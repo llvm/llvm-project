@@ -431,12 +431,12 @@ struct GPUBarrierOpToNVVMLowering final
       return success();
     }
 
-    gpu::Scope scope = op.getScope();
+    gpu::BarrierScope scope = op.getScope();
     switch (scope) {
-    case gpu::Scope::Workgroup:
+    case gpu::BarrierScope::Workgroup:
       rewriter.replaceOpWithNewOp<NVVM::BarrierOp>(op);
       return success();
-    case gpu::Scope::Subgroup: {
+    case gpu::BarrierScope::Subgroup: {
       // Emit __syncwarp(0xFFFFFFFF) for full-warp sync.
       Value mask =
           LLVM::ConstantOp::create(rewriter, op.getLoc(), rewriter.getI32Type(),

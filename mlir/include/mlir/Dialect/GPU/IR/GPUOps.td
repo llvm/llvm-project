@@ -1430,8 +1430,8 @@ def GPU_BarrierOp : GPU_Op<"barrier">,
     Arguments<(ins
       OptionalAttr<GPU_AddressSpaceAttrArray>:$address_spaces,
       Optional<GPU_NamedBarrier>:$named_barrier,
-      DefaultValuedAttr<GPU_ScopeAttr,
-        "::mlir::gpu::Scope::Workgroup">:$scope
+      DefaultValuedAttr<GPU_BarrierScopeAttr,
+        "::mlir::gpu::BarrierScope::Workgroup">:$scope
     )> {
   let summary = "Synchronizes work items within an execution scope.";
   let description = [{
@@ -1456,8 +1456,8 @@ def GPU_BarrierOp : GPU_Op<"barrier">,
     ```mlir
     // Synchronize within a subgroup (warp/wavefront).
     gpu.barrier scope <subgroup>
-    // Synchronize across the entire device.
-    gpu.barrier scope <device>
+    // Synchronize within a cluster.
+    gpu.barrier scope <cluster>
     ```
 
     A `named` barrier allows synchronizing a specific subset of subgroups

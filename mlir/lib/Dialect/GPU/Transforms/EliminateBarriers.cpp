@@ -676,7 +676,7 @@ public:
       return failure();
     }
 
-    if (barrier.getScope() != gpu::Scope::Workgroup) {
+    if (barrier.getScope() != gpu::BarrierScope::Workgroup) {
       LDBG() << "barrier has non-workgroup scope, retain it";
       return failure();
     }

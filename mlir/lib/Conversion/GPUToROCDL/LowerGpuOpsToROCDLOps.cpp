@@ -576,10 +576,10 @@ struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
   matchAndRewrite(gpu::BarrierOp op, gpu::BarrierOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    gpu::Scope scope = op.getScope();
+    gpu::BarrierScope scope = op.getScope();
 
     // Subgroup (wave) scope.
-    if (scope == gpu::Scope::Subgroup) {
+    if (scope == gpu::BarrierScope::Subgroup) {
       emitFences(op.getAddressSpaces(), rewriter, loc, "wavefront",
                  /*before=*/true);
       ROCDL::WaveBarrierOp::create(rewriter, loc);
@@ -589,13 +589,8 @@ struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
       return success();
     }
 
-    // Device and CrossDevice scopes are not directly representable.
-    if (scope == gpu::Scope::Device || scope == gpu::Scope::CrossDevice)
-      return op.emitOpError("device/cross_device scope barriers are not "
-                            "supported on AMDGPU");
-
     // Cluster scope: gfx1250+ only, signal/wait with constant -3.
-    if (scope == gpu::Scope::Cluster) {
+    if (scope == gpu::BarrierScope::Cluster) {
       if (chipset < amdgpu::Chipset(12, 5, 0))
         return op.emitOpError("cluster scope barriers require gfx1250+");
       emitFences(op.getAddressSpaces(), rewriter, loc, "cluster",
@@ -610,7 +605,7 @@ struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
     }
 
     // Workgroup scope (default).
-    assert(scope == gpu::Scope::Workgroup && "unsupported scope");
+    assert(scope == gpu::BarrierScope::Workgroup && "unsupported scope");
 
     // Named barrier path.
     if (Value namedBarrier = adaptor.getNamedBarrier()) {

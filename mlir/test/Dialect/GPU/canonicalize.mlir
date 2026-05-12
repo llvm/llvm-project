@@ -78,11 +78,11 @@ func.func @erase_barriers_same_scope() {
 
 // CHECK-LABEL: func @no_fold_different_scope
 //       CHECK-NEXT: gpu.barrier scope <subgroup>
-//       CHECK-NEXT: gpu.barrier scope <device>
+//       CHECK-NEXT: gpu.barrier scope <cluster>
 //       CHECK-NEXT: return
 func.func @no_fold_different_scope() {
   gpu.barrier scope <subgroup>
-  gpu.barrier scope <device>
+  gpu.barrier scope <cluster>
   return
 }
 

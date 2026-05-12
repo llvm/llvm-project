@@ -1522,12 +1522,9 @@ LogicalResult RotateOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult BarrierOp::verify() {
-  Scope scope = getScope();
+  BarrierScope scope = getScope();
 
-  if (scope == Scope::Thread)
-    return emitOpError("thread-level scope is not meaningful for barriers");
-
-  if (getNamedBarrier() && scope != Scope::Workgroup)
+  if (getNamedBarrier() && scope != BarrierScope::Workgroup)
     return emitOpError("named barriers require workgroup scope");
 
   return success();
@@ -1588,7 +1585,8 @@ void BarrierOp::build(mlir::OpBuilder &odsBuilder,
     addressSpacesAttr = odsBuilder.getArrayAttr(
         AddressSpaceAttr::get(odsBuilder.getContext(), addressSpace.value()));
   build(odsBuilder, odsState, addressSpacesAttr, /*named_barrier=*/Value{},
-        ScopeAttr::get(odsBuilder.getContext(), Scope::Workgroup));
+        BarrierScopeAttr::get(odsBuilder.getContext(),
+                              BarrierScope::Workgroup));
 }
 
 /// Builds a barrier that causes memory operations affecting `memrefToFence` to

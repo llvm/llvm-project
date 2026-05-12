@@ -450,20 +450,15 @@ LogicalResult GPUReturnOpConversion::matchAndRewrite(
 // Barrier.
 //===----------------------------------------------------------------------===//
 
-/// Map gpu::Scope to spirv::Scope.
-static FailureOr<spirv::Scope> mapGPUScopeToSPIRV(gpu::Scope gpuScope) {
+/// Map gpu::BarrierScope to spirv::Scope.
+static FailureOr<spirv::Scope>
+mapGPUBarrierScopeToSPIRV(gpu::BarrierScope gpuScope) {
   switch (gpuScope) {
-  case gpu::Scope::Thread:
-    return spirv::Scope::Invocation;
-  case gpu::Scope::Subgroup:
+  case gpu::BarrierScope::Subgroup:
     return spirv::Scope::Subgroup;
-  case gpu::Scope::Workgroup:
+  case gpu::BarrierScope::Workgroup:
     return spirv::Scope::Workgroup;
-  case gpu::Scope::Device:
-    return spirv::Scope::Device;
-  case gpu::Scope::CrossDevice:
-    return spirv::Scope::CrossDevice;
-  case gpu::Scope::Cluster:
+  case gpu::BarrierScope::Cluster:
     return failure();
   }
   return failure();
@@ -475,7 +470,7 @@ LogicalResult GPUBarrierConversion::matchAndRewrite(
   MLIRContext *context = getContext();
 
   // Map GPU scope to SPIR-V scope.
-  auto spirvScope = mapGPUScopeToSPIRV(barrierOp.getScope());
+  auto spirvScope = mapGPUBarrierScopeToSPIRV(barrierOp.getScope());
   if (failed(spirvScope))
     return rewriter.notifyMatchFailure(
         barrierOp, "cluster scope is not supported in SPIR-V");

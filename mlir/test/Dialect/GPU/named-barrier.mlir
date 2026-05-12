@@ -61,14 +61,6 @@ func.func @named_barrier_with_memfence(%member_count : i32) {
 
 // -----
 
-func.func @barrier_thread_scope() {
-  // expected-error @+1 {{thread-level scope is not meaningful for barriers}}
-  gpu.barrier scope <thread>
-  return
-}
-
-// -----
-
 func.func @named_barrier_non_workgroup_scope(%member_count : i32) {
   %nb = gpu.initialize_named_barrier %member_count : i32 -> !gpu.named_barrier
   // expected-error @+1 {{named barriers require workgroup scope}}

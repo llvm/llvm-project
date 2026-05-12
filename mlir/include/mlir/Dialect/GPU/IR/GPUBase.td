@@ -115,26 +115,21 @@ def GPU_AddressSpaceAttr :
 
 def GPU_AddressSpaceAttrArray : TypedArrayAttrBase<GPU_AddressSpaceAttr, "GPU Address Space array">;
 
-def GPU_ScopeThread      : I32EnumCase<"Thread",      0, "thread">;
-def GPU_ScopeSubgroup    : I32EnumCase<"Subgroup",    1, "subgroup">;
-def GPU_ScopeWorkgroup   : I32EnumCase<"Workgroup",   2, "workgroup">;
-def GPU_ScopeCluster     : I32EnumCase<"Cluster",     3, "cluster">;
-def GPU_ScopeDevice      : I32EnumCase<"Device",      4, "device">;
-def GPU_ScopeCrossDevice : I32EnumCase<"CrossDevice", 5, "cross_device">;
+def GPU_BarrierScopeSubgroup  : I32EnumCase<"Subgroup",  1, "subgroup">;
+def GPU_BarrierScopeWorkgroup : I32EnumCase<"Workgroup", 2, "workgroup">;
+def GPU_BarrierScopeCluster   : I32EnumCase<"Cluster",   3, "cluster">;
 
-def GPU_ScopeEnum : I32Enum<
-  "Scope", "barrier execution scope", [
-    GPU_ScopeThread,
-    GPU_ScopeSubgroup,
-    GPU_ScopeWorkgroup,
-    GPU_ScopeCluster,
-    GPU_ScopeDevice,
-    GPU_ScopeCrossDevice
+def GPU_BarrierScopeEnum : I32Enum<
+  "BarrierScope", "barrier execution scope", [
+    GPU_BarrierScopeSubgroup,
+    GPU_BarrierScopeWorkgroup,
+    GPU_BarrierScopeCluster
   ]> {
   let cppNamespace = "::mlir::gpu";
 }
 
-def GPU_ScopeAttr : EnumAttr<GPU_Dialect, GPU_ScopeEnum, "scope"> {
+def GPU_BarrierScopeAttr :
+    EnumAttr<GPU_Dialect, GPU_BarrierScopeEnum, "barrier_scope"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
