@@ -186,6 +186,10 @@ Improvements to clang-tidy
   compiler. (E.g. tidy suppressed many ``clang-diagnostic-invalid-offsetof``
   reports because they usually occur in expansion of the macro ``offsetof``.)
 
+- :program:`clang-tidy` will no longer exit immediately if the only enabled
+  checks are `clang-diagnostic-*` ones. This allows using
+  :program:`clang-tidy` purely as a frontend to Clang's builtin warnings.
+
 New checks
 ^^^^^^^^^^
 
