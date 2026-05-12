@@ -1000,9 +1000,10 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         RHSInfo, Operands, CtxI, &Ctx.TLI);
   }
   case Instruction::Freeze:
-    // This will never lead to any real code being generated. It acts purely
-    // as a blocker for optimizations.
-    return 0;
+    // NOTE: The only way to ask for the cost is via getInstructionCost, which
+    // requires the actual vector instruction. Instead, I've simply mirrored
+    // the behaviour in llvm/Analysis/TargetTransformInfoImpl.h.
+    return TTI::TCC_Free;
   case Instruction::ExtractValue:
     return Ctx.TTI.getInsertExtractValueCost(Instruction::ExtractValue,
                                              Ctx.CostKind);

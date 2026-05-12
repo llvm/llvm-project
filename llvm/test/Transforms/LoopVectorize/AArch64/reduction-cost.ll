@@ -60,8 +60,6 @@ exit:
   ret i64 %res
 }
 
-; The scalar cost of this loop must include the freeze's cost, otherwise VF=2
-; is incorrectly rejected as unprofitable.
 define i32 @or_reduction_with_freeze(ptr %dst, ptr %src) {
 ; CHECK-LABEL: define i32 @or_reduction_with_freeze(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
