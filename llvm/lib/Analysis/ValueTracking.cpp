@@ -830,8 +830,8 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      auto OBU = I->operand_bundles().begin()[Elem.Index];
       bool AssumeImpliesNonNull = [&]() {
+        auto OBU = I->getOperandBundleAt(Elem.Index);
         switch (getBundleAttrFromOBU(OBU)) {
         case BundleAttr::Dereferenceable: {
           auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
@@ -1087,8 +1087,8 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      auto OBU = I->operand_bundles().begin()[Elem.Index];
-      if (getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
+      if (auto OBU = I->getOperandBundleAt(Elem.Index);
+          getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
         auto [Ptr, Alignment, Offset] = getAssumeAlignInfo(OBU);
         assert(Ptr == V);
         if (!Alignment || !isPowerOf2_64(*Alignment))

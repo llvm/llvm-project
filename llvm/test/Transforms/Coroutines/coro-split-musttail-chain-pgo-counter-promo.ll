@@ -2,14 +2,14 @@
 ; RUN: opt -passes='pgo-instr-gen,instrprof,coro-split' -do-counter-promotion=true -S < %s | FileCheck %s
 
 ; CHECK-LABEL: define internal fastcc void @f.resume
-; CHECK: musttail call fastcc void
+; CHECK: musttail call fastcc void 
 ; CHECK-NEXT: ret void
-; CHECK: musttail call fastcc void
+; CHECK: musttail call fastcc void 
 ; CHECK-NEXT: ret void
 ; CHECK-LABEL: define internal fastcc void @f.destroy
 target triple = "x86_64-grtev4-linux-gnu"
 
-%CoroutinePromise = type { ptr, i64, [8 x i8], ptr}
+%CoroutinePromise = type { ptr, i64, [8 x i8], ptr} 
 %Awaitable.1 = type { ptr }
 %Awaitable.2 = type { ptr, ptr }
 
