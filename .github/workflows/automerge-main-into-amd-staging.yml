@@ -1,5 +1,5 @@
-# Merges PR's with title 'merge main into amd-staging'
-# Waits for all required checks to be successful
+# Enables auto merge for PR's with title 'merge main into amd-staging'
+# Enabling auto merge should wait for AUTOMERGE_SLEEP_SECONDS due to a race condition
 # Merge strategy: always a merge commit (--merge), not squash or rebase
 
 name: Auto-merge (main → amd-staging sync PRs)
@@ -43,12 +43,24 @@ jobs:
       - name: Enable auto-merge (merge commit on branch)
         env:
           ROCM_CCIAPP_TOKEN: ${{ steps.rocm-cciapp.outputs.token }}
+          AUTOMERGE_SLEEP_SECONDS: ${{ vars.AUTOMERGE_SLEEP_SECONDS }}
         run: |
           set -euo pipefail
           if [ -z "${ROCM_CCIAPP_TOKEN:-}" ]; then
             echo "::error::Set repo Variable ROCM_CCIAPP_APP_ID (and Secret ROCM_CCIAPP_PRIVATE_KEY). GITHUB_TOKEN is read-only here and cannot merge."
             exit 1
           fi
+
+          SLEEP_SEC="${AUTOMERGE_SLEEP_SECONDS:-0}"
+          if ! [[ "${SLEEP_SEC}" =~ ^[0-9]+$ ]]; then
+            echo "::warning::AUTOMERGE_SLEEP_SECONDS must be a non-negative integer; got '${AUTOMERGE_SLEEP_SECONDS:-}', using 0"
+            SLEEP_SEC=0
+          fi
+          if [ "${SLEEP_SEC}" -gt 0 ]; then
+            echo "Sleeping ${SLEEP_SEC}s before gh pr merge --auto (repo Variable AUTOMERGE_SLEEP_SECONDS)"
+            sleep "${SLEEP_SEC}"
+          fi
+          
           export GH_TOKEN="$ROCM_CCIAPP_TOKEN"
           # --merge = merge commit preserving branch history (not --squash / --rebase)
           gh pr merge "${{ github.event.pull_request.number }}" \
