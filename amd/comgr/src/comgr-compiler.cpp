@@ -1101,7 +1101,15 @@ amd_comgr_status_t AMDGPUCompiler::createTmpDirs() {
                            std::to_string(Id++));
 
   ProfilePoint Point("CreateDir");
-  if (fs::createUniqueDirectory(TmpDirPrefix, TmpDir)) {
+  if (std::error_code EC = fs::createUniqueDirectory(TmpDirPrefix, TmpDir)) {
+    if (env::shouldEmitVerboseLogs()) {
+      LogS << "comgr-compiler: failed to create temporary directory '"
+           << TmpDirPrefix << "': " << EC.message() << "\n";
+      const char *TmpDirEnv = std::getenv("TMPDIR");
+      if (TmpDirEnv)
+        LogS << "comgr-compiler: TMPDIR='" << TmpDirEnv
+             << "' may not exist or be writable\n";
+    }
     return AMD_COMGR_STATUS_ERROR;
   }
 
