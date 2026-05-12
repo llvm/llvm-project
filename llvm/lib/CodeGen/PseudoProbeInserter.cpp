@@ -56,7 +56,7 @@ public:
       for (MachineInstr &MI : MBB) {
         // Pseudo instructions like TCRETURNbi results in a branch instruction
         // and the call probe for that tail call should be preserved.
-        if (!MI.isPseudo() || MI.isCall())
+        if ((!MI.isPseudo() && !MI.isMetaInstruction()) || MI.isCall())
           FirstInstr = &MI;
         if (MI.isCall()) {
           if (DILocation *DL = MI.getDebugLoc()) {
