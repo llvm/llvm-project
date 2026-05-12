@@ -229,49 +229,114 @@ void SYCLToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
   HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
 }
 
+#if !defined(_WIN32)
+static void addSYCLDeviceSanitizerLibs(
+    const llvm::opt::ArgList &Args,
+    SmallVector<ToolChain::BitCodeLibraryInfo, 8> &LibraryList) {
+  // Default internalization to 'false' for these libraries, as they are
+  // expected to link with -mlink-bitcode-file, which does not link with
+  // only-needed.
+  auto addSingleLibrary = [&](StringRef DeviceLibName,
+                              bool Internalize = false) {
+    std::string FullLibName(Args.MakeArgString(DeviceLibName + ".bc"));
+    ToolChain::BitCodeLibraryInfo BitCodeLibrary({FullLibName, Internalize});
+    LibraryList.push_back(BitCodeLibrary);
+  };
+
+  std::string SanitizeVal;
+  if (Arg *A = Args.getLastArg(options::OPT_fsanitize_EQ,
+                               options::OPT_fno_sanitize_EQ)) {
+    if (A->getOption().matches(options::OPT_fsanitize_EQ) &&
+        A->getValues().size() == 1) {
+      SanitizeVal = A->getValue();
+    }
+  }
+
+  // For SPIR/SPIRV targets in community LLVM, we use the basic sanitizer
+  // libraries. The full AOT optimization (with device-specific libraries)
+  // requires Intel-specific backend support not available in community LLVM.
+  if (SanitizeVal == "address")
+    addSingleLibrary("libsycl-asan");
+  else if (SanitizeVal == "memory")
+    addSingleLibrary("libsycl-msan");
+  else if (SanitizeVal == "thread")
+    addSingleLibrary("libsycl-tsan");
+}
+#endif
+
 SmallVector<ToolChain::BitCodeLibraryInfo, 8>
 SYCLToolChain::getDeviceLibNames(const Driver &D,
                                  const llvm::opt::ArgList &Args,
                                  const llvm::Triple &TargetTriple) const {
   SmallVector<ToolChain::BitCodeLibraryInfo, 8> LibraryList;
-
-  // Check if device libraries should be linked.
   bool NoOffloadLib =
       !Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true);
-
-  if (NoOffloadLib)
-    return LibraryList;
-
-  // Helper to add libraries with internalization flag.
-  // By default, standard libraries are internalized (linked with only-needed).
+  // Default internalization to 'true' for these libraries, as they are
+  // expected to link with -mlink-builtin-bitcode.
   auto addLibToList = [&LibraryList](StringRef LibName,
                                      bool Internalize = true) {
-    BitCodeLibraryInfo BitCodeLibrary(LibName, Internalize);
+    BitCodeLibraryInfo BitCodeLibrary({LibName, Internalize});
     LibraryList.emplace_back(BitCodeLibrary);
   };
 
-  // Add all SYCL device libraries for SPIR/SPIRV targets.
+  // For SPIR/SPIRV targets, add SYCL device libraries.
   if (TargetTriple.isSPIROrSPIRV()) {
-    // Core SYCL device libraries
-    addLibToList("libsycl-crt.bc");
-    addLibToList("libsycl-complex.bc");
-    addLibToList("libsycl-complex-fp64.bc");
-    addLibToList("libsycl-cmath.bc");
-    addLibToList("libsycl-cmath-fp64.bc");
+    using SYCLDeviceLibsList = SmallVector<StringRef>;
+    const SYCLDeviceLibsList SYCLDeviceLibs = {"libsycl-crt",
+                                               "libsycl-complex",
+                                               "libsycl-complex-fp64",
+                                               "libsycl-cmath",
+                                               "libsycl-cmath-fp64",
 #if defined(_WIN32)
-    addLibToList("libsycl-msvc-math.bc");
+                                               "libsycl-msvc-math",
 #endif
-    addLibToList("libsycl-imf.bc");
-    addLibToList("libsycl-imf-fp64.bc");
-    addLibToList("libsycl-imf-bf16.bc");
-    addLibToList("libsycl-fallback-cstring.bc");
-    addLibToList("libsycl-fallback-complex.bc");
-    addLibToList("libsycl-fallback-complex-fp64.bc");
-    addLibToList("libsycl-fallback-cmath.bc");
-    addLibToList("libsycl-fallback-cmath-fp64.bc");
-    addLibToList("libsycl-fallback-imf.bc");
-    addLibToList("libsycl-fallback-imf-fp64.bc");
-    addLibToList("libsycl-fallback-imf-bf16.bc");
+                                               "libsycl-imf",
+                                               "libsycl-imf-fp64",
+                                               "libsycl-imf-bf16",
+                                               "libsycl-fallback-cstring",
+                                               "libsycl-fallback-complex",
+                                               "libsycl-fallback-complex-fp64",
+                                               "libsycl-fallback-cmath",
+                                               "libsycl-fallback-cmath-fp64",
+                                               "libsycl-fallback-imf",
+                                               "libsycl-fallback-imf-fp64",
+                                               "libsycl-fallback-imf-bf16"};
+    auto addLibraries = [&](const SYCLDeviceLibsList &LibsList) {
+      for (const StringRef &Lib : LibsList)
+        addLibToList(Args.MakeArgString(Lib + ".bc"));
+    };
+
+    if (!NoOffloadLib)
+      addLibraries(SYCLDeviceLibs);
+
+    // ITT annotation libraries are linked in separately whenever the device
+    // code instrumentation is enabled. This is an Intel-specific extension
+    // and the option may not be available in all LLVM builds.
+    // The default is true to match Intel's downstream behavior when the
+    // options are available.
+    const SYCLDeviceLibsList SYCLDeviceAnnotationLibs = {
+        "libsycl-itt-user-wrappers", "libsycl-itt-compiler-wrappers",
+        "libsycl-itt-stubs"};
+    if (!NoOffloadLib &&
+        Args.hasFlag(options::OPT_fsycl_instrument_device_code,
+                     options::OPT_fno_sycl_instrument_device_code, true))
+      addLibraries(SYCLDeviceAnnotationLibs);
+
+    // For bfloat16 support, we use fallback library in community LLVM.
+    // Native bfloat16 selection requires Intel GPU-specific backend analysis
+    // not available in upstream LLVM.
+    const SYCLDeviceLibsList SYCLDeviceBfloat16FallbackLib = {
+        "libsycl-fallback-bfloat16"};
+    // Only add bfloat16 library for AOT compilation (when subarch is specified)
+    if (TargetTriple.getSubArch() != llvm::Triple::NoSubArch && !NoOffloadLib)
+      addLibraries(SYCLDeviceBfloat16FallbackLib);
+
+    // Currently, device sanitizer support is required by some developers on
+    // Linux platform only, so compiler only provides device sanitizer libraries
+    // on Linux platform.
+#if !defined(_WIN32)
+    addSYCLDeviceSanitizerLibs(Args, LibraryList);
+#endif
   }
 
   return LibraryList;

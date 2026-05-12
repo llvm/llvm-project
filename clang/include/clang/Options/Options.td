@@ -7464,6 +7464,10 @@ def fsycl_device_only : Flag<["-"], "fsycl-device-only">,
 def fsycl_host_only : Flag<["-"], "fsycl-host-only">,
   Alias<offload_host_only>, HelpText<"Compile SYCL code for host only. Has no "
   "effect on non-SYCL compilations">;
+def fsycl_instrument_device_code : Flag<["-"], "fsycl-instrument-device-code">,
+  HelpText<"Enable instrumentation of SYCL device code for profiling">;
+def fno_sycl_instrument_device_code : Flag<["-"], "fno-sycl-instrument-device-code">,
+  HelpText<"Disable instrumentation of SYCL device code (default)">;
 def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
   HelpText<"Perform link through clang-sycl-linker via the target "
   "offloading toolchain.">;

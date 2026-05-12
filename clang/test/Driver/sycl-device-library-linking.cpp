@@ -6,6 +6,14 @@
 // RUN: %clangxx -fsycl --no-offloadlib %s -### 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-NO-DEVICE-LIBS
 
+// Test ITT instrumentation libraries (enabled by default)
+// RUN: %clangxx -fsycl %s --sysroot=%S/Inputs/SYCL -### 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-ITT-DEFAULT
+// RUN: %clangxx -fsycl -fsycl-instrument-device-code %s --sysroot=%S/Inputs/SYCL -### 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-ITT-ENABLED
+// RUN: %clangxx -fsycl -fno-sycl-instrument-device-code %s --sysroot=%S/Inputs/SYCL -### 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-ITT-DISABLED
+
 // CHECK-DEVICE-LIBS: "-cc1" "-triple" "spirv64-unknown-unknown"
 // CHECK-DEVICE-LIBS-SAME: "-fsycl-is-device"
 // CHECK-DEVICE-LIBS-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-crt.bc"
@@ -31,5 +39,23 @@
 // CHECK-NO-DEVICE-LIBS-SAME: "-fsycl-is-device"
 // CHECK-NO-DEVICE-LIBS-NOT: "-mlink-builtin-bitcode"
 // CHECK-NO-DEVICE-LIBS-NOT: "libsycl-crt.bc"
+
+// CHECK-ITT-DEFAULT: "-cc1" "-triple" "spirv64-unknown-unknown"
+// CHECK-ITT-DEFAULT-SAME: "-fsycl-is-device"
+// CHECK-ITT-DEFAULT-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-itt-user-wrappers.bc"
+// CHECK-ITT-DEFAULT-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-itt-compiler-wrappers.bc"
+// CHECK-ITT-DEFAULT-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-itt-stubs.bc"
+
+// CHECK-ITT-ENABLED: "-cc1" "-triple" "spirv64-unknown-unknown"
+// CHECK-ITT-ENABLED-SAME: "-fsycl-is-device"
+// CHECK-ITT-ENABLED-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-itt-user-wrappers.bc"
+// CHECK-ITT-ENABLED-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-itt-compiler-wrappers.bc"
+// CHECK-ITT-ENABLED-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-itt-stubs.bc"
+
+// CHECK-ITT-DISABLED: "-cc1" "-triple" "spirv64-unknown-unknown"
+// CHECK-ITT-DISABLED-SAME: "-fsycl-is-device"
+// CHECK-ITT-DISABLED-NOT: "libsycl-itt-user-wrappers.bc"
+// CHECK-ITT-DISABLED-NOT: "libsycl-itt-compiler-wrappers.bc"
+// CHECK-ITT-DISABLED-NOT: "libsycl-itt-stubs.bc"
 
 void foo() {}

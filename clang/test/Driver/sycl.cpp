@@ -11,8 +11,8 @@
 // RUN: %clangxx -### -fno-sycl %s 2>&1 | FileCheck %s --check-prefix=DISABLED
 // RUN: %clangxx -### -fsycl -fno-sycl %s 2>&1 | FileCheck %s --check-prefix=DISABLED
 // RUN: %clangxx -### %s 2>&1 | FileCheck %s --check-prefix=DISABLED
-// RUN: %clang_cl -### -fsycl -sycl-std=2017 --sysroot=%S/Inputs/SYCL -- %s 2>&1 | FileCheck %s --check-prefix=ENABLED
-// RUN: %clang_cl -### -fsycl --sysroot=%S/Inputs/SYCL -- %s 2>&1 | FileCheck %s --check-prefix=ENABLED
+// RUN: %clang_cl -### -fsycl -sycl-std=2017 --no-offloadlib -- %s 2>&1 | FileCheck %s --check-prefix=ENABLED
+// RUN: %clang_cl -### -fsycl --no-offloadlib -- %s 2>&1 | FileCheck %s --check-prefix=ENABLED
 // RUN: %clang_cl -### -- %s 2>&1 | FileCheck %s --check-prefix=DISABLED
 
 // ENABLED: "-cc1"{{.*}} "-fsycl-is-device"
@@ -22,7 +22,7 @@
 
 // RUN: %clang -### -fsycl  %s --sysroot=%S/Inputs/SYCL 2>&1 | FileCheck %s --check-prefix=DEFAULT
 // RUN: %clangxx -### -fsycl %s --sysroot=%S/Inputs/SYCL 2>&1 | FileCheck %s --check-prefix=DEFAULT
-// RUN: %clang_cl -### -fsycl --sysroot=%S/Inputs/SYCL -- %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
+// RUN: %clang_cl -### -fsycl --no-offloadlib -- %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
 // DEFAULT: "-sycl-std=2020"
 
