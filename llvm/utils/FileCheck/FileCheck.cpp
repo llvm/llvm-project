@@ -493,7 +493,7 @@ public:
     unsigned Line;
     unsigned Col;
     /// Make an invalid location to be overwritten before being used.
-    Loc() : Line(0), Col (0) {}
+    Loc() : Line(0), Col(0) {}
     /// Make a valid location.
     Loc(const std::pair<unsigned, unsigned> &LineAndCol)
         : Line(LineAndCol.first), Col(LineAndCol.second) {}
