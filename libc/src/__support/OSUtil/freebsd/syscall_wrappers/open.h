@@ -20,10 +20,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace freebsd_syscalls {
 
 LIBC_INLINE ErrorOr<int> open(const char *path, int flags, mode_t mode_flags) {
-  int fd = syscall_impl<int>(SYS_open, path, flags, mode_flags);
-  if (fd < 0)
-    return Error(-fd);
-  return fd;
+  SyscallReturn ret = syscall_impl(SYS_open, path, flags, mode_flags);
+  if (ret.is_error)
+    return Error(static_cast<int>(ret.value));
+  return static_cast<int>(ret.value);
 }
 
 } // namespace freebsd_syscalls

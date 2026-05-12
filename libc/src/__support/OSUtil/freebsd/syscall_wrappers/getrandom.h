@@ -21,10 +21,10 @@ namespace freebsd_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> getrandom(void *buf, size_t buflen,
                                        unsigned int flags) {
-  ssize_t ret = syscall_impl<ssize_t>(SYS_getrandom, buf, buflen, flags);
-  if (ret < 0)
-    return Error(-static_cast<int>(ret));
-  return ret;
+  SyscallReturn ret = syscall_impl(SYS_getrandom, buf, buflen, flags);
+  if (ret.is_error)
+    return Error(static_cast<int>(ret.value));
+  return static_cast<ssize_t>(ret.value);
 }
 
 } // namespace freebsd_syscalls

@@ -22,7 +22,7 @@ __attribute__((no_stack_protector))
 #endif
 __attribute__((noreturn)) void exit(int status) {
   for (;;) {
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, status);
+    LIBC_NAMESPACE::syscall_impl(SYS_exit, status);
   }
 }
 

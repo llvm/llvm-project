@@ -21,11 +21,11 @@ namespace freebsd_syscalls {
 
 LIBC_INLINE ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags,
                                  int fd, off_t offset) {
-  long ret = syscall_impl<long>(SYS_mmap, reinterpret_cast<long>(addr), size,
-                                prot, flags, fd, static_cast<long>(offset));
-  if (ret < 0)
-    return Error(-static_cast<int>(ret));
-  return reinterpret_cast<void *>(ret);
+  SyscallReturn ret = syscall_impl(SYS_mmap, reinterpret_cast<long>(addr), size,
+                                   prot, flags, fd, static_cast<long>(offset));
+  if (ret.is_error)
+    return Error(static_cast<int>(ret.value));
+  return reinterpret_cast<void *>(ret.value);
 }
 
 } // namespace freebsd_syscalls
