@@ -6542,35 +6542,37 @@ static bool areVFParamsOk(const VFInfo &Info, ArrayRef<VPValue *> Args,
 }
 
 /// Find a vector variant of \p CI for \p VF, respecting \p MaskRequired.
-/// Returns the variant function and the position of its mask parameter
-/// (if any), or {nullptr, std::nullopt}.
-static std::pair<Function *, std::optional<unsigned>>
-findVectorVariant(CallInst *CI, ArrayRef<VPValue *> Args, ElementCount VF,
-                  bool MaskRequired, PredicatedScalarEvolution &PSE,
-                  const Loop *L) {
+/// Returns the variant function, or nullptr. Masked variants are assumed to
+/// take the mask as a trailing parameter.
+static Function *findVectorVariant(CallInst *CI, ArrayRef<VPValue *> Args,
+                                   ElementCount VF, bool MaskRequired,
+                                   PredicatedScalarEvolution &PSE,
+                                   const Loop *L) {
   if (CI->isNoBuiltin())
-    return {nullptr, std::nullopt};
+    return nullptr;
   auto Mappings = VFDatabase::getMappings(*CI);
   const auto *It = find_if(Mappings, [&](const VFInfo &Info) {
     return Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()) &&
            areVFParamsOk(Info, Args, PSE, L);
   });
   if (It == Mappings.end())
-    return {nullptr, std::nullopt};
-  if (Function *VecFunc = CI->getModule()->getFunction(It->VectorName))
-    return {VecFunc, It->getParamIndexForOptionalMask()};
-  return {nullptr, std::nullopt};
+    return nullptr;
+  return CI->getModule()->getFunction(It->VectorName);
 }
 
 namespace {
 /// The outcome of choosing how to widen a call at a given VF.
 struct CallWideningDecision {
   using KindTy = VPCostContext::CallWideningKind;
-  KindTy Kind = KindTy::Scalarize;
+  CallWideningDecision(KindTy Kind, Function *Variant = nullptr)
+      : Kind(Kind), Variant(Variant) {}
+  KindTy Kind;
   /// Set when Kind == VectorVariant.
-  Function *Variant = nullptr;
-  /// Position of the mask parameter for \p Variant, if any.
-  std::optional<unsigned> MaskPos;
+  Function *Variant;
+
+  bool operator==(const CallWideningDecision &Other) const {
+    return Kind == Other.Kind && Variant == Other.Variant;
+  }
 };
 } // namespace
 
@@ -6584,7 +6586,7 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
 
   // Scalar VFs and calls forced or known to scalarize always replicate.
   if (VF.isScalar() || CostCtx.willBeScalarized(CI, VF))
-    return {};
+    return CallWideningDecision::KindTy::Scalarize;
 
   auto *CalledFn = cast<Function>(
       VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1)->getLiveInIRValue());
@@ -6594,33 +6596,33 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
 
   // Pseudo intrinsics (assume, lifetime, ...) are always scalarized.
   if (ID && VPCostContext::isFreeScalarIntrinsic(ID))
-    return {};
+    return CallWideningDecision::KindTy::Scalarize;
 
-  InstructionCost ScalarCost = VPReplicateRecipe::computeScalarCallCost(
-      CalledFn, ResultTy, Ops,
-      /*IsSingleScalar=*/false, VF, CostCtx);
+  InstructionCost ScalarCost =
+      VPReplicateRecipe::computeCallCost(CalledFn, ResultTy, Ops,
+                                         /*IsSingleScalar=*/false, VF, CostCtx);
 
-  auto [VecFunc, MaskPos] =
+  Function *VecFunc =
       findVectorVariant(CI, Ops, VF, MaskRequired, CostCtx.PSE, CostCtx.L);
   InstructionCost VecCallCost = InstructionCost::getInvalid();
   if (VecFunc)
-    VecCallCost = VPWidenCallRecipe::computeVectorCallCost(VecFunc, CostCtx);
+    VecCallCost = VPWidenCallRecipe::computeCallCost(VecFunc, CostCtx);
 
   // Prefer the intrinsic if it is at least as cheap as scalarizing and any
   // available vector variant.
   if (ID) {
     InstructionCost IntrinsicCost =
-        VPWidenIntrinsicRecipe::computeIntrinsicCost(ID, Ops, VPI, VF, CostCtx);
+        VPWidenIntrinsicRecipe::computeCallCost(ID, Ops, VPI, VF, CostCtx);
     if (IntrinsicCost.isValid() && ScalarCost >= IntrinsicCost &&
         (!VecFunc || VecCallCost >= IntrinsicCost))
-      return {CallWideningDecision::KindTy::Intrinsic, nullptr, std::nullopt};
+      return CallWideningDecision::KindTy::Intrinsic;
   }
 
   // Otherwise, use a vector library variant when it beats scalarizing.
   if (VecFunc && ScalarCost >= VecCallCost)
-    return {CallWideningDecision::KindTy::VectorVariant, VecFunc, MaskPos};
+    return {CallWideningDecision::KindTy::VectorVariant, VecFunc};
 
-  return {};
+  return CallWideningDecision::KindTy::Scalarize;
 }
 
 void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
@@ -6643,8 +6645,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
           decideCallWidening(*VPI, Ops, Range.Start, CostCtx);
       LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) {
-            CallWideningDecision D = decideCallWidening(*VPI, Ops, VF, CostCtx);
-            return D.Kind == Decision.Kind && D.Variant == Decision.Variant;
+            return Decision == decideCallWidening(*VPI, Ops, VF, CostCtx);
           },
           Range);
 
@@ -6658,14 +6659,15 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
         break;
       }
       case CallWideningDecision::KindTy::VectorVariant: {
-        if (Decision.MaskPos) {
+        // Masked variants take the mask as a trailing parameter, so they have
+        // one more parameter than the original call's arguments.
+        if (Decision.Variant->arg_size() > Ops.size()) {
           VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
-          Ops.insert(Ops.begin() + *Decision.MaskPos, Mask);
+          Ops.push_back(Mask);
         }
         Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
-        Recipe =
-            new VPWidenCallRecipe(VPI->getUnderlyingValue(), Decision.Variant,
-                                  Ops, *VPI, *VPI, VPI->getDebugLoc());
+        Recipe = new VPWidenCallRecipe(CI, Decision.Variant, Ops, *VPI, *VPI,
+                                       VPI->getDebugLoc());
         break;
       }
       case CallWideningDecision::KindTy::Scalarize:

@@ -1880,11 +1880,11 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   assert(getVectorizedTypeVF(Variant->getReturnType()) == VF &&
          "Variant return type must match VF");
-  return computeVectorCallCost(Variant, Ctx);
+  return computeCallCost(Variant, Ctx);
 }
 
-InstructionCost VPWidenCallRecipe::computeVectorCallCost(Function *Variant,
-                                                         VPCostContext &Ctx) {
+InstructionCost VPWidenCallRecipe::computeCallCost(Function *Variant,
+                                                   VPCostContext &Ctx) {
   return Ctx.TTI.getCallInstrCost(nullptr, Variant->getReturnType(),
                                   Variant->getFunctionType()->params(),
                                   Ctx.CostKind);
@@ -1970,7 +1970,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     State.set(this, V);
 }
 
-InstructionCost VPWidenIntrinsicRecipe::computeIntrinsicCost(
+InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
     Intrinsic::ID ID, ArrayRef<const VPValue *> Operands,
     const VPRecipeWithIRFlags &R, ElementCount VF, VPCostContext &Ctx) {
   Type *ScalarRetTy = Ctx.Types.inferScalarType(&R);
@@ -2016,7 +2016,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeIntrinsicCost(
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
                                                     VPCostContext &Ctx) const {
   SmallVector<const VPValue *> ArgOps(operands());
-  return computeIntrinsicCost(VectorIntrinsicID, ArgOps, *this, VF, Ctx);
+  return computeCallCost(VectorIntrinsicID, ArgOps, *this, VF, Ctx);
 }
 
 StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
@@ -3392,8 +3392,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
     Type *ResultTy = Ctx.Types.inferScalarType(this);
     SmallVector<const VPValue *> ArgOps(drop_end(operands()));
-    return computeScalarCallCost(CalledFn, ResultTy, ArgOps, isSingleScalar(),
-                                 VF, Ctx);
+    return computeCallCost(CalledFn, ResultTy, ArgOps, isSingleScalar(), VF,
+                           Ctx);
   }
   case Instruction::Add:
   case Instruction::Sub:
@@ -3574,7 +3574,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   return Ctx.getLegacyCost(UI, VF);
 }
 
-InstructionCost VPReplicateRecipe::computeScalarCallCost(
+InstructionCost VPReplicateRecipe::computeCallCost(
     Function *CalledFn, Type *ResultTy, ArrayRef<const VPValue *> ArgOps,
     bool IsSingleScalar, ElementCount VF, VPCostContext &Ctx) {
   SmallVector<Type *, 4> Tys = map_to_vector<4>(

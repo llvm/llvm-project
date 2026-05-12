@@ -1948,10 +1948,10 @@ public:
   LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
 
   /// Compute the cost of a vector intrinsic with \p ID and \p Operands.
-  static InstructionCost
-  computeIntrinsicCost(Intrinsic::ID ID, ArrayRef<const VPValue *> Operands,
-                       const VPRecipeWithIRFlags &R, ElementCount VF,
-                       VPCostContext &Ctx);
+  static InstructionCost computeCallCost(Intrinsic::ID ID,
+                                         ArrayRef<const VPValue *> Operands,
+                                         const VPRecipeWithIRFlags &R,
+                                         ElementCount VF, VPCostContext &Ctx);
 
   /// Return the cost of this vector intrinsic.
   LLVM_ABI_FOR_TEST InstructionCost
@@ -2024,8 +2024,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   /// Return the cost of widening a call using the vector function \p Variant.
-  static InstructionCost computeVectorCallCost(Function *Variant,
-                                               VPCostContext &Ctx);
+  static InstructionCost computeCallCost(Function *Variant, VPCostContext &Ctx);
 
   Function *getCalledScalarFunction() const {
     return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
@@ -3240,10 +3239,10 @@ public:
 
   /// Return the cost of scalarizing a call to \p CalledFn with argument
   /// operands \p ArgOps for a given \p VF.
-  static InstructionCost
-  computeScalarCallCost(Function *CalledFn, Type *ResultTy,
-                        ArrayRef<const VPValue *> ArgOps, bool IsSingleScalar,
-                        ElementCount VF, VPCostContext &Ctx);
+  static InstructionCost computeCallCost(Function *CalledFn, Type *ResultTy,
+                                         ArrayRef<const VPValue *> ArgOps,
+                                         bool IsSingleScalar, ElementCount VF,
+                                         VPCostContext &Ctx);
 
   bool isSingleScalar() const { return IsSingleScalar; }
 
