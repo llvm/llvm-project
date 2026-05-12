@@ -97,7 +97,7 @@ const DataLayout &Instruction::getDataLayout() const {
 }
 
 void Instruction::setParent(BasicBlock *P) {
-  if (!P && getParent() && getParent()->getParent())
+  if (getParent() && getParent()->getParent() != P)
     getParent()->getParent()->notifyInstructionRemoved(this);
   using Base =
       ilist_node_with_parent<Instruction, BasicBlock, ilist_iterator_bits<true>,
