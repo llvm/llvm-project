@@ -32,9 +32,14 @@ template<> void f<int>() {}
 template <typename>
 struct A {
   void f() = delete;
+
+  template <typename>
+  void g() = delete;
 };
 
 template<> void A<int>::f() {}
+
+template<> template<> void A<int>::g<int>() {}
 
 struct B {
   template <typename>
