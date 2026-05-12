@@ -624,8 +624,6 @@ void GCNRPTracker::reset(const MachineInstr &MI,
   // Always clear PhysLiveRegs even when TrackPhysRegs is false, to avoid
   // stale data if physical tracking was previously enabled.
   PhysLiveRegs.clear();
-  if (TrackPhysRegs)
-    PhysLiveRegs.init(*SRI);
 }
 
 void GCNRPTracker::reset(const MachineRegisterInfo &MRInfo,
@@ -640,8 +638,6 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRInfo,
   // Always clear PhysLiveRegs even when TrackPhysRegs is false, to avoid
   // stale data if physical tracking was previously enabled.
   PhysLiveRegs.clear();
-  if (TrackPhysRegs)
-    PhysLiveRegs.init(*SRI);
 }
 
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp

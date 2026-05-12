@@ -363,10 +363,11 @@ protected:
     LiveRegUnits Units;
     SmallDenseSet<MCRegister, 16> Regs;
 
-    void init(const TargetRegisterInfo &TRI) {
+    PhysicalRegLiveness() = delete;
+    explicit PhysicalRegLiveness(const TargetRegisterInfo &TRI) {
       Units.init(TRI);
-      Regs.clear();
     }
+
     void clear() {
       Units.clear();
       Regs.clear();
@@ -397,6 +398,8 @@ protected:
         Units.addReg(R);
     }
   };
+  mutable const MachineRegisterInfo *MRI = nullptr;
+  const SIRegisterInfo *SRI = nullptr;
   PhysicalRegLiveness PhysLiveRegs;
 
   GCNRegPressure CurPressure, MaxPressure;
@@ -406,26 +409,21 @@ protected:
   bool TrackPhysRegs = false;
 
   const MachineInstr *LastTrackedMI = nullptr;
-  mutable const MachineRegisterInfo *MRI = nullptr;
-  const SIRegisterInfo *SRI = nullptr;
 
   GCNRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &MRI)
       : LIS(LIS), MRI(&MRI),
-        SRI(static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo())) {
+        SRI(static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo())),
+        PhysLiveRegs(*SRI) {
     setPhysRegTracking();
-    if (TrackPhysRegs)
-      PhysLiveRegs.init(*SRI);
   }
 
-  // Copy constructor - PhysLiveRegs.Units must be initialized then copied.
   GCNRPTracker(const GCNRPTracker &Other)
       : LIS(Other.LIS), VirtLiveRegs(Other.VirtLiveRegs),
+        MRI(Other.MRI), SRI(Other.SRI), PhysLiveRegs(*SRI),
         CurPressure(Other.CurPressure), MaxPressure(Other.MaxPressure),
-        TrackPhysRegs(Other.TrackPhysRegs), LastTrackedMI(Other.LastTrackedMI),
-        MRI(Other.MRI), SRI(Other.SRI) {
+        TrackPhysRegs(Other.TrackPhysRegs),
+        LastTrackedMI(Other.LastTrackedMI) {
     if (TrackPhysRegs) {
-      assert(SRI && "SRI not initialized");
-      PhysLiveRegs.init(*SRI);
       PhysLiveRegs.Units.addUnits(Other.PhysLiveRegs.getBitVector());
       PhysLiveRegs.Regs = Other.PhysLiveRegs.Regs;
     }
