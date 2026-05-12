@@ -85,6 +85,11 @@ LLVM_ABI bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
 LLVM_ABI Value *getFreedOperand(const CallBase *CB,
                                 const TargetLibraryInfo *TLI);
 
+/// If this if a call to a free function, return the freed operand number, or
+/// -1.
+LLVM_ABI int getFreedOperandNo(const CallBase *CB,
+                               const TargetLibraryInfo *TLI);
+
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
 //
@@ -130,6 +135,43 @@ LLVM_ABI Constant *getInitialValueOfAllocation(const Value *V,
 /// of functions.
 LLVM_ABI std::optional<StringRef>
 getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI);
+
+/// Description of an allocation call. Note that some elements might be
+/// null/negative.
+struct AllocationCallInfo {
+  /// The name of the allocation family, e.g., malloc.
+  std::optional<StringRef> Family;
+  /// The known initial value, usually 0, UndefValue, or unknown (=nullptr).
+  Constant *InitialValue = nullptr;
+  /// The total size is the product of the SizeLHS and SizeRHS argument values,
+  /// if both are non-negative, otherwise it is simply the argument with a
+  /// non-negative value.
+  int SizeLHSArgNo = -1, SizeRHSArgNo = -1;
+  /// The requested alignment is encoded in this argument.
+  int AlignmentArgNo = -1;
+};
+
+/// Return all known information about the allocation call \p CB.
+LLVM_ABI std::optional<AllocationCallInfo>
+getAllocationCallInfo(const CallBase *CB, const TargetLibraryInfo *TLI,
+                      Type *InitialValueTy);
+
+/// Description of an allocation call. Note that some elements might be
+/// null/negative.
+struct DeallocationCallInfo {
+  /// The name of the allocation family, e.g., malloc.
+  std::optional<StringRef> Family;
+  /// The freed operand is passed in this argument.
+  int FreedOperandArgNo = -1;
+  /// The total size is encoded in this argument.
+  int SizeArgNo = -1;
+  /// The requested alignment is encoded in this argument.
+  int AlignmentArgNo = -1;
+};
+
+/// Return all known information about the dellocation call \p CB.
+LLVM_ABI std::optional<DeallocationCallInfo>
+getDeallocationCallInfo(const CallBase *CB, const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
