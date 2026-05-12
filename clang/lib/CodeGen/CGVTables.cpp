@@ -20,6 +20,8 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
@@ -811,13 +813,12 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
         return builder.add(
             llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
       }
-      // On device, an implicit __host__ __device__ virtual destructor of an
-      // explicit class template instantiation should fill its vtable slot
-      // only if device code has actually referenced the destructor. Otherwise
-      // emitting a real pointer would force body emission whose host-only
-      // callees (e.g. through libstdc++ destructor chains) can become
-      // unresolved external references at link time. The host-side vtable
-      // still gets the real pointer.
+      // For an implicit H+D virtual dtor of an explicit template
+      // instantiation, force-emitting the dtor body on device can pull
+      // host-only callees (e.g. via libstdc++ destructor chains). Skip
+      // unless device code has already referenced the dtor or any ctor
+      // of the class (a ctor implies an instance, hence possible
+      // polymorphic delete through this vtable).
       if (CGM.getLangOpts().CUDAIsDevice) {
         if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(MD)) {
           const auto *HAttr = Dtor->getAttr<CUDAHostAttr>();
@@ -831,12 +832,51 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
                            TSK_ExplicitInstantiationDeclaration ||
                        Spec->getTemplateSpecializationKind() ==
                            TSK_ExplicitInstantiationDefinition);
-          if (IsImplicitHD && IsExplicitInst &&
-              !CGM.GetGlobalValue(CGM.getMangledName(GD))) {
+          bool ClassUsedOnDevice =
+              CGM.GetGlobalValue(CGM.getMangledName(GD));
+          if (IsImplicitHD && IsExplicitInst && !ClassUsedOnDevice) {
+            for (const auto *Ctor : Spec->ctors()) {
+              if (CGM.GetGlobalValue(CGM.getMangledName(
+                      GlobalDecl(Ctor, Ctor_Complete))) ||
+                  CGM.GetGlobalValue(CGM.getMangledName(
+                      GlobalDecl(Ctor, Ctor_Base)))) {
+                ClassUsedOnDevice = true;
+                break;
+              }
+            }
+          }
+          if (IsImplicitHD && IsExplicitInst && !ClassUsedOnDevice) {
             if (IsThunk)
               nextVTableThunkIndex++;
-            return builder.add(
-                llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
+            // Emit a per-dtor trap stub instead of NULL so that, if the
+            // heuristic is wrong, the crash backtrace names the offending
+            // destructor.
+            SmallString<128> StubName(CGM.getLangOpts().HIP
+                                          ? "__clang_hip_unreachable_dtor."
+                                          : "__clang_cuda_unreachable_dtor.");
+            StubName += CGM.getMangledName(GD);
+            llvm::Module &M = CGM.getModule();
+            llvm::Function *Stub = M.getFunction(StubName);
+            if (!Stub) {
+              llvm::FunctionType *FT = llvm::FunctionType::get(
+                  CGM.VoidTy, {CGM.GlobalsInt8PtrTy}, /*isVarArg=*/false);
+              Stub = llvm::Function::Create(
+                  FT, llvm::GlobalValue::InternalLinkage, StubName, &M);
+              Stub->setDoesNotReturn();
+              Stub->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+              llvm::BasicBlock *BB = llvm::BasicBlock::Create(
+                  CGM.getLLVMContext(), "entry", Stub);
+              llvm::IRBuilder<> StubBuilder(BB);
+              StubBuilder.CreateIntrinsic(llvm::Intrinsic::trap, {});
+              StubBuilder.CreateUnreachable();
+            }
+            llvm::Constant *StubPtr = Stub;
+            unsigned FnAS = StubPtr->getType()->getPointerAddressSpace();
+            unsigned GVAS = CGM.GlobalsInt8PtrTy->getPointerAddressSpace();
+            if (FnAS != GVAS)
+              StubPtr = llvm::ConstantExpr::getAddrSpaceCast(
+                  StubPtr, CGM.GlobalsInt8PtrTy);
+            return builder.add(StubPtr);
           }
         }
       }
