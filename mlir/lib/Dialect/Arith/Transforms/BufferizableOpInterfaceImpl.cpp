@@ -163,10 +163,11 @@ struct SelectOpInterface
 
     // The "true" and the "false" operands must have the same type. If the
     // buffers have different types, they differ only in their layout map. Cast
-    // both of them to the most dynamic MemRef type.
+    // both of them to the reconciled type.
     if (trueBuffer.getType() != falseBuffer.getType()) {
-      auto targetType = bufferization::detail::asMemRefType(
-          bufferization::getBufferType(selectOp.getResult(), options, state));
+      auto targetType = options.reconcileBufferTypeMismatchFn(
+          selectOp, cast<BufferLikeType>(trueBuffer.getType()),
+          cast<BufferLikeType>(falseBuffer.getType()), options);
       if (failed(targetType))
         return failure();
       if (trueBuffer.getType() != *targetType)
@@ -198,16 +199,10 @@ struct SelectOpInterface
       return failure();
     if (*trueType == *falseType)
       return cast<BufferLikeType>(*trueType);
-    if (trueType->getMemorySpace() != falseType->getMemorySpace())
-      return op->emitError("inconsistent memory space on true/false operands");
 
-    // If the buffers have different types, they differ only in their layout
-    // map.
-    auto memrefType = llvm::cast<MemRefType>(*trueType);
-    return cast<BufferLikeType>(getMemRefTypeWithFullyDynamicLayout(
-        RankedTensorType::get(memrefType.getShape(),
-                              memrefType.getElementType()),
-        memrefType.getMemorySpace()));
+    return options.reconcileBufferTypeMismatchFn(
+        op, cast<BufferLikeType>(*trueType), cast<BufferLikeType>(*falseType),
+        options);
   }
 };
 

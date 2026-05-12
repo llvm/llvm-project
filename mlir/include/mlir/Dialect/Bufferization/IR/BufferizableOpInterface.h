@@ -273,6 +273,14 @@ struct BufferizationOptions {
   using DefaultMemorySpaceFn =
       std::function<std::optional<Attribute>(TensorLikeType t)>;
 
+  /// Resolve a mismatch between buffer types that were independently inferred
+  /// for the same bufferized value. Returns `failure()` to signal bufferization
+  /// failure; returns a buffer-like type when reconciliation suceeded. By
+  /// default, resolves into a memref with a fully dynamic layout.
+  using ReconcileBufferTypeMismatchFn = std::function<FailureOr<BufferLikeType>(
+      Operation *, BufferLikeType x, BufferLikeType y,
+      const BufferizationOptions &)>;
+
   BufferizationOptions();
 
   /// Try to cast the given op to BufferizableOpInterface if the op is allow
@@ -363,6 +371,13 @@ struct BufferizationOptions {
   // failure to determine memory space for a tensor type).
   DefaultMemorySpaceFn defaultMemorySpaceFn =
       [](TensorLikeType t) -> std::optional<Attribute> { return Attribute(); };
+
+  /// Hook to reconcile two buffer types that were independently inferred for
+  /// the same bufferized value (e.g. init_arg vs. yielded value in `scf.for`,
+  /// branches of `scf.if`, cases of `scf.index_switch`). The default keeps the
+  /// framework behavior (promote to fully-dynamic layout on layout mismatch,
+  /// fail on memory-space mismatch).
+  ReconcileBufferTypeMismatchFn reconcileBufferTypeMismatchFn = nullptr;
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.

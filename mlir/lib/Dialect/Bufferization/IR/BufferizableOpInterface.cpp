@@ -368,12 +368,42 @@ defaultUnknownTypeConverter(TensorLikeType tensorType, Attribute memorySpace,
       cast<TensorType>(tensorType), memorySpace));
 }
 
+/// Default reconcile hook: memory space mismatch is an error, layout mismatch
+/// is resolved by promoting to fully dynamic.
+FailureOr<BufferLikeType>
+defaultReconcileBufferTypeMismatch(Operation *op, BufferLikeType x,
+                                   BufferLikeType y,
+                                   const BufferizationOptions &) {
+  const auto xMemRef = cast<BaseMemRefType>(x);
+  const auto yMemRef = cast<BaseMemRefType>(y);
+
+  if (xMemRef.getMemorySpace() != yMemRef.getMemorySpace())
+    return op->emitError(
+        "inconsistent memory spaces in buffers provided for reconciliation");
+
+  if (isa<UnrankedMemRefType>(xMemRef)) {
+    // unranked memrefs have no layout.
+    return x;
+  }
+
+  const auto xRankedMemref = cast<MemRefType>(xMemRef);
+  int64_t dynamicOffset = ShapedType::kDynamic;
+  SmallVector<int64_t> dynamicStrides(xRankedMemref.getRank(),
+                                      ShapedType::kDynamic);
+  auto stridedLayout = StridedLayoutAttr::get(xRankedMemref.getContext(),
+                                              dynamicOffset, dynamicStrides);
+  return cast<BufferLikeType>(
+      MemRefType::get(xRankedMemref.getShape(), xRankedMemref.getElementType(),
+                      stridedLayout, xRankedMemref.getMemorySpace()));
+}
+
 } // namespace
 
 // Default constructor for BufferizationOptions.
 BufferizationOptions::BufferizationOptions()
     : functionArgTypeConverterFn(defaultFunctionArgTypeConverter),
-      unknownTypeConverterFn(defaultUnknownTypeConverter) {}
+      unknownTypeConverterFn(defaultUnknownTypeConverter),
+      reconcileBufferTypeMismatchFn(defaultReconcileBufferTypeMismatch) {}
 
 bool BufferizationOptions::isOpAllowed(Operation *op) const {
   // Special case: If function boundary bufferization is deactivated, do not

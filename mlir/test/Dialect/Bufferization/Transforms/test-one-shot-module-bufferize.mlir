@@ -1,8 +1,10 @@
 // RUN: mlir-opt %s -test-one-shot-module-bufferize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-one-shot-module-bufferize="infer-function-result-layout=0" -split-input-file | FileCheck %s --check-prefix=PRESERVE-SIGNATURE
 
 #enc1 = #test.tensor_encoding<"hello">
 #enc2 = #test.tensor_encoding<"not hello">
 
+// CHECK-LABEL: @BufferizeEncodingThroughFunctionBoundaryAndCustomOps
 module @BufferizeEncodingThroughFunctionBoundaryAndCustomOps {
   // CHECK: func @inner_func(
   // CHECK-SAME:  %[[arg0:.*]]: memref<?xf32, #test.memref_layout<"hello">>)
@@ -272,6 +274,7 @@ func.func @scf_while_inplace(
 
 #enc1 = #test.tensor_encoding<"custom">
 
+// CHECK-LABEL: @BufferizeEncodingForCustomOpsInsideScf
 module @BufferizeEncodingForCustomOpsInsideScf {
   // CHECK: func.func @custom_encoding_inside_scf(
   // CHECK-SAME:  %[[arg:.*]]: memref<42xf64, #test.memref_layout<"custom">>,
@@ -295,4 +298,293 @@ module @BufferizeEncodingForCustomOpsInsideScf {
     // CHECK: return %[[loop]]
     return %loop : tensor<42xf64, #enc1>
   }
+}
+
+// -----
+
+#layout1 = #test.memref_layout<"layout_a">
+
+module @BufferizeLayoutForFunction {
+  // CHECK: func.func @layout_for_func
+  // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+  func.func @layout_for_func() -> tensor<10xf32> {
+    // CHECK: %[[memref:.*]] = "test.create_memref_op"
+    // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_a">>
+    // CHECK: return %[[memref]]
+    %memref = "test.tensor_with_future_layout"() {layout = #layout1}
+      : () -> tensor<10xf32>
+    return %memref : tensor<10xf32>
+  }
+
+  // PRESERVE-SIGNATURE: func.func @layout_for_func
+  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
+  // PRESERVE-SIGNATURE: %[[memref:.*]] = "test.create_memref_op"
+  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+  // PRESERVE-SIGNATURE: %[[cast:.*]] = memref.cast %[[memref]]
+  // PRESERVE-SIGNATURE-SAME: to memref<10xf32>
+  // PRESERVE-SIGNATURE: return %[[cast]]
+}
+
+// -----
+
+#layout1 = #test.memref_layout<"layout_a">
+#layout2 = #test.memref_layout<"layout_b">
+
+// CHECK-LABEL: @BufferizeLayoutMismatchInsideScfIf
+module @BufferizeLayoutMismatchInsideScfIf {
+  // CHECK: func.func @mismatch_in_if
+  // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+  func.func @mismatch_in_if(%cond: i1) -> tensor<10xf32> {
+    // CHECK: %[[ret:.*]] = scf.if
+    // CHECK-SAME: -> (memref<10xf32, #test.memref_layout<"layout_a">>)
+    %ret = scf.if %cond -> tensor<10xf32> {
+      // CHECK: %[[one:.*]] = "test.create_memref_op"
+      // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+      %one = "test.tensor_with_future_layout"() {layout = #layout1}
+        : () -> tensor<10xf32>
+      // CHECK: scf.yield %[[one]]
+      scf.yield %one : tensor<10xf32>
+    } else {
+      // CHECK: %[[another:.*]] = "test.create_memref_op"
+      // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_b">>
+      // CHECK: %[[cast:.*]] = memref.cast %[[another]]
+      // CHECK-SAME: to memref<10xf32, #test.memref_layout<"layout_a">>
+      %another = "test.tensor_with_future_layout"() {layout = #layout2}
+        : () -> tensor<10xf32>
+      // CHECK: scf.yield %[[cast]]
+      scf.yield %another : tensor<10xf32>
+    }
+
+    // CHECK: return %[[ret]]
+    return %ret : tensor<10xf32>
+  }
+
+  // PRESERVE-SIGNATURE: func.func @mismatch_in_if
+  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
+}
+
+// -----
+
+#layout1 = #test.memref_layout<"layout_a">
+#layout2 = #test.memref_layout<"layout_b">
+#layout3 = #test.memref_layout<"layout_c">
+
+// CHECK-LABEL: @BufferizeLayoutMismatchInsideScfSwitch
+module @BufferizeLayoutMismatchInsideScfSwitch {
+  // CHECK: func.func @mismatch_in_switch
+  // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_a">>
+  func.func @mismatch_in_switch(%idx: index) -> tensor<10xf32> {
+    // CHECK: %[[ret:.*]] = scf.index_switch
+    // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+    %ret = scf.index_switch %idx -> tensor<10xf32>
+    case 0 {
+      // CHECK: %[[one:.*]] = "test.create_memref_op"
+      // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+      %one = "test.tensor_with_future_layout"() {layout = #layout1}
+        : () -> tensor<10xf32>
+      // CHECK: scf.yield %[[one]]
+      scf.yield %one : tensor<10xf32>
+    }
+    case 1 {
+      // CHECK: %[[another:.*]] = "test.create_memref_op"
+      // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_b">>
+      // CHECK: %[[cast:.*]] = memref.cast %[[another]]
+      // CHECK-SAME: to memref<10xf32, #test.memref_layout<"layout_a">>
+      %another = "test.tensor_with_future_layout"() {layout = #layout2}
+        : () -> tensor<10xf32>
+      // CHECK: scf.yield %[[cast]]
+      scf.yield %another : tensor<10xf32>
+    }
+    default {
+      // CHECK: %[[yet_another:.*]] = "test.create_memref_op"
+      // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_c">>
+      // CHECK: %[[cast:.*]] = memref.cast %[[yet_another]]
+      // CHECK-SAME: to memref<10xf32, #test.memref_layout<"layout_a">>
+      %yet_another = "test.tensor_with_future_layout"() {layout = #layout3}
+        : () -> tensor<10xf32>
+      // CHECK: scf.yield %[[cast]]
+      scf.yield %yet_another : tensor<10xf32>
+    }
+
+    // CHECK: return %[[ret]]
+    return %ret : tensor<10xf32>
+  }
+
+  // PRESERVE-SIGNATURE: func.func @mismatch_in_switch
+  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
+}
+
+// -----
+
+#layout1 = #test.memref_layout<"layout_a">
+#layout2 = #test.memref_layout<"layout_b">
+
+// CHECK-LABEL: @BufferizeLayoutMismatchInsideScfFor
+module @BufferizeLayoutMismatchInsideScfFor {
+  // CHECK: func.func @mismatch_in_for
+  // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_a">>
+  func.func @mismatch_in_for(
+      %lb: index, %ub: index, %step: index)
+      -> tensor<10xf32> {
+    // CHECK: %[[init:.*]] = "test.create_memref_op"
+    // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+    %init = "test.tensor_with_future_layout"() {layout = #layout1}
+      : () -> tensor<10xf32>
+
+    // CHECK: %[[loop:.+]] = scf.for
+    // CHECK-SAME: iter_args(%[[iter:.*]] = %[[init]])
+    // CHECK-SAME: -> (memref<10xf32, #test.memref_layout<"layout_a">>)
+    %loop = scf.for %i = %lb to %ub step %step
+        iter_args(%iter = %init) -> (tensor<10xf32>) {
+      // CHECK: %[[conflict:.*]] = "test.dummy_memref_op"(%[[iter]])
+      // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_b">>
+      // CHECK: %[[cast:.*]] = memref.cast %[[conflict]]
+      // CHECK-SAME: to memref<10xf32, #test.memref_layout<"layout_a">>
+      %conflict = "test.force_new_layout"(%iter) {layout = #layout2}
+        : (tensor<10xf32>) -> tensor<10xf32>
+      // CHECK: scf.yield %[[cast]]
+      scf.yield %conflict : tensor<10xf32>
+    }
+
+    // CHECK: return %[[loop]]
+    return %loop : tensor<10xf32>
+  }
+
+  // PRESERVE-SIGNATURE: func.func @mismatch_in_for
+  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
+}
+
+// -----
+
+#layout1 = #test.memref_layout<"layout_a">
+#layout2 = #test.memref_layout<"layout_b">
+
+// Test that custom layout can co-exist in principle within an "end-to-end"
+// SCF example (`for { extract slice -> custom op -> insert slice }`) without
+// bufferization failing completely due to a layout mismatch. The fact that the
+// produced IR itself is rather dumb (e.g. memref.subview drops user-specified
+// layout) is out of scope for now.
+
+// CHECK-LABEL: @BufferizeLayoutMismatchInsideScfForWithSubviews
+module @BufferizeLayoutMismatchInsideScfForWithSubviews {
+  // CHECK: func.func @mismatch_in_for
+  // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_a">>
+  func.func @mismatch_in_for(
+      %lb: index, %ub: index, %step: index)
+      -> tensor<10xf32> {
+    %c0 = arith.constant 0 : index
+
+    // CHECK: %[[init:.*]] = "test.create_memref_op"
+    // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+    %init = "test.tensor_with_future_layout"() {layout = #layout1}
+      : () -> tensor<10xf32>
+
+    // CHECK: %[[loop:.+]] = scf.for
+    // CHECK-SAME: iter_args(%[[inout:.*]] = %[[init]])
+    // CHECK-SAME: -> (memref<10xf32, #test.memref_layout<"layout_a">>)
+    %loop = scf.for %i = %lb to %ub step %step
+        iter_args(%inout = %init) -> (tensor<10xf32>) {
+      // CHECK: %[[in:.*]] = memref.subview %[[inout]]
+      // CHECK-SAME: to memref<5xf32, strided<[1], offset: ?>>
+      %in = tensor.extract_slice %inout[%c0] [5] [1]
+        : tensor<10xf32> to tensor<5xf32>
+
+      // CHECK: %[[conflict:.*]] = "test.dummy_memref_op"(%[[in]])
+      // CHECK-SAME: -> memref<5xf32, #test.memref_layout<"layout_b">>
+      %conflict = "test.force_new_layout"(%in) {layout = #layout2}
+        : (tensor<5xf32>) -> tensor<5xf32>
+
+      // CHECK: %[[out:.*]] = memref.subview %[[inout]]
+      // CHECK-SAME: to memref<5xf32, strided<[1], offset: ?>>
+      // CHECK: memref.copy %[[conflict]], %[[out]]
+      %out = tensor.insert_slice %conflict into %inout[%c0] [5] [1]
+        : tensor<5xf32> into tensor<10xf32>
+
+      // CHECK: scf.yield %[[inout]]
+      scf.yield %out : tensor<10xf32>
+    }
+
+    // CHECK: return %[[loop]]
+    return %loop : tensor<10xf32>
+  }
+
+  // PRESERVE-SIGNATURE: func.func @mismatch_in_for
+  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
+}
+
+// -----
+
+#layout1 = #test.memref_layout<"layout_a">
+#layout2 = #test.memref_layout<"layout_b">
+
+// CHECK-LABEL: @BufferizeLayoutMismatchInScfExecuteRegion
+module @BufferizeLayoutMismatchInScfExecuteRegion {
+  // CHECK: func.func @mismatch_in_scf_execute_region
+  // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+  func.func @mismatch_in_scf_execute_region(%cond: i1) -> tensor<10xf32> {
+    // CHECK: %[[out:.*]] = scf.execute_region
+    // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+    %out = scf.execute_region -> tensor<10xf32> {
+      cf.cond_br %cond, ^bb1, ^bb2
+
+      ^bb1:
+        // CHECK: %[[one:.*]] = "test.create_memref_op"
+        // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+        %one = "test.tensor_with_future_layout"() {layout = #layout1}
+          : () -> tensor<10xf32>
+        // CHECK: cf.br ^bb3(%[[one]]
+        cf.br ^bb3(%one : tensor<10xf32>)
+
+      ^bb2:
+        // CHECK: %[[another:.*]] = "test.create_memref_op"
+        // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_b">>
+        // CHECK: %[[cast:.*]] = memref.cast %[[another]]
+        // CHECK-SAME: to memref<10xf32, #test.memref_layout<"layout_a">>
+        %another = "test.tensor_with_future_layout"() {layout = #layout2}
+          : () -> tensor<10xf32>
+        // CHECK: cf.br ^bb3(%[[cast]]
+        cf.br ^bb3(%another : tensor<10xf32>)
+
+      ^bb3(%res: tensor<10xf32>):
+        // CHECK: scf.yield {{%.*}} : memref<10xf32, #test.memref_layout<"layout_a">>
+        scf.yield %res : tensor<10xf32>
+    }
+    // CHECK: return %[[out]]
+    return %out : tensor<10xf32>
+  }
+
+  // PRESERVE-SIGNATURE: func.func @mismatch_in_scf_execute_region
+  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
+}
+
+// -----
+
+#layout1 = #test.memref_layout<"layout_a">
+#layout2 = #test.memref_layout<"layout_b">
+
+// CHECK-LABEL: @BufferizeLayoutMismatchInArithSelect
+module @BufferizeLayoutMismatchInArithSelect {
+  // CHECK: func.func @mismatch_in_select(%[[cond:.*]]: i1)
+  // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_a">>
+  func.func @mismatch_in_select(%cond: i1) -> tensor<10xf32> {
+    // CHECK: %[[memref1:.*]] = "test.create_memref_op"
+    // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+    %tensor1 = "test.tensor_with_future_layout"() {layout = #layout1}
+      : () -> tensor<10xf32>
+    // CHECK: %[[memref2:.*]] = "test.create_memref_op"
+    // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_b">>
+    %tensor2 = "test.tensor_with_future_layout"() {layout = #layout2}
+      : () -> tensor<10xf32>
+
+    // CHECK: %[[cast:.*]] = memref.cast %[[memref2]]
+    // CHECK-SAME: to memref<10xf32, #test.memref_layout<"layout_a">>
+
+    // CHECK: %[[select:.*]] = arith.select %[[cond]], %[[memref1]], %[[cast]]
+    %select = arith.select %cond, %tensor1, %tensor2 : i1, tensor<10xf32>
+    // CHECK: return %[[select]]
+    return %select : tensor<10xf32>
+  }
+
+  // PRESERVE-SIGNATURE: func.func @mismatch_in_select
+  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
 }

@@ -315,20 +315,8 @@ struct IfOpInterface
     if (thenBufferType == elseBufferType)
       return cast<BufferLikeType>(thenBufferType);
 
-    // Memory space mismatch.
-    auto thenBaseMemRefType = dyn_cast<BaseMemRefType>(thenBufferType);
-    auto elseBaseMemRefType = dyn_cast<BaseMemRefType>(elseBufferType);
-    if (thenBaseMemRefType && elseBaseMemRefType &&
-        thenBaseMemRefType.getMemorySpace() !=
-            elseBaseMemRefType.getMemorySpace())
-      return op->emitError("inconsistent memory space on then/else branches");
-
-    // TODO: Properly support with options, for now it is hardcoded MemRef type
-    // based approach Layout maps are different: Promote to fully dynamic layout
-    // map.
-    return cast<BufferLikeType>(getMemRefTypeWithFullyDynamicLayout(
-        cast<TensorType>(opResult.getType()),
-        thenBaseMemRefType.getMemorySpace()));
+    return options.reconcileBufferTypeMismatchFn(op, thenBufferType,
+                                                 elseBufferType, options);
   }
 };
 
@@ -407,23 +395,20 @@ struct IndexSwitchOpInterface
     assert(value.getDefiningOp() == op && "invalid value");
     int64_t resultNum = cast<OpResult>(value).getResultNumber();
 
-    // TODO: Properly support with options, for now it is hardcoded MemRef type
-    // based approach Helper function to get buffer type of a case.
-    auto getYieldedBufferType = [&](Block &b) -> FailureOr<BaseMemRefType> {
+    auto getYieldedBufferType = [&](Block &b) -> FailureOr<BufferLikeType> {
       auto yieldOp = cast<scf::YieldOp>(b.getTerminator());
       Value yieldedValue = yieldOp->getOperand(resultNum);
-      if (auto bufferType = dyn_cast<BaseMemRefType>(yieldedValue.getType()))
+      if (auto bufferType = dyn_cast<BufferLikeType>(yieldedValue.getType()))
         return bufferType;
-      auto maybeBufferType = bufferization::getBufferType(
-          yieldedValue, options, state, invocationStack);
-      return bufferization::detail::asMemRefType(maybeBufferType);
+      return bufferization::getBufferType(yieldedValue, options, state,
+                                          invocationStack);
     };
 
     // Compute buffer type of the default case.
     auto maybeBufferType = getYieldedBufferType(switchOp.getDefaultBlock());
     if (failed(maybeBufferType))
       return failure();
-    BaseMemRefType bufferType = *maybeBufferType;
+    BufferLikeType bufferType = *maybeBufferType;
 
     // Compute buffer types of all other cases.
     for (int64_t i = 0, numCases = switchOp.getNumCases(); i < numCases; ++i) {
@@ -435,15 +420,11 @@ struct IndexSwitchOpInterface
       if (bufferType == *yieldedBufferType)
         continue;
 
-      // Memory space mismatch.
-      if (bufferType.getMemorySpace() != yieldedBufferType->getMemorySpace())
-        return op->emitError("inconsistent memory space on switch cases");
-
-      // TODO: Properly support with options, for now it is hardcoded MemRef
-      // type based approach Layout maps are different: Promote to fully dynamic
-      // layout map.
-      bufferType = getMemRefTypeWithFullyDynamicLayout(
-          cast<TensorType>(value.getType()), bufferType.getMemorySpace());
+      auto reconciled = options.reconcileBufferTypeMismatchFn(
+          op, bufferType, *yieldedBufferType, options);
+      if (failed(reconciled))
+        return failure();
+      bufferType = *reconciled;
     }
 
     return cast<BufferLikeType>(bufferType);
@@ -576,27 +557,24 @@ static FailureOr<BufferLikeType> computeLoopRegionIterArgBufferType(
     return yieldedValueBufferType;
 
   // If there is a mismatch between the yielded buffer type and the init_arg
-  // buffer type, the buffer type must be promoted to a fully dynamic layout
-  // map.
-  auto yieldedBufferType = cast<BaseMemRefType>(yieldedValueBufferType);
-  auto iterTensorType = cast<TensorType>(iterArg.getType());
-  auto initBufferType = llvm::cast<BaseMemRefType>(*initArgBufferType);
-  if (initBufferType.getMemorySpace() != yieldedBufferType.getMemorySpace())
-    return loopOp->emitOpError(
-        "init_arg and yielded value bufferize to inconsistent memory spaces");
+  // buffer type, the buffer type must be reconciled.
 #ifndef NDEBUG
-  if (auto yieldedRankedBufferType = dyn_cast<MemRefType>(yieldedBufferType)) {
-    assert(
-        llvm::all_equal({yieldedRankedBufferType.getShape(),
-                         cast<MemRefType>(initBufferType).getShape(),
-                         cast<RankedTensorType>(iterTensorType).getShape()}) &&
-        "expected same shape");
+  if (auto iterTensorType = dyn_cast<TensorType>(iterArg.getType())) {
+    auto yieldedBufferType = cast<BaseMemRefType>(yieldedValueBufferType);
+    auto initBufferType = cast<BaseMemRefType>(*initArgBufferType);
+    if (auto yieldedRankedBufferType =
+            dyn_cast<MemRefType>(yieldedBufferType)) {
+      assert(llvm::all_equal(
+                 {yieldedRankedBufferType.getShape(),
+                  cast<MemRefType>(initBufferType).getShape(),
+                  cast<RankedTensorType>(iterTensorType).getShape()}) &&
+             "expected same shape");
+    }
   }
 #endif // NDEBUG
-  // TODO: Properly support with options, for now it is hardcoded MemRef type
-  // based approach
-  return cast<BufferLikeType>(getMemRefTypeWithFullyDynamicLayout(
-      iterTensorType, yieldedBufferType.getMemorySpace()));
+
+  return options.reconcileBufferTypeMismatchFn(loopOp, *initArgBufferType,
+                                               yieldedValueBufferType, options);
 }
 
 /// Return `true` if the given loop may have 0 iterations.

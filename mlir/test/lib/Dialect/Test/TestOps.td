@@ -1009,7 +1009,7 @@ def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
 
 def ReifyShapedTypeUsingReifyResultShapesOp :
     TEST_Op<"reify_shaped_type_using_reify_result_shapes",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -1024,7 +1024,7 @@ def ReifyShapedTypeUsingReifyResultShapesOp :
 
 def ReifyShapedTypeUsingReifyShapeOfResultOp :
     TEST_Op<"reify_shaped_type_using_reify_shape_of_result",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes", "reifyShapeOfResult"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -1040,7 +1040,7 @@ def ReifyShapedTypeUsingReifyShapeOfResultOp :
 
 def ReifyShapedTypeUsingReifyDimOfResultOp :
     TEST_Op<"reify_shaped_type_using_reify_dim_of_result",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes", "reifyShapeOfResult", "reifyDimOfResult"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -4196,6 +4196,104 @@ def TestCreateTensorOp
 def TestCreateMemrefOp : TEST_Op<"create_memref_op"> {
   let arguments = (ins);
   let results = (outs Arg<Bufferization_BufferLikeTypeInterface>:$output);
+}
+
+def TestTensorWithFutureLayoutOp
+    : TEST_Op<"tensor_with_future_layout",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands", "bufferizesToAllocation"]>]> {
+  let description = [{
+    A tensor creation operation that forces a specific `TestMemRefLayoutAttr`
+    layout  to be set during bufferization into a memref. In tensor world, this
+    op does nothing encoding/layout wise. Thus, it allows to create memref
+    layout mismatches that can later be resolved by the bufferization framework
+    while keeping tensor IR valid.
+  }];
+
+  let arguments = (ins TestMemRefLayoutAttr:$layout);
+  let results = (outs AnyRankedTensor:$output);
+  let extraClassDefinition = [{
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryRead(
+        ::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return false;
+    }
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryWrite(
+        ::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return false;
+    }
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToAllocation(
+        mlir::Value) {
+      return true;
+    }
+    ::mlir::bufferization::AliasingValueList
+    test::TestTensorWithFutureLayoutOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestTensorWithFutureLayoutOp::getAliasingOpOperands(::mlir::Value,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+  }];
+}
+
+def TestForceNewLayoutOp
+    : TEST_Op<"force_new_layout",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands"]>]> {
+  let description = [{
+    A tensor operation that forces a specific `TestMemRefLayoutAttr` to be set
+    during bufferization into a memref. In tensor world, this op does nothing
+    encoding/layout wise. Thus, it allows to create memref layout mismatches
+    that can later be resolved by the bufferization framework while keeping
+    tensor IR valid.
+  }];
+
+  let arguments = (ins
+    Arg<AnyRankedTensor>:$input,
+    TestMemRefLayoutAttr:$layout
+  );
+  let results = (outs AnyRankedTensor:$output);
+  let extraClassDefinition = [{
+    bool test::TestForceNewLayoutOp::bufferizesToMemoryRead(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestForceNewLayoutOp::bufferizesToMemoryWrite(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    ::mlir::bufferization::AliasingValueList
+    test::TestForceNewLayoutOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{getOutput(), relation, /*isDefinite=*/true}};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestForceNewLayoutOp::getAliasingOpOperands(::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      if (value != getOutput())
+        return {};
+
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{&getOperation()->getOpOperand(0), relation,
+               /*isDefinite=*/true}};
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
