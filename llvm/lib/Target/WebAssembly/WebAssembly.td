@@ -37,10 +37,6 @@ def FeatureCallIndirectOverlong :
       SubtargetFeature<"call-indirect-overlong", "HasCallIndirectOverlong", "true",
                        "Enable overlong encoding for call_indirect immediates">;
 
-def FeatureLibcallThreadContext :
-      SubtargetFeature<"libcall-thread-context", "HasLibcallThreadContext", "true",
-                       "Enable using library calls for managing thread context">;
-
 def FeatureExceptionHandling :
       SubtargetFeature<"exception-handling", "HasExceptionHandling", "true",
                        "Enable Wasm exception handling">;
