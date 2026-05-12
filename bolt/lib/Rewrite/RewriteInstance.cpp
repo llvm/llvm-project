@@ -2250,10 +2250,10 @@ Error RewriteInstance::readSpecialSections() {
   }
 
   HasTextRelocations =
-      (bool)BC->getUniqueSectionByName(
-          std::string(".rela") + BC->getMainCodeSectionName()) ||
-      (bool)BC->getUniqueSectionByName(
-          std::string(".crel") + BC->getMainCodeSectionName());
+      (bool)BC->getUniqueSectionByName(std::string(".rela") +
+                                       BC->getMainCodeSectionName()) ||
+      (bool)BC->getUniqueSectionByName(std::string(".crel") +
+                                       BC->getMainCodeSectionName());
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
 
