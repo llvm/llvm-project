@@ -16,7 +16,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE double dfmal(long double x, long double y, long double z) {
+LIBC_INLINE LIBC_CONSTEXPR double dfmal(long double x, long double y,
+                                        long double z) {
   return fputil::fma<double>(x, y, z);
 }
 

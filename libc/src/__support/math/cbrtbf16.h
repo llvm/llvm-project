@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE bfloat16 cbrtbf16(bfloat16 x) {
+LIBC_INLINE constexpr bfloat16 cbrtbf16(bfloat16 x) {
   return fputil::cast<bfloat16>(math::cbrtf(static_cast<float>(x)));
 }
 

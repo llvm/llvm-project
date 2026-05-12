@@ -69,7 +69,7 @@ LIBC_INLINE_VAR constexpr double MLOG_2_EXP2_M12_LO = 0x1.b0e2633fe0685p-79;
 // Return expm1(dx) / x ~ 1 + dx / 2 + dx^2 / 6 + dx^3 / 24.
 // For |dx| < 2^-13 + 2^-30:
 //   | output - expm1(dx) / dx | < 2^-51.
-LIBC_INLINE double poly_approx_d(double dx) {
+LIBC_INLINE LIBC_CONSTEXPR double poly_approx_d(double dx) {
   // dx^2
   double dx2 = dx * dx;
   // c0 = 1 + dx / 2
@@ -87,7 +87,7 @@ LIBC_INLINE double poly_approx_d(double dx) {
 // Return exp(dx) ~ 1 + dx + dx^2 / 2 + ... + dx^6 / 720
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-101
-LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
+LIBC_INLINE LIBC_CONSTEXPR DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
   // Taylor polynomial.
   constexpr DoubleDouble COEFFS[] = {
       {0, 0x1p0},                                      // 1
@@ -108,7 +108,7 @@ LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // Return exp(dx) ~ 1 + dx + dx^2 / 2 + ... + dx^7 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
-LIBC_INLINE Float128 poly_approx_f128(const Float128 &dx) {
+LIBC_INLINE LIBC_CONSTEXPR Float128 poly_approx_f128(const Float128 &dx) {
   constexpr Float128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
@@ -129,7 +129,8 @@ LIBC_INLINE Float128 poly_approx_f128(const Float128 &dx) {
 // Compute exp(x) using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-LIBC_INLINE Float128 exp_f128(double x, double kd, int idx1, int idx2) {
+LIBC_INLINE LIBC_CONSTEXPR Float128 exp_f128(double x, double kd, int idx1,
+                                             int idx2) {
   // Recalculate dx:
 
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -162,8 +163,8 @@ LIBC_INLINE Float128 exp_f128(double x, double kd, int idx1, int idx2) {
 }
 
 // Compute exp(x) with double-double precision.
-LIBC_INLINE DoubleDouble exp_double_double(double x, double kd,
-                                           const DoubleDouble &exp_mid) {
+LIBC_INLINE LIBC_CONSTEXPR DoubleDouble
+exp_double_double(double x, double kd, const DoubleDouble &exp_mid) {
   // Recalculate dx:
   //   dx = x - k * 2^-12 * log(2)
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -186,7 +187,7 @@ LIBC_INLINE DoubleDouble exp_double_double(double x, double kd,
 
 // Check for exceptional cases when
 // |x| <= 2^-53 or x < log(2^-1075) or x >= 0x1.6232bdd7abcd3p+9
-LIBC_INLINE double set_exceptional(double x) {
+LIBC_INLINE constexpr double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -234,7 +235,7 @@ LIBC_INLINE double set_exceptional(double x) {
 
 } // namespace exp_internal
 
-LIBC_INLINE double exp(double x) {
+LIBC_INLINE LIBC_CONSTEXPR double exp(double x) {
   using namespace exp_internal;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);

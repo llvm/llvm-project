@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE double dsubl(long double x, long double y) {
+LIBC_INLINE constexpr double dsubl(long double x, long double y) {
   return fputil::generic::sub<double>(x, y);
 }
 

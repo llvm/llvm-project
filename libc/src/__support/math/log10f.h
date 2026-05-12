@@ -61,7 +61,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float log10f(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float log10f(float x) {
   using namespace common_constants_internal;
   constexpr double LOG10_2 = 0x1.34413509f79ffp-2;
   // Lookup table for -log10(r) where r is defined in common_constants.cpp.

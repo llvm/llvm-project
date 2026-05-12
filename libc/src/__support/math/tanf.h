@@ -49,7 +49,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS> TANF_EXCEPTS{{
 
 } // namespace tanf_internal
 
-LIBC_INLINE float tanf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float tanf(float x) {
   using namespace sincosf_utils_internal;
   using namespace tanf_internal;
   using FPBits = typename fputil::FPBits<float>;
@@ -147,7 +147,7 @@ LIBC_INLINE float tanf(float x) {
   // and sincosf.
 
   double xd = static_cast<double>(x);
-  double sin_k, cos_k, sin_y, cosm1_y;
+  double sin_k{}, cos_k{}, sin_y{}, cosm1_y{};
 
   sincosf_eval(xd, x_abs, sin_k, cos_k, sin_y, cosm1_y);
   // tan(x) = sin(x) / cos(x)

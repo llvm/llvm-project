@@ -44,7 +44,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_EXCEPTS>
 
 } // namespace sinf16_internal
 
-LIBC_INLINE float16 sinf16(float16 x) {
+LIBC_INLINE LIBC_CONSTEXPR float16 sinf16(float16 x) {
   using namespace sinf16_internal;
   using namespace sincosf16_internal;
   using FPBits = fputil::FPBits<float16>;
@@ -115,7 +115,7 @@ LIBC_INLINE float16 sinf16(float16 x) {
     return x + FPBits::quiet_nan().get_val();
   }
 
-  float sin_k, cos_k, sin_y, cosm1_y;
+  float sin_k{}, cos_k{}, sin_y{}, cosm1_y{};
   sincosf16_eval(xf, sin_k, cos_k, sin_y, cosm1_y);
 
   if (LIBC_UNLIKELY(sin_y == 0 && sin_k == 0))
