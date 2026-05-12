@@ -521,9 +521,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::BSWAP:                      return "bswap";
   case ISD::CTPOP:                      return "ctpop";
   case ISD::CTTZ:                       return "cttz";
-  case ISD::CTTZ_ZERO_UNDEF:            return "cttz_zero_undef";
+  case ISD::CTTZ_ZERO_POISON:           return "cttz_zero_poison";
   case ISD::CTLZ:                       return "ctlz";
-  case ISD::CTLZ_ZERO_UNDEF:            return "ctlz_zero_undef";
+  case ISD::CTLZ_ZERO_POISON:           return "ctlz_zero_poison";
   case ISD::CTLS:                       return "ctls";
   case ISD::PARITY:                     return "parity";
 
