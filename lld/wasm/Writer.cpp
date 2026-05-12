@@ -1392,8 +1392,8 @@ void Writer::createInitMemoryFunction() {
         }
 
         // When we initialize the TLS segment we also set the TLS base.
-        // This allows the runtime to use this
-        // static copy of the TLS data for the first/main thread.
+        // This allows the runtime to use this static copy of the TLS data 
+        // for the first/main thread.
         if (ctx.arg.sharedMemory && s->isTLS()) {
           if (ctx.isPic) {
             // Cache the result of the addionion in local 0
@@ -1675,14 +1675,7 @@ void Writer::createInitTLSFunction() {
       writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
       writeUleb128(os, 0, "local index");
 
-      if (ctx.arg.libcallThreadContext) {
-        writeU8(os, WASM_OPCODE_CALL, "call");
-        writeUleb128(os, ctx.sym.setTLSBase->getFunctionIndex(),
-                     "function index");
-      } else {
-        writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
-        writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "global index");
-      }
+      writeSetTLSBase(ctx, os);
 
       // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend
       // op.
