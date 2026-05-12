@@ -10,7 +10,7 @@ define void @main() {
     ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %qnan_nonzero_payload = fadd double 1.000000e+00, 0x7FF8000000000001 => double NaN
-; CHECK-NEXT:   %snan = fadd double 1.000000e+00, 0x7FF0000000000001 => double 0xFFF8000000000000
+; CHECK-NEXT:   %qnan_nonzero_payload = fadd double 1.000000e+00, +nan(0x1) => double NaN
+; CHECK-NEXT:   %snan = fadd double 1.000000e+00, +snan(0x1) => double 0xFFF8000000000000
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

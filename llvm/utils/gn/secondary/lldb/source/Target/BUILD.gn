@@ -53,6 +53,7 @@ static_library("Target") {
     "OperatingSystem.cpp",
     "PathMappingList.cpp",
     "Platform.cpp",
+    "Policy.cpp",
     "Process.cpp",
     "ProcessTrace.cpp",
     "Queue.cpp",

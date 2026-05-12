@@ -261,9 +261,29 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
 
   assert(InputFiles.size() && "No inputs to link");
 
+  // Get all SYCL device library files, if any.
+  auto SYCLDeviceLibFiles = getSYCLDeviceLibs(Args);
+  if (!SYCLDeviceLibFiles)
+    return SYCLDeviceLibFiles.takeError();
+
+  // Create a new file to write the linked device file to.
+  auto BitcodeOutput =
+      createTempFile(Args, sys::path::filename(OutputFile), "bc");
+  if (!BitcodeOutput)
+    return BitcodeOutput.takeError();
+
+  if (Verbose || DryRun) {
+    std::string Inputs = llvm::join(InputFiles.begin(), InputFiles.end(), ", ");
+    std::string LibInputs = llvm::join((*SYCLDeviceLibFiles).begin(),
+                                       (*SYCLDeviceLibFiles).end(), ", ");
+    errs() << formatv(
+        "sycl-device-link: inputs: {0} libfiles: {1} output: {2}\n", Inputs,
+        LibInputs, *BitcodeOutput);
+  }
+
+  // Link SYCL device input files.
   auto LinkerOutput = std::make_unique<Module>("sycl-device-link", C);
   Linker L(*LinkerOutput);
-  // Link SYCL device input files.
   for (auto &File : InputFiles) {
     auto ModOrErr = getBitcodeModule(File, C);
     if (!ModOrErr)
@@ -271,11 +291,6 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
     if (L.linkInModule(std::move(*ModOrErr)))
       return createStringError("Could not link IR");
   }
-
-  // Get all SYCL device library files, if any.
-  auto SYCLDeviceLibFiles = getSYCLDeviceLibs(Args);
-  if (!SYCLDeviceLibFiles)
-    return SYCLDeviceLibFiles.takeError();
 
   // Link in SYCL device library files.
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
@@ -294,27 +309,12 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
   if (Args.hasArg(OPT_print_linked_module))
     outs() << *LinkerOutput;
 
-  // Create a new file to write the linked device file to.
-  auto BitcodeOutput =
-      createTempFile(Args, sys::path::filename(OutputFile), "bc");
-  if (!BitcodeOutput)
-    return BitcodeOutput.takeError();
-
   // Write the final output into 'BitcodeOutput' file.
   int FD = -1;
   if (std::error_code EC = sys::fs::openFileForWrite(*BitcodeOutput, FD))
     return errorCodeToError(EC);
   llvm::raw_fd_ostream OS(FD, true);
   WriteBitcodeToFile(*LinkerOutput, OS);
-
-  if (Verbose) {
-    std::string Inputs = llvm::join(InputFiles.begin(), InputFiles.end(), ", ");
-    std::string LibInputs = llvm::join((*SYCLDeviceLibFiles).begin(),
-                                       (*SYCLDeviceLibFiles).end(), ", ");
-    errs() << formatv(
-        "sycl-device-link: inputs: {0} libfiles: {1} output: {2}\n", Inputs,
-        LibInputs, *BitcodeOutput);
-  }
 
   return LinkResult{std::move(LinkerOutput), SmallString<256>(*BitcodeOutput)};
 }
@@ -328,6 +328,10 @@ Expected<LinkResult> linkDeviceCode(ArrayRef<std::string> InputFiles,
 static Error runCodeGen(StringRef File, const ArgList &Args,
                         StringRef OutputFile, LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("Code generation");
+
+  if (Verbose || DryRun)
+    errs() << formatv("LLVM backend: input: {0}, output: {1}\n", File,
+                      OutputFile);
 
   // Parse input module.
   SMDiagnostic Err;
@@ -374,10 +378,6 @@ static Error runCodeGen(StringRef File, const ArgList &Args,
                               CodeGenFileType::ObjectFile))
     return createStringError("Failed to execute LLVM backend");
   CodeGenPasses.run(*M);
-
-  if (Verbose)
-    errs() << formatv("LLVM backend: input: {0}, output: {1}\n", File,
-                      OutputFile);
 
   return Error::success();
 }
