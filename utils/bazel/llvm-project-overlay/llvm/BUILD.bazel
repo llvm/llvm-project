@@ -345,7 +345,10 @@ cc_library(
             "BLAKE3_NO_SSE41",
         ],
     }),
-    features = ["-parse_headers"],
+    features = [
+        "-parse_headers",
+        "-layering_check",
+    ],
     includes = ["include"],
     linkopts = select({
         ":is_windows_clang_mingw": [
@@ -403,6 +406,7 @@ cc_library(
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
         "//third-party:zstd",
+        "//libc:shared_math_headers",
     ],
 )
 

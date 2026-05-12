@@ -2847,6 +2847,29 @@ libc_support_library(
 
 ########################## externally shared targets ###########################
 
+cc_library(
+    name = "shared_math_headers",
+    hdrs = ["shared/math.h"] + glob(
+        [
+            "shared/math/*.h",
+            "src/__support/**/*.h",
+            "src/__support/**/*.inc",
+            "src/__support/**/*.def",
+            "include/**/*.h",
+            "hdr/**/*.h",
+        ],
+        allow_empty = True,
+    ),
+    features = [
+        "-layering_check",
+        "-parse_headers",
+    ],
+    includes = ["."],
+    deps = [
+        ":libcxx_shared_headers",
+    ],
+)
+
 libc_header_library(
     name = "libcxx_shared_headers",
     hdrs = [
