@@ -62,6 +62,7 @@ CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
                                const LegalizerInfo *LI)
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer), VT(VT),
       MDT(MDT), IsPreLegalize(IsPreLegalize), LI(LI),
+      TII(Builder.getMF().getSubtarget().getInstrInfo()),
       RBI(Builder.getMF().getSubtarget().getRegBankInfo()),
       TRI(Builder.getMF().getSubtarget().getRegisterInfo()) {
   (void)this->VT;
@@ -5320,6 +5321,23 @@ bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchConstantFoldUnaryIntOp(MachineInstr &MI,
+                                                 BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  auto Csts = ConstantFoldUnaryIntOp(MI.getOpcode(), MRI.getType(Dst),
+                                     MI.getOperand(1).getReg(), MRI);
+  if (Csts.empty())
+    return false;
+
+  MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+    if (Csts.size() == 1)
+      B.buildConstant(Dst, Csts[0]);
+    else
+      B.buildBuildVectorConstant(Dst, Csts);
+  };
+  return true;
+}
+
 bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
                                             APInt &MatchInfo) const {
   Register Op1 = MI.getOperand(1).getReg();
@@ -6897,9 +6915,13 @@ bool CombinerHelper::matchRepeatedFPDivisor(
   if (!MI.getFlag(MachineInstr::MIFlag::FmArcp))
     return false;
 
+  auto IsOne = [this](Register X) {
+    auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
+    return N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0));
+  };
+
   // Skip if current node is a reciprocal/fneg-reciprocal.
-  auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
-  if (N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0)))
+  if (IsOne(X))
     return false;
 
   // Exit early if the target does not want this transform or if there can't
@@ -6916,7 +6938,8 @@ bool CombinerHelper::matchRepeatedFPDivisor(
     if (&U == &MI || U.getParent() != MI.getParent())
       continue;
     if (U.getOpcode() == TargetOpcode::G_FDIV &&
-        U.getOperand(2).getReg() == Y && U.getOperand(1).getReg() != Y) {
+        U.getOperand(2).getReg() == Y && U.getOperand(1).getReg() != Y &&
+        !IsOne(U.getOperand(1).getReg())) {
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
       if (U.getFlag(MachineInstr::MIFlag::FmArcp)) {
@@ -8620,7 +8643,7 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
 bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
                                BuildFnTy &MatchInfo) const {
   assert((CtlzMI.getOpcode() == TargetOpcode::G_CTLZ ||
-          CtlzMI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) &&
+          CtlzMI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_POISON) &&
          "Expected G_CTLZ variant");
 
   const Register Dst = CtlzMI.getOperand(0).getReg();

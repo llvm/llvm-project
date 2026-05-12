@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fmaximum.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/fmaximum.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, fmaximum, (double x, double y)) {
-  return fputil::fmaximum(x, y);
+  return math::fmaximum(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

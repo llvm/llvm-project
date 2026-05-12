@@ -18,7 +18,7 @@
 ; RUN: obj2yaml %t.bulk-mem64.wasm | FileCheck %s --check-prefixes ACTIVE,ACTIVE64
 
 ;; In -pie mode segments are combined into one active segment.
-; RUN: wasm-ld --experimental-pic --import-memory -pie -no-gc-sections --no-entry %t.atomics.bulk-mem.pic.o -o %t.pic.wasm
+; RUN: wasm-ld --import-memory -pie -no-gc-sections --no-entry %t.atomics.bulk-mem.pic.o -o %t.pic.wasm
 ; RUN: obj2yaml %t.pic.wasm | FileCheck %s --check-prefixes ACTIVE-PIC
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.pic.wasm | FileCheck %s --check-prefixes PIC-NON-SHARED-DIS
 
@@ -33,12 +33,12 @@
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.atomics.bulk-mem64.wasm | FileCheck %s --check-prefixes DIS,NOPIC-DIS -DPTR=i64
 
 ;; Also test in combination with PIC/pie
-; RUN: wasm-ld --experimental-pic -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic.o -o %t.shared.pic.wasm
+; RUN: wasm-ld -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic.o -o %t.shared.pic.wasm
 ; RUN: obj2yaml %t.shared.pic.wasm | FileCheck %s --check-prefixes PASSIVE-PIC,PASSIVE32-PIC
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.shared.pic.wasm | FileCheck %s --check-prefixes DIS,PIC-DIS -DPTR=i32
 
 ;; Also test in combination with PIC/pie + wasm64
-; RUN: wasm-ld -mwasm64 --experimental-pic -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic-mem64.o -o %t.pic-mem64.wasm
+; RUN: wasm-ld -mwasm64 -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic-mem64.o -o %t.pic-mem64.wasm
 ; RUN: obj2yaml %t.pic-mem64.wasm | FileCheck %s --check-prefixes PASSIVE-PIC,PASSIVE64-PIC
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.pic-mem64.wasm | FileCheck %s --check-prefixes DIS,PIC-DIS -DPTR=i64
 

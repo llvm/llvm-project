@@ -158,6 +158,10 @@ public:
 
   virtual Status RemoveBreakpoint(lldb::addr_t addr, bool hardware = false);
 
+  bool HasSoftwareBreakpoint(lldb::addr_t addr) {
+    return m_software_breakpoints.find(addr) != m_software_breakpoints.end();
+  }
+
   // Hardware Breakpoint functions
   virtual const HardwareBreakpointMap &GetHardwareBreakpointMap() const;
 
@@ -419,7 +423,6 @@ public:
 
 protected:
   struct SoftwareBreakpoint {
-    uint32_t ref_count;
     llvm::SmallVector<uint8_t, 4> saved_opcodes;
     llvm::ArrayRef<uint8_t> breakpoint_opcodes;
   };

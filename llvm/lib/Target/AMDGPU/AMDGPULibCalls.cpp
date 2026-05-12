@@ -1084,7 +1084,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
   Value *nval;
   if (needabs) {
-    nval = B.CreateUnaryIntrinsic(Intrinsic::fabs, opr0, nullptr, "__fabs");
+    nval = B.CreateFAbs(opr0, nullptr, "__fabs");
   } else {
     nval = cnval ? cnval : opr0;
   }
@@ -1259,13 +1259,13 @@ static Value *emitIsOddInteger(IRBuilder<> &B, Value *Y) {
 
 // isinf(val) => fabs(val) == +inf
 static Value *emitIsInf(IRBuilder<> &B, Value *val) {
-  auto *fabsVal = B.CreateUnaryIntrinsic(Intrinsic::fabs, val);
+  auto *fabsVal = B.CreateFAbs(val);
   return B.CreateFCmpOEQ(fabsVal, ConstantFP::getInfinity(val->getType()));
 }
 
 // y * log2(fabs(x))
 static Value *emitFastExpYLnx(IRBuilder<> &B, Value *X, Value *Y) {
-  Value *AbsX = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+  Value *AbsX = B.CreateFAbs(X);
   Value *LogAbsX = B.CreateUnaryIntrinsic(Intrinsic::log2, AbsX);
   Value *YTimesLogX = B.CreateFMul(Y, LogAbsX);
   return B.CreateUnaryIntrinsic(Intrinsic::exp2, YTimesLogX);
@@ -1304,10 +1304,10 @@ static Value *emitPowFixup(IRBuilder<> &B, Value *X, Value *Y, Value *ExpYLnX,
     // mixed sign constant infinities.
     Value *YIsInf = emitIsInf(B, Y);
 
-    Value *AY = B.CreateUnaryIntrinsic(Intrinsic::fabs, Y);
+    Value *AY = B.CreateFAbs(Y);
     Value *YIsNegInf = B.CreateFCmpUNE(Y, AY);
 
-    Value *AX = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+    Value *AX = B.CreateFAbs(X);
     Value *AxEqOne = B.CreateFCmpOEQ(AX, One);
     Value *AxLtOne = B.CreateFCmpOLT(AX, One);
     Value *XorCond = B.CreateXor(AxLtOne, YIsNegInf);
@@ -1368,7 +1368,7 @@ static Value *emitPowFixup(IRBuilder<> &B, Value *X, Value *Y, Value *ExpYLnX,
     Value *Ret = B.CreateCopySign(ExpYLnX, SelSign);
 
     // if (isinf(x) || x == 0.0f)
-    Value *FabsX = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+    Value *FabsX = B.CreateFAbs(X);
     Value *XIsInf = B.CreateFCmpOEQ(FabsX, PInf);
     Value *XEqZero = B.CreateFCmpOEQ(X, Zero);
     Value *InfOrZero = B.CreateOr(XIsInf, XEqZero);
@@ -1396,7 +1396,7 @@ static Value *emitPowFixup(IRBuilder<> &B, Value *X, Value *Y, Value *ExpYLnX,
     Value *Ret = B.CreateCopySign(ExpYLnX, SelSign);
 
     // if (isinf(x) || x == 0.0f)
-    Value *FabsX = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+    Value *FabsX = B.CreateFAbs(X);
     Value *IsInfX = B.CreateFCmpOEQ(FabsX, PInf);
     Value *XEqZero = B.CreateFCmpOEQ(X, Zero);
     Value *CondInfOrZero = B.CreateOr(IsInfX, XEqZero);

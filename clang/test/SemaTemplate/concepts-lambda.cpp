@@ -56,9 +56,7 @@ namespace GH57971 {
   function_ptr ptr = f<void>;
 }
 
-// GH58368: A lambda defined in a concept requires we store
-// the concept as a part of the lambda context.
-namespace LambdaInConcept {
+namespace GH58368 {
 using size_t = unsigned long;
 
 template<size_t...Ts>
@@ -366,4 +364,36 @@ void f()
 void test() {
     f<42>();
 }
+}
+
+namespace GH193944 {
+
+template<auto L, typename... Ts>
+concept pass_a_concept_inside_a_lambda = requires { L.template operator()<Ts...>(); }; // #requires_pass_a_concept_inside_a_lambda
+
+template<auto Pred, typename... Ts>
+concept PredicateFor_bad = pass_a_concept_inside_a_lambda<[]<typename... Xs> // #pass_a_concept_inside_a_lambda
+                                          requires(__is_same(decltype(Pred.template operator()<Xs>()), bool) and ...)
+                                      {},
+                                      Ts...>;
+
+template<auto Pred, typename... Ts>
+    requires PredicateFor_bad<Pred, Ts...> // #PredicateFor_bad
+constexpr const unsigned count_if_v_bad =
+        [] { return (Pred.template operator()<Ts>() + ... + 0); }();
+
+constexpr const auto L = []<typename T>
+{ return __is_same(T, long); };
+
+constexpr const auto L2 = []<typename T>
+{ return 114514; };
+
+static_assert(count_if_v_bad<L, double, int, long, void> == 1);
+
+static_assert(count_if_v_bad<L2, double> == 1);
+// expected-error@-1 {{constraints not satisfied}}
+// expected-note@#PredicateFor_bad {{evaluated to false}}
+// expected-note@#pass_a_concept_inside_a_lambda {{evaluated to false}}
+// expected-note@#requires_pass_a_concept_inside_a_lambda {{no matching member function}}
+
 }

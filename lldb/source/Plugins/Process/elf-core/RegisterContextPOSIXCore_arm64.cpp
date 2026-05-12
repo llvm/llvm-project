@@ -80,7 +80,7 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
 
   DataExtractor poe_data = getRegset(notes, arch.GetTriple(), AARCH64_POE_Desc);
   struct poe_regs {
-    uint64_t por_reg;
+    uint64_t por_el0_reg;
   };
   if (poe_data.GetByteSize() >= sizeof(poe_regs))
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPOE);
