@@ -19029,14 +19029,17 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
 
     ConstOp = peekThroughBitcasts(N->getOperand(ConstOpIdx));
     Pow2Op = N->getOperand(1 - ConstOpIdx);
-    if (Pow2Op.getOpcode() != ISD::UINT_TO_FP &&
-        (Pow2Op.getOpcode() != ISD::SINT_TO_FP ||
-         !DAG.computeKnownBits(Pow2Op).isNonNegative()))
+    unsigned Pow2Opc = Pow2Op.getOpcode();
+    if (Pow2Opc != ISD::UINT_TO_FP && Pow2Opc != ISD::SINT_TO_FP)
       return false;
 
     Pow2Op = Pow2Op.getOperand(0);
 
-    int MaxExpChange = DAG.computeKnownBits(Pow2Op).countMaxActiveBits();
+    KnownBits Pow2OpKnownBits = DAG.computeKnownBits(Pow2Op);
+    if (Pow2Opc == ISD::SINT_TO_FP && !Pow2OpKnownBits.isNonNegative())
+      return false;
+
+    int MaxExpChange = Pow2OpKnownBits.countMaxActiveBits();
 
     auto IsFPConstValid = [N, MaxExpChange, &Mantissa](ConstantFPSDNode *CFP) {
       if (CFP == nullptr)
