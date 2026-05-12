@@ -58,8 +58,9 @@ jobs:
         shell: bash
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           fetch-depth: 2
       - name: Build and Test
         timeout-minutes: 120
@@ -112,14 +113,14 @@ jobs:
         # https://github.com/actions/upload-artifact/issues/569
         continue-on-error: true
         if: '!cancelled()'
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Premerge Artifacts (Linux ${{ runner.arch }})
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
       - name: Upload Comment
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ always() && !startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') }}
         continue-on-error: true
         with:
@@ -138,8 +139,9 @@ jobs:
         shell: bash
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           fetch-depth: 2
       - name: Compute Projects
         id: vars
@@ -178,14 +180,14 @@ jobs:
         # https://github.com/actions/upload-artifact/issues/569
         continue-on-error: true
         if: '!cancelled()'
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Premerge Artifacts (Windows)
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
       - name: Upload Comment
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         continue-on-error: true
         with:
@@ -203,11 +205,12 @@ jobs:
       (github.event_name != 'pull_request' || github.event.action != 'closed')
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           fetch-depth: 2
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
+        uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
         with:
           max-size: "2000M"
       - name: Install Ninja

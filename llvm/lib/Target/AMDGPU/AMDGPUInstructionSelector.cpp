@@ -730,8 +730,16 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(SrcRC, DstSize / 8);
   for (int I = 0, E = NumDst; I != E; ++I) {
     MachineOperand &Dst = MI.getOperand(I);
-    BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), Dst.getReg())
-        .addReg(SrcReg, {}, SubRegs[I]);
+    // hi16:sreg_32 is not allowed so explicitly shift upper 16-bits.
+    if (SrcBank->getID() == AMDGPU::SGPRRegBankID &&
+        SubRegs[I] == AMDGPU::hi16) {
+      BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst.getReg())
+          .addReg(SrcReg)
+          .addImm(16);
+    } else {
+      BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), Dst.getReg())
+          .addReg(SrcReg, {}, SubRegs[I]);
+    }
 
     // Make sure the subregister index is valid for the source register.
     SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
@@ -2398,8 +2406,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectTensorLoadStore(I, IntrinsicID);
   case Intrinsic::amdgcn_asyncmark:
   case Intrinsic::amdgcn_wait_asyncmark:
-    // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
-    if (!Subtarget->hasVMemToLDSLoad())
+    if (!Subtarget->hasAsyncMark())
       return false;
     break;
   case Intrinsic::amdgcn_exp_compr:
@@ -2830,6 +2837,18 @@ static Register stripBitCast(Register Reg, MachineRegisterInfo &MRI) {
 
 static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
                            Register &Out) {
+  // When unmerging a register that is composed of 2 x 16-bit values allow to
+  // use an extract hi instruction for the upper 16 bits. We only need to check
+  // the size of `In` as all defs are guaranteed to be the same type for
+  // GUnmerge.
+  if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(In))) {
+    if (Unmerge->getNumDefs() == 2 && Unmerge->getOperand(1).getReg() == In &&
+        MRI.getType(In).getSizeInBits() == 16) {
+      Out = Unmerge->getSourceReg();
+      return true;
+    }
+  }
+
   Register Trunc;
   if (!mi_match(In, MRI, m_GTrunc(m_Reg(Trunc))))
     return false;
@@ -4563,6 +4582,14 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3ModsImpl(
   return std::pair(Src, Mods);
 }
 
+std::pair<Register, unsigned>
+AMDGPUInstructionSelector::selectVOP3PModsF32Impl(Register Src) const {
+  unsigned Mods;
+  std::tie(Src, Mods) = selectVOP3ModsImpl(Src);
+  Mods |= SISrcMods::OP_SEL_1;
+  return std::pair(Src, Mods);
+}
+
 Register AMDGPUInstructionSelector::copyToVGPRIfSrcFolded(
     Register Src, unsigned Mods, MachineOperand Root, MachineInstr *InsertPt,
     bool ForceVGPR) const {
@@ -5267,6 +5294,41 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
 
   return selectVOP3PRetHelper(Root, true);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PNoModsDOT(MachineOperand &Root) const {
+  MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
+  Register Src;
+  unsigned Mods;
+  std::tie(Src, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI, true /*IsDOT*/);
+  if (Mods != SISrcMods::OP_SEL_1)
+    return {};
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Src); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PModsF32(MachineOperand &Root) const {
+  Register Src;
+  unsigned Mods;
+  std::tie(Src, Mods) = selectVOP3PModsF32Impl(Root.getReg());
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PNoModsF32(MachineOperand &Root) const {
+  Register Src;
+  unsigned Mods;
+  std::tie(Src, Mods) = selectVOP3PModsF32Impl(Root.getReg());
+  if (Mods != SISrcMods::OP_SEL_1)
+    return {};
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Src); }}};
 }
 
 InstructionSelector::ComplexRendererFns
@@ -6218,7 +6280,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
 
   int64_t Offset = 0;
   if (mi_match(Root.getReg(), *MRI, m_ICst(Offset)) &&
-      Offset != TM.getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS)) {
+      Offset != AMDGPU::getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS)) {
     Register HighBits = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
     // TODO: Should this be inside the render function? The iterator seems to
@@ -7101,6 +7163,24 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
   const DebugLoc &DL = I.getDebugLoc();
   const MachineOperand &BarOp = I.getOperand(1);
   const MachineOperand &CntOp = I.getOperand(2);
+
+  // A member count of 0 means "keep existing member count". That plus a known
+  // constant value for the barrier ID lets us use the immarg form.
+  if (IntrID == Intrinsic::amdgcn_s_barrier_signal_var) {
+    std::optional<int64_t> CntImm =
+        getIConstantVRegSExtVal(CntOp.getReg(), *MRI);
+    if (CntImm && *CntImm == 0) {
+      std::optional<int64_t> BarValImm =
+          getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
+      if (BarValImm) {
+        auto BarID = ((*BarValImm) >> 4) & 0x3F;
+        BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_IMM))
+            .addImm(BarID);
+        I.eraseFromParent();
+        return true;
+      }
+    }
+  }
 
   // BarID = (BarOp >> 4) & 0x3F
   Register TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);

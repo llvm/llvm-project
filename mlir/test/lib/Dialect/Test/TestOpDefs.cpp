@@ -256,7 +256,7 @@ OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
 
 LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -273,8 +273,8 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
     MLIRContext *context, std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, PropertyRef properties,
+    RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Create return type consisting of the last element of the first operand.
   auto operandType = operands.front().getType();
@@ -499,6 +499,22 @@ void SideEffectOp::getEffects(
 void SideEffectOp::getEffects(
     SmallVectorImpl<TestEffects::EffectInstance> &effects) {
   testSideEffectOpGetEffect(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ConditionalSideEffectOp
+//===----------------------------------------------------------------------===//
+
+void ConditionalSideEffectOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (!getHasEffects())
+    return;
+
+  SideEffects::Resource *resource = SideEffects::DefaultResource::get();
+  effects.emplace_back(MemoryEffects::Read::get(), resource);
+  effects.emplace_back(MemoryEffects::Write::get(), resource);
+  effects.emplace_back(MemoryEffects::Free::get(), resource);
+  effects.emplace_back(MemoryEffects::Allocate::get(), resource);
 }
 
 void SideEffectWithRegionOp::getEffects(
@@ -1046,11 +1062,15 @@ LogicalResult ReifyBoundOp::verify() {
   if (isa<ShapedType>(getVar().getType())) {
     if (!getDim().has_value())
       return emitOpError("expected 'dim' attribute for shaped type variable");
-  } else if (getVar().getType().isIndex()) {
+  } else if (getVar().getType().isIndex() || getVar().getType().isInteger()) {
+    if (getVar().getType().isInteger() && !getAllowIntegerType())
+      return emitOpError("integer variable requires 'allow_integer_type'");
     if (getDim().has_value())
-      return emitOpError("unexpected 'dim' attribute for index variable");
+      return emitOpError(
+          "unexpected 'dim' attribute for index/integer variable");
   } else {
-    return emitOpError("expected index-typed variable or shape type variable");
+    return emitOpError(
+        "expected index-typed/integer-typed variable or shape type variable");
   }
   if (getConstant() && getScalable())
     return emitOpError("'scalable' and 'constant' are mutually exlusive");
@@ -1178,7 +1198,7 @@ LogicalResult OpWithInferTypeAdaptorInterfaceOp::inferReturnTypes(
 // refineReturnType, currently only refineReturnType can be omitted.
 LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   returnTypes.clear();
   return OpWithRefineTypeInterfaceOp::refineReturnTypes(
@@ -1188,7 +1208,7 @@ LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
 
 LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -1270,7 +1290,7 @@ OpWithShapedTypeInferTypeAdaptorInterfaceOp::reifyReturnTypeShapes(
 
 LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
     MLIRContext *context, std::optional<Location>, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
 
   Adaptor adaptor(operands, attributes, properties, regions);
@@ -1329,6 +1349,15 @@ TestCrashingReturnOp::getMutableSuccessorOperands(RegionSuccessor successor) {
     llvm::report_fatal_error("getMutableSuccessorOperands called on unverified "
                              "test.crashing_return");
   return getArgsMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TestReturnWithIgnoredValueOp
+//===----------------------------------------------------------------------===//
+
+MutableOperandRange TestReturnWithIgnoredValueOp::getMutableSuccessorOperands(
+    RegionSuccessor /*successor*/) {
+  return getValuesMutable();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1519,6 +1548,30 @@ SmallVector<Region *> TestLoopTypesCompatOp::getLoopRegions() {
 
 bool TestLoopTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
   return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
+}
+
+void TestRegionTypeChangerOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange
+TestRegionTypeChangerOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getEntries();
+}
+
+ValueRange
+TestRegionTypeChangerOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+bool TestRegionTypeChangerOp::areTypesCompatible(Type lhs, Type rhs) {
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1769,6 +1822,19 @@ convertTensorToBuffer(mlir::Operation *op,
                                                      dummyMemrefOp.getResult());
 
   return mlir::success();
+}
+
+mlir::FailureOr<mlir::bufferization::BufferLikeType>
+test::TestDummyTensorOp::getBufferType(
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    const mlir::bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  const auto type = dyn_cast<test::TestTensorType>(value.getType());
+  if (type == nullptr)
+    return failure();
+
+  return cast<mlir::bufferization::BufferLikeType>(test::TestMemrefType::get(
+      getContext(), type.getShape(), type.getElementType(), nullptr));
 }
 
 ::mlir::LogicalResult test::TestCreateTensorOp::bufferize(

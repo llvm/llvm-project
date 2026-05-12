@@ -1585,7 +1585,7 @@ void AsmMatcherInfo::buildInfo() {
         continue;
 
       // Ignore "codegen only" instructions.
-      if (CGI->TheDef->getValueAsBit("isCodeGenOnly"))
+      if (CGI->isCodeGenOnly)
         continue;
 
       // Ignore instructions for different instructions
@@ -2010,7 +2010,10 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   SmallSetVector<CachedHashString, 16> OperandConversionKinds;
   SmallSetVector<CachedHashString, 16> InstructionConversionKinds;
   std::vector<std::vector<uint8_t>> ConversionTable;
-  size_t MaxRowLength = 2; // minimum is custom converter plus terminator.
+
+  // minimum is custom converter plus a operand index in parsed OperandVector
+  // (0 for custom converter) and terminator (CVT_Done).
+  size_t MaxRowLength = 3;
 
   // TargetOperandClass - This is the target's operand class, like X86Operand.
   std::string TargetOperandClass = Target.getName().str() + "Operand";
@@ -2614,7 +2617,8 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
     OS << indent(4)
        << "const unsigned HwMode = "
           "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);\n"
-          "Kind = RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER "
+       << indent(4)
+       << "Kind = RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER "
           "+ 1)];\n"
           "  }\n\n";
   }
@@ -3602,7 +3606,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
       assert(I != Info.SubtargetFeatures.end() && "Didn't import predicate?");
       OS << I->second.getEnumBitName() << ", ";
     }
-    OS << "},\n";
+    OS << "}, // " << getNameForFeatureBitset(FeatureBitset) << "\n";
   }
   OS << "};\n\n";
 
@@ -3828,7 +3832,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      if (ActualIdx < Operands.size())\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \" (\";\n";
   OS << "                        Operands[ActualIdx]->print(dbgs(), "
-        "*getContext().getAsmInfo()); dbgs() << "
+        "getContext().getAsmInfo()); dbgs() << "
         "\"): \");\n";
   OS << "      else\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \": \");\n";

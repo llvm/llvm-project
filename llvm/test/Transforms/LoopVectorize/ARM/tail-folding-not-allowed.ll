@@ -155,10 +155,10 @@ define void @narrowing_load_not_allowed(ptr noalias nocapture %A, ptr noalias no
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %add6, %for.body ]
   %arrayidx = getelementptr inbounds i16, ptr %C, i32 %i.012
   %0 = load i16, ptr %arrayidx, align 2
@@ -421,7 +421,7 @@ define void @fptrunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fptrunc <4 x float> [[TMP5]] to <4 x half>
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x half> [[TMP8]], splat (half 0xH4000)
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x half> [[TMP8]], splat (half 2.000000e+00)
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds half, ptr [[D:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x half> [[TMP9]], ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -443,7 +443,7 @@ define void @fptrunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i32 [[I_017]]
 ; CHECK-NEXT:    store float [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = fptrunc float [[ADD]] to half
-; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast half [[CONV]], 0xH4000
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast half [[CONV]], 2.000000e+00
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds half, ptr [[D]], i32 [[I_017]]
 ; CHECK-NEXT:    store half [[FACTOR]], ptr [[ARRAYIDX5]], align 2
 ; CHECK-NEXT:    [[ADD6]] = add nuw nsw i32 [[I_017]], 1
@@ -479,7 +479,7 @@ for.body:
 ; which aren't supported by the lowoverhead loop pass, causing the tail-predication
 ; to be reverted which is expensive and what we would like to avoid.
 ;
-define dso_local void @select_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N, ptr noalias nocapture readonly %Cond) {
+define void @select_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N, ptr noalias nocapture readonly %Cond) {
 ; CHECK-LABEL: @select_not_allowed(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -538,16 +538,16 @@ entry:
   %cmp10 = icmp sgt i32 %N, 0
   br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %Cond, i32 %i.011
   %0 = load i32, ptr %arrayidx, align 4
@@ -613,7 +613,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 2147483647, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -624,7 +624,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 2147483647, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -680,7 +680,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ -2147483648, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -691,7 +691,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ -2147483648, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -747,7 +747,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 4294967295, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -758,7 +758,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 4294967295, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -814,7 +814,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -825,7 +825,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }

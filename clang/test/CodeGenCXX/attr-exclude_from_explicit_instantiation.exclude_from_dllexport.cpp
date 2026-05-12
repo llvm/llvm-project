@@ -149,15 +149,15 @@ void usePolymorphic() {
   // GNU-DAG: define linkonce_odr dso_local void @_ZN11PolymorphicI11ImplicitTagE29excludedExportedVirtualMethodEv
 }
 
-/// Test that the DLL attrribute wins over the exclude attribute on a
-/// non-template context.
+/// Test that the exclude attibute takes precedence over the DLL attrribute in
+/// a non-template context also.
 struct NonTemplateClass {
   EXCLUDE_ATTR __declspec(dllexport) void excludedExportedMethod();
 };
 
 void NonTemplateClass::excludedExportedMethod() {}
-// MSC-DAG: define dso_local dllexport void @"?excludedExportedMethod@NonTemplateClass@@QEAAXXZ"
-// GNU-DAG: define dso_local dllexport void @_ZN16NonTemplateClass22excludedExportedMethodEv
+// MSC-DAG: define dso_local void @"?excludedExportedMethod@NonTemplateClass@@QEAAXXZ"
+// GNU-DAG: define dso_local void @_ZN16NonTemplateClass22excludedExportedMethodEv
 
 /// The same, but exporting whole class.
 struct __declspec(dllexport) NonTemplateExportedClass {
@@ -165,5 +165,5 @@ struct __declspec(dllexport) NonTemplateExportedClass {
 };
 
 void NonTemplateExportedClass::excludedMethod() {}
-// MSC-DAG: define dso_local dllexport void @"?excludedMethod@NonTemplateExportedClass@@QEAAXXZ"
-// GNU-DAG: define dso_local dllexport void @_ZN24NonTemplateExportedClass14excludedMethodEv
+// MSC-DAG: define dso_local void @"?excludedMethod@NonTemplateExportedClass@@QEAAXXZ"
+// GNU-DAG: define dso_local void @_ZN24NonTemplateExportedClass14excludedMethodEv

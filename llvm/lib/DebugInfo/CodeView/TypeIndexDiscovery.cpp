@@ -402,6 +402,7 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
     break;
   case SymbolKind::S_BPREL32:
   case SymbolKind::S_REGREL32:
+  case SymbolKind::S_REGREL32_INDIR:
     Refs.push_back({TiRefKind::TypeRef, 4, 1}); // Type
     break;
   case SymbolKind::S_CALLSITEINFO:
@@ -424,6 +425,7 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
   // Defranges don't have types, just registers and code offsets.
   case SymbolKind::S_DEFRANGE_REGISTER:
   case SymbolKind::S_DEFRANGE_REGISTER_REL:
+  case SymbolKind::S_DEFRANGE_REGISTER_REL_INDIR:
   case SymbolKind::S_DEFRANGE_FRAMEPOINTER_REL:
   case SymbolKind::S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE:
   case SymbolKind::S_DEFRANGE_SUBFIELD_REGISTER:

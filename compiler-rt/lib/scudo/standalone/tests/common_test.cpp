@@ -23,7 +23,7 @@ namespace scudo {
 
 TEST(ScudoCommonTest, VerifyGetResidentPages) {
   if (!SCUDO_LINUX)
-    GTEST_SKIP() << "Only valid on linux systems.";
+    TEST_SKIP("Only valid on linux systems.");
 
   constexpr uptr NumPages = 512;
   const uptr SizeBytes = NumPages * getPageSizeCached();
@@ -67,7 +67,7 @@ TEST(ScudoCommonTest, VerifyGetResidentPages) {
 
 TEST(ScudoCommonTest, VerifyReleasePagesToOS) {
   if (!SCUDO_LINUX)
-    GTEST_SKIP() << "Only valid on linux systems.";
+    TEST_SKIP("Only valid on linux systems.");
 
   constexpr uptr NumPages = 1000;
   const uptr SizeBytes = NumPages * getPageSizeCached();
@@ -114,6 +114,38 @@ TEST(ScudoCommonTest, Zeros) {
   EXPECT_EQ(std::count(P, P + N, 0), N);
 
   MemMap.unmap();
+}
+
+TEST(ScudoCommonTest, IsPowerOfTwo) {
+  EXPECT_FALSE(isPowerOfTwo(0));
+  EXPECT_TRUE(isPowerOfTwo(1));
+  EXPECT_TRUE(isPowerOfTwo(2));
+  EXPECT_TRUE(isPowerOfTwo(4));
+  EXPECT_FALSE(isPowerOfTwo(3));
+}
+
+TEST(ScudoCommonTest, ComputePercentage) {
+  uptr Integral, Fractional;
+  computePercentage(50, 100, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 50U);
+  EXPECT_EQ(Fractional, 0U);
+
+  computePercentage(1, 3, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 33U);
+  EXPECT_EQ(Fractional, 33U);
+
+  computePercentage(2, 3, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 66U);
+  EXPECT_EQ(Fractional, 67U);
+
+  computePercentage(0, 0, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 100U);
+  EXPECT_EQ(Fractional, 0U);
+}
+
+TEST(ScudoCommonTest, IsAlignedSlow) {
+  EXPECT_TRUE(isAlignedSlow(64, 16));
+  EXPECT_FALSE(isAlignedSlow(65, 16));
 }
 
 } // namespace scudo

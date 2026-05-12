@@ -1201,6 +1201,12 @@ void CodeGenFunction::EmitNewArrayInitializer(
     EmitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
                                /*NewPointerIsChecked*/ true,
                                CCE->requiresZeroInitialization());
+    if (getContext().getTargetInfo().emitVectorDeletingDtors(
+            getContext().getLangOpts())) {
+      CXXDestructorDecl *Dtor = Ctor->getParent()->getDestructor();
+      if (Dtor && Dtor->isVirtual())
+        CGM.requireVectorDestructorDefinition(Ctor->getParent());
+    }
     return;
   }
 
@@ -1714,6 +1720,18 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   llvm::Instruction *cleanupDominator = nullptr;
   if (E->getOperatorDelete() &&
       !E->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
+    // A potentially-throwing constructor inside __try requires C++ object
+    // unwinding, which is incompatible with SEH.
+    if (getLangOpts().CXXExceptions && currentFunctionUsesSEHTry()) {
+      if (const auto *ConstructExpr = E->getConstructExpr()) {
+        const auto *FPT = ConstructExpr->getConstructor()
+                              ->getType()
+                              ->castAs<FunctionProtoType>();
+        if (!FPT->isNothrow())
+          getContext().getDiagnostics().Report(E->getBeginLoc(),
+                                               diag::err_seh_object_unwinding);
+      }
+    }
     EnterNewDeleteCleanup(*this, E, TypeIdentityArg, allocation, allocSize,
                           allocAlign, allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();

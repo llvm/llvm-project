@@ -5,8 +5,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyHICPPModule STATIC
   HICPPTidyModule.cpp
-  MultiwayPathsCoveredCheck.cpp
-  SignedBitwiseCheck.cpp
 
   LINK_LIBS
   clangTidy

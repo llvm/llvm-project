@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_INTEGER_CLC_BITFIELD_EXTRACT_SIGNED_H__
-#define __CLC_INTEGER_CLC_BITFIELD_EXTRACT_SIGNED_H__
+#ifndef __CLC_INTEGER_CLC_BITFIELD_EXTRACT_UNSIGNED_H__
+#define __CLC_INTEGER_CLC_BITFIELD_EXTRACT_UNSIGNED_H__
 
 #include "clc/internal/clc.h"
 
@@ -20,4 +20,4 @@
 #undef __CLC_RETTYPE
 #undef __CLC_FUNCTION
 
-#endif // __CLC_INTEGER_CLC_BITFIELD_EXTRACT_SIGNED_H__
+#endif // __CLC_INTEGER_CLC_BITFIELD_EXTRACT_UNSIGNED_H__

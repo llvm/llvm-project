@@ -65,4 +65,74 @@ module {
 // CHECK:   cir.return
 // CHECK: }
 
+  // Ternary with cir.trap as the false-region terminator. This pattern is
+  // emitted by libc++ assertion macros that expand to
+  // `cond ? (void)0 : __builtin_trap()`. The flatten-cfg pass must accept
+  // cir.trap (a non-returning Terminator) as a valid region terminator and
+  // leave it in place rather than rewriting it into a branch.
+  cir.func @ternary_trap_false(%arg0: !cir.bool) {
+    cir.ternary(%arg0, true {
+      cir.yield
+    }, false {
+      cir.trap
+    }) : (!cir.bool) -> ()
+    cir.return
+  }
+
+// CHECK: cir.func{{.*}} @ternary_trap_false(%arg0: !cir.bool) {
+// CHECK:   cir.brcond %arg0 ^bb1, ^bb2
+// CHECK: ^bb1:  // pred: ^bb0
+// CHECK:   cir.br ^bb3
+// CHECK: ^bb2:  // pred: ^bb0
+// CHECK:   cir.trap
+// CHECK: ^bb3:  // pred: ^bb1
+// CHECK:   cir.br ^bb4
+// CHECK: ^bb4:  // pred: ^bb3
+// CHECK:   cir.return
+// CHECK: }
+
+  // Mirror case: cir.trap in the true region.
+  cir.func @ternary_trap_true(%arg0: !cir.bool) {
+    cir.ternary(%arg0, true {
+      cir.trap
+    }, false {
+      cir.yield
+    }) : (!cir.bool) -> ()
+    cir.return
+  }
+
+// CHECK: cir.func{{.*}} @ternary_trap_true(%arg0: !cir.bool) {
+// CHECK:   cir.brcond %arg0 ^bb1, ^bb2
+// CHECK: ^bb1:  // pred: ^bb0
+// CHECK:   cir.trap
+// CHECK: ^bb2:  // pred: ^bb0
+// CHECK:   cir.br ^bb3
+// CHECK: ^bb3:  // pred: ^bb2
+// CHECK:   cir.br ^bb4
+// CHECK: ^bb4:  // pred: ^bb3
+// CHECK:   cir.return
+// CHECK: }
+
+  // cir.unreachable as the false-region terminator (e.g. throw expressions).
+  cir.func @ternary_unreachable_false(%arg0: !cir.bool) {
+    cir.ternary(%arg0, true {
+      cir.yield
+    }, false {
+      cir.unreachable
+    }) : (!cir.bool) -> ()
+    cir.return
+  }
+
+// CHECK: cir.func{{.*}} @ternary_unreachable_false(%arg0: !cir.bool) {
+// CHECK:   cir.brcond %arg0 ^bb1, ^bb2
+// CHECK: ^bb1:  // pred: ^bb0
+// CHECK:   cir.br ^bb3
+// CHECK: ^bb2:  // pred: ^bb0
+// CHECK:   cir.unreachable
+// CHECK: ^bb3:  // pred: ^bb1
+// CHECK:   cir.br ^bb4
+// CHECK: ^bb4:  // pred: ^bb3
+// CHECK:   cir.return
+// CHECK: }
+
 }

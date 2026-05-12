@@ -328,6 +328,74 @@ spirv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.ExecutionModeId
+//===----------------------------------------------------------------------===//
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.SpecConstant @z = 5 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // CHECK: spirv.ExecutionModeId {{@.*}} "LocalSizeHintId" @x, @y, @z
+   spirv.ExecutionModeId @do_nothing "LocalSizeHintId" @x, @y, @z
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{expected attribute value}}
+   spirv.ExecutionModeId @do_nothing "LocalSizeId"
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+    spirv.SpecConstant @x = 3 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected ExecutionMode that takes extra operands that are <id> operands, got: ContractionOff}}
+   spirv.ExecutionModeId @do_nothing "ContractionOff" @x
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.SpecConstant @z = 5 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{custom op 'spirv.ExecutionModeId' invalid execution_mode attribute specification: "GLCompute"}}
+   spirv.ExecutionModeId @do_nothing "GLCompute" @x, @y, @z
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{custom op 'spirv.ExecutionModeId' invalid kind of attribute specified}}
+   spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y, 2
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.func
 //===----------------------------------------------------------------------===//
 
@@ -517,6 +585,19 @@ spirv.module Logical GLSL450 {
 spirv.module Logical GLSL450 {
   // expected-error @+1 {{storage class cannot be 'Function'}}
   spirv.GlobalVariable @var0 : !spirv.ptr<f32, Function>
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  spirv.SpecConstant @sc = 1.0 : f32
+  // expected-error @+1 {{op with Import linkage type must not have an initializer}}
+  spirv.GlobalVariable @var0 initializer(@sc) {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "importedVar",
+      linkage_type = <Import>
+    >
+  } : !spirv.ptr<f32, Private>
 }
 
 // -----
@@ -885,6 +966,57 @@ spirv.module Logical GLSL450 {
   spirv.SpecConstant @sc3 = 3.5 : f32
   // expected-error @+1 {{has incorrect types of operands: expected 'f32', but provided 'i32'}}
   spirv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : vector<3xf32>
+}
+
+// -----
+
+// Nested composite: array of arrays
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1.5 : f32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstantComposite @scc_inner (@sc1, @sc2) : !spirv.array<2 x f32>
+  // CHECK: spirv.SpecConstantComposite @scc_nested (@scc_inner, @scc_inner) : !spirv.array<2 x !spirv.array<2 x f32>>
+  spirv.SpecConstantComposite @scc_nested (@scc_inner, @scc_inner) : !spirv.array<2 x !spirv.array<2 x f32>>
+}
+
+// -----
+
+// Struct with composite and scalar constituents
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1 : i32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstant @sc3 = 3.5 : f32
+  spirv.SpecConstantComposite @scc_vec (@sc2, @sc3) : vector<2xf32>
+  // CHECK: spirv.SpecConstantComposite @scc_struct (@sc1, @scc_vec) : !spirv.struct<(i32, vector<2xf32>)>
+  spirv.SpecConstantComposite @scc_struct (@sc1, @scc_vec) : !spirv.struct<(i32, vector<2xf32>)>
+}
+
+// -----
+
+// Type mismatch with composite constituent
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1.5 : f32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstantComposite @scc_inner (@sc1, @sc2) : !spirv.array<2 x f32>
+  // expected-error @+1 {{has incorrect types of operands: expected '!spirv.array<3 x f32>', but provided '!spirv.array<2 x f32>'}}
+  spirv.SpecConstantComposite @scc_bad (@scc_inner) : !spirv.array<1 x !spirv.array<3 x f32>>
+}
+
+// -----
+
+// Unsupported constituent (not a SpecConstant or SpecConstantComposite)
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @gv : !spirv.ptr<f32, Private>
+  // expected-error @+1 {{unsupported constituent "gv": must reference a spirv.SpecConstant or spirv.SpecConstantComposite}}
+  spirv.SpecConstantComposite @scc (@gv) : !spirv.array<1 x f32>
+}
+
+// -----
+
+// Unknown constituent symbol
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{unknown constituent symbol "does_not_exist"}}
+  spirv.SpecConstantComposite @scc (@does_not_exist) : !spirv.array<1 x f32>
 }
 
 //===----------------------------------------------------------------------===//

@@ -13,6 +13,10 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
+#if defined(__FreeBSD__) && defined(__amd64__)
+#include <machine/pcb.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -54,6 +58,20 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
     llvm::support::ulittle64_t rip;
   } pcb;
 
+  constexpr unsigned short CODE_SEL = 4 << 3;
+  constexpr unsigned short DATA_SEL = 5 << 3;
+
+#if defined(__FreeBSD__) && defined(__amd64__)
+  static_assert(offsetof(struct pcb, pcb_r15) == offsetof(decltype(pcb), r15));
+  static_assert(offsetof(struct pcb, pcb_r14) == offsetof(decltype(pcb), r14));
+  static_assert(offsetof(struct pcb, pcb_r13) == offsetof(decltype(pcb), r13));
+  static_assert(offsetof(struct pcb, pcb_r12) == offsetof(decltype(pcb), r12));
+  static_assert(offsetof(struct pcb, pcb_rbp) == offsetof(decltype(pcb), rbp));
+  static_assert(offsetof(struct pcb, pcb_rsp) == offsetof(decltype(pcb), rsp));
+  static_assert(offsetof(struct pcb, pcb_rbx) == offsetof(decltype(pcb), rbx));
+  static_assert(offsetof(struct pcb, pcb_rip) == offsetof(decltype(pcb), rip));
+#endif
+
   Status error;
   size_t rd =
       m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
@@ -75,9 +93,13 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
     REG(rsp);
     REG(rbx);
     REG(rip);
-
 #undef REG
-
+  case lldb_cs_x86_64:
+    value.SetUInt(CODE_SEL, reg_info->byte_size);
+    break;
+  case lldb_ss_x86_64:
+    value.SetUInt(DATA_SEL, reg_info->byte_size);
+    break;
   default:
     return false;
   }

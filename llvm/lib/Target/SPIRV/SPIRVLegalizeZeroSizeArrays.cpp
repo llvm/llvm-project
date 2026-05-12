@@ -298,12 +298,23 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
 
     Type *NewTy = legalizeType(GV.getValueType());
     Constant *LegalizedInitializer =
-        GV.hasInitializer() ? legalizeConstant(GV.getInitializer()) : nullptr;
+        GV.hasInitializer() && !GV.hasAppendingLinkage()
+            ? legalizeConstant(GV.getInitializer())
+            : nullptr;
+
+    // The new global will have the same linkage type as the original,
+    // except in the case that it is an llvm intrinsic global such as
+    // llvm.global_ctors with appending linkage, in which case we need to change
+    // the linkage as appending linkage is only allowed for arrays.
+    GlobalValue::LinkageTypes NewLT =
+        GV.hasAppendingLinkage()
+            ? GlobalValue::LinkageTypes::ExternalWeakLinkage
+            : GV.getLinkage();
 
     // Use an empty name for now, we will update it in the
     // following step.
     GlobalVariable *NewGV = new GlobalVariable(
-        M, NewTy, GV.isConstant(), GV.getLinkage(), LegalizedInitializer,
+        M, NewTy, GV.isConstant(), NewLT, LegalizedInitializer,
         /*Name=*/"", &GV, GV.getThreadLocalMode(), GV.getAddressSpace(),
         GV.isExternallyInitialized());
     NewGV->copyAttributesFrom(&GV);

@@ -393,6 +393,8 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #define SANITIZER_INTERCEPT_SHMCTL                                       \
   (((SI_FREEBSD || SI_LINUX_NOT_ANDROID) && SANITIZER_WORDSIZE == 64) || \
    SI_NETBSD || SI_SOLARIS)
+// shmat calls REAL(shmctl), so it requires shmctl interception.
+#define SANITIZER_INTERCEPT_SHMAT SANITIZER_INTERCEPT_SHMCTL
 #define SANITIZER_INTERCEPT_RANDOM_R SI_GLIBC
 #define SANITIZER_INTERCEPT_PTHREAD_ATTR_GET SI_POSIX
 #define SANITIZER_INTERCEPT_PTHREAD_ATTR_GETINHERITSCHED \

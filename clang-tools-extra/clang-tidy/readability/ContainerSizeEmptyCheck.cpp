@@ -144,16 +144,18 @@ void ContainerSizeEmptyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
-  const auto ValidContainerRecord = cxxRecordDecl(isSameOrDerivedFrom(
-      namedDecl(has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
-                                  hasAnyName("size", "length"),
-                                  returns(qualType(isIntegralType(),
-                                                   unless(booleanType()))))
-                        .bind("size")),
-                has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
-                                  hasName("empty"), returns(booleanType()))
-                        .bind("empty")))
-          .bind("container")));
+  const auto ValidContainerRecord =
+      cxxRecordDecl(
+          isSameOrDerivedFrom(namedDecl(
+              has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
+                                hasAnyName("size", "length"),
+                                returns(qualType(isIntegralType(),
+                                                 unless(booleanType()))))
+                      .bind("size")),
+              has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
+                                hasName("empty"), returns(booleanType()))
+                      .bind("empty")))))
+          .bind("ContainerDecl");
 
   const auto ValidContainerNonTemplateType =
       qualType(hasUnqualifiedDesugaredType(
@@ -236,6 +238,13 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperation(
           hasAnyOperatorName("==", "!="), hasOperands(WrongComparend, STLArg),
+          unless(hasEitherOperand(cxxConstructExpr(
+              argumentCountIs(0),
+              unless(hasType(qualType(hasCanonicalType(hasDeclaration(
+                  // 'equalsBoundNode' needs the 'ContainerDecl' binding
+                  // from 'STLArg' to already exist, so this constraint must
+                  // appear after 'hasOperands' matcher
+                  namedDecl(equalsBoundNode("ContainerDecl")))))))))),
           unless(allOf(hasLHS(hasType(ExcludedComparisonTypesMatcher)),
                        hasRHS(hasType(SameExcludedComparisonTypesMatcher)))),
           NotInEmptyMethodOfContainer)
@@ -417,21 +426,6 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                   "for emptiness instead of comparing to an empty object")
         << Hint;
   }
-
-  const auto *Container = Result.Nodes.getNodeAs<NamedDecl>("container");
-  if (const auto *CTS = dyn_cast<ClassTemplateSpecializationDecl>(Container)) {
-    // The definition of the empty() method is the same for all implicit
-    // instantiations. In order to avoid duplicate or inconsistent warnings
-    // (depending on how deduplication is done), we use the same class name
-    // for all implicit instantiations of a template.
-    if (CTS->getSpecializationKind() == TSK_ImplicitInstantiation)
-      Container = CTS->getSpecializedTemplate();
-  }
-  const auto *Empty = Result.Nodes.getNodeAs<FunctionDecl>("empty");
-
-  diag(Empty->getLocation(), "method %0::empty() defined here",
-       DiagnosticIDs::Note)
-      << Container;
 }
 
 } // namespace clang::tidy::readability

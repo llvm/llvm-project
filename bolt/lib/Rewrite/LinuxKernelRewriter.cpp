@@ -159,10 +159,8 @@ class AddressExtractor : public DataExtractor {
   uint64_t DataAddress;
 
 public:
-  AddressExtractor(StringRef Data, uint64_t DataAddress, bool IsLittleEndian,
-                   uint8_t AddressSize)
-      : DataExtractor(Data, IsLittleEndian, AddressSize),
-        DataAddress(DataAddress) {}
+  AddressExtractor(StringRef Data, uint64_t DataAddress, bool IsLittleEndian)
+      : DataExtractor(Data, IsLittleEndian), DataAddress(DataAddress) {}
 
   /// Extract 32-bit PC-relative address/pointer.
   uint64_t getPCRelAddress32(Cursor &C) {
@@ -515,8 +513,7 @@ Error LinuxKernelRewriter::processSMPLocks() {
                              "bad size of .smp_locks section");
 
   AddressExtractor AE(SMPLocksSection->getContents(), SectionAddress,
-                      BC.AsmInfo->isLittleEndian(),
-                      BC.AsmInfo->getCodePointerSize());
+                      BC.AsmInfo->isLittleEndian());
   AddressExtractor::Cursor Cursor(0);
   while (Cursor && Cursor.tell() < SectionSize) {
     const uint64_t Offset = Cursor.tell();
@@ -591,11 +588,10 @@ Error LinuxKernelRewriter::readORCTables() {
                              "ORC entries number mismatch detected");
 
   DataExtractor OrcDE(ORCUnwindSection->getContents(),
-                      BC.AsmInfo->isLittleEndian(),
-                      BC.AsmInfo->getCodePointerSize());
-  AddressExtractor IPAE(
-      ORCUnwindIPSection->getContents(), ORCUnwindIPSection->getAddress(),
-      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+                      BC.AsmInfo->isLittleEndian());
+  AddressExtractor IPAE(ORCUnwindIPSection->getContents(),
+                        ORCUnwindIPSection->getAddress(),
+                        BC.AsmInfo->isLittleEndian());
   DataExtractor::Cursor ORCCursor(0);
   DataExtractor::Cursor IPCursor(0);
   uint64_t PrevIP = 0;
@@ -944,9 +940,9 @@ Error LinuxKernelRewriter::validateORCTables() {
   if (!ORCUnwindIPSection)
     return Error::success();
 
-  AddressExtractor IPAE(
-      ORCUnwindIPSection->getOutputContents(), ORCUnwindIPSection->getAddress(),
-      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor IPAE(ORCUnwindIPSection->getOutputContents(),
+                        ORCUnwindIPSection->getAddress(),
+                        BC.AsmInfo->isLittleEndian());
   AddressExtractor::Cursor IPCursor(0);
   uint64_t PrevIP = 0;
   for (uint32_t Index = 0; Index < NumORCEntries; ++Index) {
@@ -1003,8 +999,7 @@ Error LinuxKernelRewriter::readStaticCalls() {
 
   const uint64_t SectionAddress = StaticCallSection->getAddress();
   AddressExtractor AE(StaticCallSection->getContents(), SectionAddress,
-                      BC.AsmInfo->isLittleEndian(),
-                      BC.AsmInfo->getCodePointerSize());
+                      BC.AsmInfo->isLittleEndian());
   AddressExtractor::Cursor Cursor(StaticCallTableAddress - SectionAddress);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
@@ -1111,9 +1106,9 @@ Error LinuxKernelRewriter::readExceptionTable() {
     return createStringError(errc::executable_format_error,
                              "exception table size error");
 
-  AddressExtractor AE(
-      ExceptionsSection->getContents(), ExceptionsSection->getAddress(),
-      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor AE(ExceptionsSection->getContents(),
+                      ExceptionsSection->getAddress(),
+                      BC.AsmInfo->isLittleEndian());
   AddressExtractor::Cursor Cursor(0);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < ExceptionsSection->getSize()) {
@@ -1216,8 +1211,7 @@ Error LinuxKernelRewriter::readParaInstructions() {
     return Error::success();
 
   DataExtractor DE(ParavirtualPatchSection->getContents(),
-                   BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
+                   BC.AsmInfo->isLittleEndian());
   uint32_t EntryID = 0;
   DataExtractor::Cursor Cursor(0);
   while (Cursor && !DE.eof(Cursor)) {
@@ -1316,9 +1310,9 @@ Error LinuxKernelRewriter::readBugTable() {
     return createStringError(errc::executable_format_error,
                              "bug table size error");
 
-  AddressExtractor AE(
-      BugTableSection->getContents(), BugTableSection->getAddress(),
-      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor AE(BugTableSection->getContents(),
+                      BugTableSection->getAddress(),
+                      BC.AsmInfo->isLittleEndian());
   AddressExtractor::Cursor Cursor(0);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < BugTableSection->getSize()) {
@@ -1482,9 +1476,9 @@ Error LinuxKernelRewriter::readAltInstructions() {
 Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
                                                   bool AltInstHasPadLen,
                                                   bool ParseOnly) {
-  AddressExtractor AE(
-      AltInstrSection->getContents(), AltInstrSection->getAddress(),
-      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor AE(AltInstrSection->getContents(),
+                      AltInstrSection->getAddress(),
+                      BC.AsmInfo->isLittleEndian());
   AddressExtractor::Cursor Cursor(0);
   uint64_t EntryID = 0;
   while (Cursor && !AE.eof(Cursor)) {
@@ -1614,9 +1608,9 @@ Error LinuxKernelRewriter::readPCIFixupTable() {
     return createStringError(errc::executable_format_error,
                              "PCI fixup table size error");
 
-  AddressExtractor AE(
-      PCIFixupSection->getContents(), PCIFixupSection->getAddress(),
-      BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
+  AddressExtractor AE(PCIFixupSection->getContents(),
+                      PCIFixupSection->getAddress(),
+                      BC.AsmInfo->isLittleEndian());
   AddressExtractor::Cursor Cursor(0);
   uint64_t EntryID = 0;
   while (Cursor && !AE.eof(Cursor)) {
@@ -1730,8 +1724,7 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
 
   const uint64_t SectionAddress = StaticKeysJumpSection->getAddress();
   AddressExtractor AE(StaticKeysJumpSection->getContents(), SectionAddress,
-                      BC.AsmInfo->isLittleEndian(),
-                      BC.AsmInfo->getCodePointerSize());
+                      BC.AsmInfo->isLittleEndian());
   AddressExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
@@ -1932,8 +1925,7 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
 
   const uint64_t SectionAddress = StaticKeysJumpSection->getAddress();
   AddressExtractor AE(StaticKeysJumpSection->getOutputContents(),
-                      SectionAddress, BC.AsmInfo->isLittleEndian(),
-                      BC.AsmInfo->getCodePointerSize());
+                      SectionAddress, BC.AsmInfo->isLittleEndian());
   AddressExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
   const BinaryData *Stop = BC.getBinaryDataByName("__stop___jump_table");
   uint32_t EntryID = 0;

@@ -363,14 +363,12 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   // Validate chain entries and collect stores from chain entries and
   // intermediate ops.
   SmallVector<StoreInst *> Stores;
-  unsigned OutOfLoopUses = 0;
   for (Value *V : Chain) {
     for (User *U : V->users()) {
       if (Chain.contains(U))
         continue;
       auto *I = dyn_cast<Instruction>(U);
-      if (!I || (!TheLoop->contains(I) &&
-                 (V != BackedgeValue || ++OutOfLoopUses > 1)))
+      if (!I || (!TheLoop->contains(I) && V != BackedgeValue))
         return {};
       if (!TheLoop->contains(I))
         continue;
@@ -395,6 +393,8 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   StoreInst *IntermediateStore = nullptr;
   const SCEV *StorePtrSCEV = nullptr;
   for (StoreInst *SI : Stores) {
+    if (!SE)
+      return {};
     const SCEV *Ptr = SE->getSCEV(SI->getPointerOperand());
     if (!SE->isLoopInvariant(Ptr, TheLoop) ||
         (StorePtrSCEV && StorePtrSCEV != Ptr))
@@ -927,12 +927,8 @@ RecurrenceDescriptor::isFindPattern(Loop *TheLoop, PHINode *OrigPhi,
   // We are looking for selects of the form:
   //   select(cmp(), phi, value) or
   //   select(cmp(), value, phi)
-  // TODO: Match selects with multi-use cmp conditions.
-  Value *NonRdxPhi = nullptr;
-  if (!match(I, m_CombineOr(m_Select(m_OneUse(m_Cmp()), m_Value(NonRdxPhi),
-                                     m_Specific(OrigPhi)),
-                            m_Select(m_OneUse(m_Cmp()), m_Specific(OrigPhi),
-                                     m_Value(NonRdxPhi)))))
+  if (!match(I, m_CombineOr(m_Select(m_Cmp(), m_Value(), m_Specific(OrigPhi)),
+                            m_Select(m_Cmp(), m_Specific(OrigPhi), m_Value()))))
     return InstDesc(false, I);
 
   return InstDesc(I, RecurKind::FindLast);
@@ -1392,9 +1388,15 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
     llvm::append_range(RedundantCasts, *Casts);
 }
 
+InductionDescriptor
+InductionDescriptor::getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE) {
+  return InductionDescriptor(Constant::getNullValue(Ty), IK_IntInduction,
+                             SE.getOne(Ty));
+}
+
 ConstantInt *InductionDescriptor::getConstIntStepValue() const {
-  if (isa<SCEVConstant>(Step))
-    return dyn_cast<ConstantInt>(cast<SCEVConstant>(Step)->getValue());
+  if (auto *ConstStep = dyn_cast<SCEVConstant>(Step))
+    return ConstStep->getValue();
   return nullptr;
 }
 

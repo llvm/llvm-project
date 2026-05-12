@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
@@ -50,6 +50,16 @@ namespace cwg948 { // cwg948: 3.7
   }
 #endif
 } // namespace cwg948
+
+namespace cwg950 { // cwg950: 3.1
+#if __cplusplus >= 201103L
+struct A {};
+struct B : decltype(A()) {};
+
+template <typename T>
+struct C : decltype(T()) {};
+#endif
+} // namespace cwg950
 
 namespace cwg952 { // cwg952: 2.8
 namespace example1 {
@@ -168,6 +178,17 @@ enum struct E3 { e = static_cast<int>(E3()) };
 enum struct E4 : int { e = static_cast<int>(E4()) };
 #endif
 } // namespace cwg977
+
+namespace cwg988 { // cwg988: 2.7
+#if __cplusplus >= 201103L
+void f(int& lvalue_ref, int&& rvalue_ref) {
+  static_assert(__is_same(decltype(lvalue_ref)&,  int&),  "");
+  static_assert(__is_same(decltype(lvalue_ref)&&, int&),  "");
+  static_assert(__is_same(decltype(rvalue_ref)&,  int&),  "");
+  static_assert(__is_same(decltype(rvalue_ref)&&, int&&), "");
+}
+#endif
+} // namespace cwg988
 
 namespace cwg990 { // cwg990: 3.5
 #if __cplusplus >= 201103L

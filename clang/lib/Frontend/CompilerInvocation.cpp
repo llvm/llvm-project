@@ -2557,6 +2557,10 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
     if (Prefix != "expected")
       GenerateArg(Consumer, OPT_verify_EQ, Prefix);
 
+  if (Opts.VerifyDirectives) {
+    GenerateArg(Consumer, OPT_verify_directives);
+  }
+
   DiagnosticLevelMask VIU = Opts.getVerifyIgnoreUnexpected();
   if (VIU == DiagnosticLevelMask::None) {
     // This is the default, don't generate anything.
@@ -2655,6 +2659,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
 
   Opts.VerifyDiagnostics = Args.hasArg(OPT_verify) || Args.hasArg(OPT_verify_EQ);
+  Opts.VerifyDirectives = Args.hasArg(OPT_verify_directives);
   Opts.VerifyPrefixes = Args.getAllArgValues(OPT_verify_EQ);
   if (Args.hasArg(OPT_verify))
     Opts.VerifyPrefixes.push_back("expected");
@@ -3285,6 +3290,12 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   }
 
   Opts.DashX = DashX;
+
+  // CIR is a source-level frontend pipeline. When the input is already LLVM IR
+  // (e.g. during the backend phase of OpenMP offloading), the standard LLVM
+  // backend should be used instead.
+  if (Opts.UseClangIRPipeline && DashX.getLanguage() == Language::LLVM_IR)
+    Opts.UseClangIRPipeline = false;
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }

@@ -9,13 +9,13 @@
 #   clang -g -c -o 1.o Inputs/odr-uniquing-DW_AT_name-conflict/lib1.cpp
 #   clang -g -c -o 2.o Inputs/odr-uniquing-DW_AT_name-conflict/lib2.cpp
 
-# RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/odr-uniquing-DW_AT_name-conflict -y %p/dummy-debug-map-arm64.map -o - \
+# RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/odr-uniquing-DW_AT_name-conflict -y %p/dummy-debug-map-arm64.map -o - \
 # RUN:     | llvm-dwarfdump --verify - | FileCheck %s
 
 # RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/odr-uniquing-DW_AT_name-conflict -y %p/dummy-debug-map-arm64.map -o - \
 # RUN:     | not llvm-dwarfdump --verify - | FileCheck %s --check-prefix=PARALLEL-ODR
 
-# RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/odr-uniquing-DW_AT_name-conflict -y %p/dummy-debug-map-arm64.map -no-odr -o - \
+# RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/odr-uniquing-DW_AT_name-conflict -y %p/dummy-debug-map-arm64.map -no-odr -o - \
 # RUN:     | llvm-dwarfdump --verify - | FileCheck %s
 
 # RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/odr-uniquing-DW_AT_name-conflict -y %p/dummy-debug-map-arm64.map -no-odr -o - \

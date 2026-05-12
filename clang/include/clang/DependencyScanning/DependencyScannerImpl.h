@@ -11,8 +11,6 @@
 
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
-#include "clang/Driver/Compilation.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -123,11 +121,10 @@ computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
 std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
     std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
-    StringRef WorkingDirectory, DependencyConsumer &Consumer,
-    DependencyScanningService &Service, CompilerInvocation &Inv,
-    DependencyActionController &Controller,
+    DependencyConsumer &Consumer, DependencyScanningService &Service,
+    CompilerInvocation &Inv, DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    llvm::SmallVector<StringRef> &StableDirs);
+    SmallVector<StringRef> &StableDirs);
 } // namespace dependencies
 } // namespace clang
 

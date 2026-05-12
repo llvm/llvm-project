@@ -318,12 +318,13 @@ TEST(DiagnosticsTest, ClangTidy) {
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
+  TU.AdditionalFiles["system/assert.h"] = ""; // Suppress "not found" error.
   TU.ClangTidyProvider = addTidyChecks("bugprone-sizeof-expression,"
                                        "bugprone-macro-repeated-side-effects,"
                                        "modernize-deprecated-headers,"
                                        "modernize-use-trailing-return-type,"
                                        "misc-no-recursion");
+  TU.ExtraArgs.push_back("-isystem" + testPath("system"));
   TU.ExtraArgs.push_back("-Wno-unsequenced");
   EXPECT_THAT(
       TU.build().getDiagnostics(),
@@ -1089,6 +1090,18 @@ void foo(int *x);
   const auto *X = cast<FunctionDecl>(findDecl(AST, "foo")).getParamDecl(0);
   ASSERT_TRUE(X->getOriginalType()->getNullability() ==
               NullabilityKind::NonNull);
+}
+
+TEST(DiagnosticsTest, PreamblePragmaDiagnosticPushPop) {
+  auto TU = TestTU::withCode(R"cpp(
+#pragma clang diagnostic push
+int main() {
+   return 0;
+}
+#pragma clang diagnostic pop
+)cpp");
+  auto AST = TU.build();
+  EXPECT_THAT(AST.getDiagnostics(), IsEmpty());
 }
 
 TEST(DiagnosticsTest, PreambleHeaderWithBadPragmaAssumeNonnull) {
@@ -2168,6 +2181,27 @@ TEST(DiagnosticsTest, UnusedInHeader) {
   // https://github.com/clangd/vscode-clangd/issues/360
   TU.Filename = "test.h";
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+}
+
+TEST(DiagnosticsTest, DontSuppressSubcategories) {
+  Annotations Source(R"cpp(
+  /*error-ok*/
+    void bar(int x) {
+      switch(x) {
+      default:
+        break;
+        break;
+      }
+    })cpp");
+  TestTU TU;
+  TU.ExtraArgs.push_back("-Wunreachable-code-aggressive");
+  TU.Code = Source.code().str();
+  Config Cfg;
+  // This shouldn't suppress subcategory unreachable-break.
+  Cfg.Diagnostics.Suppress = {"unreachable-code"};
+  WithContextValue SuppressFilterWithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(diagName("-Wunreachable-code-break")));
 }
 
 } // namespace

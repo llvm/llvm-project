@@ -2012,7 +2012,7 @@ public:
                                 llvm::BasicBlock &FiniBB, llvm::Function *Fn,
                                 ArrayRef<llvm::Value *> Args) {
       llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
-      if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminator())
+      if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminatorOrNull())
         CodeGenIPBBTI->eraseFromParent();
 
       CGF.Builder.SetInsertPoint(CodeGenIPBB);
@@ -2461,6 +2461,14 @@ public:
                                  const ThunkInfo *Thunk, bool IsUnprototyped);
 
   void FinishThunk();
+
+  /// Start an Objective-C direct method thunk.
+  void StartObjCDirectPreconditionThunk(const ObjCMethodDecl *OMD,
+                                        llvm::Function *Fn,
+                                        const CGFunctionInfo &FI);
+
+  /// Finish an Objective-C direct method thunk.
+  void FinishObjCDirectPreconditionThunk();
 
   /// Emit a musttail call for a thunk with a potentially adjusted this pointer.
   void EmitMustTailThunk(GlobalDecl GD, llvm::Value *AdjustedThisPtr,
@@ -3756,6 +3764,9 @@ public:
   llvm::Function *
   GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
                                      const OMPExecutableDirective &D);
+  llvm::Function *
+  GenerateOpenMPCapturedStmtFunctionAggregate(const CapturedStmt &S,
+                                              const OMPExecutableDirective &D);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
@@ -3919,6 +3930,7 @@ public:
   void EmitOMPStripeDirective(const OMPStripeDirective &S);
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
+  void EmitOMPSplitDirective(const OMPSplitDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
   void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
@@ -4757,6 +4769,13 @@ public:
 
   RValue emitRotate(const CallExpr *E, bool IsRotateRight);
 
+  RValue emitStdcCountIntrinsic(const CallExpr *E, llvm::Intrinsic::ID IntID,
+                                bool InvertArg, bool IsPop = false);
+  RValue emitStdcBitWidthMinus(const CallExpr *E, llvm::Intrinsic::ID IntID,
+                               bool IsPop);
+  RValue emitStdcFirstBit(const CallExpr *E, llvm::Intrinsic::ID IntID,
+                          bool InvertArg);
+
   /// Emit IR for __builtin_os_log_format.
   RValue emitBuiltinOSLogFormat(const CallExpr &E);
 
@@ -4912,6 +4931,8 @@ public:
 
   llvm::Value *BuildVector(ArrayRef<llvm::Value *> Ops);
   llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitPPCBuiltinCpu(unsigned BuiltinID, llvm::Type *ReturnType,
+                                 StringRef CPUStr);
   llvm::Value *EmitPPCBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
@@ -5468,6 +5489,86 @@ private:
                      QualType InputType, std::string &ConstraintStr,
                      SourceLocation Loc);
 
+  /// This structure holds the information gathered about the constraints for an
+  /// inline assembly statement. It helps in separating the constraint
+  /// processing from the code generation.
+  struct AsmConstraintsInfo {
+    // The output and input constraints.
+    SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos;
+    SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos;
+
+    // Constraint strings.
+    std::string Constraints;
+    std::string InOutConstraints;
+
+    // Keep track of out constraints for tied input operand.
+    std::vector<std::string> OutputConstraints;
+
+    // Keep track of argument types.
+    std::vector<llvm::Value *> Args;
+    std::vector<llvm::Type *> ArgTypes;
+    std::vector<llvm::Type *> ArgElemTypes;
+
+    // Keep track of result register constraints.
+    std::vector<LValue> ResultRegDests;
+    std::vector<QualType> ResultRegQualTys;
+    std::vector<llvm::Type *> ResultRegTypes;
+    std::vector<llvm::Type *> ResultTruncRegTypes;
+
+    llvm::BitVector ResultTypeRequiresCast;
+
+    // Keep track of in/out constraints.
+    std::vector<llvm::Value *> InOutArgs;
+    std::vector<llvm::Type *> InOutArgTypes;
+    std::vector<llvm::Type *> InOutArgElemTypes;
+
+    // Destination blocks for 'asm gotos'.
+    llvm::BasicBlock *DefaultDest = nullptr;
+    SmallVector<llvm::BasicBlock *, 3> IndirectDests;
+
+    std::vector<std::optional<std::pair<unsigned, unsigned>>> ResultBounds;
+
+    // An inline asm can be marked readonly if it meets the following
+    // conditions:
+    //
+    //   - it doesn't have any sideeffects
+    //   - it doesn't clobber memory
+    //   - it doesn't return a value by-reference
+    //
+    // It can be marked readnone if it doesn't have any input memory
+    // constraints in addition to meeting the conditions listed above.
+    bool ReadOnly = true;
+    bool ReadNone = true;
+
+    AsmConstraintsInfo(
+        SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
+        SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos)
+        : OutputConstraintInfos(OutputConstraintInfos),
+          InputConstraintInfos(InputConstraintInfos) {}
+  };
+
+  void EmitAsmStmt(
+      const AsmStmt &S,
+      SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
+      SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos);
+  void EmitAsmStores(const AsmStmt &S,
+                     const llvm::ArrayRef<llvm::Value *> RegResults,
+                     const AsmConstraintsInfo &AsmInfo);
+  void UpdateAsmCallInst(const AsmStmt &S, llvm::CallBase &Result,
+                         const AsmConstraintsInfo &AsmInfo, bool HasSideEffect,
+                         bool HasUnwindClobber, bool NoMerge, bool NoConvergent,
+                         std::vector<llvm::Value *> &RegResults);
+  bool GetOutputAndInputConstraints(
+      const AsmStmt &S,
+      SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
+      SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos);
+  void HandleOutputConstraints(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
+  void HandleMSStyleAsmBlob(const AsmStmt &S, std::string &AsmString,
+                            AsmConstraintsInfo &AsmInfo);
+  void HandleInputConstraints(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
+  bool HandleLabels(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
+  bool HandleClobbers(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
+
   /// Attempts to statically evaluate the object size of E. If that
   /// fails, emits code to figure the size of E out for us. This is
   /// pass_object_size aware.
@@ -5578,6 +5679,8 @@ public:
                                        ArrayRef<FMVResolverOption> Options);
   void EmitRISCVMultiVersionResolver(llvm::Function *Resolver,
                                      ArrayRef<FMVResolverOption> Options);
+  void EmitPPCAIXMultiVersionResolver(llvm::Function *Resolver,
+                                      ArrayRef<FMVResolverOption> Options);
 
   Address EmitAddressOfPFPField(Address RecordPtr, const PFPField &Field);
   Address EmitAddressOfPFPField(Address RecordPtr, Address FieldPtr,

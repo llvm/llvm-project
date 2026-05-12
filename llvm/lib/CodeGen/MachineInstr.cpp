@@ -797,9 +797,9 @@ MachineInstr *MachineInstr::removeFromBundle() {
   return getParent()->remove_instr(this);
 }
 
-void MachineInstr::eraseFromParent() {
+MachineBasicBlock::iterator MachineInstr::eraseFromParent() {
   assert(getParent() && "Not embedded in a basic block!");
-  getParent()->erase(this);
+  return getParent()->erase(this);
 }
 
 void MachineInstr::eraseFromBundle() {
@@ -927,7 +927,7 @@ bool MachineInstr::isStackAligningInlineAsm() const {
 InlineAsm::AsmDialect MachineInstr::getInlineAsmDialect() const {
   assert(isInlineAsm() && "getInlineAsmDialect() only works for inline asms!");
   unsigned ExtraInfo = getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
-  return InlineAsm::AsmDialect((ExtraInfo & InlineAsm::Extra_AsmDialect) != 0);
+  return InlineAsm::getDialect(ExtraInfo);
 }
 
 int MachineInstr::findInlineAsmFlagIdx(unsigned OpIdx,
@@ -2613,6 +2613,9 @@ MachineInstr::getSpillSize(const TargetInstrInfo *TII) const {
 
 std::optional<LocationSize>
 MachineInstr::getFoldedSpillSize(const TargetInstrInfo *TII) const {
+  if (!mayStore())
+    return std::nullopt;
+
   MMOList Accesses;
   if (TII->hasStoreToStackSlot(*this, Accesses))
     return getSpillSlotSize(Accesses, getMF()->getFrameInfo());

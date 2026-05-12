@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
 
-struct NoCopyConstruct {};
+struct NoCopyConstruct {
+  int x;
+};
 
 struct CopyConstruct {
   CopyConstruct() = default;
@@ -9,10 +11,12 @@ struct CopyConstruct {
 
 struct NonDefaultCtor {
   NonDefaultCtor();
+  int x;
 };
 
 struct HasDtor {
   ~HasDtor();
+  int x;
 };
 
 // CHECK: acc.firstprivate.recipe @firstprivatization__ZTSi : !cir.ptr<!s32i> init {
@@ -109,7 +113,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -145,7 +149,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -180,7 +184,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -215,7 +219,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -250,7 +254,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -285,7 +289,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -314,7 +318,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[DEC:.*]] = cir.unary(dec, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[DEC:.*]] = cir.dec %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[DEC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }

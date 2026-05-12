@@ -306,9 +306,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
-  if (Args.hasArg(options::OPT_s))
-    CmdArgs.push_back("-s");
-
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
     if (IsBigEndian)
@@ -375,6 +372,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
+  Args.addAllArgs(CmdArgs, {options::OPT_s, options::OPT_t, options::OPT_u});
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
     if (!isAndroid && !IsIAMCU) {
@@ -435,7 +434,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           Args.MakeArgString(ToolChain.GetFilePath("crt_pad_segment.o")));
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
+  Args.addAllArgs(CmdArgs, {options::OPT_L});
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
@@ -579,7 +578,10 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_T, options::OPT_t});
+  // Emit -T after -L paths so that INPUT()/GROUP() directives in the linker
+  // script resolve against the user-supplied and toolchain search paths in GNU
+  // ld.
+  Args.addAllArgs(CmdArgs, {options::OPT_T});
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this,
@@ -3135,22 +3137,21 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
                                    path_list &Paths) {
   // Add the multilib suffixed paths where they are available.
   if (GCCInstallation.isValid()) {
-    assert(!SelectedMultilibs.empty());
+    const Multilib &GCCMultilib = GCCInstallation.getMultilib();
     const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
     const std::string &LibPath =
         std::string(GCCInstallation.getParentLibPath());
 
     // Sourcery CodeBench MIPS toolchain holds some libraries under
     // a biarch-like suffix of the GCC installation.
-    if (const auto &PathsCallback = Multilibs.filePathsCallback())
-      for (const auto &Path : PathsCallback(SelectedMultilibs.back()))
+    if (const auto &PathsCallback =
+            GCCInstallation.getMultilibs().filePathsCallback())
+      for (const auto &Path : PathsCallback(GCCMultilib))
         addPathIfExists(D, GCCInstallation.getInstallPath() + Path, Paths);
 
     // Add lib/gcc/$triple/$version, with an optional /multilib suffix.
-    addPathIfExists(D,
-                    GCCInstallation.getInstallPath() +
-                        SelectedMultilibs.back().gccSuffix(),
-                    Paths);
+    addPathIfExists(
+        D, GCCInstallation.getInstallPath() + GCCMultilib.gccSuffix(), Paths);
 
     // Add lib/gcc/$triple/$libdir
     // For GCC built with --enable-version-specific-runtime-libs.
@@ -3177,7 +3178,7 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     // Clang diverges from GCC's behavior.
     addPathIfExists(D,
                     LibPath + "/../" + GCCTriple.str() + "/lib/../" + OSLibDir +
-                        SelectedMultilibs.back().osSuffix(),
+                        GCCMultilib.osSuffix(),
                     Paths);
 
     // If the GCC installation we found is inside of the sysroot, we want to
@@ -3221,7 +3222,7 @@ void Generic_GCC::AddMultilibIncludeArgs(const ArgList &DriverArgs,
                               Twine(LibPath) + "/../" + GCCTriple.str() +
                                   "/include");
 
-  const auto &Callback = Multilibs.includeDirsCallback();
+  const auto &Callback = GCCInstallation.getMultilibs().includeDirsCallback();
   if (Callback) {
     for (const auto &Path : Callback(GCCInstallation.getMultilib()))
       addExternCSystemIncludeIfExists(DriverArgs, CC1Args,

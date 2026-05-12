@@ -211,6 +211,7 @@ public:
   bool isValid() const { return State != AVLState::Uninitialized; }
   void setUnknown() { State = AVLState::Unknown; }
   bool isUnknown() const { return State == AVLState::Unknown; }
+  bool isKnown() const { return isValid() && !isUnknown(); }
 
   void setAVLRegDef(const VNInfo *VNInfo, Register AVLReg) {
     assert(AVLReg.isVirtual());
@@ -268,36 +269,35 @@ public:
     }
   }
 
-  bool hasSEWLMULRatioOnly() const { return SEWLMULRatioOnly; }
+  bool hasSEWLMULRatioOnly() const {
+    assert(isKnown() && "Can't use VTYPE for uninitialized or unknown");
+    return SEWLMULRatioOnly;
+  }
 
   unsigned getSEW() const {
-    assert(isValid() && !isUnknown() && !hasSEWLMULRatioOnly() &&
+    assert(isKnown() && !hasSEWLMULRatioOnly() &&
            "Can't use VTYPE for uninitialized or unknown");
     return SEW;
   }
   RISCVVType::VLMUL getVLMUL() const {
-    assert(isValid() && !isUnknown() && !hasSEWLMULRatioOnly() &&
+    assert(isKnown() && !hasSEWLMULRatioOnly() &&
            "Can't use VTYPE for uninitialized or unknown");
     return VLMul;
   }
   bool getTailAgnostic() const {
-    assert(isValid() && !isUnknown() &&
-           "Can't use VTYPE for uninitialized or unknown");
+    assert(isKnown() && "Can't use VTYPE for uninitialized or unknown");
     return TailAgnostic;
   }
   bool getMaskAgnostic() const {
-    assert(isValid() && !isUnknown() &&
-           "Can't use VTYPE for uninitialized or unknown");
+    assert(isKnown() && "Can't use VTYPE for uninitialized or unknown");
     return MaskAgnostic;
   }
   bool getAltFmt() const {
-    assert(isValid() && !isUnknown() &&
-           "Can't use VTYPE for uninitialized or unknown");
+    assert(isKnown() && "Can't use VTYPE for uninitialized or unknown");
     return AltFmt;
   }
   unsigned getTWiden() const {
-    assert(isValid() && !isUnknown() &&
-           "Can't use VTYPE for uninitialized or unknown");
+    assert(isKnown() && "Can't use VTYPE for uninitialized or unknown");
     return TWiden;
   }
 
@@ -355,8 +355,7 @@ public:
   }
 
   void setVTYPE(unsigned VType) {
-    assert(isValid() && !isUnknown() &&
-           "Can't set VTYPE for uninitialized or unknown");
+    assert(isKnown() && "Can't set VTYPE for uninitialized or unknown");
     VLMul = RISCVVType::getVLMUL(VType);
     SEW = RISCVVType::getSEW(VType);
     TailAgnostic = RISCVVType::isTailAgnostic(VType);
@@ -367,8 +366,7 @@ public:
   }
   void setVTYPE(RISCVVType::VLMUL L, unsigned S, bool TA, bool MA, bool Altfmt,
                 unsigned W) {
-    assert(isValid() && !isUnknown() &&
-           "Can't set VTYPE for uninitialized or unknown");
+    assert(isKnown() && "Can't set VTYPE for uninitialized or unknown");
     VLMul = L;
     SEW = S;
     TailAgnostic = TA;
@@ -382,7 +380,7 @@ public:
   void setVLMul(RISCVVType::VLMUL VLMul) { this->VLMul = VLMul; }
 
   unsigned encodeVTYPE() const {
-    assert(isValid() && !isUnknown() && !SEWLMULRatioOnly &&
+    assert(isKnown() && !SEWLMULRatioOnly &&
            "Can't encode VTYPE for uninitialized or unknown");
     if (TWiden != 0)
       return RISCVVType::encodeXSfmmVType(SEW, TWiden, AltFmt);
@@ -403,8 +401,7 @@ public:
   }
 
   unsigned getSEWLMULRatio() const {
-    assert(isValid() && !isUnknown() &&
-           "Can't use VTYPE for uninitialized or unknown");
+    assert(isKnown() && "Can't use VTYPE for uninitialized or unknown");
     return RISCVVType::getSEWLMULRatio(SEW, VLMul);
   }
 
@@ -536,7 +533,7 @@ public:
       OS << "AVLVLMAX";
       break;
     }
-    if (isValid() && !isUnknown()) {
+    if (isKnown()) {
       OS << ", ";
 
       unsigned LMul;

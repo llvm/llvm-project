@@ -191,3 +191,11 @@ MyObj& return_ref_from_noescape_ptr(
 int* return_spaced_brackets(int* p [ [clang::noescape] /*some comment*/ ]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
   return p; // expected-note {{returned here}}
 }
+
+namespace callable_wrappers {
+
+std::function<void()> escape_noescape_via_function(int &x [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
+  return [&]() { (void)x; }; // expected-note {{returned here}}
+}
+
+} // namespace callable_wrappers
