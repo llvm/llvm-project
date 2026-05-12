@@ -51,13 +51,11 @@ CompileUnit::CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit,
   if (!CUDie)
     return;
 
-  if (std::optional<DWARFFormValue> Val = CUDie.find(dwarf::DW_AT_language)) {
-    uint16_t LangVal = dwarf::toUnsigned(Val, 0);
-    if (isODRLanguage(LangVal))
-      Language = LangVal;
-  }
+  if (std::optional<DWARFFormValue> Val = CUDie.find(dwarf::DW_AT_language))
+    Language = dwarf::toUnsigned(Val, 0);
 
-  if (!GlobalData.getOptions().NoODR && Language.has_value())
+  if (!GlobalData.getOptions().NoODR && Language.has_value() &&
+      isODRLanguage(*Language))
     NoODR = false;
 
   if (const char *CUName = CUDie.getName(DINameKind::ShortName))
@@ -293,7 +291,6 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
       return;
     }
 
-    auto &Entry = (*GlobalData.getOptions().ParseableSwiftInterfaces)[*Name];
     // The prepend path is applied later when copying.
     SmallString<128> ResolvedPath;
     if (sys::path::is_relative(Path))
@@ -301,14 +298,25 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
           ResolvedPath,
           dwarf::toString(getUnitDIE().find(dwarf::DW_AT_comp_dir), ""));
     sys::path::append(ResolvedPath, Path);
-    if (!Entry.empty() && Entry != ResolvedPath) {
-      DWARFDie Die = getDIE(DieEntry);
-      warn(Twine("conflicting parseable interfaces for Swift Module ") + *Name +
-               ": " + Entry + " and " + Path + ".",
-           &Die);
-    }
-    Entry = std::string(ResolvedPath);
+
+    // Stage the entry. It will be merged into the shared
+    // ParseableSwiftInterfaces map after the parallel analysis phase so that
+    // the final contents and any conflict warnings are deterministic.
+    PendingSwiftInterfaces.emplace_back(*Name, ResolvedPath);
   }
+}
+
+void CompileUnit::mergeSwiftInterfaces(
+    DWARFLinkerBase::SwiftInterfacesMapTy &Map) {
+  for (auto &Pending : PendingSwiftInterfaces) {
+    auto &Entry = Map[Pending.ModuleName];
+    if (!Entry.empty() && Entry != Pending.ResolvedPath)
+      warn(Twine("conflicting parseable interfaces for Swift Module ") +
+           Pending.ModuleName + ": " + Entry + " and " + Pending.ResolvedPath +
+           ".");
+    Entry = Pending.ResolvedPath;
+  }
+  PendingSwiftInterfaces.clear();
 }
 
 Error CompileUnit::assignTypeNames(TypePool &TypePoolRef) {

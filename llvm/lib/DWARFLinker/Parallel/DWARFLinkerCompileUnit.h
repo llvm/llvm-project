@@ -127,8 +127,14 @@ public:
   void maybeResetToLoadedStage();
 
   /// Collect references to parseable Swift interfaces in imported
-  /// DW_TAG_module blocks.
+  /// DW_TAG_module blocks. The entries are staged on the CompileUnit and
+  /// merged into the shared map after the parallel analysis phase.
   void analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry);
+
+  /// Merge the Swift interface entries collected by analyzeImportedModule
+  /// into \p Map, emitting a warning for each conflicting path. Must be
+  /// called serially after analysis has completed.
+  void mergeSwiftInterfaces(DWARFLinkerBase::SwiftInterfacesMapTy &Map);
 
   /// Navigate DWARF tree and set die properties.
   void analyzeDWARFStructure() {
@@ -731,8 +737,18 @@ private:
   /// Pointer to the paired compile unit from the input DWARF.
   DWARFUnit *OrigUnit = nullptr;
 
-  /// The DW_AT_language of this unit.
+  /// Raw DW_AT_language from the input (not ODR-filtered).
   std::optional<uint16_t> Language;
+
+  /// Parseable Swift interface entries staged during the parallel analysis
+  /// phase. Merged serially afterwards.
+  struct PendingSwiftInterface {
+    PendingSwiftInterface(StringRef ModuleName, StringRef ResolvedPath)
+        : ModuleName(ModuleName), ResolvedPath(ResolvedPath) {}
+    std::string ModuleName;
+    std::string ResolvedPath;
+  };
+  SmallVector<PendingSwiftInterface> PendingSwiftInterfaces;
 
   /// Line table for this unit.
   const DWARFDebugLine::LineTable *LineTablePtr = nullptr;

@@ -4,17 +4,17 @@
 // XFAIL: target={{(s390x|sparc.*)-.*}}
 // XFAIL: system-aix
 
-// CHECK{LITERAL}: @dense_resource_tensor_constant = internal constant [5 x float] [float 0x3FCA034080000000, float 0xBFD0466300000000, float 0xBFD75DDF80000000, float 0xBFDE074F40000000, float 0x3FDDD3A1C0000000]
+// CHECK{LITERAL}: @dense_resource_tensor_constant = internal constant [5 x float] [float f0x3E501A04, float f0xBE823318, float f0xBEBAEEFC, float f0xBEF03A7A, float f0x3EEE9D0E]
 llvm.mlir.global internal constant @dense_resource_tensor_constant(dense_resource<dense_resource_test_5xf32> : tensor<5xf32>) : !llvm.array<5 x f32>
 
-// CHECK{LITERAL}: @dense_resource_vector_constant = internal constant <5 x float> <float 0x3FCA034080000000, float 0xBFD0466300000000, float 0xBFD75DDF80000000, float 0xBFDE074F40000000, float 0x3FDDD3A1C0000000>
+// CHECK{LITERAL}: @dense_resource_vector_constant = internal constant <5 x float> <float f0x3E501A04, float f0xBE823318, float f0xBEBAEEFC, float f0xBEF03A7A, float f0x3EEE9D0E>
 llvm.mlir.global internal constant @dense_resource_vector_constant(dense_resource<dense_resource_test_5xf32> : vector<5xf32>) : vector<5xf32>
 
 
-// CHECK{LITERAL}: @dense_resource_multidim_tensor_constant = internal constant [1 x [2 x [2 x float]]] [[2 x [2 x float]] [[2 x float] [float 0x3FD6B46A80000000, float 0x3FD6781AC0000000], [2 x float] [float 0xBFB45A2AA0000000, float 0x3FD77A5CA0000000]]]
+// CHECK{LITERAL}: @dense_resource_multidim_tensor_constant = internal constant [1 x [2 x [2 x float]]] [[2 x [2 x float]] [[2 x float] [float f0x3EB5A354, float f0x3EB3C0D6], [2 x float] [float f0xBDA2D155, float f0x3EBBD2E5]]] 
 llvm.mlir.global internal constant @dense_resource_multidim_tensor_constant(dense_resource<dense_resource_test_2x2xf32> : tensor<1x2x2xf32>) : !llvm.array<1 x !llvm.array<2 x !llvm.array<2 x f32>>>
 
-// CHECK{LITERAL}: @dense_resource_multidim_vector_constant = internal constant [1 x [2 x <2 x float>]] [[2 x <2 x float>] [<2 x float> <float 0x3FD6B46A80000000, float 0x3FD6781AC0000000>, <2 x float> <float 0xBFB45A2AA0000000, float 0x3FD77A5CA0000000>]]
+// CHECK{LITERAL}: @dense_resource_multidim_vector_constant = internal constant [1 x [2 x <2 x float>]] [[2 x <2 x float>] [<2 x float> <float f0x3EB5A354, float f0x3EB3C0D6>, <2 x float> <float f0xBDA2D155, float f0x3EBBD2E5>]]
 llvm.mlir.global internal constant @dense_resource_multidim_vector_constant(dense_resource<dense_resource_test_2x2xf32> : vector<1x2x2xf32>) : !llvm.array<1 x !llvm.array<2 x vector<2 x f32>>>
 
 // Resources are kept at end of file. New tests should be added above this.

@@ -1518,6 +1518,11 @@ LogicalResult ResolveLayoutConflicts::run() {
     return WalkResult::advance();
   });
 
+  LLVM_DEBUG({
+    DBGS() << "IR after resolving layout conflicts:\n";
+    parentOp->dump();
+  });
+
   return r.wasInterrupted() ? failure() : success();
 }
 

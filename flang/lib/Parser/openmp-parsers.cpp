@@ -1916,8 +1916,8 @@ TYPE_PARSER(construct<OmpNothingDirective>(
     OmpDirectiveSpecificationParser{}))
 
 TYPE_PARSER( //
-    sourced(construct<OpenMPUtilityConstruct>(Parser<OmpErrorDirective>{})) ||
-    sourced(construct<OpenMPUtilityConstruct>(Parser<OmpNothingDirective>{})))
+    sourced(construct<OmpUtilityDirective>(Parser<OmpErrorDirective>{})) ||
+    sourced(construct<OmpUtilityDirective>(Parser<OmpNothingDirective>{})))
 
 TYPE_PARSER(construct<OmpMetadirectiveDirective>(
     predicated(Parser<OmpDirectiveName>{},
@@ -2423,20 +2423,20 @@ TYPE_PARSER(sourced(construct<OmpDeclareSimdDirective>(
     OmpDirectiveSpecificationParser{})))
 
 TYPE_PARSER(sourced( //
-    construct<OpenMPGroupprivate>(
+    construct<OmpGroupprivateDirective>(
         predicated(OmpDirectiveNameParser{},
             IsDirective(llvm::omp::Directive::OMPD_groupprivate)) >=
         OmpDirectiveSpecificationParser{})))
 
 // 2.4 Requires construct
-TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
+TYPE_PARSER(sourced(construct<OmpRequiresDirective>(
     predicated(OmpDirectiveNameParser{},
         IsDirective(llvm::omp::Directive::OMPD_requires)) >=
     OmpDirectiveSpecificationParser{})))
 
 // 2.15.2 Threadprivate directive
 TYPE_PARSER(sourced( //
-    construct<OpenMPThreadprivate>(
+    construct<OmpThreadprivateDirective>(
         predicated(OmpDirectiveNameParser{},
             IsDirective(llvm::omp::Directive::OMPD_threadprivate)) >=
         OmpDirectiveSpecificationParser{})))
@@ -2465,13 +2465,13 @@ TYPE_PARSER(
                             construct<OpenMPDeclarativeConstruct>(
                                 sourced(OmpDeclarativeAllocateParser{})) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPGroupprivate>{}) ||
+                                Parser<OmpGroupprivateDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPRequiresConstruct>{}) ||
+                                Parser<OmpRequiresDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPThreadprivate>{}) ||
+                                Parser<OmpThreadprivateDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPUtilityConstruct>{}) ||
+                                Parser<OmpUtilityDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OmpMetadirectiveDirective>{})) /
                             endOmpLine))
@@ -2566,7 +2566,7 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
                 construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
-                construct<OpenMPConstruct>(Parser<OpenMPUtilityConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OmpUtilityDirective>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPDispatchConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAssumeConstruct>{}),

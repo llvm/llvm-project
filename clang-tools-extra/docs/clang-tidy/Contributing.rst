@@ -131,8 +131,8 @@ So you have an idea of a useful check for :program:`clang-tidy`.
 First, if you're not familiar with LLVM development, read through the `Getting
 Started with the LLVM System`_ document for instructions on setting up your
 workflow and the `LLVM Coding Standards`_ document to familiarize yourself
-with the coding style used in the project. For code reviews, we currently
-use `LLVM Github`_, though historically we used Phabricator.
+with the coding style used in the project. Code reviews for clang-tidy
+contributions are done through `LLVM Github`_.
 
 .. _Getting Started with the LLVM System: https://llvm.org/docs/GettingStarted.html
 .. _LLVM Coding Standards: https://llvm.org/docs/CodingStandards.html

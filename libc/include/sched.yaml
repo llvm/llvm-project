@@ -94,8 +94,6 @@ functions:
     return_type: int
     arguments:
       - type: pid_t
-      - type: int
-      - type: const struct sched_param *
   - name: sched_rr_get_interval
     standards:
       - POSIX
@@ -124,6 +122,8 @@ functions:
     return_type: int
     arguments:
       - type: pid_t
+      - type: int
+      - type: const struct sched_param *
   - name: sched_yield
     standards:
       - POSIX
