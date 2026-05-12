@@ -41,9 +41,8 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
   ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
 
   // WASIP3 implies using the libcall thread context.
-  if (!HasLibcallThreadContext && TargetTriple.getOS() == Triple::WASIp3) {
+  if (!HasLibcallThreadContext && TargetTriple.getOS() == Triple::WASIp3)
     HasLibcallThreadContext = true;
-  }
 
   FeatureBitset Bits = getFeatureBits();
 
