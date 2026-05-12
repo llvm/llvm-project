@@ -49,7 +49,7 @@ C++ Specific Potentially Breaking Changes
 - Clang now correctly rejects ``export`` declarations in module implementation
   partitions. (#GH107602)
 
-- Template arguments which aren't equivalent to their copies are correctly rejected.
+- Template arguments which aren't template-argument-equivalent to their copies are correctly rejected.
 
 ABI Changes in This Version
 ---------------------------

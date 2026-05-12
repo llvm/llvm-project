@@ -226,6 +226,21 @@ template struct T5<{}>;
 //   expected-note@#CannotCopy-T5-S5 {{passing argument to parameter here}}
 //   expected-note@#CannotCopy-T5-S5 {{non-type template argument is required to be copyable}}
 static_assert(!C<S5<>, T5>);
+
+struct Base6 {
+  Base6() = default;
+  Base6(Base6&) = default;
+};
+struct S6 : Base6 {}; // #CannotCopy-S6
+template <S6> // #CannotCopy-T6-S6
+struct T6 {};
+template struct T6<{}>;
+// expected-error@-1 {{no matching constructor for initialization of 'S6'}}
+//   expected-note@#CannotCopy-S6 {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const S6') would lose const qualifier}}
+//   expected-note@#CannotCopy-S6 {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
+//   expected-note@#CannotCopy-T6-S6 {{passing argument to parameter here}}
+//   expected-note@#CannotCopy-T6-S6 {{non-type template argument is required to be copyable}}
+static_assert(!C<S6, T6>);
 }
 
 namespace StableAddress {

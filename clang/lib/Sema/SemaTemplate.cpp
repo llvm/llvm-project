@@ -7132,10 +7132,14 @@ static bool CheckTemplateArgumentPointerToMember(
 
 // P2308R1  C++26 [temp.arg.nontype]p4:
 //   ... If, for the initialization from any candidate initializer,
+//     - the initialization would be ill-formed, or
 //     - ...
 //     - the initialization would cause P to not be
 //       template-argument-equivalent ([temp.type]) to v,
 //   the program is ill-formed.
+//
+// Returns `false` if they are template-argument-equivalent, `true` if the
+// initialization fails or they are not template-argument-equivalent.
 static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
                                                  QualType ParamType,
                                                  const APValue &Value,
@@ -7148,7 +7152,6 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
       !CXXRecord->hasUserDeclaredConstructor()) {
 
     if (CXXRecord->hasTrivialCopyConstructor() &&
-        CXXRecord->implicitCopyConstructorHasConstParam() &&
         !CXXRecord->needsOverloadResolutionForCopyConstructor())
       return false;
 
