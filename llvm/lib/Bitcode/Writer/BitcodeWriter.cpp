@@ -4671,8 +4671,6 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
       /*WriteContextSizeInfoIndex*/ true, CallStackPos, CallStackCount);
 }
 
-
-
 // Collect the global value references in the given variable's initializer,
 // and emit them in a summary record.
 void ModuleBitcodeWriterBase::writeModuleLevelReferences(

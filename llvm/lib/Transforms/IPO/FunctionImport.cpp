@@ -340,8 +340,6 @@ selectCallee(const ModuleSummaryIndex &Index,
   return nullptr;
 }
 
-
-
 namespace {
 
 using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */>;

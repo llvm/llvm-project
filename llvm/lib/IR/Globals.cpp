@@ -131,9 +131,9 @@ std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
 }
 
 MDNode *GlobalValue::getGUIDMetadata() const {
-   if (auto *GO = dyn_cast<GlobalObject>(this))
-     return GO->getMetadata(LLVMContext::MD_unique_id);
-   return nullptr;
+  if (auto *GO = dyn_cast<GlobalObject>(this))
+    return GO->getMetadata(LLVMContext::MD_unique_id);
+  return nullptr;
 }
 
 void GlobalValue::removeFromParent() {
