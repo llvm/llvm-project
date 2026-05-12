@@ -515,6 +515,29 @@ unsigned Lexer::MeasureTokenLength(SourceLocation Loc,
   return TheTok.getLength();
 }
 
+SourceLocation Lexer::findEndOfIdentifierContinuation(
+    SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
+  Loc = SM.getExpansionLoc(Loc);
+  const FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
+  if (Invalid)
+    return Loc;
+
+  const char *StrData = Buffer.data() + LocInfo.second;
+  if (StrData >= Buffer.end())
+    return Loc;
+
+  // Use the lexer continuation rules directly, without requiring identifier
+  // start at Loc.
+  Lexer TheLexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts,
+                 Buffer.begin(), StrData, Buffer.end());
+  Token Tok;
+  Tok.startToken();
+  TheLexer.LexIdentifierContinue(Tok, StrData);
+  return Loc.getLocWithOffset(Tok.getLength());
+}
+
 /// Relex the token at the specified location.
 /// \returns true if there was a failure, false on success.
 bool Lexer::getRawToken(SourceLocation Loc, Token &Result,

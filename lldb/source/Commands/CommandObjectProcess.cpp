@@ -533,7 +533,7 @@ protected:
       // default breakpoint.
       if (m_options.m_run_to_bkpt_args.GetArgumentCount() > 0)
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            m_options.m_run_to_bkpt_args, target, result, &run_to_bkpt_ids,
+            m_options.m_run_to_bkpt_args, m_exe_ctx, result, &run_to_bkpt_ids,
             BreakpointName::Permissions::disablePerm);
       if (!result.Succeeded()) {
         return;
@@ -927,7 +927,9 @@ protected:
                   error);
     if (error.Fail() || process_sp == nullptr) {
       result.AppendError(error.AsCString("Error connecting to the process"));
+      return;
     }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   CommandOptions m_options;
@@ -951,6 +953,10 @@ public:
     if (process)
       return process->GetPluginCommandObject();
     return nullptr;
+  }
+
+  llvm::StringRef GetUnsupportedError() override {
+    return "no process plugin commands are currently registered";
   }
 };
 

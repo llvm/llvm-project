@@ -4245,7 +4245,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     }
 
     if (I == N) {
-      if (!handler.found(*O, ObjType))
+      if (!handler.found(*O, ObjType, Obj.Base))
         return false;
 
       // If we modified a bit-field, truncate it to the right width.
@@ -4342,7 +4342,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         expandVector(*O, NumElements);
       }
       assert(O->isVector() && "unexpected object during vector element access");
-      return handler.found(O->getVectorElt(Index), ObjType);
+      return handler.found(O->getVectorElt(Index), ObjType, Obj.Base);
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
       if (Field->isMutable() &&
           !Obj.mayAccessMutableMembers(Info, handler.AccessKind)) {
@@ -4402,7 +4402,7 @@ struct ExtractSubobjectHandler {
 
   typedef bool result_type;
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     Result = Subobj;
     if (AccessKind == AK_ReadObjectRepresentation)
       return true;
@@ -4448,7 +4448,7 @@ struct ModifySubobjectHandler {
   }
 
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     if (!checkConst(SubobjType))
       return false;
     // We've been given ownership of NewVal, so just swap it in.
@@ -4978,7 +4978,7 @@ struct CompoundAssignSubobjectHandler {
   }
 
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     switch (Subobj.getKind()) {
     case APValue::Int:
       return found(Subobj.getInt(), SubobjType);
@@ -4997,6 +4997,7 @@ struct CompoundAssignSubobjectHandler {
       Info.FFDiag(E, diag::note_constexpr_access_uninit)
           << /*read of=*/0 << /*uninitialized object=*/1
           << E->getLHS()->getSourceRange();
+      NoteLValueLocation(Info, Base);
       return false;
     default:
       // FIXME: can this happen?
@@ -5125,7 +5126,7 @@ struct IncDecSubobjectHandler {
   }
 
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     // Stash the old value. Also clear Old, so we don't clobber it later
     // if we're post-incrementing a complex.
     if (Old) {
@@ -6412,7 +6413,9 @@ struct CheckDynamicTypeHandler {
   AccessKinds AccessKind;
   typedef bool result_type;
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) { return true; }
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
+    return true;
+  }
   bool found(APSInt &Value, QualType SubobjType) { return true; }
   bool found(APFloat &Value, QualType SubobjType) { return true; }
 };
@@ -6762,7 +6765,7 @@ struct StartLifetimeOfUnionMemberHandler {
 
   typedef bool result_type;
   bool failed() { return Failed; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     // We are supposed to perform no initialization but begin the lifetime of
     // the object. We interpret that as meaning to do what default
     // initialization of the object would do if all constructors involved were
@@ -7480,7 +7483,7 @@ struct DestroyObjectHandler {
 
   typedef bool result_type;
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     return HandleDestructionImpl(Info, E->getSourceRange(), This, Subobj,
                                  SubobjType);
   }
@@ -10865,7 +10868,8 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
         }
         return true;
       }
-      bool found(APValue &Subobj, QualType SubobjType) {
+      bool found(APValue &Subobj, QualType SubobjType,
+                 APValue::LValueBase Base) {
         if (!checkConst(SubobjType))
           return false;
         // FIXME: Reject the cases where [basic.life]p8 would not permit the
@@ -16976,20 +16980,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BIstdc_bit_ceil_ui:
   case Builtin::BIstdc_bit_ceil_ul:
   case Builtin::BIstdc_bit_ceil_ull:
-  case Builtin::BIstdc_leading_zeros:
-  case Builtin::BIstdc_leading_ones:
-  case Builtin::BIstdc_trailing_zeros:
-  case Builtin::BIstdc_trailing_ones:
-  case Builtin::BIstdc_first_leading_zero:
-  case Builtin::BIstdc_first_leading_one:
-  case Builtin::BIstdc_first_trailing_zero:
-  case Builtin::BIstdc_first_trailing_one:
-  case Builtin::BIstdc_count_zeros:
-  case Builtin::BIstdc_count_ones:
-  case Builtin::BIstdc_has_single_bit:
-  case Builtin::BIstdc_bit_width:
-  case Builtin::BIstdc_bit_floor:
-  case Builtin::BIstdc_bit_ceil:
   case Builtin::BI__builtin_stdc_leading_zeros:
   case Builtin::BI__builtin_stdc_leading_ones:
   case Builtin::BI__builtin_stdc_trailing_zeros:
@@ -17017,7 +17007,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_leading_zeros_ui:
     case Builtin::BIstdc_leading_zeros_ul:
     case Builtin::BIstdc_leading_zeros_ull:
-    case Builtin::BIstdc_leading_zeros:
     case Builtin::BI__builtin_stdc_leading_zeros:
       return Success(APInt(ResBitWidth, Val.countl_zero()), E);
     case Builtin::BIstdc_leading_ones_uc:
@@ -17025,7 +17014,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_leading_ones_ui:
     case Builtin::BIstdc_leading_ones_ul:
     case Builtin::BIstdc_leading_ones_ull:
-    case Builtin::BIstdc_leading_ones:
     case Builtin::BI__builtin_stdc_leading_ones:
       return Success(APInt(ResBitWidth, Val.countl_one()), E);
     case Builtin::BIstdc_trailing_zeros_uc:
@@ -17033,7 +17021,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_trailing_zeros_ui:
     case Builtin::BIstdc_trailing_zeros_ul:
     case Builtin::BIstdc_trailing_zeros_ull:
-    case Builtin::BIstdc_trailing_zeros:
     case Builtin::BI__builtin_stdc_trailing_zeros:
       return Success(APInt(ResBitWidth, Val.countr_zero()), E);
     case Builtin::BIstdc_trailing_ones_uc:
@@ -17041,7 +17028,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_trailing_ones_ui:
     case Builtin::BIstdc_trailing_ones_ul:
     case Builtin::BIstdc_trailing_ones_ull:
-    case Builtin::BIstdc_trailing_ones:
     case Builtin::BI__builtin_stdc_trailing_ones:
       return Success(APInt(ResBitWidth, Val.countr_one()), E);
     case Builtin::BIstdc_first_leading_zero_uc:
@@ -17049,7 +17035,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_first_leading_zero_ui:
     case Builtin::BIstdc_first_leading_zero_ul:
     case Builtin::BIstdc_first_leading_zero_ull:
-    case Builtin::BIstdc_first_leading_zero:
     case Builtin::BI__builtin_stdc_first_leading_zero:
       return Success(
           APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countl_one() + 1), E);
@@ -17058,7 +17043,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_first_leading_one_ui:
     case Builtin::BIstdc_first_leading_one_ul:
     case Builtin::BIstdc_first_leading_one_ull:
-    case Builtin::BIstdc_first_leading_one:
     case Builtin::BI__builtin_stdc_first_leading_one:
       return Success(
           APInt(ResBitWidth, Val.isZero() ? 0 : Val.countl_zero() + 1), E);
@@ -17067,7 +17051,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_first_trailing_zero_ui:
     case Builtin::BIstdc_first_trailing_zero_ul:
     case Builtin::BIstdc_first_trailing_zero_ull:
-    case Builtin::BIstdc_first_trailing_zero:
     case Builtin::BI__builtin_stdc_first_trailing_zero:
       return Success(
           APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countr_one() + 1), E);
@@ -17076,7 +17059,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_first_trailing_one_ui:
     case Builtin::BIstdc_first_trailing_one_ul:
     case Builtin::BIstdc_first_trailing_one_ull:
-    case Builtin::BIstdc_first_trailing_one:
     case Builtin::BI__builtin_stdc_first_trailing_one:
       return Success(
           APInt(ResBitWidth, Val.isZero() ? 0 : Val.countr_zero() + 1), E);
@@ -17085,7 +17067,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_count_zeros_ui:
     case Builtin::BIstdc_count_zeros_ul:
     case Builtin::BIstdc_count_zeros_ull:
-    case Builtin::BIstdc_count_zeros:
     case Builtin::BI__builtin_stdc_count_zeros: {
       APInt Cnt(ResBitWidth, BitWidth - Val.popcount());
       return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
@@ -17095,7 +17076,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_count_ones_ui:
     case Builtin::BIstdc_count_ones_ul:
     case Builtin::BIstdc_count_ones_ull:
-    case Builtin::BIstdc_count_ones:
     case Builtin::BI__builtin_stdc_count_ones: {
       APInt Cnt(ResBitWidth, Val.popcount());
       return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
@@ -17105,7 +17085,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_has_single_bit_ui:
     case Builtin::BIstdc_has_single_bit_ul:
     case Builtin::BIstdc_has_single_bit_ull:
-    case Builtin::BIstdc_has_single_bit:
     case Builtin::BI__builtin_stdc_has_single_bit: {
       APInt Res(ResBitWidth, Val.popcount() == 1 ? 1 : 0);
       return Success(APSInt(Res, /*IsUnsigned*/ true), E);
@@ -17115,7 +17094,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_bit_width_ui:
     case Builtin::BIstdc_bit_width_ul:
     case Builtin::BIstdc_bit_width_ull:
-    case Builtin::BIstdc_bit_width:
     case Builtin::BI__builtin_stdc_bit_width:
       return Success(APInt(ResBitWidth, BitWidth - Val.countl_zero()), E);
     case Builtin::BIstdc_bit_floor_uc:
@@ -17123,7 +17101,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_bit_floor_ui:
     case Builtin::BIstdc_bit_floor_ul:
     case Builtin::BIstdc_bit_floor_ull:
-    case Builtin::BIstdc_bit_floor:
     case Builtin::BI__builtin_stdc_bit_floor: {
       if (Val.isZero())
         return Success(APInt(BitWidth, 0), E);
@@ -17136,7 +17113,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_bit_ceil_ui:
     case Builtin::BIstdc_bit_ceil_ul:
     case Builtin::BIstdc_bit_ceil_ull:
-    case Builtin::BIstdc_bit_ceil:
     case Builtin::BI__builtin_stdc_bit_ceil: {
       if (Val.ule(1))
         return Success(APSInt(APInt(BitWidth, 1), /*IsUnsigned*/ true), E);
@@ -22524,6 +22500,11 @@ struct IsWithinLifetimeHandler {
   static constexpr AccessKinds AccessKind = AccessKinds::AK_IsWithinLifetime;
   using result_type = std::optional<bool>;
   std::optional<bool> failed() { return std::nullopt; }
+  template <typename T>
+  std::optional<bool> found(T &Subobj, QualType SubobjType,
+                            APValue::LValueBase) {
+    return true;
+  }
   template <typename T>
   std::optional<bool> found(T &Subobj, QualType SubobjType) {
     return true;

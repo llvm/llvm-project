@@ -78,8 +78,9 @@ class PlainCFGBuilder {
   void createVPInstructionsForVPBB(VPBasicBlock *VPBB, BasicBlock *BB);
 
 public:
-  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer)
-      : TheLoop(Lp), LI(LI), LVer(LVer), Plan(std::make_unique<VPlan>(Lp)) {}
+  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer, Type *IdxTy)
+      : TheLoop(Lp), LI(LI), LVer(LVer),
+        Plan(std::make_unique<VPlan>(Lp, IdxTy)) {}
 
   /// Build plain CFG for TheLoop and connect it to Plan's entry.
   std::unique_ptr<VPlan> buildPlainCFG();
@@ -635,7 +636,7 @@ std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
                              DebugLoc IVDL, PredicatedScalarEvolution &PSE,
                              LoopVersioning *LVer) {
-  PlainCFGBuilder Builder(TheLoop, &LI, LVer);
+  PlainCFGBuilder Builder(TheLoop, &LI, LVer, InductionTy);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
   simplifyLiveInsWithSCEV(*VPlan0, PSE);
@@ -993,9 +994,8 @@ bool VPlanTransforms::createHeaderPhiRecipes(
   return true;
 }
 
-void VPlanTransforms::createInLoopReductionRecipes(
-    VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
-    ElementCount MinVF) {
+void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
+                                                   ElementCount MinVF) {
   VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   SmallVector<VPRecipeBase *> ToDelete;
@@ -1124,13 +1124,9 @@ void VPlanTransforms::createInLoopReductionRecipes(
             "PreviousLink must be the operand other than VecOp");
       }
 
-      // Get block mask from CurrentLink, if it needs predication.
-      VPValue *CondOp = nullptr;
-      if (BlocksNeedingPredication.contains(CurrentLinkI->getParent()))
-        CondOp = cast<VPInstruction>(CurrentLink)->getMask();
-
       assert(PhiR->getVFScaleFactor() == 1 &&
              "inloop reductions must be unscaled");
+      VPValue *CondOp = cast<VPInstruction>(CurrentLink)->getMask();
       auto *RedRecipe = new VPReductionRecipe(
           Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
           getReductionStyle(/*IsInLoop=*/true, PhiR->isOrdered(), 1),
@@ -1397,8 +1393,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
       continue;
 
     // Compute the index of the last active lane.
-    VPValue *LastActiveLane =
-        Builder.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
+    VPValue *LastActiveLane = Builder.createLastActiveLane(HeaderMask);
     auto *Ext =
         Builder.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
     R.getVPSingleValue()->replaceAllUsesWith(Ext);
@@ -2004,11 +1999,10 @@ static bool handleFirstArgMinOrMax(
   // If we used a new wide canonical IV convert the reduction result back to the
   // original IV scale before the final select.
   if (!WideIV->isCanonical()) {
-    auto *DerivedIVRecipe =
-        new VPDerivedIVRecipe(InductionDescriptor::IK_IntInduction,
-                              nullptr, // No FPBinOp for integer induction
-                              WideIV->getStartValue(), FinalCanIV,
-                              WideIV->getStepValue(), "derived.iv.result");
+    auto *DerivedIVRecipe = new VPDerivedIVRecipe(
+        InductionDescriptor::IK_IntInduction,
+        nullptr, // No FPBinOp for integer induction
+        WideIV->getStartValue(), FinalCanIV, WideIV->getStepValue());
     DerivedIVRecipe->insertBefore(&*Builder.getInsertPoint());
     FinalCanIV = DerivedIVRecipe;
   }

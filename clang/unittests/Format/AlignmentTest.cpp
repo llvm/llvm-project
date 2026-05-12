@@ -1280,6 +1280,13 @@ TEST_F(AlignmentTest, ConsecutiveDeclarations) {
   verifyFormat("int         a = method();\n"
                "float const oneTwoThree = 133;",
                Alignment);
+  verifyFormat(
+      "foo          fooNode(ConvertStdStringToUString(fieldNames[chIdx]),\n"
+      "                     // asdf\n"
+      "                     // foo1 foo2 foo12345\n"
+      "                     SomeFunctionAB(a123456789012345));\n"
+      "const size_t v1234567890123456789012345678901234;",
+      Alignment);
   verifyFormat("int i = 1, j = 10;\n"
                "something = 2000;",
                Alignment);
@@ -3591,6 +3598,16 @@ TEST_F(AlignmentTest, ContinuedAligned) {
                "\t\t}\n"
                "\t},\n"
                "\tvariant);",
+               Style);
+
+  Style.ColumnLimit = 40;
+  Style.IndentWidth = Style.TabWidth = Style.ContinuationIndentWidth = 8;
+
+  verifyFormat("void f() {\n"
+               "\tint aaaaaaaaaaaaaaaaaaaa =\n"
+               "\t\t000000000000000001 ? 2\n"
+               "\t\t                   : 3;\n"
+               "}",
                Style);
 }
 

@@ -242,13 +242,15 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
         continue;
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
-      if (SrcReg.isVirtual() && DstReg.isVirtual()) {
-        auto SrcRC = MRI.getRegClass(SrcReg);
-        auto DstRC = MRI.getRegClass(DstReg);
-        if (SrcRC == DstRC) {
-          MRI.replaceRegWith(DstReg, SrcReg);
-          MI.eraseFromParent();
-        }
+      unsigned SrcSubIdx = MI.getOperand(1).getSubReg();
+      if (!SrcReg.isVirtual() || !DstReg.isVirtual() || SrcSubIdx)
+        continue;
+
+      const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
+      const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
+      if (SrcRC == DstRC) {
+        MRI.replaceRegWith(DstReg, SrcReg);
+        MI.eraseFromParent();
       }
     }
   }
