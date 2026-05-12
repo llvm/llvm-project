@@ -24,10 +24,16 @@ tablegen("StripOpts") {
   args = [ "-gen-opt-parser-defs" ]
 }
 
+tablegen("ExtractBundleEntryOpts") {
+  visibility = [ ":llvm-objcopy" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 symlinks = [
   "llvm-bitcode-strip",
   "llvm-install-name-tool",
   "llvm-strip",
+  "llvm-extract-bundle-entry",
 ]
 if (llvm_install_binutils_symlinks) {
   symlinks += [
@@ -63,6 +69,7 @@ driver_executable("llvm-objcopy") {
     ":InstallNameToolOpts",
     ":ObjcopyOpts",
     ":StripOpts",
+    ":ExtractBundleEntryOpts",
     "//llvm/lib/MC",
     "//llvm/lib/ObjCopy",
     "//llvm/lib/Object",

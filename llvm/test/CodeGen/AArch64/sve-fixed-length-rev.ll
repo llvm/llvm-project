@@ -12,10 +12,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <8 x i8> @bitreverse_v8i8(<8 x i8> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-NEXT:    ret
   %res = call <8 x i8> @llvm.bitreverse.v8i8(<8 x i8> %op)
   ret <8 x i8> %res
@@ -24,10 +21,7 @@ define <8 x i8> @bitreverse_v8i8(<8 x i8> %op) vscale_range(2,0) #0 {
 define <16 x i8> @bitreverse_v16i8(<16 x i8> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    rbit v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> %op)
   ret <16 x i8> %res
