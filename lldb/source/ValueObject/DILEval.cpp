@@ -851,14 +851,10 @@ Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
   if (!all_ok)
     return all_ok.takeError();
 
-  Status status;
-  lhs->SetValueFromInteger(rhs, status, m_allow_var_updates);
-  if (status.Success())
-    return lhs;
+  if (llvm::Error e = lhs->SetValueFromInteger(rhs, m_allow_var_updates))
+    return e;
 
-  std::string err_msg = status.AsCString();
-  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                              location);
+  return lhs;
 }
 
 llvm::Expected<lldb::ValueObjectSP>

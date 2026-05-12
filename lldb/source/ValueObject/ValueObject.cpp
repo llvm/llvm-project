@@ -1227,32 +1227,26 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   return llvm::createStringError("type cannot be converted to bool");
 }
 
-void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
-                                      bool can_update_var) {
+llvm::Error ValueObject::SetValueFromInteger(const llvm::APInt &value,
+                                             bool can_update_var) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
-      !val_type.IsScalarType()) {
-    error =
-        Status::FromErrorString("current value object is not an scalar object");
-    return;
-  }
+      !val_type.IsScalarType())
+    return llvm::createStringError(
+        "current value object is not an scalar object");
 
   // Verify, if current object is associated with a program variable, that
   // we are allowing updating program variables in this case.
-  if (GetVariable() && !can_update_var) {
-    error = Status::FromErrorString(
+  if (GetVariable() && !can_update_var)
+    return llvm::createStringError(
         "Not allowed to update program variables in this case.");
-    return;
-  }
 
   // Make sure we're not trying to assign to a constant.
-  if (GetIsConstant()) {
-    error =
-        Status::FromErrorString("current value is not assignable (a constant)");
-    return;
-  }
+  if (GetIsConstant())
+    return llvm::createStringError(
+        "current value is not assignable (a constant)");
 
   // Verify the proposed new value is the right size.
   lldb::TargetSP target = GetTargetSP();
@@ -1263,64 +1257,53 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
     if (value.getBitWidth() > byte_size * CHAR_BIT) {
       // The type is too big, but maybe the value itself is small enough?
       uint64_t u_max = (1 << (byte_size * CHAR_BIT)) - 1;
-      if (*(value.getRawData()) > u_max) {
-        error =
-            Status::FromErrorString("illegal argument: new value is too big");
-        return;
-      }
+      if (*(value.getRawData()) > u_max)
+        return llvm::createStringError(
+            "illegal argument: new value is too big");
     }
   }
 
+  Status error;
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(value.getRawData()), byte_size,
       target->GetArchitecture().GetByteOrder(),
       static_cast<uint8_t>(target->GetArchitecture().GetAddressByteSize()));
   SetData(*data_sp, error);
+  return error.takeError();
 }
 
-void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
-                                      Status &error, bool can_update_var) {
+llvm::Error ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
+                                             bool can_update_var) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
-      !val_type.IsScalarType()) {
-    error =
-        Status::FromErrorString("current value object is not an scalar object");
-    return;
-  }
+      !val_type.IsScalarType())
+    return llvm::createStringError(
+        "current value object is not an scalar object");
 
   // Verify, if current object is associated with a program variable, that
   // we are allowing updating program variables in this case.
-  if (GetVariable() && !can_update_var) {
-    error = Status::FromErrorString(
+  if (GetVariable() && !can_update_var)
+    return llvm::createStringError(
         "Not allowed to update program variables in this case.");
-    return;
-  }
 
   // Verify the proposed new value is the right type.
   CompilerType new_val_type = new_val_sp->GetCompilerType();
   if (!new_val_type.IsInteger() && !new_val_type.IsUnscopedEnumerationType() &&
-      !HasFloatingRepresentation(new_val_type) &&
-      !new_val_type.IsPointerType()) {
-    error = Status::FromErrorString(
+      !HasFloatingRepresentation(new_val_type) && !new_val_type.IsPointerType())
+    return llvm::createStringError(
         "illegal argument: new value is not a scalar object");
-    return;
-  }
 
   if (new_val_type.IsInteger() || new_val_type.IsUnscopedEnumerationType()) {
     auto value_or_err = new_val_sp->GetValueAsAPSInt();
     if (value_or_err)
-      SetValueFromInteger(*value_or_err, error, can_update_var);
-    else
-      error = Status::FromError(value_or_err.takeError());
+      return SetValueFromInteger(*value_or_err, can_update_var);
   } else if (HasFloatingRepresentation(new_val_type)) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
-      SetValueFromInteger(value_or_err->bitcastToAPInt(), error,
-                          can_update_var);
-    else
-      error = Status::FromError(value_or_err.takeError());
+      return SetValueFromInteger(value_or_err->bitcastToAPInt(),
+                                 can_update_var);
   } else if (new_val_type.IsPointerType()) {
     bool success = true;
     uint64_t int_val = new_val_sp->GetValueAsUnsigned(0, &success);
@@ -1330,11 +1313,12 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       if (auto temp = llvm::expectedToOptional(
               new_val_sp->GetCompilerType().GetBitSize(target.get())))
         num_bits = temp.value();
-      SetValueFromInteger(llvm::APInt(num_bits, int_val), error,
-                          can_update_var);
+      return SetValueFromInteger(llvm::APInt(num_bits, int_val),
+                                 can_update_var);
     } else
-      error = Status::FromErrorString("error converting new_val_sp to integer");
+      return llvm::createStringError("error converting new_val_sp to integer");
   }
+  llvm_unreachable("Unrecognized type for RHS of assignment.");
 }
 
 // if any more "special cases" are added to
