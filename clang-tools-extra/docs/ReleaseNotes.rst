@@ -204,6 +204,12 @@ New checks
   Finds functions where throwing exceptions is unsafe but the function is still
   marked as potentially throwing.
 
+- New :doc:`llvm-formatv-string
+  <clang-tidy/checks/llvm/formatv-string>` check.
+
+  Validates ``llvm::formatv`` format strings against the provided arguments,
+  diagnosing mismatched argument counts, unused arguments, and mixed index styles.
+
 - New :doc:`llvm-redundant-casting
   <clang-tidy/checks/llvm/redundant-casting>` check.
 

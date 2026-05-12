@@ -119,6 +119,11 @@ public:
   virtual void
   reportLifetimeboundViolation(const ParmVarDecl *ParmWithLifetimebound) {}
 
+  // Reports misuse of [[clang::lifetimebound]] when implicit this parameter
+  // doesn't escape through return.
+  virtual void
+  reportLifetimeboundViolation(const CXXMethodDecl *MDWithLifetimebound) {}
+
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
                                                   const CXXMethodDecl *MD,
