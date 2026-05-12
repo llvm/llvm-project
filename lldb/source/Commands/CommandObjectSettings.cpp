@@ -409,6 +409,7 @@ protected:
     if (args.empty()) {
       GetDebugger().DumpAllPropertyValues(&clean_ctx, out_file,
                                           OptionValue::eDumpGroupExport);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
     }
 
@@ -419,6 +420,8 @@ protected:
         result.AppendError(error.AsCString());
       }
     }
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
 private:

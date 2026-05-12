@@ -231,6 +231,20 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* Renamed ISD::CTLZ_ZERO_UNDEF to ISD::CTLZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+* Renamed ISD::CTTZ_ZERO_UNDEF to ISD::CTTZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+### Changes to the GlobalISel infrastructure
+
+* Renamed G_CTLZ_ZERO_UNDEF to G_CTLZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+* Renamed G_CTTZ_ZERO_UNDEF to G_CTTZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
 ### Changes to the Metadata Info
 
 ### Changes to the Debug Info

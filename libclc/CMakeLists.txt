@@ -23,7 +23,9 @@ option(
 )
 
 # List of all supported architectures.
-set( LIBCLC_ARCHS_ALL amdgpu amdgcn nvptx64 spirv spirv32 spirv64 )
+set( LIBCLC_ARCHS_ALL amdgpu amdgcn nvptx64 )
+set( LIBCLC_ARCHS_SPIRV spirv spirv32 spirv64)
+list( APPEND LIBCLC_ARCHS_ALL ${LIBCLC_ARCHS_SPIRV})
 
 set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
@@ -100,7 +102,7 @@ string( REPLACE "-" ";" TRIPLE  ${LIBCLC_TARGET} )
 list(GET TRIPLE 0 ARCH)
 list(GET TRIPLE 2 OS)
 
-if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv32 OR ARCH STREQUAL spirv64)
+if(ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
   if(NOT OS STREQUAL vulkan AND NOT LIBCLC_USE_SPIRV_BACKEND AND NOT llvm-spirv_exe)
     message(FATAL_ERROR "SPIR-V backend or llvm-spirv is required for libclc ${LIBCLC_TARGET}")
   endif()
@@ -138,7 +140,7 @@ add_dependencies( libclc libclc-opencl-builtins )
 # Determine the clang target triple. Vulkan and SPIR-V backend targets use the
 # triple directly; other SPIR-V targets fall back to the legacy SPIR target.
 set(clang_triple ${LIBCLC_TARGET})
-if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv32 OR ARCH STREQUAL spirv64)
+if(ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
   if(NOT OS STREQUAL vulkan AND NOT LIBCLC_USE_SPIRV_BACKEND)
     if(ARCH STREQUAL spirv)
       set(clang_triple spir--)
@@ -154,7 +156,7 @@ set(generic_addrspace_val 0)
 if(ARCH STREQUAL amdgcn)
   set(private_addrspace_val 5)
 endif()
-if((ARCH STREQUAL spirv OR ARCH STREQUAL spirv32 OR ARCH STREQUAL spirv64) AND NOT OS STREQUAL vulkan)
+if(ARCH IN_LIST LIBCLC_ARCHS_SPIRV AND NOT OS STREQUAL vulkan)
   set(generic_addrspace_val 4)
 endif()
 
@@ -163,7 +165,7 @@ set(target_compile_flags)
 set(target_extra_defines)
 set(opt_flags -O3)
 
-if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv32 OR ARCH STREQUAL spirv64)
+if(ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
   if(OS STREQUAL vulkan)
     list(APPEND target_compile_flags -Wno-unknown-assumption -U__opencl_c_int64)
   else()
@@ -181,7 +183,7 @@ if(ARCH STREQUAL amdgcn)
   list(APPEND _clc_overrides ${CLC_AMDGPU_SOURCES})
 elseif(ARCH STREQUAL nvptx64 AND (OS STREQUAL nvidiacl OR OS STREQUAL cuda))
   list(APPEND _clc_overrides ${CLC_PTX_NVIDIACL_SOURCES})
-elseif(ARCH STREQUAL spirv OR ARCH STREQUAL spirv32 OR ARCH STREQUAL spirv64)
+elseif(ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
   if(OS STREQUAL vulkan)
     list(APPEND _clc_overrides ${CLC_VULKAN_SOURCES})
   else()
@@ -192,7 +194,7 @@ libclc_merge_sources(clc_sources ${CLC_GENERIC_SOURCES} ${_clc_overrides})
 
 # Collect OpenCL sources. SPIR-V and Vulkan targets use self-contained
 # subsets while others merge with target-specific overrides.
-if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv32 OR ARCH STREQUAL spirv64)
+if(ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
   if(OS STREQUAL vulkan)
     set(opencl_sources ${OPENCL_VULKAN_SOURCES})
   else()
