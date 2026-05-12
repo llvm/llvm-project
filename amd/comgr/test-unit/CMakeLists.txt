@@ -43,7 +43,9 @@ else()
 endif()
 
 # Pin C++17 and mirror LLVM's RTTI setting (avoids type_info link errors
-# against libLLVM*).
+# against LLVM libs built with RTTI off, including hotswap::transpiler
+# which carries its own non-RTTI / non-exceptions compile flags via
+# llvm_update_compile_flags()).
 function(comgr_configure_test_target target)
   set_target_properties(${target} PROPERTIES
     CXX_STANDARD 17
@@ -128,9 +130,31 @@ target_include_directories(HotswapMCTests PRIVATE
 
 comgr_configure_test_target(HotswapMCTests)
 
-# Register both test binaries with the test-unit / check-comgr plumbing.
+# -- RaiserScaffoldingTests ---------------------------------------------------
+#
+# Pins the bare-bones raiser scaffolding contract (`hotswap/raiser.hpp`):
+# empty input produces a verifyModule-clean `llvm::Module` with a single
+# `AMDGPU_KERNEL` `ret void` function, plus the failure paths for missing
+# kernel descriptor / malformed ISA.
+
+add_executable(RaiserScaffoldingTests
+  RaiserScaffoldingTest.cpp)
+
+target_link_libraries(RaiserScaffoldingTests PRIVATE
+  ${COMGR_GTEST_LIBS}
+  hotswap::transpiler
+  ${LLVM_PTHREAD_LIB})
+
+target_include_directories(RaiserScaffoldingTests PRIVATE
+  ${COMGR_GTEST_INCLUDE_DIRS})
+
+comgr_configure_test_target(RaiserScaffoldingTests)
+
+# Register every test binary with the test-unit / check-comgr plumbing.
 add_custom_target(test-unit
   COMMAND $<TARGET_FILE:HotswapElfTests>
-  COMMAND $<TARGET_FILE:HotswapMCTests>)
-add_dependencies(test-unit HotswapElfTests HotswapMCTests)
+  COMMAND $<TARGET_FILE:HotswapMCTests>
+  COMMAND $<TARGET_FILE:RaiserScaffoldingTests>)
+add_dependencies(test-unit HotswapElfTests HotswapMCTests
+  RaiserScaffoldingTests)
 add_dependencies(check-comgr test-unit)
