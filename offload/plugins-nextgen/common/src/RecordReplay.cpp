@@ -89,17 +89,20 @@ Error RecordReplayTy::deinit() {
 
 Error RecordReplayTy::emitInstanceReport() {
   std::lock_guard<std::mutex> LG(InstancesLock);
-  llvm::outs() << "=== record report begin ===\n";
-  llvm::outs() << "directory: "
+  llvm::outs() << "=== Kernel Record Report ===\n";
+  llvm::outs() << "Directory: "
                << std::filesystem::absolute(OutputDirectory).string() << "\n";
-  llvm::outs() << "kernels: " << Instances.size() << "\n";
+  llvm::outs() << "Total Instances: " << Instances.size() << "\n";
+  llvm::outs() << "JSON Filename, Kernel Name, Time (ns), Occurrences:\n";
 
   SmallString<128> Filename;
   for (const auto &Inst : Instances)
     llvm::outs()
         << getFilename(Inst, FileTy::Descriptor, /*IncludeDir=*/false).c_str()
-        << ": " << Inst.Kernel.getName() << "\n";
-  llvm::outs() << "=== record report end ===\n";
+        << ", " << Inst.Kernel.getName() << ", " << Inst.getRecordedTimeNs()
+        << ", " << Inst.Occurrences << "\n";
+  llvm::outs() << "=== End Kernel Record Report ===\n";
+
   return Plugin::success();
 }
 
@@ -114,6 +117,16 @@ RecordReplayTy::registerInstance(const GenericKernelTy &Kernel,
   // Increase the number of occurrences.
   It->Occurrences += 1;
   return {*It, Inserted};
+}
+
+Error RecordReplayTy::unregisterInstance(const InstanceTy &Instance) {
+  assert(isReplaying() && "Cannot unregister instance when recording.");
+
+  std::lock_guard<std::mutex> LG(InstancesLock);
+  size_t Erased = Instances.erase(Instance);
+  if (Erased != 1)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT, "invalid instance");
+  return Plugin::success();
 }
 
 Expected<void *> RecordReplayTy::allocate(uint64_t Size) {
@@ -147,34 +160,57 @@ Expected<RecordReplayTy::HandleTy> RecordReplayTy::recordPrologue(
       (KernelExtraArgs) ? KernelExtraArgs->ReplayOutcome : nullptr);
 
   HandleTy Handle{&Instance, First};
-  if (isReplaying() || !First)
+  if (!First)
     return Handle;
 
-  if (auto Err = recordDescImpl(Kernel, Instance, KernelArgs, LaunchParams))
-    return Err;
+  if (isRecording()) {
+    if (auto Err = recordDescImpl(Kernel, Instance, KernelArgs, LaunchParams))
+      return Err;
 
-  if (auto Err = recordPrologueImpl(Kernel, Instance, KernelArgs, LaunchParams))
-    return Err;
+    if (auto Err =
+            recordPrologueImpl(Kernel, Instance, KernelArgs, LaunchParams))
+      return Err;
+  }
+
+  // Start the timer for the kernel execution.
+  Instance.recordBeginTime();
 
   return Handle;
 }
 
 Error RecordReplayTy::recordEpilogue(const GenericKernelTy &Kernel,
                                      HandleTy Handle) {
-  if (!shouldRecordEpilogue() || !Handle.Active)
+  if (!Handle.Active)
     return Plugin::success();
 
+  // Stop the timer for the kernel execution.
   const InstanceTy &Instance = *Handle.Instance;
-  if (auto Err = recordEpilogueImpl(Kernel, Instance))
-    return Err;
+  Instance.recordEndTime();
 
-  // If necessary, inform the replaying tool about where the epilogue snapshot
-  // file has been stored.
-  if (isReplaying() && Instance.ReplayOutcome) {
-    SmallString<128> Filename = getFilename(Instance, FileTy::EpilogueSnapshot);
-    Instance.ReplayOutcome->OutputFilepath = Filename;
-  }
+  if (shouldRecordEpilogue())
+    if (auto Err = recordEpilogueImpl(Kernel, Instance))
+      return Err;
+
+  if (isReplaying() && Instance.ReplayOutcome)
+    populateReplayOutcome(Instance, *Instance.ReplayOutcome);
+
+  // After a replay, unregister the instance so it can be replayed again. Do
+  // not access the instance object beyond this point.
+  if (isReplaying())
+    return unregisterInstance(Instance);
+
   return Plugin::success();
+}
+
+void RecordReplayTy::populateReplayOutcome(const InstanceTy &Instance,
+                                           KernelReplayOutcomeTy &Outcome) {
+  // Only save the epilogue output filename if it was recorded.
+  if (shouldRecordEpilogue()) {
+    SmallString<128> Filename = getFilename(Instance, FileTy::EpilogueSnapshot);
+    Outcome.OutputFilepath = Filename;
+  }
+  // Save the kernel replay time.
+  Outcome.KernelReplayTimeNs = Instance.getRecordedTimeNs();
 }
 
 Error NativeRecordReplayTy::recordPrologueImpl(

@@ -541,6 +541,34 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
 
 // -----
 
+llvm.func @mov_matrix(%src : i32) -> i32 {
+  // expected-error@+1 {{'nvvm.movmatrix' op expected shape to be 8x8}}
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 16>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+  llvm.return %dst : i32
+}
+
+// -----
+
+llvm.func @mov_matrix(%src : i32) -> i32 {
+  // expected-error@+1 {{'nvvm.movmatrix' op expected layout to be col}}
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                              layout = #nvvm.mma_layout<row>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+  llvm.return %dst : i32
+}
+
+// -----
+
+llvm.func @mov_matrix(%src : i32) -> i32 {
+  // expected-error@+1 {{'nvvm.movmatrix' op expected element type to be b16}}
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b8>} : i32
+  llvm.return %dst : i32
+}
+
+// -----
+
 llvm.func @clusterlaunchcontrol_query_cancel_is_canceled_invalid_return_type(%try_cancel_response: i128) {
   // expected-error@+1 {{'nvvm.clusterlaunchcontrol.query.cancel' op is_canceled query type returns an i1}}
   %res = nvvm.clusterlaunchcontrol.query.cancel query = is_canceled, %try_cancel_response : i32
@@ -590,9 +618,9 @@ llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
 
 // -----
 
-// Test that nvvm.barrier0 at module scope (outside any function) produces a
+// Test that nvvm.barrier at module scope (outside any function) produces a
 // proper error instead of crashing with a null dereference in
 // createIntrinsicCall. See https://github.com/llvm/llvm-project/issues/186642
-// expected-error @+2 {{'nvvm.barrier0' op cannot be translated to LLVM IR without an active insertion point}}
-// expected-error @+1 {{LLVM Translation failed for operation: nvvm.barrier0}}
-nvvm.barrier0
+// expected-error @+2 {{'nvvm.barrier' op cannot be translated to LLVM IR without an active insertion point}}
+// expected-error @+1 {{LLVM Translation failed for operation: nvvm.barrier}}
+nvvm.barrier

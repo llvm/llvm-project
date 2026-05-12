@@ -211,7 +211,7 @@ TEST(DumpASTTests, Arcana) {
   auto Node = dumpAST(DynTypedNode::create(findDecl(AST, "x")), AST.getTokens(),
                       AST.getASTContext());
   EXPECT_THAT(Node.arcana, testing::StartsWith("VarDecl "));
-  EXPECT_THAT(Node.arcana, testing::EndsWith(" 'int'"));
+  EXPECT_THAT(Node.arcana, testing::EndsWith(" 'int' external-linkage"));
   ASSERT_THAT(Node.children, SizeIs(1)) << "Expected one child typeloc";
   EXPECT_THAT(Node.children.front().arcana, testing::StartsWith("QualType "));
 }

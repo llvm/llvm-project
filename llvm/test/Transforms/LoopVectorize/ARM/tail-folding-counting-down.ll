@@ -17,8 +17,8 @@ define void @sgt_loopguard(ptr noalias nocapture readonly %a, ptr noalias nocapt
 ; COMMON-LABEL: @sgt_loopguard(
 ; COMMON:       vector.body:
 
-; CHECK-TF:     %[[VIVELEM0:.*]] = extractelement <16 x i32> %vec.iv, i64 0
-; CHECK-TF:     %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %[[VIVELEM0]], i32 %N)
+; CHECK-TF:     %[[INDEX:.*]] = phi i32
+; CHECK-TF:     %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %[[INDEX]], i32 %N)
 ; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask
 ; CHECK-TF:     llvm.masked.load.v16i8.p0(ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask
 ; CHECK-TF:     llvm.masked.store.v16i8.p0(<16 x i8> %{{.*}}, ptr align 1 %{{.*}}, <16 x i1> %active.lane.mask)

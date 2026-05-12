@@ -84,6 +84,50 @@ subroutine test_intent_in(x)
   call bar_intent_in(x)
 end subroutine
 
+! Test copy-out is skipped when the actual argument has INTENT(IN).
+! A copy-in is still needed for the contiguous-requiring callee, but
+! the temp is only deallocated on return, not copied back (no "to" clause).
+! CHECK-LABEL: func @_QPtest_actual_arg_intent_in(
+subroutine test_actual_arg_intent_in(x)
+  real, intent(in) :: x(:)
+! CHECK: hlfir.copy_in
+! CHECK: fir.call @_QPbar
+! CHECK: hlfir.copy_out
+! CHECK-NOT: to
+! CHECK: return
+  call bar(x)
+end subroutine
+
+! Test copy-out is NOT skipped when passing a section of a pointer component
+! of an INTENT(IN) dummy: the pointer target is not a subobject of the dummy
+! (F2023 9.4.2 p5), so the callee may define it and copy-out is required.
+! CHECK-LABEL: func @_QPtest_actual_arg_intent_in_ptr_component(
+subroutine test_actual_arg_intent_in_ptr_component(x)
+  type :: t
+    integer, pointer :: p(:)
+  end type
+  type(t), intent(in) :: x
+! CHECK: hlfir.copy_in
+! CHECK: fir.call @_QPbar_integer
+! CHECK: hlfir.copy_out
+! CHECK-SAME: to
+  call bar_integer(x%p(1:4:2))
+end subroutine
+
+! Test copy-out is NOT skipped when the actual is a section of an INTENT(IN)
+! pointer dummy: INTENT(IN) on a pointer restricts pointer association, not
+! the target's contents, so the callee may define the target and copy-out is
+! required.
+! CHECK-LABEL: func @_QPtest_actual_intent_in_pointer(
+subroutine test_actual_intent_in_pointer(pi)
+  integer, intent(in), pointer :: pi(:)
+! CHECK: hlfir.copy_in
+! CHECK: fir.call @_QPbar_integer
+! CHECK: hlfir.copy_out
+! CHECK-SAME: to
+  call bar_integer(pi(1:4:2))
+end subroutine
+
 ! Test copy-in/copy-out is done for intent(inout)
 ! CHECK-LABEL: func @_QPtest_intent_inout(
 subroutine test_intent_inout(x)

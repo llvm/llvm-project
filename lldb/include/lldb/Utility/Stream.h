@@ -38,10 +38,11 @@ public:
     llvm::StringRef pattern; ///< Regex pattern for highlighting.
     llvm::StringRef prefix;  ///< ANSI color code to start colorization.
     llvm::StringRef suffix;  ///< ANSI color code to end colorization.
+    bool ignore_case = false; ///< Whether to match case-insensitively.
 
     HighlightSettings(llvm::StringRef p, llvm::StringRef pre,
-                      llvm::StringRef suf)
-        : pattern(p), prefix(pre), suffix(suf) {}
+                      llvm::StringRef suf, bool ic = false)
+        : pattern(p), prefix(pre), suffix(suf), ignore_case(ic) {}
   };
 
   /// Utility class for counting the bytes that were written to a stream in a
@@ -232,6 +233,8 @@ public:
   ///     A reference to this class so multiple things can be streamed
   ///     in one statement.
   Stream &operator<<(const llvm::formatv_object_base &obj);
+
+  Stream &operator<<(bool b) { return *this << (b ? "true" : "false"); }
 
   Stream &operator<<(uint8_t uval) = delete;
   Stream &operator<<(uint16_t uval) = delete;

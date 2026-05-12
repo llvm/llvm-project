@@ -346,56 +346,58 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
 Response HandleFunctionTemplateDecl(Sema &SemaRef,
                                     const FunctionTemplateDecl *FTD,
                                     MultiLevelTemplateArgumentList &Result) {
-  Result.addOuterTemplateArguments(
-      const_cast<FunctionTemplateDecl *>(FTD),
-      const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(
-          SemaRef.Context),
-      /*Final=*/false);
-
-  NestedNameSpecifier NNS = FTD->getTemplatedDecl()->getQualifier();
-
-  for (const Type *Ty = NNS.getKind() == NestedNameSpecifier::Kind::Type
-                            ? NNS.getAsType()
-                            : nullptr,
-                  *NextTy = nullptr;
-       Ty && Ty->isInstantiationDependentType();
-       Ty = std::exchange(NextTy, nullptr)) {
-    if (NestedNameSpecifier P = Ty->getPrefix();
-        P.getKind() == NestedNameSpecifier::Kind::Type)
-      NextTy = P.getAsType();
-    const auto *TSTy = dyn_cast<TemplateSpecializationType>(Ty);
-    if (!TSTy)
-      continue;
-
-    ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
-    // Prefer template arguments from the injected-class-type if possible.
-    // For example,
-    // ```cpp
-    // template <class... Pack> struct S {
-    //   template <class T> void foo();
-    // };
-    // template <class... Pack> template <class T>
-    //           ^^^^^^^^^^^^^ InjectedTemplateArgs
-    //           They're of kind TemplateArgument::Pack, not of
-    //           TemplateArgument::Type.
-    // void S<Pack...>::foo() {}
-    //        ^^^^^^^
-    //        TSTy->template_arguments() (which are of PackExpansionType)
-    // ```
-    // This meets the contract in
-    // TreeTransform::TryExpandParameterPacks that the template arguments
-    // for unexpanded parameters should be of a Pack kind.
-    if (TSTy->isCurrentInstantiation()) {
-      auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
-      if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
-        Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
-      else if (auto *Specialization =
-                   dyn_cast<ClassTemplateSpecializationDecl>(RD))
-        Arguments = Specialization->getTemplateInstantiationArgs().asArray();
-    }
+  if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
     Result.addOuterTemplateArguments(
-        TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
+        const_cast<FunctionTemplateDecl *>(FTD),
+        const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(
+            SemaRef.Context),
         /*Final=*/false);
+
+    NestedNameSpecifier NNS = FTD->getTemplatedDecl()->getQualifier();
+
+    for (const Type *Ty = NNS.getKind() == NestedNameSpecifier::Kind::Type
+                              ? NNS.getAsType()
+                              : nullptr,
+                    *NextTy = nullptr;
+         Ty && Ty->isInstantiationDependentType();
+         Ty = std::exchange(NextTy, nullptr)) {
+      if (NestedNameSpecifier P = Ty->getPrefix();
+          P.getKind() == NestedNameSpecifier::Kind::Type)
+        NextTy = P.getAsType();
+      const auto *TSTy = dyn_cast<TemplateSpecializationType>(Ty);
+      if (!TSTy)
+        continue;
+
+      ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
+      // Prefer template arguments from the injected-class-type if possible.
+      // For example,
+      // ```cpp
+      // template <class... Pack> struct S {
+      //   template <class T> void foo();
+      // };
+      // template <class... Pack> template <class T>
+      //           ^^^^^^^^^^^^^ InjectedTemplateArgs
+      //           They're of kind TemplateArgument::Pack, not of
+      //           TemplateArgument::Type.
+      // void S<Pack...>::foo() {}
+      //        ^^^^^^^
+      //        TSTy->template_arguments() (which are of PackExpansionType)
+      // ```
+      // This meets the contract in
+      // TreeTransform::TryExpandParameterPacks that the template arguments
+      // for unexpanded parameters should be of a Pack kind.
+      if (TSTy->isCurrentInstantiation()) {
+        auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
+        if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
+          Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
+        else if (auto *Specialization =
+                     dyn_cast<ClassTemplateSpecializationDecl>(RD))
+          Arguments = Specialization->getTemplateInstantiationArgs().asArray();
+      }
+      Result.addOuterTemplateArguments(
+          TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
+          /*Final=*/false);
+    }
   }
 
   return Response::ChangeDecl(FTD->getLexicalDeclContext());
@@ -1761,7 +1763,22 @@ namespace {
           if (TA.isDependent())
             return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
       }
+      if (auto *CD = dyn_cast_if_present<ImplicitConceptSpecializationDecl>(
+              LSI->Lambda->getLambdaContextDecl())) {
+        if (llvm::any_of(CD->getTemplateArguments(),
+                         [](const auto &TA) { return TA.isDependent(); }))
+          return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
+      }
       return inherited::ComputeLambdaDependency(LSI);
+    }
+
+    ExprResult TransformConstraint(Expr *AC) {
+      // We don't want the template argument substitution into parameter
+      // mappings to preserve the outer depths.
+      if (AC && SemaRef.inConstraintSubstitution())
+        return TransformExpr(const_cast<Expr *>(AC));
+
+      return AC;
     }
 
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
@@ -1874,11 +1891,24 @@ namespace {
                               TemplateParameterList *OrigTPL)  {
       if (!OrigTPL || !OrigTPL->size()) return OrigTPL;
 
+      std::optional<MultiLevelTemplateArgumentList> OldMLTAL;
+      // We need to preserve the lambda depth in parameter mapping.
+      // Otherwise the template argument deduction would fail, if we reduced the
+      // depth too early.
+      if (SemaRef.inParameterMappingSubstitution() &&
+          OrigTPL->getDepth() >= TemplateArgs.getNumSubstitutedLevels())
+        OldMLTAL = ForgetSubstitution();
+
       DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
-      TemplateDeclInstantiator  DeclInstantiator(getSema(),
-                        /* DeclContext *Owner */ Owner, TemplateArgs);
-      DeclInstantiator.setEvaluateConstraints(EvaluateConstraints);
-      return DeclInstantiator.SubstTemplateParams(OrigTPL);
+      TemplateDeclInstantiator DeclInstantiator(getSema(), Owner, TemplateArgs);
+      // We don't want the template argument substitution into parameter
+      // mappings to preserve the outer depths.
+      DeclInstantiator.setEvaluateConstraints(
+          SemaRef.inConstraintSubstitution() || EvaluateConstraints);
+      auto *Transformed = DeclInstantiator.SubstTemplateParams(OrigTPL);
+      if (OldMLTAL)
+        RememberSubstitution(std::move(*OldMLTAL));
+      return Transformed;
     }
 
     concepts::TypeRequirement *
@@ -3232,6 +3262,8 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
 
   InstantiateAttrs(TemplateArgs, OldParm, NewParm);
 
+  NewParm->deduceParmAddressSpace(Context);
+
   return NewParm;
 }
 
@@ -3409,7 +3441,7 @@ Sema::SubstBaseSpecifiers(CXXRecordDecl *Instantiation,
   bool Invalid = false;
   SmallVector<CXXBaseSpecifier*, 4> InstantiatedBases;
   for (const auto &Base : Pattern->bases()) {
-    if (!Base.getType()->isDependentType()) {
+    if (!Base.getType()->isInstantiationDependentType()) {
       if (const CXXRecordDecl *RD = Base.getType()->getAsCXXRecordDecl()) {
         if (RD->isInvalidDecl())
           Instantiation->setInvalidDecl();
@@ -3699,7 +3731,7 @@ bool Sema::InstantiateClassImpl(
 
     Attr *NewAttr =
       instantiateTemplateAttribute(I->TmplAttr, Context, *this, TemplateArgs);
-    if (NewAttr)
+    if (NewAttr && checkInstantiatedThreadSafetyAttrs(I->NewDecl, NewAttr))
       I->NewDecl->addAttr(NewAttr);
     LocalInstantiationScope::deleteScopes(I->Scope,
                                           Instantiator.getStartingScope());
@@ -3869,7 +3901,8 @@ bool Sema::InstantiateInClassInitializer(
   // we don't have a scope.
   ContextRAII SavedContext(*this, Instantiation->getParent());
   EnterExpressionEvaluationContext EvalContext(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+      Instantiation);
   ExprEvalContexts.back().DelayedDefaultInitializationContext = {
       PointOfInstantiation, Instantiation, CurContext};
 
