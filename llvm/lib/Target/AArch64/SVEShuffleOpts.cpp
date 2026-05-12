@@ -117,7 +117,8 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
     if (!Extract || Extract->getNumIndices() != 1)
       return;
 
-    auto *Extend = dyn_cast<CastInst>(Extract->getUniqueUndroppableUser());
+    auto *Extend =
+        dyn_cast_if_present<CastInst>(Extract->getUniqueUndroppableUser());
     if (!Extend || (!isa<ZExtInst>(Extend) && !isa<UIToFPInst>(Extend)))
       return;
 
