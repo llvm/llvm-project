@@ -2563,12 +2563,12 @@ llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
     // Update the global enablement flag
     if (!GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable))
       return llvm::createStringErrorV("could not find plugin {}", name);
-    // We should in principle iterate over all debuggers and
-    // enable/disable their runtimes. However, this doesn't work because we need
-    // to because we need to hold `GetDebuggerListMutex` to safely iterate and
-    // can cause deadlock when trying to activate a plugin (creating a
-    // breakpoint might call `Debugger::ReportProgress` which also tries to lock
-    // the mutex). For now just don't update live processes.
+    // We should in principle iterate over all debuggers and enable/disable
+    // their runtimes. However, this doesn't work because we need to hold
+    // `GetDebuggerListMutex` to safely iterate and this can cause deadlock when
+    // trying to activate a plugin (creating a breakpoint might call
+    // `Debugger::ReportProgress` which also tries to lock the mutex). For now
+    // just don't update live processes.
     // FIXME: We should probably emit a warning about this.
     return llvm::Error::success();
   case lldb::ePluginDomainKindDebugger: {
