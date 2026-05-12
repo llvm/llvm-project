@@ -123,14 +123,15 @@
 ; CHECK-O23-NEXT: Running pass: LCSSAPass on foo
 ; CHECK-O23-NEXT: Running pass: IndVarSimplifyPass on loop
 ; CHECK-O23-NEXT: Running pass: LoopDeletionPass on loop
-; CHECK-O23-NEXT: Running pass: LoopFullUnrollPass on loop
 ; CHECK-O23-NEXT: Running pass: LoopDistributePass on foo
 ; CHECK-O23-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-O23-NEXT: Running pass: LoopVectorizePass on foo
 ; CHECK-O23-NEXT: Running analysis: DemandedBitsAnalysis on foo
 ; CHECK-O23-NEXT: Running pass: DropUnnecessaryAssumesPass on foo
 ; CHECK-O23-NEXT: Running pass: InferAlignmentPass on foo
-; CHECK-O23-NEXT: Running pass: LoopUnrollPass on foo
+; CHECK-O23-NEXT: Running pass: LoopSimplifyPass on foo
+; CHECK-O23-NEXT: Running pass: LCSSAPass on foo
+; CHECK-O23-NEXT: Running pass: LoopFullUnrollPass on loop
 ; CHECK-O23-NEXT: WarnMissedTransformationsPass on foo
 ; CHECK-O23-NEXT: Running pass: SROAPass on foo
 ; CHECK-O23-NEXT: Running pass: InstCombinePass on foo
