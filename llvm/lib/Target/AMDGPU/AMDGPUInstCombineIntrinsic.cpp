@@ -698,9 +698,7 @@ static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
   Constant *Ops[] = {ConstantInt::get(Ty, *LHS), ConstantInt::get(Ty, *RHS)};
   auto *CI =
       dyn_cast_or_null<ConstantInt>(ConstantFoldInstOperands(BO, Ops, DL));
-  if (!CI)
-    return std::nullopt;
-  return CI->getZExtValue();
+  return CI ? std::optional<unsigned>(CI->getZExtValue()) : std::nullopt;
 }
 
 /// Build the per-lane shuffle map by evaluating Index for every lane in the
@@ -767,9 +765,7 @@ static constexpr auto matchFullRowMirrorPattern = matchMirrorPattern<16>;
 
 /// Match a 16-lane cyclic rotation; returns the rotation amount in [1, 15].
 static std::optional<unsigned> matchRowRotatePattern(ArrayRef<uint8_t> Ids) {
-  if (!isFullRowPattern(Ids))
-    return std::nullopt;
-  if (Ids[0] == 0)
+  if (Ids[0] == 0 || !isFullRowPattern(Ids))
     return std::nullopt;
   for (unsigned J = 1; J < 16; ++J)
     if (Ids[J] != (Ids[0] + J) % 16)
@@ -790,10 +786,8 @@ static std::optional<unsigned> matchRowSharePattern(ArrayRef<uint8_t> Ids) {
 /// Match an XOR mask pattern within each 16-lane row: Ids[J] == Mask ^ J,
 /// with Mask in [1, 15].
 static std::optional<unsigned> matchRowXMaskPattern(ArrayRef<uint8_t> Ids) {
-  if (!isFullRowPattern(Ids))
-    return std::nullopt;
   unsigned Mask = Ids[0];
-  if (Mask == 0)
+  if (Mask == 0 || !isFullRowPattern(Ids))
     return std::nullopt;
   for (unsigned J = 0; J < 16; ++J)
     if (Ids[J] != (Mask ^ J))
@@ -883,9 +877,9 @@ matchDsSwizzleBitmaskPattern(ArrayRef<uint8_t> Ids) {
   }
 
   return AMDGPU::Swizzle::BITMASK_PERM_ENC |
-         (AndMask << AMDGPU::Swizzle::BITMASK_AND_SHIFT) |
-         (OrMask << AMDGPU::Swizzle::BITMASK_OR_SHIFT) |
-         (XorMask << AMDGPU::Swizzle::BITMASK_XOR_SHIFT);
+         AndMask << AMDGPU::Swizzle::BITMASK_AND_SHIFT |
+         OrMask << AMDGPU::Swizzle::BITMASK_OR_SHIFT |
+         XorMask << AMDGPU::Swizzle::BITMASK_XOR_SHIFT;
 }
 
 /// Emit v_mov_b32_dpp with the given control word, row/bank masks 0xF, and
@@ -956,6 +950,11 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
                                         ArrayRef<uint8_t> Ids,
                                         const GCNSubtarget &ST,
                                         const DataLayout &DL) {
+  // Uniform shuffle (all lanes read the same value) is handled by cheaper
+  // broadcast/readlane intrinsics.
+  if (all_equal(Ids))
+    return nullptr;
+
   if (std::optional<unsigned> QP = matchQuadPermPattern(Ids)) {
     if (ST.hasDPP())
       return createUpdateDpp(B, Src, *QP);
@@ -1001,8 +1000,7 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
 
   // Generic DS_SWIZZLE bitmask-mode fallback: handles any 32-lane shuffle that
   // can be expressed as dst = ((src & AND) | OR) ^ XOR with 5-bit masks. This
-  // is available on every target that has ds_swizzle (i.e. all of them) and
-  // strictly subsumes the half-row "share" cases the original code handled.
+  // is available on every target that has ds_swizzle.
   if (std::optional<unsigned> Imm = matchDsSwizzleBitmaskPattern(Ids))
     return createDsSwizzle(B, Src, *Imm, DL);
 
