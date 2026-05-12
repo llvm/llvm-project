@@ -21,8 +21,8 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
 #include <cstdio>
@@ -832,14 +832,13 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
                            TSK_ExplicitInstantiationDeclaration ||
                        Spec->getTemplateSpecializationKind() ==
                            TSK_ExplicitInstantiationDefinition);
-          bool ClassUsedOnDevice =
-              CGM.GetGlobalValue(CGM.getMangledName(GD));
+          bool ClassUsedOnDevice = CGM.GetGlobalValue(CGM.getMangledName(GD));
           if (IsImplicitHD && IsExplicitInst && !ClassUsedOnDevice) {
             for (const auto *Ctor : Spec->ctors()) {
-              if (CGM.GetGlobalValue(CGM.getMangledName(
-                      GlobalDecl(Ctor, Ctor_Complete))) ||
-                  CGM.GetGlobalValue(CGM.getMangledName(
-                      GlobalDecl(Ctor, Ctor_Base)))) {
+              if (CGM.GetGlobalValue(
+                      CGM.getMangledName(GlobalDecl(Ctor, Ctor_Complete))) ||
+                  CGM.GetGlobalValue(
+                      CGM.getMangledName(GlobalDecl(Ctor, Ctor_Base)))) {
                 ClassUsedOnDevice = true;
                 break;
               }
@@ -864,8 +863,8 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
                   FT, llvm::GlobalValue::InternalLinkage, StubName, &M);
               Stub->setDoesNotReturn();
               Stub->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-              llvm::BasicBlock *BB = llvm::BasicBlock::Create(
-                  CGM.getLLVMContext(), "entry", Stub);
+              llvm::BasicBlock *BB =
+                  llvm::BasicBlock::Create(CGM.getLLVMContext(), "entry", Stub);
               llvm::IRBuilder<> StubBuilder(BB);
               StubBuilder.CreateIntrinsic(llvm::Intrinsic::trap, {});
               StubBuilder.CreateUnreachable();
