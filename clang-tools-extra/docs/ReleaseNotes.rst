@@ -186,6 +186,10 @@ Improvements to clang-tidy
   compiler. (E.g. tidy suppressed many ``clang-diagnostic-invalid-offsetof``
   reports because they usually occur in expansion of the macro ``offsetof``.)
 
+- :program:`clang-tidy` will no longer exit immediately if the only enabled
+  checks are `clang-diagnostic-*` ones. This allows using
+  :program:`clang-tidy` purely as a frontend to Clang's builtin warnings.
+
 New checks
 ^^^^^^^^^^
 
@@ -199,6 +203,12 @@ New checks
 
   Finds functions where throwing exceptions is unsafe but the function is still
   marked as potentially throwing.
+
+- New :doc:`llvm-formatv-string
+  <clang-tidy/checks/llvm/formatv-string>` check.
+
+  Validates ``llvm::formatv`` format strings against the provided arguments,
+  diagnosing mismatched argument counts, unused arguments, and mixed index styles.
 
 - New :doc:`llvm-redundant-casting
   <clang-tidy/checks/llvm/redundant-casting>` check.

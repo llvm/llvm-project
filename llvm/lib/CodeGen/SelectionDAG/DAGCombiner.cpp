@@ -11428,6 +11428,24 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     }
   }
 
+  // fold (sra (add nsw X, C), D) -> (add nsw (sra X, D), C s>> D)
+  // when C has D trailing zeros (so C s>> D is exact).
+  if (N1C && N0.hasOneUse() && N0.getOpcode() == ISD::ADD &&
+      N0->getFlags().hasNoSignedWrap()) {
+    if (ConstantSDNode *AddC = isConstOrConstSplat(N0.getOperand(1))) {
+      const APInt &ShAmt = N1C->getAPIntValue();
+      const APInt &AddVal = AddC->getAPIntValue();
+      if (ShAmt.ult(AddVal.countr_zero())) {
+        SDNodeFlags ShiftFlags = N->getFlags();
+        SDValue NewSra =
+            DAG.getNode(ISD::SRA, DL, VT, N0.getOperand(0), N1, ShiftFlags);
+        SDValue NewC = DAG.getConstant(AddVal.ashr(ShAmt), DL, VT);
+        SDNodeFlags AddFlags = N0->getFlags();
+        return DAG.getNode(ISD::ADD, DL, VT, NewSra, NewC, AddFlags);
+      }
+    }
+  }
+
   // Simplify, based on bits shifted out of the LHS.
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
@@ -11692,6 +11710,24 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
                                  LastElt);
         return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT), DL,
                                   VT);
+      }
+    }
+  }
+
+  // fold (srl (add nuw X, C), D) -> (add nuw (srl X, D), C u>> D)
+  // when C has D trailing zeros (so C >> D is exact).
+  if (N1C && N0.hasOneUse() && N0.getOpcode() == ISD::ADD &&
+      N0->getFlags().hasNoUnsignedWrap()) {
+    if (ConstantSDNode *AddC = isConstOrConstSplat(N0.getOperand(1))) {
+      const APInt &ShAmt = N1C->getAPIntValue();
+      const APInt &AddVal = AddC->getAPIntValue();
+      if (ShAmt.ult(AddVal.countr_zero())) {
+        SDNodeFlags ShiftFlags = N->getFlags();
+        SDValue NewSrl =
+            DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), N1, ShiftFlags);
+        SDValue NewC = DAG.getConstant(AddVal.lshr(ShAmt), DL, VT);
+        SDNodeFlags AddFlags = N0->getFlags();
+        return DAG.getNode(ISD::ADD, DL, VT, NewSrl, NewC, AddFlags);
       }
     }
   }
@@ -17633,6 +17669,11 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   // fold (conv (freeze (load x))) -> (freeze (load (conv*)x))
   // If the resultant load doesn't need a higher alignment than the original!
   auto CastLoad = [this, &VT](SDValue N0, const SDLoc &DL) {
+    // Peek through scalar_to_vector if the scalar is same size as VT - often a
+    // leftover from legalization.
+    if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && N0.hasOneUse() &&
+        N0.getOperand(0).getValueSizeInBits() == VT.getSizeInBits())
+      N0 = N0.getOperand(0);
     if (N0.getOpcode() == ISD::AssertNoFPClass)
       N0 = N0.getOperand(0);
     if (!ISD::isNormalLoad(N0.getNode()) || !N0.hasOneUse())
@@ -19029,16 +19070,17 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
 
     ConstOp = peekThroughBitcasts(N->getOperand(ConstOpIdx));
     Pow2Op = N->getOperand(1 - ConstOpIdx);
-    if (Pow2Op.getOpcode() != ISD::UINT_TO_FP &&
-        (Pow2Op.getOpcode() != ISD::SINT_TO_FP ||
-         !DAG.computeKnownBits(Pow2Op).isNonNegative()))
+    unsigned Pow2Opc = Pow2Op.getOpcode();
+    if (Pow2Opc != ISD::UINT_TO_FP && Pow2Opc != ISD::SINT_TO_FP)
       return false;
 
     Pow2Op = Pow2Op.getOperand(0);
 
-    // `Log2(Pow2Op) < Pow2Op.getScalarSizeInBits()`.
-    // TODO: We could use knownbits to make this bound more precise.
-    int MaxExpChange = Pow2Op.getValueType().getScalarSizeInBits();
+    KnownBits Pow2OpKnownBits = DAG.computeKnownBits(Pow2Op);
+    if (Pow2Opc == ISD::SINT_TO_FP && !Pow2OpKnownBits.isNonNegative())
+      return false;
+
+    int MaxExpChange = Pow2OpKnownBits.countMaxActiveBits();
 
     auto IsFPConstValid = [N, MaxExpChange, &Mantissa](ConstantFPSDNode *CFP) {
       if (CFP == nullptr)
@@ -24897,13 +24939,14 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
   // Extracting an element of a vector constant is constant-folded, so this
   // transform is just replacing a vector op with a scalar op while moving the
   // extract.
+  auto IsExtractFree = [](SDValue Op) {
+    APInt SplatVal;
+    return isAnyConstantBuildVector(Op, true) ||
+           ISD::isConstantSplatVector(Op.getNode(), SplatVal);
+  };
   SDValue Op0 = Vec.getOperand(0);
   SDValue Op1 = Vec.getOperand(1);
-  APInt SplatVal;
-  if (!isAnyConstantBuildVector(Op0, true) &&
-      !ISD::isConstantSplatVector(Op0.getNode(), SplatVal) &&
-      !isAnyConstantBuildVector(Op1, true) &&
-      !ISD::isConstantSplatVector(Op1.getNode(), SplatVal))
+  if (!IsExtractFree(Op0) && !IsExtractFree(Op1))
     return SDValue();
 
   // extractelt (op X, C), IndexC --> op (extractelt X, IndexC), C'

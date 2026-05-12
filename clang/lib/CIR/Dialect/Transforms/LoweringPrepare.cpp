@@ -151,6 +151,7 @@ struct LoweringPreparePass
   /// with the CUDA runtime.
   void buildCUDAModuleCtor();
   std::optional<FuncOp> buildCUDAModuleDtor();
+  std::optional<FuncOp> buildHIPModuleDtor();
   std::optional<FuncOp> buildCUDARegisterGlobals();
   void buildCUDARegisterGlobalFunctions(cir::CIRBaseBuilderTy &builder,
                                         FuncOp regGlobalFunc);
@@ -1935,8 +1936,6 @@ static std::string addUnderscoredPrefix(llvm::StringRef prefix,
 void LoweringPreparePass::buildCUDAModuleCtor() {
   bool isHIP = astCtx->getLangOpts().HIP;
 
-  if (isHIP)
-    assert(!cir::MissingFeatures::hipModuleCtor());
   if (astCtx->getLangOpts().GPURelocatableDeviceCode)
     llvm_unreachable("GPU RDC NYI");
 
@@ -2063,8 +2062,67 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   builder.setInsertionPointToStart(moduleCtor.addEntryBlock());
   assert(!cir::MissingFeatures::opGlobalCtorPriority());
   if (isHIP) {
-    llvm_unreachable("HIP Module Constructor Support");
-  } else if (!astCtx->getLangOpts().GPURelocatableDeviceCode) {
+    // --- Create HIP CTOR ---
+    //   if (__hip_gpubin_handle == nullptr)
+    //     __hip_gpubin_handle = __hipRegisterFatBinary(&fatbinWrapper);
+    //   __hip_register_globals(__hip_gpubin_handle);
+    //   atexit(__hip_module_dtor);
+    mlir::Block *entryBlock = builder.getInsertionBlock();
+    mlir::Region *parent = entryBlock->getParent();
+    mlir::Block *ifBlock = builder.createBlock(parent);
+    mlir::Block *exitBlock = builder.createBlock(parent);
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToEnd(entryBlock);
+      mlir::Value handle =
+          builder.createLoad(loc, builder.createGetGlobal(gpuBinHandle));
+      auto handlePtrTy = mlir::cast<cir::PointerType>(handle.getType());
+      mlir::Value nullPtr = builder.getNullPtr(handlePtrTy, loc);
+      mlir::Value isNull =
+          builder.createCompare(loc, cir::CmpOpKind::eq, handle, nullPtr);
+      cir::BrCondOp::create(builder, loc, isNull, ifBlock, exitBlock);
+    }
+    {
+      // Handle is null: load the fatbin and register it.
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToStart(ifBlock);
+      mlir::Value wrapper = builder.createGetGlobal(fatbinWrapper);
+      mlir::Value fatbinVoidPtr = builder.createBitcast(wrapper, voidPtrTy);
+      cir::CallOp gpuBinaryHandleCall =
+          builder.createCallOp(loc, regFunc, fatbinVoidPtr);
+      mlir::Value gpuBinaryHandle = gpuBinaryHandleCall.getResult();
+      // Store the value back to the global `__hip_gpubin_handle`.
+      mlir::Value gpuBinaryHandleGlobal = builder.createGetGlobal(gpuBinHandle);
+      builder.createStore(loc, gpuBinaryHandle, gpuBinaryHandleGlobal);
+      cir::BrOp::create(builder, loc, exitBlock);
+    }
+    {
+      // Exit block: load the (possibly newly-registered) handle, call
+      // __hip_register_globals, and register the module dtor with atexit().
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToStart(exitBlock);
+      mlir::Value gHandle =
+          builder.createLoad(loc, builder.createGetGlobal(gpuBinHandle));
+
+      if (std::optional<FuncOp> regGlobal = buildCUDARegisterGlobals())
+        builder.createCallOp(loc, *regGlobal, gHandle);
+
+      if (std::optional<FuncOp> dtor = buildHIPModuleDtor()) {
+        cir::CIRBaseBuilderTy globalBuilder(getContext());
+        globalBuilder.setInsertionPointToStart(mlirModule.getBody());
+        FuncOp atexit = buildRuntimeFunction(
+            globalBuilder, "atexit", loc,
+            FuncType::get(PointerType::get(dtor->getFunctionType()), intTy));
+        mlir::Value dtorFunc = GetGlobalOp::create(
+            builder, loc, PointerType::get(dtor->getFunctionType()),
+            mlir::FlatSymbolRefAttr::get(dtor->getSymNameAttr()));
+        builder.createCallOp(loc, atexit, dtorFunc);
+      }
+      cir::ReturnOp::create(builder, loc);
+    }
+    return;
+  }
+  if (!astCtx->getLangOpts().GPURelocatableDeviceCode) {
 
     // --- Create CUDA CTOR-DTOR ---
     // Register binary with CUDA runtime. This is substantially different in
@@ -2165,6 +2223,77 @@ std::optional<FuncOp> LoweringPreparePass::buildCUDAModuleDtor() {
   return dtor;
 }
 
+/// Build the HIP module dtor:
+///
+///     void __hip_module_dtor() {
+///       if (__hip_gpubin_handle != nullptr) {
+///         __hipUnregisterFatBinary(__hip_gpubin_handle);
+///         __hip_gpubin_handle = nullptr;
+///       }
+///     }
+///
+/// Despite the name, OG doesn't treat this as a real destructor: putting it on
+/// the dtor list would cause a double-free. It is meant to be registered via
+/// atexit() at the end of the module ctor.
+std::optional<FuncOp> LoweringPreparePass::buildHIPModuleDtor() {
+  if (!mlirModule->getAttr(CIRDialect::getCUDABinaryHandleAttrName()))
+    return {};
+
+  llvm::StringRef prefix = getCUDAPrefix(astCtx);
+
+  VoidType voidTy = VoidType::get(&getContext());
+  PointerType voidPtrPtrTy = PointerType::get(PointerType::get(voidTy));
+
+  mlir::Location loc = mlirModule.getLoc();
+
+  cir::CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  // void __hipUnregisterFatBinary(void ** handle);
+  std::string unregisterFuncName =
+      addUnderscoredPrefix(prefix, "UnregisterFatBinary");
+  FuncOp unregisterFunc = buildRuntimeFunction(
+      builder, unregisterFuncName, loc, FuncType::get({voidPtrPtrTy}, voidTy));
+
+  std::string dtorName = addUnderscoredPrefix(prefix, "_module_dtor");
+  FuncOp dtor =
+      buildRuntimeFunction(builder, dtorName, loc, FuncType::get({}, voidTy),
+                           GlobalLinkageKind::InternalLinkage);
+
+  std::string gpubinName = addUnderscoredPrefix(prefix, "_gpubin_handle");
+  GlobalOp gpuBinGlobal = cast<GlobalOp>(mlirModule.lookupSymbol(gpubinName));
+
+  mlir::Block *entryBlock = dtor.addEntryBlock();
+  mlir::Block *ifBlock = builder.createBlock(&dtor.getBody());
+  mlir::Block *exitBlock = builder.createBlock(&dtor.getBody());
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(entryBlock);
+  mlir::Value handle =
+      builder.createLoad(loc, builder.createGetGlobal(gpuBinGlobal));
+  auto handlePtrTy = mlir::cast<cir::PointerType>(handle.getType());
+  mlir::Value nullPtr = builder.getNullPtr(handlePtrTy, loc);
+  mlir::Value isNotNull =
+      builder.createCompare(loc, cir::CmpOpKind::ne, handle, nullPtr);
+  cir::BrCondOp::create(builder, loc, isNotNull, ifBlock, exitBlock);
+
+  {
+    // Handle is non-null: unregister and clear it.
+    mlir::OpBuilder::InsertionGuard ifGuard(builder);
+    builder.setInsertionPointToStart(ifBlock);
+    builder.createCallOp(loc, unregisterFunc, handle);
+    builder.createStore(loc, nullPtr, builder.createGetGlobal(gpuBinGlobal));
+    cir::BrOp::create(builder, loc, exitBlock);
+  }
+  {
+    mlir::OpBuilder::InsertionGuard exitGuard(builder);
+    builder.setInsertionPointToStart(exitBlock);
+    cir::ReturnOp::create(builder, loc);
+  }
+
+  return dtor;
+}
+
 std::optional<FuncOp> LoweringPreparePass::buildCUDARegisterGlobals() {
   // There is nothing to register.
   if (cudaKernelMap.empty())
@@ -2257,20 +2386,28 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
     mlir::Value deviceFunc = builder.createBitcast(
         builder.createGetGlobal(deviceFuncStr), voidPtrTy);
 
+    mlir::Value hostFunc;
     if (isHIP) {
-      llvm_unreachable("HIP kernel registration NYI");
+      // Under HIP, the kernel-handle is a GlobalOp shadow created by CIR
+      // codegen and named with the kernel-reference mangled name (e.g.
+      // `@_Z2fnv` pointing at the device-stub function
+      // `_Z17__device_stub__fnv`). The CUDAKernelNameAttr on the device-stub
+      // uses the same name, so we can resolve the shadow by symbol lookup.
+      auto funcHandle = cast<GlobalOp>(mlirModule.lookupSymbol(kernelName));
+      hostFunc =
+          builder.createBitcast(builder.createGetGlobal(funcHandle), voidPtrTy);
     } else {
-      mlir::Value hostFunc = builder.createBitcast(
+      hostFunc = builder.createBitcast(
           GetGlobalOp::create(
               builder, loc, PointerType::get(deviceStub.getFunctionType()),
               mlir::FlatSymbolRefAttr::get(deviceStub.getSymNameAttr())),
           voidPtrTy);
-      builder.createCallOp(
-          loc, cudaRegisterFunction,
-          {fatbinHandle, hostFunc, deviceFunc, deviceFunc,
-           ConstantOp::create(builder, loc, IntAttr::get(intTy, -1)),
-           cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr});
     }
+    builder.createCallOp(
+        loc, cudaRegisterFunction,
+        {fatbinHandle, hostFunc, deviceFunc, deviceFunc,
+         ConstantOp::create(builder, loc, IntAttr::get(intTy, -1)), cirNullPtr,
+         cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr});
   }
 }
 
