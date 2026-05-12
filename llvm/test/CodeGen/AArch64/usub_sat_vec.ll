@@ -320,8 +320,7 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    cmhi v0.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-GI-NEXT:    bic v0.16b, v3.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   %z = call <16 x i4> @llvm.usub.sat.v16i4(<16 x i4> %x, <16 x i4> %y)
   ret <16 x i4> %z
@@ -342,8 +341,7 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    cmhi v0.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-GI-NEXT:    bic v0.16b, v3.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   %z = call <16 x i1> @llvm.usub.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z
