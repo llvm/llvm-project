@@ -27,7 +27,10 @@ RemarksMixAnalyzer::run(const CapabilityContext &Context) {
                 Path, [&](const remarks::Remark &R) -> Error {
                   for (const remarks::Argument &A : R.Args) {
                     ++TotalArgs;
-                    json::Value &Val = Keys[A.Key];
+                    // A.Key is a StringRef into the MemoryBuffer; copy to own
+                    // the storage before the buffer is freed on return.
+                    std::string KeyStr = A.Key.str();
+                    json::Value &Val = Keys[KeyStr];
                     Val = Val.getAsInteger().value_or(0) + 1;
                   }
                   return Error::success();
@@ -35,7 +38,7 @@ RemarksMixAnalyzer::run(const CapabilityContext &Context) {
           return std::move(E);
 
         return makeJSONResult(CapID, UnitID, json::Object{
-            {"remarks_path", Path},
+            {"remarks_path", Path.str()},
             {"total_args", TotalArgs},
             {"instruction_mix", std::move(Keys)}});
       });

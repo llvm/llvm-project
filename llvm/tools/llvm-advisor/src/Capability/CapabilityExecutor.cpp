@@ -116,21 +116,28 @@ CapabilityExecutor::execute(ArrayRef<CapabilityNode> Nodes,
     std::string RunKey = computeCapabilityRunKey(
         Context.Unit, Node.Spec.ID, Node.Spec.Version, InputDigest);
     if (Cache.contains(RunKey)) {
-      Expected<std::string> ID = Cache.get(RunKey);
-      if (!ID)
-        return ID.takeError();
-      Expected<std::string> Blob = Storage.blobs().get(*ID);
-      if (!Blob)
-        return Blob.takeError();
-      Expected<json::Value> Cached = json::parse(*Blob);
-      if (!Cached)
-        return Cached.takeError();
-      Results.push_back(json::Object{{"capability", Node.Spec.ID},
-                                     {"run_key", RunKey},
-                                     {"result_id", *ID},
-                                     {"cache", "hit"},
-                                     {"value", std::move(*Cached)}});
-      continue;
+      bool CacheHit = false;
+      if (Expected<std::string> ID = Cache.get(RunKey)) {
+        if (Expected<std::string> Blob = Storage.blobs().get(*ID)) {
+          if (Expected<json::Value> Cached = json::parse(*Blob)) {
+            Results.push_back(json::Object{{"capability", Node.Spec.ID},
+                                           {"run_key", RunKey},
+                                           {"result_id", *ID},
+                                           {"cache", "hit"},
+                                           {"value", std::move(*Cached)}});
+            CacheHit = true;
+          } else {
+            consumeError(Cached.takeError());
+          }
+        } else {
+          consumeError(Blob.takeError());
+        }
+      } else {
+        consumeError(ID.takeError());
+      }
+      if (CacheHit)
+        continue;
+      // Fall through to re-run the capability on any cache read failure.
     }
 
     CapabilityRunner *Runner = Registry.getRunner(Node.Spec);

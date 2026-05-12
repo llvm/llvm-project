@@ -42,6 +42,8 @@ CallFrequencyInsight::analyze(const InsightInput &Input) const {
   const json::Object &D = *Input.PrimaryData;
 
   const json::Array *Nodes = D.getArray("nodes");
+  if (!Nodes)
+    Nodes = D.getArray("functions");
   if (!Nodes || Nodes->empty())
     return noDataError();
 

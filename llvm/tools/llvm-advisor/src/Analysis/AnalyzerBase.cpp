@@ -59,22 +59,22 @@ std::unique_ptr<JSONCapabilityResult>
 llvm::advisor::makeUnavailableResult(StringRef CapabilityID, StringRef UnitID,
                                       StringRef Reason) {
   return std::make_unique<JSONCapabilityResult>(
-      json::Object{{"capability", CapabilityID},
-                   {"unit_id", UnitID},
+      json::Object{{"capability", CapabilityID.str()},
+                   {"unit_id", UnitID.str()},
                    {"available", false},
-                   {"reason", Reason}});
+                   {"reason", Reason.str()}});
 }
 
 std::unique_ptr<JSONCapabilityResult>
 llvm::advisor::makeUnavailableResult(StringRef CapabilityID, StringRef UnitID,
                                       StringRef Reason, StringRef Summary) {
   json::Object Obj;
-  Obj["capability"] = CapabilityID;
-  Obj["unit_id"] = UnitID;
+  Obj["capability"] = CapabilityID.str();
+  Obj["unit_id"] = UnitID.str();
   Obj["available"] = false;
-  Obj["reason"] = Reason;
+  Obj["reason"] = Reason.str();
   if (!Summary.empty())
-    Obj["summary"] = Summary;
+    Obj["summary"] = Summary.str();
   return std::make_unique<JSONCapabilityResult>(std::move(Obj));
 }
 

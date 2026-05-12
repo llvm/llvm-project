@@ -25,18 +25,22 @@ RemarksAnalyzer::run(const CapabilityContext &Context) {
         if (Error E = foreachRemark(
                 Path, [&](const remarks::Remark &R) -> Error {
                   ++Count;
-                  json::Value &PassVal = ByPass[R.PassName];
+                  // R.PassName is a StringRef into the MemoryBuffer; copy to
+                  // std::string so the ObjectKey owns its storage and remains
+                  // valid after foreachRemark destroys the buffer.
+                  std::string PassKey = R.PassName.str();
+                  json::Value &PassVal = ByPass[PassKey];
                   PassVal = PassVal.getAsInteger().value_or(0) + 1;
 
                   StringRef Ty = remarks::typeToStr(R.RemarkType);
-                  json::Value &TypeVal = ByType[Ty];
+                  json::Value &TypeVal = ByType[Ty.str()];
                   TypeVal = TypeVal.getAsInteger().value_or(0) + 1;
                   return Error::success();
                 }))
           return std::move(E);
 
         return makeJSONResult(CapID, UnitID, json::Object{
-            {"remarks_path", Path},
+            {"remarks_path", Path.str()},
             {"remark_count", Count},
             {"by_pass", std::move(ByPass)},
             {"by_type", std::move(ByType)}});

@@ -33,8 +33,6 @@ json::Value llvm::advisor::toJSON(const CapabilitySpec &Spec) {
                       {"summary", Spec.Summary},
                       {"execution_mode", Spec.ExecutionMode},
                       {"cost_class", Spec.CostClass},
-                      {"readiness", Spec.Readiness},
-                      {"readiness_level", Spec.Readiness},
                       {"dependencies", stringsToJSON(Spec.Dependencies)},
                       {"depends_on", stringsToJSON(Spec.Dependencies)},
                       {"required_inputs", stringsToJSON(Spec.RequiredInputs)},

@@ -28,16 +28,19 @@ RemarksDetailAnalyzer::run(const CapabilityContext &Context) {
                     Truncated = true;
                     return Error::success();
                   }
+                  // All StringRef fields point into the MemoryBuffer; copy to
+                  // std::string before storing as json::Value because
+                  // json::Value(StringRef) stores T_StringRef (non-owning).
                   json::Object Item{
-                      {"pass", R.PassName},
-                      {"name", R.RemarkName},
+                      {"pass", R.PassName.str()},
+                      {"name", R.RemarkName.str()},
                       {"type", remarks::typeToStr(R.RemarkType)},
-                      {"function", R.FunctionName},
+                      {"function", R.FunctionName.str()},
                       {"message", R.getArgsAsMsg()},
                   };
                   if (R.Loc)
                     Item["location"] =
-                        json::Object{{"file", R.Loc->SourceFilePath},
+                        json::Object{{"file", R.Loc->SourceFilePath.str()},
                                      {"line", static_cast<int64_t>(R.Loc->SourceLine)},
                                      {"column", static_cast<int64_t>(R.Loc->SourceColumn)}};
                   if (R.Hotness)
@@ -48,7 +51,7 @@ RemarksDetailAnalyzer::run(const CapabilityContext &Context) {
           return std::move(E);
 
         return makeJSONResult(CapID, UnitID, json::Object{
-            {"remarks_path", Path},
+            {"remarks_path", Path.str()},
             {"count", static_cast<int64_t>(Items.size())},
             {"truncated", Truncated},
             {"remarks", std::move(Items)}});

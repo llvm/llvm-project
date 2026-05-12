@@ -37,10 +37,12 @@ RemarksSizeDiffAnalyzer::run(const CapabilityContext &Context) {
                       continue;
                     ++DeltaCount;
                     DeltaSum += *V;
+                    // StringRefs from remarks are into the MemoryBuffer;
+                    // json::Value(StringRef) stores non-owning T_StringRef.
                     Entries.push_back(json::Object{
-                        {"function", R.FunctionName},
-                        {"remark", R.RemarkName},
-                        {"key", Key},
+                        {"function", R.FunctionName.str()},
+                        {"remark", R.RemarkName.str()},
+                        {"key", Key.str()},
                         {"value", *V},
                     });
                   }
@@ -49,7 +51,7 @@ RemarksSizeDiffAnalyzer::run(const CapabilityContext &Context) {
           return std::move(E);
 
         return makeJSONResult(CapID, UnitID, json::Object{
-            {"remarks_path", Path},
+            {"remarks_path", Path.str()},
             {"delta_count", DeltaCount},
             {"delta_sum", DeltaSum},
             {"entries", std::move(Entries)}});

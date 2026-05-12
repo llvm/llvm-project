@@ -17,7 +17,7 @@ public:
   StringRef getDescription() const override {
     return "Key IR metrics with interpretation and size-class annotation";
   }
-  StringRef getRequiredCapability() const override { return "llvm.ir.stats"; }
+  StringRef getRequiredCapability() const override { return "llvm.ir.summary"; }
   Expected<InsightOutput> analyze(const InsightInput &Input) const override;
 };
 

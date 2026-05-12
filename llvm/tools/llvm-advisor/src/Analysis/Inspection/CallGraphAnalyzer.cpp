@@ -8,6 +8,7 @@
 
 #include "Analysis/Inspection/CallGraphAnalyzer.h"
 #include "Analysis/IR/IRAnalysisUtils.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CallGraph.h"
 
 using namespace llvm;
@@ -20,9 +21,9 @@ CallGraphAnalyzer::run(const CapabilityContext &Context) {
   return withIRModule(Context, CapID, UnitID,
                       [&](LLVMContext &, Module &M) {
     CallGraph CG(M);
-    json::Array Functions;
     int64_t EdgeCount = 0;
 
+    DenseMap<const Function *, int64_t> OutMap, InMap;
     for (Function &F : M) {
       if (F.isDeclaration())
         continue;
@@ -33,11 +34,21 @@ CallGraphAnalyzer::run(const CapabilityContext &Context) {
           if (Entry.second && Entry.second->getFunction()) {
             ++Out;
             ++EdgeCount;
+            InMap[Entry.second->getFunction()]++;
           }
         }
       }
-      Functions.push_back(
-          json::Object{{"name", F.getName()}, {"outgoing_calls", Out}});
+      OutMap[&F] = Out;
+    }
+
+    json::Array Functions;
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      Functions.push_back(json::Object{
+          {"name", F.getName()},
+          {"outgoing_calls", OutMap.lookup(&F)},
+          {"incoming_calls", InMap.lookup(&F)}});
     }
 
     return makeJSONResult(CapID, UnitID, json::Object{

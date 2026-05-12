@@ -96,8 +96,10 @@ makeUnavailableResult(StringRef CapabilityID, StringRef UnitID,
 /// populated.  Additional properties are merged from Data.
 inline std::unique_ptr<JSONCapabilityResult>
 makeJSONResult(StringRef CapabilityID, StringRef UnitID, json::Object &&Data) {
-  Data["capability"] = CapabilityID;
-  Data["unit_id"] = UnitID;
+  // json::Value(StringRef) stores non-owning T_StringRef; copy to std::string
+  // so the values remain valid after the source StringRefs go out of scope.
+  Data["capability"] = CapabilityID.str();
+  Data["unit_id"] = UnitID.str();
   Data["available"] = true;
   return std::make_unique<JSONCapabilityResult>(std::move(Data));
 }

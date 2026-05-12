@@ -45,8 +45,11 @@ MetricTrendsInsight::analyze(const InsightInput &Input) const {
   const json::Object &D = *Input.PrimaryData;
 
   int64_t Functions = getInt(D, "functions");
+  if (!Functions) Functions = getInt(D, "function_count");
   int64_t Instructions = getInt(D, "instructions");
+  if (!Instructions) Instructions = getInt(D, "instruction_count");
   int64_t Globals = getInt(D, "globals");
+  if (!Globals) Globals = getInt(D, "global_count");
 
   if (Functions == 0 && Instructions == 0)
     return noDataError();
