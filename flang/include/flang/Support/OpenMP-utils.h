@@ -9,25 +9,35 @@
 #ifndef FORTRAN_SUPPORT_OPENMP_UTILS_H_
 #define FORTRAN_SUPPORT_OPENMP_UTILS_H_
 
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Semantics/symbol.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Value.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace Fortran::common::openmp {
 /// Structure holding the information needed to create and bind entry block
 /// arguments associated to a single clause.
 struct EntryBlockArgsEntry {
-  llvm::ArrayRef<const Fortran::semantics::Symbol *> syms;
+  llvm::SmallVector<Fortran::lower::omp::Object> objects;
   llvm::ArrayRef<mlir::Value> vars;
 
   bool isValid() const {
-    // This check allows specifying a smaller number of symbols than values
+    // This check allows specifying a smaller number of objects than values
     // because in some case cases a single symbol generates multiple block
     // arguments.
-    return syms.size() <= vars.size();
+    return objects.size() <= vars.size();
+  }
+
+  llvm::SmallVector<const Fortran::semantics::Symbol *> getSyms() const {
+    llvm::SmallVector<const Fortran::semantics::Symbol *> syms;
+    for (const Fortran::lower::omp::Object &object : objects) {
+      syms.push_back(object.sym());
+    }
+    return syms;
   }
 };
 
@@ -50,10 +60,22 @@ struct EntryBlockArgs {
         useDeviceAddr.isValid() && useDevicePtr.isValid();
   }
 
-  auto getSyms() const {
-    return llvm::concat<const semantics::Symbol *const>(hasDeviceAddr.syms,
-        inReduction.syms, map.syms, priv.syms, reduction.syms,
-        taskReduction.syms, useDeviceAddr.syms, useDevicePtr.syms);
+  llvm::SmallVector<const semantics::Symbol *> getSyms() const {
+    llvm::SmallVector<const semantics::Symbol *> syms;
+    auto appendSyms = [&syms](const EntryBlockArgsEntry &entry) {
+      for (const Fortran::lower::omp::Object &object : entry.objects) {
+        syms.push_back(object.sym());
+      }
+    };
+    appendSyms(hasDeviceAddr);
+    appendSyms(inReduction);
+    appendSyms(map);
+    appendSyms(priv);
+    appendSyms(reduction);
+    appendSyms(taskReduction);
+    appendSyms(useDeviceAddr);
+    appendSyms(useDevicePtr);
+    return syms;
   }
 
   auto getVars() const {
