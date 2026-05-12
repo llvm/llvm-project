@@ -272,3 +272,26 @@ func.func @promotable_through_cast_view_blocks(%a: f32, %cond: i1) -> f32 {
   %v = memref.load %view[] : memref<f32>
   return %v : f32
 }
+
+// -----
+
+// Regression test: the view is defined in the parent region but the store
+// owning the propagated blocking use lives in a nested region (`scf.if`).
+// The new blocking use must be registered under the owner's region, otherwise
+// `removeBlockingUses` trips the "all operations must still be in the same
+// region" invariant after `scf.if` rebuilds itself in `finalizePromotion`.
+
+// CHECK-LABEL: func.func @promotable_through_view_across_regions
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[A:.*]]: i32)
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.transparent_view
+// CHECK-NOT: memref.store
+// CHECK: scf.if %[[COND]]
+func.func @promotable_through_view_across_regions(%cond: i1, %a: i32) {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  %view = test.transparent_view %slot : (memref<i32>) -> memref<i32>
+  scf.if %cond {
+    memref.store %a, %view[] : memref<i32>
+  }
+  return
+}

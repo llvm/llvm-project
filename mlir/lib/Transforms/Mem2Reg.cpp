@@ -422,8 +422,9 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     for (OpOperand *blockingUse : newBlockingUses) {
       assert(llvm::is_contained(user->getResults(), blockingUse->get()));
 
+      Operation *useOwner = blockingUse->getOwner();
       SmallPtrSetImpl<OpOperand *> &newUserBlockingUseSet =
-          blockingUsesMap[blockingUse->getOwner()];
+          userToBlockingUses[useOwner->getParentRegion()][useOwner];
       newUserBlockingUseSet.insert(blockingUse);
     }
   }
@@ -793,8 +794,7 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
       Value reachingDefAtBlockingUse = reachingDef;
       if (viewSlot.ptr != slot.ptr) {
         // Convert the reaching definition to `viewSlot.elemType` to match
-        // what the impl sees. Skipped when the chain is empty; any cast
-        // unused by the impl will be cleaned up by DCE.
+        // what `toPromoteMemOp` sees.
         reachingDefAtBlockingUse = convertSlotValueToViewValue(
             reachingDef, viewSlot.ptr, slot, builder);
         assert(reachingDefAtBlockingUse &&
