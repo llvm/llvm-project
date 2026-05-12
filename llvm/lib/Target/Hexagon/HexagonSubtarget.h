@@ -63,7 +63,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool HasPreV65 = false;
   bool HasMemNoShuf = false;
   bool EnableDuplex = false;
-  bool ReservedR19 = false;
+  bool ReservedR[32] = {};
   bool NoreturnStackElim = false;
 
 public:
@@ -286,7 +286,7 @@ public:
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
 
   bool hasMemNoShuf() const { return HasMemNoShuf; }
-  bool hasReservedR19() const { return ReservedR19; }
+  bool isRRegReserved(unsigned i) const { return ReservedR[i]; }
   bool usePredicatedCalls() const;
 
   bool noreturnStackElim() const { return NoreturnStackElim; }
