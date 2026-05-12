@@ -3837,7 +3837,6 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       if (CapturedStmtInfo &&
           CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
           CGM.getLangOpts().OpenMP) {
-        // OpenMP case: binding was captured via its decomposed decl.
         return EmitOMPCapturedBindingLValue(BD);
       }
       // Non-OpenMP case: lambda capture.
