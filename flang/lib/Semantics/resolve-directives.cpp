@@ -1825,9 +1825,24 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
           name.symbol = found;
         } else if (GetContext().defaultDSA == Symbol::Flag::AccNone) {
           // 2.5.14.
-          context_.Say(name.source,
-              "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
-              symbol.name());
+          bool isScalarExtensionApplicable{false};
+          if (context_.IsEnabled(
+                  common::LanguageFeature::AccDefaultNoneScalars)) {
+            if (const auto *det{symbol.detailsIf<ObjectEntityDetails>()}) {
+              if (!det->IsArray()) {
+                isScalarExtensionApplicable = true;
+                context_.Warn(common::UsageWarning::AccImplicitScalar,
+                    name.source,
+                    "Implicit attribute inferred for DEFAULT(NONE) scalar '%s' (-facc-allow-default-none-scalars)"_warn_en_US,
+                    symbol.name());
+              }
+            }
+          }
+          if (!isScalarExtensionApplicable) {
+            context_.Say(name.source,
+                "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
+                symbol.name());
+          }
         }
       } else {
         // TODO: assertion here?  or clear name.symbol?
