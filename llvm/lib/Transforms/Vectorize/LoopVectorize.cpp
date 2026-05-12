@@ -994,15 +994,14 @@ public:
     InstWidening Kind;
     Function *Variant;
     Intrinsic::ID IID;
-    bool RequiresMask;
     InstructionCost Cost;
   };
 
   void setCallWideningDecision(CallInst *CI, ElementCount VF, InstWidening Kind,
                                Function *Variant, Intrinsic::ID IID,
-                               bool RequiresMask, InstructionCost Cost) {
+                               InstructionCost Cost) {
     assert(!VF.isScalar() && "Expected vector VF");
-    CallWideningDecisions[{CI, VF}] = {Kind, Variant, IID, RequiresMask, Cost};
+    CallWideningDecisions[{CI, VF}] = {Kind, Variant, IID, Cost};
   }
 
   CallWideningDecision getCallWideningDecision(CallInst *CI,
@@ -1010,7 +1009,7 @@ public:
     assert(!VF.isScalar() && "Expected vector VF");
     auto I = CallWideningDecisions.find({CI, VF});
     if (I == CallWideningDecisions.end())
-      return {CM_Unknown, nullptr, Intrinsic::not_intrinsic, false, 0};
+      return {CM_Unknown, nullptr, Intrinsic::not_intrinsic, 0};
     return I->second;
   }
 
@@ -4969,7 +4968,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
                              ForcedScalar->second.contains(CI)) ||
                             isUniformAfterVectorization(CI, VF))) {
         setCallWideningDecision(CI, VF, CM_Scalarize, nullptr,
-                                Intrinsic::not_intrinsic, false, ScalarCost);
+                                Intrinsic::not_intrinsic, ScalarCost);
         continue;
       }
 
@@ -4984,7 +4983,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       if (RecurrenceDescriptor::isFMulAddIntrinsic(CI))
         if (auto RedCost = getReductionPatternCost(CI, VF, RetTy)) {
           setCallWideningDecision(CI, VF, CM_IntrinsicCall, nullptr,
-                                  getVectorIntrinsicIDForCall(CI, TLI), false,
+                                  getVectorIntrinsicIDForCall(CI, TLI),
                                   *RedCost);
           continue;
         }
@@ -5070,8 +5069,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         Decision = CM_IntrinsicCall;
       }
 
-      setCallWideningDecision(CI, VF, Decision, VecFunc, IID,
-                              FuncInfo.isMasked(), Cost);
+      setCallWideningDecision(CI, VF, Decision, VecFunc, IID, Cost);
     }
   }
 }
@@ -6462,7 +6460,6 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
                                       VPI->getDebugLoc());
 
   Function *Variant = nullptr;
-  bool RequiresMask = false;
   // Is better to call a vectorized version of the function than to to scalarize
   // the call?
   auto ShouldUseVectorCall = LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -6485,7 +6482,6 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
             CM.getCallWideningDecision(CI, VF);
         if (Decision.Kind == LoopVectorizationCostModel::CM_VectorCall) {
           Variant = Decision.Variant;
-          RequiresMask = Decision.RequiresMask;
           return true;
         }
 
@@ -6493,7 +6489,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
       },
       Range);
   if (ShouldUseVectorCall) {
-    if (RequiresMask) {
+    if (Variant->getFunctionType()->getNumParams() > Ops.size()) {
       // We have 2 cases that would require a mask:
       //   1) The call needs to be predicated, either due to a conditional
       //      in the scalar loop or use of an active lane mask with
