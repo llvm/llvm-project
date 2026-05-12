@@ -5,7 +5,7 @@
 # those two are instrumented. Adding --instrument-hot-only further restricts
 # instrumentation to foo (the only function that is both listed and hot).
 
-# REQUIRES: system-linux,bolt-runtime
+# REQUIRES: system-linux,bolt-runtime,target=x86_64-{{.*}}
 
 # RUN: %clang %cflags %s -o %t.exe -Wl,-q
 # RUN: link_fdata %s %t.exe %t.fdata
