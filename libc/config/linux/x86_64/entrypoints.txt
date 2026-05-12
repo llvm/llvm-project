@@ -1341,6 +1341,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.setenv
     libc.src.stdlib.mbstowcs
     libc.src.stdlib.mbtowc
     libc.src.stdlib.quick_exit
@@ -1463,11 +1464,24 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.wchar.wcrtomb
     libc.src.wchar.wcsrtombs
     libc.src.wchar.wcsnrtombs
+    # libc.src.wchar.fgetwc
+    # libc.src.wchar.fgetws
+    # libc.src.wchar.fputwc
+    # libc.src.wchar.fputws
+    libc.src.wchar.fwide
+    # libc.src.wchar.getwc
+    # libc.src.wchar.getwchar
+    # libc.src.wchar.putwc
+    # libc.src.wchar.putwchar
+    # libc.src.wchar.ungetwc
 
     # nl_types.h entrypoints
-    libc.src.nl_types.catopen 
+    libc.src.nl_types.catopen
     libc.src.nl_types.catclose
     libc.src.nl_types.catgets
+
+    # link.h entrypoints
+    libc.src.link.dl_iterate_phdr
   )
 endif()
 

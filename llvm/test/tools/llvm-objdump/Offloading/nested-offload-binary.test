@@ -1,0 +1,85 @@
+## Test that llvm-objdump can display nested OffloadBinary images.
+
+## The content blobs below were generated from the following YAML Input
+##!Offload
+##Members:
+##  - ImageKind:      IMG_Bitcode
+##    OffloadKind:    OFK_OpenMP
+##    String:
+##    - Key:            "triple"
+##      Value:          "x-y-z"
+##    - Key:            "arch"
+##      Value:          "arch1"
+##  - ImageKind:      IMG_Bitcode
+##    OffloadKind:    OFK_OpenMP
+##    String:
+##    - Key:            "triple"
+##      Value:          "x-y-z"
+##    - Key:            "arch"
+##      Value:          "arch2"
+
+# RUN: yaml2obj %s -o %t.bin
+# RUN: llvm-objdump --offloading %t.bin | FileCheck --match-full-lines --strict-whitespace --implicit-check-not={{.}} %s
+
+!Offload
+Members:
+  - ImageKind:      IMG_Object
+    OffloadKind:    OFK_OpenMP
+    String:
+    - Key:            "triple"
+      Value:          "x-y-z"
+    - Key:            "arch"
+      Value:          "none"
+    Content:        10ff10ad02000000f00000000000000020000000000000000200000000000000020001000000000070000000000000000200000000000000f00000000000000000000000000000000200010000000000a0000000000000000200000000000000f0000000000000000000000000000000dc00000000000000d1000000000000000500000000000000d700000000000000e9000000000000000500000000000000dc00000000000000d1000000000000000500000000000000d700000000000000e300000000000000050000000000000000782d792d7a006172636800747269706c650061726368320061726368310000
+  - ImageKind:      IMG_Object
+    OffloadKind:    OFK_OpenMP
+    String:
+    - Key:            "triple"
+      Value:          "a-b-c"
+    - Key:            "arch"
+      Value:          "none"
+    Content:        10ff10ad02000000f00000000000000020000000000000000200000000000000020001000000000070000000000000000200000000000000f00000000000000000000000000000000200010000000000a0000000000000000200000000000000f0000000000000000000000000000000dc00000000000000d1000000000000000500000000000000d700000000000000e9000000000000000500000000000000dc00000000000000d1000000000000000500000000000000d700000000000000e300000000000000050000000000000000782d792d7a006172636800747269706c650061726368320061726368310000
+
+#      CHECK:OFFLOADING IMAGE [0]:
+# CHECK-NEXT:kind            elf
+# CHECK-NEXT:arch            none
+# CHECK-NEXT:triple          x-y-z
+# CHECK-NEXT:producer        openmp
+# CHECK-NEXT:image size      {{[0-9]+}} bytes
+# CHECK-NEXT:nested images   2
+# CHECK-EMPTY:
+# CHECK-NEXT:  OFFLOADING IMAGE [0.0]:
+# CHECK-NEXT:  kind            llvm ir
+# CHECK-NEXT:  arch            arch1
+# CHECK-NEXT:  triple          x-y-z
+# CHECK-NEXT:  producer        openmp
+# CHECK-NEXT:  image size      {{[0-9]+}} bytes
+# CHECK-EMPTY:
+# CHECK-NEXT:  OFFLOADING IMAGE [0.1]:
+# CHECK-NEXT:  kind            llvm ir
+# CHECK-NEXT:  arch            arch2
+# CHECK-NEXT:  triple          x-y-z
+# CHECK-NEXT:  producer        openmp
+# CHECK-NEXT:  image size      {{[0-9]+}} bytes
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [1]:
+# CHECK-NEXT:kind            elf
+# CHECK-NEXT:arch            none
+# CHECK-NEXT:triple          a-b-c
+# CHECK-NEXT:producer        openmp
+# CHECK-NEXT:image size      {{[0-9]+}} bytes
+# CHECK-NEXT:nested images   2
+# CHECK-EMPTY:
+# CHECK-NEXT:  OFFLOADING IMAGE [1.0]:
+# CHECK-NEXT:  kind            llvm ir
+# CHECK-NEXT:  arch            arch1
+# CHECK-NEXT:  triple          x-y-z
+# CHECK-NEXT:  producer        openmp
+# CHECK-NEXT:  image size      {{[0-9]+}} bytes
+# CHECK-EMPTY:
+# CHECK-NEXT:  OFFLOADING IMAGE [1.1]:
+# CHECK-NEXT:  kind            llvm ir
+# CHECK-NEXT:  arch            arch2
+# CHECK-NEXT:  triple          x-y-z
+# CHECK-NEXT:  producer        openmp
+# CHECK-NEXT:  image size      {{[0-9]+}} bytes
