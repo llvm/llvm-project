@@ -148,6 +148,38 @@ public:
         << UseExpr->getSourceRange();
   }
 
+  void reportInvalidatedField(const Expr *IssueExpr,
+                              const FieldDecl *DanglingField,
+                              const Expr *InvalidationExpr) override {
+    auto InvalidationDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                                ? diag::note_lifetime_safety_freed_here
+                                : diag::note_lifetime_safety_invalidated_here;
+    S.Diag(IssueExpr->getExprLoc(),
+           diag::warn_lifetime_safety_invalidated_field)
+        << false << IssueExpr->getSourceRange();
+    S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
+        << InvalidationExpr->getSourceRange();
+    S.Diag(DanglingField->getLocation(),
+           diag::note_lifetime_safety_dangling_field_here)
+        << DanglingField->getEndLoc();
+  }
+
+  void reportInvalidatedField(const ParmVarDecl *PVD,
+                              const FieldDecl *DanglingField,
+                              const Expr *InvalidationExpr) override {
+    auto InvalidationDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                                ? diag::note_lifetime_safety_freed_here
+                                : diag::note_lifetime_safety_invalidated_here;
+    S.Diag(PVD->getSourceRange().getBegin(),
+           diag::warn_lifetime_safety_invalidated_field)
+        << true << PVD->getSourceRange();
+    S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
+        << InvalidationExpr->getSourceRange();
+    S.Diag(DanglingField->getLocation(),
+           diag::note_lifetime_safety_dangling_field_here)
+        << DanglingField->getEndLoc();
+  }
+
   void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
                                      EscapingTarget Target) override {
@@ -180,11 +212,12 @@ public:
 
   void reportLifetimeboundViolation(
       const ParmVarDecl *ParmWithLifetimebound) override {
+    const auto *Attr = ParmWithLifetimebound->getAttr<LifetimeBoundAttr>();
     StringRef ParamName = ParmWithLifetimebound->getName();
     bool HasName = ParamName.size() > 0;
-    S.Diag(ParmWithLifetimebound->getLocation(),
+    S.Diag(Attr->getLocation(),
            diag::warn_lifetime_safety_param_lifetimebound_violation)
-        << HasName << ParamName << ParmWithLifetimebound->getSourceRange();
+        << HasName << ParamName << Attr->getRange();
   }
 
   void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

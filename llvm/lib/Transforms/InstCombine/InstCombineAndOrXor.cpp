@@ -3154,7 +3154,7 @@ static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
     Value *NewLower = Builder.CreateZExt(Lo, Ty);
     Value *NewUpper = Builder.CreateZExt(Hi, Ty);
     NewUpper = Builder.CreateShl(NewUpper, HalfWidth);
-    Value *BinOp = Builder.CreateOr(NewLower, NewUpper);
+    Value *BinOp = Builder.CreateDisjointOr(NewLower, NewUpper);
     return Builder.CreateIntrinsic(id, Ty, BinOp);
   };
 
@@ -3964,16 +3964,16 @@ Value *InstCombinerImpl::reassociateDisjointOr(Value *LHS, Value *RHS) {
   Value *X, *Y;
   if (match(RHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
     if (Value *Res = foldDisjointOr(LHS, X))
-      return Builder.CreateOr(Res, Y, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, Y);
     if (Value *Res = foldDisjointOr(LHS, Y))
-      return Builder.CreateOr(Res, X, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, X);
   }
 
   if (match(LHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
     if (Value *Res = foldDisjointOr(X, RHS))
-      return Builder.CreateOr(Res, Y, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, Y);
     if (Value *Res = foldDisjointOr(Y, RHS))
-      return Builder.CreateOr(Res, X, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, X);
   }
 
   return nullptr;
@@ -4438,8 +4438,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       match(Op0, m_Or(m_Value(A), m_ConstantInt(CI)))) {
     bool IsDisjointOuter = cast<PossiblyDisjointInst>(I).isDisjoint();
     bool IsDisjointInner = cast<PossiblyDisjointInst>(Op0)->isDisjoint();
-    Value *Inner = Builder.CreateOr(A, Op1);
-    cast<PossiblyDisjointInst>(Inner)->setIsDisjoint(IsDisjointOuter);
+    Value *Inner = Builder.CreateOr(A, Op1, "", /*IsDisjoint=*/IsDisjointOuter);
     Inner->takeName(Op0);
     return IsDisjointOuter && IsDisjointInner
                ? BinaryOperator::CreateDisjointOr(Inner, CI)

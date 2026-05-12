@@ -88,6 +88,12 @@ public:
   virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
                                           const Expr *UseExpr,
                                           const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedField(const Expr *IssueExpr,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedField(const ParmVarDecl *PVD,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
 
   using EscapingTarget =
       llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
@@ -110,7 +116,8 @@ public:
 
   // Reports misuse of [[clang::lifetimebound]] when parameter doesn't escape
   // through return.
-  virtual void reportLifetimeboundViolation(const ParmVarDecl *VD) {}
+  virtual void
+  reportLifetimeboundViolation(const ParmVarDecl *ParmWithLifetimebound) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

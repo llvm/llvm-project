@@ -58,9 +58,9 @@ Potentially Breaking Changes
 - Removed the :program:`clang-tidy` ``hicpp`` module. All checks have been moved
   to the other modules. Use the replacement checks instead:
 
-  ================================== =========================================================
+  ================================== ========================================================================
   Removed check                      Replacement check
-  ================================== =========================================================
+  ================================== ========================================================================
   ``hicpp-avoid-c-arrays``           :doc:`modernize-avoid-c-arrays
                                      <clang-tidy/checks/modernize/avoid-c-arrays>`
   ``hicpp-avoid-goto``               :doc:`cppcoreguidelines-avoid-goto
@@ -77,7 +77,39 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/readability/function-size>`
   ``hicpp-ignored-remove-result``    :doc:`bugprone-unused-return-value
                                      <clang-tidy/checks/bugprone/unused-return-value>`
-  ================================== =========================================================
+  ``hicpp-invalid-access-moved``     :doc:`bugprone-use-after-move
+                                     <clang-tidy/checks/bugprone/use-after-move>`
+  ``hicpp-member-init``              :doc:`cppcoreguidelines-pro-type-member-init
+                                     <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>`
+  ``hicpp-move-const-arg``           :doc:`performance-move-const-arg
+                                     <clang-tidy/checks/performance/move-const-arg>`
+  ``hicpp-multiway-paths-covered``   :doc:`bugprone-unhandled-code-paths
+                                     <clang-tidy/checks/bugprone/unhandled-code-paths>`
+  ``hicpp-named-parameter``          :doc:`readability-named-parameter
+                                     <clang-tidy/checks/readability/named-parameter>`
+  ``hicpp-new-delete-operators``     :doc:`misc-new-delete-overloads
+                                     <clang-tidy/checks/misc/new-delete-overloads>`
+  ``hicpp-no-array-decay``           :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
+                                     <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>`
+  ``hicpp-no-assembler``             :doc:`portability-no-assembler
+                                     <clang-tidy/checks/portability/no-assembler>`
+  ``hicpp-no-malloc``                :doc:`cppcoreguidelines-no-malloc
+                                     <clang-tidy/checks/cppcoreguidelines/no-malloc>`
+  ``hicpp-noexcept-move``            :doc:`performance-noexcept-move-constructor
+                                     <clang-tidy/checks/performance/noexcept-move-constructor>`
+  ``hicpp-signed-bitwise``           :doc:`bugprone-signed-bitwise
+                                     <clang-tidy/checks/bugprone/signed-bitwise>`
+  ``hicpp-special-member-functions`` :doc:`cppcoreguidelines-special-member-functions
+                                     <clang-tidy/checks/cppcoreguidelines/special-member-functions>`
+  ``hicpp-static-assert``            :doc:`misc-static-assert
+                                     <clang-tidy/checks/misc/static-assert>`
+  ``hicpp-undelegated-constructor``  :doc:`bugprone-undelegated-constructor
+                                     <clang-tidy/checks/bugprone/undelegated-constructor>`
+  ``hicpp-use-auto``                 :doc:`modernize-use-auto
+                                     <clang-tidy/checks/modernize/use-auto>`
+  ``hicpp-use-emplace``              :doc:`modernize-use-emplace
+                                     <clang-tidy/checks/modernize/use-emplace>`
+  ================================== ========================================================================
 
 Improvements to clangd
 ----------------------
@@ -147,6 +179,13 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
   JSON when the source file path contains characters that require JSON escaping.
 
+- Ensured that :program:`clang-tidy` and the clang compiler uses the same logic
+  for the suppression of compiler diagnostics in system headers and expansions
+  of macros defined in system headers. Previously the default setting of tidy
+  overzealously suppressed some diagnostics that would have been emitted by the
+  compiler. (E.g. tidy suppressed many ``clang-diagnostic-invalid-offsetof``
+  reports because they usually occur in expansion of the macro ``offsetof``.)
+
 New checks
 ^^^^^^^^^^
 
@@ -180,6 +219,11 @@ New checks
   Finds calls to ``llvm::to_vector(llvm::map_range(...))`` and
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
+
+- New :doc:`misc-static-initialization-cycle
+  <clang-tidy/checks/misc/static-initialization-cycle>` check.
+
+  Finds cyclical initialization of static variables.
 
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
@@ -246,22 +290,6 @@ New check aliases
   to :doc:`misc-explicit-constructor
   <clang-tidy/checks/misc/explicit-constructor>`. The
   `google-explicit-constructor` name is kept as an alias.
-
-- Renamed :doc:`hicpp-multiway-paths-covered
-  <clang-tidy/checks/hicpp/multiway-paths-covered>`
-  to :doc:`bugprone-unhandled-code-paths
-  <clang-tidy/checks/bugprone/unhandled-code-paths>`.
-  The `hicpp-multiway-paths-covered` name is kept as an alias.
-
-- Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
-  to :doc:`portability-no-assembler
-  <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
-  name is kept as an alias.
-
-- Renamed :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
-  to :doc:`bugprone-signed-bitwise
-  <clang-tidy/checks/bugprone/signed-bitwise>`. The `hicpp-signed-bitwise`
-  name is kept as an alias.
 
 - Renamed :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` to

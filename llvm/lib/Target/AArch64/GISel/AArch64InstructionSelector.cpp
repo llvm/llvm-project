@@ -1053,7 +1053,14 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 
     const TypeSize SrcSize = TRI.getRegSizeInBits(*SrcRC);
     const TypeSize DstSize = TRI.getRegSizeInBits(*DstRC);
+    unsigned SrcSubReg = I.getOperand(1).getSubReg();
     unsigned SubReg;
+
+    if (SrcSubReg) {
+      if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI))
+        return false;
+      return true;
+    }
 
     // If the source bank doesn't support a subregister copy small enough,
     // then we first need to copy to the destination bank.
