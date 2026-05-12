@@ -1504,6 +1504,11 @@ module std [system] {
     export std.ios // base class
   }
 
+  module inplace_vector {
+    header "inplace_vector"
+    export *
+  }
+
   module iterator {
     module access                     { header "__iterator/access.h" }
     module advance                    { header "__iterator/advance.h" }
