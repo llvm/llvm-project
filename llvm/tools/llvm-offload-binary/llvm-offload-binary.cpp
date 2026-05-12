@@ -16,6 +16,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/ArchiveWriter.h"
+#include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -135,6 +137,44 @@ static Error bundleImages() {
   return Error::success();
 }
 
+// Extract a single OffloadBinary, recursively handling nested OffloadBinaries.
+static Error extractBinary(const OffloadBinary *Binary, StringRef InputFile,
+                           uint64_t &Idx, StringSaver &Saver) {
+  StringRef ImageData = Binary->getImage();
+
+  // Check if the image contains a nested OffloadBinary.
+  if (identify_magic(ImageData) == file_magic::offload_binary) {
+    // Parse nested OffloadBinary.
+    MemoryBufferRef InnerBuffer(ImageData, "nested-offload-binary");
+    SmallVector<OffloadFile> InnerBinaries;
+    if (Error Err = extractOffloadBinaries(InnerBuffer, InnerBinaries))
+      return Err;
+
+    // Recursively extract each nested binary.
+    for (const auto &InnerBinary : InnerBinaries) {
+      if (Error E =
+              extractBinary(InnerBinary.getBinary(), InputFile, Idx, Saver))
+        return E;
+    }
+    return Error::success();
+  }
+
+  // Base case: extract the actual device image.
+  std::string Filename;
+  raw_string_ostream SS(Filename);
+  SS << sys::path::stem(InputFile) << "-" << Binary->getTriple();
+  StringRef Arch = Binary->getArch();
+  if (!Arch.empty())
+    SS << "-" << Arch;
+  SS << "." << Idx++ << "." << getImageKindName(Binary->getImageKind());
+
+  if (Error E = writeFile(Saver.save(Filename), ImageData))
+    return E;
+
+  outs() << "Extracted: " << Filename << "\n";
+  return Error::success();
+}
+
 static Error unbundleImages() {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFile);
@@ -151,6 +191,18 @@ static Error unbundleImages() {
   SmallVector<OffloadFile> Binaries;
   if (Error Err = extractOffloadBinaries(*Buffer, Binaries))
     return Err;
+
+  // If no filters specified, extract all images.
+  if (DeviceImages.empty()) {
+    BumpPtrAllocator Alloc;
+    StringSaver Saver(Alloc);
+    uint64_t Idx = 0;
+    for (const OffloadFile &File : Binaries) {
+      if (Error E = extractBinary(File.getBinary(), InputFile, Idx, Saver))
+        return E;
+    }
+    return Error::success();
+  }
 
   // Try to extract each device image specified by the user from the input file.
   for (StringRef Image : DeviceImages) {
@@ -202,11 +254,7 @@ static Error unbundleImages() {
     } else {
       uint64_t Idx = 0;
       for (const OffloadBinary *Binary : Extracted) {
-        StringRef Filename =
-            Saver.save(sys::path::stem(InputFile) + "-" + Binary->getTriple() +
-                       "-" + Binary->getArch() + "." + std::to_string(Idx++) +
-                       "." + getImageKindName(Binary->getImageKind()));
-        if (Error E = writeFile(Filename, Binary->getImage()))
+        if (Error E = extractBinary(Binary, InputFile, Idx, Saver))
           return E;
       }
     }

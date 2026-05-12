@@ -184,13 +184,8 @@ template <typename DieType> DieType unwrapReferencedTypedefType(DieType D) {
     if (!Unwrapped || Unwrapped.getTag() != dwarf::DW_TAG_typedef)
       return Unwrapped;
 
-    if (!Visited.insert(Unwrapped.getOffset()).second) {
-      WithColor::warning()
-          << "typedef cycle detected: DW_TAG_typedef at offset 0x"
-          << utohexstr(Unwrapped.getOffset())
-          << " references itself through DW_TAG_typedef chain\n";
+    if (!Visited.insert(Unwrapped.getOffset()).second)
       return Unwrapped;
-    }
 
     D = Unwrapped;
   }

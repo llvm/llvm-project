@@ -82,6 +82,14 @@ class CommandLineCompletionTestCase(TestBase):
             f"{command} ptr_container->Mem", f"{command} ptr_container->MemberVar"
         )
 
+    def test_frame_variable_direct_ivar(self):
+        """Test that 'frame variable' completes members of 'this' directly."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "Bar")
+        self.completions_contain("frame variable ", ["t", "temp"])
+        self.complete_from_to("frame variable te", "frame variable temp")
+        self.complete_from_to("frame variable t.", "frame variable t.x")
+
     def test_process_attach_dash_dash_con(self):
         """Test that 'process attach --con' completes to 'process attach --continue '."""
         self.complete_from_to("process attach --con", "process attach --continue ")

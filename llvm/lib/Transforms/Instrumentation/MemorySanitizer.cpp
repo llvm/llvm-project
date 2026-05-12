@@ -2616,10 +2616,63 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
-  void visitFPToSIInst(CastInst &I) { handleShadowOr(I); }
-  void visitFPToUIInst(CastInst &I) { handleShadowOr(I); }
-  void visitSIToFPInst(CastInst &I) { handleShadowOr(I); }
-  void visitUIToFPInst(CastInst &I) { handleShadowOr(I); }
+  /// Handle LLVM and NEON vector convert intrinsics.
+  ///
+  /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
+  ///       i32       @llvm.aarch64.neon.fcvtms.i32.f64    (double)
+  ///       <2 x i32> @fptoui (<2 x float>)
+  ///       i64       @llvm.fptosi.sat.i64.f64(double)
+  ///
+  /// Note that the size of input/output elements can differ e.g.,
+  ///       double    @sitofp(i32)
+  /// but the number of elements must be the same.
+  ///
+  /// For conversions to or from fixed-point, there is a trailing argument to
+  /// indicate the fixed-point precision:
+  /// - <4 x float> llvm.aarch64.neon.vcvtfxs2fp.v4f32.v4i32(<4 x i32>,   i32)
+  /// - <4 x i32>   llvm.aarch64.neon.vcvtfp2fxu.v4i32.v4f32(<4 x float>, i32)
+  ///
+  /// For x86 SSE vector convert intrinsics, see
+  /// handleSSEVectorConvertIntrinsic().
+  void handleGenericVectorConvertIntrinsic(Instruction &I, bool FixedPoint) {
+    [[maybe_unused]] unsigned NumArgs = I.getNumOperands();
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      NumArgs = CI->arg_size();
+
+    if (FixedPoint) {
+      assert(NumArgs == 2);
+      Value *Precision = I.getOperand(1);
+      insertCheckShadowOf(Precision, &I);
+    } else {
+      assert(NumArgs == 1);
+    }
+
+    IRBuilder<> IRB(&I);
+    Value *S0 = getShadow(&I, 0);
+
+    /// For scalars:
+    /// Since they are converting from floating-point to integer, the output is
+    /// - fully uninitialized if *any* bit of the input is uninitialized
+    /// - fully ininitialized if all bits of the input are ininitialized
+    /// We apply the same principle on a per-field basis for vectors.
+    Value *OutShadow = IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)),
+                                      getShadowTy(&I));
+    setShadow(&I, OutShadow);
+    setOriginForNaryOp(I);
+  }
+
+  void visitFPToSIInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitFPToUIInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitSIToFPInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitUIToFPInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
   void visitFPExtInst(CastInst &I) { handleShadowOr(I); }
   void visitFPTruncInst(CastInst &I) { handleShadowOr(I); }
 
@@ -3558,43 +3611,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OutputShadow = IRB.CreateSExt(OutputShadow, getShadowTy(Src), "_mscz_os");
 
     setShadow(&I, OutputShadow);
-    setOriginForNaryOp(I);
-  }
-
-  /// Handle Arm NEON vector convert intrinsics.
-  ///
-  /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
-  ///      i32        @llvm.aarch64.neon.fcvtms.i32.f64    (double)
-  ///
-  /// For conversions to or from fixed-point, there is a trailing argument to
-  /// indicate the fixed-point precision:
-  /// - <4 x float> llvm.aarch64.neon.vcvtfxs2fp.v4f32.v4i32(<4 x i32>,   i32)
-  /// - <4 x i32>   llvm.aarch64.neon.vcvtfp2fxu.v4i32.v4f32(<4 x float>, i32)
-  ///
-  /// For x86 SSE vector convert intrinsics, see
-  /// handleSSEVectorConvertIntrinsic().
-  void handleNEONVectorConvertIntrinsic(IntrinsicInst &I, bool FixedPoint) {
-    if (FixedPoint)
-      assert(I.arg_size() == 2);
-    else
-      assert(I.arg_size() == 1);
-
-    IRBuilder<> IRB(&I);
-    Value *S0 = getShadow(&I, 0);
-
-    if (FixedPoint) {
-      Value *Precision = I.getOperand(1);
-      insertCheckShadowOf(Precision, &I);
-    }
-
-    /// For scalars:
-    /// Since they are converting from floating-point to integer, the output is
-    /// - fully uninitialized if *any* bit of the input is uninitialized
-    /// - fully ininitialized if all bits of the input are ininitialized
-    /// We apply the same principle on a per-field basis for vectors.
-    Value *OutShadow = IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)),
-                                      getShadowTy(&I));
-    setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
   }
 
@@ -5870,7 +5886,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //      lowered to these cross-platform intrinsics.
     case Intrinsic::fptosi_sat:
     case Intrinsic::fptoui_sat:
-      handleShadowOr(I);
+      handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
 
     default:
@@ -7173,7 +7189,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Vector Conversions Between Half-Precision and Single-Precision
     case Intrinsic::aarch64_neon_vcvthf2fp:
     case Intrinsic::aarch64_neon_vcvtfp2hf:
-      handleNEONVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+      handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
 
     // Vector Conversions Between Fixed-Point and Floating-Point
@@ -7181,7 +7197,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_vcvtfp2fxs:
     case Intrinsic::aarch64_neon_vcvtfxu2fp:
     case Intrinsic::aarch64_neon_vcvtfp2fxu:
-      handleNEONVectorConvertIntrinsic(I, /*FixedPoint=*/true);
+      handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/true);
       break;
 
     // TODO: bfloat conversions

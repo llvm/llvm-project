@@ -284,7 +284,7 @@ define i32 @reduction(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
-; CHECK-NEXT:      EMIT-SCALAR vp<[[VP8]]> = phi [ ir<%rdx.next>, vector.body.split ], [ ir<poison>, vector.body ]
+; CHECK-NEXT:      EMIT-SCALAR vp<[[VP8]]> = phi [ ir<%rdx.next>, vector.body.split ], [ ir<%rdx>, vector.body ]
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors

@@ -7306,9 +7306,10 @@ Value *CodeGenFunction::EmitAArch64CpuInit() {
 Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
   const Expr *ArgExpr = E->getArg(0)->IgnoreParenCasts();
   StringRef ArgStr = cast<StringLiteral>(ArgExpr)->getString();
+  llvm::SmallVector<StringRef, 8> OrigFeatures;
+  ArgStr.split(OrigFeatures, "+");
   llvm::SmallVector<StringRef, 8> Features;
-  ArgStr.split(Features, "+");
-  for (auto &Feature : Features) {
+  for (StringRef Feature : OrigFeatures) {
     Feature = Feature.trim();
     if (!llvm::AArch64::parseFMVExtension(Feature))
       return Builder.getFalse();

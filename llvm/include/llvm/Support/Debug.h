@@ -104,6 +104,11 @@ LLVM_ABI extern bool EnableDebugBuffering;
 /// like: dbgs() << "foo" << "bar";
 LLVM_ABI raw_ostream &dbgs();
 
+/// If EnableDebugBuffering is true, this flushes the debug stream with
+/// the banner displayed, the same way it is printed automatically on
+/// program termination.
+LLVM_ABI void printDebugLog();
+
 // DEBUG macro - This macro should be used by passes to emit debug information.
 // If the '-debug' option is specified on the commandline, and if this is a
 // debug build, then the code specified as the option to the macro will be

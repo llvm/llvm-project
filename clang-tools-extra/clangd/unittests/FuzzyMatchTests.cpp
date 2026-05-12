@@ -305,6 +305,8 @@ TEST(FuzzyMatch, Segmentation) {
               returns("+--+---+------"));
   EXPECT_THAT(segment("t3h PeNgU1N oF d00m!!!!!!!!"), //
               returns("+-- +-+-+-+ ++ +---        "));
+  EXPECT_THAT(segment("ab🙂cd"), //
+              returns("+-------"));
 }
 
 } // namespace

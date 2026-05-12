@@ -398,10 +398,10 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   }
 
   if (!token) {
-    // XXX(compnerd) should we use the compiler to get the sizeof(unsigned)?
-    uint64_t error_code =
-        process->ReadUnsignedIntegerFromMemory(injected_result + 2 * word_size + sizeof(unsigned),
-                                               word_size, 0, status);
+    // ErrorCode is a 4-byte `unsigned` field in __lldb_LoadLibraryResult.
+    uint64_t error_code = process->ReadUnsignedIntegerFromMemory(
+        injected_result + 2 * word_size + sizeof(unsigned), sizeof(unsigned), 0,
+        status);
     if (status.Fail()) {
       error = Status::FromErrorStringWithFormat(
           "LoadLibrary error: could not read error status: %s",

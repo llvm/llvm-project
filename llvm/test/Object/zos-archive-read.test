@@ -1,0 +1,69 @@
+## Test reading a valid z/OS archive.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.valid.a \
+# RUN:   --symtab "foo.txt:0" --symtab "bar:0" --member foo.txt:abcd
+# RUN: llvm-ar t %t.valid.a | FileCheck %s --check-prefix=LIST
+# RUN: llvm-nm --print-armap %t.valid.a | FileCheck %s --check-prefix=SYMS
+# RUN: llvm-ar p %t.valid.a foo.txt | FileCheck %s --check-prefix=CONTENT
+
+# LIST: foo.txt
+# SYMS: Archive map
+# SYMS-NEXT: foo.txt in foo.txt
+# SYMS-NEXT: bar in foo.txt
+# CONTENT: abcd
+
+## Test malformed terminator on member header.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.bad_term.a \
+# RUN:   --member foo.txt --bad-terminator
+# RUN: not llvm-ar t %t.bad_term.a 2>&1 | FileCheck %s --check-prefix=ERR-TERM
+# ERR-TERM: terminator characters in archive member
+
+## Test empty UID field on member header.
+## We know that the member header starts at offset 8 because no 
+## symbol table name is generated.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.empty_uid.a \
+# RUN:   --member foo.txt --empty-uid
+# RUN: not llvm-ar t %t.empty_uid.a 2>&1 | FileCheck %s --check-prefix=ERR-UID
+# ERR-UID: UID field is empty or contains only spaces in archive member header at offset 8
+
+## Test leading space in member name.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.empty_name.a \
+# RUN:   --member foo.txt --empty-name
+# RUN: not llvm-ar t %t.empty_name.a 2>&1 | FileCheck %s --check-prefix=ERR-NAME
+# ERR-NAME: name contains a leading space for archive member header
+
+## Test truncated z/OS symbol table.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.trunc_sym.a \
+# RUN:   --symtab-truncated
+# RUN: not llvm-ar t %t.trunc_sym.a 2>&1 | FileCheck %s --check-prefix=ERR-TRUNC
+# ERR-TRUNC: z/OS archive symbol table is too small to read the symbol count, symbol table size is 2
+## Test z/OS symbol table where count exceeds buffer.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.bad_count.a \
+# RUN:   --symtab-bad-count
+# RUN: not llvm-ar t %t.bad_count.a 2>&1 | FileCheck %s --check-prefix=ERR-COUNT
+# ERR-COUNT: z/OS archive symbol table names offset {{[0-9]+}} exceeds symbol table size 4
+
+## Test malformed __.SYMDEF header.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.bad_sym_hdr.a \
+# RUN:   --member foo.txt --symtab foo.txt:0 --malform-symtab-hdr empty-mode
+# RUN: not llvm-ar t %t.bad_sym_hdr.a 2>&1 | FileCheck %s --check-prefix=ERR-SYM-HDR
+# ERR-SYM-HDR: AccessMode field is empty or contains only spaces
+
+## Test empty LastModified field.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.empty_modtime.a \
+# RUN:   --member foo.txt --empty-modtime
+# RUN: not llvm-ar t %t.empty_modtime.a 2>&1 | FileCheck %s --check-prefix=ERR-MODTIME
+# ERR-MODTIME: LastModified field is empty or contains only spaces in archive member header at offset 8
+
+## Test empty GID field.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.empty_gid.a \
+# RUN:   --member foo.txt --empty-gid
+# RUN: not llvm-ar t %t.empty_gid.a 2>&1 | FileCheck %s --check-prefix=ERR-GID
+# ERR-GID: GID field is empty or contains only spaces in archive member header at offset 8
+
+## Test that a truncated archive with incomplete member header is rejected.
+## The z/OS magic is 8 bytes and a member header requires 60 bytes.
+## Writing only 3 bytes after the magic is not enough for a valid header.
+# RUN: printf '\x5A\x4C\x81\x99\x83\x88\x6E\x15' > %t.badhdr.a
+# RUN: printf '\x00\x00\x00' >> %t.badhdr.a
+# RUN: not llvm-ar t %t.badhdr.a 2>&1 | FileCheck %s --check-prefix=ERR-CHILD
+# ERR-CHILD: truncated or malformed archive

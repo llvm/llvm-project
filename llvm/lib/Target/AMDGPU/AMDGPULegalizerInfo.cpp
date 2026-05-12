@@ -1138,6 +1138,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FSubActions.lowerFor({V2S32}).clampMaxNumElements(0, S32, 2);
 
   FSubActions
+    .clampMaxNumElements(0, S16, 2)
     .scalarize(0)
     .clampScalar(0, S32, S64);
 

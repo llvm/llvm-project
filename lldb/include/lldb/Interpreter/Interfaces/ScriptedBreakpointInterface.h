@@ -11,6 +11,7 @@
 
 #include "ScriptedInterface.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -35,6 +36,13 @@ public:
   GetLocationDescription(lldb::BreakpointLocationSP bp_loc_sp,
                          lldb::DescriptionLevel level) {
     return {};
+  }
+
+  virtual void SetBreakpoint(lldb::BreakpointSP break_sp) {}
+
+  virtual bool OverridesResolver(Target &target,
+                                 StructuredDataImpl &original_resolver) {
+    return false;
   }
 };
 } // namespace lldb_private

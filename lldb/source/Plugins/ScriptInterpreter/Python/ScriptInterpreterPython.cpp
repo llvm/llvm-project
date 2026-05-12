@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// clang-format off
 // LLDB Python header must be included first
 #include "lldb-python.h"
+//clang-format on
 
 #include "Interfaces/ScriptInterpreterPythonInterfaces.h"
 #include "PythonDataObjects.h"

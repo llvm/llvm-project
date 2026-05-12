@@ -916,7 +916,7 @@ determinePointerAccessAttrs(Argument *A,
       // but return results thas alias their pointer argument, and thus should
       // be handled like GEP or addrspacecast above.
       if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-              &CB, /*MustPreserveNullness=*/false)) {
+              &CB, /*MustPreserveOffset=*/false)) {
         for (Use &UU : CB.uses())
           if (Visited.insert(&UU).second)
             Worklist.push_back(&UU);

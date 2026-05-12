@@ -102,7 +102,7 @@ bool rewritePHIs(Function &F, UniformityInfo &UA, DominatorTree *DT) {
   SmallVector<PHINode *> ToBeDeleted;
   for (auto &BB : F) {
     for (auto &PHI : BB.phis()) {
-      if (UA.isDivergent(&PHI))
+      if (UA.isDivergentAtDef(&PHI))
         continue;
 
       // The unique incoming value except undef/poison for the PHI node.
@@ -144,7 +144,7 @@ bool rewritePHIs(Function &F, UniformityInfo &UA, DominatorTree *DT) {
       // TODO: We should still be able to replace undef value if the unique
       // value is a Constant.
       if (!UniqueDefinedIncoming || Undefs.empty() ||
-          !UA.isDivergent(DominateBB->getTerminator()))
+          !UA.isDivergentAtDef(DominateBB->getTerminator()))
         continue;
 
       // We only replace the undef when DominateBB truly dominates all the

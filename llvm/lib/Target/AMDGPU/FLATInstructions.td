@@ -530,6 +530,7 @@ class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VGPROp_64:$vaddr), str
   let mayStore = 1;
   let VM_CNT = 0;
   let LGKM_CNT = 0;
+  let hasSideEffects = 1;
 }
 
 multiclass FLAT_Flat_Prefetch_Pseudo<string opName> {

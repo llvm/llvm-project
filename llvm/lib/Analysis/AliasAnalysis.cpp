@@ -458,10 +458,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
 // Helper method implementation
 //===----------------------------------------------------------------------===//
 
-/// Get ModRefInfo for a synchronizing operation, such as a fence or stronger
-/// than monotonic atomic load/store.
-static ModRefInfo getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
-                                 AAQueryInfo &AAQI) {
+ModRefInfo llvm::getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
+                                AAQueryInfo &AAQI) {
   if (!Loc.Ptr)
     return ModRefInfo::ModRef;
 
@@ -930,7 +928,8 @@ bool llvm::isBaseOfObject(const Value *V) {
 
 bool llvm::isEscapeSource(const Value *V) {
   if (auto *CB = dyn_cast<CallBase>(V)) {
-    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB, true))
+    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+            CB, /*MustPreserveOffset=*/true))
       return false;
 
     // The return value of a function with a captures(ret: address, provenance)

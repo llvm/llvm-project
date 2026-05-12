@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/PluginManager.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/lldb-enumerations.h"
-
 // clang-format off
 // LLDB Python header must be included first
 #include "../lldb-python.h"
 //clang-format on
+
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/lldb-enumerations.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"

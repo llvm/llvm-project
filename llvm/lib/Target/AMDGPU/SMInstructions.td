@@ -251,6 +251,7 @@ class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase>
   let ScalarStore = 0;
   let has_offset = 1;
   let has_soffset = 1;
+  let hasSideEffects = 1;
 }
 
 //===----------------------------------------------------------------------===//

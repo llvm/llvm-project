@@ -72,21 +72,28 @@ getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
   return nullptr;
 }
 
-bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   // Attribute merging doesn't work well with attributes on function types (like
   // 'this' param). We need to check all redeclarations.
-  auto CheckRedecls = [](const FunctionDecl *F) {
-    return llvm::any_of(F->redecls(), [](const FunctionDecl *Redecl) {
-      const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo();
-      return TSI && getLifetimeBoundAttrFromFunctionType(*TSI);
-    });
+  auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
+    for (const FunctionDecl *Redecl : F->redecls())
+      if (const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo())
+        if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
+          return Attr;
+    return nullptr;
   };
 
-  if (CheckRedecls(FD))
-    return true;
-  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern();
-      Pattern && CheckRedecls(Pattern))
+  if (const auto *Attr = CheckRedecls(FD))
+    return Attr;
+  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
+    return CheckRedecls(Pattern);
+  return nullptr;
+}
+
+bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+  if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
 }

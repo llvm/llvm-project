@@ -366,6 +366,27 @@ The timing data is stored in the `test_exec_root` in a file named
   primary purpose is to suppress an ``XPASS`` result without modifying a test
   case that uses the ``XFAIL`` directive.
 
+.. option:: --unsupported LIST
+
+  Treat those tests whose name is in the semicolon separated list ``LIST`` as
+  ``UNSUPPORTED``. This can be helpful when one does not want to modify the test
+  suite. The environment variable ``LIT_UNSUPPORTED`` can be also used in place
+  of this option, which is especially useful in environments where the call to
+  ``lit`` is issued indirectly.
+
+  The syntax for specifying test names is the same as for :option:`--xfail` and
+  ``LIT_XFAIL``. A test name can be specified as a file name relative to the
+  test suite directory or as the full test name reported in LIT output.
+
+.. option:: --unsupported-not LIST
+
+  Do not treat the specified tests as ``UNSUPPORTED``.  The environment variable
+  ``LIT_UNSUPPORTED_NOT`` can also be used in place of this option.  The syntax
+  is the same as for :option:`--unsupported` and ``LIT_UNSUPPORTED``.
+  :option:`--unsupported-not` and ``LIT_UNSUPPORTED_NOT`` always override all
+  other ``UNSUPPORTED`` specifications, including an :option:`--unsupported`
+  appearing later on the command line.
+
 .. option:: --exclude-xfail
 
   ``XFAIL`` tests won't be run, unless they are listed in the ``--xfail-not``

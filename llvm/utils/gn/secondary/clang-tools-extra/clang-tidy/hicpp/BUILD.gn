@@ -18,8 +18,5 @@ static_library("hicpp") {
     "//clang/lib/Serialization",
     "//llvm/lib/Support",
   ]
-  sources = [
-    "HICPPTidyModule.cpp",
-    "MultiwayPathsCoveredCheck.cpp",
-  ]
+  sources = [ "HICPPTidyModule.cpp" ]
 }

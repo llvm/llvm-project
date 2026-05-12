@@ -111,7 +111,7 @@ void DivergenceLoweringHelper::getCandidatesForLowering(
       if (MI.getOpcode() != TargetOpcode::G_PHI)
         continue;
       Register Dst = MI.getOperand(0).getReg();
-      if (MRI->getType(Dst) == S1 && MUI->isDivergent(Dst))
+      if (MRI->getType(Dst) == S1 && MUI->isDivergentAtDef(Dst))
         Vreg1Phis.push_back(&MI);
     }
   }
@@ -207,7 +207,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergence() {
   DenseMap<Register, Register> TDCache;
 
   for (auto [Reg, UseInst, _] : MUI->getTemporalDivergenceList()) {
-    if (MRI->getType(Reg) == LLT::scalar(1) || MUI->isDivergent(Reg) ||
+    if (MRI->getType(Reg) == LLT::scalar(1) || MUI->isDivergentAtDef(Reg) ||
         ILMA.isS32S64LaneMask(Reg))
       continue;
 

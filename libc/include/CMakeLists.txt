@@ -216,8 +216,11 @@ add_header_macro(
   ../libc/include/netinet/in.yaml
   netinet/in.h
   DEPENDS
-    .llvm_libc_common_h
     .llvm-libc-macros.netinet_in_macros
+    .llvm-libc-types.in_addr_t
+    .llvm-libc-types.in_port_t
+    .llvm-libc-types.sa_family_t
+    .llvm_libc_common_h
 )
 
 add_header_macro(

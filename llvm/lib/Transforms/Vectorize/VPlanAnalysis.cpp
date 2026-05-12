@@ -24,23 +24,6 @@ using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
 
-VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
-    : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {
-  if (auto LoopRegion = Plan.getVectorLoopRegion()) {
-    CanonicalIVTy = LoopRegion->getCanonicalIVType();
-    return;
-  }
-
-  // If there's no loop region, retrieve the type from the trip count
-  // expression.
-  auto *TC = Plan.getTripCount();
-  if (auto *TCIRV = dyn_cast<VPIRValue>(TC)) {
-    CanonicalIVTy = TCIRV->getType();
-    return;
-  }
-  CanonicalIVTy = cast<VPExpandSCEVRecipe>(TC)->getSCEV()->getType();
-}
-
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
   Type *ResTy = inferScalarType(R->getIncomingValue(0));
   for (unsigned I = 1, E = R->getNumIncomingValues(); I != E; ++I) {
@@ -128,7 +111,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::LastActiveLane:
     // Assume that the maximum possible number of elements in a vector fits
     // within the index type for the default address space.
-    return DL.getIndexType(Ctx, 0);
+    return R->getParent()->getPlan()->getDataLayout().getIndexType(Ctx, 0);
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
@@ -286,11 +269,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (auto *IRV = dyn_cast<VPIRValue>(V))
     return IRV->getType();
 
-  if (isa<VPSymbolicValue>(V)) {
-    // All VPValues without any underlying IR value (like the vector trip count
-    // or the backedge-taken count) have the same type as the canonical IV.
-    return CanonicalIVTy;
-  }
+  if (auto *SymbolicV = dyn_cast<VPSymbolicValue>(V))
+    return SymbolicV->getType();
 
   if (auto *RegionV = dyn_cast<VPRegionValue>(V))
     return RegionV->getType();

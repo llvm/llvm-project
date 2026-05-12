@@ -46,7 +46,7 @@ __global__ void global_fn(int a) {}
 // CIR-HOST: %[[#CIRKernelArgs:]] = cir.alloca {{.*}}"kernel_args"
 // CIR-HOST: %[[#Decayed:]] = cir.cast array_to_ptrdecay %[[#CIRKernelArgs]]
 // CIR-HOST: cir.call @__hipPopCallConfiguration
-// CIR-HOST: cir.get_global @_Z9global_fni : !cir.ptr<!cir.func<(!s32i)>>
+// CIR-HOST: cir.get_global @_Z9global_fni : !cir.ptr<!cir.ptr<!cir.func<(!s32i)>>>
 // CIR-HOST: cir.call @hipLaunchKernel
 
 // OGCG-HOST: define dso_local void @_Z24__device_stub__global_fni

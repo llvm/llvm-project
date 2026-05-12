@@ -951,13 +951,12 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     if (C2->isSignMask())
       return BinaryOperator::CreateAdd(X, ConstantInt::get(Ty, *C2 ^ *C));
 
-    // If X has no high-bits set above an xor mask:
-    // add (xor X, LowMaskC), C --> sub (LowMaskC + C), X
-    if (C2->isMask()) {
-      KnownBits LHSKnown = computeKnownBits(X, &Add);
-      if ((*C2 | LHSKnown.Zero).isAllOnes())
-        return BinaryOperator::CreateSub(ConstantInt::get(Ty, *C2 + *C), X);
-    }
+    // If X has no bits set other than an xor mask,
+    // xor is equivalent to sub with no borrow between bits:
+    // add (xor X, C2), C --> sub (C2 + C), X
+    KnownBits LHSKnown = computeKnownBits(X, &Add);
+    if ((*C2 | LHSKnown.Zero).isAllOnes())
+      return BinaryOperator::CreateSub(ConstantInt::get(Ty, *C2 + *C), X);
 
     // Look for a math+logic pattern that corresponds to sext-in-register of a
     // value with cleared high bits. Convert that into a pair of shifts:

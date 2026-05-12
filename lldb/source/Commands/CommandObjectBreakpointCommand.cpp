@@ -389,16 +389,25 @@ protected:
         } else {
           script_interp->CollectDataForBreakpointCommandCallback(
               m_bp_options_vec, result);
+          // Still gathering input; the IOHandler will set the final status.
+          result.SetStatus(eReturnStatusStarted);
+          return;
         }
         if (!error.Success())
           result.SetError(std::move(error));
+        else
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         // Special handling for one-liner specified inline.
-        if (m_options.m_use_one_liner)
+        if (m_options.m_use_one_liner) {
           SetBreakpointCommandCallback(m_bp_options_vec,
                                        m_options.m_one_liner.c_str());
-        else
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
+        } else {
           CollectDataForBreakpointCommandCallback(m_bp_options_vec, result);
+          // Still gathering input; the IOHandler will set the final status.
+          result.SetStatus(eReturnStatusStarted);
+        }
       }
     }
   }

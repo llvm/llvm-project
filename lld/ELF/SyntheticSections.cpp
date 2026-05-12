@@ -3062,8 +3062,7 @@ DebugNamesSection<ELFT>::DebugNamesSection(Ctx &ctx)
                                       ELFT::Is64Bits ? 8 : 4);
     // .debug_str is needed to get symbol names from string offsets.
     DataExtractor strExtractor(dobj.getStrSection(),
-                               ELFT::Endianness == endianness::little,
-                               ELFT::Is64Bits ? 8 : 4);
+                               ELFT::Endianness == endianness::little);
     inputChunk.section = dobj.getNamesSection();
 
     inputChunk.llvmDebugNames.emplace(namesExtractor, strExtractor);

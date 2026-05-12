@@ -35,9 +35,9 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     assert(N->getOperand(2).getOpcode() == ISD::TargetConstant &&
            "Expected index to be a target constant!");
     break;
-  case RISCVISD::VDOTA4_VL:
-  case RISCVISD::VDOTA4U_VL:
-  case RISCVISD::VDOTA4SU_VL: {
+  case RISCVISD::VDOT4A_VL:
+  case RISCVISD::VDOT4AU_VL:
+  case RISCVISD::VDOT4ASU_VL: {
     EVT VT = N->getValueType(0);
     assert(VT.isScalableVector() && VT.getVectorElementType() == MVT::i32 &&
            "Expected result to be an i32 scalable vector");

@@ -1676,16 +1676,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     LValue lv = emitLValue(e->getSubExpr());
     QualType destTy = getContext().getPointerType(e->getType());
 
-    clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
-    mlir::ptr::MemorySpaceAttrInterface srcAS;
-    if (clang::isTargetAddressSpace(srcLangAS))
-      srcAS = cir::toCIRAddressSpaceAttr(getMLIRContext(), srcLangAS);
-    else
-      cgm.errorNYI(
-          e->getSourceRange(),
-          "emitCastLValue: address space conversion from unknown address "
-          "space");
-
     mlir::Value v = performAddrSpaceCast(lv.getPointer(), convertType(destTy));
 
     return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),

@@ -161,7 +161,8 @@ static bool isDereferenceableAndAlignedPointer(
 
 
   if (const auto *Call = dyn_cast<CallBase>(V)) {
-    if (auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
+    if (auto *RP = getArgumentAliasingToReturnedPointer(
+            Call, /*MustPreserveOffset=*/true))
       return isDereferenceableAndAlignedPointer(RP, Alignment, Size, DL, CtxI,
                                                 AC, DT, TLI, Visited, MaxDepth);
 

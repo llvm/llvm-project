@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_LIB_SEMA_SEMALIFETIMESAFETY_H
 #define LLVM_CLANG_LIB_SEMA_SEMALIFETIMESAFETY_H
 
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Lexer.h"
@@ -36,7 +37,7 @@ inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_dangling_global,
       diag::warn_lifetime_safety_dangling_global_moved,
       diag::warn_lifetime_safety_noescape_escapes,
-      diag::warn_lifetime_safety_param_lifetimebound_violation,
+      diag::warn_lifetime_safety_lifetimebound_violation,
   };
   for (unsigned DiagID : DiagIDs)
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
@@ -148,6 +149,38 @@ public:
         << UseExpr->getSourceRange();
   }
 
+  void reportInvalidatedField(const Expr *IssueExpr,
+                              const FieldDecl *DanglingField,
+                              const Expr *InvalidationExpr) override {
+    auto InvalidationDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                                ? diag::note_lifetime_safety_freed_here
+                                : diag::note_lifetime_safety_invalidated_here;
+    S.Diag(IssueExpr->getExprLoc(),
+           diag::warn_lifetime_safety_invalidated_field)
+        << false << IssueExpr->getSourceRange();
+    S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
+        << InvalidationExpr->getSourceRange();
+    S.Diag(DanglingField->getLocation(),
+           diag::note_lifetime_safety_dangling_field_here)
+        << DanglingField->getEndLoc();
+  }
+
+  void reportInvalidatedField(const ParmVarDecl *PVD,
+                              const FieldDecl *DanglingField,
+                              const Expr *InvalidationExpr) override {
+    auto InvalidationDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                                ? diag::note_lifetime_safety_freed_here
+                                : diag::note_lifetime_safety_invalidated_here;
+    S.Diag(PVD->getSourceRange().getBegin(),
+           diag::warn_lifetime_safety_invalidated_field)
+        << true << PVD->getSourceRange();
+    S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
+        << InvalidationExpr->getSourceRange();
+    S.Diag(DanglingField->getLocation(),
+           diag::note_lifetime_safety_dangling_field_here)
+        << DanglingField->getEndLoc();
+  }
+
   void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
                                      EscapingTarget Target) override {
@@ -184,8 +217,18 @@ public:
     StringRef ParamName = ParmWithLifetimebound->getName();
     bool HasName = ParamName.size() > 0;
     S.Diag(Attr->getLocation(),
-           diag::warn_lifetime_safety_param_lifetimebound_violation)
+           diag::warn_lifetime_safety_lifetimebound_violation)
         << HasName << ParamName << Attr->getRange();
+  }
+
+  void reportLifetimeboundViolation(
+      const CXXMethodDecl *MDWithLifetimebound) override {
+    const auto *Attr =
+        getImplicitObjectParamLifetimeBoundAttr(MDWithLifetimebound);
+    assert(Attr && "Expected lifetimebound attribute");
+    S.Diag(Attr->getLocation(),
+           diag::warn_lifetime_safety_lifetimebound_violation)
+        << 2 << "" << Attr->getRange();
   }
 
   void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

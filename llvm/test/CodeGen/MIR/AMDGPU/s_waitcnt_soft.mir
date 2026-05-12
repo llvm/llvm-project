@@ -1,0 +1,229 @@
+# RUN: split-file %s %t
+
+# Common tests that work on all targets
+;--- common.mir
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
+---
+name: vmcnt_0
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmcnt_0
+    ; CHECK: S_WAITCNT_soft .Vmcnt_0
+    S_WAITCNT_soft .Vmcnt_0
+...
+---
+name: vmcnt_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmcnt_1
+    ; CHECK: S_WAITCNT_soft .Vmcnt_1
+    S_WAITCNT_soft .Vmcnt_1
+...
+---
+name: expcnt_0
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: expcnt_0
+    ; CHECK: S_WAITCNT_soft .Expcnt_0
+    S_WAITCNT_soft .Expcnt_0
+...
+---
+name: expcnt_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: expcnt_1
+    ; CHECK: S_WAITCNT_soft .Expcnt_1
+    S_WAITCNT_soft .Expcnt_1
+...
+---
+name: expcnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: expcnt_max-1
+    ; CHECK: S_WAITCNT_soft .Expcnt_6
+    S_WAITCNT_soft .Expcnt_6
+...
+---
+name: lgkmcnt_0
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: lgkmcnt_0
+    ; CHECK: S_WAITCNT_soft .Lgkmcnt_0
+    S_WAITCNT_soft .Lgkmcnt_0
+...
+---
+name: lgkmcnt_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: lgkmcnt_1
+    ; CHECK: S_WAITCNT_soft .Lgkmcnt_1
+    S_WAITCNT_soft .Lgkmcnt_1
+...
+---
+name: vmcnt_expcnt
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmcnt_expcnt
+    ; CHECK: S_WAITCNT_soft .Vmcnt_1_Expcnt_2
+    S_WAITCNT_soft .Vmcnt_1_Expcnt_2
+...
+---
+name: vmcnt_lgkmcnt
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmcnt_lgkmcnt
+    ; CHECK: S_WAITCNT_soft .Vmcnt_3_Lgkmcnt_5
+    S_WAITCNT_soft .Vmcnt_3_Lgkmcnt_5
+...
+---
+name: expcnt_lgkmcnt
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: expcnt_lgkmcnt
+    ; CHECK: S_WAITCNT_soft .Expcnt_4_Lgkmcnt_6
+    S_WAITCNT_soft .Expcnt_4_Lgkmcnt_6
+...
+---
+name: all-zero
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: all-zero
+    ; CHECK: S_WAITCNT_soft .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+    S_WAITCNT_soft .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+...
+---
+name: all-off
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: all-off
+    ; CHECK: S_WAITCNT_soft .AllOff
+    S_WAITCNT_soft .AllOff
+...
+---
+name: zero-number
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: zero-number
+    ; CHECK: S_WAITCNT_soft .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+    S_WAITCNT_soft 0
+...
+
+# GFX8-specific: vmcnt max=15, lgkmcnt max=15
+;--- gfx8.mir
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass=none %t/gfx8.mir -o - | FileCheck %t/gfx8.mir
+---
+name: vmcnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmcnt_max-1
+    ; CHECK: S_WAITCNT_soft .Vmcnt_14
+    S_WAITCNT_soft .Vmcnt_14
+...
+---
+name: lgkmcnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: lgkmcnt_max-1
+    ; CHECK: S_WAITCNT_soft .Lgkmcnt_14
+    S_WAITCNT_soft .Lgkmcnt_14
+...
+---
+name: all-off-number
+body: |
+  bb.0:
+    ; vmcnt=15, expcnt=7, lgkmcnt=15 -> 0xF7F = 3967
+    ; CHECK-LABEL: name: all-off-number
+    ; CHECK: S_WAITCNT_soft .AllOff
+    S_WAITCNT_soft 3967
+...
+
+# GFX9-specific: vmcnt max=63, lgkmcnt max=15
+;--- gfx9.mir
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=none %t/gfx9.mir -o - | FileCheck %t/gfx9.mir
+---
+name: vmcnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmcnt_max-1
+    ; CHECK: S_WAITCNT_soft .Vmcnt_62
+    S_WAITCNT_soft .Vmcnt_62
+...
+---
+name: lgkmcnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: lgkmcnt_max-1
+    ; CHECK: S_WAITCNT_soft .Lgkmcnt_14
+    S_WAITCNT_soft .Lgkmcnt_14
+...
+---
+name: all-off-number
+body: |
+  bb.0:
+    ; vmcnt=63, expcnt=7, lgkmcnt=15 -> 0xCF7F = 53119
+    ; CHECK-LABEL: name: all-off-number
+    ; CHECK: S_WAITCNT_soft .AllOff
+    S_WAITCNT_soft 53119
+...
+
+# GFX10-specific: vmcnt max=63, lgkmcnt max=63
+;--- gfx10.mir
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=none %t/gfx10.mir -o - | FileCheck %t/gfx10.mir
+---
+name: vmcnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmcnt_max-1
+    ; CHECK: S_WAITCNT_soft .Vmcnt_62
+    S_WAITCNT_soft .Vmcnt_62
+...
+---
+name: lgkmcnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: lgkmcnt_max-1
+    ; CHECK: S_WAITCNT_soft .Lgkmcnt_62
+    S_WAITCNT_soft .Lgkmcnt_62
+...
+---
+name: all-off-number
+body: |
+  bb.0:
+    ; vmcnt=63, expcnt=7, lgkmcnt=63 -> 0xFF7F = 65407
+    ; CHECK-LABEL: name: all-off-number
+    ; CHECK: S_WAITCNT_soft .AllOff
+    S_WAITCNT_soft 65407
+...
+
+# GFX11-specific: vmcnt max=63, lgkmcnt max=63 (different encoding than GFX10)
+;--- gfx11.mir
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=none %t/gfx11.mir -o - | FileCheck %t/gfx11.mir
+---
+name: vmcnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmcnt_max-1
+    ; CHECK: S_WAITCNT_soft .Vmcnt_62
+    S_WAITCNT_soft .Vmcnt_62
+...
+---
+name: lgkmcnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: lgkmcnt_max-1
+    ; CHECK: S_WAITCNT_soft .Lgkmcnt_62
+    S_WAITCNT_soft .Lgkmcnt_62
+...
+---
+name: all-off-number
+body: |
+  bb.0:
+    ; GFX11 encoding: expcnt[2:0]=bits[2:0], lgkmcnt[5:0]=bits[9:4], vmcnt[5:0]=bits[15:10]
+    ; vmcnt=63, expcnt=7, lgkmcnt=63 -> 0xFFF7 = 65527
+    ; CHECK-LABEL: name: all-off-number
+    ; CHECK: S_WAITCNT_soft .AllOff
+    S_WAITCNT_soft 65527
+...

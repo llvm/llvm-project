@@ -423,25 +423,29 @@ LLVM_ABI uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
 
 /// This function returns call pointer argument that is considered the same by
 /// aliasing rules. You CAN'T use it to replace one value with another. If
-/// \p MustPreserveNullness is true, the call must preserve the nullness of
-/// the pointer.
+/// \p MustPreserveOffset is true, the call must preserve the byte offset of
+/// the pointer within its underlying object. Offset preservation implies
+/// nullness preservation; pass true when callers reason about either offset or
+/// null equality (e.g. GEP decomposition, dereferenceability, isKnownNonZero).
 LLVM_ABI const Value *
 getArgumentAliasingToReturnedPointer(const CallBase *Call,
-                                     bool MustPreserveNullness);
+                                     bool MustPreserveOffset);
 inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
-                                                   bool MustPreserveNullness) {
+                                                   bool MustPreserveOffset) {
   return const_cast<Value *>(getArgumentAliasingToReturnedPointer(
-      const_cast<const CallBase *>(Call), MustPreserveNullness));
+      const_cast<const CallBase *>(Call), MustPreserveOffset));
 }
 
 /// {launder,strip}.invariant.group returns pointer that aliases its argument,
 /// and it only captures pointer by returning it.
 /// These intrinsics are not marked as nocapture, because returning is
 /// considered as capture. The arguments are not marked as returned neither,
-/// because it would make it useless. If \p MustPreserveNullness is true,
-/// the intrinsic must preserve the nullness of the pointer.
+/// because it would make it useless. If \p MustPreserveOffset is true, the
+/// intrinsic must preserve the byte offset of the pointer within its
+/// underlying object (which excludes `llvm.ptrmask`, since masking off low
+/// bits changes the byte offset while still aliasing the same object).
 LLVM_ABI bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-    const CallBase *Call, bool MustPreserveNullness);
+    const CallBase *Call, bool MustPreserveOffset);
 
 /// This method strips off any GEP address adjustments, pointer casts
 /// or `llvm.threadlocal.address` from the specified value \p V, returning the

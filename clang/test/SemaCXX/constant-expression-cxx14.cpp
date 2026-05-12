@@ -1237,7 +1237,7 @@ namespace ObjectsUnderConstruction {
   };
   constexpr Aggregate aggr1;
   static_assert(aggr1.x == 1 && aggr1.y == 1, "");
-  // FIXME: This is not specified by the standard, but sanity requires it.
+  // This is not specified by the standard, but sanity requires it.
   constexpr Aggregate aggr2 = {};
   static_assert(aggr2.x == 1 && aggr2.y == 1, "");
 

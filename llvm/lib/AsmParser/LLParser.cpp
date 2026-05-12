@@ -4162,15 +4162,16 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     if (!ExpectedTy->isFloatingPointTy())
       return error(ID.Loc, "floating-point constant invalid for type");
     ID.APFloatVal = APFloat(ExpectedTy->getFltSemantics());
-    auto Except = ID.APFloatVal.convertFromString(
-        Lex.getStrVal(), RoundingMode::NearestTiesToEven);
-    assert(Except && "Invalid float strings should be caught by the lexer");
+    APFloat::opStatus Except =
+        cantFail(ID.APFloatVal.convertFromString(
+                     Lex.getStrVal(), RoundingMode::NearestTiesToEven),
+                 "Invalid float strings should be caught by the lexer");
     // Forbid overflowing and underflowing literals, but permit inexact
     // literals. Underflow is thrown when the result is denormal, so to allow
     // denormals, only reject underflowing literals that resulted in a zero.
-    if (*Except & APFloat::opOverflow)
+    if (Except & APFloat::opOverflow)
       return error(ID.Loc, "floating-point constant overflowed type");
-    if ((*Except & APFloat::opUnderflow) && ID.APFloatVal.isZero())
+    if ((Except & APFloat::opUnderflow) && ID.APFloatVal.isZero())
       return error(ID.Loc, "floating-point constant underflowed type");
     ID.Kind = ValID::t_APFloat;
     break;

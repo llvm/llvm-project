@@ -13,6 +13,7 @@ static_library("llvm") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "FormatvStringCheck.cpp",
     "HeaderGuardCheck.cpp",
     "IncludeOrderCheck.cpp",
     "LLVMTidyModule.cpp",

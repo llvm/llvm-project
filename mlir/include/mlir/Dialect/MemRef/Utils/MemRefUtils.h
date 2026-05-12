@@ -31,6 +31,18 @@ namespace memref {
 /// contiguous chunk of memory.
 bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 
+/// Controls how the per-dimension contribution to `linearizedSize` is divided
+/// by `dstBits / srcBits` when scaling down to the emulated type. The offset
+/// and intra-data offset are unaffected; they always use floor division and
+/// remainder respectively.
+/// - `Floor`: round each `stride * size / scaler` down. Suitable for indexing
+///   computations where a partial trailing byte is not included.
+/// - `Ceil`: round up, matching the result-shape size used by narrow-type
+///   memref type conversion (see `getLinearizedShape`). Use this when the
+///   caller needs the linearized size to cover all source elements, e.g. when
+///   building the size attribute of a converted `memref.reinterpret_cast`.
+enum class LinearizedDivKind { Floor, Ceil };
+
 /// For a `memref` with `offset`, `sizes` and `strides`, returns the
 /// offset, size, and potentially the size padded at the front to use for the
 /// linearized `memref`.
@@ -47,6 +59,8 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 ///   load/store, the memory region emulated is larger than the actual memory
 ///   region needed. `intraDataOffset` returns the element offset of the data
 ///   relevant at the beginning.
+/// - `sizeDivKind` selects floor vs ceil rounding for the `linearizedSize`
+///   contribution from each dimension (see `LinearizedDivKind`).
 struct LinearizedMemRefInfo {
   OpFoldResult linearizedOffset;
   OpFoldResult linearizedSize;
@@ -55,7 +69,8 @@ struct LinearizedMemRefInfo {
 std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     OpBuilder &builder, Location loc, int srcBits, int dstBits,
     OpFoldResult offset, ArrayRef<OpFoldResult> sizes,
-    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices = {});
+    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices = {},
+    LinearizedDivKind sizeDivKind = LinearizedDivKind::Floor);
 
 /// For a `memref` with `offset` and `sizes`, returns the
 /// offset and size to use for the linearized `memref`, assuming that
@@ -64,10 +79,12 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
 ///   element type with bitwidth `srcBits` using element type with
 ///   bitwidth `dstBits`, the linearized offset and size are
 ///   scaled down by `dstBits`/`srcBits`.
-LinearizedMemRefInfo
-getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
-                                 int dstBits, OpFoldResult offset,
-                                 ArrayRef<OpFoldResult> sizes);
+/// - `sizeDivKind` selects floor vs ceil rounding for the `linearizedSize`
+///   contribution from each dimension (see `LinearizedDivKind`).
+LinearizedMemRefInfo getLinearizedMemRefOffsetAndSize(
+    OpBuilder &builder, Location loc, int srcBits, int dstBits,
+    OpFoldResult offset, ArrayRef<OpFoldResult> sizes,
+    LinearizedDivKind sizeDivKind = LinearizedDivKind::Floor);
 
 /// Track temporary allocations that are never read from. If this is the case
 /// it means both the allocations and associated stores can be removed.

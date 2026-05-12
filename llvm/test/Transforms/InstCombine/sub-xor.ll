@@ -158,6 +158,84 @@ define <2 x i8> @xor_add_splat_undef(<2 x i8> %x) {
   ret <2 x i8> %add
 }
 
+define i32 @xor_notmask_add(i32 %x) {
+; CHECK-LABEL: @xor_notmask_add(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 28
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw nsw i32 51, [[AND]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %and = and i32 %x, 28
+  %xor = xor i32 %and, 61
+  %add = add i32 %xor, -10
+  ret i32 %add
+}
+
+define i32 @xor_notmask_add_multiuse(i32 %x) {
+; CHECK-LABEL: @xor_notmask_add_multiuse(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 28
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 29
+; CHECK-NEXT:    call void @use(i32 [[XOR]])
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw nsw i32 39, [[AND]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %and = and i32 %x, 28
+  %xor = xor i32 %and, 29
+  call void @use(i32 %xor)
+  %add = add i32 %xor, 10
+  ret i32 %add
+}
+
+define <2 x i8> @xor_notmask_add_splat(<2 x i8> %x) {
+; CHECK-LABEL: @xor_notmask_add_splat(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 24)
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw nsw <2 x i8> splat (i8 103), [[AND]]
+; CHECK-NEXT:    ret <2 x i8> [[ADD]]
+;
+  %and = and <2 x i8> %x, <i8 24, i8 24>
+  %xor = xor <2 x i8> %and, <i8 61, i8 61>
+  %add = add <2 x i8> %xor, <i8 42, i8 42>
+  ret <2 x i8> %add
+}
+
+define <2 x i8> @xor_notmask_add_splat_poison(<2 x i8> %x) {
+; CHECK-LABEL: @xor_notmask_add_splat_poison(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 24)
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[AND]], <i8 62, i8 poison>
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i8> [[XOR]], splat (i8 42)
+; CHECK-NEXT:    ret <2 x i8> [[ADD]]
+;
+  %and = and <2 x i8> %x, <i8 24, i8 24>
+  %xor = xor <2 x i8> %and, <i8 62, i8 poison>
+  %add = add <2 x i8> %xor, <i8 42, i8 42>
+  ret <2 x i8> %add
+}
+
+define <2 x i8> @xor_notmask_add_non_splat(<2 x i8> %x) {
+; CHECK-LABEL: @xor_notmask_add_non_splat(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 24)
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[AND]], <i8 62, i8 61>
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i8> [[XOR]], splat (i8 42)
+; CHECK-NEXT:    ret <2 x i8> [[ADD]]
+;
+  %and = and <2 x i8> %x, <i8 24, i8 24>
+  %xor = xor <2 x i8> %and, <i8 62, i8 61>
+  %add = add <2 x i8> %xor, <i8 42, i8 42>
+  ret <2 x i8> %add
+}
+
+define i32 @xor_notmask_add_negative(i32 %x) {
+; CHECK-LABEL: @xor_notmask_add_negative(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 28
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 23
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[XOR]], 10
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %and = and i32 %x, 28
+  %xor = xor i32 %and, 23
+  %add = add i32 %xor, 10
+  ret i32 %add
+}
+
 ; Make sure we don't convert sub to xor using dominating condition. That makes
 ; it hard for other passe to reverse.
 define i32 @xor_dominating_cond(i32 %x) {

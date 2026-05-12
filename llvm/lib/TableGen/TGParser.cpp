@@ -863,6 +863,11 @@ TGParser::ParseSubMultiClassReference(MultiClass *CurMC) {
     return Result;
   }
 
+  if (CheckTemplateArgValues(Result.TemplateArgs, ArgLocs, &Result.MC->Rec)) {
+    Result.MC = nullptr; // Error checking value list.
+    return Result;
+  }
+
   Result.RefRange.End = Lex.getLoc();
 
   return Result;
