@@ -86,8 +86,7 @@ LIBC_INLINE float tanhf(float x) {
 #else
   const double half_way = xbits.is_neg() ? 0.5 : -0.5;
 
-  mk = static_cast<int>(
-      fputil::multiply_add(xd, -LOG2_E_EXP2_6, half_way));
+  mk = static_cast<int>(fputil::multiply_add(xd, -LOG2_E_EXP2_6, half_way));
   k = static_cast<double>(-mk);
 #endif // LIBC_TARGET_CPU_HAS_NEAREST_INT
   // -hi = floor(-k * 2^(-MID_BITS))
