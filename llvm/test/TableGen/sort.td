@@ -1,32 +1,27 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// RUN: not llvm-tblgen -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
-// RUN: not llvm-tblgen -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
+// RUN: not llvm-tblgen -DERROR_NONLIST %s 2>&1 | FileCheck --check-prefix=ERROR_NONLIST %s
+// RUN: not llvm-tblgen -DERROR_KEYTYPE %s 2>&1 | FileCheck --check-prefix=ERROR_KEYTYPE %s
 
 defvar EmptyStrings = []<string>;
 defvar EmptyInts = []<int>;
 defvar Creatures = ["cephalopod", "axolotl", "dragonfly", "barracuda"];
 defvar Nums = [5, 2, 8, 1, 3];
 
-// CHECK: def rec1
-// CHECK:   sorted_strings = ["axolotl", "barracuda", "cephalopod", "dragonfly"];
-// CHECK:   sorted_ints = [1, 2, 3, 5, 8];
-// CHECK:   sorted_empty_strings = [];
-// CHECK:   sorted_empty_ints = [];
-
-def rec1 {
-  list<string> sorted_strings = !sort(item, Creatures, item);
-  list<int> sorted_ints = !sort(n, Nums, n);
-  list<string> sorted_empty_strings = !sort(item, EmptyStrings, item);
-  list<int> sorted_empty_ints = !sort(n, EmptyInts, n);
-}
-
 // Stable sort: equal keys preserve original relative order.
-// CHECK: def rec2
+// CHECK-LABEL: def duplicates
 // CHECK:   stable = ["a", "a", "b", "b", "c"];
 
 defvar DuplicateWords = ["b", "a", "b", "c", "a"];
-def rec2 {
+def duplicates {
   list<string> stable = !sort(item, DuplicateWords, item);
+}
+
+// Sort an already-sorted list — should be a no-op.
+// CHECK-LABEL: def idempotent
+// CHECK:   already = ["a", "b", "c"];
+
+def idempotent {
+  list<string> already = !sort(item, ["a", "b", "c"], item);
 }
 
 // Sort records by a string field or an int field.
@@ -40,45 +35,50 @@ def thing_b : Thing<"beta",    20>;
 
 defvar Things = [thing_c, thing_a, thing_b];
 
-// CHECK: def rec3
+// CHECK-LABEL: def key_expr
 // CHECK:   by_name  = [thing_a, thing_b, thing_c];
 // CHECK:   by_value = [thing_a, thing_b, thing_c];
 
-def rec3 {
+def key_expr {
   list<Thing> by_name  = !sort(t, Things, t.Name);
   list<Thing> by_value = !sort(t, Things, t.Value);
 }
 
-// Sort an already-sorted list — should be a no-op.
-// CHECK: def rec4
-// CHECK:   already = ["a", "b", "c"];
-
-def rec4 {
-  list<string> already = !sort(item, ["a", "b", "c"], item);
-}
-
 // Sort a single-element list.
-// CHECK: def rec5
+// CHECK-LABEL: def single
 // CHECK:   one = ["only"];
 
-def rec5 {
+def single {
   list<string> one = !sort(item, ["only"], item);
 }
 
-#ifdef ERROR1
+// CHECK-LABEL: def sorted
+// CHECK:   sorted_strings = ["axolotl", "barracuda", "cephalopod", "dragonfly"];
+// CHECK:   sorted_ints = [1, 2, 3, 5, 8];
+// CHECK:   sorted_empty_strings = [];
+// CHECK:   sorted_empty_ints = [];
+
+def sorted {
+  list<string> sorted_strings = !sort(item, Creatures, item);
+  list<int> sorted_ints = !sort(n, Nums, n);
+  list<string> sorted_empty_strings = !sort(item, EmptyStrings, item);
+  list<int> sorted_empty_ints = !sort(n, EmptyInts, n);
+}
+
+#ifdef ERROR_NONLIST
 // Dag is not a valid second argument.
-// ERROR1: !sort must have a list argument
+// ERROR_NONLIST: !sort must have a list argument
 def myop;
 defvar mydag = (myop);
-def err1 {
+def err_nonlist {
   list<string> bad = !sort(x, mydag, !cast<string>(x));
 }
 #endif
 
-#ifdef ERROR2
+#ifdef ERROR_KEYTYPE
 // Key that cannot be resolved to int or string leaves the op unfolded.
-// ERROR2: could not be fully resolved
-def err2 {
+// ERROR_KEYTYPE: could not be fully resolved
+def err_keytype {
   list<Thing> bad = !sort(t, Things, t);
 }
 #endif
