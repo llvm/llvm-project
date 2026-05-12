@@ -1941,7 +1941,8 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
   }
 
   case tgtok::XForEach:
-  case tgtok::XFilter: {
+  case tgtok::XFilter:
+  case tgtok::XSort: {
     return ParseOperationForEachFilter(CurRec, ItemType);
   }
 
@@ -2571,10 +2572,11 @@ const Init *TGParser::ParseOperationFind(Record *CurRec,
   return (TernOpInit::get(Code, LHS, MHS, RHS, Type))->Fold(CurRec);
 }
 
-/// Parse the !foreach and !filter operations. Return null on error.
+/// Parse the !foreach, !filter, and !sort operations. Return null on error.
 ///
 /// ForEach ::= !foreach(ID, list-or-dag, expr) => list<expr type>
-/// Filter  ::= !foreach(ID, list, predicate) ==> list<list type>
+/// Filter  ::= !filter(ID, list, predicate) ==> list<list type>
+/// Sort    ::= !sort(ID, list, key-expr) ==> list<list type>
 const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
                                                   const RecTy *ItemType) {
   SMLoc OpLoc = Lex.getLoc();
@@ -2630,7 +2632,8 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
       if (const auto *OutListTy = dyn_cast<ListRecTy>(ItemType)) {
         ExprEltType = (Operation == tgtok::XForEach)
                           ? OutListTy->getElementType()
-                          : IntRecTy::get(Records);
+                          : (Operation == tgtok::XFilter ? IntRecTy::get(Records)
+                                                         : nullptr);
       } else {
         Error(OpLoc, "expected value of type '" +
                          Twine(ItemType->getAsString()) +
@@ -2639,8 +2642,9 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
       }
     }
   } else if (const auto *InDagTy = dyn_cast<DagRecTy>(MHSt->getType())) {
-    if (Operation == tgtok::XFilter) {
-      TokError("!filter must have a list argument");
+    if (Operation == tgtok::XFilter || Operation == tgtok::XSort) {
+      TokError(Twine("!") + (Operation == tgtok::XFilter ? "filter" : "sort") +
+               " must have a list argument");
       return nullptr;
     }
     InEltType = InDagTy;
@@ -2653,8 +2657,10 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
   } else {
     if (Operation == tgtok::XForEach)
       TokError("!foreach must have a list or dag argument");
-    else
+    else if (Operation == tgtok::XFilter)
       TokError("!filter must have a list argument");
+    else
+      TokError("!sort must have a list argument");
     return nullptr;
   }
 
@@ -2688,14 +2694,16 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
       return nullptr;
     }
     OutType = RHSt->getType()->getListTy();
-  } else if (Operation == tgtok::XFilter) {
+  } else if (Operation == tgtok::XFilter || Operation == tgtok::XSort) {
     OutType = InEltType->getListTy();
   }
 
-  return (TernOpInit::get((Operation == tgtok::XForEach) ? TernOpInit::FOREACH
-                                                         : TernOpInit::FILTER,
-                          LHS, MHS, RHS, OutType))
-      ->Fold(CurRec);
+  TernOpInit::TernaryOp Opc = TernOpInit::FOREACH;
+  if (Operation == tgtok::XFilter)
+    Opc = TernOpInit::FILTER;
+  else if (Operation == tgtok::XSort)
+    Opc = TernOpInit::SORT;
+  return (TernOpInit::get(Opc, LHS, MHS, RHS, OutType))->Fold(CurRec);
 }
 
 const Init *TGParser::ParseOperationCond(Record *CurRec,
