@@ -164,12 +164,8 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     return Size;
   }
 
-  // SP modification expands to 2 instructions.
-  if (ModifiesSP)
-    return 8;
-
-  // Non-memory instructions that modify LR expand to 2 instructions.
-  if (ModifiesLR)
+  // Non memory operations that modify LR or SP expand to 2 instructions.
+  if (ModifiesSP || ModifiesLR)
     return 8;
 
   // Default case: instructions that don't cause expansion.

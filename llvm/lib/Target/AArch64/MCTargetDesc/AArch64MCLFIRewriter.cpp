@@ -143,7 +143,7 @@ static MCInst replaceRegAt(const MCInst &Inst, unsigned Idx,
 // the instruction uses pre/post-indexed addressing.
 struct MemInstInfo {
   int BaseRegIdx;
-  int OffsetIdx; // -1 if no offset operand.
+  std::optional<unsigned> OffsetIdx;
   bool IsPrePost;
   bool IsLiteral;
 };
@@ -455,6 +455,9 @@ bool AArch64MCLFIRewriter::rewriteLoadStoreRoW(const MCInst &Inst,
 
   // Case 4: Register-offset-X load/store.
   // ldr xN, [xM1, xM2] -> add x26, xM1, xM2; ldr xN, [x27, w26, uxtw]
+  //
+  // In this case, even if xM1 is SP we must do a full rewrite, since an
+  // arbitrary register value is being added as the offset.
   unsigned Shift;
   if ((MemOp = convertRoXToRoW(Op, Shift)) != AArch64::INSTRUCTION_LIST_END) {
     MCRegister Reg1 = Inst.getOperand(1).getReg();
@@ -514,82 +517,83 @@ void AArch64MCLFIRewriter::rewriteLoadStoreBase(const MCInst &Inst,
   MCRegister BaseReg = Inst.getOperand(Info->BaseRegIdx).getReg();
 
   // Stack accesses don't need address sandboxing, except when sp is modified
-  // with a register post-index operand.
+  // with a non-zero register post-index operand.
   bool BaseIsSP = BaseReg == AArch64::SP;
   if (BaseIsSP) {
-    if (Info->OffsetIdx < 0 || !Inst.getOperand(Info->OffsetIdx).isReg())
+    if (!Info->OffsetIdx || !Inst.getOperand(*Info->OffsetIdx).isReg())
       return emitInst(Inst, Out, STI);
-    MCRegister OffReg = Inst.getOperand(Info->OffsetIdx).getReg();
+    MCRegister OffReg = Inst.getOperand(*Info->OffsetIdx).getReg();
     if (OffReg == AArch64::XZR || OffReg == AArch64::WZR)
       return emitInst(Inst, Out, STI);
   }
 
   // Guard the base register, unless it is SP.
-  MCRegister AccessBase = BaseIsSP ? AArch64::SP : LFIAddrReg;
   if (!BaseIsSP)
     emitAddMask(LFIAddrReg, BaseReg, Out, STI);
 
-  if (Info->IsPrePost) {
-    bool IsPre = false;
-    bool IsNoOffset = false;
-    unsigned BaseOpcode = convertPrePostToBase(Opcode, IsPre, IsNoOffset);
-
-    if (BaseOpcode != AArch64::INSTRUCTION_LIST_END) {
-      // Demote pre/post-index to base indexed form.
-      MCInst NewInst;
-      NewInst.setOpcode(BaseOpcode);
-      NewInst.setLoc(Inst.getLoc());
-
-      // Skip writeback operand (operand 0) and copy data operands up to base.
-      for (int I = 1; I < Info->BaseRegIdx; ++I)
-        NewInst.addOperand(Inst.getOperand(I));
-
-      // Add the access base register (LFIAddrReg or SP).
-      NewInst.addOperand(MCOperand::createReg(AccessBase));
-
-      // For pre-index, include the offset; for post-index, use zero.
-      if (IsPre && Info->OffsetIdx >= 0)
-        NewInst.addOperand(Inst.getOperand(Info->OffsetIdx));
-      else if (!IsNoOffset)
-        NewInst.addOperand(MCOperand::createImm(0));
-
-      emitInst(NewInst, Out, STI);
-
-      // Update the base register with the offset. If the base is SP, a
-      // register offset must be sandboxed (the result is otherwise
-      // unbounded), and ADDXrs cannot take SP, so the extended-register form
-      // via the scratch register is used.
-      if (Info->OffsetIdx >= 0) {
-        const MCOperand &OffsetOp = Inst.getOperand(Info->OffsetIdx);
-        if (OffsetOp.isImm()) {
-          int64_t Scale = getPrePostScale(Opcode);
-          int64_t Offset = OffsetOp.getImm() * Scale;
-          emitAddImm(BaseReg, BaseReg, Offset, Out, STI);
-        } else if (OffsetOp.isReg()) {
-          // SIMD post-index uses a register offset (XZR for natural offset).
-          MCRegister OffReg = OffsetOp.getReg();
-          if (OffReg == AArch64::XZR) {
-            int NaturalOffset = getSIMDNaturalOffset(Opcode);
-            if (NaturalOffset > 0)
-              emitAddImm(BaseReg, BaseReg, NaturalOffset, Out, STI);
-          } else if (OffReg != AArch64::WZR) {
-            if (BaseIsSP) {
-              emitAddRegExtend(LFIScratchReg, AArch64::SP, OffReg,
-                               AArch64_AM::UXTX, 0, Out, STI);
-              emitAddMask(AArch64::SP, LFIScratchReg, Out, STI);
-            } else {
-              emitAddReg(BaseReg, BaseReg, OffReg, 0, Out, STI);
-            }
-          }
-        }
-      }
-    } else {
-      error(Inst, "unhandled pre/post-index instruction in LFI rewriter");
-    }
-  } else {
+  if (!Info->IsPrePost) {
     // Non-pre/post instruction: replace the base register operand.
     MCInst NewInst = replaceRegAt(Inst, Info->BaseRegIdx, LFIAddrReg);
     emitInst(NewInst, Out, STI);
+    return;
+  }
+
+  bool IsPre = false;
+  bool IsNoOffset = false;
+  unsigned BaseOpcode = convertPrePostToBase(Opcode, IsPre, IsNoOffset);
+
+  if (BaseOpcode == AArch64::INSTRUCTION_LIST_END)
+    return error(Inst, "unhandled pre/post-index instruction in LFI rewriter");
+
+  // Demote pre/post-index to base indexed form.
+  MCInst NewInst;
+  NewInst.setOpcode(BaseOpcode);
+  NewInst.setLoc(Inst.getLoc());
+
+  // Skip writeback operand (operand 0) and copy data operands up to base.
+  for (int I = 1; I < Info->BaseRegIdx; ++I)
+    NewInst.addOperand(Inst.getOperand(I));
+
+  // Add the access base register (LFIAddrReg or SP).
+  MCRegister AccessBase = BaseIsSP ? AArch64::SP : LFIAddrReg;
+  NewInst.addOperand(MCOperand::createReg(AccessBase));
+
+  // For pre-index, include the offset; for post-index, use zero.
+  if (IsPre && Info->OffsetIdx)
+    NewInst.addOperand(Inst.getOperand(*Info->OffsetIdx));
+  else if (!IsNoOffset)
+    NewInst.addOperand(MCOperand::createImm(0));
+
+  emitInst(NewInst, Out, STI);
+
+  if (!Info->OffsetIdx)
+    return;
+
+  // Update the base register with the offset. If the base is SP, a register
+  // offset must be sandboxed (the result is otherwise unbounded), and ADDXrs
+  // cannot take SP, so the extended-register form via the scratch register is
+  // used.
+  const MCOperand &OffsetOp = Inst.getOperand(*Info->OffsetIdx);
+  if (OffsetOp.isImm()) {
+    int64_t Scale = getPrePostScale(Opcode);
+    int64_t Offset = OffsetOp.getImm() * Scale;
+    emitAddImm(BaseReg, BaseReg, Offset, Out, STI);
+  } else if (OffsetOp.isReg()) {
+    // SIMD post-index uses a register offset (XZR for natural offset).
+    MCRegister OffReg = OffsetOp.getReg();
+    if (OffReg == AArch64::XZR) {
+      int NaturalOffset = getSIMDNaturalOffset(Opcode);
+      if (NaturalOffset > 0)
+        emitAddImm(BaseReg, BaseReg, NaturalOffset, Out, STI);
+    } else if (OffReg != AArch64::WZR) {
+      if (BaseIsSP) {
+        emitAddRegExtend(LFIScratchReg, AArch64::SP, OffReg, AArch64_AM::UXTX,
+                         0, Out, STI);
+        emitAddMask(AArch64::SP, LFIScratchReg, Out, STI);
+      } else {
+        emitAddReg(BaseReg, BaseReg, OffReg, 0, Out, STI);
+      }
+    }
   }
 }
 
@@ -911,7 +915,8 @@ static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
   case AArch64::LDRDl:
   case AArch64::LDRQl:
   case AArch64::PRFMl:
-    return MemInstInfo{0, -1, false, true};
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
+    return MemInstInfo{0, std::nullopt, false, true};
 
     // Scalar indexed/unscaled/register-offset: Rt, [Rn, ...]
 #define X(NAME, S)                                                             \
@@ -948,6 +953,7 @@ static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
   case AArch64::STURWi:
   case AArch64::STURXi:
   case AArch64::PRFUMi:
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
     return MemInstInfo{1, 2, false, false};
 
     // Scalar pre/post-index: wback, Rt, [Rn], #imm
@@ -956,6 +962,7 @@ static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
   case AArch64::NAME##post:
     SCALAR_MEM_OPS(X)
 #undef X
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
     return MemInstInfo{2, 3, true, false};
 
   // Exclusive/acquire loads: Rt, [Rn]
@@ -993,7 +1000,8 @@ static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
 #define X(NAME, OFF) case AArch64::NAME:
     SIMD_MULTI_OPS(X)
 #undef X
-    return MemInstInfo{1, -1, false, false};
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
+    return MemInstInfo{1, std::nullopt, false, false};
 
   // Exclusive stores: Ws, Rt, [Rn]
   case AArch64::STXRB:
@@ -1004,14 +1012,16 @@ static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
   case AArch64::STLXRH:
   case AArch64::STLXRW:
   case AArch64::STLXRX:
-    return MemInstInfo{2, -1, false, false};
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
+    return MemInstInfo{2, std::nullopt, false, false};
 
   // Exclusive pair loads: Rt, Rt2, [Rn]
   case AArch64::LDXPW:
   case AArch64::LDXPX:
   case AArch64::LDAXPW:
   case AArch64::LDAXPX:
-    return MemInstInfo{2, -1, false, false};
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
+    return MemInstInfo{2, std::nullopt, false, false};
 
     // Pair indexed loads/stores: Rt, Rt2, [Rn, #imm]
 #define X(NAME, SCALE) case AArch64::NAME##i:
@@ -1027,6 +1037,7 @@ static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
   case AArch64::STNPSi:
   case AArch64::STNPWi:
   case AArch64::STNPXi:
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
     return MemInstInfo{2, 3, false, false};
 
     // CAS: Rs(out), Rs(in, tied), Rt, [Rn]
@@ -1040,7 +1051,8 @@ static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
     CAS_VARIANTS(CASL)
     CAS_VARIANTS(CASAL)
 #undef CAS_VARIANTS
-    return MemInstInfo{3, -1, false, false};
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
+    return MemInstInfo{3, std::nullopt, false, false};
 
     // LSE atomics: Rs, Rt, [Rn] - all 16 size/ordering variants per operation.
 #define LSE_VARIANTS(NAME)                                                     \
@@ -1074,20 +1086,23 @@ static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
 #define X(NAME, OFF) case AArch64::NAME:
     SIMD_LANE_STORE_OPS(X)
 #undef X
-    return MemInstInfo{2, -1, false, false};
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
+    return MemInstInfo{2, std::nullopt, false, false};
 
     // SIMD lane loads (base form): Vt(out), Vt(tied), idx, [Rn]
 #define X(NAME, OFF) case AArch64::NAME:
     SIMD_LANE_LOAD_OPS(X)
 #undef X
-    return MemInstInfo{3, -1, false, false};
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
+    return MemInstInfo{3, std::nullopt, false, false};
 
   // Exclusive store pairs: Ws, Rt, Rt2, [Rn]
   case AArch64::STXPW:
   case AArch64::STXPX:
   case AArch64::STLXPW:
   case AArch64::STLXPX:
-    return MemInstInfo{3, -1, false, false};
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
+    return MemInstInfo{3, std::nullopt, false, false};
 
     // Pair pre/post-index: wback, Rt, Rt2, [Rn, #imm]! / [Rn], #imm
 #define X(NAME, SCALE)                                                         \
@@ -1095,6 +1110,7 @@ static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
   case AArch64::NAME##post:
     PAIR_OPS(X)
 #undef X
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
     return MemInstInfo{3, 4, true, false};
 
   // CASP: Ws_Ws2(out), Ws_Ws2(in, tied), Wt_Wt2, [Rn]
@@ -1106,24 +1122,28 @@ static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
   case AArch64::CASPLX:
   case AArch64::CASPALW:
   case AArch64::CASPALX:
-    return MemInstInfo{3, -1, false, false};
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
+    return MemInstInfo{3, std::nullopt, false, false};
 
     // SIMD multiple/replicate post-index: wback, Vt, [Rn], Xm
 #define X(NAME, OFF) case AArch64::NAME##_POST:
     SIMD_MULTI_OPS(X)
 #undef X
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
     return MemInstInfo{2, 3, true, false};
 
     // SIMD lane store post-index: wback, Vt, idx, [Rn], Xm
 #define X(NAME, OFF) case AArch64::NAME##_POST:
     SIMD_LANE_STORE_OPS(X)
 #undef X
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
     return MemInstInfo{3, 4, true, false};
 
     // SIMD lane load post-index: wback, Vt(out), Vt(tied), idx, [Rn], Xm
 #define X(NAME, OFF) case AArch64::NAME##_POST:
     SIMD_LANE_LOAD_OPS(X)
 #undef X
+    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
     return MemInstInfo{4, 5, true, false};
   }
 }

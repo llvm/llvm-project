@@ -166,7 +166,7 @@ In the following assembly rewrites, some shorthand is used.
 * ``xN`` or ``wN``: refers to any general-purpose non-reserved register.
 * ``{a,b,c}``: matches any of ``a``, ``b``, or ``c``.
 * ``LDSTr``: a load/store instruction that supports register-register addressing modes, with one source/destination register.
-* ``LDSTx``: a load/store instruction not matched by ``LDSTr``.
+* ``LDSTx``: a load/store instruction not matched by ``LDSTr``. This covers load/store pairs (``ldp``/``stp``), SIMD load/stores (``ld1``, ``st1``, ...), atomics, exclusives, load/store-release, and unscaled (``ldur``/``stur``) forms. These instructions have a more limited set of addressing modes than ``LDSTr``.
 
 Control flow
 ~~~~~~~~~~~~
