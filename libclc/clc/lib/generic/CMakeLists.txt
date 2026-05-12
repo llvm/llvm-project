@@ -1,4 +1,4 @@
-libclc_add_sources(${LIBCLC_CLC_TARGET}
+libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
   async/clc_prefetch.cl
   atomic/clc_atomic_compare_exchange.cl
   atomic/clc_atomic_dec.cl

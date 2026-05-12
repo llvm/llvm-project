@@ -1,25 +1,26 @@
 # Adds source files to a libclc builtin library target with deduplication. If a
-# source with the same basename already exists in the target's SOURCES property,
-# the new file is skipped.
+# source with the same basename already exists in the target's SOURCES property
+# the new file is skipped. This enables target-specific directories to override
+# generic implementations when they are included first.
+#
+# Sources are specified as paths relative to CMAKE_CURRENT_SOURCE_DIR, or
+# relative to BASE_DIR if provided.
 function(libclc_add_sources target)
-  cmake_parse_arguments(ARG "" "BASE_DIR" "" ${ARGN})
+  cmake_parse_arguments(ARG "" "BASE_DIR" "FILES" ${ARGN})
   if(NOT ARG_BASE_DIR)
     set(ARG_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
   endif()
 
   get_target_property(existing ${target} SOURCES)
-  if(NOT existing)
-    set(existing "")
-  endif()
 
   set(seen)
-  foreach(file ${existing})
+  foreach(file IN LISTS existing)
     get_filename_component(name "${file}" NAME)
     list(APPEND seen "${name}")
   endforeach()
 
   set(new_sources)
-  foreach(rel_src ${ARG_UNPARSED_ARGUMENTS})
+  foreach(rel_src IN LISTS ARG_FILES)
     get_filename_component(name "${rel_src}" NAME)
     if(NOT name IN_LIST seen)
       list(APPEND new_sources "${ARG_BASE_DIR}/${rel_src}")
@@ -30,7 +31,7 @@ function(libclc_add_sources target)
   if(new_sources)
     target_sources(${target} PRIVATE ${new_sources})
     set(inc_dirs)
-    foreach(file ${new_sources})
+    foreach(file IN LISTS new_sources)
       get_filename_component(dir "${file}" DIRECTORY)
       list(APPEND inc_dirs "${dir}")
     endforeach()

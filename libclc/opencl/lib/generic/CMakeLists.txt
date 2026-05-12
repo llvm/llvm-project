@@ -1,4 +1,4 @@
-libclc_add_sources(${LIBCLC_OPENCL_TARGET}
+libclc_add_sources(${LIBCLC_OPENCL_TARGET} FILES
   address_space/qualifier.cl
   async/async_work_group_copy.cl
   async/async_work_group_strided_copy.cl

@@ -6,6 +6,7 @@ endif()
 # Non-Vulkan SPIR-V uses a curated subset of generic builtins.
 libclc_add_sources(${LIBCLC_OPENCL_TARGET}
   BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../generic
+  FILES
   async/async_work_group_strided_copy.cl
   async/wait_group_events.cl
   common/degrees.cl

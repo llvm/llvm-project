@@ -1,4 +1,4 @@
-libclc_add_sources(${LIBCLC_CLC_TARGET}
+libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
   address_space/clc_qualifier.cl
   math/clc_cbrt.cl
   math/clc_exp.cl
