@@ -18861,6 +18861,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Instruction *Load, Value *Mask, IntrinsicInst *DI,
     const APInt &GapMask) const {
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
+  assert(GapMask.getBitWidth() == Factor);
   if (Factor != 2 && Factor != 3 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching ld2, ld3 and ld4 patterns failed\n");
     return false;
@@ -18871,7 +18872,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
   assert(!Mask && "Unexpected mask on a load\n");
 
   // Gap mask is currently not supported.
-  if (Factor != GapMask.popcount())
+  if (!GapMask.isAllOnes())
     return false;
 
   VectorType *VTy = getDeinterleavedVectorType(DI);

@@ -369,8 +369,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   VectorType *ResVTy = getDeinterleavedVectorType(DI);
 
-  unsigned MaskFactor = GapMask.popcount();
-  bool HasGapMask = MaskFactor < Factor && MaskFactor != 1;
+  unsigned MaskFactor = GapMask.getActiveBits();
+  bool UseStridedSeg = MaskFactor < Factor && MaskFactor > 1;
   const DataLayout &DL = Load->getDataLayout();
   auto *XLenTy = Builder.getIntNTy(Subtarget.getXLen());
 
@@ -387,23 +387,24 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   unsigned ElementSizeInBytes = DL.getTypeStoreSize(ResVTy->getElementType());
   Value *Return;
   if (isa<FixedVectorType>(ResVTy)) {
-    if (HasGapMask) {
+    Value *SegLoad;
+    if (UseStridedSeg) {
       // Lower to strided segmented load.
       Value *Stride = ConstantInt::get(XLenTy, Factor * ElementSizeInBytes);
-      Value *SegLoad = Builder.CreateIntrinsic(
-          FixedVlssegIntrIds[MaskFactor - 2], {ResVTy, PtrTy, XLenTy, XLenTy},
-          {Ptr, Stride, Mask, VL});
-      // Replace masked-off factors with poisons.
-      SmallVector<Type *, 8> AggrTypes{Factor, ResVTy};
-      Return = PoisonValue::get(StructType::get(Load->getContext(), AggrTypes));
-      for (unsigned I = 0; I < MaskFactor; ++I) {
-        Value *SubVec = Builder.CreateExtractValue(SegLoad, I);
-        Return = Builder.CreateInsertValue(Return, SubVec, I);
-      }
+      SegLoad = Builder.CreateIntrinsic(FixedVlssegIntrIds[MaskFactor - 2],
+                                        {ResVTy, PtrTy, XLenTy, XLenTy},
+                                        {Ptr, Stride, Mask, VL});
     } else {
-      Return =
+      SegLoad =
           Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2],
                                   {ResVTy, PtrTy, XLenTy}, {Ptr, Mask, VL});
+    }
+    // Replace masked-off factors with poisons.
+    SmallVector<Type *, 8> AggrTypes{Factor, ResVTy};
+    Return = PoisonValue::get(StructType::get(Load->getContext(), AggrTypes));
+    for (unsigned I = 0; I < MaskFactor; ++I) {
+      Value *SubVec = Builder.CreateExtractValue(SegLoad, I);
+      Return = Builder.CreateInsertValue(Return, SubVec, I);
     }
   } else {
     unsigned SEW = DL.getTypeSizeInBits(ResVTy->getElementType());
@@ -411,9 +412,9 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Type *VecTupTy = TargetExtType::get(
         Load->getContext(), "riscv.vector.tuple",
         ScalableVectorType::get(Builder.getInt8Ty(), NumElts * SEW / 8),
-        MaskFactor);
+        UseStridedSeg ? MaskFactor : Factor);
     Function *SegLoadFunc;
-    if (HasGapMask) {
+    if (UseStridedSeg) {
       // Lower to strided segmented load.
       SegLoadFunc = Intrinsic::getOrInsertDeclaration(
           Load->getModule(), ScalableVlssegIntrIds[MaskFactor - 2],
@@ -432,7 +433,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
         ConstantInt::get(XLenTy,
                          RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC),
         ConstantInt::get(XLenTy, Log2_64(SEW))};
-    if (HasGapMask) {
+    if (UseStridedSeg) {
       Value *Stride = ConstantInt::get(XLenTy, Factor * ElementSizeInBytes);
       Operands.insert(std::next(Operands.begin(), 2), Stride);
     }
