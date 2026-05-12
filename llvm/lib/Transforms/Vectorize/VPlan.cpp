@@ -862,7 +862,8 @@ VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
                            CanIV->getDebugLoc(), "index.next");
 }
 
-VPlan::VPlan(Loop *L) {
+VPlan::VPlan(Loop *L, Type *IdxTy)
+    : VectorTripCount(IdxTy), VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
   setEntry(createVPIRBasicBlock(L->getLoopPreheader()));
   ScalarHeader = createVPIRBasicBlock(L->getHeader());
 
@@ -873,7 +874,7 @@ VPlan::VPlan(Loop *L) {
 }
 
 VPlan::~VPlan() {
-  VPSymbolicValue DummyValue;
+  VPSymbolicValue DummyValue(nullptr);
 
   for (auto *VPB : CreatedBlocks) {
     if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
@@ -1236,7 +1237,8 @@ VPlan *VPlan::duplicate() {
     NewScalarHeader = createVPIRBasicBlock(ScalarHeaderIRBB);
   }
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
-  auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
+  auto *NewPlan =
+      new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader, getIndexType());
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
@@ -1258,7 +1260,8 @@ VPlan *VPlan::duplicate() {
          "All VPSymbolicValues must be handled below");
 
   if (BackedgeTakenCount)
-    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
+    NewPlan->BackedgeTakenCount =
+        new VPSymbolicValue(BackedgeTakenCount->getType());
 
   // Map and propagate materialized state for symbolic values.
   for (auto [OldSV, NewSV] :

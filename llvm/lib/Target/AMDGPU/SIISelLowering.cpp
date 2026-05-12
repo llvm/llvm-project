@@ -518,8 +518,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMadMacF32Insts())
     setOperationAction(ISD::FMAD, MVT::f32, Legal);
 
-  setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
-  setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
+  setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_POISON}, MVT::i32, Custom);
+  setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_POISON}, MVT::i32, Custom);
   setOperationAction(ISD::CTLS, MVT::i32, Custom);
 
   // We only really have 32-bit BFE instructions (and 16-bit on VI).
@@ -592,7 +592,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction({ISD::SIGN_EXTEND, ISD::SDIV, ISD::UDIV, ISD::SREM,
                         ISD::UREM, ISD::BITREVERSE, ISD::CTTZ,
-                        ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF,
+                        ISD::CTTZ_ZERO_POISON, ISD::CTLZ, ISD::CTLZ_ZERO_POISON,
                         ISD::CTPOP},
                        MVT::i16, Promote);
 
@@ -848,8 +848,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         ISD::UADDSAT, ISD::USUBSAT, ISD::SADDSAT, ISD::SSUBSAT},
                        MVT::v2i16, Legal);
 
-    setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMINNUM_IEEE,
-                        ISD::FMAXNUM_IEEE, ISD::FCANONICALIZE},
+    setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FABS,
+                        ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
+                        ISD::FCANONICALIZE},
                        MVT::v2f16, Legal);
 
     setOperationAction(ISD::EXTRACT_VECTOR_ELT,
@@ -871,7 +872,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     for (MVT VT : {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16})
       // Split vector operations.
-      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FABS,
+                          ISD::FCANONICALIZE},
                          VT, Custom);
 
     setOperationAction(
@@ -17420,7 +17422,7 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
 }
 
 static bool isCtlzOpc(unsigned Opc) {
-  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF;
+  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_POISON;
 }
 
 SDValue SITargetLowering::performSubCombine(SDNode *N,
@@ -19810,7 +19812,7 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
       return !TRI->isSGPRReg(MRI, Reg);
 
     if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
-      return UA->isDivergent(V);
+      return UA->isDivergentAtDef(V);
 
     assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
     return !TRI->isSGPRReg(MRI, Reg);

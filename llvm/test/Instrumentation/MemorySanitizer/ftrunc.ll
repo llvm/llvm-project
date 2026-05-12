@@ -20,9 +20,13 @@ define float @trunc_unsigned_f32(float %x) #0 {
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    [[I:%.*]] = fptoui float [[X]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP4]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[I]] to float
-; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %i = fptoui float %x to i32
@@ -35,9 +39,13 @@ define double @trunc_unsigned_f64(double %x) #0 {
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i64
 ; CHECK-NEXT:    [[I:%.*]] = fptoui double [[X]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP4]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = uitofp i64 [[I]] to double
-; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %i = fptoui double %x to i64
@@ -50,9 +58,13 @@ define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
 ; CHECK-SAME: <4 x float> [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[I:%.*]] = fptoui <4 x float> [[X]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i1> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[R:%.*]] = uitofp <4 x i32> [[I]] to <4 x float>
-; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %i = fptoui <4 x float> %x to <4 x i32>
@@ -65,9 +77,13 @@ define <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) #0 {
 ; CHECK-SAME: <2 x double> [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[I:%.*]] = fptoui <2 x double> [[X]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <2 x i1> [[TMP4]] to <2 x i64>
 ; CHECK-NEXT:    [[R:%.*]] = uitofp <2 x i64> [[I]] to <2 x double>
-; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %i = fptoui <2 x double> %x to <2 x i64>
@@ -80,9 +96,13 @@ define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
 ; CHECK-SAME: <4 x double> [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i64>
 ; CHECK-NEXT:    [[I:%.*]] = fptoui <4 x double> [[X]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i1> [[TMP4]] to <4 x i64>
 ; CHECK-NEXT:    [[R:%.*]] = uitofp <4 x i64> [[I]] to <4 x double>
-; CHECK-NEXT:    store <4 x i64> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
   %i = fptoui <4 x double> %x to <4 x i64>
@@ -95,9 +115,13 @@ define float @trunc_signed_f32_nsz(float %x) #0 {
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    [[I:%.*]] = fptosi float [[X]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP4]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to float
-; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %i = fptosi float %x to i32
@@ -110,9 +134,11 @@ define double @trunc_signed32_f64_no_fast_math(double %x) #0 {
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    [[I:%.*]] = fptosi double [[X]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP4]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to double
 ; CHECK-NEXT:    store i64 [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[R]]
@@ -127,9 +153,11 @@ define double @trunc_signed32_f64_nsz(double %x) #0 {
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    [[I:%.*]] = fptosi double [[X]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP4]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to double
 ; CHECK-NEXT:    store i64 [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[R]]
@@ -144,8 +172,11 @@ define double @trunc_f32_signed32_f64_nsz(float %x) #0 {
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP5]] to i32
 ; CHECK-NEXT:    [[I:%.*]] = fptosi float [[X]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP4]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to double
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[R]]
@@ -160,8 +191,11 @@ define float @trunc_f64_signed32_f32_nsz(double %x) #0 {
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP5]] to i32
 ; CHECK-NEXT:    [[I:%.*]] = fptosi double [[X]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP4]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to float
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[R]]
@@ -176,9 +210,13 @@ define double @trunc_signed_f64_nsz(double %x) #0 {
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i64
 ; CHECK-NEXT:    [[I:%.*]] = fptosi double [[X]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP4]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = sitofp i64 [[I]] to double
-; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %i = fptosi double %x to i64
@@ -191,9 +229,13 @@ define <4 x float> @trunc_signed_v4f32_nsz(<4 x float> %x) #0 {
 ; CHECK-SAME: <4 x float> [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[I:%.*]] = fptosi <4 x float> [[X]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i1> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[R:%.*]] = sitofp <4 x i32> [[I]] to <4 x float>
-; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %i = fptosi <4 x float> %x to <4 x i32>
@@ -206,9 +248,13 @@ define <2 x double> @trunc_signed_v2f64_nsz(<2 x double> %x) #0 {
 ; CHECK-SAME: <2 x double> [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[I:%.*]] = fptosi <2 x double> [[X]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <2 x i1> [[TMP4]] to <2 x i64>
 ; CHECK-NEXT:    [[R:%.*]] = sitofp <2 x i64> [[I]] to <2 x double>
-; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %i = fptosi <2 x double> %x to <2 x i64>
@@ -221,9 +267,13 @@ define <4 x double> @trunc_signed_v4f64_nsz(<4 x double> %x) #0 {
 ; CHECK-SAME: <4 x double> [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i64>
 ; CHECK-NEXT:    [[I:%.*]] = fptosi <4 x double> [[X]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i1> [[TMP4]] to <4 x i64>
 ; CHECK-NEXT:    [[R:%.*]] = sitofp <4 x i64> [[I]] to <4 x double>
-; CHECK-NEXT:    store <4 x i64> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
   %i = fptosi <4 x double> %x to <4 x i64>
@@ -236,8 +286,11 @@ define float @trunc_unsigned_f32_disable_via_intrinsic(float %x) #0 {
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float [[X]])
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = sext i1 [[TMP4]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[I]] to float
 ; CHECK-NEXT:    store i32 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[R]]
@@ -252,8 +305,11 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i64
 ; CHECK-NEXT:    [[I:%.*]] = call i64 @llvm.fptosi.sat.i64.f64(double [[X]])
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = sext i1 [[TMP4]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = sitofp i64 [[I]] to double
 ; CHECK-NEXT:    store i64 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[R]]
