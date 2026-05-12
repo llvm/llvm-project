@@ -670,7 +670,8 @@ public:
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const;
 
   /// Returns true if the target machine supports masked loads or stores
-  /// for \p I's data type and alignment.
+  /// for \p I's data type and alignment. The caller must ensure the access is
+  /// consecutive or part of an interleave group.
   bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
 
   /// Returns true if the target machine can represent \p V as a masked gather

@@ -48,7 +48,7 @@ define {<8 x half>, <8 x half>} @vector_deinterleave_v8f16_v16f16(<16 x half> %v
 define {<2 x float>, <2 x float>} @vector_deinterleave_v2f32_v4f32(<4 x float> %vec) {
 ; CHECK-SD-LABEL: vector_deinterleave_v2f32_v4f32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    zip1 v2.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    zip2 v1.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    fmov d0, d2
@@ -236,12 +236,10 @@ define {<1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>} @vector_deinterleave4_v1i64_
 ; CHECK-LABEL: vector_deinterleave4_v1i64_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v2.16b, v1.16b
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    mov d3, v2.d[1]
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    // kill: def $d3 killed $d3 killed $q3
 ; CHECK-NEXT:    ret
   %retval = call {<1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>} @llvm.vector.deinterleave4.v4i64(<4 x i64> %vec)
   ret {<1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>} %retval
@@ -298,8 +296,8 @@ define {<8 x half>, <8 x half>, <8 x half>, <8 x half>} @vector_deinterleave4_v8
 define {<2 x float>, <2 x float>, <2 x float>, <2 x float>} @vector_deinterleave4_v2f32_v8f32(<8 x float> %vec) {
 ; CHECK-LABEL: vector_deinterleave4_v2f32_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d2, v1.d[1]
+; CHECK-NEXT:    mov d3, v0.d[1]
 ; CHECK-NEXT:    uzp1 v4.2s, v1.2s, v2.2s
 ; CHECK-NEXT:    uzp1 v5.2s, v0.2s, v3.2s
 ; CHECK-NEXT:    uzp2 v6.2s, v1.2s, v2.2s
@@ -333,12 +331,10 @@ define {<1 x double>, <1 x double>, <1 x double>, <1 x double>} @vector_deinterl
 ; CHECK-LABEL: vector_deinterleave4_v1f64_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v2.16b, v1.16b
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    mov d3, v2.d[1]
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    // kill: def $d3 killed $d3 killed $q3
 ; CHECK-NEXT:    ret
   %retval = call {<1 x double>, <1 x double>, <1 x double>, <1 x double>} @llvm.vector.deinterleave4.v4f64(<4 x double> %vec)
   ret {<1 x double>, <1 x double>, <1 x double>, <1 x double>} %retval
