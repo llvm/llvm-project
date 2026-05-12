@@ -7464,12 +7464,10 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
       getIConstantVRegValWithLookThrough(False, MRI);
 
   // Use KnownBits to determine zeros when not a constant.
-  bool TrueIsZero = TrueOpt
-                        ? TrueOpt->Value.isZero()
-                        : (VT && VT->getKnownBits(True).isZero());
-  bool FalseIsZero = FalseOpt
-                         ? FalseOpt->Value.isZero()
-                         : (VT && VT->getKnownBits(False).isZero());
+  bool TrueIsZero = TrueOpt ? TrueOpt->Value.isZero()
+                            : (VT && VT->getKnownBits(True).isZero());
+  bool FalseIsZero = FalseOpt ? FalseOpt->Value.isZero()
+                              : (VT && VT->getKnownBits(False).isZero());
 
   // Patterns with a constant true value and a zero false value.
   if (TrueOpt && FalseIsZero) {
