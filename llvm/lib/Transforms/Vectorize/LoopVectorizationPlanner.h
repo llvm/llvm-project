@@ -937,7 +937,10 @@ private:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
   /// legal to vectorize the loop.
-  void buildVPlans(ElementCount MinVF, ElementCount MaxVF);
+  void buildVPlans(VPlan &VPlan0, ElementCount MinVF, ElementCount MaxVF);
+
+  /// Build base VPlan0 with scalar transformations applied.
+  VPlanPtr buildVPlan0();
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
