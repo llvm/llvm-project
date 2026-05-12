@@ -11331,7 +11331,7 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
                      .setMIFlag(MachineInstr::FrameDestroy);
 
   MachineFunction &MF = *MBB.getParent();
-  const auto *AFI = MBB.getParent()->getInfo<AArch64FunctionInfo>();
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   auto &AFL = *static_cast<const AArch64FrameLowering *>(
       MF.getSubtarget().getFrameLowering());
   if (AFL.getArgumentStackToRestore(MF, MBB)) {

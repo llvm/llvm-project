@@ -584,7 +584,7 @@ public:
   /// branch protection uses PAuthLR but the subtarget lacks PAuthLR
   /// instructions. If the epilogue has callee-popped argument stack to restore,
   /// it additionally implicit defines X15 and X17 to cover clobbered registers
-  /// for the requried sequence on subtargets both with and without PAuthLR
+  /// for the required sequence on subtargets both with and without PAuthLR
   /// instructions.
   void createPauthEpilogueInstr(MachineBasicBlock &MBB, DebugLoc DL) const;
 
