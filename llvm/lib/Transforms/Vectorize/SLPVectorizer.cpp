@@ -19214,7 +19214,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       if (User && User->hasOneUse() &&
           isa<LoadInst, StoreInst>(User->user_back())) {
         Type *LocalTy = getValueType(User->user_back());
-        if (!UserScalarTy) {
+        if (!UserScalarTy && !isa<ScalableVectorType>(LocalTy)) {
           UserScalarTy = LocalTy;
         } else if (UserScalarTy != LocalTy) {
           AllUsersGEPSWithStoresLoads = false;
@@ -28661,7 +28661,8 @@ public:
       // original scalar identity operations on matched horizontal reductions).
       IsSupportedHorRdxIdentityOp =
           RK == ReductionOrdering::Unordered && RdxKind != RecurKind::Mul &&
-          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd;
+          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd &&
+          (!SLPReVec || !S.getMainOp()->getType()->isVectorTy());
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)

@@ -776,6 +776,10 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
       VNInfo *VNI = getVNInfoFromReg(AVL.getReg(), MI, LIS);
       VNInfo *PrevVNI = getVNInfoFromReg(AVL.getReg(), PrevMI, LIS);
       if (!VNI || !PrevVNI || VNI != PrevVNI) {
+        // If LIS is null, we were not able to get the VNInfo so we don't know
+        // if the AVL def needs to be moved.
+        if (!LIS)
+          return false;
         // If the AVL is defined by a load immediate instruction (ADDI x0, imm),
         // it can be moved earlier since it has no register dependencies.
         if (!AVL.getReg().isVirtual())
