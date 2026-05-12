@@ -24,7 +24,7 @@ float4 test_binary_double4(double4 p0) {
 }
 
 float4x4 test_binary_double4x4(double4x4 p0) {
-  // ATAN2: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x 64 bit API lowering for [[FUNC]] is deprecated. Explicitly cast parameters to 32 or 16 bit types.
+  // CHECK-MAT: warning: '[[FUNC]]<4U, 4U>' is deprecated: In 202x 64 bit API lowering for [[FUNC]] is deprecated. Explicitly cast parameters to 32 or 16 bit types.
   return FUNC(p0, p0);
 }
 
