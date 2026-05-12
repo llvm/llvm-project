@@ -11618,61 +11618,59 @@ SDValue PPCTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget.isPPC64())
     return Op;
 
-  // Apply the optimization to Power8 and 64-bits which allows parallelism
-  // for rotate instructions which should make the bswap64 builtin faster.
-  if (!Subtarget.hasP9Vector()) {
-    SDValue Input = Op.getOperand(0);
-    // Helper lambda for rotate-and-insert operations (RLWIMI/RLDIMI)
-    auto CreateRotateInsert =
-        [&](unsigned Opcode, MVT VT, SDValue Dest, SDValue Src, unsigned RotAmt,
-            unsigned MaskBegin,
-            std::optional<unsigned> MaskEnd = std::nullopt) -> SDValue {
-      SmallVector<SDValue, 5> Ops = {
-          Dest, Src, DAG.getTargetConstant(RotAmt, dl, MVT::i32),
-          DAG.getTargetConstant(MaskBegin, dl, MVT::i32)};
-      if (MaskEnd.has_value())
-        Ops.push_back(DAG.getTargetConstant(*MaskEnd, dl, MVT::i32));
-
-      return SDValue(DAG.getMachineNode(Opcode, dl, VT, Ops), 0);
-    };
-
-    // Helper lambda to perform 32-bit byte swap: rotl(8) + 2x rlwimi
-    auto Swap32 = [&](SDValue Val32) -> SDValue {
-      SDValue Rot = DAG.getNode(ISD::ROTL, dl, MVT::i32, Val32,
-                                DAG.getConstant(8, dl, MVT::i32));
-      // Insert bits [24:31] from Val32 into Rot at position [0:7]
-      SDValue Swap =
-          CreateRotateInsert(PPC::RLWIMI, MVT::i32, Rot, Val32, 24, 0, 7);
-      // Insert bits [16:23] from Val32 into Swap at position [16:23]
-      return CreateRotateInsert(PPC::RLWIMI, MVT::i32, Swap, Val32, 24, 16, 23);
-    };
-    // Extract and swap high and low 32 bits independently (enables parallelism)
-    SDValue Hi32 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32,
-                               DAG.getNode(ISD::SRL, dl, MVT::i64, Input,
-                                           DAG.getConstant(32, dl, MVT::i64)));
-    SDValue Lo32 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Input);
-
-    // Combine swapped halves using rldimi: rotate LoSwap left by 32 to place it
-    // in the upper 32 bits, inserting into HiSwap which occupies the lower 32
-    // bits. This swaps the two halves' positions, completing the 64-bit
-    // reversal.
-    SDValue HiSwap = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Swap32(Hi32));
-    SDValue LoSwap = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Swap32(Lo32));
-
-    return CreateRotateInsert(PPC::RLDIMI, MVT::i64, HiSwap, LoSwap, 32, 0);
+  if (Subtarget.hasP9Vector()) {
+    // MTVSRDD
+    Op = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v2i64, Op.getOperand(0),
+                     Op.getOperand(0));
+    // XXBRD
+    Op = DAG.getNode(ISD::BSWAP, dl, MVT::v2i64, Op);
+    // MFVSRD
+    int VectorIndex = 0;
+    if (Subtarget.isLittleEndian())
+      VectorIndex = 1;
+    Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Op,
+                     DAG.getTargetConstant(VectorIndex, dl, MVT::i32));
+    return Op;
   }
-  // MTVSRDD
-  Op = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v2i64, Op.getOperand(0),
-                   Op.getOperand(0));
-  // XXBRD
-  Op = DAG.getNode(ISD::BSWAP, dl, MVT::v2i64, Op);
-  // MFVSRD
-  int VectorIndex = 0;
-  if (Subtarget.isLittleEndian())
-    VectorIndex = 1;
-  Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Op,
-                   DAG.getTargetConstant(VectorIndex, dl, MVT::i32));
-  return Op;
+
+  // For Power8, use parallel rotate instructions for faster bswap64.
+  SDValue Input = Op.getOperand(0);
+  // Helper to create rotate-and-insert operations (RLWIMI/RLDIMI).
+  auto CreateRotateInsert =
+      [&](unsigned Opcode, MVT VT, SDValue Dest, SDValue Src, unsigned RotAmt,
+          unsigned MaskBegin,
+          std::optional<unsigned> MaskEnd = std::nullopt) -> SDValue {
+    SmallVector<SDValue, 5> Ops = {
+        Dest, Src, DAG.getTargetConstant(RotAmt, dl, MVT::i32),
+        DAG.getTargetConstant(MaskBegin, dl, MVT::i32)};
+    if (MaskEnd.has_value())
+      Ops.push_back(DAG.getTargetConstant(*MaskEnd, dl, MVT::i32));
+
+    return SDValue(DAG.getMachineNode(Opcode, dl, VT, Ops), 0);
+  };
+
+  // Helper to perform 32-bit byte swap using rotl(8) + 2x rlwimi.
+  auto Swap32 = [&](SDValue Val32) -> SDValue {
+    SDValue Rot = DAG.getNode(ISD::ROTL, dl, MVT::i32, Val32,
+                              DAG.getConstant(8, dl, MVT::i32));
+    // Insert bits [24:31] from Val32 into Rot at position [0:7].
+    SDValue Swap =
+        CreateRotateInsert(PPC::RLWIMI, MVT::i32, Rot, Val32, 24, 0, 7);
+    // Insert bits [16:23] from Val32 into Swap at position [16:23].
+    return CreateRotateInsert(PPC::RLWIMI, MVT::i32, Swap, Val32, 24, 16, 23);
+  };
+  // Extract and swap high and low 32-bit halves independently for parallelism.
+  SDValue Hi32 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32,
+                             DAG.getNode(ISD::SRL, dl, MVT::i64, Input,
+                                         DAG.getConstant(32, dl, MVT::i64)));
+  SDValue Lo32 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Input);
+
+  // Combine swapped halves: rotate LoSwap left by 32 bits and insert into
+  // HiSwap to swap their positions, completing the 64-bit byte reversal.
+  SDValue HiSwap = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Swap32(Hi32));
+  SDValue LoSwap = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Swap32(Lo32));
+
+  return CreateRotateInsert(PPC::RLDIMI, MVT::i64, HiSwap, LoSwap, 32, 0);
 }
 
 // ATOMIC_CMP_SWAP for i8/i16 needs to zero-extend its input since it will be
