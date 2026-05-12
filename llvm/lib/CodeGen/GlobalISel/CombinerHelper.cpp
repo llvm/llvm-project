@@ -6105,10 +6105,10 @@ void CombinerHelper::applyUDivByPow2(MachineInstr &MI) const {
 
 void CombinerHelper::applySimplifySRemByPow2(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_SREM && "Expected SREM");
-  auto &SRem = cast<GenericMachineInstr>(MI);
+  auto &SRem = cast<GBinOp>(MI);
   Register Dst = SRem.getReg(0);
-  Register LHS = SRem.getReg(1);
-  Register RHS = SRem.getReg(2);
+  Register LHS = SRem.getLHSReg();
+  Register RHS = SRem.getRHSReg();
   LLT Ty = MRI.getType(Dst);
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
 
