@@ -20,9 +20,8 @@ using namespace llvm;
 void InstructionCost::print(raw_ostream &OS) const {
   using UnsignedCostType = std::make_unsigned_t<CostType>;
   if (isValid()) {
-    UnsignedCostType AbsValue = (Value < 0)
-                                    ? -((std::make_unsigned_t<CostType>)(Value))
-                                    : ((std::make_unsigned_t<CostType>)(Value));
+    UnsignedCostType AbsValue =
+        (Value < 0) ? -((UnsignedCostType)Value) : ((UnsignedCostType)Value);
     UnsignedCostType WholeNumber = AbsValue / CostGranularity;
     UnsignedCostType Remainder = AbsValue % CostGranularity;
     if (Value < 0)
