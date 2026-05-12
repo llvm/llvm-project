@@ -603,10 +603,6 @@ bool CompilerInstanceWithContext::computeDependencies(
 
   assert(CB && "Must have PPCallbacks after module loading");
   CB->moduleImport(SourceLocation(), Path, ModResult);
-  // Note that we are calling the CB's EndOfMainFile function, which
-  // forwards the results to the dependency consumer.
-  // It does not indicate the end of processing the fake file.
-  CB->EndOfMainFile();
 
   if (!ModResult)
     return false;
@@ -614,6 +610,7 @@ bool CompilerInstanceWithContext::computeDependencies(
   if (CI.getDiagnostics().hasErrorOccurred())
     return false;
 
+  MDC->run();
   MDC->applyDiscoveredDependencies(ModuleInvocation);
 
   if (!Controller.finalize(CI, ModuleInvocation))
