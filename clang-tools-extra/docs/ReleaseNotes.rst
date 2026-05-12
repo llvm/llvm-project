@@ -163,6 +163,13 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
   JSON when the source file path contains characters that require JSON escaping.
 
+- Ensured that :program:`clang-tidy` and the clang compiler uses the same logic
+  for the suppression of compiler diagnostics in system headers and expansions
+  of macros defined in system headers. Previously the default setting of tidy
+  overzealously suppressed some diagnostics that would have been emitted by the
+  compiler. (E.g. tidy suppressed many ``clang-diagnostic-invalid-offsetof``
+  reports because they usually occur in expansion of the macro ``offsetof``.)
+
 New checks
 ^^^^^^^^^^
 
