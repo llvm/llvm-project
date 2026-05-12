@@ -113,150 +113,102 @@ foreach IntTy = ["I32", "I64", "I128"] in {
   def CTPOP_#IntTy : RuntimeLibcall;
 }
 
-foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
-  def ADD_#FPTy : RuntimeLibcall;
-  def FAST_ADD_#FPTy : RuntimeLibcall;
 
-  def SUB_#FPTy : RuntimeLibcall;
-  def FAST_SUB_#FPTy : RuntimeLibcall;
+class TypeSuffix<string S, FuncArgType Ty> {
+  string Suffix = S;
+  FuncArgType Type = Ty;
+}
+def F32 : TypeSuffix<"F32", Flt>;
+def F64 : TypeSuffix<"F64", Dbl>;
+def F80 : TypeSuffix<"F80", LDbl>;
+def F128 : TypeSuffix<"F128", LDbl>;
+def PPCF128 : TypeSuffix<"PPCF128", LDbl>;
 
-  def MUL_#FPTy : RuntimeLibcall;
-  def FAST_MUL_#FPTy : RuntimeLibcall;
+foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
+  def ADD_#FPTy.Suffix : RuntimeLibcall;
+  def FAST_ADD_#FPTy.Suffix : RuntimeLibcall;
 
-  def DIV_#FPTy : RuntimeLibcall;
-  def FAST_DIV_#FPTy : RuntimeLibcall;
+  def SUB_#FPTy.Suffix : RuntimeLibcall;
+  def FAST_SUB_#FPTy.Suffix : RuntimeLibcall;
 
-  //def REM_#FPTy : RuntimeLibcall;
-  def FMA_#FPTy : RuntimeLibcall;
-  def POWI_#FPTy : RuntimeLibcall;
+  def MUL_#FPTy.Suffix : RuntimeLibcall;
+  def FAST_MUL_#FPTy.Suffix : RuntimeLibcall;
 
-  //def SQRT_#FPTy : RuntimeLibcall;
-  def FAST_SQRT_#FPTy : RuntimeLibcall;
+  def DIV_#FPTy.Suffix : RuntimeLibcall;
+  def FAST_DIV_#FPTy.Suffix : RuntimeLibcall;
 
-  //def CBRT_#FPTy : RuntimeLibcall;
-  //def LOG_#FPTy : RuntimeLibcall;
-  //def LOG_FINITE_#FPTy : RuntimeLibcall;
-  //def LOG2_#FPTy : RuntimeLibcall;
-  //def LOG2_FINITE_#FPTy : RuntimeLibcall;
-  //def LOG10_#FPTy : RuntimeLibcall;
-  //def LOG10_FINITE_#FPTy : RuntimeLibcall;
-  //def EXP_#FPTy : RuntimeLibcall;
-  //def EXP_FINITE_#FPTy : RuntimeLibcall;
-  //def EXP2_#FPTy : RuntimeLibcall;
-  //def EXP2_FINITE_#FPTy : RuntimeLibcall;
-  //def EXP10_#FPTy : RuntimeLibcall;
-  def EXP10_FINITE_#FPTy : RuntimeLibcall;
-  //def SIN_#FPTy : RuntimeLibcall;
-  //def COS_#FPTy : RuntimeLibcall;
-  //def TAN_#FPTy : RuntimeLibcall;
-  //def SINH_#FPTy : RuntimeLibcall;
-  //def COSH_#FPTy : RuntimeLibcall;
-  //def TANH_#FPTy : RuntimeLibcall;
-  //def ASIN_#FPTy : RuntimeLibcall;
-  //def ACOS_#FPTy : RuntimeLibcall;
-  //def ATAN_#FPTy : RuntimeLibcall;
-  //def ATAN2_#FPTy : RuntimeLibcall;
-  //def SINCOS_#FPTy : RuntimeLibcall;
-  //def REMQUO_#FPTy : RuntimeLibcall;
-  //def FDIM_#FPTy : RuntimeLibcall;
+  def REM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMA_#FPTy.Suffix : RuntimeLibcall;
+  def POWI_#FPTy.Suffix : RuntimeLibcall;
 
-  //def CABS_#FPTy : RuntimeLibcall;
+  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def FAST_SQRT_#FPTy.Suffix : RuntimeLibcall;
 
-  def REM_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
-  def SQRT_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def CBRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG10_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG10_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP10_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP10_FINITE_#FPTy.Suffix : RuntimeLibcall;
+  def SIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def COS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def TAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def SINH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def COSH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def TANH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ASIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ACOS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ATAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ATAN2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
+  def REMQUO_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]>;
+  def FDIM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 
-  def CBRT_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def LOG_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def LOG_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def LOG2_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def LOG2_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def LOG10_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def LOG10_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def EXP_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def EXP_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def EXP2_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def EXP2_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def EXP10_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-
-  def SIN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def COS_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def TAN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def SINH_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def COSH_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def TANH_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def ASIN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def ACOS_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def ATAN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def ATAN2_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
-  def SINCOS_#FPTy : FPRuntimeLibcall<FPTy, Void, [Flt, Ptr, Ptr]>;
-  def REMQUO_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt, Ptr]>;
-  def FDIM_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
-
-  def CABS_#FPTy : FPRuntimeLibcall<FPTy, NoneType, []>;
+  def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
 }
 
 foreach FPTy = [ "F32", "F64" ] in {
   def SINCOS_STRET_#FPTy : RuntimeLibcall;
 }
 
-foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
-  //def POW_#FPTy : RuntimeLibcall;
-  //def POW_FINITE_#FPTy : RuntimeLibcall;
-  //def CEIL_#FPTy : RuntimeLibcall;
-  //def TRUNC_#FPTy : RuntimeLibcall;
-  //def RINT_#FPTy : RuntimeLibcall;
-  //def NEARBYINT_#FPTy : RuntimeLibcall;
-  //def ROUND_#FPTy : RuntimeLibcall;
-  //def ROUNDEVEN_#FPTy : RuntimeLibcall;
-  //def FLOOR_#FPTy : RuntimeLibcall;
-  //def COPYSIGN_#FPTy : RuntimeLibcall;
-  //def FMIN_#FPTy : RuntimeLibcall;
-  //def FMAX_#FPTy : RuntimeLibcall;
-  def FMINIMUM_#FPTy : RuntimeLibcall;
-  def FMAXIMUM_#FPTy : RuntimeLibcall;
-  //def FMINIMUM_NUM_#FPTy : RuntimeLibcall;
-  //def FMAXIMUM_NUM_#FPTy : RuntimeLibcall;
-  def LROUND_#FPTy : RuntimeLibcall;
-  def LLROUND_#FPTy : RuntimeLibcall;
-  def LRINT_#FPTy : RuntimeLibcall;
-  def LLRINT_#FPTy : RuntimeLibcall;
-  //def LDEXP_#FPTy : RuntimeLibcall;
-  //def FREXP_#FPTy : RuntimeLibcall;
-  def SINCOSPI_#FPTy : RuntimeLibcall;
-  //def MODF_#FPTy : RuntimeLibcall;
-  //def NAN_#FPTy : RuntimeLibcall;
-  //def NEXTTOWARD_#FPTy : RuntimeLibcall;
-  //def REMAINDER_#FPTy : RuntimeLibcall;
-  //def SCALBLN_#FPTy : RuntimeLibcall;
-  //def SCALBN_#FPTy : RuntimeLibcall;
-  //def TGAMMA_#FPTy : RuntimeLibcall;
-
-  def POW_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
-  def POW_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
-  def CEIL_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def TRUNC_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def RINT_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def NEARBYINT_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def ROUND_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def ROUNDEVEN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def FLOOR_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
-  def COPYSIGN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
-  def FMIN_#FPTy : FPRuntimeLibcall<FPTy, Floating, [Same, Same]>;
-  def FMAX_#FPTy : FPRuntimeLibcall<FPTy, Floating, [Same, Same]>;
-
-  def FMINIMUM_NUM_#FPTy : FPRuntimeLibcall<FPTy, Floating, [Same, Same]>;
-  def FMAXIMUM_NUM_#FPTy : FPRuntimeLibcall<FPTy, Floating, [Same, Same]>;
-
-  def LDEXP_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Int]>;
-  def FREXP_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Ptr]>;
-
-  def MODF_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Ptr]>;
-  def NAN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Ptr]>;
-  def NEXTTOWARD_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, LDbl]>;
-  def REMAINDER_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
-  def SCALBLN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Long]>;
-  def SCALBN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Int]>;
-  def TGAMMA_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
+  def POW_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def POW_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def CEIL_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def TRUNC_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def RINT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def NEARBYINT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ROUND_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ROUNDEVEN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def FLOOR_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def COPYSIGN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMIN_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
+  def FMAX_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
+  def FMINIMUM_#FPTy.Suffix : RuntimeLibcall;
+  def FMAXIMUM_#FPTy.Suffix : RuntimeLibcall;
+  def FMINIMUM_NUM_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
+  def FMAXIMUM_NUM_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
+  def LROUND_#FPTy.Suffix : RuntimeLibcall;
+  def LLROUND_#FPTy.Suffix : RuntimeLibcall;
+  def LRINT_#FPTy.Suffix : RuntimeLibcall;
+  def LLRINT_#FPTy.Suffix : RuntimeLibcall;
+  def LDEXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
+  def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
+  def SINCOSPI_#FPTy.Suffix : RuntimeLibcall;
+  def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
+  def NAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [Ptr]>;
+  def NEXTTOWARD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, LDbl]>;
+  def REMAINDER_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def SCALBLN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Long]>;
+  def SCALBN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
+  def TGAMMA_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
 }
 
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
