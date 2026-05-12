@@ -131,7 +131,7 @@
 ; RUN: diff %t5 %t8
 
 ; Test malformed outer OffloadBinary is handled gracefully.
-; RUN: printf "\x10\xff\x10\xad\x0a" > %t9
+; RUN: printf "\020\377\020\255\012" > %t9
 ; RUN: not llvm-offload-binary %t9 2>&1 | FileCheck --check-prefix=MALFORMED-OUTER %s
 
 ; MALFORMED-OUTER: llvm-offload-binary: error: Invalid data was encountered while parsing the file
