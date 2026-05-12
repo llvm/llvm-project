@@ -473,32 +473,30 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
     if (match(Op1, m_Add(m_Value(A), m_APInt(AddC))) && AddC->isNegative() &&
         (-*AddC).ult(BitWidth)) {
       unsigned PosOffset = (-*AddC).getZExtValue();
-
-      auto isSuitableForPreShift = [PosOffset, &I, AC]() {
-        switch (I.getOpcode()) {
-        default:
-          return false;
-        case Instruction::Shl:
-          return (I.hasNoSignedWrap() || I.hasNoUnsignedWrap()) &&
-                 AC->eq(AC->lshr(PosOffset).shl(PosOffset));
-        case Instruction::LShr:
-          return I.isExact() && AC->eq(AC->shl(PosOffset).lshr(PosOffset));
-        case Instruction::AShr:
-          return I.isExact() && AC->eq(AC->shl(PosOffset).ashr(PosOffset));
-        }
-      };
-      if (isSuitableForPreShift()) {
-        Constant *NewC = ConstantInt::get(Ty, I.getOpcode() == Instruction::Shl
-                                                  ? AC->lshr(PosOffset)
-                                                  : AC->shl(PosOffset));
-        BinaryOperator *NewShiftOp =
-            BinaryOperator::Create(I.getOpcode(), NewC, A);
-        if (I.getOpcode() == Instruction::Shl) {
+      switch (I.getOpcode()) {
+      default:
+        llvm_unreachable("Expected a shift");
+      case Instruction::Shl:
+        if ((I.hasNoSignedWrap() || I.hasNoUnsignedWrap()) &&
+            AC->eq(AC->lshr(PosOffset).shl(PosOffset))) {
+          Constant *NewC = ConstantInt::get(Ty, AC->lshr(PosOffset));
+          BinaryOperator *NewShiftOp = BinaryOperator::CreateShl(NewC, A);
           NewShiftOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-        } else {
-          NewShiftOp->setIsExact();
+          return NewShiftOp;
         }
-        return NewShiftOp;
+        break;
+      case Instruction::LShr:
+        if (I.isExact() && AC->eq(AC->shl(PosOffset).lshr(PosOffset))) {
+          Constant *NewC = ConstantInt::get(Ty, AC->shl(PosOffset));
+          return BinaryOperator::CreateExactLShr(NewC, A);
+        }
+        break;
+      case Instruction::AShr:
+        if (I.isExact() && AC->eq(AC->shl(PosOffset).ashr(PosOffset))) {
+          Constant *NewC = ConstantInt::get(Ty, AC->shl(PosOffset));
+          return BinaryOperator::CreateExactAShr(NewC, A);
+        }
+        break;
       }
     }
 
