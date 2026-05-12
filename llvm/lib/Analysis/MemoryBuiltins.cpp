@@ -101,13 +101,23 @@ static StringRef mangledNameForMallocFamily(const MallocFamily &Family) {
 }
 
 struct AllocFnsTy {
+  AllocFnsTy() {}
+  AllocFnsTy(AllocType AllocTy, unsigned NumParams, int FstParam, int SndParam,
+             int AlignParam, MallocFamily Family)
+      : AllocTy(AllocTy), NumParams(NumParams), FstParam(FstParam),
+        SndParam(SndParam), AlignParam(AlignParam),
+        Family(Family) {}
+
+  // TODO: Replace AllocTy with the family (String or enum). Right now these
+  // encode overlapping information and use different sources.
   AllocType AllocTy;
-  unsigned NumParams;
-  // First and Second size parameters (or -1 if unused)
-  int FstParam, SndParam;
-  // Alignment parameter for aligned_alloc and aligned new
-  int AlignParam;
-  // Name of default allocator function to group malloc/free calls by family
+  // The number of parameters of this alloca function.
+  int NumParams = -1;
+  // First and Second size parameters (or -1 if unused).
+  int FstParam = -1, SndParam = -1;
+  // Alignment parameter for aligned_alloc and aligned new.
+  int AlignParam = -1;
+  // Name of default allocator function to group malloc/free calls by family.
   MallocFamily Family;
 };
 
@@ -251,8 +261,8 @@ getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
   Result.NumParams = CB->arg_size();
   Result.FstParam = Args.first;
   Result.SndParam = Args.second.value_or(-1);
-  // Allocsize has no way to specify an alignment argument
-  Result.AlignParam = -1;
+  // AllocAlign defines the alignment parameter.
+  Result.AlignParam = CB->getArgOperandNoWithAttribute(Attribute::AllocAlign);
   return Result;
 }
 
@@ -439,42 +449,62 @@ Constant *llvm::getInitialValueOfAllocation(const Value *V,
   return nullptr;
 }
 
+std::optional<AllocationCallInfo>
+llvm::getAllocationCallInfo(const CallBase *CB, const TargetLibraryInfo *TLI,
+                            Type *InitialValueTy) {
+  std::optional<AllocFnsTy> FnData = getAllocationSize(CB, TLI);
+  if (!FnData)
+    return std::nullopt;
+
+  AllocationCallInfo ACI{};
+  ACI.Family = getAllocationFamily(CB, TLI);
+  ACI.AlignmentArgNo = FnData->AlignParam;
+  ACI.SizeLHSArgNo = FnData->FstParam;
+  ACI.SizeRHSArgNo = FnData->SndParam;
+  ACI.InitialValue = getInitialValueOfAllocation(CB, TLI, InitialValueTy);
+  return ACI;
+}
+
 struct FreeFnsTy {
   unsigned NumParams;
+  // Size parameter, or -1 if not available.
+  int SizeParam;
+  // Alignment parameter for aligned_alloc and aligned new
+  int AlignParam;
   // Name of default allocator function to group malloc/free calls by family
   MallocFamily Family;
 };
 
 // clang-format off
 static const std::pair<LibFunc, FreeFnsTy> FreeFnData[] = {
-    {LibFunc_ZdlPv,                              {1, MallocFamily::CPPNew}},             // operator delete(void*)
-    {LibFunc_ZdaPv,                              {1, MallocFamily::CPPNewArray}},        // operator delete[](void*)
-    {LibFunc_msvc_delete_ptr32,                  {1, MallocFamily::MSVCNew}},            // operator delete(void*)
-    {LibFunc_msvc_delete_ptr64,                  {1, MallocFamily::MSVCNew}},            // operator delete(void*)
-    {LibFunc_msvc_delete_array_ptr32,            {1, MallocFamily::MSVCArrayNew}},       // operator delete[](void*)
-    {LibFunc_msvc_delete_array_ptr64,            {1, MallocFamily::MSVCArrayNew}},       // operator delete[](void*)
-    {LibFunc_ZdlPvj,                             {2, MallocFamily::CPPNew}},             // delete(void*, uint)
-    {LibFunc_ZdlPvm,                             {2, MallocFamily::CPPNew}},             // delete(void*, ulong)
-    {LibFunc_ZdlPvRKSt9nothrow_t,                {2, MallocFamily::CPPNew}},             // delete(void*, nothrow)
-    {LibFunc_ZdlPvSt11align_val_t,               {2, MallocFamily::CPPNewAligned}},      // delete(void*, align_val_t)
-    {LibFunc_ZdaPvj,                             {2, MallocFamily::CPPNewArray}},        // delete[](void*, uint)
-    {LibFunc_ZdaPvm,                             {2, MallocFamily::CPPNewArray}},        // delete[](void*, ulong)
-    {LibFunc_ZdaPvRKSt9nothrow_t,                {2, MallocFamily::CPPNewArray}},        // delete[](void*, nothrow)
-    {LibFunc_ZdaPvSt11align_val_t,               {2, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, align_val_t)
-    {LibFunc_msvc_delete_ptr32_int,              {2, MallocFamily::MSVCNew}},            // delete(void*, uint)
-    {LibFunc_msvc_delete_ptr64_longlong,         {2, MallocFamily::MSVCNew}},            // delete(void*, ulonglong)
-    {LibFunc_msvc_delete_ptr32_nothrow,          {2, MallocFamily::MSVCNew}},            // delete(void*, nothrow)
-    {LibFunc_msvc_delete_ptr64_nothrow,          {2, MallocFamily::MSVCNew}},            // delete(void*, nothrow)
-    {LibFunc_msvc_delete_array_ptr32_int,        {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, uint)
-    {LibFunc_msvc_delete_array_ptr64_longlong,   {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, ulonglong)
-    {LibFunc_msvc_delete_array_ptr32_nothrow,    {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, nothrow)
-    {LibFunc_msvc_delete_array_ptr64_nothrow,    {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, nothrow)
-    {LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t, {3, MallocFamily::CPPNewAligned}},      // delete(void*, align_val_t, nothrow)
-    {LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t, {3, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, align_val_t, nothrow)
-    {LibFunc_ZdlPvjSt11align_val_t,              {3, MallocFamily::CPPNewAligned}},      // delete(void*, unsigned int, align_val_t)
-    {LibFunc_ZdlPvmSt11align_val_t,              {3, MallocFamily::CPPNewAligned}},      // delete(void*, unsigned long, align_val_t)
-    {LibFunc_ZdaPvjSt11align_val_t,              {3, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, unsigned int, align_val_t)
-    {LibFunc_ZdaPvmSt11align_val_t,              {3, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, unsigned long, align_val_t)
+    {LibFunc_ZdlPv,                              {1, -1, -1, MallocFamily::CPPNew}},             // operator delete(void*) 
+    {LibFunc_ZdaPv,                              {1, -1, -1, MallocFamily::CPPNewArray}},        // operator delete[](void*)
+    {LibFunc_msvc_delete_ptr32,                  {1, -1, -1, MallocFamily::MSVCNew}},            // operator delete(void*)
+    {LibFunc_msvc_delete_ptr64,                  {1, -1, -1, MallocFamily::MSVCNew}},            // operator delete(void*)
+    {LibFunc_msvc_delete_array_ptr32,            {1, -1, -1, MallocFamily::MSVCArrayNew}},       // operator delete[](void*)
+    {LibFunc_msvc_delete_array_ptr64,            {1, -1, -1, MallocFamily::MSVCArrayNew}},       // operator delete[](void*)
+    {LibFunc_ZdlPvj,                             {2,  1, -1, MallocFamily::CPPNew}},             // delete(void*, uint)
+    {LibFunc_ZdlPvm,                             {2,  1, -1, MallocFamily::CPPNew}},             // delete(void*, ulong)
+    {LibFunc_ZdlPvRKSt9nothrow_t,                {2, -1, -1, MallocFamily::CPPNew}},             // delete(void*, nothrow)
+    {LibFunc_ZdlPvSt11align_val_t,               {2, -1,  1, MallocFamily::CPPNewAligned}},      // delete(void*, align_val_t)
+    {LibFunc_ZdaPvj,                             {2,  1, -1, MallocFamily::CPPNewArray}},        // delete[](void*, uint)
+    {LibFunc_ZdaPvm,                             {2,  1, -1, MallocFamily::CPPNewArray}},        // delete[](void*, ulong)
+    {LibFunc_ZdaPvRKSt9nothrow_t,                {2, -1, -1, MallocFamily::CPPNewArray}},        // delete[](void*, nothrow)
+    {LibFunc_ZdaPvSt11align_val_t,               {2, -1,  1, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, align_val_t)
+    {LibFunc_msvc_delete_ptr32_int,              {2,  1, -1, MallocFamily::MSVCNew}},            // delete(void*, uint)
+    {LibFunc_msvc_delete_ptr64_longlong,         {2,  1, -1, MallocFamily::MSVCNew}},            // delete(void*, ulonglong)
+    {LibFunc_msvc_delete_ptr32_nothrow,          {2, -1, -1, MallocFamily::MSVCNew}},            // delete(void*, nothrow)
+    {LibFunc_msvc_delete_ptr64_nothrow,          {2, -1, -1, MallocFamily::MSVCNew}},            // delete(void*, nothrow)
+    {LibFunc_msvc_delete_array_ptr32_int,        {2,  1, -1, MallocFamily::MSVCArrayNew}},       // delete[](void*, uint)
+    {LibFunc_msvc_delete_array_ptr64_longlong,   {2,  1, -1, MallocFamily::MSVCArrayNew}},       // delete[](void*, ulonglong)
+    {LibFunc_msvc_delete_array_ptr32_nothrow,    {2, -1, -1, MallocFamily::MSVCArrayNew}},       // delete[](void*, nothrow)
+    {LibFunc_msvc_delete_array_ptr64_nothrow,    {2, -1, -1, MallocFamily::MSVCArrayNew}},       // delete[](void*, nothrow)
+    {LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t, {3, -1,  1, MallocFamily::CPPNewAligned}},      // delete(void*, align_val_t, nothrow)
+    {LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t, {3, -1,  1, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, align_val_t, nothrow)
+    {LibFunc_ZdlPvjSt11align_val_t,              {3,  1,  2, MallocFamily::CPPNewAligned}},      // delete(void*, unsigned int, align_val_t)
+    {LibFunc_ZdlPvmSt11align_val_t,              {3,  1,  2, MallocFamily::CPPNewAligned}},      // delete(void*, unsigned long, align_val_t)
+    {LibFunc_ZdaPvjSt11align_val_t,              {3,  1,  2, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, unsigned int, align_val_t)
+    {LibFunc_ZdaPvmSt11align_val_t,              {3,  1,  2, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, unsigned long, align_val_t)
 };
 // clang-format on
 
@@ -535,20 +565,71 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   return true;
 }
 
-Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
+int llvm::getFreedOperandNo(const CallBase *CB, const TargetLibraryInfo *TLI) {
   if (const Function *Callee = getCalledFunction(CB)) {
     LibFunc TLIFn;
     if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
         isLibFreeFunction(Callee, TLIFn)) {
       // All currently supported free functions free the first argument.
-      return CB->getArgOperand(0);
+      return 0;
     }
   }
 
   if (checkFnAllocKind(CB, AllocFnKind::Free))
-    return CB->getArgOperandWithAttribute(Attribute::AllocatedPointer);
+    return CB->getArgOperandNoWithAttribute(Attribute::AllocatedPointer);
 
+  return -1;
+}
+
+Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
+  int Index = getFreedOperandNo(CB, TLI);
+  if (Index >= 0)
+    return CB->getArgOperand(Index);
   return nullptr;
+}
+
+std::optional<DeallocationCallInfo>
+llvm::getDeallocationCallInfo(const CallBase *CB,
+                              const TargetLibraryInfo *TLI) {
+  const Function *Callee = getCalledFunction(CB);
+  if (!Callee)
+    return std::nullopt;
+
+  LibFunc TLIFn;
+  DeallocationCallInfo DCI{};
+  if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
+      isLibFreeFunction(Callee, TLIFn)) {
+    // Callee is some known library function.
+    std::optional<FreeFnsTy> FnData =
+        getFreeFunctionDataForFunction(Callee, TLIFn);
+    if (FnData) {
+      DCI.Family = mangledNameForMallocFamily(FnData->Family);
+      DCI.FreedOperandArgNo = 0;
+      DCI.SizeArgNo = FnData->SizeParam;
+      DCI.AlignmentArgNo = FnData->AlignParam;
+      return DCI;
+    }
+  }
+
+  // Fallback, check arguments.
+  if (checkFnAllocKind(CB, AllocFnKind::Free))
+    DCI.FreedOperandArgNo =
+        CB->getArgOperandNoWithAttribute(Attribute::AllocatedPointer);
+  if (DCI.FreedOperandArgNo < 0)
+    return std::nullopt;
+
+  DCI.Family = getAllocationFamily(CB, TLI);
+
+  Attribute Attr = CB->getFnAttr(Attribute::AllocSize);
+  if (Attr != Attribute()) {
+    std::pair<unsigned, std::optional<unsigned>> Args = Attr.getAllocSizeArgs();
+    if (Args.first >= 0 && !Args.second) 
+      DCI.SizeArgNo = Args.first;
+  }
+
+  DCI.AlignmentArgNo = CB->getArgOperandNoWithAttribute(Attribute::AllocAlign);
+
+  return DCI;
 }
 
 //===----------------------------------------------------------------------===//

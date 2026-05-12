@@ -1969,6 +1969,10 @@ public:
   /// operand value. Otherwise, return nullptr.
   LLVM_ABI Value *getArgOperandWithAttribute(Attribute::AttrKind Kind) const;
 
+  /// If one of the arguments has the specified attribute, returns its
+  /// operand number. Otherwise, return -1.
+  LLVM_ABI int getArgOperandNoWithAttribute(Attribute::AttrKind Kind) const;
+
   /// Return true if the call should not be treated as a call to a
   /// builtin.
   bool isNoBuiltin() const {
