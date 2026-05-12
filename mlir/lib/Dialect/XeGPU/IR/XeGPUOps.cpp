@@ -924,19 +924,21 @@ LogicalResult DpasMxOp::verify() {
     if (scaleAVecType) {
       auto scaleAShape = scaleAVecType.getShape();
 
-      if (scaleAVecType.getRank() != 2)
-        return emitOpError("Scale A must be a 2D vector when not a scalar.");
+      // Check below only applies if rank is 2
+      // Rank 1 means op is already at lane level.
+      if (scaleAVecType.getRank() == 2) {
 
-      // Verify layout distributability for scale_a
-      if (failed(verifyLayoutDistributable(*this, getLayoutAScale(),
-                                           scaleAShape, "ScaleA")))
-        return failure();
+        // Verify layout distributability for scale_a
+        if (failed(verifyLayoutDistributable(*this, getLayoutAScale(),
+                                             scaleAShape, "ScaleA")))
+          return failure();
 
-      // Validate M dimension: scale_a[0] must match a[0]
-      if (scaleAShape[0] != aShape[0])
-        return emitOpError("Scale A M dimension [")
-               << scaleAShape[0] << "] must match A M dimension [" << aShape[0]
-               << "].";
+        // Validate M dimension: scale_a[0] must match a[0]
+        if (scaleAShape[0] != aShape[0])
+          return emitOpError("Scale A M dimension [")
+                 << scaleAShape[0] << "] must match A M dimension ["
+                 << aShape[0] << "].";
+      }
     }
   }
 
@@ -947,19 +949,21 @@ LogicalResult DpasMxOp::verify() {
     if (scaleBVecType) {
       auto scaleBShape = scaleBVecType.getShape();
 
-      if (scaleBVecType.getRank() != 2)
-        return emitOpError("Scale B must be a 2D vector when not a scalar.");
+      // Check below only applies if rank is 2
+      // Rank 1 means op is already at lane level.
+      if (scaleBVecType.getRank() == 2) {
 
-      // Verify layout distributability for scale_b
-      if (failed(verifyLayoutDistributable(*this, getLayoutBScale(),
-                                           scaleBShape, "ScaleB")))
-        return failure();
+        // Verify layout distributability for scale_b
+        if (failed(verifyLayoutDistributable(*this, getLayoutBScale(),
+                                             scaleBShape, "ScaleB")))
+          return failure();
 
-      // Validate N dimension: scale_b[1] must match b[1]
-      if (scaleBShape[1] != bShape[1])
-        return emitOpError("Scale B N dimension [")
-               << scaleBShape[1] << "] must match B N dimension [" << bShape[1]
-               << "].";
+        // Validate N dimension: scale_b[1] must match b[1]
+        if (scaleBShape[1] != bShape[1])
+          return emitOpError("Scale B N dimension [")
+                 << scaleBShape[1] << "] must match B N dimension ["
+                 << bShape[1] << "].";
+      }
     }
   }
 
@@ -970,15 +974,17 @@ LogicalResult DpasMxOp::verify() {
     auto scaleBVecType = dyn_cast<VectorType>(getScaleBType());
 
     if (scaleAVecType && scaleBVecType) {
-      auto scaleAShape = scaleAVecType.getShape();
-      auto scaleBShape = scaleBVecType.getShape();
+      if (scaleAVecType.getRank() == 2 && scaleBVecType.getRank() == 2) {
+        auto scaleAShape = scaleAVecType.getShape();
+        auto scaleBShape = scaleBVecType.getShape();
 
-      // Validate scale K dimension compatibility: scale_a[1] must match
-      // scale_b[0]
-      if (scaleAShape[1] != scaleBShape[0])
-        return emitOpError("Scale K dimension mismatch: scale_a has K=")
-               << scaleAShape[1] << " but scale_b has K=" << scaleBShape[0]
-               << ".";
+        // Validate scale K dimension compatibility: scale_a[1] must match
+        // scale_b[0]
+        if (scaleAShape[1] != scaleBShape[0])
+          return emitOpError("Scale K dimension mismatch: scale_a has K=")
+                 << scaleAShape[1] << " but scale_b has K=" << scaleBShape[0]
+                 << ".";
+      }
     }
   }
 
