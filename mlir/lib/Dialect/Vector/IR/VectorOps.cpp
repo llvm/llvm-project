@@ -5682,13 +5682,9 @@ struct FoldTransferReadAfterTransferWrite
         !writeOp.getPermutationMap().isMinorIdentity())
       return failure();
 
-    // The fold diverges from the original write+read at positions that are
-    // out-of-bounds: the write does not store there and the read returns
-    // pad, but the fold returns valToStore. This is only a problem when
-    // *both* transfers have OOB dimensions (in_bounds=false). When at
-    // least one side has in_bounds=true, it asserts the position is within
-    // bounds; an actual OOB access is undefined behavior, so the fold
-    // cannot introduce new incorrectness.
+    // We cannot fold when both of them are out of bounds.
+    // If one of them is in bounds but the other one isn't, then
+    // we can take advantage of undefined behaviour to fold.
     if (readOp.hasOutOfBoundsDim() && writeOp.hasOutOfBoundsDim())
       return failure();
 
