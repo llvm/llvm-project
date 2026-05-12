@@ -44,6 +44,13 @@ bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
     location.symbols.push_back(ConstString("pthread_kill"));
     location.symbols_are_regex = true;
     break;
+  case llvm::Triple::Win32:
+    // Windows MSVC CRT can be statically or dynamically linked. With dynamic
+    // linking, abort lives in ucrtbase.dll. With static linking it's embedded
+    // in the executable.
+    // Match on the symbol only to handle both.
+    location.symbols.push_back(ConstString("abort"));
+    break;
   default:
     Log *log = GetLog(LLDBLog::Unwind);
     LLDB_LOG(log, "AssertFrameRecognizer::GetAbortLocation Unsupported OS");
@@ -79,6 +86,10 @@ bool GetAssertLocation(llvm::Triple::OSType os, SymbolLocation &location) {
     location.module_spec = FileSpec("libc.so.6");
     location.symbols.push_back(ConstString("__assert_fail"));
     location.symbols.push_back(ConstString("__GI___assert_fail"));
+    break;
+  case llvm::Triple::Win32:
+    // See comment in GetAbortLocation for why we skip the module check.
+    location.symbols.push_back(ConstString("_wassert"));
     break;
   default:
     Log *log = GetLog(LLDBLog::Unwind);
@@ -160,7 +171,9 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
     SymbolContext sym_ctx =
         prev_frame_sp->GetSymbolContext(eSymbolContextEverything);
 
-    if (!sym_ctx.module_sp ||
+    if (!sym_ctx.module_sp)
+      continue;
+    if (location.module_spec.GetFilename() &&
         !sym_ctx.module_sp->GetFileSpec().FileEquals(location.module_spec))
       continue;
 
