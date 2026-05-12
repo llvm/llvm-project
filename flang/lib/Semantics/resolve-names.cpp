@@ -1511,9 +1511,9 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // attribute.
   if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
       name && name->symbol) {
-    if (Symbol * copy{currScope().CopySymbol(*name->symbol)}) {
+    if (Symbol * copy{currScope().CopySymbol(name->symbol->GetUltimate())}) {
       name->symbol = copy;
-      if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
+      if (auto *object{copy->GetUltimate().detailsIf<ObjectEntityDetails>()}) {
         object->set_cudaDataAttr(common::CUDADataAttr::Device);
       }
     }
@@ -4107,7 +4107,27 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
         if (classification == ProcedureDefinitionClass::External) {
           const auto *subp1{p1.detailsIf<SubprogramDetails>()};
           const auto *subp2{p2.detailsIf<SubprogramDetails>()};
-          return subp1 && subp1->isInterface() && subp2 && subp2->isInterface();
+          if (subp1 && subp1->isInterface() && subp2 && subp2->isInterface()) {
+            // Don't allow merging when either module has a submodule
+            // that provides a body for this procedure.
+            auto hasSubmoduleBody{[](const Symbol &p) {
+              const Scope &owner{p.owner()};
+              if (!owner.IsModule()) {
+                return false;
+              }
+              for (const Scope &child : owner.children()) {
+                if (child.IsSubmodule()) {
+                  auto it{child.find(p.name())};
+                  if (it != child.end() &&
+                      IsProcedure((*it->second).GetUltimate())) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            }};
+            return !hasSubmoduleBody(p1) && !hasSubmoduleBody(p2);
+          }
         } else if (classification == ProcedureDefinitionClass::Module) {
           return AreSameModuleSymbol(p1, p2);
         }
@@ -4687,6 +4707,10 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
           "Name '%s' from host scope should have a type declaration before its local statement function definition"_port_en_US,
           name.source);
       MakeSymbol(name, Attrs{}, UnknownDetails{});
+      // 'name' may still point to a host-associated SubprogramNameDetails
+      // symbol. Reset it so statement-function processing
+      // re-resolves to the new local SubprogramDetails.
+      name.symbol = nullptr;
     } else if (auto *entity{ultimate.detailsIf<EntityDetails>()};
                entity && !ultimate.has<ProcEntityDetails>()) {
       resultType = entity->type();
@@ -6012,7 +6036,11 @@ bool DeclarationVisitor::Pre(const parser::CUDAAttributesStmt &x) {
       if (!symbol) {
         symbol = &MakeSymbol(name, ObjectEntityDetails{});
       }
-      SetCUDADataAttr(name.source, *symbol, attr);
+      if (attr == common::CUDADataAttr::Value) {
+        SetExplicitAttr(*symbol, Attr::VALUE);
+      } else {
+        SetCUDADataAttr(name.source, *symbol, attr);
+      }
     }
   }
   return false;
