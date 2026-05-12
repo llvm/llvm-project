@@ -2119,8 +2119,7 @@ define void @ktest_1(<8 x double> %in, ptr %base) {
 ; KNL-LABEL: ktest_1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vcmpgtpd (%rdi), %zmm0, %k1
-; KNL-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
-; KNL-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
+; KNL-NEXT:    vcmpltpd 8(%rdi), %zmm0, %k0 {%k1}
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb %al, %al
 ; KNL-NEXT:    je LBB44_2
@@ -2152,8 +2151,7 @@ define void @ktest_1(<8 x double> %in, ptr %base) {
 ; AVX512BW-LABEL: ktest_1:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vcmpgtpd (%rdi), %zmm0, %k1
-; AVX512BW-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
-; AVX512BW-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
+; AVX512BW-NEXT:    vcmpltpd 8(%rdi), %zmm0, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    testb %al, %al
 ; AVX512BW-NEXT:    je LBB44_2
@@ -5055,9 +5053,7 @@ define <64 x i1> @mask64_insert(i32 %a) {
 ; KNL-NEXT:    kmovw %esi, %k0
 ; KNL-NEXT:    movw $-4, %cx
 ; KNL-NEXT:    kmovw %ecx, %k1
-; KNL-NEXT:    kshiftrw $1, %k1, %k1
-; KNL-NEXT:    kshiftlw $1, %k1, %k1
-; KNL-NEXT:    korw %k0, %k1, %k0
+; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, (%rdi)
 ; KNL-NEXT:    movw $-3, 6(%rdi)
 ; KNL-NEXT:    movl $-131075, 2(%rdi) ## imm = 0xFFFDFFFD
@@ -5070,9 +5066,7 @@ define <64 x i1> @mask64_insert(i32 %a) {
 ; SKX-NEXT:    kshiftrq $63, %k0, %k0
 ; SKX-NEXT:    movabsq $-562958543486980, %rax ## imm = 0xFFFDFFFDFFFDFFFC
 ; SKX-NEXT:    kmovq %rax, %k1
-; SKX-NEXT:    kshiftrq $1, %k1, %k1
-; SKX-NEXT:    kshiftlq $1, %k1, %k1
-; SKX-NEXT:    korq %k0, %k1, %k0
+; SKX-NEXT:    korq %k1, %k0, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    retq
 ;
@@ -5083,9 +5077,7 @@ define <64 x i1> @mask64_insert(i32 %a) {
 ; AVX512BW-NEXT:    kshiftrq $63, %k0, %k0
 ; AVX512BW-NEXT:    movabsq $-562958543486980, %rax ## imm = 0xFFFDFFFDFFFDFFFC
 ; AVX512BW-NEXT:    kmovq %rax, %k1
-; AVX512BW-NEXT:    kshiftrq $1, %k1, %k1
-; AVX512BW-NEXT:    kshiftlq $1, %k1, %k1
-; AVX512BW-NEXT:    korq %k0, %k1, %k0
+; AVX512BW-NEXT:    korq %k1, %k0, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
@@ -5096,9 +5088,7 @@ define <64 x i1> @mask64_insert(i32 %a) {
 ; AVX512DQ-NEXT:    kmovw %esi, %k0
 ; AVX512DQ-NEXT:    movw $-4, %cx
 ; AVX512DQ-NEXT:    kmovw %ecx, %k1
-; AVX512DQ-NEXT:    kshiftrw $1, %k1, %k1
-; AVX512DQ-NEXT:    kshiftlw $1, %k1, %k1
-; AVX512DQ-NEXT:    korw %k0, %k1, %k0
+; AVX512DQ-NEXT:    korw %k1, %k0, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, (%rdi)
 ; AVX512DQ-NEXT:    movw $-3, 6(%rdi)
 ; AVX512DQ-NEXT:    movl $-131075, 2(%rdi) ## imm = 0xFFFDFFFD

@@ -39,12 +39,19 @@ class EnumCase<string sym, int intVal, string strVal, int widthVal> {
 class IntEnumAttrCaseBase<I intType, string sym, string strVal, int intVal> :
     EnumCase<sym, intVal, strVal, intType.bitwidth>,
     SignlessIntegerAttrBase<intType, "case " # strVal> {
-  let predicate =
-    CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() == " # intVal>;
+  let predicate = CPred<[{
+    ::llvm::cast<::mlir::IntegerAttr>($_self).getValue().eq(::llvm::APInt(}]
+      # intType.bitwidth # ", "
+      # intVal # 
+    "))">;
 }
 
 // Cases of integer enums with a specific type. By default, the string
 // representation is the same as the C++ symbol name.
+class I8EnumCase<string sym, int val, string str = sym>
+  : EnumCase<sym, val, str, 8>;
+class I16EnumCase<string sym, int val, string str = sym>
+  : EnumCase<sym, val, str, 16>;
 class I32EnumCase<string sym, int val, string str = sym>
   : EnumCase<sym, val, str, 32>;
 class I64EnumCase<string sym, int val, string str = sym>
@@ -275,6 +282,12 @@ class EnumAttrInfo<
   string parameterPrinter = ?;
 }
 
+// Decorates an enum attribute to have a default (unvalidated) default value
+// from a specific enum case if not present. The default value is constructed as
+// the fully-qualified enum case symbol.
+class DefaultValuedEnumAttr<EnumAttrInfo attr, EnumCase case>
+    : DefaultValuedAttr<attr, attr.cppType # "::" # case.symbol>;
+
 // An attribute holding a single integer value.
 class IntEnum<string name, string summary, list<EnumCase> cases, int width>
     : EnumInfo<name,
@@ -283,10 +296,14 @@ class IntEnum<string name, string summary, list<EnumCase> cases, int width>
           summary),
       cases, width>;
 
+class I8Enum<string name, string summary, list<EnumCase> cases>
+    : IntEnum<name, summary, cases, 8>;
+class I16Enum<string name, string summary, list<EnumCase> cases>
+    : IntEnum<name, summary, cases, 16>;
 class I32Enum<string name, string summary, list<EnumCase> cases>
     : IntEnum<name, summary, cases, 32>;
 class I64Enum<string name, string summary, list<EnumCase> cases>
-    : IntEnum<name, summary, cases, 32>;
+    : IntEnum<name, summary, cases, 64>;
 
 // An enum attribute backed by IntegerAttr.
 //
@@ -311,8 +328,8 @@ class IntEnumAttr<I intType, string name, string summary,
   // symbol is not valid.
   let parameterParser = [{[&]() -> ::mlir::FailureOr<}] # cppType # [{> {
     auto loc = $_parser.getCurrentLocation();
-    ::llvm::StringRef enumKeyword;
-    if (::mlir::failed($_parser.parseKeyword(&enumKeyword)))
+    std::string enumKeyword;
+    if (::mlir::failed($_parser.parseKeywordOrString(&enumKeyword)))
       return ::mlir::failure();
     auto maybeEnum = }] # cppNamespace # "::" #
                           stringToSymbolFnName # [{(enumKeyword);
@@ -433,9 +450,9 @@ class BitEnumAttr<I intType, string name, string summary,
   let parameterParser = [{[&]() -> ::mlir::FailureOr<}] # cppType # [{> {
     }] # cppType # [{ flags = {};
     auto loc = $_parser.getCurrentLocation();
-    ::llvm::StringRef enumKeyword;
+    std::string enumKeyword;
     do {
-      if (::mlir::failed($_parser.parseKeyword(&enumKeyword)))
+      if (::mlir::failed($_parser.parseKeywordOrString(&enumKeyword)))
         return ::mlir::failure();
       auto maybeEnum = }] # cppNamespace # "::" #
                             stringToSymbolFnName # [{(enumKeyword);
@@ -740,5 +757,36 @@ class ConstantEnumCase<Attr attribute, string case>
   assert !or(!isa<EnumAttr>(attribute), !isa<EnumInfo>(attribute)),
     "attribute must be one of 'EnumAttr' or 'EnumInfo'";
 }
+
+/// Attribute constraint restricting the enum attribute to a subset of allowed
+/// cases. `enumAttr` is the `EnumAttr` attribute and `allowedCases` is a list
+/// of `EnumCase`s that are permitted.
+///
+/// Example:
+/// ```
+/// ConfinedAttr<MyEnumAttr, [EnumAttrIsOneOf<MyEnumAttr, [CaseA, CaseB]>]>
+/// ```
+class EnumAttrIsOneOf<EnumAttr enumAttr, list<EnumCase> allowedCases>
+  : AttrConstraint<
+      Or<!foreach(case, allowedCases,
+        CPred<"::llvm::cast<" # enumAttr.cppNamespace # "::"
+              # enumAttr.cppClassName # ">($_self).getValue() == "
+              # enumAttr.enum.cppType # "::" # case.symbol>)>,
+      "whose value is one of {"
+        # !interleave(!foreach(case, allowedCases, case.str), ", ") # "}">;
+
+/// Attribute constraint restricting the enum attribute to exclude a subset of
+/// cases. `enumAttr` is the `EnumAttr` attribute and `disallowedCases` is a
+/// list of `EnumCase`s that are not permitted.
+///
+/// Example:
+/// ```
+/// ConfinedAttr<MyEnumAttr, [EnumAttrIsNoneOf<MyEnumAttr, [CaseA, CaseB]>]>
+/// ```
+class EnumAttrIsNoneOf<EnumAttr enumAttr, list<EnumCase> disallowedCases>
+  : AttrConstraint<
+      Neg<EnumAttrIsOneOf<enumAttr, disallowedCases>.predicate>,
+      "whose value is none of {"
+        # !interleave(!foreach(case, disallowedCases, case.str), ", ") # "}">;
 
 #endif // ENUMATTR_TD

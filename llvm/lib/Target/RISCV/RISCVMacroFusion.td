@@ -14,7 +14,7 @@
 //   lui rd, imm[31:12]
 //   addi(w) rd, rd, imm[11:0]
 def TuneLUIADDIFusion
-  : SimpleFusion<"lui-addi-fusion", "HasLUIADDIFusion",
+  : SimpleFusion<"lui-addi", "HasLUIADDIFusion",
                  "Enable LUI+ADDI macro fusion",
                  CheckOpcode<[LUI]>,
                  CheckOpcode<[ADDI, ADDIW]>>;
@@ -23,7 +23,7 @@ def TuneLUIADDIFusion
 //   auipc rd, imm20
 //   addi rd, rd, imm12
 def TuneAUIPCADDIFusion
-  : SimpleFusion<"auipc-addi-fusion", "HasAUIPCADDIFusion",
+  : SimpleFusion<"auipc-addi", "HasAUIPCADDIFusion",
                  "Enable AUIPC+ADDI macrofusion",
                  CheckOpcode<[AUIPC]>,
                  CheckOpcode<[ADDI]>>;
@@ -32,7 +32,7 @@ def TuneAUIPCADDIFusion
 //   slli rd, rs1, 48
 //   srli rd, rd, 48
 def TuneZExtHFusion
-  : SimpleFusion<"zexth-fusion", "HasZExtHFusion",
+  : SimpleFusion<"zexth", "HasZExtHFusion",
                  "Enable SLLI+SRLI to be fused to zero extension of halfword",
                  CheckAll<[
                    CheckOpcode<[SLLI]>,
@@ -49,7 +49,7 @@ def TuneZExtHFusion
 //   slli rd, rs1, 32
 //   srli rd, rd, 32
 def TuneZExtWFusion
-  : SimpleFusion<"zextw-fusion", "HasZExtWFusion",
+  : SimpleFusion<"zextw", "HasZExtWFusion",
                  "Enable SLLI+SRLI to be fused to zero extension of word",
                  CheckAll<[
                    CheckOpcode<[SLLI]>,
@@ -67,7 +67,7 @@ def TuneZExtWFusion
 //   srli rd, rd, x
 //   where 0 <= x < 32
 def TuneShiftedZExtWFusion
-  : SimpleFusion<"shifted-zextw-fusion", "HasShiftedZExtWFusion",
+  : SimpleFusion<"shifted-zextw", "HasShiftedZExtWFusion",
                  "Enable SLLI+SRLI to be fused when computing (shifted) word zero extension",
                  CheckAll<[
                    CheckOpcode<[SLLI]>,
@@ -84,10 +84,174 @@ def TuneShiftedZExtWFusion
 //   add rd, rs1, rs2
 //   ld rd, 0(rd)
 def TuneLDADDFusion
-  : SimpleFusion<"ld-add-fusion", "HasLDADDFusion", "Enable LD+ADD macrofusion",
+  : SimpleFusion<"ld-add", "HasLDADDFusion", "Enable LD+ADD macrofusion",
                  CheckOpcode<[ADD]>,
                  CheckAll<[
                    CheckOpcode<[LD]>,
                    CheckIsImmOperand<2>,
                    CheckImmOperand<2, 0>
                  ]>>;
+
+defvar Load = [LB, LH, LW, LD, LBU, LHU, LWU];
+defvar LoadStore = [LB, LBU, LH, LHU, LW, LWU, LD,
+                    FLH, FLW, FLD,
+                    SB, SH, SW, SD,
+                    FSH, FSW, FSD];
+defvar LogicOp = [AND, OR, XOR];
+defvar LogicImmOp = [ANDI, ORI, XORI];
+defvar ShiftLeft = [SLLI, SLLIW];
+defvar ShiftRight = [SRLI, SRLIW, SRAI, SRAIW];
+
+// Fuse add(.uw) followed by a load (lb, lh, lw, ld, lbu, lhu, lwu):
+//   add(.uw) rd, rs1, rs2
+//   load rd, imm12(rd)
+def TuneADDLoadFusion
+  : SimpleFusion<"add-load", "HasADDLoadFusion", "Enable ADD(.UW) + load macrofusion",
+                 CheckOpcode<[ADD, ADD_UW]>,
+                 CheckOpcode<Load>>;
+
+// Fuse AUIPC followed by by a load (lb, lh, lw, ld, lbu, lhu, lwu)
+//   auipc rd, imm20
+//   load rd, imm12(rd)
+def TuneAUIPCLoadFusion
+  : SimpleFusion<"auipc-load", "HasAUIPCLoadFusion",
+                 "Enable AUIPC + load macrofusion",
+                 CheckOpcode<[AUIPC]>,
+                 CheckOpcode<Load>>;
+
+// Fuse LUI followed by a load (lb, lh, lw, ld, lbu, lhu, lwu)
+//   lui rd, imm[31:12]
+//   load rd, imm12(rd)
+def TuneLUILoadFusion
+  : SimpleFusion<"lui-load", "HasLUILoadFusion",
+                 "Enable LUI + load macrofusion",
+                 CheckOpcode<[LUI]>,
+                 CheckOpcode<Load>>;
+
+// Bitfield extract fusion: similar to TuneShiftedZExtWFusion
+// but without the immediate restriction
+//   slli rd, rs1, imm12
+//   srli rd, rd, imm12
+def TuneBFExtFusion
+  : SimpleFusion<"bfext", "HasBFExtFusion",
+                 "Enable SLLI+SRLI (bitfield extract) macrofusion",
+                 CheckOpcode<[SLLI]>,
+                 CheckOpcode<[SRLI]>>;
+
+// Fuse ADDI followed by a load (lb, lh, lw, ld, lbu, lhu, lwu)
+//   addi rd, rs1, imm12
+//   load rd, imm12(rd)
+def TuneADDILoadFusion
+  : SimpleFusion<"addi-load", "HasADDILoadFusion",
+                 "Enable ADDI + load macrofusion",
+                 CheckOpcode<[ADDI]>,
+                 CheckOpcode<Load>>;
+
+// Fuse shXadd(.uw) followed by a load (lb, lh, lw, ld, lbu, lhu, lwu)
+//   shXadd(.uw) rd, rs1, rs2
+//   load rd, imm12(rd)
+def TuneSHXADDLoadFusion
+  : SimpleFusion<"shxadd-load", "HasSHXADDLoadFusion",
+                 "Enable SH(1|2|3)ADD(.UW) + load macrofusion",
+                 CheckOpcode<[SH1ADD, SH2ADD, SH3ADD, SH1ADD_UW, SH2ADD_UW, SH3ADD_UW]>,
+                 CheckOpcode<Load>>;
+
+// Fuse logic operation followed by another logic operation:
+//   and/or/xor rd, rs1, rs2
+//   and/or/xor rd, rd, rs3
+let IsCommutable = 1 in
+def TuneFusionLogicRegReg
+  : SimpleFusion<"logic-reg-reg", "HasFusionLogicRegReg",
+                 "Enable AND/OR/XOR+AND/OR/XOR macrofusion",
+                 CheckOpcode<LogicOp>,
+                 CheckOpcode<LogicOp>>;
+
+// Fuse logic operation followed by logic immediate operation:
+//   and/or/xor rd, rs1, rs2
+//   andi/ori/xori rd, rd, imm
+def TuneFusionLogicRegImm
+  : SimpleFusion<"logic-reg-imm", "HasFusionLogicRegImm",
+                 "Enable AND/OR/XOR+ANDI/ORI/XORI macrofusion",
+                 CheckOpcode<LogicOp>,
+                 CheckOpcode<LogicImmOp>>;
+
+// Fuse logic immediate operation followed by logic operation:
+//   andi/ori/xori rd, rs1, imm
+//   and/or/xor rd, rd, rs2
+let IsCommutable = 1 in
+def TuneFusionLogicImmReg
+  : SimpleFusion<"logic-imm-reg", "HasFusionLogicImmReg",
+                 "Enable ANDI/ORI/XORI+AND/OR/XOR macrofusion",
+                 CheckOpcode<LogicImmOp>,
+                 CheckOpcode<LogicOp>>;
+
+// Fuse multiply followed by add:
+//   mul(w) rd, rs1, rs2
+//   add(w) rd, rd, rs3
+def TuneFusionMulAdd
+  : SimpleFusion<"mul-add", "HasFusionMulAdd",
+                 "Enable MUL+ADD macrofusion",
+                 CheckOpcode<[MUL, MULW]>,
+                 CheckOpcode<[ADD, ADDW]>,
+                 epilog = [
+                   // Check that both instructions have the same width
+                   FusionPredicateWithCode<[{
+                     if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
+                         (SecondMI.getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask))
+                       return false;
+                   }]>,
+                   SecondFusionPredicateWithMCInstPredicate<
+                     CheckNot<CheckSameRegOperand<0, 2>>
+                   >
+                 ]>;
+
+// Fuse add with load or store with zero offset:
+//   add rd, rs1, rs2
+//   load/store rt, 0(rd)
+def TuneFusionAddMem
+  : Fusion<"add-mem", "HasFusionAddMem",
+           "Enable ADD+LOAD/STORE macrofusion",
+           [
+             SecondFusionPredicateWithMCInstPredicate<
+               CheckAll<[
+                 CheckOpcode<LoadStore>,
+                 CheckIsImmOperand<2>,
+                 CheckImmOperand<2, 0>
+               ]>
+             >,
+             WildcardTrue,
+             FirstFusionPredicateWithMCInstPredicate<
+               CheckAll<[
+                 CheckOpcode<[ADD]>,
+                 CheckNot<CheckSameRegOperand<0, 1>>,
+                 CheckNot<CheckSameRegOperand<0, 2>>
+               ]>
+             >,
+             TieReg<0, 1>
+           ]>;
+
+// Fuse shift left followed by shift right for bit extraction:
+//   slli(w) rd, rs1, imm1
+//   srli(w)/srai(w) rd, rd, imm2
+//   where imm1 <= imm2
+def TuneFusionShiftBitExtract
+  : SimpleFusion<"shift-bit-extract", "HasFusionShiftBitExtract",
+                 "Enable SLLI+SRLI/SRAI macrofusion",
+                 CheckOpcode<ShiftLeft>,
+                 CheckOpcode<ShiftRight>,
+                 epilog = [
+                   // Check that both instructions have the same width
+                   FusionPredicateWithCode<[{
+                     if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
+                         (SecondMI.getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask))
+                       return false;
+                   }]>,
+                   // Check that FirstMI's immediate <= SecondMI's immediate
+                   FusionPredicateWithCode<[{
+                     if (!(FirstMI->getOperand(2).isImm() &&
+                           SecondMI.getOperand(2).isImm() &&
+                           FirstMI->getOperand(2).getImm() <=
+                           SecondMI.getOperand(2).getImm()))
+                       return false;
+                   }]>,
+                 ]>;

@@ -108,9 +108,7 @@ int internal_dlinfo(void *handle, int request, void *p) {
 
 // In contrast to POSIX, on Windows GetCurrentThreadId()
 // returns a system-unique identifier.
-tid_t GetTid() {
-  return GetCurrentThreadId();
-}
+ThreadID GetTid() { return GetCurrentThreadId(); }
 
 uptr GetThreadSelf() {
   return GetTid();
@@ -915,11 +913,12 @@ void ReportFile::Write(const char *buffer, uptr length) {
   }
 }
 
-void SetAlternateSignalStack() {
+void* SetAlternateSignalStack() {
   // FIXME: Decide what to do on Windows.
+  return nullptr;
 }
 
-void UnsetAlternateSignalStack() {
+void UnsetAlternateSignalStack(void* altstack_base) {
   // FIXME: Decide what to do on Windows.
 }
 
@@ -1011,6 +1010,9 @@ void SignalContext::InitPcSpBp() {
 #    if SANITIZER_ARM
   bp = (uptr)context_record->R11;
   sp = (uptr)context_record->Sp;
+#    elif SANITIZER_MIPS32
+  bp = (uptr)context_record->IntS8;
+  sp = (uptr)context_record->IntSp;
 #    else
   bp = (uptr)context_record->Ebp;
   sp = (uptr)context_record->Esp;

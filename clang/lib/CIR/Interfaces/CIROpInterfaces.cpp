@@ -18,9 +18,20 @@ using namespace cir;
 
 #include "clang/CIR/MissingFeatures.h"
 
+bool CIRGlobalValueInterface::hasDefaultVisibility() {
+  assert(!cir::MissingFeatures::hiddenVisibility());
+  assert(!cir::MissingFeatures::protectedVisibility());
+  return isPublic() || isPrivate();
+}
+
 bool CIRGlobalValueInterface::canBenefitFromLocalAlias() {
   assert(!cir::MissingFeatures::supportIFuncAttr());
-  assert(!cir::MissingFeatures::supportVisibility());
-  assert(!cir::MissingFeatures::supportComdat());
-  return false;
+  // hasComdat here should be isDeduplicateComdat, but as far as clang codegen
+  // is concerned, there is no case for Comdat::NoDeduplicate as all comdat
+  // would be Comdat::Any or Comdat::Largest (in the case of MS ABI). And CIRGen
+  // wouldn't even generate Comdat::Largest comdat as it tries to leave ABI
+  // specifics to LLVM lowering stage, thus here we don't need test Comdat
+  // selectionKind.
+  return hasDefaultVisibility() && hasExternalLinkage() && !isDeclaration() &&
+         !hasComdat();
 }

@@ -21,16 +21,16 @@
 ; OBJ: 0000000000000000 <_Z1fi>:
 ; OBJ-NEXT: 0: leal    0x1(%rdi), %eax
 ; OBJ-NEXT: 3: retq
-; OBJ: 0000000000000010 <_Z1gi>:
-; OBJ-NEXT: 10: leal    0x1(%rdi), %eax
-; OBJ-NEXT: 13: retq
+; OBJ: 0000000000000004 <_Z1gi>:
+; OBJ-NEXT: 4: leal    0x1(%rdi), %eax
+; OBJ-NEXT: 7: retq
 
 ; DBG:      Address            Line   Column File   ISA Discriminator OpIndex Flags
 ; DBG-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
 ; DBG-NEXT: 0x0000000000000000      2      0      0   0             0       0  is_stmt prologue_end
 ; DBG-NEXT: 0x0000000000000003      3      0      0   0             0       0  is_stmt
-; DBG-NEXT: 0x0000000000000010      2      0      0   0             0       0  is_stmt prologue_end
-; DBG-NEXT: 0x0000000000000013      6      0      0   0             0       0  is_stmt
+; DBG-NEXT: 0x0000000000000004      2      0      0   0             0       0  is_stmt prologue_end
+; DBG-NEXT: 0x0000000000000007      6      0      0   0             0       0  is_stmt
 
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -55,8 +55,8 @@ entry:
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !10 = !{!"clang version 19.0.0"}
-!11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
 !12 = !DISubroutineType(types: !13)
 !13 = !{}
-!16 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 5, type: !12, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!16 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 5, type: !12, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
 !18 = distinct !DILocation(line: 6, scope: !16)

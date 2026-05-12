@@ -523,9 +523,10 @@ Error opts::symbols::findFunctions(lldb_private::Module &Module) {
         ContextOr->IsValid() ? *ContextOr : CompilerDeclContext();
 
     List.Clear();
-    lldb_private::Module::LookupInfo lookup_info(
-        ConstString(Name), getFunctionNameFlags(), eLanguageTypeUnknown);
-    Symfile.FindFunctions(lookup_info, ContextPtr, true, List);
+    std::vector<lldb_private::Module::LookupInfo> lookup_infos =
+        lldb_private::Module::LookupInfo::MakeLookupInfos(
+            ConstString(Name), getFunctionNameFlags(), eLanguageTypeUnknown);
+    Symfile.FindFunctions(lookup_infos, ContextPtr, true, List);
   }
   outs() << formatv("Found {0} functions:\n", List.GetSize());
   StreamString Stream;
@@ -766,8 +767,7 @@ Error opts::symbols::verify(lldb_private::Module &Module) {
     if (!comp_unit)
       return make_string_error("Cannot parse compile unit {0}.", i);
 
-    outs() << "Processing '"
-           << comp_unit->GetPrimaryFile().GetFilename().AsCString()
+    outs() << "Processing '" << comp_unit->GetPrimaryFile().GetFilename()
            << "' compile unit.\n";
 
     LineTable *lt = comp_unit->GetLineTable();
@@ -1112,13 +1112,13 @@ bool opts::irmemorymap::evalMalloc(StringRef Line,
   // Issue the malloc in the target process with "-rw" permissions.
   const uint32_t Permissions = 0x3;
   const bool ZeroMemory = false;
-  Status ST;
-  addr_t Addr =
-      State.Map.Malloc(Size, Alignment, Permissions, AP, ZeroMemory, ST);
-  if (ST.Fail()) {
-    outs() << formatv("Malloc error: {0}\n", ST);
+  auto AddrOrErr =
+      State.Map.Malloc(Size, Alignment, Permissions, AP, ZeroMemory);
+  if (!AddrOrErr) {
+    outs() << formatv("Malloc error: {0}\n", toString(AddrOrErr.takeError()));
     return true;
   }
+  addr_t Addr = *AddrOrErr;
 
   // Print the result of the allocation before checking its validity.
   outs() << formatv("Malloc: address = {0:x}\n", Addr);
@@ -1253,8 +1253,7 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
-  auto TerminateDebugger =
-      llvm::make_scope_exit([&] { DebuggerLifetime.Terminate(); });
+  llvm::scope_exit TerminateDebugger([&] { DebuggerLifetime.Terminate(); });
 
   auto Dbg = lldb_private::Debugger::CreateInstance();
   ModuleList::GetGlobalModuleListProperties().SetEnableExternalLookup(false);

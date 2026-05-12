@@ -92,8 +92,8 @@ void addFalsePositiveGenerator(AnalysisASTConsumer &AnalysisConsumer,
   AnOpts.CheckersAndPackages = {{"test.FalsePositiveGenerator", true},
                                 {"debug.ViewExplodedGraph", false}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addChecker<FalsePositiveGenerator>(
-        "test.FalsePositiveGenerator", "EmptyDescription", "EmptyDocsUri");
+    Registry.addChecker<FalsePositiveGenerator>("test.FalsePositiveGenerator",
+                                                "MockDescription");
   });
 }
 

@@ -6,23 +6,13 @@
 #
 # ==-------------------------------------------------------------------------==#
 
-from functools import total_ordering
+from hdrgen.symbol import Symbol
 
 
-@total_ordering
-class Object:
+class Object(Symbol):
     def __init__(self, name, type):
-        self.name = name
+        super().__init__(name)
         self.type = type
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def __lt__(self, other):
-        return self.name < other.name
-
-    def __hash__(self):
-        return self.name.__hash__()
 
     def __str__(self):
         return f"extern {self.type} {self.name};"

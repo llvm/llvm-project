@@ -747,3 +747,172 @@ define i8 @smin_of_add(i8 %a, i8 %b, i8 %c) {
   %min = call i8 @llvm.smin.i8(i8 %add1, i8 %add2)
   ret i8 %min
 }
+
+; sub right-distributes over min/max: minmax(sub X, Z, sub Y, Z) -> sub minmax(X, Y), Z
+define i8 @smin_of_sub_nsw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_sub_nsw_r(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = sub nsw i8 [[TMP1]], [[C]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub nsw i8 %a, %c
+  %sub2 = sub nsw i8 %b, %c
+  %res = call i8 @llvm.smin.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+
+define i8 @smax_of_sub_nsw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_sub_nsw_r(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = sub nsw i8 [[TMP1]], [[C]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub nsw i8 %a, %c
+  %sub2 = sub nsw i8 %b, %c
+  %res = call i8 @llvm.smax.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+
+define i8 @umin_of_sub_nuw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_sub_nuw_r(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw i8 [[TMP1]], [[C]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub nuw i8 %a, %c
+  %sub2 = sub nuw i8 %b, %c
+  %res = call i8 @llvm.umin.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+
+define i8 @umax_of_sub_nuw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_sub_nuw_r(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw i8 [[TMP1]], [[C]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub nuw i8 %a, %c
+  %sub2 = sub nuw i8 %b, %c
+  %res = call i8 @llvm.umax.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+
+define <2 x i8> @smin_of_sub_nsw_r_vec(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c) {
+; CHECK-LABEL: define <2 x i8> @smin_of_sub_nsw_r_vec(
+; CHECK-SAME: <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <2 x i8> [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[A]], <2 x i8> [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = sub nsw <2 x i8> [[TMP1]], [[C]]
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %sub1 = sub nsw <2 x i8> %a, %c
+  %sub2 = sub nsw <2 x i8> %b, %c
+  %res = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %sub1, <2 x i8> %sub2)
+  ret <2 x i8> %res
+}
+
+define i8 @smin_of_sub_nsw_r_const(i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @smin_of_sub_nsw_r_const(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 32)
+; CHECK-NEXT:    [[RES:%.*]] = sub nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub nsw i8 %b, %a
+  %sub2 = sub nsw i8 32, %a
+  %res = call i8 @llvm.smin.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+
+; Negative tests
+define i8 @smin_of_sub(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_sub(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i8 [[A]], [[C]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i8 [[B]], [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[SUB1]], i8 [[SUB2]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub i8 %a, %c
+  %sub2 = sub i8 %b, %c
+  %res = call i8 @llvm.smin.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+
+; sub does not left-distribute
+define i8 @smin_of_sub_nsw_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_sub_nsw_l(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i8 [[C]], [[A]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i8 [[C]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[SUB1]], i8 [[SUB2]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub nsw i8 %c, %a
+  %sub2 = sub nsw i8 %c, %b
+  %res = call i8 @llvm.smin.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+
+define i8 @smin_of_sub_nuw(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_sub_nuw(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i8 [[A]], [[C]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nuw i8 [[B]], [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[SUB1]], i8 [[SUB2]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub nuw i8 %a, %c
+  %sub2 = sub nuw i8 %b, %c
+  %res = call i8 @llvm.smin.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+
+define i8 @smin_of_sub_add_nsw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_sub_add_nsw_r(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i8 [[A]], [[C]]
+; CHECK-NEXT:    [[SUB2:%.*]] = add nsw i8 [[B]], [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[SUB1]], i8 [[SUB2]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub nsw i8 %a, %c
+  %sub2 = add nsw i8 %b, %c
+  %res = call i8 @llvm.smin.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+
+define i8 @smin_of_sub_nsw_sub_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_sub_nsw_sub_r(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i8 [[A]], [[C]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i8 [[B]], [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[SUB1]], i8 [[SUB2]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub nsw i8 %a, %c
+  %sub2 = sub i8 %b, %c
+  %res = call i8 @llvm.smin.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+
+declare void @use8(i8)
+define i8 @smin_of_sub_nsw_multiuse_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_sub_nsw_multiuse_r(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i8 [[A]], [[C]]
+; CHECK-NEXT:    call void @use8(i8 [[SUB1]])
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i8 [[B]], [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[SUB1]], i8 [[SUB2]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sub1 = sub nsw i8 %a, %c
+  call void @use8(i8 %sub1)
+  %sub2 = sub nsw i8 %b, %c
+  %res = call i8 @llvm.smin.i8(i8 %sub1, i8 %sub2)
+  ret i8 %res
+}
+

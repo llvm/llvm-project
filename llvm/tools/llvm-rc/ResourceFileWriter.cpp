@@ -631,8 +631,8 @@ Error ResourceFileWriter::writeSingleAccelerator(
   if (IsASCII && IsVirtKey)
     return createAccError("Accelerator can't be both ASCII and VIRTKEY");
 
-  if (!IsVirtKey && (Obj.Flags & (Opt::ALT | Opt::SHIFT | Opt::CONTROL)))
-    return createAccError("Can only apply ALT, SHIFT or CONTROL to VIRTKEY"
+  if (!IsVirtKey && (Obj.Flags & (Opt::SHIFT | Opt::CONTROL)))
+    return createAccError("Can only apply SHIFT or CONTROL to VIRTKEY"
                           " accelerators");
 
   if (Obj.Event.isInt()) {

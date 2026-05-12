@@ -62,7 +62,7 @@ protected:
                           bool HasRelocationAddend_, uint8_t ABIVersion_ = 0);
 
 public:
-  virtual ~MCELFObjectTargetWriter() = default;
+  ~MCELFObjectTargetWriter() override = default;
 
   Triple::ObjectFormatType getFormat() const override { return Triple::ELF; }
   static bool classof(const MCObjectTargetWriter *W) {
@@ -181,7 +181,7 @@ public:
   uint64_t writeObject() override;
 
   bool hasRelocationAddend() const;
-  bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
+  bool usesRela(const MCTargetOptions &TO, const MCSectionELF &Sec) const;
 
   bool useSectionSymbol(const MCValue &Val, const MCSymbolELF *Sym, uint64_t C,
                         unsigned Type) const;

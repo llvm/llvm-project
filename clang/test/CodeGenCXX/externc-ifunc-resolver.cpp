@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -emit-llvm -o - %s | FileCheck %s
 
 extern "C" {
 __attribute__((used)) static void *resolve_foo() { return 0; }

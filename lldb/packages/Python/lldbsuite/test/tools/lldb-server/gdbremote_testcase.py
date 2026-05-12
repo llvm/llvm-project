@@ -15,6 +15,7 @@ import tempfile
 import time
 from lldbsuite.test import configuration
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import skipIfWasm
 from lldbsuite.support import seven
 from lldbgdbserverutils import *
 import logging
@@ -55,6 +56,7 @@ class GdbRemoteTestCaseFactory(type):
         return super(GdbRemoteTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
 
 
+@skipIfWasm  # wasm uses runtime's GDB stub, not lldb-server
 class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
     # Default time out in seconds. The timeout is increased tenfold under Asan.
     DEFAULT_TIMEOUT = 20 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
@@ -114,6 +116,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
         self.setUpBaseLogging()
         self.debug_monitor_extra_args = []
+        self.start_new_session = True
 
         if self.isVerboseLoggingRequested():
             # If requested, full logs go to a log file
@@ -362,7 +365,10 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
         # Start the server.
         server = self.spawnSubprocess(
-            self.debug_monitor_exe, commandline_args, install_remote=False
+            self.debug_monitor_exe,
+            commandline_args,
+            install_remote=False,
+            start_new_session=self.start_new_session,
         )
         self.assertIsNotNone(server)
 
@@ -444,13 +450,20 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         if not exe_path:
             exe_path = self.getBuildArtifact("a.out")
 
-        args = []
+        # This file will be created once the inferior has enabled attaching.
+        sync_file_path = lldbutil.append_to_process_working_directory(
+            self, "process_ready"
+        )
+        args = [f"syncfile:{sync_file_path}"]
         if inferior_args:
             args.extend(inferior_args)
         if sleep_seconds:
             args.append("sleep:%d" % sleep_seconds)
 
-        return self.spawnSubprocess(exe_path, args)
+        inferior = self.spawnSubprocess(exe_path, args)
+        lldbutil.wait_for_file_on_target(self, sync_file_path)
+
+        return inferior
 
     def prep_debug_monitor_and_inferior(
         self,
@@ -768,6 +781,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                     "error",
                     "dirty-pages",
                     "type",
+                    "protection-key",
                 ],
             )
             self.assertIsNotNone(val)
@@ -924,6 +938,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "QNonStop",
         "SupportedWatchpointTypes",
         "SupportedCompressions",
+        "MultiMemRead",
+        "jMultiBreakpoint",
     ]
 
     def parse_qSupported_response(self, context):

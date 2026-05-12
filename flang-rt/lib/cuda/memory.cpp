@@ -25,23 +25,26 @@ extern "C" {
 void *RTDEF(CUFMemAlloc)(
     std::size_t bytes, unsigned type, const char *sourceFile, int sourceLine) {
   void *ptr = nullptr;
-  if (bytes != 0) {
-    if (type == kMemTypeDevice) {
-      if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
-        CUDA_REPORT_IF_ERROR(
-            cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
-      } else {
-        CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
-      }
-    } else if (type == kMemTypeManaged || type == kMemTypeUnified) {
-      CUDA_REPORT_IF_ERROR(
-          cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
-    } else if (type == kMemTypePinned) {
-      CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&ptr, bytes));
+  bytes = bytes ? bytes : 1;
+  if (type == kMemTypeDevice) {
+    if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
+      CUDA_REPORT_IF_ERROR_LOC(
+          cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal),
+          sourceFile, sourceLine);
     } else {
-      Terminator terminator{sourceFile, sourceLine};
-      terminator.Crash("unsupported memory type");
+      CUDA_REPORT_IF_ERROR_LOC(
+          cudaMalloc((void **)&ptr, bytes), sourceFile, sourceLine);
     }
+  } else if (type == kMemTypeManaged || type == kMemTypeUnified) {
+    CUDA_REPORT_IF_ERROR_LOC(
+        cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal),
+        sourceFile, sourceLine);
+  } else if (type == kMemTypePinned) {
+    CUDA_REPORT_IF_ERROR_LOC(
+        cudaMallocHost((void **)&ptr, bytes), sourceFile, sourceLine);
+  } else {
+    Terminator terminator{sourceFile, sourceLine};
+    terminator.Crash("unsupported memory type");
   }
   return ptr;
 }
@@ -52,9 +55,9 @@ void RTDEF(CUFMemFree)(
     return;
   if (type == kMemTypeDevice || type == kMemTypeManaged ||
       type == kMemTypeUnified) {
-    CUDA_REPORT_IF_ERROR(cudaFree(ptr));
+    CUDA_REPORT_IF_ERROR_LOC(cudaFree(ptr), sourceFile, sourceLine);
   } else if (type == kMemTypePinned) {
-    CUDA_REPORT_IF_ERROR(cudaFreeHost(ptr));
+    CUDA_REPORT_IF_ERROR_LOC(cudaFreeHost(ptr), sourceFile, sourceLine);
   } else {
     Terminator terminator{sourceFile, sourceLine};
     terminator.Crash("unsupported memory type");
@@ -82,7 +85,8 @@ void RTDEF(CUFDataTransferPtrPtr)(void *dst, void *src, std::size_t bytes,
     terminator.Crash("host to host copy not supported");
   }
   // TODO: Use cudaMemcpyAsync when we have support for stream.
-  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, bytes, kind));
+  CUDA_REPORT_IF_ERROR_LOC(
+      cudaMemcpy(dst, src, bytes, kind), sourceFile, sourceLine);
 }
 
 void RTDEF(CUFDataTransferPtrDesc)(void *addr, Descriptor *desc,
@@ -105,14 +109,17 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
   } else {
     terminator.Crash("host to host copy not supported");
   }
-  if ((srcDesc->rank() > 0) && (dstDesc->Elements() < srcDesc->Elements())) {
+  // Allocate dst descriptor if not allocated.
+  if (!dstDesc->IsAllocated()) {
+    dstDesc->ApplyMold(*srcDesc, dstDesc->rank());
+    dstDesc->Allocate(/*asyncObject=*/nullptr);
+  }
+  if ((srcDesc->rank() > 0) && (dstDesc->Elements() <= srcDesc->Elements()) &&
+      srcDesc->IsContiguous() && dstDesc->IsContiguous()) {
     // Special case when rhs is bigger than lhs and both are contiguous arrays.
     // In this case we do a simple ptr to ptr transfer with the size of lhs.
     // This is be allowed in the reference compiler and it avoids error
     // triggered in the Assign runtime function used for the main case below.
-    if (!srcDesc->IsContiguous() || !dstDesc->IsContiguous())
-      terminator.Crash("Unsupported data transfer: mismatching element counts "
-                       "with non-contiguous arrays");
     RTNAME(CUFDataTransferPtrPtr)(dstDesc->raw().base_addr,
         srcDesc->raw().base_addr, dstDesc->Elements() * dstDesc->ElementBytes(),
         mode, sourceFile, sourceLine);

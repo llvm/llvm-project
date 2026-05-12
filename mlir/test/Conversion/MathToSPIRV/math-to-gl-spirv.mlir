@@ -12,6 +12,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %1 = math.cos %arg0 : f32
   // CHECK: spirv.GL.Exp %{{.*}}: f32
   %2 = math.exp %arg0 : f32
+  // CHECK: spirv.GL.Exp2 %{{.*}}: f32
+  %exp2 = math.exp2 %arg0 : f32
   // CHECK: %[[EXP:.+]] = spirv.GL.Exp %arg0
   // CHECK: %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
   // CHECK: spirv.FSub %[[EXP]], %[[ONE]]
@@ -22,9 +24,7 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
   %5 = math.log1p %arg0 : f32
-  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant 1.44269502 : f32
-  // CHECK: %[[LOG0:.+]] = spirv.GL.Log {{.+}}
-  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  // CHECK: spirv.GL.Log2 %{{.*}}: f32
   %6 = math.log2 %arg0 : f32
   // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant 0.434294492 : f32
   // CHECK: %[[LOG1:.+]] = spirv.GL.Log {{.+}}
@@ -46,6 +46,22 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %14 = math.ceil %arg0 : f32
   // CHECK: spirv.GL.Floor %{{.*}}: f32
   %15 = math.floor %arg0 : f32
+  // CHECK: spirv.GL.Tan %{{.*}}: f32
+  %16 = math.tan %arg0 : f32
+  // CHECK: spirv.GL.Asin %{{.*}}: f32
+  %17 = math.asin %arg0 : f32
+  // CHECK: spirv.GL.Acos %{{.*}}: f32
+  %18 = math.acos %arg0 : f32
+  // CHECK: spirv.GL.Sinh %{{.*}}: f32
+  %19 = math.sinh %arg0 : f32
+  // CHECK: spirv.GL.Cosh %{{.*}}: f32
+  %20 = math.cosh %arg0 : f32
+  // CHECK: spirv.GL.Asinh %{{.*}}: f32
+  %21 = math.asinh %arg0 : f32
+  // CHECK: spirv.GL.Acosh %{{.*}}: f32
+  %22 = math.acosh %arg0 : f32
+  // CHECK: spirv.GL.Atanh %{{.*}}: f32
+  %23 = math.atanh %arg0 : f32
   return
 }
 
@@ -57,6 +73,8 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   %1 = math.cos %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Exp %{{.*}}: vector<3xf32>
   %2 = math.exp %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Exp2 %{{.*}}: vector<3xf32>
+  %exp2 = math.exp2 %arg0 : vector<3xf32>
   // CHECK: %[[EXP:.+]] = spirv.GL.Exp %arg0
   // CHECK: %[[ONE:.+]] = spirv.Constant dense<1.000000e+00> : vector<3xf32>
   // CHECK: spirv.FSub %[[EXP]], %[[ONE]]
@@ -67,9 +85,7 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
   %5 = math.log1p %arg0 : vector<3xf32>
-  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant dense<1.44269502> : vector<3xf32>
-  // CHECK: %[[LOG0:.+]] = spirv.GL.Log {{.+}}
-  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  // CHECK: spirv.GL.Log2 %{{.*}}: vector<3xf32>
   %6 = math.log2 %arg0 : vector<3xf32>
   // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant dense<0.434294492> : vector<3xf32>
   // CHECK: %[[LOG1:.+]] = spirv.GL.Log {{.+}}
@@ -85,6 +101,22 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   %11 = math.tanh %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Sin %{{.*}}: vector<3xf32>
   %12 = math.sin %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Tan %{{.*}}: vector<3xf32>
+  %13 = math.tan %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Asin %{{.*}}: vector<3xf32>
+  %14 = math.asin %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Acos %{{.*}}: vector<3xf32>
+  %15 = math.acos %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Sinh %{{.*}}: vector<3xf32>
+  %16 = math.sinh %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Cosh %{{.*}}: vector<3xf32>
+  %17 = math.cosh %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Asinh %{{.*}}: vector<3xf32>
+  %18 = math.asinh %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Acosh %{{.*}}: vector<3xf32>
+  %19 = math.acosh %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Atanh %{{.*}}: vector<3xf32>
+  %20 = math.atanh %arg0 : vector<3xf32>
   return
 }
 
@@ -223,6 +255,27 @@ func.func @round_vector(%x: vector<4xf32>) -> vector<4xf32> {
   // CHECK: %[[BITCAST:.+]] = spirv.Bitcast %[[ADD]]
   %0 = math.round %x : vector<4xf32>
   return %0: vector<4xf32>
+}
+
+// Unit dimensional vectors are converted to scalars by inserting
+// unrealized_conversion_cast's.
+//
+// CHECK-LABEL: @round_vector_unit_dim
+//  CHECK-SAME: (%[[ARG:.+]]: vector<1xf32>) -> vector<1xf32>
+func.func @round_vector_unit_dim(%x: vector<1xf32>) -> vector<1xf32> {
+  // CHECK: %[[CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<1xf32> to f32
+  // CHECK: %[[ZERO:.+]] = spirv.Constant 0.000000e+00
+  // CHECK: %[[ONE:.+]] = spirv.Constant 1.000000e+00
+  // CHECK: %[[HALF:.+]] = spirv.Constant 5.000000e-01
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[CAST]] : f32
+  // CHECK: %[[FLOOR:.+]] = spirv.GL.Floor %[[ABS]]
+  // CHECK: %[[SUB:.+]] = spirv.FSub %[[ABS]], %[[FLOOR]]
+  // CHECK: %[[GE:.+]] = spirv.FOrdGreaterThanEqual %[[SUB]], %[[HALF]]
+  // CHECK: %[[SEL:.+]] = spirv.Select %[[GE]], %[[ONE]], %[[ZERO]]
+  // CHECK: %[[ADD:.+]] = spirv.FAdd %[[FLOOR]], %[[SEL]]
+  // CHECK: %[[BITCAST:.+]] = spirv.Bitcast %[[ADD]] : f32 to i32
+  %0 = math.round %x : vector<1xf32>
+  return %0: vector<1xf32>
 }
 
 } // end module

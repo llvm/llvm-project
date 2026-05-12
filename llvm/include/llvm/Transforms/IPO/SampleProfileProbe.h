@@ -16,9 +16,10 @@
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compiler.h"
 #include <unordered_map>
 
 namespace llvm {
@@ -47,10 +48,10 @@ using FuncProbeFactorMap = StringMap<ProbeFactorMap>;
 // function pass, the factor sum for a probe would be typically 100%.
 class PseudoProbeVerifier {
 public:
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
   // Implementation of pass instrumentation callbacks for new pass manager.
-  void runAfterPass(StringRef PassID, Any IR);
+  LLVM_ABI void runAfterPass(StringRef PassID, Any IR);
 
 private:
   // Allow a little bias due the rounding to integral factors.
@@ -74,8 +75,8 @@ private:
 class SampleProfileProber {
 public:
   // Give an empty module id when the prober is not used for instrumentation.
-  SampleProfileProber(Function &F);
-  void instrumentOneFunc(Function &F, TargetMachine *TM);
+  LLVM_ABI SampleProfileProber(Function &F);
+  LLVM_ABI void instrumentOneFunc(Function &F, TargetMachine *TM);
 
 private:
   Function *getFunction() const { return F; }
@@ -112,12 +113,13 @@ private:
   uint32_t LastProbeId;
 };
 
-class SampleProfileProbePass : public PassInfoMixin<SampleProfileProbePass> {
+class SampleProfileProbePass
+    : public OptionalPassInfoMixin<SampleProfileProbePass> {
   TargetMachine *TM;
 
 public:
   SampleProfileProbePass(TargetMachine *TM) : TM(TM) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 // Pseudo probe distribution factor updater.
@@ -132,12 +134,13 @@ public:
 // pass updates distribution factors for each pseudo probe at the end of the
 // prelink pipeline, to reflect an estimated portion of the real execution
 // count.
-class PseudoProbeUpdatePass : public PassInfoMixin<PseudoProbeUpdatePass> {
+class PseudoProbeUpdatePass
+    : public OptionalPassInfoMixin<PseudoProbeUpdatePass> {
   void runOnFunction(Function &F, FunctionAnalysisManager &FAM);
 
 public:
   PseudoProbeUpdatePass() = default;
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

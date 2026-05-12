@@ -1,4 +1,4 @@
-// REQUIRES : system-darwin
+// REQUIRES: system-darwin
 // RUN: dsymutil -oso-prepend-path %p/.. -dump-debug-map \
 // RUN: %p/../Inputs/global_downgraded_to_static.x86_64 2>&1 | FileCheck %s
 //

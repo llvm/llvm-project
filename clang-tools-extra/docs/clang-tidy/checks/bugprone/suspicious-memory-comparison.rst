@@ -24,10 +24,12 @@ and
 <https://wiki.sei.cmu.edu/confluence/display/c/FLP37-C.+Do+not+use+object+representations+to+compare+floating-point+values>`_
 
 This check is also related to and partially overlaps the CERT C++ Coding Standard rules
-`OOP57-CPP. Prefer special member functions and overloaded operators to C Standard Library functions
+`OOP57-CPP. Prefer special member functions and overloaded operators to
+C Standard Library functions
 <https://wiki.sei.cmu.edu/confluence/display/cplusplus/OOP57-CPP.+Prefer+special+member+functions+and+overloaded+operators+to+C+Standard+Library+functions>`_
 and
-`EXP62-CPP. Do not access the bits of an object representation that are not part of the object's value representation
+`EXP62-CPP. Do not access the bits of an object representation that are not
+part of the object's value representation
 <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP62-CPP.+Do+not+access+the+bits+of+an+object+representation+that+are+not+part+of+the+object%27s+value+representation>`_
 
 `cert-exp42-c` redirects here as an alias of this check.

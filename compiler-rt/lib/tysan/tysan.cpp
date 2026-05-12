@@ -15,6 +15,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -22,6 +23,7 @@
 
 #include "tysan/tysan.h"
 
+#include <stdint.h>
 #include <string.h>
 
 using namespace __sanitizer;
@@ -37,6 +39,30 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 tysan_copy_types(const void *daddr, const void *saddr, uptr size) {
   if (tysan_inited)
     internal_memmove(shadow_for(daddr), shadow_for(saddr), size * sizeof(uptr));
+}
+
+static void getStackTrace(bool fullStacktrace, uptr pc, uptr bp,
+                          BufferedStackTrace *ST) {
+  uptr top = 0;
+  uptr bottom = 0;
+  if (fullStacktrace)
+    GetThreadStackTopAndBottom(false, &top, &bottom);
+  bool request_fast = StackTrace::WillUseFastUnwind(true);
+  ST->Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
+}
+
+namespace __tysan {
+void OnStackUnwind(const SignalContext &sig, const void *,
+                   BufferedStackTrace *stack) {
+  getStackTrace(true, StackTrace::GetNextInstructionPc(sig.pc), sig.bp, stack);
+}
+} // namespace __tysan
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_print_stack_trace() {
+  GET_CURRENT_PC_BP;
+  UNINITIALIZED BufferedStackTrace stack;
+  getStackTrace(true, pc, bp, &stack);
+  stack.Print();
 }
 
 static const char *getDisplayName(const char *Name) {
@@ -240,24 +266,80 @@ static void reportError(void *Addr, int Size, tysan_type_descriptor *TD,
     Printf("\n");
 
   if (pc) {
-    uptr top = 0;
-    uptr bottom = 0;
-    if (flags().print_stacktrace)
-      GetThreadStackTopAndBottom(false, &top, &bottom);
-
-    bool request_fast = StackTrace::WillUseFastUnwind(true);
     BufferedStackTrace ST;
-    ST.Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
+    getStackTrace(flags().print_stacktrace, pc, bp, &ST);
     ST.Print();
   } else {
     Printf("\n");
   }
+
+  if (flags().halt_on_error) {
+    Report("ABORTING\n");
+    Die();
+  }
+}
+
+ALWAYS_INLINE
+static void SetShadowType(tysan_type_descriptor *td,
+                          tysan_type_descriptor **shadowData,
+                          uint64_t AccessSize) {
+  *shadowData = td;
+  uptr shadowDataInt = (uptr)shadowData;
+
+  for (uint64_t i = 1; i < AccessSize; ++i) {
+    uptr dataOffset = i << PtrShift();
+    sptr *badShadowData = (sptr *)(shadowDataInt + dataOffset);
+    sptr badTD = sptr(i) * -1;
+    *badShadowData = badTD;
+  }
+}
+
+ALWAYS_INLINE
+static bool GetNotAllBadTD(uptr ShadowDataInt, uint64_t AccessSize) {
+  bool notAllBadTD = false;
+  for (uint64_t i = 1; i < AccessSize; ++i) {
+    sptr **unkShadowData = (sptr **)(ShadowDataInt + (i << PtrShift()));
+    sptr *ILdTD = *unkShadowData;
+    notAllBadTD = notAllBadTD || (ILdTD != nullptr);
+  }
+  return notAllBadTD;
+}
+
+ALWAYS_INLINE
+static bool GetNotAllUnkTD(uptr ShadowDataInt, uint64_t AccessSize) {
+  bool notAllBadTD = false;
+  for (uint64_t i = 1; i < AccessSize; ++i) {
+    sptr *badShadowData = (sptr *)(ShadowDataInt + (i << PtrShift()));
+    sptr ILdTD = *badShadowData;
+    notAllBadTD = notAllBadTD || (ILdTD >= 0);
+  }
+  return notAllBadTD;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
-  GET_CALLER_PC_BP_SP;
+__tysan_instrument_mem_inst(char *dest, char *src, uint64_t size,
+                            bool needsMemMove) {
+  tysan_type_descriptor **destShadowDataPtr = shadow_for(dest);
 
+  if (!src) {
+    internal_memset((char *)destShadowDataPtr, 0, size << PtrShift());
+    return;
+  }
+
+  uptr srcShadowInt = ((((uptr)src) & AppMask()) << PtrShift()) + ShadowAddr();
+  void *srcShadow = (void *)srcShadowInt;
+
+  if (needsMemMove) {
+    internal_memmove((char *)destShadowDataPtr, srcShadow, size << PtrShift());
+  } else {
+    internal_memcpy((char *)destShadowDataPtr, srcShadow, size << PtrShift());
+  }
+}
+
+ALWAYS_INLINE
+static void __tysan_check_internal(void *addr, int size,
+                                   tysan_type_descriptor *td, int flags,
+                                   uptr pc, uptr bp, uptr sp) {
   bool IsRead = flags & 1;
   bool IsWrite = flags & 2;
   const char *AccessStr;
@@ -298,6 +380,64 @@ __tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
       reportError(addr, size, td, OldTD, AccessStr,
                   "partially accesses an object", i, pc, bp, sp);
   }
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
+  GET_CALLER_PC_BP_SP;
+  __tysan_check_internal(addr, size, td, flags, pc, bp, sp);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__tysan_instrument_with_shadow_update(void *ptr, tysan_type_descriptor *td,
+                                      bool sanitizeFunction,
+                                      uint64_t accessSize, int flags) {
+  tysan_type_descriptor **shadowData = shadow_for(ptr);
+  tysan_type_descriptor *loadedTD = *shadowData;
+  bool shadowIsNull = loadedTD == nullptr;
+
+  // TODO, sanitizeFunction is known at compile time, so maybe this is split
+  // into two different functions
+  if (sanitizeFunction) {
+
+    if (td != loadedTD) {
+
+      // We now know that the types did not match (we're on the slow path). If
+      // the type is unknown, then set it.
+      if (shadowIsNull) {
+        // We're about to set the type. Make sure that all bytes in the value
+        // are also of unknown type.
+        bool isAllUnknownTD = GetNotAllUnkTD((uptr)shadowData, accessSize);
+        if (isAllUnknownTD) {
+          GET_CALLER_PC_BP_SP;
+          __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
+        }
+        SetShadowType(td, shadowData, accessSize);
+      } else {
+        GET_CALLER_PC_BP_SP;
+        __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
+      }
+    } else {
+      // We appear to have the right type. Make sure that all other bytes in
+      // the type are still marked as interior bytes. If not, call the runtime.
+      bool isNotAllBadTD = GetNotAllBadTD((uptr)shadowData, accessSize);
+      if (isNotAllBadTD) {
+        GET_CALLER_PC_BP_SP;
+        __tysan_check_internal(ptr, accessSize, td, flags, pc, bp, sp);
+      }
+    }
+  } else if (shadowIsNull) {
+    SetShadowType(td, shadowData, accessSize);
+  }
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__tysan_set_shadow_type(void *ptr, tysan_type_descriptor *td,
+                        uint64_t accessSize) {
+  // In the mode where writes always set the type, for a write (which does
+  // not also read), we just set the type.
+  tysan_type_descriptor **shadow = shadow_for(ptr);
+  SetShadowType(td, shadow, accessSize);
 }
 
 Flags __tysan::flags_data;
@@ -343,6 +483,8 @@ static void InitializeFlags() {
     ReportUnrecognizedFlags();
   if (common_flags()->help)
     parser.PrintFlagDescriptions();
+
+  __sanitizer_set_report_path(common_flags()->log_path);
 }
 
 static void TySanInitializePlatformEarly() {
@@ -370,6 +512,9 @@ bool tysan_init_is_running;
 } // namespace __tysan
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
+  SanitizerToolName = "TypeSanitizer";
+  CacheBinaryName();
+
   CHECK(!tysan_init_is_running);
   if (tysan_inited)
     return;

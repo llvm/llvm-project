@@ -15,17 +15,18 @@
 
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
-extern cl::opt<bool> EnablePGSO;
-extern cl::opt<bool> PGSOLargeWorkingSetSizeOnly;
-extern cl::opt<bool> PGSOColdCodeOnly;
-extern cl::opt<bool> PGSOColdCodeOnlyForInstrPGO;
-extern cl::opt<bool> PGSOColdCodeOnlyForSamplePGO;
-extern cl::opt<bool> PGSOColdCodeOnlyForPartialSamplePGO;
-extern cl::opt<bool> ForcePGSO;
-extern cl::opt<int> PgsoCutoffInstrProf;
-extern cl::opt<int> PgsoCutoffSampleProf;
+LLVM_ABI extern cl::opt<bool> EnablePGSO;
+LLVM_ABI extern cl::opt<bool> PGSOLargeWorkingSetSizeOnly;
+LLVM_ABI extern cl::opt<bool> PGSOColdCodeOnly;
+LLVM_ABI extern cl::opt<bool> PGSOColdCodeOnlyForInstrPGO;
+LLVM_ABI extern cl::opt<bool> PGSOColdCodeOnlyForSamplePGO;
+LLVM_ABI extern cl::opt<bool> PGSOColdCodeOnlyForPartialSamplePGO;
+LLVM_ABI extern cl::opt<bool> ForcePGSO;
+LLVM_ABI extern cl::opt<int> PgsoCutoffInstrProf;
+LLVM_ABI extern cl::opt<int> PgsoCutoffSampleProf;
 
 class BasicBlock;
 class BlockFrequencyInfo;
@@ -90,15 +91,17 @@ bool shouldOptimizeForSizeImpl(BlockTOrBlockFreq BBOrBlockFreq,
 
 /// Returns true if function \p F is suggested to be size-optimized based on the
 /// profile.
-bool shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
-                           BlockFrequencyInfo *BFI,
-                           PGSOQueryType QueryType = PGSOQueryType::Other);
+LLVM_ABI bool
+shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
+                      BlockFrequencyInfo *BFI,
+                      PGSOQueryType QueryType = PGSOQueryType::Other);
 
 /// Returns true if basic block \p BB is suggested to be size-optimized based on
 /// the profile.
-bool shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
-                           BlockFrequencyInfo *BFI,
-                           PGSOQueryType QueryType = PGSOQueryType::Other);
+LLVM_ABI bool
+shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
+                      BlockFrequencyInfo *BFI,
+                      PGSOQueryType QueryType = PGSOQueryType::Other);
 
 } // end namespace llvm
 

@@ -1,4 +1,4 @@
-; RUN: opt -passes=callsite-splitting -S < %s | FileCheck %s --implicit-check-not=dbg.value
+; RUN: opt -passes=callsite-splitting -S < %s | FileCheck %s --implicit-check-not=dbg_value
 
 ;; Test that DebugLocs are preserved, and that dbg.values are duplicated.
 

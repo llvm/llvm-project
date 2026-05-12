@@ -49,7 +49,7 @@ static StringRef getRCPrefix(dxil::ResourceClass RC) {
 
 static StringRef getFormatName(const dxil::ResourceTypeInfo &RI) {
   if (RI.isTyped()) {
-    switch (RI.getTyped().ElementTy) {
+    switch (RI.getTyped().DXILStorageTy) {
     case dxil::ElementType::I1:
       return "i1";
     case dxil::ElementType::I16:
@@ -214,7 +214,7 @@ struct FormatBindingSize
 
   void format(llvm::raw_ostream &OS, StringRef Style) override {
     uint32_t Size = Item.getBinding().Size;
-    if (Size == std::numeric_limits<uint32_t>::max())
+    if (Size == 0)
       OS << "unbounded";
     else
       OS << Size;

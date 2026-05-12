@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "TestAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
@@ -62,8 +64,9 @@ struct TestElementsAttrInterface
       return;
     }
 
-    llvm::interleaveComma(*values, diag,
-                          [&](T value) { printOneElement(diag, value); });
+    llvm::interleaveComma(*values, diag, [&](T value) {
+      printOneElement(diag, std::move(value));
+    });
   }
 };
 } // namespace

@@ -22,7 +22,10 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
@@ -30,12 +33,19 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef _WIN32
+#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
+#endif
+
 #include <algorithm>
 #include <atomic>
 #include <bitset>
 #include <clocale>
 #include <csignal>
 #include <future>
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 #include <string>
 #include <thread>
 #include <utility>
@@ -280,6 +290,12 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (args.hasArg(OPT_wait_for)) {
+    if (!args.hasArg(OPT_attach_name)) {
+      error.SetErrorStringWithFormat(
+          "--wait-for requires a name (--attach-name)");
+      return error;
+    }
+
     m_option_data.m_wait_for = true;
   }
 
@@ -387,7 +403,8 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (m_option_data.m_print_python_path) {
-    SBFileSpec python_file_spec = SBHostOS::GetLLDBPythonPath();
+    SBFileSpec python_file_spec =
+        SBHostOS::GetScriptPath(lldb::eScriptLanguagePython);
     if (python_file_spec.IsValid()) {
       char python_path[PATH_MAX];
       size_t num_chars = python_file_spec.GetPath(python_path, PATH_MAX);
@@ -435,12 +452,7 @@ int Driver::MainLoop() {
     atexit(reset_stdin_termios);
   }
 
-#ifndef _MSC_VER
-  // Disabling stdin buffering with MSVC's 2015 CRT exposes a bug in fgets
-  // which causes it to miss newlines depending on whether there have been an
-  // odd or even number of characters.  Bug has been reported to MS via Connect.
   ::setbuf(stdin, nullptr);
-#endif
   ::setbuf(stdout, nullptr);
 
   m_debugger.SetErrorFileHandle(stderr, false);
@@ -537,7 +549,7 @@ int Driver::MainLoop() {
   // Check if we have any data in the commands stream, and if so, save it to a
   // temp file
   // so we can then run the command interpreter using the file contents.
-  bool go_interactive = true;
+  bool go_interactive = !m_option_data.m_batch;
   if ((commands_stream.GetData() != nullptr) &&
       (commands_stream.GetSize() != 0u)) {
     SBError error = m_debugger.SetInputString(commands_stream.GetData());
@@ -575,6 +587,7 @@ int Driver::MainLoop() {
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultInferiorCrash &&
         !m_option_data.m_after_crash_commands.empty()) {
+      go_interactive = true;
       SBStream crash_commands_stream;
       WriteCommandsForSourcing(eCommandPlacementAfterCrash,
                                crash_commands_stream);
@@ -641,11 +654,10 @@ void Driver::UpdateWindowSize() {
   }
 }
 
-void sigint_handler(int signo) {
 #ifdef _WIN32
+void sigint_handler(int signo) {
   // Restore handler as it is not persistent on Windows.
   signal(SIGINT, sigint_handler);
-#endif
 
   static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
   if (g_driver != nullptr) {
@@ -658,6 +670,7 @@ void sigint_handler(int signo) {
 
   _exit(signo);
 }
+#endif
 
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " [options]";
@@ -722,6 +735,13 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
+#ifdef _WIN32
+  auto python_path_or_err = SetupPythonRuntimeLibrary();
+  if (!python_path_or_err)
+    llvm::WithColor::error()
+        << llvm::toString(python_path_or_err.takeError()) << '\n';
+#endif
+
   // Parse arguments.
   LLDBOptTable T;
   unsigned MissingArgIndex;
@@ -764,14 +784,63 @@ int main(int argc, char const *argv[]) {
   // Setup LLDB signal handlers once the debugger has been initialized.
   SBDebugger::PrintDiagnosticsOnError();
 
-  //  FIXME: Migrate the SIGINT handler to be handled by the signal loop below.
+#ifdef _WIN32
   signal(SIGINT, sigint_handler);
-#if !defined(_WIN32)
+#else
   signal(SIGPIPE, SIG_IGN);
+
+  // Capture the main thread's id so the signal thread can target it.
+  pthread_t main_thread = pthread_self();
+
+  // Set when the signal thread sends itself a SIGINT to wake the main thread.
+  // The next callback invocation observes this flag and skips the work. A
+  // plain bool is sufficient because the callback only ever runs on the
+  // signal thread; it lives outside the lambda because MainLoopPosix copies
+  // the callback on every dispatch, which would discard in-lambda state.
+  bool skip_next_sigint = false;
 
   // Handle signals in a MainLoop running on a separate thread.
   MainLoop signal_loop;
   Status signal_status;
+
+  auto sigint_handler = signal_loop.RegisterSignal(
+      SIGINT,
+      [&, main_thread](MainLoopBase &) {
+        // Skip the self-sent wakeup SIGINT queued at the end of the previous
+        // invocation.
+        if (std::exchange(skip_next_sigint, false))
+          return;
+
+        // Temporarily restore the default disposition so that a second SIGINT
+        // delivered while DispatchInputInterrupt is running hard-terminates
+        // the process. This preserves the "double Ctrl-C to force exit"
+        // escape hatch users rely on when the debugger is unresponsive.
+        struct sigaction old_action;
+        struct sigaction new_action = {};
+        new_action.sa_handler = SIG_DFL;
+        sigemptyset(&new_action.sa_mask);
+
+        int ret = sigaction(SIGINT, &new_action, &old_action);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        if (g_driver)
+          g_driver->GetDebugger().DispatchInputInterrupt();
+
+        ret = sigaction(SIGINT, &old_action, nullptr);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        // Wake the main thread so any blocking syscall (e.g. the Python REPL
+        // waiting on input or sleeping) returns with EINTR. This lets Python
+        // observe the pending interrupt queued by DispatchInputInterrupt and
+        // raise KeyboardInterrupt. Flag the resulting callback invocation so
+        // it's skipped rather than re-running DispatchInputInterrupt.
+        skip_next_sigint = true;
+        pthread_kill(main_thread, SIGINT);
+      },
+      signal_status);
+  assert(sigint_handler && signal_status.Success());
 
   auto sigwinch_handler = signal_loop.RegisterSignal(
       SIGWINCH,
@@ -844,9 +913,10 @@ int main(int argc, char const *argv[]) {
   }
 
 #if !defined(_WIN32)
-  signal_loop.AddPendingCallback(
-      [](MainLoopBase &loop) { loop.RequestTermination(); });
-  signal_thread.join();
+  // Try to interrupt the signal thread.  If that succeeds, wait for it to exit.
+  if (signal_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+    signal_thread.join();
 #endif
 
   return exit_code;

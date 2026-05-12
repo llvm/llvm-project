@@ -49,13 +49,15 @@ public:
     __data_._DoFree = true;
   }
 
-  exception(exception const&) _NOEXCEPT {}
+  exception(exception const&) _NOEXCEPT : __data_() {}
 
   exception& operator=(exception const&) _NOEXCEPT { return *this; }
 
   virtual ~exception() _NOEXCEPT {}
 
-  virtual char const* what() const _NOEXCEPT { return __data_._What ? __data_._What : "Unknown exception"; }
+  [[__nodiscard__]] virtual char const* what() const _NOEXCEPT {
+    return __data_._What ? __data_._What : "Unknown exception";
+  }
 
 private:
   __std_exception_data __data_;
@@ -77,7 +79,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI exception& operator=(const exception&) _NOEXCEPT = default;
 
   virtual ~exception() _NOEXCEPT;
-  virtual const char* what() const _NOEXCEPT;
+  [[__nodiscard__]] virtual const char* what() const _NOEXCEPT;
 };
 
 class _LIBCPP_EXPORTED_FROM_ABI bad_exception : public exception {
@@ -86,7 +88,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bad_exception(const bad_exception&) _NOEXCEPT            = default;
   _LIBCPP_HIDE_FROM_ABI bad_exception& operator=(const bad_exception&) _NOEXCEPT = default;
   ~bad_exception() _NOEXCEPT override;
-  const char* what() const _NOEXCEPT override;
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 };
 #endif // !_LIBCPP_ABI_VCRUNTIME
 

@@ -15,8 +15,6 @@
 #include "AllocationState.h"
 #include "InterCheckerAPI.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -78,8 +76,6 @@ public:
                                      BugReporterContext &BRC,
                                      PathSensitiveBugReport &BR) override;
 
-    // FIXME: Scan the map once in the visitor's constructor and do a direct
-    // lookup by region.
     bool isSymbolTracked(ProgramStateRef State, SymbolRef Sym) {
       RawPtrMapTy Map = State->get<RawPtrMap>();
       for (const auto &Entry : Map) {

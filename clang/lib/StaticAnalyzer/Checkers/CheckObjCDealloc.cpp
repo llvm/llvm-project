@@ -929,7 +929,7 @@ ObjCDeallocChecker::getValueReleasedByNillingOut(const ObjCMethodCall &M,
   SVal Arg = M.getArgSVal(0);
   ProgramStateRef notNilState, nilState;
   std::tie(notNilState, nilState) =
-      M.getState()->assume(Arg.castAs<DefinedOrUnknownSVal>());
+      C.getState()->assume(Arg.castAs<DefinedOrUnknownSVal>());
   if (!(nilState && !notNilState))
     return nullptr;
 

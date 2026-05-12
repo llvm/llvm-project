@@ -6,7 +6,7 @@
 define i32 @brkpa(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: brkpa:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    brkpas p0.b, p0/z, p1.b, p2.b
+; CHECK-NEXT:    brkpas p1.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkpa.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -18,7 +18,7 @@ define i32 @brkpa(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x 
 define i32 @brkpb(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: brkpb:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    brkpbs p0.b, p0/z, p1.b, p2.b
+; CHECK-NEXT:    brkpbs p1.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkpb.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -30,7 +30,7 @@ define i32 @brkpb(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x 
 define i32 @brka(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
 ; CHECK-LABEL: brka:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    brkas p0.b, p0/z, p1.b
+; CHECK-NEXT:    brkas p1.b, p0/z, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brka.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a)
@@ -42,7 +42,7 @@ define i32 @brka(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
 define i32 @brkb(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
 ; CHECK-LABEL: brkb:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    brkbs p0.b, p0/z, p1.b
+; CHECK-NEXT:    brkbs p1.b, p0/z, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkb.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a)
@@ -69,8 +69,8 @@ define i32 @brkn_all_active(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vsca
 define i32 @brkpa_neg(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: brkpa_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    brkpa p0.b, p0/z, p1.b, p2.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    brkpa p2.b, p0/z, p1.b, p2.b
+; CHECK-NEXT:    ptest p1, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkpa.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -82,8 +82,8 @@ define i32 @brkpa_neg(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 1
 define i32 @brkpb_neg(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: brkpb_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    brkpb p0.b, p0/z, p1.b, p2.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    brkpb p2.b, p0/z, p1.b, p2.b
+; CHECK-NEXT:    ptest p1, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkpb.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -95,8 +95,8 @@ define i32 @brkpb_neg(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 1
 define i32 @brka_neg(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
 ; CHECK-LABEL: brka_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    brka p0.b, p0/z, p1.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    brka p2.b, p0/z, p1.b
+; CHECK-NEXT:    ptest p1, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brka.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a)
@@ -108,8 +108,8 @@ define i32 @brka_neg(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
 define i32 @brkb_neg(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
 ; CHECK-LABEL: brkb_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    brkb p2.b, p0/z, p1.b
+; CHECK-NEXT:    ptest p1, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkb.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a)

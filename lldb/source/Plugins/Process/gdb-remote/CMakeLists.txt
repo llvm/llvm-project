@@ -6,6 +6,10 @@ lldb_tablegen(ProcessGDBRemotePropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE ProcessGDBRemoteProperties.td
   TARGET LLDBPluginProcessGDBRemotePropertiesEnumGen)
 
+lldb_tablegen(ProcessGDBRemoteProperties.json -dump-json
+  SOURCE ProcessGDBRemoteProperties.td
+  TARGET LLDBPluginProcessGDBRemotePropertiesJsonGen)
+
 set(LLDB_PLUGINS
   lldbPluginProcessUtility
 )
@@ -33,6 +37,9 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
   ProcessGDBRemoteLog.cpp
   ThreadGDBRemote.cpp
 
+  LINK_COMPONENTS
+    Support
+    TargetParser
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -45,9 +52,6 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
     ${LLDB_SYSTEM_LIBS}
     ${LLDB_PLUGINS}
     ${LIBCOMPRESSION}
-  LINK_COMPONENTS
-    Support
-    TargetParser
   )
 
 add_dependencies(lldbPluginProcessGDBRemote

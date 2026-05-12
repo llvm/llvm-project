@@ -376,7 +376,7 @@ protected:
     std::vector<uint32_t> valid_wp_ids;
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
-      result.AppendError("Invalid watchpoints specification.");
+      result.AppendError("invalid watchpoints specification");
       return;
     }
 
@@ -470,7 +470,7 @@ protected:
     std::vector<uint32_t> valid_wp_ids;
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
-      result.AppendError("Invalid watchpoints specification.");
+      result.AppendError("invalid watchpoints specification");
       return;
     }
 
@@ -483,7 +483,7 @@ protected:
         if (wp)
           wp->ClearCallback();
       } else {
-        result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n", cur_wp_id);
+        result.AppendErrorWithFormat("Invalid watchpoint ID: %u", cur_wp_id);
         return;
       }
     }
@@ -525,7 +525,7 @@ protected:
     std::vector<uint32_t> valid_wp_ids;
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
-      result.AppendError("Invalid watchpoints specification.");
+      result.AppendError("invalid watchpoints specification");
       return;
     }
 
@@ -548,15 +548,14 @@ protected:
                                     result.GetOutputStream().GetIndentLevel() +
                                         2);
             } else {
-              result.AppendMessageWithFormat(
-                  "Watchpoint %u does not have an associated command.\n",
+              result.AppendMessageWithFormatv(
+                  "Watchpoint {0} does not have an associated command.",
                   cur_wp_id);
             }
           }
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n",
-                                       cur_wp_id);
+          result.AppendErrorWithFormat("Invalid watchpoint ID: %u", cur_wp_id);
         }
       }
     }

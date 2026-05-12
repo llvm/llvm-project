@@ -51,7 +51,6 @@
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/WindowScheduler.h"
-#include "llvm/InitializePasses.h"
 
 #include <deque>
 
@@ -96,9 +95,7 @@ public:
 
   static char ID;
 
-  MachinePipeliner() : MachineFunctionPass(ID) {
-    initializeMachinePipelinerPass(*PassRegistry::getPassRegistry());
-  }
+  MachinePipeliner() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -120,14 +117,17 @@ class SwingSchedulerDDGEdge {
   SUnit *Dst = nullptr;
   SDep Pred;
   unsigned Distance = 0;
+  bool IsValidationOnly = false;
 
 public:
   /// Creates an edge corresponding to an edge represented by \p PredOrSucc and
   /// \p Dep in the original DAG. This pair has no information about the
   /// direction of the edge, so we need to pass an additional argument \p
   /// IsSucc.
-  SwingSchedulerDDGEdge(SUnit *PredOrSucc, const SDep &Dep, bool IsSucc)
-      : Dst(PredOrSucc), Pred(Dep), Distance(0u) {
+  SwingSchedulerDDGEdge(SUnit *PredOrSucc, const SDep &Dep, bool IsSucc,
+                        bool IsValidationOnly)
+      : Dst(PredOrSucc), Pred(Dep), Distance(0u),
+        IsValidationOnly(IsValidationOnly) {
     SUnit *Src = Dep.getSUnit();
 
     if (IsSucc) {
@@ -188,19 +188,59 @@ public:
   /// functions. We ignore the back-edge recurrence in order to avoid unbounded
   /// recursion in the calculation of the ASAP, ALAP, etc functions.
   bool ignoreDependence(bool IgnoreAnti) const;
+
+  /// Returns true if this edge is intended to be used only for validating the
+  /// schedule.
+  bool isValidationOnly() const { return IsValidationOnly; }
 };
 
-/// Represents dependencies between instructions. This class is a wrapper of
-/// `SUnits` and its dependencies to manipulate back-edges in a natural way.
-/// Currently it only supports back-edges via PHI, which are expressed as
-/// anti-dependencies in the original DAG.
-/// FIXME: Support any other loop-carried dependencies
+/// Represents loop-carried dependencies. Because SwingSchedulerDAG doesn't
+/// assume cycle dependencies as the name suggests, such dependencies must be
+/// handled separately. After DAG construction is finished, these dependencies
+/// are added to SwingSchedulerDDG.
+/// TODO: Also handle output-dependencies introduced by physical registers.
+struct LoopCarriedEdges {
+  using OrderDep = SmallSetVector<SUnit *, 8>;
+  using OrderDepsType = DenseMap<SUnit *, OrderDep>;
+
+  OrderDepsType OrderDeps;
+
+  const OrderDep *getOrderDepOrNull(SUnit *Key) const {
+    auto Ite = OrderDeps.find(Key);
+    if (Ite == OrderDeps.end())
+      return nullptr;
+    return &Ite->second;
+  }
+
+  /// Adds some edges to the original DAG that correspond to loop-carried
+  /// dependencies. Historically, loop-carried edges are represented by using
+  /// non-loop-carried edges in the original DAG. This function appends such
+  /// edges to preserve the previous behavior.
+  void modifySUnits(std::vector<SUnit> &SUnits, const TargetInstrInfo *TII);
+
+  void dump(SUnit *SU, const TargetRegisterInfo *TRI,
+            const MachineRegisterInfo *MRI) const;
+};
+
+/// This class provides APIs to retrieve edges from/to an SUnit node, with a
+/// particular focus on loop-carried dependencies. Since SUnit is not designed
+/// to represent such edges, handling them directly using its APIs has required
+/// non-trivial logic in the past. This class serves as a wrapper around SUnit,
+/// offering a simpler interface for managing these dependencies.
 class SwingSchedulerDDG {
   using EdgesType = SmallVector<SwingSchedulerDDGEdge, 4>;
 
   struct SwingSchedulerDDGEdges {
     EdgesType Preds;
     EdgesType Succs;
+
+    /// This field is a subset of ValidationOnlyEdges. These edges are used only
+    /// by specific heuristics, mainly for cycle detection. Although they are
+    /// unnecessary in theory (i.e., ignoring them should still yield a valid
+    /// schedule), they are retained to preserve the existing behavior. Since we
+    /// only need which extra edges exist from a given SUnit, we only store the
+    /// destination SUnits.
+    SmallVector<SUnit *, 4> ExtraSuccs;
   };
 
   void initEdges(SUnit *SU);
@@ -212,17 +252,28 @@ class SwingSchedulerDDG {
   SwingSchedulerDDGEdges EntrySUEdges;
   SwingSchedulerDDGEdges ExitSUEdges;
 
+  /// Edges that are used only when validating the schedule. These edges are
+  /// not considered to drive the optimization heuristics.
+  SmallVector<SwingSchedulerDDGEdge, 8> ValidationOnlyEdges;
+
+  /// Adds a NON-validation-only edge to the DDG. Assumes to be called only by
+  /// the ctor.
   void addEdge(const SUnit *SU, const SwingSchedulerDDGEdge &Edge);
 
   SwingSchedulerDDGEdges &getEdges(const SUnit *SU);
   const SwingSchedulerDDGEdges &getEdges(const SUnit *SU) const;
 
 public:
-  SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU, SUnit *ExitSU);
+  SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU, SUnit *ExitSU,
+                    const LoopCarriedEdges &LCE);
 
   const EdgesType &getInEdges(const SUnit *SU) const;
 
   const EdgesType &getOutEdges(const SUnit *SU) const;
+
+  ArrayRef<SUnit *> getExtraOutEdges(const SUnit *SU) const;
+
+  bool isValidSchedule(const SMSchedule &Schedule) const;
 };
 
 /// This class builds the dependence graph for the instructions in a loop,
@@ -317,7 +368,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
       NumPaths = 0;
     }
 
-    void createAdjacencyStructure(SwingSchedulerDAG *DAG);
+    void createAdjacencyStructure(SwingSchedulerDDG *DDG);
     bool circuit(int V, int S, NodeSetType &NodeSets,
                  const SwingSchedulerDAG *DAG, bool HasBackedge = false);
     void unblock(int U);
@@ -374,8 +425,6 @@ public:
     return ScheduleInfo[Node->NodeNum].ZeroLatencyHeight;
   }
 
-  bool isLoopCarriedDep(const SwingSchedulerDDGEdge &Edge) const;
-
   void applyInstrChange(MachineInstr *MI, SMSchedule &Schedule);
 
   void fixupRegisterOverlaps(std::deque<SUnit *> &Instrs);
@@ -402,7 +451,7 @@ public:
                              const MachineInstr *OtherMI) const;
 
 private:
-  void addLoopCarriedDependences();
+  LoopCarriedEdges addLoopCarriedDependences();
   void updatePhiDependences();
   void changeDependences();
   unsigned calculateResMII();
@@ -486,13 +535,11 @@ public:
     SUnit *FirstNode = Nodes[0];
     SUnit *LastNode = Nodes[Nodes.size() - 1];
 
-    for (auto &PI : DDG->getInEdges(LastNode)) {
+    for (SUnit *SU : DDG->getExtraOutEdges(LastNode)) {
       // If we have an order dep that is potentially loop carried then a
-      // back-edge exists between the last node and the first node that isn't
-      // modeled in the DAG. Handle it manually by adding 1 to the distance of
-      // the last node.
-      if (PI.getSrc() != FirstNode || !PI.isOrderDep() ||
-          !DAG->isLoopCarriedDep(PI))
+      // back-edge exists between the last node and the first node in extra
+      // edges. Handle it manually by adding 1 to the distance of the last node.
+      if (SU != FirstNode)
         continue;
       unsigned &First = SUnitToDistance[FirstNode];
       unsigned Last = SUnitToDistance[LastNode];
@@ -735,16 +782,6 @@ public:
   /// Return the last cycle in the finalized schedule.
   int getFinalCycle() const { return FirstCycle + InitiationInterval - 1; }
 
-  /// Return the cycle of the earliest scheduled instruction in the dependence
-  /// chain.
-  int earliestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                           const SwingSchedulerDDG *DDG);
-
-  /// Return the cycle of the latest scheduled instruction in the dependence
-  /// chain.
-  int latestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                         const SwingSchedulerDDG *DDG);
-
   void computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart, int II,
                     SwingSchedulerDAG *DAG);
   bool insert(SUnit *SU, int StartCycle, int EndCycle, int II);
@@ -786,7 +823,7 @@ public:
     return ScheduledInstrs[cycle];
   }
 
-  SmallSet<SUnit *, 8>
+  SmallPtrSet<SUnit *, 8>
   computeUnpipelineableNodes(SwingSchedulerDAG *SSD,
                              TargetInstrInfo::PipelinerLoopInfo *PLI);
 

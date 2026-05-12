@@ -62,6 +62,19 @@
 ; YAML-NEXT:   - ClobberedBy:     store
 ; YAML-NEXT:     DebugLoc:        { File: '/tmp/s.c', Line: 2, Column: 10 }
 ; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            gvn
+; YAML-NEXT: Name:            LoadClobbered
+; YAML-NEXT: Function:        lifetime_end
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'load of type '
+; YAML-NEXT:   - Type:            i8
+; YAML-NEXT:   - String:          ' not eliminated'
+; YAML-NEXT:   - String:          ' in favor of '
+; YAML-NEXT:   - OtherAccess:     store
+; YAML-NEXT:   - String:          ' because it is clobbered by '
+; YAML-NEXT:   - ClobberedBy:     call llvm.lifetime.end.p0
+; YAML-NEXT: ...
 
 define i32 @arg(ptr %p, i32 %i) {
 entry:
@@ -93,6 +106,16 @@ entry:
   %add = add i32 %load1, %load
   ret i32 %add
 }
+
+define i8 @lifetime_end(i8 %val) {
+  %p = alloca [32 x i8]
+  call void @llvm.lifetime.start.p0(ptr %p)
+  store i8 %val, ptr %p
+  call void @llvm.lifetime.end.p0(ptr %p)
+  %1 = load i8, ptr %p
+  ret i8 %1
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}

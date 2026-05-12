@@ -13,10 +13,11 @@
 
 namespace llvm {
 class MCAsmInfoWasm : public MCAsmInfo {
-  virtual void anchor();
+  void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
+                            raw_ostream &) const final;
 
 protected:
-  MCAsmInfoWasm();
+  MCAsmInfoWasm(const MCTargetOptions &Options);
 };
 } // namespace llvm
 

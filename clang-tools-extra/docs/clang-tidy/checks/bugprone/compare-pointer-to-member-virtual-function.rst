@@ -3,8 +3,8 @@
 bugprone-compare-pointer-to-member-virtual-function
 ===================================================
 
-Detects unspecified behavior about equality comparison between pointer to member
-virtual function and anything other than null-pointer-constant.
+Detects unspecified behavior about equality comparison between pointer to
+member virtual function and anything other than null-pointer-constant.
 
 .. code-block:: c++
 
@@ -47,18 +47,19 @@ becomes particularly challenging when dealing with pointers to pure virtual
 functions, as they may not even have a valid address, further complicating
 comparisons.
 
-Instead, it is recommended to utilize the ``typeid`` operator or other appropriate
-mechanisms for comparing objects to ensure robust and predictable behavior in
-your codebase. By heeding this detection and adopting a more reliable comparison
-method, you can mitigate potential issues related to unspecified behavior,
-especially when dealing with pointers to member virtual functions or pure
+Instead, it is recommended to utilize the ``typeid`` operator or other
+appropriate mechanisms for comparing objects to ensure robust and predictable
+behavior in your codebase. By heeding this detection and adopting a more reliable
+comparison method, you can mitigate potential issues related to unspecified
+behavior, especially when dealing with pointers to member virtual functions or pure
 virtual functions, thereby improving the overall stability and maintainability
 of your code. In scenarios involving pointers to member virtual functions, it's
 only advisable to employ ``nullptr`` for comparisons.
 
+
 Limitations
 -----------
 
-Does not analyze values stored in a variable. For variable, only analyze all virtual
-methods in the same ``class`` or ``struct`` and diagnose when assigning a pointer
-to member virtual function to this variable is possible.
+Does not analyze values stored in a variable. For variable, only analyze all
+virtual methods in the same ``class`` or ``struct`` and diagnose when assigning
+a pointer to member virtual function to this variable is possible.

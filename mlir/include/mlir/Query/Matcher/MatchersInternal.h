@@ -8,11 +8,11 @@
 //
 // Implements the base layer of the matcher framework.
 //
-// Matchers are methods that return a Matcher which provides a method one of the
-// following methods: match(Operation *op), match(Operation *op,
-// SetVector<Operation *> &matchedOps)
+// Matchers are methods that return a Matcher which provides a
+// `match(...)` method whose parameters define the context of the match.
+// Support includes simple (unary) matchers as well as matcher combinators
+// (anyOf, allOf, etc.)
 //
-// The matcher functions are defined in include/mlir/IR/Matchers.h.
 // This file contains the wrapper classes needed to construct matchers for
 // mlir-query.
 //
@@ -25,6 +25,15 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 namespace mlir::query::matcher {
+class DynMatcher;
+namespace internal {
+
+bool allOfVariadicOperator(Operation *op, SetVector<Operation *> *matchedOps,
+                           ArrayRef<DynMatcher> innerMatchers);
+bool anyOfVariadicOperator(Operation *op, SetVector<Operation *> *matchedOps,
+                           ArrayRef<DynMatcher> innerMatchers);
+
+} // namespace internal
 
 // Defaults to false if T has no match() method with the signature:
 // match(Operation* op).
@@ -84,6 +93,27 @@ private:
   MatcherFn matcherFn;
 };
 
+// VariadicMatcher takes a vector of Matchers and returns true if any Matchers
+// match the given operation.
+using VariadicOperatorFunction = bool (*)(Operation *op,
+                                          SetVector<Operation *> *matchedOps,
+                                          ArrayRef<DynMatcher> innerMatchers);
+
+template <VariadicOperatorFunction Func>
+class VariadicMatcher : public MatcherInterface {
+public:
+  VariadicMatcher(std::vector<DynMatcher> matchers)
+      : matchers(std::move(matchers)) {}
+
+  bool match(Operation *op) override { return Func(op, nullptr, matchers); }
+  bool match(Operation *op, SetVector<Operation *> &matchedOps) override {
+    return Func(op, &matchedOps, matchers);
+  }
+
+private:
+  std::vector<DynMatcher> matchers;
+};
+
 // Matcher wraps a MatcherInterface implementation and provides match()
 // methods that redirect calls to the underlying implementation.
 class DynMatcher {
@@ -91,6 +121,31 @@ public:
   // Takes ownership of the provided implementation pointer.
   DynMatcher(MatcherInterface *implementation)
       : implementation(implementation) {}
+
+  // Construct from a variadic function.
+  enum VariadicOperator {
+    // Matches operations for which all provided matchers match.
+    AllOf,
+    // Matches operations for which at least one of the provided matchers
+    // matches.
+    AnyOf
+  };
+
+  static std::unique_ptr<DynMatcher>
+  constructVariadic(VariadicOperator Op,
+                    std::vector<DynMatcher> innerMatchers) {
+    switch (Op) {
+    case AllOf:
+      return std::make_unique<DynMatcher>(
+          new VariadicMatcher<internal::allOfVariadicOperator>(
+              std::move(innerMatchers)));
+    case AnyOf:
+      return std::make_unique<DynMatcher>(
+          new VariadicMatcher<internal::anyOfVariadicOperator>(
+              std::move(innerMatchers)));
+    }
+    llvm_unreachable("Invalid Op value.");
+  }
 
   template <typename MatcherFn>
   static std::unique_ptr<DynMatcher>
@@ -113,6 +168,59 @@ private:
   std::string functionName;
 };
 
+// VariadicOperatorMatcher related types.
+template <typename... Ps>
+class VariadicOperatorMatcher {
+public:
+  VariadicOperatorMatcher(DynMatcher::VariadicOperator varOp, Ps &&...params)
+      : varOp(varOp), params(std::forward<Ps>(params)...) {}
+
+  operator std::unique_ptr<DynMatcher>() const & {
+    return DynMatcher::constructVariadic(
+        varOp, getMatchers(std::index_sequence_for<Ps...>()));
+  }
+
+  operator std::unique_ptr<DynMatcher>() && {
+    return DynMatcher::constructVariadic(
+        varOp, std::move(*this).getMatchers(std::index_sequence_for<Ps...>()));
+  }
+
+private:
+  // Helper method to unpack the tuple into a vector.
+  template <std::size_t... Is>
+  std::vector<DynMatcher> getMatchers(std::index_sequence<Is...>) const & {
+    return {DynMatcher(std::get<Is>(params))...};
+  }
+
+  template <std::size_t... Is>
+  std::vector<DynMatcher> getMatchers(std::index_sequence<Is...>) && {
+    return {DynMatcher(std::get<Is>(std::move(params)))...};
+  }
+
+  const DynMatcher::VariadicOperator varOp;
+  std::tuple<Ps...> params;
+};
+
+// Overloaded function object to generate VariadicOperatorMatcher objects from
+// arbitrary matchers.
+template <unsigned MinCount, unsigned MaxCount>
+struct VariadicOperatorMatcherFunc {
+  DynMatcher::VariadicOperator varOp;
+
+  template <typename... Ms>
+  VariadicOperatorMatcher<Ms...> operator()(Ms &&...Ps) const {
+    static_assert(MinCount <= sizeof...(Ms) && sizeof...(Ms) <= MaxCount,
+                  "invalid number of parameters for variadic matcher");
+    return VariadicOperatorMatcher<Ms...>(varOp, std::forward<Ms>(Ps)...);
+  }
+};
+
+namespace internal {
+const VariadicOperatorMatcherFunc<1, std::numeric_limits<unsigned>::max()>
+    anyOf = {DynMatcher::AnyOf};
+const VariadicOperatorMatcherFunc<1, std::numeric_limits<unsigned>::max()>
+    allOf = {DynMatcher::AllOf};
+} // namespace internal
 } // namespace mlir::query::matcher
 
 #endif // MLIR_TOOLS_MLIRQUERY_MATCHER_MATCHERSINTERNAL_H

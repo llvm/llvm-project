@@ -449,12 +449,14 @@ public:
 
   void GetAliasHelp(const char *alias_name, StreamString &help_string);
 
-  void OutputFormattedHelpText(Stream &strm, llvm::StringRef prefix,
-                               llvm::StringRef help_text);
+  void OutputFormattedHelpText(
+      Stream &strm, llvm::StringRef prefix, llvm::StringRef help_text,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt);
 
-  void OutputFormattedHelpText(Stream &stream, llvm::StringRef command_word,
-                               llvm::StringRef separator,
-                               llvm::StringRef help_text, size_t max_word_len);
+  void OutputFormattedHelpText(
+      Stream &stream, llvm::StringRef command_word, llvm::StringRef separator,
+      llvm::StringRef help_text, size_t max_word_len,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt);
 
   // this mimics OutputFormattedHelpText but it does perform a much simpler
   // formatting, basically ensuring line alignment. This is only good if you
@@ -729,6 +731,12 @@ private:
 
   bool EchoCommandNonInteractive(llvm::StringRef line,
                                  const Flags &io_handler_flags) const;
+
+  /// Return the language specific command object for the current frame.
+  ///
+  /// For example, when stopped on a C++ frame, this returns the command object
+  /// for "language cplusplus" (`CommandObjectMultiwordItaniumABI`).
+  lldb::CommandObjectSP GetFrameLanguageCommand() const;
 
   // A very simple state machine which models the command handling transitions
   enum class CommandHandlingState {

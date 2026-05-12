@@ -19,8 +19,10 @@
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/ABI.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
@@ -28,6 +30,7 @@ class ASTContext;
 class FunctionType;
 class GlobalDecl;
 class QualType;
+class TargetInfo;
 class Type;
 } // namespace clang
 
@@ -70,6 +73,12 @@ class CIRGenTypes {
 
   llvm::SmallVector<const clang::RecordDecl *, 8> deferredRecords;
 
+  /// Cache of record type keys known to be safe to convert (i.e.,
+  /// isSafeToConvert returned true). Cleared whenever recordsBeingLaidOut
+  /// changes, since the safety result depends on which records are currently
+  /// being laid out.
+  llvm::DenseSet<const clang::Type *> safeToConvertCache;
+
   /// Heper for convertType.
   mlir::Type convertFunctionTypeInternal(clang::QualType ft);
 
@@ -104,6 +113,16 @@ public:
     return recordsBeingLaidOut.count(ty);
   }
 
+  /// Check if a record type key is in the safe-to-convert cache.
+  bool isCachedSafeToConvert(const clang::Type *key) const {
+    return safeToConvertCache.count(key);
+  }
+
+  /// Add a record type key to the safe-to-convert cache.
+  void cacheSafeToConvert(const clang::Type *key) {
+    safeToConvertCache.insert(key);
+  }
+
   const ABIInfo &getABIInfo() const { return theABIInfo; }
 
   /// Convert a Clang type into a mlir::Type.
@@ -129,6 +148,13 @@ public:
   /// Get the CIR function type for \arg Info.
   cir::FuncType getFunctionType(const CIRGenFunctionInfo &info);
 
+  cir::FuncType getFunctionType(clang::GlobalDecl gd);
+
+  /// Determine if a C++ inheriting constructor should have parameters matching
+  /// those of its inherited constructor.
+  bool inheritingCtorHasParams(const InheritedConstructor &inherited,
+                               CXXCtorType type);
+
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue
   //     of a function declaration or definition,
@@ -151,6 +177,10 @@ public:
 
   const CIRGenFunctionInfo &arrangeGlobalDeclaration(GlobalDecl gd);
 
+  /// UpdateCompletedType - when we find the full definition for a TagDecl,
+  /// replace the 'opaque' type we previously made for it if applicable.
+  void updateCompletedType(const clang::TagDecl *td);
+
   /// Free functions are functions that are compatible with an ordinary C
   /// function pointer type.
   const CIRGenFunctionInfo &
@@ -161,6 +191,11 @@ public:
   bool isZeroInitializable(clang::QualType ty);
   bool isZeroInitializable(const RecordDecl *rd);
 
+  const CIRGenFunctionInfo &arrangeCXXConstructorCall(
+      const CallArgList &args, const clang::CXXConstructorDecl *d,
+      clang::CXXCtorType ctorKind, unsigned extraPrefixArgs,
+      unsigned extraSuffixArgs, bool passProtoArgs = true);
+
   const CIRGenFunctionInfo &
   arrangeCXXMethodCall(const CallArgList &args,
                        const clang::FunctionProtoType *type,
@@ -169,6 +204,7 @@ public:
   /// C++ methods have some special rules and also have implicit parameters.
   const CIRGenFunctionInfo &
   arrangeCXXMethodDeclaration(const clang::CXXMethodDecl *md);
+  const CIRGenFunctionInfo &arrangeCXXStructorDeclaration(clang::GlobalDecl gd);
 
   const CIRGenFunctionInfo &
   arrangeCXXMethodType(const clang::CXXRecordDecl *rd,
@@ -179,14 +215,16 @@ public:
                                                     const FunctionType *fnType);
 
   const CIRGenFunctionInfo &
-  arrangeCIRFunctionInfo(CanQualType returnType,
+  arrangeCIRFunctionInfo(CanQualType returnType, bool isInstanceMethod,
                          llvm::ArrayRef<CanQualType> argTypes,
-                         RequiredArgs required);
+                         FunctionType::ExtInfo info, RequiredArgs required);
 
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(CanQual<FunctionProtoType> fpt);
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt);
+
+  unsigned getTargetAddressSpace(QualType ty) const;
 };
 
 } // namespace clang::CIRGen

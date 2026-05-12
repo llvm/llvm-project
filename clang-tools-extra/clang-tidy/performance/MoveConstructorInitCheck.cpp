@@ -1,4 +1,4 @@
-//===--- MoveConstructorInitCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,7 +39,7 @@ void MoveConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Do not diagnose if the expression used to perform the initialization is a
   // trivially-copyable type.
-  QualType QT = Initializer->getInit()->getType();
+  const QualType QT = Initializer->getInit()->getType();
   if (QT.isTriviallyCopyableType(*Result.Context))
     return;
 

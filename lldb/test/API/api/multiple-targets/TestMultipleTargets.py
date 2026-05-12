@@ -8,10 +8,12 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class TestMultipleTargets(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     @skipIfNoSBHeaders
     @expectedFailureAll(
         oslist=["windows"], archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr20282"

@@ -28,6 +28,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 class _LIBCPP_EXPORTED_FROM_ABI __libcpp_debug_randomizer {
 public:
   _LIBCPP_HIDE_FROM_ABI __libcpp_debug_randomizer() {
@@ -65,7 +66,6 @@ private:
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE) || defined(_LIBCPP_BUILDING_LIBRARY)
 class _LIBCPP_EXPORTED_FROM_ABI __rs_default;
 
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
 
 class _LIBCPP_EXPORTED_FROM_ABI __rs_default {
@@ -91,7 +91,6 @@ public:
 };
 
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX14 void
@@ -162,6 +161,7 @@ shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last, _UniformRan
       std::move(__first), std::move(__last), std::forward<_UniformRandomNumberGenerator>(__g));
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

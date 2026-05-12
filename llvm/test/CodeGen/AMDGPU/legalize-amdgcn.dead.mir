@@ -8,16 +8,14 @@ body: |
 
     ; CHECK-LABEL: name: test_struct
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF1]](<3 x s32>)
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $vgpr1 = COPY [[UV]](s32)
-    ; CHECK-NEXT: $vgpr2 = COPY [[UV1]](s32)
-    ; CHECK-NEXT: $vgpr3 = COPY [[UV2]](s32)
-    ; CHECK-NEXT: $vgpr4_vgpr5 = COPY [[DEF2]](s64)
-    ; CHECK-NEXT: $vgpr6 = COPY [[DEF3]](<2 x s16>)
+    ; CHECK-NEXT: $vgpr1 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: $vgpr3 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: $vgpr4_vgpr5 = COPY [[DEF1]](s64)
+    ; CHECK-NEXT: $vgpr6 = COPY [[DEF2]](<2 x s16>)
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
     %0:_(s32), %1:_(<3 x s32>), %2:_(s64), %3:_(<2 x s16>) = G_INTRINSIC intrinsic(@llvm.amdgcn.dead)
 

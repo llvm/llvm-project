@@ -247,8 +247,8 @@ TEST(BitfieldsTest, ValueTooBigBounded) {
   Bitfield::set<A>(Storage, 0);
   Bitfield::set<A>(Storage, -1);
   Bitfield::set<A>(Storage, -2);
-  EXPECT_DEBUG_DEATH(Bitfield::set<A>(Storage, 2), "value is too big");
-  EXPECT_DEBUG_DEATH(Bitfield::set<A>(Storage, -3), "value is too small");
+  EXPECT_DEBUG_DEATH(Bitfield::set<A>(Storage, 2), "value is out of range");
+  EXPECT_DEBUG_DEATH(Bitfield::set<A>(Storage, -3), "value is out of range");
 }
 
 #endif

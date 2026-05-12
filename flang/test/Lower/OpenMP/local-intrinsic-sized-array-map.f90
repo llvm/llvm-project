@@ -11,7 +11,7 @@
 !HLFIRDIALECT:   %[[B_DECLARE:.*]]:2 = hlfir.declare %[[B_ALLOCA]](%[[B_SHAPE]]) {uniq_name = "_QFlocal_variable_intrinsic_sizeEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 !HLFIRDIALECT:   %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}} : index) upper_bound({{.*}} : index) extent({{.*}} : index) stride({{.*}} : index) start_idx({{.*}} : index) {stride_in_bytes = true}
 !HLFIRDIALECT:   %[[MAP_DATA_B:.*]] = omp.map.info var_ptr(%[[B_DECLARE]]#1 : !fir.ref<!fir.array<?xf32>>, f32) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xf32>> {name = "b"}
-!HLFIRDIALECT:   %[[MAP_DATA_SZ:.*]] = omp.map.info var_ptr(%[[SZ_DATA]] : !fir.ref<index>, index) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<index> {name = ""}
+!HLFIRDIALECT:   %[[MAP_DATA_SZ:.*]] = omp.map.info var_ptr(%[[SZ_DATA]] : !fir.ref<index>, index) map_clauses(implicit) capture(ByCopy) -> !fir.ref<index> {name = ""}
 !HLFIRDIALECT:   omp.target map_entries(%[[MAP_DATA_B]] -> %[[ARG1:.*]], %[[MAP_DATA_SZ]] -> %[[ARG2:.*]] : !fir.ref<!fir.array<?xf32>>, !fir.ref<index>) {
 !HLFIRDIALECT:      %[[SZ_LD:.*]] = fir.load %[[ARG2]] : !fir.ref<index>
 !HLFIRDIALECT:      %[[SZ_CONV:.*]] = fir.convert %[[SZ_LD]] : (index) -> i64

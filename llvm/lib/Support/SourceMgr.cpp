@@ -24,6 +24,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -38,6 +39,22 @@ using namespace llvm;
 
 static const size_t TabStop = 8;
 
+// Out of line to avoid needing definition of vfs::FileSystem in header.
+SourceMgr::SourceMgr() = default;
+SourceMgr::SourceMgr(IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : FS(std::move(FS)) {}
+SourceMgr::SourceMgr(SourceMgr &&) = default;
+SourceMgr &SourceMgr::operator=(SourceMgr &&) = default;
+SourceMgr::~SourceMgr() = default;
+
+IntrusiveRefCntPtr<vfs::FileSystem> SourceMgr::getVirtualFileSystem() const {
+  return FS;
+}
+
+void SourceMgr::setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+  this->FS = std::move(FS);
+}
+
 unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
                                    SMLoc IncludeLoc,
                                    std::string &IncludedFile) {
@@ -51,9 +68,16 @@ unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 SourceMgr::OpenIncludeFile(const std::string &Filename,
-                           std::string &IncludedFile) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
-      MemoryBuffer::getFile(Filename);
+                           std::string &IncludedFile,
+                           bool RequiresNullTerminator) {
+  auto GetFile = [this, RequiresNullTerminator](StringRef Path) {
+    return FS ? FS->getBufferForFile(Path, /*FileSize=*/-1,
+                                     RequiresNullTerminator)
+              : MemoryBuffer::getFile(Path, /*IsText=*/false,
+                                      RequiresNullTerminator);
+  };
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr = GetFile(Filename);
 
   SmallString<64> Buffer(Filename);
   // If the file didn't exist directly, see if it's in an include path.
@@ -61,7 +85,7 @@ SourceMgr::OpenIncludeFile(const std::string &Filename,
        ++i) {
     Buffer = IncludeDirectories[i];
     sys::path::append(Buffer, Filename);
-    NewBufOrErr = MemoryBuffer::getFile(Buffer);
+    NewBufOrErr = GetFile(Buffer);
   }
 
   if (NewBufOrErr)
@@ -202,7 +226,7 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   size_t NewlineOffs = StringRef(BufStart, Ptr - BufStart).find_last_of("\n\r");
   if (NewlineOffs == StringRef::npos)
     NewlineOffs = ~(size_t)0;
-  return std::make_pair(LineNo, Ptr - BufStart - NewlineOffs);
+  return {LineNo, Ptr - BufStart - NewlineOffs};
 }
 
 // FIXME: Note that the formatting of source locations is spread between

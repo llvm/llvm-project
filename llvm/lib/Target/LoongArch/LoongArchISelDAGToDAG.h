@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCHISELDAGTODAG_H
 
 #include "LoongArch.h"
+#include "LoongArchSelectionDAGInfo.h"
 #include "LoongArchTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 
@@ -26,8 +27,9 @@ class LoongArchDAGToDAGISel : public SelectionDAGISel {
 public:
   LoongArchDAGToDAGISel() = delete;
 
-  explicit LoongArchDAGToDAGISel(LoongArchTargetMachine &TM)
-      : SelectionDAGISel(TM) {}
+  explicit LoongArchDAGToDAGISel(LoongArchTargetMachine &TM,
+                                 CodeGenOptLevel OptLevel)
+      : SelectionDAGISel(TM, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<LoongArchSubtarget>();
@@ -58,10 +60,13 @@ public:
 
   bool selectVSplat(SDNode *N, APInt &Imm, unsigned MinSizeInBits) const;
 
-  template <unsigned ImmSize, bool IsSigned = false>
+  template <unsigned ImmSize, unsigned EltSize = 0, bool IsSigned = false>
   bool selectVSplatImm(SDValue N, SDValue &SplatVal);
-
+  template <unsigned ImmSize>
+  bool selectVSplatImmNeg(SDValue N, SDValue &SplatVal) const;
+  template <unsigned EltSize = 0>
   bool selectVSplatUimmInvPow2(SDValue N, SDValue &SplatImm) const;
+  template <unsigned EltSize = 0>
   bool selectVSplatUimmPow2(SDValue N, SDValue &SplatImm) const;
 
   // Return the LoongArch branch opcode that matches the given DAG integer
@@ -93,7 +98,8 @@ public:
 class LoongArchDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
   static char ID;
-  explicit LoongArchDAGToDAGISelLegacy(LoongArchTargetMachine &TM);
+  explicit LoongArchDAGToDAGISelLegacy(LoongArchTargetMachine &TM,
+                                       CodeGenOptLevel OptLevel);
 };
 
 } // end namespace llvm

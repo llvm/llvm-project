@@ -130,7 +130,7 @@ bool LPPassManager::runOnFunction(Function &F) {
   auto &LIWP = getAnalysis<LoopInfoWrapperPass>();
   LI = &LIWP.getLoopInfo();
   Module &M = *F.getParent();
-#if 0
+#ifndef NDEBUG
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 #endif
   bool Changed = false;
@@ -239,9 +239,7 @@ bool LPPassManager::runOnFunction(Function &F) {
         // is that LPPassManager might run passes which do not require LCSSA
         // form (LoopPassPrinter for example). We should skip verification for
         // such passes.
-        // FIXME: Loop-sink currently break LCSSA. Fix it and reenable the
-        // verification!
-#if 0
+#ifndef NDEBUG
         if (mustPreserveAnalysisID(LCSSAVerificationPass::ID))
           assert(CurrentLoop->isRecursivelyLCSSAForm(*DT, *LI));
 #endif
@@ -373,7 +371,7 @@ bool LoopPass::skipLoop(const Loop *L) const {
   if (!F)
     return false;
   // Check the opt bisect limit.
-  OptPassGate &Gate = F->getContext().getOptPassGate();
+  const OptPassGate &Gate = F->getContext().getOptPassGate();
   if (Gate.isEnabled() &&
       !Gate.shouldRunPass(this->getPassName(), getDescription(*L)))
     return true;

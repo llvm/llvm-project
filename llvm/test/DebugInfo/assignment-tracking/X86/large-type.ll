@@ -1,6 +1,8 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
+target triple = "x86_64-unknown-linux-gnu"
+
 ;; Based on optimized IR from C source:
 ;; int main () {
 ;;   char a1[__INT_MAX__];

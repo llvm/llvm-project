@@ -7,7 +7,7 @@
 // Test deducing minimal version.
 // spirv.IAdd is available from v1.0.
 
-// CHECK: requires #spirv.vce<v1.0, [Shader], []>
+// CHECK: requires #spirv.vce<v1.0, [Shader, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader], []>, #spirv.resource_limits<>>
@@ -21,7 +21,7 @@ spirv.module Logical GLSL450 attributes {
 // Test deducing minimal version.
 // spirv.GroupNonUniformBallot is available since v1.3.
 
-// CHECK: requires #spirv.vce<v1.3, [GroupNonUniformBallot, Shader], []>
+// CHECK: requires #spirv.vce<v1.3, [GroupNonUniformBallot, Shader, GroupNonUniform, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader, GroupNonUniformBallot], []>, #spirv.resource_limits<>>
@@ -32,7 +32,7 @@ spirv.module Logical GLSL450 attributes {
   }
 }
 
-// CHECK: requires #spirv.vce<v1.4, [Shader], []>
+// CHECK: requires #spirv.vce<v1.4, [Shader, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.6, [Shader], []>, #spirv.resource_limits<>>
 } {
@@ -48,7 +48,7 @@ spirv.module Logical GLSL450 attributes {
 
 // Test minimal capabilities.
 
-// CHECK: requires #spirv.vce<v1.0, [Shader], []>
+// CHECK: requires #spirv.vce<v1.0, [Shader, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader, Float16, Float64, Int16, Int64, VariablePointers], []>, #spirv.resource_limits<>>
@@ -61,10 +61,10 @@ spirv.module Logical GLSL450 attributes {
 
 // Test Physical Storage Buffers are deduced correctly.
 
-// CHECK: spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.0, [PhysicalStorageBufferAddresses, Shader], [SPV_EXT_physical_storage_buffer]>
+// CHECK: spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.0, [PhysicalStorageBufferAddresses, Shader, Matrix], [SPV_EXT_physical_storage_buffer]>
 spirv.module PhysicalStorageBuffer64 GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader, PhysicalStorageBufferAddresses], [SPV_EXT_physical_storage_buffer]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [PhysicalStorageBufferAddresses], [SPV_EXT_physical_storage_buffer]>, #spirv.resource_limits<>>
 } {
   spirv.func @physical_ptr(%val : !spirv.ptr<f32, PhysicalStorageBuffer> { spirv.decoration = #spirv.decoration<Aliased> }) "None" {
     spirv.Return
@@ -74,7 +74,7 @@ spirv.module PhysicalStorageBuffer64 GLSL450 attributes {
 // Test deducing implied capability.
 // AtomicStorage implies Shader.
 
-// CHECK: requires #spirv.vce<v1.0, [Shader], []>
+// CHECK: requires #spirv.vce<v1.0, [Shader, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [AtomicStorage], []>, #spirv.resource_limits<>>
@@ -95,7 +95,7 @@ spirv.module Logical GLSL450 attributes {
 // * GroupNonUniformArithmetic
 // * GroupNonUniformBallot
 
-// CHECK: requires #spirv.vce<v1.3, [GroupNonUniformArithmetic, Shader], []>
+// CHECK: requires #spirv.vce<v1.3, [GroupNonUniformArithmetic, Shader, GroupNonUniform, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>, #spirv.resource_limits<>>
@@ -106,7 +106,7 @@ spirv.module Logical GLSL450 attributes {
   }
 }
 
-// CHECK: requires #spirv.vce<v1.3, [GroupNonUniformClustered, GroupNonUniformBallot, Shader], []>
+// CHECK: requires #spirv.vce<v1.3, [GroupNonUniformClustered, GroupNonUniformBallot, Shader, GroupNonUniform, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, GroupNonUniformClustered, GroupNonUniformBallot], []>, #spirv.resource_limits<>>
@@ -120,7 +120,7 @@ spirv.module Logical GLSL450 attributes {
 // Test type required capabilities
 
 // Using 8-bit integers in non-interface storage class requires Int8.
-// CHECK: requires #spirv.vce<v1.0, [Int8, Shader], []>
+// CHECK: requires #spirv.vce<v1.0, [Int8, Shader, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, Int8], []>, #spirv.resource_limits<>>
@@ -132,7 +132,7 @@ spirv.module Logical GLSL450 attributes {
 }
 
 // Using 16-bit floats in non-interface storage class requires Float16.
-// CHECK: requires #spirv.vce<v1.0, [Float16, Shader], []>
+// CHECK: requires #spirv.vce<v1.0, [Float16, Shader, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, Float16], []>, #spirv.resource_limits<>>
@@ -144,7 +144,7 @@ spirv.module Logical GLSL450 attributes {
 }
 
 // Using 16-element vectors requires Vector16.
-// CHECK: requires #spirv.vce<v1.0, [Vector16, Shader], []>
+// CHECK: requires #spirv.vce<v1.0, [Vector16, Shader, Kernel, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, Vector16], []>, #spirv.resource_limits<>>
@@ -162,7 +162,7 @@ spirv.module Logical GLSL450 attributes {
 // Test deducing minimal extensions.
 // spirv.KHR.SubgroupBallot requires the SPV_KHR_shader_ballot extension.
 
-// CHECK: requires #spirv.vce<v1.0, [SubgroupBallotKHR, Shader], [SPV_KHR_shader_ballot]>
+// CHECK: requires #spirv.vce<v1.0, [SubgroupBallotKHR, Shader, Matrix], [SPV_KHR_shader_ballot]>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader, SubgroupBallotKHR],
@@ -178,7 +178,7 @@ spirv.module Logical GLSL450 attributes {
 // Vulkan memory model requires SPV_KHR_vulkan_memory_model, which is enabled
 // implicitly by v1.5.
 
-// CHECK: requires #spirv.vce<v1.0, [VulkanMemoryModel], [SPV_KHR_vulkan_memory_model]>
+// CHECK: requires #spirv.vce<v1.5, [VulkanMemoryModel], [SPV_KHR_vulkan_memory_model]>
 spirv.module Logical Vulkan attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader, VulkanMemoryModel], []>, #spirv.resource_limits<>>
@@ -193,7 +193,7 @@ spirv.module Logical Vulkan attributes {
 
 // Using 8-bit integers in interface storage class requires additional
 // extensions and capabilities.
-// CHECK: requires #spirv.vce<v1.0, [StorageBuffer16BitAccess, Shader, Int16], [SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>
+// CHECK: requires #spirv.vce<v1.0, [StorageBuffer16BitAccess, Shader, Int16, Matrix], [SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, StorageBuffer16BitAccess, Int16], []>, #spirv.resource_limits<>>
@@ -208,7 +208,7 @@ spirv.module Logical GLSL450 attributes {
 // Complicated nested types
 // * Buffer requires ImageBuffer or SampledBuffer.
 // * Rg32f requires StorageImageExtendedFormats.
-// CHECK: requires #spirv.vce<v1.0, [UniformAndStorageBuffer8BitAccess, StorageUniform16, Int64, Shader, ImageBuffer, StorageImageExtendedFormats], [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>
+// CHECK: requires #spirv.vce<v1.0, [UniformAndStorageBuffer8BitAccess, StorageUniform16, Int64, Shader, ImageBuffer, StorageImageExtendedFormats, StorageBuffer8BitAccess, StorageBuffer16BitAccess, Matrix, SampledBuffer], [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader, UniformAndStorageBuffer8BitAccess, StorageBuffer16BitAccess, StorageUniform16, Int16, Int64, ImageBuffer, StorageImageExtendedFormats], []>,
@@ -216,4 +216,226 @@ spirv.module Logical GLSL450 attributes {
 } {
   spirv.GlobalVariable @data : !spirv.ptr<!spirv.struct<(i8 [0], f16 [2], i64 [4])>, Uniform>
   spirv.GlobalVariable @img  : !spirv.ptr<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Rg32f>, UniformConstant>
+}
+
+// Using bfloat16 requires BFloat16TypeKHR capability and SPV_KHR_bfloat16 extension.
+// CHECK: requires #spirv.vce<v1.0, [StorageBuffer16BitAccess, Shader, BFloat16TypeKHR, Matrix], [SPV_KHR_bfloat16, SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader, StorageBuffer16BitAccess, BFloat16TypeKHR], [SPV_KHR_bfloat16, SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.func @load_bf16(%ptr : !spirv.ptr<bf16, StorageBuffer>) -> bf16 "None" {
+    %val = spirv.Load "StorageBuffer" %ptr : bf16
+    spirv.ReturnValue %val : bf16
+  }
+}
+
+// Cooperative matrix with bf16 component type
+// CHECK: requires #spirv.vce<v1.6, [BFloat16TypeKHR, CooperativeMatrixKHR, BFloat16CooperativeMatrixKHR, Shader, Matrix], [SPV_KHR_bfloat16, SPV_KHR_cooperative_matrix]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader, CooperativeMatrixKHR, BFloat16TypeKHR, BFloat16CooperativeMatrixKHR], [SPV_KHR_cooperative_matrix, SPV_KHR_bfloat16]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.func @bf16_coopmatrix(%arg0: !spirv.coopmatrix<4x4xbf16, Subgroup, MatrixA>) -> !spirv.coopmatrix<4x4xbf16, Subgroup, MatrixA> "None" {
+    spirv.ReturnValue %arg0 : !spirv.coopmatrix<4x4xbf16, Subgroup, MatrixA>
+  }
+}
+
+// Cooperative matrix with f8E4M3FN component type
+// CHECK: requires #spirv.vce<v1.6, [Float8EXT, CooperativeMatrixKHR, Float8CooperativeMatrixEXT, Shader, Matrix], [SPV_EXT_float8, SPV_KHR_cooperative_matrix]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader, CooperativeMatrixKHR, Float8EXT, Float8CooperativeMatrixEXT], [SPV_KHR_cooperative_matrix, SPV_EXT_float8]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.func @f8_coopmatrix(%arg0: !spirv.coopmatrix<4x4xf8E4M3FN, Subgroup, MatrixA>) -> !spirv.coopmatrix<4x4xf8E4M3FN, Subgroup, MatrixA> "None" {
+    spirv.ReturnValue %arg0 : !spirv.coopmatrix<4x4xf8E4M3FN, Subgroup, MatrixA>
+  }
+}
+
+// Cooperative matrix with f8E5M2 component type
+// CHECK: requires #spirv.vce<v1.6, [Float8EXT, CooperativeMatrixKHR, Float8CooperativeMatrixEXT, Shader, Matrix], [SPV_EXT_float8, SPV_KHR_cooperative_matrix]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader, CooperativeMatrixKHR, Float8EXT, Float8CooperativeMatrixEXT], [SPV_KHR_cooperative_matrix, SPV_EXT_float8]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.func @f8_coopmatrix(%arg0: !spirv.coopmatrix<4x4xf8E5M2, Subgroup, MatrixA>) -> !spirv.coopmatrix<4x4xf8E5M2, Subgroup, MatrixA> "None" {
+    spirv.ReturnValue %arg0 : !spirv.coopmatrix<4x4xf8E5M2, Subgroup, MatrixA>
+  }
+}
+
+// CHECK: requires #spirv.vce<v1.5, [GraphARM, Int8, TensorsARM, Float16, VulkanMemoryModel], [SPV_ARM_graph, SPV_ARM_tensors, SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [VulkanMemoryModel, GraphARM, TensorsARM, Float16], [SPV_ARM_tensors, SPV_ARM_graph]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.ARM.Graph @argmax(%arg0: !spirv.arm.tensor<14x19xi8>, %arg1 : !spirv.arm.tensor<1xf16>) -> !spirv.arm.tensor<14x19xi8> {
+      spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<14x19xi8>
+  }
+}
+
+// Check that `bind(set, binding)` on spirv.GlobalVariable deduces the Shader
+// capability (DescriptorSet and Binding decorations require Shader per the spec).
+// CHECK: requires #spirv.vce<v1.5, [Shader, VulkanMemoryModel, Matrix], [SPV_KHR_vulkan_memory_model]>
+spirv.module Logical Vulkan attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, VulkanMemoryModel], [SPV_KHR_vulkan_memory_model]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @var bind(0, 0) : !spirv.ptr<!spirv.struct<(i32 [0])>, UniformConstant>
+}
+
+// Check that extension and capability queries handle recursive types.
+// CHECK: requires #spirv.vce<v1.0, [Shader, Addresses, Matrix], [SPV_KHR_storage_buffer_storage_class]>
+spirv.module Physical64 GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader, Addresses], [SPV_KHR_storage_buffer_storage_class]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @recursive:
+    !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>, StorageBuffer>
+}
+
+//===----------------------------------------------------------------------===//
+// Image type capabilities
+//===----------------------------------------------------------------------===//
+
+// 2D + MultiSampled + NoSampler requires StorageImageMultisample.
+// CHECK: requires #spirv.vce<v1.0, [Shader, StorageImageMultisample, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, StorageImageMultisample], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_2d_ms_storage bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, MultiSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// 2D + MultiSampled + Arrayed + NoSampler requires both StorageImageMultisample
+// and ImageMSArray.
+// CHECK: requires #spirv.vce<v1.0, [Shader, StorageImageMultisample, ImageMSArray, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, StorageImageMultisample, ImageMSArray], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_2d_ms_arrayed_storage bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Dim2D, NoDepth, Arrayed, MultiSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// 2D + SingleSampled does not request multisample-related caps.
+// CHECK: requires #spirv.vce<v1.0, [Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_2d_storage bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// Cube without Arrayed requires Shader but not ImageCubeArray.
+// CHECK: requires #spirv.vce<v1.0, [Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_cube bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Cube, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, UniformConstant>
+}
+
+// Cube + Arrayed requires ImageCubeArray (which transitively implies
+// SampledCubeArray).
+// CHECK: requires #spirv.vce<v1.0, [Shader, ImageCubeArray, Matrix, SampledCubeArray], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, ImageCubeArray], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_cube_arrayed bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Cube, NoDepth, Arrayed, SingleSampled, NeedSampler, Unknown>, UniformConstant>
+}
+
+// 1D + NoSampler requires Image1D directly (and pulls in Sampled1D as an
+// implied capability, but the target_env need not list Sampled1D).
+// CHECK: requires #spirv.vce<v1.0, [Shader, Image1D, Matrix, Sampled1D], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Image1D], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_1d_storage bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// 1D + NeedSampler requires Sampled1D.
+// CHECK: requires #spirv.vce<v1.0, [Shader, Sampled1D, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Sampled1D], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_1d_sampled bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, UniformConstant>
+}
+
+// Buffer + NoSampler requires ImageBuffer (which transitively implies
+// SampledBuffer).
+// CHECK: requires #spirv.vce<v1.0, [Shader, ImageBuffer, Matrix, SampledBuffer], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, ImageBuffer], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_buffer_storage bind(0, 0) :
+    !spirv.ptr<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// 64-bit integer sampled type requires Int64ImageEXT and the
+// SPV_EXT_shader_image_int64 extension.
+// CHECK: requires #spirv.vce<v1.0, [Shader, Int64ImageEXT, Int64, Matrix], [SPV_EXT_shader_image_int64]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Int64, Int64ImageEXT], [SPV_EXT_shader_image_int64]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @img_2d_i64 bind(0, 0) :
+    !spirv.ptr<!spirv.image<i64, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, UniformConstant>
+}
+
+// CHECK: requires #spirv.vce<v1.0, [Linkage, Shader, Matrix], [SPV_KHR_linkonce_odr]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Linkage], [SPV_KHR_linkonce_odr]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.func @linkonce_odr_fn() "None" attributes {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "linkonce_odr_fn",
+      linkage_type = <LinkOnceODR>>
+  } {
+    spirv.Return
+  }
+}
+
+// CHECK: requires #spirv.vce<v1.0, [Linkage, Shader, Matrix], [SPV_AMD_weak_linkage]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Linkage], [SPV_AMD_weak_linkage]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @weak_var {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "weak_var",
+      linkage_type = <Weak>>
+  } : !spirv.ptr<i32, Private>
 }

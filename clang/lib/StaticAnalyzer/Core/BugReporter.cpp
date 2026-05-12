@@ -20,13 +20,11 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
@@ -44,7 +42,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -53,15 +50,10 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -331,7 +323,7 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
   CallExitEnd CExit = P.castAs<CallExitEnd>();
 
   // FIXME: Use CallEvent to abstract this over all calls.
-  const Stmt *CallSite = CExit.getCalleeContext()->getCallSite();
+  const Expr *CallSite = CExit.getCalleeContext()->getCallSite();
   const auto *CE = dyn_cast_or_null<CallExpr>(CallSite);
   if (!CE)
     return {};
@@ -1169,7 +1161,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
     if (C.shouldAddPathEdges()) {
       // Add an edge to the start of the function.
-      const StackFrameContext *CalleeLC = CE->getCalleeContext();
+      const StackFrame *CalleeLC = CE->getCalleeContext();
       const Decl *D = CalleeLC->getDecl();
       // Add the edge only when the callee has body. We jump to the beginning
       // of the *declaration*, however we expect it to be followed by the
@@ -2082,7 +2074,7 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
   if (PDC->shouldAddPathEdges()) {
     // Add an edge to the start of the function.
     // We'll prune it out later, but it helps make diagnostics more uniform.
-    const StackFrameContext *CalleeLC =
+    const StackFrame *CalleeLC =
         Construct.getLocationContextForActivePath()->getStackFrame();
     const Decl *D = CalleeLC->getDecl();
     addEdgeToPath(Construct.getActivePath(), PrevLoc,
@@ -2171,6 +2163,7 @@ PathSensitiveBugReport::PathSensitiveBugReport(
     : BugReport(Kind::PathSensitive, bt, shortDesc, desc), ErrorNode(errorNode),
       ErrorNodeRange(getStmt() ? getStmt()->getSourceRange() : SourceRange()),
       UniqueingLocation(LocationToUnique), UniqueingDecl(DeclToUnique) {
+  assert(ErrorNode && "The error node must be non-null!");
   assert(!isDependency(ErrorNode->getState()
                            ->getAnalysisManager()
                            .getCheckerManager()
@@ -3412,9 +3405,9 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
 }
 
 void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
-                                  const CheckerBase *Checker, StringRef Name,
-                                  StringRef Category, StringRef Str,
-                                  PathDiagnosticLocation Loc,
+                                  const CheckerFrontend *Checker,
+                                  StringRef Name, StringRef Category,
+                                  StringRef Str, PathDiagnosticLocation Loc,
                                   ArrayRef<SourceRange> Ranges,
                                   ArrayRef<FixItHint> Fixits) {
   EmitBasicReport(DeclWithIssue, Checker->getName(), Name, Category, Str, Loc,

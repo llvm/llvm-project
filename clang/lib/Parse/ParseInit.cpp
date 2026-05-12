@@ -20,8 +20,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 using namespace clang;
 
 bool Parser::MayBeDesignationStart() {
@@ -479,8 +477,6 @@ ExprResult Parser::ParseBraceInitializer() {
     if (Tok.is(tok::ellipsis))
       SubElt = Actions.ActOnPackExpansion(SubElt.get(), ConsumeToken());
 
-    SubElt = Actions.CorrectDelayedTyposInExpr(SubElt.get());
-
     // If we couldn't parse the subelement, bail out.
     if (SubElt.isUsable()) {
       InitExprs.push_back(SubElt.get());
@@ -584,4 +580,27 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
   Braces.consumeClose();
 
   return !trailingComma;
+}
+
+ExprResult Parser::ParseInitializer(Decl *DeclForInitializer) {
+  // Set DeclForInitializer for file-scope variables.
+  // For constexpr references, set it to suppress runtime warnings.
+  // For non-constexpr references, don't set it to avoid evaluation issues
+  // with self-referencing initializers. Local variables (including local
+  // constexpr) should emit runtime warnings.
+  if (DeclForInitializer && !Actions.ExprEvalContexts.empty()) {
+    if (auto *VD = dyn_cast<VarDecl>(DeclForInitializer);
+        VD && VD->isFileVarDecl() &&
+        (!VD->getType()->isReferenceType() || VD->isConstexpr()))
+      Actions.ExprEvalContexts.back().DeclForInitializer = VD;
+  }
+
+  ExprResult init;
+  if (Tok.isNot(tok::l_brace)) {
+    init = ParseAssignmentExpression();
+  } else {
+    init = ParseBraceInitializer();
+  }
+
+  return init;
 }

@@ -72,6 +72,15 @@ static bool isValidSwiftErrorResultType(QualType Ty) {
   return isValidSwiftContextType(Ty);
 }
 
+static bool isValidSwiftContextName(StringRef ContextName) {
+  // ContextName might be qualified, e.g. 'MyNamespace.MyStruct'.
+  SmallVector<StringRef, 1> ContextNameComponents;
+  ContextName.split(ContextNameComponents, '.');
+  return all_of(ContextNameComponents, [&](StringRef Component) {
+    return isValidAsciiIdentifier(Component);
+  });
+}
+
 void SemaSwift::handleAttrAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.isInvalid() || AL.isUsedAsTypeAttr())
     return;
@@ -120,9 +129,9 @@ static bool isErrorParameter(Sema &S, QualType QT) {
 
   // Check for CFError**.
   if (const auto *PT = Pointee->getAs<PointerType>())
-    if (const auto *RT = PT->getPointeeType()->getAs<RecordType>())
-      if (S.ObjC().isCFError(RT->getDecl()))
-        return true;
+    if (auto *RD = PT->getPointeeType()->getAsRecordDecl();
+        RD && S.ObjC().isCFError(RD))
+      return true;
 
   return false;
 }
@@ -262,11 +271,10 @@ static void checkSwiftAsyncErrorBlock(Sema &S, Decl *D,
       }
       // Check for CFError *.
       if (const auto *PtrTy = Param->getAs<PointerType>()) {
-        if (const auto *RT = PtrTy->getPointeeType()->getAs<RecordType>()) {
-          if (S.ObjC().isCFError(RT->getDecl())) {
-            AnyErrorParams = true;
-            break;
-          }
+        if (auto *RD = PtrTy->getPointeeType()->getAsRecordDecl();
+            RD && S.ObjC().isCFError(RD)) {
+          AnyErrorParams = true;
+          break;
         }
       }
     }
@@ -344,7 +352,7 @@ static bool validateSwiftFunctionName(Sema &S, const ParsedAttr &AL,
   else if (Name.consume_front("setter:"))
     IsSetter = true;
 
-  if (Name.back() != ')') {
+  if (Name.empty() || Name.back() != ')') {
     S.Diag(Loc, diag::warn_attr_swift_name_function) << AL;
     return false;
   }
@@ -356,11 +364,11 @@ static bool validateSwiftFunctionName(Sema &S, const ParsedAttr &AL,
 
   // Split at the first '.', if it exists, which separates the context name
   // from the base name.
-  std::tie(ContextName, BaseName) = BaseName.split('.');
+  std::tie(ContextName, BaseName) = BaseName.rsplit('.');
   if (BaseName.empty()) {
     BaseName = ContextName;
     ContextName = StringRef();
-  } else if (ContextName.empty() || !isValidAsciiIdentifier(ContextName)) {
+  } else if (ContextName.empty() || !isValidSwiftContextName(ContextName)) {
     S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
         << AL << /*context*/ 1;
     return false;
@@ -584,11 +592,11 @@ bool SemaSwift::DiagnoseName(Decl *D, StringRef Name, SourceLocation Loc,
              !IsAsync) {
     StringRef ContextName, BaseName;
 
-    std::tie(ContextName, BaseName) = Name.split('.');
+    std::tie(ContextName, BaseName) = Name.rsplit('.');
     if (BaseName.empty()) {
       BaseName = ContextName;
       ContextName = StringRef();
-    } else if (!isValidAsciiIdentifier(ContextName)) {
+    } else if (!isValidSwiftContextName(ContextName)) {
       Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
           << AL << /*context*/ 1;
       return false;

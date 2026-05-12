@@ -76,10 +76,16 @@ public:
     EXPECT_FP_EQ(T(-0.75), func(T(-10.75), &integral));
     EXPECT_FP_EQ(integral, T(-10.0));
 
-    EXPECT_FP_EQ(T(0.125), func(T(100.125), &integral));
+    EXPECT_FP_EQ(T(0.125), func(T(31.125), &integral));
+    EXPECT_FP_EQ(integral, T(31.0));
+
+    EXPECT_FP_EQ(T(-0.125), func(T(-31.125), &integral));
+    EXPECT_FP_EQ(integral, T(-31.0));
+
+    EXPECT_FP_EQ(T(0.5), func(T(100.5), &integral));
     EXPECT_FP_EQ(integral, T(100.0));
 
-    EXPECT_FP_EQ(T(-0.125), func(T(-100.125), &integral));
+    EXPECT_FP_EQ(T(-0.5), func(T(-100.5), &integral));
     EXPECT_FP_EQ(integral, T(-100.0));
   }
 

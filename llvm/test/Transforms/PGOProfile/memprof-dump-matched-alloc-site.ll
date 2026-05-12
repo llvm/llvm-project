@@ -26,16 +26,52 @@
 ; REQUIRES: x86_64-linux
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof-dump-matched-alloc-site.yaml -o %t/memprof-dump-matched-alloc-site.memprofdata
-; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-match-info -S 2>&1 | FileCheck %s
+; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-match-info -memprof-print-function-guids -S -pass-remarks=memprof 2>&1 | FileCheck %s --check-prefixes=MATCH,FUNCGUID,REMARK
+;; Test that -memprof-print-matched-alloc-stack enables reporting of the full
+;; matched stack.
+; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-match-info -memprof-print-matched-alloc-stack -S 2>&1 | FileCheck %s --check-prefixes=MATCH,STACK
+;; Test that -memprof-print-matched-alloc-stack without -memprof-print-match-info
+;; is a noop.
+; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-matched-alloc-stack -S 2>&1 | FileCheck %s --implicit-check-not="context with id" --implicit-check-not="and call stack"
 
 ;--- memprof-dump-matched-alloc-site.yaml
 ---
 HeapProfileRecords:
+  - GUID:            _Z2f2v
+    AllocSites:
+      - Callstack:
+          - { Function: _Z2f1v, LineOffset: 0, Column: 21, IsInlineFrame: true }
+          - { Function: _Z2f2v, LineOffset: 0, Column: 21, IsInlineFrame: true }
+          - { Function: _Z2f3v, LineOffset: 0, Column: 47, IsInlineFrame: false }
+          - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       3
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 0
+    CallSites:
+      - Frames:
+          - { Function: _Z2f1v, LineOffset: 0, Column: 21, IsInlineFrame: true }
+          - { Function: _Z2f2v, LineOffset: 0, Column: 21, IsInlineFrame: true }
+          - { Function: _Z2f3v, LineOffset: 0, Column: 47, IsInlineFrame: false }
+  - GUID:            _Z2f1v
+    AllocSites:
+      - Callstack:
+          - { Function: _Z2f1v, LineOffset: 0, Column: 21, IsInlineFrame: true }
+          - { Function: _Z2f2v, LineOffset: 0, Column: 21, IsInlineFrame: true }
+          - { Function: _Z2f3v, LineOffset: 0, Column: 47, IsInlineFrame: false }
+          - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       3
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 0
+    CallSites:       []
   - GUID:            _Z2f3v
     AllocSites:
       - Callstack:
-          - { Function: _ZL2f1v, LineOffset: 0, Column: 35, IsInlineFrame: true }
-          - { Function: _ZL2f2v, LineOffset: 0, Column: 35, IsInlineFrame: true }
+          - { Function: _Z2f1v, LineOffset: 0, Column: 21, IsInlineFrame: true }
+          - { Function: _Z2f2v, LineOffset: 0, Column: 21, IsInlineFrame: true }
           - { Function: _Z2f3v, LineOffset: 0, Column: 47, IsInlineFrame: false }
           - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
         MemInfoBlock:
@@ -47,18 +83,44 @@ HeapProfileRecords:
       # Kept empty here because this section is irrelevant for this test.
 ...
 ;--- memprof-dump-matched-alloc-site.ll
-; CHECK: MemProf notcold context with id 12978026349401156968 has total profiled size 3 is matched with 3 frames
+
+;; From -pass-remarks=memprof and -memprof-print-function-guids
+; FUNCGUID: MemProf: Function GUID 4708092051066754107 is _Z2f1v
+; REMARK: remark: memprof-dump-matched-alloc-site.cc:1:21: call in function _Z2f1v matched alloc context with alloc type notcold total size 3 full context id 5736731103568718490 frame count 1
+; FUNCGUID: MemProf: Function GUID 14255129117669598641 is _Z2f2v
+; REMARK: remark: memprof-dump-matched-alloc-site.cc:1:21: call in function _Z2f2v matched alloc context with alloc type notcold total size 3 full context id 5736731103568718490 frame count 2
+; FUNCGUID: MemProf: Function GUID 2771528421763978342 is _Z2f3v
+; REMARK: remark: memprof-dump-matched-alloc-site.cc:1:21: call in function _Z2f3v matched alloc context with alloc type notcold total size 3 full context id 5736731103568718490 frame count 3
+
+; MATCH: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 1 frames
+; STACK-SAME: and call stack 16675831946704128299 1244320836757332728 8373967866436022208 5401059281181789382
+; MATCH: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 2 frames
+; STACK-SAME: and call stack 16675831946704128299 1244320836757332728 8373967866436022208 5401059281181789382
+; MATCH: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 3 frames
+; STACK-SAME: and call stack 16675831946704128299 1244320836757332728 8373967866436022208 5401059281181789382
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define ptr @_Z2f3v() {
+define ptr @_Z2f1v() {
 entry:
-  %call.i.i = call ptr @_Znam(i64 0), !dbg !3
-  ret ptr null
+  %call = call ptr @_Znam(i64 0), !dbg !3
+  ret ptr %call
 }
 
 declare ptr @_Znam(i64)
+
+define ptr @_Z2f2v() {
+entry:
+  %call.i = call ptr @_Znam(i64 0), !dbg !7
+  ret ptr %call.i
+}
+
+define ptr @_Z2f3v() {
+entry:
+  %call.i.i = call ptr @_Znam(i64 0), !dbg !10
+  ret ptr %call.i.i
+}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
@@ -66,13 +128,14 @@ declare ptr @_Znam(i64)
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1)
 !1 = !DIFile(filename: "memprof-dump-matched-alloc-site.cc", directory: "/")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = !DILocation(line: 1, column: 35, scope: !4, inlinedAt: !7)
-!4 = distinct !DISubprogram(name: "f1", linkageName: "_ZL2f1v", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!3 = !DILocation(line: 1, column: 21, scope: !4)
+!4 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1v", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !5 = !DISubroutineType(types: !6)
 !6 = !{}
-!7 = distinct !DILocation(line: 2, column: 35, scope: !8, inlinedAt: !9)
-!8 = distinct !DISubprogram(name: "f2", linkageName: "_ZL2f2v", scope: !1, file: !1, line: 2, type: !5, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!9 = distinct !DILocation(line: 3, column: 47, scope: !10)
-!10 = distinct !DISubprogram(name: "f3", linkageName: "_Z2f3v", scope: !1, file: !1, line: 3, type: !5, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!11 = !DILocation(line: 6, column: 3, scope: !12)
-!12 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 5, type: !5, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!7 = !DILocation(line: 1, column: 21, scope: !4, inlinedAt: !8)
+!8 = distinct !DILocation(line: 2, column: 21, scope: !9)
+!9 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f2v", scope: !1, file: !1, line: 2, type: !5, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!10 = !DILocation(line: 1, column: 21, scope: !4, inlinedAt: !11)
+!11 = distinct !DILocation(line: 2, column: 21, scope: !9, inlinedAt: !12)
+!12 = distinct !DILocation(line: 3, column: 47, scope: !13)
+!13 = distinct !DISubprogram(name: "f3", linkageName: "_Z2f3v", scope: !1, file: !1, line: 3, type: !5, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)

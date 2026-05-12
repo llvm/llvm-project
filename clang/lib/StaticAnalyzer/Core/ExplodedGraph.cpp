@@ -16,7 +16,6 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/Stmt.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Analysis/Support/BumpVector.h"
 #include "clang/Basic/LLVM.h"
@@ -26,8 +25,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -323,7 +320,7 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   const LocationContext *LC = getLocationContext();
   if (LC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
     // It must be a stack frame because we only autosynthesize functions.
-    return cast<StackFrameContext>(findTopAutosynthesizedParentContext(LC))
+    return cast<StackFrame>(findTopAutosynthesizedParentContext(LC))
         ->getCallSite();
   }
   // Otherwise, see if the node's program point directly points to a statement.

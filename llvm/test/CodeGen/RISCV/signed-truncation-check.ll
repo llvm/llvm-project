@@ -349,7 +349,7 @@ define i1 @add_ugecmp_i32_i16(i32 %x) nounwind {
 ; RV64I-NEXT:    lui a1, 1048568
 ; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    lui a1, 1048560
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    sltu a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
@@ -429,7 +429,7 @@ define i1 @add_ugecmp_i64_i16(i64 %x) nounwind {
 ; RV64I-NEXT:    lui a1, 1048568
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    lui a1, 1048560
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    sltu a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
@@ -805,7 +805,7 @@ define i1 @add_ultcmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a0, a0, 128
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sltu a0, a0, a1

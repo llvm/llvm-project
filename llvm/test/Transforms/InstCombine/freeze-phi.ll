@@ -212,3 +212,31 @@ D:
   %y.fr = freeze i32 %y
   ret i32 %y.fr
 }
+
+; Make sure that fmf in phi node is dropped when freeze get folded.
+
+define float @pr161524(float noundef %arg) {
+; CHECK-LABEL: @pr161524(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 144)
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_EXIT:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[ARG]], 1.000000e+00
+; CHECK-NEXT:    br label [[IF_EXIT]]
+; CHECK:       if.exit:
+; CHECK-NEXT:    [[RET:%.*]] = phi float [ [[FADD]], [[IF_THEN]] ], [ [[ARG]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  %cond = tail call i1 @llvm.is.fpclass.f32(float %arg, i32 144)
+  br i1 %cond, label %if.then, label %if.exit
+
+if.then:
+  %fadd = fadd float %arg, 1.0
+  br label %if.exit
+
+if.exit:
+  %ret = phi ninf float [ %fadd, %if.then ], [ %arg, %entry ]
+  %ret.fr = freeze float %ret
+  ret float %ret.fr
+}

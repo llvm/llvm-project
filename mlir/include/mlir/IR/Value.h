@@ -86,13 +86,13 @@ protected:
 
 /// This class represents an instance of an SSA value in the MLIR system,
 /// representing a computable value that has a type and a set of users. An SSA
-/// value is either a BlockArgument or the result of an operation. Note: This
-/// class has value-type semantics and is just a simple wrapper around a
-/// ValueImpl that is either owner by a block(in the case of a BlockArgument) or
-/// an Operation(in the case of an OpResult).
-/// As most IR constructs, this isn't const-correct, but we keep method
-/// consistent and as such method that immediately modify this Value aren't
-/// marked `const` (include modifying the Value use-list).
+/// value is either a BlockArgument or the result of an operation.
+/// Note: This class has value-type semantics and is just a simple wrapper
+/// around a ValueImpl that is either owned by a block (in the case of a
+/// BlockArgument) or an Operation (in the case of an OpResult).
+/// As most IR constructs, this isn't const-correct, but we keep the method
+/// consistent, and therefore methods that immediately modify this Value aren't
+/// marked `const` (including modifying the Value's use-list).
 class Value {
 public:
   constexpr Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
@@ -187,8 +187,22 @@ public:
   /// Returns a range of all uses, which is useful for iterating over all uses.
   use_range getUses() const { return {use_begin(), use_end()}; }
 
+  /// This method computes the number of uses of this Value.
+  ///
+  /// This is a linear time operation.  Use hasOneUse, hasNUses, or
+  /// hasNUsesOrMore to check for specific values.
+  unsigned getNumUses() const;
+
   /// Returns true if this value has exactly one use.
   bool hasOneUse() const { return impl->hasOneUse(); }
+
+  /// Return true if this Value has exactly n uses.
+  bool hasNUses(unsigned n) const;
+
+  /// Return true if this value has n uses or more.
+  ///
+  /// This is logically equivalent to getNumUses() >= N.
+  bool hasNUsesOrMore(unsigned n) const;
 
   /// Returns true if this value has no uses.
   bool use_empty() const { return impl->use_empty(); }
@@ -229,10 +243,7 @@ protected:
   detail::ValueImpl *impl;
 };
 
-inline raw_ostream &operator<<(raw_ostream &os, Value value) {
-  value.print(os);
-  return os;
-}
+raw_ostream &operator<<(raw_ostream &os, Value value);
 
 //===----------------------------------------------------------------------===//
 // OpOperand
@@ -248,7 +259,7 @@ public:
   }
 
   /// Return which operand this is in the OpOperand list of the Operation.
-  unsigned getOperandNumber();
+  unsigned getOperandNumber() const;
 
   /// Set the current value being used by this operand.
   void assign(Value value) { set(value); }
@@ -419,8 +430,18 @@ inline unsigned OpResultImpl::getResultNumber() const {
 template <typename Ty>
 struct TypedValue : Value {
   using Value::Value;
+  using ValueType = Ty;
 
   static bool classof(Value value) { return llvm::isa<Ty>(value.getType()); }
+
+  /// TypedValue<B> can implicitly convert to TypedValue<A> if B is assignable
+  /// to A.
+  template <typename ToTy,
+            typename = typename std::enable_if<std::is_assignable<
+                typename ToTy::ValueType &, Ty>::value>::type>
+  operator ToTy() const {
+    return llvm::cast<ToTy>(*this);
+  }
 
   /// Return the known Type
   Ty getType() const { return llvm::cast<Ty>(Value::getType()); }

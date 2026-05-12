@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
 class X {
 public:
@@ -80,3 +81,26 @@ struct B : A {
   B(int);
 };
 B b = 0; // ok, calls B(int) then A(const A&) then B(A).
+
+
+namespace GH149443 {
+#if __cplusplus >= 202002
+template <class... T>
+concept C = [] {
+  static_assert(sizeof...(T) > 1);
+  return true;
+}();
+
+struct Deferred {
+  template <typename TO>
+  operator TO();
+};
+
+void foo(Deferred);
+
+void bar(Deferred d) {
+  foo(d);
+}
+
+#endif
+}

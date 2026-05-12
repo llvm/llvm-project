@@ -13,6 +13,9 @@
 #ifndef LLVM_IR_FMF_H
 #define LLVM_IR_FMF_H
 
+#include "llvm/Support/Compiler.h"
+#include <cassert>
+
 namespace llvm {
 class raw_ostream;
 
@@ -22,8 +25,6 @@ private:
   friend class FPMathOperator;
 
   unsigned Flags = 0;
-
-  FastMathFlags(unsigned F) : Flags(F) {}
 
 public:
   // This is how the bits are used in Value::SubclassOptionalData so they
@@ -40,6 +41,10 @@ public:
     ApproxFunc      = (1 << 6),
     FlagEnd         = (1 << 7)
   };
+
+  FastMathFlags(unsigned F) : Flags(F) {
+    assert(((F & 0xff) == F) && "Flags value is not legal!");
+  }
 
   constexpr static unsigned AllFlagsMask = FlagEnd - 1;
 
@@ -103,8 +108,12 @@ public:
     return Flags != OtherFlags.Flags;
   }
 
+  bool operator==(const FastMathFlags &OtherFlags) const {
+    return Flags == OtherFlags.Flags;
+  }
+
   /// Print fast-math flags to \p O.
-  void print(raw_ostream &O) const;
+  LLVM_ABI void print(raw_ostream &O) const;
 
   /// Intersect rewrite-based flags
   static inline FastMathFlags intersectRewrite(FastMathFlags LHS,

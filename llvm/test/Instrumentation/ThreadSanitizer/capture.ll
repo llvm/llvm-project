@@ -45,6 +45,7 @@ entry:
 ; CHECK-LABEL: define void @captured2
 ; CHECK: __tsan_write
 ; CHECK: __tsan_write
+; CHECK-NOT: __tsan_write
 ; CHECK: ret void
 
 define void @captured3() nounwind uwtable sanitize_thread {
@@ -101,6 +102,7 @@ entry:
 ; CHECK-LABEL: define void @notcaptured2
 ; CHECK: __tsan_write
 ; CHECK: __tsan_write
+; CHECK-NOT: __tsan_write
 ; CHECK: ret void
 
 define void @notcaptured3(i1 %cond) nounwind uwtable sanitize_thread {

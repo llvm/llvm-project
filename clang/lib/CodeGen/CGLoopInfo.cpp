@@ -221,18 +221,6 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
     return createUnrollAndJamMetadata(Attrs, LoopProperties, HasUserTransforms);
   }
 
-  // Apply all loop properties to the vectorized loop.
-  SmallVector<Metadata *, 4> FollowupLoopProperties;
-  FollowupLoopProperties.append(LoopProperties.begin(), LoopProperties.end());
-
-  // Don't vectorize an already vectorized loop.
-  FollowupLoopProperties.push_back(
-      MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.isvectorized")));
-
-  bool FollowupHasTransforms = false;
-  SmallVector<Metadata *, 4> Followup = createUnrollAndJamMetadata(
-      Attrs, FollowupLoopProperties, FollowupHasTransforms);
-
   SmallVector<Metadata *, 4> Args;
   Args.append(LoopProperties.begin(), LoopProperties.end());
 
@@ -286,22 +274,46 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
   // 5) it is implied when vectorize.width is unset (0) and the user
   //    explicitly requested fixed-width vectorization, i.e.
   //    vectorize.scalable.enable is false.
+  bool VectorizeEnabled = false;
   if (Attrs.VectorizeEnable != LoopAttributes::Unspecified ||
       (IsVectorPredicateEnabled && Attrs.VectorizeWidth != 1) ||
       Attrs.VectorizeWidth > 1 ||
       Attrs.VectorizeScalable == LoopAttributes::Enable ||
       (Attrs.VectorizeScalable == LoopAttributes::Disable &&
        Attrs.VectorizeWidth != 1)) {
-    bool AttrVal = Attrs.VectorizeEnable != LoopAttributes::Disable;
+    VectorizeEnabled = Attrs.VectorizeEnable != LoopAttributes::Disable;
     Args.push_back(
         MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
                           ConstantAsMetadata::get(ConstantInt::get(
-                              llvm::Type::getInt1Ty(Ctx), AttrVal))}));
+                              llvm::Type::getInt1Ty(Ctx), VectorizeEnabled))}));
   }
 
-  if (FollowupHasTransforms)
-    Args.push_back(
-        createFollowupMetadata("llvm.loop.vectorize.followup_all", Followup));
+  // Apply all loop properties to the vectorized loop.
+  SmallVector<Metadata *, 4> FollowupLoopProperties;
+
+  // If vectorization is not explicitly enabled, the follow-up metadata will be
+  // directly appended to the list currently being created. In that case, adding
+  // LoopProperties to FollowupLoopProperties would result in duplication.
+  if (VectorizeEnabled)
+    FollowupLoopProperties.append(LoopProperties.begin(), LoopProperties.end());
+
+  // Don't vectorize an already vectorized loop.
+  FollowupLoopProperties.push_back(
+      MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.isvectorized")));
+
+  bool FollowupHasTransforms = false;
+  SmallVector<Metadata *, 4> Followup = createUnrollAndJamMetadata(
+      Attrs, FollowupLoopProperties, FollowupHasTransforms);
+
+  if (FollowupHasTransforms) {
+    // If vectorization is explicitly enabled, we create a follow-up metadata,
+    // otherwise directly add the contents of it to Args.
+    if (VectorizeEnabled)
+      Args.push_back(
+          createFollowupMetadata("llvm.loop.vectorize.followup_all", Followup));
+    else
+      Args.append(Followup.begin(), Followup.end());
+  }
 
   HasUserTransforms = true;
   return Args;
@@ -409,6 +421,10 @@ SmallVector<Metadata *, 4> LoopInfo::createMetadata(
     LoopProperties.push_back(
         MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.mustprogress")));
 
+  if (Attrs.LICMDisabled)
+    LoopProperties.push_back(
+        MDNode::get(Ctx, MDString::get(Ctx, "llvm.licm.disable")));
+
   assert(!!AccGroup == Attrs.IsParallel &&
          "There must be an access group iff the loop is parallel");
   if (Attrs.IsParallel) {
@@ -436,7 +452,8 @@ LoopAttributes::LoopAttributes(bool IsParallel)
       VectorizeScalable(LoopAttributes::Unspecified), InterleaveCount(0),
       UnrollCount(0), UnrollAndJamCount(0),
       DistributeEnable(LoopAttributes::Unspecified), PipelineDisabled(false),
-      PipelineInitiationInterval(0), CodeAlign(0), MustProgress(false) {}
+      LICMDisabled(false), PipelineInitiationInterval(0), CodeAlign(0),
+      MustProgress(false) {}
 
 void LoopAttributes::clear() {
   IsParallel = false;
@@ -451,6 +468,7 @@ void LoopAttributes::clear() {
   VectorizePredicateEnable = LoopAttributes::Unspecified;
   DistributeEnable = LoopAttributes::Unspecified;
   PipelineDisabled = false;
+  LICMDisabled = false;
   PipelineInitiationInterval = 0;
   CodeAlign = 0;
   MustProgress = false;
@@ -472,7 +490,7 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
       Attrs.VectorizeScalable == LoopAttributes::Unspecified &&
       Attrs.InterleaveCount == 0 && Attrs.UnrollCount == 0 &&
       Attrs.UnrollAndJamCount == 0 && !Attrs.PipelineDisabled &&
-      Attrs.PipelineInitiationInterval == 0 &&
+      !Attrs.LICMDisabled && Attrs.PipelineInitiationInterval == 0 &&
       Attrs.VectorizePredicateEnable == LoopAttributes::Unspecified &&
       Attrs.VectorizeEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollEnable == LoopAttributes::Unspecified &&
@@ -510,6 +528,7 @@ void LoopInfo::finish() {
     BeforeJam.VectorizeEnable = Attrs.VectorizeEnable;
     BeforeJam.DistributeEnable = Attrs.DistributeEnable;
     BeforeJam.VectorizePredicateEnable = Attrs.VectorizePredicateEnable;
+    BeforeJam.LICMDisabled = Attrs.LICMDisabled;
 
     switch (Attrs.UnrollEnable) {
     case LoopAttributes::Unspecified:
@@ -665,6 +684,9 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::PipelineDisabled:
         setPipelineDisabled(true);
         break;
+      case LoopHintAttr::LICMDisabled:
+        setLICMDisabled(true);
+        break;
       case LoopHintAttr::UnrollCount:
       case LoopHintAttr::UnrollAndJamCount:
       case LoopHintAttr::VectorizeWidth:
@@ -698,6 +720,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::InterleaveCount:
       case LoopHintAttr::PipelineDisabled:
       case LoopHintAttr::PipelineInitiationInterval:
+      case LoopHintAttr::LICMDisabled:
         llvm_unreachable("Options cannot enabled.");
         break;
       }
@@ -720,6 +743,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::Distribute:
       case LoopHintAttr::PipelineDisabled:
       case LoopHintAttr::PipelineInitiationInterval:
+      case LoopHintAttr::LICMDisabled:
         llvm_unreachable("Options cannot be used to assume mem safety.");
         break;
       }
@@ -742,6 +766,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::PipelineDisabled:
       case LoopHintAttr::PipelineInitiationInterval:
       case LoopHintAttr::VectorizePredicate:
+      case LoopHintAttr::LICMDisabled:
         llvm_unreachable("Options cannot be used with 'full' hint.");
         break;
       }
@@ -783,6 +808,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::Interleave:
       case LoopHintAttr::Distribute:
       case LoopHintAttr::PipelineDisabled:
+      case LoopHintAttr::LICMDisabled:
         llvm_unreachable("Options cannot be assigned a value.");
         break;
       }

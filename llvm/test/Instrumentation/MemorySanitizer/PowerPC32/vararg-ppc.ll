@@ -18,7 +18,7 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 2147483647
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i32 [[TMP5]] to ptr
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 8 [[TMP6]], i8 0, i32 4, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[VL]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VL]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[VL]] to i32
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 2147483647
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i32 [[TMP8]] to ptr
@@ -50,15 +50,15 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK-NEXT:    [[TMP31:%.*]] = inttoptr i32 [[TMP30]] to ptr
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP17]], ptr align 4 [[TMP31]], i32 [[TMP21]], i1 false)
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VL]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[VL]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VL]])
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 0
 ;
   %vl = alloca ptr, align 8
-  call void @llvm.lifetime.start.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.start.p0(ptr %vl)
   call void @llvm.va_start(ptr %vl)
   call void @llvm.va_end(ptr %vl)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.end.p0(ptr %vl)
   ret i32 0
 }
 
@@ -67,21 +67,21 @@ define i32 @foo(i32 %guard, ...) {
 
 
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 declare void @llvm.va_start(ptr) #2
 declare void @llvm.va_end(ptr) #2
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 define i32 @bar() {
 ; CHECK-LABEL: define i32 @bar() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i32 ptrtoint (ptr @__msan_param_tls to i32) to ptr), align 8
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 8) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 16) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 24) to ptr), align 8
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 4) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 8) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 16), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 24), align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 4), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), align 8
 ; CHECK-NEXT:    store i32 16, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (i32, ...) @foo(i32 0, i32 1, i64 2, double 3.000000e+00)
@@ -102,9 +102,9 @@ define i32 @bar2() {
 ; CHECK-LABEL: define i32 @bar2() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i32 ptrtoint (ptr @__msan_param_tls to i32) to ptr), align 8
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 8) to ptr), align 8
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 8) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
+; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), align 8
 ; CHECK-NEXT:    store i32 24, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (i32, ...) @foo(i32 0, <2 x i64> <i64 1, i64 2>)
@@ -125,9 +125,9 @@ define i32 @bar4() {
 ; CHECK-LABEL: define i32 @bar4() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i32 ptrtoint (ptr @__msan_param_tls to i32) to ptr), align 8
-; CHECK-NEXT:    store [2 x i64] zeroinitializer, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 8) to ptr), align 8
-; CHECK-NEXT:    store [2 x i64] zeroinitializer, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 8) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    store [2 x i64] zeroinitializer, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
+; CHECK-NEXT:    store [2 x i64] zeroinitializer, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), align 8
 ; CHECK-NEXT:    store i32 24, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (i32, ...) @foo(i32 0, [2 x i64] [i64 1, i64 2])
@@ -145,9 +145,9 @@ define i32 @bar5() {
 ; CHECK-LABEL: define i32 @bar5() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i32 ptrtoint (ptr @__msan_param_tls to i32) to ptr), align 8
-; CHECK-NEXT:    store [2 x i128] zeroinitializer, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 8) to ptr), align 8
-; CHECK-NEXT:    store [2 x i128] zeroinitializer, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 8) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    store [2 x i128] zeroinitializer, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
+; CHECK-NEXT:    store [2 x i128] zeroinitializer, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), align 8
 ; CHECK-NEXT:    store i32 40, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (i32, ...) @foo(i32 0, [2 x i128] [i128 1, i128 2])
@@ -166,15 +166,15 @@ define i32 @bar6(ptr %arg) {
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i32 ptrtoint (ptr @__msan_param_tls to i32) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARG]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 2147483647
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i32 [[TMP3]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 8) to ptr), i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 getelementptr (i8, ptr @__msan_param_tls, i32 8), i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[ARG]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 2147483647
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i32 [[TMP6]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 8) to ptr), ptr align 8 [[TMP7]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), ptr align 8 [[TMP7]], i64 16, i1 false)
 ; CHECK-NEXT:    store i32 24, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i32 (i32, ...) @foo(i32 0, ptr byval([2 x i64]) align 8 [[ARG]])
@@ -193,15 +193,15 @@ define i32 @bar7(ptr %arg) {
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i32 ptrtoint (ptr @__msan_param_tls to i32) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARG]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 2147483647
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i32 [[TMP3]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 8) to ptr), i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 getelementptr (i8, ptr @__msan_param_tls, i32 8), i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[ARG]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 2147483647
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i32 [[TMP6]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 8) to ptr), ptr align 8 [[TMP7]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), ptr align 8 [[TMP7]], i64 32, i1 false)
 ; CHECK-NEXT:    store i32 40, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i32 (i32, ...) @foo(i32 0, ptr byval([4 x i64]) align 16 [[ARG]])
@@ -222,205 +222,205 @@ define dso_local i64 @many_args() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 ptrtoint (ptr @__msan_param_tls to i32) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 8) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 16) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 24) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 32) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 40) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 48) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 56) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 64) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 72) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 80) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 88) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 96) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 104) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 112) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 120) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 128) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 136) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 144) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 152) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 160) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 168) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 176) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 184) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 192) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 200) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 208) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 216) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 224) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 232) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 240) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 248) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 256) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 264) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 272) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 280) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 288) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 296) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 304) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 312) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 320) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 328) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 336) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 344) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 352) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 360) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 368) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 376) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 384) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 392) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 400) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 408) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 416) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 424) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 432) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 440) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 448) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 456) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 464) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 472) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 480) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 488) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 496) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 504) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 512) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 520) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 528) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 536) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 544) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 552) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 560) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 568) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 576) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 584) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 592) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 600) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 608) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 616) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 624) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 632) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 640) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 648) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 656) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 664) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 672) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 680) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 688) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 696) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 704) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 712) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 720) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 728) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 736) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 744) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 752) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 760) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 768) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 776) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 784) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_param_tls to i32), i32 792) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 8) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 16) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 24) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 32) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 40) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 48) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 56) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 64) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 72) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 80) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 88) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 96) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 104) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 112) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 120) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 128) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 136) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 144) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 152) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 160) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 168) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 176) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 184) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 192) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 200) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 208) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 216) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 224) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 232) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 240) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 248) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 256) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 264) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 272) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 280) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 288) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 296) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 304) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 312) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 320) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 328) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 336) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 344) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 352) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 360) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 368) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 376) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 384) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 392) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 400) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 408) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 416) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 424) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 432) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 440) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 448) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 456) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 464) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 472) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 480) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 488) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 496) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 504) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 512) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 520) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 528) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 536) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 544) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 552) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 560) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 568) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 576) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 584) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 592) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 600) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 608) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 616) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 624) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 632) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 640) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 648) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 656) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 664) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 672) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 680) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 688) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 696) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 704) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 712) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 720) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 728) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 736) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 744) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 752) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 760) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 768) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 776) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 784) to ptr), align 8
-; CHECK-NEXT:    store i64 0, ptr inttoptr (i32 add (i32 ptrtoint (ptr @__msan_va_arg_tls to i32), i32 792) to ptr), align 8
+; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 16), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 24), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 32), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 40), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 48), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 56), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 64), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 72), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 80), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 88), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 96), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 104), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 112), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 120), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 128), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 136), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 144), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 152), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 160), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 168), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 176), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 184), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 192), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 200), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 208), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 216), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 224), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 232), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 240), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 248), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 256), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 264), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 272), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 280), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 288), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 296), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 304), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 312), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 320), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 328), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 336), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 344), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 352), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 360), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 368), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 376), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 384), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 392), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 400), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 408), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 416), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 424), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 432), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 440), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 448), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 456), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 464), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 472), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 480), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 488), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 496), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 504), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 512), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 520), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 528), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 536), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 544), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 552), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 560), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 568), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 576), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 584), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 592), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 600), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 608), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 616), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 624), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 632), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 640), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 648), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 656), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 664), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 672), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 680), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 688), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 696), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 704), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 712), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 720), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 728), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 736), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 744), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 752), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 760), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 768), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 776), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 784), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 792), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 16), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 24), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 32), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 40), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 48), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 56), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 64), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 72), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 80), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 88), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 96), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 104), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 112), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 120), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 128), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 136), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 144), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 152), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 160), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 168), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 176), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 184), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 192), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 200), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 208), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 216), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 224), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 232), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 240), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 248), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 256), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 264), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 272), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 280), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 288), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 296), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 304), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 312), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 320), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 328), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 336), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 344), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 352), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 360), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 368), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 376), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 384), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 392), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 400), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 408), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 416), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 424), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 432), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 440), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 448), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 456), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 464), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 472), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 480), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 488), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 496), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 504), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 512), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 520), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 528), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 536), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 544), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 552), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 560), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 568), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 576), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 584), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 592), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 600), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 608), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 616), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 624), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 632), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 640), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 648), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 656), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 664), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 672), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 680), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 688), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 696), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 704), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 712), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 720), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 728), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 736), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 744), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 752), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 760), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 768), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 776), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 784), align 8
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 792), align 8
 ; CHECK-NEXT:    store i32 968, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[RET:%.*]] = call i64 (i64, ...) @sum(i64 120, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1)

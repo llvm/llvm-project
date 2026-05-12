@@ -80,4 +80,4 @@ F2:
 	ret i32 %B
 }
 
-attributes #0 = { "amdgpu-flat-work-group-size"="1,1" }
+attributes #0 = { "amdgpu-flat-work-group-size"="1,1" "amdgpu-no-wwm" }

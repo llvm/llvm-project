@@ -454,8 +454,7 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
                                                        : StringRef("/");
   llvm::sys::path::append(CustomWorkingDir, "some", "weird", "path");
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
@@ -475,8 +474,7 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
 TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   SmallString<64> CustomWorkingDir = getSystemRoot();
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
@@ -495,14 +493,17 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
+  // Normalize to native path style to match tryGetRealPathName()
+  // which uses native style (potentially forward slashes on Windows
+  // if LLVM_WINDOWS_PREFER_FORWARD_SLASH is on).
+  llvm::sys::path::native(ExpectedResult);
   EXPECT_EQ(file.getFileEntry().tryGetRealPathName(), ExpectedResult);
 }
 
 TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   SmallString<64> CustomWorkingDir = getSystemRoot();
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
@@ -522,6 +523,10 @@ TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
+  // Normalize to native path style to match tryGetRealPathName()
+  // which uses native style (potentially forward slashes on Windows
+  // if LLVM_WINDOWS_PREFER_FORWARD_SLASH is on).
+  llvm::sys::path::native(ExpectedResult);
   EXPECT_EQ(file->getFileEntry().tryGetRealPathName(), ExpectedResult);
 }
 
@@ -533,8 +538,7 @@ TEST_F(FileManagerTest, getBypassFile) {
   CustomWorkingDir = "/";
 #endif
 
-  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
-      new llvm::vfs::InMemoryFileSystem);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 

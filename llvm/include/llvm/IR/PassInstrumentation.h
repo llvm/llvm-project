@@ -55,7 +55,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
-#include <type_traits>
 #include <vector>
 
 namespace llvm {
@@ -163,9 +162,9 @@ public:
   }
 
   /// Add a class name to pass name mapping for use by pass instrumentation.
-  void addClassToPassName(StringRef ClassName, StringRef PassName);
-  /// Get the pass name for a given pass class name.
-  StringRef getPassNameForClassName(StringRef ClassName);
+  LLVM_ABI void addClassToPassName(StringRef ClassName, StringRef PassName);
+  /// Get the pass name for a given pass class name. Empty if no match found.
+  LLVM_ABI StringRef getPassNameForClassName(StringRef ClassName);
 
 private:
   friend class PassInstrumentation;
@@ -213,13 +212,8 @@ class PassInstrumentation {
   // created from (1). Here we want to make case (1) skippable unconditionally
   // since they are regular passes. We call PassConcept::isRequired to decide
   // for case (2).
-  template <typename PassT>
-  using has_required_t = decltype(std::declval<PassT &>().isRequired());
-
   template <typename PassT> static bool isRequired(const PassT &Pass) {
-    if constexpr (is_detected<has_required_t, PassT>::value)
-      return Pass.isRequired();
-    return false;
+    return Pass.isRequired();
   }
 
 public:
@@ -344,14 +338,15 @@ public:
   }
 };
 
-bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);
+LLVM_ABI bool isSpecialPass(StringRef PassID,
+                            const std::vector<StringRef> &Specials);
 
 /// Pseudo-analysis pass that exposes the \c PassInstrumentation to pass
 /// managers.
 class PassInstrumentationAnalysis
     : public AnalysisInfoMixin<PassInstrumentationAnalysis> {
   friend AnalysisInfoMixin<PassInstrumentationAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   PassInstrumentationCallbacks *Callbacks;
 

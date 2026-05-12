@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/rename.h"
-#include "src/__support/CPP/string_view.h"
-#include "src/__support/macros/config.h"
-#include "src/stdio/gpu/file.h"
 
 #include "hdr/types/FILE.h"
+#include "src/__support/common.h"
+#include "src/stdio/gpu/file.h"
+#include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -23,7 +23,6 @@ LLVM_LIBC_FUNCTION(int, rename, (const char *oldpath, const char *newpath)) {
   port.recv([&](rpc::Buffer *buffer, uint32_t) {
     ret = static_cast<int>(buffer->data[0]);
   });
-  port.close();
 
   return ret;
 }

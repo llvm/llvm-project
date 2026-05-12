@@ -9,8 +9,8 @@
 #include "pthread_condattr_setclock.h"
 
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
 #include "hdr/time_macros.h" // CLOCK_MONOTONIC, CLOCK_REALTIME
 #include <pthread.h>         // pthread_condattr_t

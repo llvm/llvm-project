@@ -9,4 +9,4 @@
 	.thumb_func
 	adr r0, invalid_relocation+1
 
-# CHECK: 10:2: error: unsupported relocation type
+# CHECK: 10:28: error: unsupported relocation type

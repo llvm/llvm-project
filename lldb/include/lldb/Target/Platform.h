@@ -21,11 +21,14 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private-forward.h"
@@ -126,8 +129,7 @@ public:
   ///     Returns \b true if this Platform plug-in was able to find
   ///     a suitable executable, \b false otherwise.
   virtual Status ResolveExecutable(const ModuleSpec &module_spec,
-                                   lldb::ModuleSP &exe_module_sp,
-                                   const FileSpecList *module_search_paths_ptr);
+                                   lldb::ModuleSP &exe_module_sp);
 
   /// Find a symbol file given a symbol file module specification.
   ///
@@ -269,13 +271,35 @@ public:
   virtual Status GetFileWithUUID(const FileSpec &platform_file,
                                  const UUID *uuid_ptr, FileSpec &local_file);
 
-  // Locate the scripting resource given a module specification.
-  //
-  // Locating the file should happen only on the local computer or using the
-  // current computers global settings.
-  virtual FileSpecList
+  /// Locate the scripting resource given a module specification.
+  ///
+  /// Returns a map from a located script's \c FileSpec to the
+  /// \c LoadScriptFromSymFile with which LLDB should load it.
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
   LocateExecutableScriptingResources(Target *target, Module &module,
                                      Stream &feedback_stream);
+
+  /// Locate the platform-specific scripting resource given a module
+  /// specification.
+  virtual llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesForPlatform(Target *target, Module &module,
+                                                Stream &feedback_stream);
+
+  /// Helper function for \c LocateExecutableScriptingResources
+  /// which gathers FileSpecs for executable scripts from
+  /// pre-configured "safe" auto-load paths.
+  ///
+  /// E.g., for Python it will look for a script at:
+  ///   \c <safe-path>/<module-name>/<module-name>.py
+  static llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesFromSafePaths(Stream &feedback_stream,
+                                                  FileSpec module_spec,
+                                                  const Target &target);
+
+  /// Returns true if the module's symbol file (e.g. a dSYM bundle) is
+  /// code-signed with a trusted signature. Used to decide whether to
+  /// auto-loaded scripts.
+  virtual bool IsSymbolFileTrusted(Module &module);
 
   /// \param[in] module_spec
   ///     The ModuleSpec of a binary to find.
@@ -303,10 +327,11 @@ public:
   /// \return
   ///     The Status object for any errors found while searching for
   ///     the binary.
-  virtual Status GetSharedModule(
-      const ModuleSpec &module_spec, Process *process,
-      lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
-      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+  virtual Status
+  GetSharedModule(const ModuleSpec &module_spec, Process *process,
+                  lldb::ModuleSP &module_sp,
+                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                  bool *did_create_ptr);
 
   void CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp,
@@ -452,7 +477,7 @@ public:
   ///          (e.g., a public and internal SDK).
   virtual llvm::Expected<std::pair<XcodeSDK, bool>>
   GetSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -468,7 +493,7 @@ public:
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -477,9 +502,10 @@ public:
   ///
   /// \param[in] unit The CU
   ///
-  /// \returns A parsed XcodeSDK object if successful, an Error otherwise. 
-  virtual llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::createStringError(
+  /// \returns A parsed XcodeSDK object if successful, an Error otherwise.
+  virtual llvm::Expected<XcodeSDK>
+  GetSDKPathFromDebugInfo(CompileUnit & /*unit*/) {
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -494,7 +520,7 @@ public:
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -676,6 +702,9 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string
+          *separated_error_output, // Pass nullptr to have error and command
+                                   // output combined in command_output.
       const Timeout<std::micro> &timeout);
 
   virtual lldb_private::Status RunShellCommand(
@@ -687,6 +716,9 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string
+          *separated_error_output, // Pass nullptr to have error and command
+                                   // output combined in command_output.
       const Timeout<std::micro> &timeout);
 
   virtual void SetLocalCacheDirectory(const char *local);
@@ -777,8 +809,8 @@ public:
   /// Try to get a specific unwind plan for a named trap handler.
   /// The default is not to have specific unwind plans for trap handlers.
   ///
-  /// \param[in] triple
-  ///     Triple of the current target.
+  /// \param[in] arch
+  ///     Architecture of the current target.
   ///
   /// \param[in] name
   ///     Name of the trap handler function.
@@ -787,8 +819,8 @@ public:
   ///     A specific unwind plan for that trap handler, or an empty
   ///     shared pointer. The latter means there is no specific plan,
   ///     unwind as normal.
-  virtual lldb::UnwindPlanSP
-  GetTrapHandlerUnwindPlan(const llvm::Triple &triple, ConstString name) {
+  virtual lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                                      ConstString name) {
     return {};
   }
 
@@ -924,7 +956,7 @@ public:
   ///     A structured data dictionary containing at each entry, the crash
   ///     information type as the entry key and the matching  an array as the
   ///     entry value. \b nullptr if not implemented or  if the process has no
-  ///     crash information entry. \b error if an error occured.
+  ///     crash information entry. \b error if an error occurred.
   virtual llvm::Expected<StructuredData::DictionarySP>
   FetchExtendedCrashInformation(lldb_private::Process &process) {
     return nullptr;
@@ -960,6 +992,8 @@ public:
 
   virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
 
+  virtual lldb::StopInfoSP GetStopInfoFromSiginfo(Thread &thread) { return {}; }
+
   virtual Args GetExtraStartupCommands();
 
   typedef std::function<Status(const ModuleSpec &module_spec,
@@ -974,6 +1008,13 @@ public:
   void SetLocateModuleCallback(LocateModuleCallback callback);
 
   LocateModuleCallback GetLocateModuleCallback() const;
+
+  /// Returns a \c FileSpecList of safe paths to auto-load scripting resources
+  /// from for a particular platform.
+  virtual llvm::Expected<FileSpecList>
+  GetSafeAutoLoadPaths(const Target &target) const {
+    return FileSpecList();
+  }
 
 protected:
   /// Create a list of ArchSpecs with the given OS and a architectures. The
@@ -1036,8 +1077,8 @@ protected:
   /// predefined trap handlers, this method may be a no-op.
   virtual void CalculateTrapHandlerSymbolNames() = 0;
 
-  Status GetCachedExecutable(ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                             const FileSpecList *module_search_paths_ptr);
+  Status GetCachedExecutable(ModuleSpec &module_spec,
+                             lldb::ModuleSP &module_sp);
 
   virtual Status DownloadModuleSlice(const FileSpec &src_file_spec,
                                      const uint64_t src_offset,
@@ -1048,6 +1089,21 @@ protected:
                                     const FileSpec &dst_file_spec);
 
   virtual const char *GetCacheHostname();
+
+  /// If we did some replacements of reserved characters, and a
+  /// file with the untampered name exists, then warn the user
+  /// that the file as-is shall not be loaded.
+  static void WarnIfInvalidUnsanitizedScriptExists(
+      Stream &os,
+      const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
+      const FileSpec &original_fspec, const FileSpec &fspec);
+
+  /// Returns the \c LoadScriptFromSymFile of scripting resource associated
+  /// with the specified module \c FileSpec. If the load style wasn't explicitly
+  /// set for a module, returns the target-wide default.
+  static LoadScriptFromSymFile
+  GetScriptLoadStyleForModule(const FileSpec &module_fspec,
+                              const Target &target);
 
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;

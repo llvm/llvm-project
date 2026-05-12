@@ -1,5 +1,5 @@
 int foo(void) { }
-int *bar(float *f) { return f; }
+void bar(void) { int; }
 
 // RUN: c-index-test -test-load-source all %s 2>&1|FileCheck -check-prefix=CHECK-BOTH-WARNINGS %s
 // RUN: c-index-test -test-load-source-reparse 5 all %s 2>&1|FileCheck -check-prefix=CHECK-BOTH-WARNINGS %s
@@ -10,9 +10,9 @@ int *bar(float *f) { return f; }
 // RUN: c-index-test -test-load-source all -w -O4 %s 2>&1 | FileCheck -check-prefix=NOWARNINGS %s
 
 // CHECK-BOTH-WARNINGS: warning: non-void function does not return a value
-// CHECK-BOTH-WARNINGS: warning: incompatible pointer types returning 'float *' from a function with result type 'int *'
+// CHECK-BOTH-WARNINGS: warning: declaration does not declare anything
 
 // CHECK-SECOND-WARNING-NOT:non-void function does not return a value
-// CHECK-SECOND-WARNING: warning: incompatible pointer types returning 'float *' from a function with result type 'int *'
+// CHECK-SECOND-WARNING: warning: declaration does not declare anything
 
 // NOWARNINGS-NOT: warning:

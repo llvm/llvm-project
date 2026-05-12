@@ -17,9 +17,7 @@
 #include "clang/Lex/TokenConcatenation.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/ADT/RewriteBuffer.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 

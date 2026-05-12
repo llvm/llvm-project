@@ -111,7 +111,7 @@ mismatch_vec_loop:                                ; preds = %mismatch_vec_loop_i
   %lhs.load = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr %20, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), i32 %19)
   %21 = getelementptr inbounds i8, ptr %b, i64 %mismatch_vector_index
   %rhs.load = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr %21, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), i32 %19)
-  %mismatch.cmp = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> %lhs.load, <vscale x 16 x i8> %rhs.load, metadata !"ne", <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), i32 %19)
+  %mismatch.cmp = icmp ne <vscale x 16 x i8> %lhs.load, %rhs.load
   %22 = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> %mismatch.cmp, i1 false, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), i32 %19)
   %23 = icmp ne i32 %22, %19
   br i1 %23, label %mismatch_vec_loop_found, label %mismatch_vec_loop_inc

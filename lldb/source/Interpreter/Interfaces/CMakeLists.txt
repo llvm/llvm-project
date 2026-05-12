@@ -1,10 +1,11 @@
 add_lldb_library(lldbInterpreterInterfaces NO_PLUGIN_DEPENDENCIES
   ScriptedInterfaceUsages.cpp
 
-  LINK_LIBS
-    lldbUtility
-
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Interpreter/Interfaces
   LINK_COMPONENTS
     Support
+  LINK_LIBS
+    lldbUtility
   )
 

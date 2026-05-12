@@ -3,7 +3,7 @@
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
-; CHECK: CYCLES ASSSUMED DIVERGENT:
+; CHECK: CYCLES ASSUMED DIVERGENT:
 ; CHECK-NEXT: depth=1: entries(if.end16 for.cond1) for.body4
 
 define void @foo(i1 %b) {

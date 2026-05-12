@@ -26,7 +26,7 @@
 ; CHECK-NEXT:           Maximum:         0x7
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Minimum:         0x2
+; CHECK-NEXT:  - Minimum: 0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
@@ -34,19 +34,19 @@
 ; CHECK-NEXT:         Mutable:         true
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           66592
+; CHECK-NEXT:           Value:           65536
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1028
+; CHECK-NEXT: Value: 65540
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1036
+; CHECK-NEXT:           Value:           65548
 ; CHECK-NEXT:   - Type:            EXPORT
 ; CHECK-NEXT:     Exports:
 ; CHECK-NEXT:       - Name:            memory
@@ -119,13 +119,13 @@
 ; CHECK-NEXT:         Body:            41020B
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            4180888080000B
+; CHECK-NEXT:         Body:            4180808480000B
 ; CHECK-NEXT:       - Index:           4
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            4184888080000B
+; CHECK-NEXT:         Body:            4184808480000B
 ; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            4188888080000B
+; CHECK-NEXT:         Body:            4188808480000B
 ; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4181808080000B
@@ -146,13 +146,13 @@
 ; CHECK-NEXT:         Body:            41020B
 ; CHECK-NEXT:       - Index:           12
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            418C888080000B
+; CHECK-NEXT:         Body:            418C808480000B
 ; CHECK-NEXT:       - Index:           13
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            4190888080000B
+; CHECK-NEXT:         Body:            4190808480000B
 ; CHECK-NEXT:       - Index:           14
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            4194888080000B
+; CHECK-NEXT:         Body:            4194808480000B
 ; CHECK-NEXT:       - Index:           15
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4184808080000B
@@ -164,11 +164,11 @@
 ; CHECK-NEXT:         Body:            4186808080000B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:
-; CHECK-NEXT:       - SectionOffset:   7
+; CHECK-NEXT:       - SectionOffset:   8
 ; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1024
+; CHECK-NEXT:           Value:           65536
 ; CHECK-NEXT:         Content:         '010000000100000001000000010000000100000001000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name

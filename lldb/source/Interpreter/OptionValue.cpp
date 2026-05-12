@@ -380,11 +380,11 @@ bool OptionValue::SetLanguageValue(lldb::LanguageType new_language) {
   return false;
 }
 
-const FormatEntity::Entry *OptionValue::GetFormatEntity() const {
+FormatEntity::Entry OptionValue::GetFormatEntityValue() const {
   std::lock_guard<std::mutex> lock(m_mutex);
   if (const OptionValueFormatEntity *option_value = GetAsFormatEntity())
-    return &option_value->GetCurrentValue();
-  return nullptr;
+    return option_value->GetCurrentValue();
+  return {};
 }
 
 const RegularExpression *OptionValue::GetRegexValue() const {

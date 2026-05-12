@@ -21,7 +21,9 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Signals.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -65,15 +67,14 @@ public:
   ///  NULL if there is no right subtree.
   ImutAVLTree *getRight() const { return right; }
 
-  /// getHeight - Returns the height of the tree.  A tree with no subtrees
-  ///  has a height of 1.
+  /// Returns the height of the tree. A tree with no subtrees has a height of 1.
   unsigned getHeight() const { return height; }
 
-  /// getValue - Returns the data value associated with the tree node.
+  /// Returns the data value associated with the tree node.
   const value_type& getValue() const { return value; }
 
-  /// find - Finds the subtree associated with the specified key value.
-  ///  This method returns NULL if no matching subtree is found.
+  /// Finds the subtree associated with the specified key value. This method
+  /// returns NULL if no matching subtree is found.
   ImutAVLTree* find(key_type_ref K) {
     ImutAVLTree *T = this;
     while (T) {
@@ -88,8 +89,7 @@ public:
     return nullptr;
   }
 
-  /// getMaxElement - Find the subtree associated with the highest ranged
-  ///  key value.
+  /// Find the subtree associated with the highest ranged key value.
   ImutAVLTree* getMaxElement() {
     ImutAVLTree *T = this;
     ImutAVLTree *Right = T->getRight();
@@ -97,8 +97,8 @@ public:
     return T;
   }
 
-  /// size - Returns the number of nodes in the tree, which includes
-  ///  both leaves and non-leaf nodes.
+  /// Returns the number of nodes in the tree, which includes both leaves and
+  // non-leaf nodes.
   unsigned size() const {
     unsigned n = 1;
     if (const ImutAVLTree* L = getLeft())
@@ -108,13 +108,13 @@ public:
     return n;
   }
 
-  /// begin - Returns an iterator that iterates over the nodes of the tree
-  ///  in an inorder traversal.  The returned iterator thus refers to the
-  ///  the tree node with the minimum data element.
+  /// Returns an iterator that iterates over the nodes of the tree in an inorder
+  /// traversal. The returned iterator thus refers to the tree node with the
+  /// minimum data element.
   iterator begin() const { return iterator(this); }
 
-  /// end - Returns an iterator for the tree that denotes the end of an
-  ///  inorder traversal.
+  /// Returns an iterator for the tree that denotes the end of an inorder
+  /// traversal.
   iterator end() const { return iterator(); }
 
   bool isElementEqual(value_type_ref V) const {
@@ -135,9 +135,9 @@ public:
     return isElementEqual(RHS->getValue());
   }
 
-  /// isEqual - Compares two trees for structural equality and returns true
-  ///   if they are equal.  This worst case performance of this operation is
-  //    linear in the sizes of the trees.
+  /// Compares two trees for structural equality and returns true if they are
+  /// equal. The worst case performance of this operation is linear in the sizes
+  /// of the trees.
   bool isEqual(const ImutAVLTree& RHS) const {
     if (&RHS == this)
       return true;
@@ -162,21 +162,20 @@ public:
     return LItr == LEnd && RItr == REnd;
   }
 
-  /// isNotEqual - Compares two trees for structural inequality.  Performance
-  ///  is the same is isEqual.
+  /// Compares two trees for structural inequality.  Performance is the same as
+  /// isEqual.
   bool isNotEqual(const ImutAVLTree& RHS) const { return !isEqual(RHS); }
 
-  /// contains - Returns true if this tree contains a subtree (node) that
-  ///  has an data element that matches the specified key.  Complexity
-  ///  is logarithmic in the size of the tree.
+  /// Returns true if this tree contains a subtree (node) that has an data
+  /// element that matches the specified key. Complexity is logarithmic in the
+  /// size of the tree.
   bool contains(key_type_ref K) { return (bool) find(K); }
 
-  /// validateTree - A utility method that checks that the balancing and
-  ///  ordering invariants of the tree are satisfied.  It is a recursive
-  ///  method that returns the height of the tree, which is then consumed
-  ///  by the enclosing validateTree call.  External callers should ignore the
-  ///  return value.  An invalid tree will cause an assertion to fire in
-  ///  a debug build.
+  /// A utility method that checks that the balancing and ordering invariants of
+  /// the tree are satisfied. It is a recursive method that returns the height
+  /// of the tree, which is then consumed by the enclosing validateTree call.
+  /// External callers should ignore the return value.  An invalid tree will
+  /// cause an assertion to fire in a debug build.
   unsigned validateTree() const {
     unsigned HL = getLeft() ? getLeft()->validateTree() : 0;
     unsigned HR = getRight() ? getRight()->validateTree() : 0;
@@ -230,8 +229,7 @@ private:
   //===----------------------------------------------------===//
 
 private:
-  /// ImutAVLTree - Internal constructor that is only called by
-  ///   ImutAVLFactory.
+  /// Internal constructor that is only called by ImutAVLFactory.
   ImutAVLTree(Factory *f, ImutAVLTree* l, ImutAVLTree* r, value_type_ref v,
               unsigned height)
     : factory(f), left(l), right(r), height(height), IsMutable(true),
@@ -241,7 +239,7 @@ private:
     if (right) right->retain();
   }
 
-  /// isMutable - Returns true if the left and right subtree references
+  /// Returns true if the left and right subtree references
   ///  (as well as height) can be changed.  If this method returns false,
   ///  the tree is truly immutable.  Trees returned from an ImutAVLFactory
   ///  object should always have this method return true.  Further, if this
@@ -249,8 +247,8 @@ private:
   ///  will also have this method return false.  The converse is not true.
   bool isMutable() const { return IsMutable; }
 
-  /// hasCachedDigest - Returns true if the digest for this tree is cached.
-  ///  This can only be true if the tree is immutable.
+  /// Returns true if the digest for this tree is cached. This can only be true
+  /// if the tree is immutable.
   bool hasCachedDigest() const { return IsDigestCached; }
 
   //===----------------------------------------------------===//
@@ -264,21 +262,20 @@ private:
   // immutable.
   //===----------------------------------------------------===//
 
-  /// markImmutable - Clears the mutable flag for a tree.  After this happens,
-  ///   it is an error to call setLeft(), setRight(), and setHeight().
+  /// Clears the mutable flag for a tree.  After this happens,
+  /// it is an error to call setLeft(), setRight(), and setHeight().
   void markImmutable() {
     assert(isMutable() && "Mutable flag already removed.");
     IsMutable = false;
   }
 
-  /// markedCachedDigest - Clears the NoCachedDigest flag for a tree.
+  /// Clears the NoCachedDigest flag for a tree.
   void markedCachedDigest() {
     assert(!hasCachedDigest() && "NoCachedDigest flag already removed.");
     IsDigestCached = true;
   }
 
-  /// setHeight - Changes the height of the tree.  Used internally by
-  ///  ImutAVLFactory.
+  /// Changes the height of the tree.  Used internally by ImutAVLFactory.
   void setHeight(unsigned h) {
     assert(isMutable() && "Only a mutable tree can have its height changed.");
     height = h;
@@ -485,8 +482,7 @@ protected:
     createdNodes.clear();
   }
 
-  /// balanceTree - Used by add_internal and remove_internal to
-  ///  balance a newly created tree.
+  /// Used by add_internal and remove_internal to balance a newly created tree.
   TreeTy* balanceTree(TreeTy* L, value_type_ref V, TreeTy* R) {
     unsigned hl = getHeight(L);
     unsigned hr = getHeight(R);
@@ -531,7 +527,7 @@ protected:
   /// add_internal - Creates a new tree that includes the specified
   ///  data and the data from the original tree.  If the original tree
   ///  already contained the data item, the original tree is returned.
-  TreeTy* add_internal(value_type_ref V, TreeTy* T) {
+  TreeTy *add_internal(value_type_ref V, TreeTy *T) {
     if (isEmpty(T))
       return createNode(T, V, T);
     assert(!T->isMutable());
@@ -539,19 +535,34 @@ protected:
     key_type_ref K = ImutInfo::KeyOfValue(V);
     key_type_ref KCurrent = ImutInfo::KeyOfValue(getValue(T));
 
-    if (ImutInfo::isEqual(K,KCurrent))
+    if (ImutInfo::isEqual(K, KCurrent)) {
+      // If both key and value are same, return the original tree.
+      if (ImutInfo::isDataEqual(ImutInfo::DataOfValue(V),
+                                ImutInfo::DataOfValue(getValue(T))))
+        return T;
+      // Otherwise create a new node with the new value.
       return createNode(getLeft(T), V, getRight(T));
-    else if (ImutInfo::isLess(K,KCurrent))
-      return balanceTree(add_internal(V, getLeft(T)), getValue(T), getRight(T));
+    }
+
+    TreeTy *NewL = getLeft(T);
+    TreeTy *NewR = getRight(T);
+    if (ImutInfo::isLess(K, KCurrent))
+      NewL = add_internal(V, NewL);
     else
-      return balanceTree(getLeft(T), getValue(T), add_internal(V, getRight(T)));
+      NewR = add_internal(V, NewR);
+
+    // If no changes were made, return the original tree. Otherwise, balance the
+    // tree and return the new root.
+    return NewL == getLeft(T) && NewR == getRight(T)
+               ? T
+               : balanceTree(NewL, getValue(T), NewR);
   }
 
   /// remove_internal - Creates a new tree that includes all the data
   ///  from the original tree except the specified data.  If the
   ///  specified data did not exist in the original tree, the original
   ///  tree is returned.
-  TreeTy* remove_internal(key_type_ref K, TreeTy* T) {
+  TreeTy *remove_internal(key_type_ref K, TreeTy *T) {
     if (isEmpty(T))
       return T;
 
@@ -559,15 +570,21 @@ protected:
 
     key_type_ref KCurrent = ImutInfo::KeyOfValue(getValue(T));
 
-    if (ImutInfo::isEqual(K,KCurrent)) {
+    if (ImutInfo::isEqual(K, KCurrent))
       return combineTrees(getLeft(T), getRight(T));
-    } else if (ImutInfo::isLess(K,KCurrent)) {
-      return balanceTree(remove_internal(K, getLeft(T)),
-                                            getValue(T), getRight(T));
-    } else {
-      return balanceTree(getLeft(T), getValue(T),
-                         remove_internal(K, getRight(T)));
-    }
+
+    TreeTy *NewL = getLeft(T);
+    TreeTy *NewR = getRight(T);
+    if (ImutInfo::isLess(K, KCurrent))
+      NewL = remove_internal(K, NewL);
+    else
+      NewR = remove_internal(K, NewR);
+
+    // If no changes were made, return the original tree. Otherwise, balance the
+    // tree and return the new root.
+    return NewL == getLeft(T) && NewR == getRight(T)
+               ? T
+               : balanceTree(NewL, getValue(T), NewR);
   }
 
   TreeTy* combineTrees(TreeTy* L, TreeTy* R) {
@@ -590,8 +607,7 @@ protected:
                        getValue(T), getRight(T));
   }
 
-  /// markImmutable - Clears the mutable bits of a root and all of its
-  ///  descendants.
+  /// Clears the mutable bits of a root and all of its descendants.
   void markImmutable(TreeTy* T) {
     if (!T || !T->isMutable())
       return;
@@ -612,9 +628,7 @@ public:
     // if find a collision compare those trees by their contents.
     unsigned digest = TNew->computeDigest();
     TreeTy *&entry = Cache[maskCacheIndex(digest)];
-    do {
-      if (!entry)
-        break;
+    if (entry) {
       for (TreeTy *T = entry ; T != nullptr; T = T->next) {
         // Compare the Contents('T') with Contents('TNew')
         typename TreeTy::iterator TI = T->begin(), TE = T->end();
@@ -630,7 +644,6 @@ public:
       entry->prev = TNew;
       TNew->next = entry;
     }
-    while (false);
 
     entry = TNew;
     TNew->IsCanonicalized = true;
@@ -905,11 +918,10 @@ struct ImutProfileInfo<T*> {
 //  for element profiling.
 //===----------------------------------------------------------------------===//
 
-/// ImutContainerInfo - Generic definition of comparison operations for
-///   elements of immutable containers that defaults to using
-///   std::equal_to<> and std::less<> to perform comparison of elements.
-template <typename T>
-struct ImutContainerInfo : public ImutProfileInfo<T> {
+/// Generic definition of comparison operations for elements of immutable
+/// containers that defaults to using std::equal_to<> and std::less<> to perform
+/// comparison of elements.
+template <typename T> struct ImutContainerInfo : ImutProfileInfo<T> {
   using value_type = typename ImutProfileInfo<T>::value_type;
   using value_type_ref = typename ImutProfileInfo<T>::value_type_ref;
   using key_type = value_type;
@@ -931,11 +943,9 @@ struct ImutContainerInfo : public ImutProfileInfo<T> {
   static bool isDataEqual(data_type_ref, data_type_ref) { return true; }
 };
 
-/// ImutContainerInfo - Specialization for pointer values to treat pointers
-///  as references to unique objects.  Pointers are thus compared by
-///  their addresses.
-template <typename T>
-struct ImutContainerInfo<T*> : public ImutProfileInfo<T*> {
+/// Specialization for pointer values to treat pointers as references to unique
+/// objects. Pointers are thus compared by their addresses.
+template <typename T> struct ImutContainerInfo<T *> : ImutProfileInfo<T *> {
   using value_type = typename ImutProfileInfo<T*>::value_type;
   using value_type_ref = typename ImutProfileInfo<T*>::value_type_ref;
   using key_type = value_type;
@@ -988,30 +998,30 @@ public:
     Factory(const Factory& RHS) = delete;
     void operator=(const Factory& RHS) = delete;
 
-    /// getEmptySet - Returns an immutable set that contains no elements.
+    /// Returns an immutable set that contains no elements.
     ImmutableSet getEmptySet() {
       return ImmutableSet(F.getEmptyTree());
     }
 
-    /// add - Creates a new immutable set that contains all of the values
-    ///  of the original set with the addition of the specified value.  If
-    ///  the original set already included the value, then the original set is
-    ///  returned and no memory is allocated.  The time and space complexity
-    ///  of this operation is logarithmic in the size of the original set.
-    ///  The memory allocated to represent the set is released when the
-    ///  factory object that created the set is destroyed.
+    /// Creates a new immutable set that contains all of the values
+    /// of the original set with the addition of the specified value.  If
+    /// the original set already included the value, then the original set is
+    /// returned and no memory is allocated.  The time and space complexity
+    /// of this operation is logarithmic in the size of the original set.
+    /// The memory allocated to represent the set is released when the
+    /// factory object that created the set is destroyed.
     [[nodiscard]] ImmutableSet add(ImmutableSet Old, value_type_ref V) {
       TreeTy *NewT = F.add(Old.Root.get(), V);
       return ImmutableSet(Canonicalize ? F.getCanonicalTree(NewT) : NewT);
     }
 
-    /// remove - Creates a new immutable set that contains all of the values
-    ///  of the original set with the exception of the specified value.  If
-    ///  the original set did not contain the value, the original set is
-    ///  returned and no memory is allocated.  The time and space complexity
-    ///  of this operation is logarithmic in the size of the original set.
-    ///  The memory allocated to represent the set is released when the
-    ///  factory object that created the set is destroyed.
+    /// Creates a new immutable set that contains all of the values
+    /// of the original set with the exception of the specified value.  If
+    /// the original set did not contain the value, the original set is
+    /// returned and no memory is allocated.  The time and space complexity
+    /// of this operation is logarithmic in the size of the original set.
+    /// The memory allocated to represent the set is released when the
+    /// factory object that created the set is destroyed.
     [[nodiscard]] ImmutableSet remove(ImmutableSet Old, value_type_ref V) {
       TreeTy *NewT = F.remove(Old.Root.get(), V);
       return ImmutableSet(Canonicalize ? F.getCanonicalTree(NewT) : NewT);
@@ -1047,11 +1057,11 @@ public:
 
   TreeTy *getRootWithoutRetain() const { return Root.get(); }
 
-  /// isEmpty - Return true if the set contains no elements.
+  /// Return true if the set contains no elements.
   bool isEmpty() const { return !Root; }
 
-  /// isSingleton - Return true if the set contains exactly one element.
-  ///   This method runs in constant time.
+  /// Return true if the set contains exactly one element.
+  /// This method runs in constant time.
   bool isSingleton() const { return getHeight() == 1; }
 
   //===--------------------------------------------------===//
@@ -1135,11 +1145,11 @@ public:
                             : Root != RHS.Root;
   }
 
-  /// isEmpty - Return true if the set contains no elements.
+  /// Return true if the set contains no elements.
   bool isEmpty() const { return !Root; }
 
-  /// isSingleton - Return true if the set contains exactly one element.
-  ///   This method runs in constant time.
+  /// Return true if the set contains exactly one element.
+  /// This method runs in constant time.
   bool isSingleton() const { return getHeight() == 1; }
 
   //===--------------------------------------------------===//

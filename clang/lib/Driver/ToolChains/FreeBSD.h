@@ -78,6 +78,11 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
 
+  bool IsAArch64OutlineAtomicsDefault(
+      const llvm::opt::ArgList &Args) const override {
+    return true;
+  }
+
   UnwindTableLevel
   getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
@@ -86,6 +91,10 @@ public:
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,
   // FreeBSD defaults to standalone/full debug info.
   bool GetDefaultStandaloneDebug() const override { return true; }
+  // On FreeBSD, `/usr/bin/ld` is `ld.lld`, but other things may be installed in
+  // the path named `ld`  or `{triple}-ld`, which may be picked by preference if
+  // we default to `ld` here.
+  const char *getDefaultLinker() const override { return "ld.lld"; }
 
 protected:
   Tool *buildAssembler() const override;

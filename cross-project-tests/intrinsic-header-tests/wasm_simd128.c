@@ -1033,6 +1033,12 @@ v128_t test_f64x2_promote_low_f32x4(v128_t a) {
   return wasm_f64x2_promote_low_f32x4(a);
 }
 
+// CHECK-LABEL: test_f32x4_promote_low_f16x8:
+// CHECK: f32x4.promote_low_f16x8{{$}}
+v128_t test_f32x4_promote_low_f16x8(v128_t a) {
+  return wasm_f32x4_promote_low_f16x8(a);
+}
+
 // CHECK-LABEL: test_i8x16_shuffle:
 // CHECK: i8x16.shuffle 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
 // 0{{$}}
@@ -1511,13 +1517,13 @@ v128_t test_f16x8_convert_u16x8(v128_t a) {
 }
 
 // CHECK-LABEL: test_f16x8_relaxed_madd:
-// CHECK: f16x8.relaxed_madd{{$}}
+// CHECK: f16x8.madd{{$}}
 v128_t test_f16x8_relaxed_madd(v128_t a, v128_t b, v128_t c) {
   return wasm_f16x8_relaxed_madd(a, b, c);
 }
 
 // CHECK-LABEL: test_f16x8_relaxed_nmadd:
-// CHECK: f16x8.relaxed_nmadd{{$}}
+// CHECK: f16x8.nmadd{{$}}
 v128_t test_f16x8_relaxed_nmadd(v128_t a, v128_t b, v128_t c) {
   return wasm_f16x8_relaxed_nmadd(a, b, c);
 }

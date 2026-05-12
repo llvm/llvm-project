@@ -99,13 +99,13 @@ public:
 };
 
 /// Printer pass for the \c StackSafetyAnalysis results.
-class StackSafetyPrinterPass : public PassInfoMixin<StackSafetyPrinterPass> {
+class StackSafetyPrinterPass
+    : public RequiredPassInfoMixin<StackSafetyPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit StackSafetyPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// StackSafetyInfo wrapper for the legacy pass manager
@@ -138,13 +138,12 @@ public:
 
 /// Printer pass for the \c StackSafetyGlobalAnalysis results.
 class StackSafetyGlobalPrinterPass
-    : public PassInfoMixin<StackSafetyGlobalPrinterPass> {
+    : public RequiredPassInfoMixin<StackSafetyGlobalPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit StackSafetyGlobalPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// This pass performs the global (interprocedural) stack safety analysis
@@ -156,7 +155,7 @@ public:
   static char ID;
 
   StackSafetyGlobalInfoWrapperPass();
-  ~StackSafetyGlobalInfoWrapperPass();
+  ~StackSafetyGlobalInfoWrapperPass() override;
 
   const StackSafetyGlobalInfo &getResult() const { return SSGI; }
 

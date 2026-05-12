@@ -13,8 +13,6 @@
 #include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/TextAPIError.h"
-#include <iomanip>
-#include <sstream>
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -423,12 +421,11 @@ bool InterfaceFile::operator==(const InterfaceFile &O) const {
       return false;
   }
 
-  if (!std::equal(Documents.begin(), Documents.end(), O.Documents.begin(),
-                  O.Documents.end(),
-                  [](const std::shared_ptr<InterfaceFile> LHS,
-                     const std::shared_ptr<InterfaceFile> RHS) {
-                    return *LHS == *RHS;
-                  }))
+  if (!llvm::equal(Documents, O.Documents,
+                   [](const std::shared_ptr<InterfaceFile> &LHS,
+                      const std::shared_ptr<InterfaceFile> &RHS) {
+                     return *LHS == *RHS;
+                   }))
     return false;
   return true;
 }

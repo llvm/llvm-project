@@ -237,28 +237,78 @@ private:
 };
 
 // CommandObjectSettingsShow -- Show current values
+#define LLDB_OPTIONS_settings_show
+#include "CommandOptions.inc"
 
 class CommandObjectSettingsShow : public CommandObjectParsed {
 public:
   CommandObjectSettingsShow(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "settings show",
                             "Show matching debugger settings and their current "
-                            "values.  Defaults to showing all settings.",
-                            nullptr) {
+                            "values.  Defaults to showing all settings.") {
     AddSimpleArgumentList(eArgTypeSettingVariableName, eArgRepeatOptional);
   }
 
   ~CommandObjectSettingsShow() override = default;
 
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      const int short_option = m_getopt_table[option_idx].val;
+      switch (short_option) {
+      case 'd':
+        m_include_defaults = true;
+        break;
+      case 'c':
+        m_only_changed = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return {};
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_include_defaults = false;
+      m_only_changed = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return g_settings_show_options;
+    }
+
+    bool m_include_defaults = false;
+    bool m_only_changed = false;
+  };
+
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
+    uint32_t dump_mask = OptionValue::eDumpGroupValue;
+    if (m_options.m_include_defaults)
+      dump_mask |= OptionValue::eDumpOptionDefaultValue;
+    if (m_options.m_only_changed) {
+      dump_mask |= OptionValue::eDumpOptionOnlyChanged;
+      dump_mask |= OptionValue::eDumpOptionDefaultValue;
+    }
+
     if (!args.empty()) {
       for (const auto &arg : args) {
+        if (m_options.m_only_changed) {
+          Status lookup_error;
+          lldb::OptionValueSP value_sp = GetDebugger().GetPropertyValue(
+              &m_exe_ctx, arg.ref(), lookup_error);
+          if (value_sp && value_sp->IsDefault())
+            continue;
+        }
         Status error(GetDebugger().DumpPropertyValue(
-            &m_exe_ctx, result.GetOutputStream(), arg.ref(),
-            OptionValue::eDumpGroupValue));
+            &m_exe_ctx, result.GetOutputStream(), arg.ref(), dump_mask));
         if (error.Success()) {
           result.GetOutputStream().EOL();
         } else {
@@ -267,9 +317,12 @@ protected:
       }
     } else {
       GetDebugger().DumpAllPropertyValues(&m_exe_ctx, result.GetOutputStream(),
-                                          OptionValue::eDumpGroupValue);
+                                          dump_mask);
     }
   }
+
+private:
+  CommandOptions m_options;
 };
 
 // CommandObjectSettingsWrite -- Write settings to file
@@ -356,6 +409,7 @@ protected:
     if (args.empty()) {
       GetDebugger().DumpAllPropertyValues(&clean_ctx, out_file,
                                           OptionValue::eDumpGroupExport);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
     }
 
@@ -366,6 +420,8 @@ protected:
         result.AppendError(error.AsCString());
       }
     }
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
 private:

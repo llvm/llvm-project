@@ -21,7 +21,7 @@ void f(int x) {
 // CHECK: preamble.h:5:10: IntegerLiteral= Extent=[5:10 - 5:11]
 // CHECK: preamble.c:8:5: FunctionDecl=wibble:8:5 Extent=[8:1 - 8:16]
 // CHECK: preamble.c:8:15: ParmDecl=:8:15 (Definition) Extent=[8:12 - 8:15]
-// CHECK-DIAG: preamble.h:4:7:{4:9-4:13}: warning: incompatible pointer types assigning to 'int *' from 'float *'
+// CHECK-DIAG: preamble.h:4:7:{4:9-4:13}: error: incompatible pointer types assigning to 'int *' from 'float *'
 // FIXME: Should see:
 //     preamble.c:5:9: warning: macro is not used
 // CHECK-DIAG-NOT: preamble.c:6:9: warning: macro is not used

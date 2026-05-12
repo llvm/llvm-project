@@ -34,7 +34,7 @@ static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
                                            LLVM::LLVMDialect *llvmDialect) {
   auto *context = module.getContext();
   if (module.lookupSymbol<LLVM::LLVMFuncOp>("printf"))
-    return SymbolRefAttr::get("printf", context);
+    return SymbolRefAttr::get(context, "printf");
 
   // Create a function declaration for printf, the signature is:
   //   * `i32 (i8*, ...)`
@@ -47,8 +47,8 @@ static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
   // Insert the printf function into the body of the parent module.
   PatternRewriter::InsertionGuard insertGuard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
-  rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), "printf", llvmFnType);
-  return SymbolRefAttr::get("printf", context);
+  LLVM::LLVMFuncOp::create(rewriter, module.getLoc(), "printf", llvmFnType);
+  return SymbolRefAttr::get(context, "printf");
 }
 ```
 
@@ -245,7 +245,7 @@ define void @main()
 ```
 
 The full code listing for dumping LLVM IR can be found in
-`examples/toy/Ch6/toy.cpp` in the `dumpLLVMIR()` function:
+`examples/toy/Ch6/toyc.cpp` in the `dumpLLVMIR()` function:
 
 ```c++
 

@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -32,9 +33,10 @@ class LegalizerInfo;
 class MachineIRBuilder;
 class MachineInstr;
 class GISelChangeObserver;
+class LibcallLoweringInfo;
 class LostDebugLocObserver;
 
-class Legalizer : public MachineFunctionPass {
+class LLVM_ABI Legalizer : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -69,11 +71,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static MFResult
-  legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
-                          ArrayRef<GISelChangeObserver *> AuxObservers,
-                          LostDebugLocObserver &LocObserver,
-                          MachineIRBuilder &MIRBuilder, GISelValueTracking *VT);
+  static MFResult legalizeMachineFunction(
+      MachineFunction &MF, const LegalizerInfo &LI,
+      ArrayRef<GISelChangeObserver *> AuxObservers,
+      LostDebugLocObserver &LocObserver, MachineIRBuilder &MIRBuilder,
+      const LibcallLoweringInfo *Libcalls, GISelValueTracking *VT);
 };
 } // End namespace llvm.
 

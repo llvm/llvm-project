@@ -14,26 +14,30 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#define DEBUG_TYPE "gpu-lowering"
 
 using namespace mlir;
 
-LLVM::LLVMFuncOp mlir::getOrDefineFunction(gpu::GPUModuleOp moduleOp,
-                                           Location loc, OpBuilder &b,
-                                           StringRef name,
+LLVM::LLVMFuncOp mlir::getOrDefineFunction(Operation *moduleOp, Location loc,
+                                           OpBuilder &b, StringRef name,
                                            LLVM::LLVMFunctionType type) {
-  LLVM::LLVMFuncOp ret;
-  if (!(ret = moduleOp.template lookupSymbol<LLVM::LLVMFuncOp>(name))) {
-    OpBuilder::InsertionGuard guard(b);
-    b.setInsertionPointToStart(moduleOp.getBody());
-    ret = b.create<LLVM::LLVMFuncOp>(loc, name, type, LLVM::Linkage::External);
-  }
-  return ret;
+  auto existing = dyn_cast_or_null<LLVM::LLVMFuncOp>(
+      SymbolTable::lookupSymbolIn(moduleOp, name));
+  if (existing)
+    return existing;
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(&moduleOp->getRegion(0).front());
+  return LLVM::LLVMFuncOp::create(b, loc, name, type, LLVM::Linkage::External);
 }
 
-static SmallString<16> getUniqueSymbolName(gpu::GPUModuleOp moduleOp,
+static SmallString<16> getUniqueSymbolName(Operation *moduleOp,
                                            StringRef prefix) {
   // Get a unique global name.
   unsigned stringNumber = 0;
@@ -41,15 +45,16 @@ static SmallString<16> getUniqueSymbolName(gpu::GPUModuleOp moduleOp,
   do {
     stringConstName.clear();
     (prefix + Twine(stringNumber++)).toStringRef(stringConstName);
-  } while (moduleOp.lookupSymbol(stringConstName));
+  } while (SymbolTable::lookupSymbolIn(moduleOp, stringConstName));
   return stringConstName;
 }
 
-LLVM::GlobalOp
-mlir::getOrCreateStringConstant(OpBuilder &b, Location loc,
-                                gpu::GPUModuleOp moduleOp, Type llvmI8,
-                                StringRef namePrefix, StringRef str,
-                                uint64_t alignment, unsigned addrSpace) {
+LLVM::GlobalOp mlir::getOrCreateStringConstant(OpBuilder &b, Location loc,
+                                               Operation *moduleOp, Type llvmI8,
+                                               StringRef namePrefix,
+                                               StringRef str,
+                                               uint64_t alignment,
+                                               unsigned addrSpace) {
   llvm::SmallString<20> nullTermStr(str);
   nullTermStr.push_back('\0'); // Null terminate for C
   auto globalType =
@@ -57,7 +62,7 @@ mlir::getOrCreateStringConstant(OpBuilder &b, Location loc,
   StringAttr attr = b.getStringAttr(nullTermStr);
 
   // Try to find existing global.
-  for (auto globalOp : moduleOp.getOps<LLVM::GlobalOp>())
+  for (auto globalOp : moduleOp->getRegion(0).getOps<LLVM::GlobalOp>())
     if (globalOp.getGlobalType() == globalType && globalOp.getConstant() &&
         globalOp.getValueAttr() == attr &&
         globalOp.getAlignment().value_or(0) == alignment &&
@@ -66,11 +71,60 @@ mlir::getOrCreateStringConstant(OpBuilder &b, Location loc,
 
   // Not found: create new global.
   OpBuilder::InsertionGuard guard(b);
-  b.setInsertionPointToStart(moduleOp.getBody());
+  b.setInsertionPointToStart(&moduleOp->getRegion(0).front());
   SmallString<16> name = getUniqueSymbolName(moduleOp, namePrefix);
-  return b.create<LLVM::GlobalOp>(loc, globalType,
-                                  /*isConstant=*/true, LLVM::Linkage::Internal,
-                                  name, attr, alignment, addrSpace);
+  return LLVM::GlobalOp::create(b, loc, globalType,
+                                /*isConstant=*/true, LLVM::Linkage::Internal,
+                                name, attr, alignment, addrSpace);
+}
+
+FailureOr<LoweredLLVMFuncAttrs> GPUFuncOpLowering::buildLoweredGPULLVMFuncAttrs(
+    gpu::GPUFuncOp gpuFuncOp, Type llvmFuncType, OpBuilder &rewriter) const {
+  FailureOr<LoweredLLVMFuncAttrs> loweredAttrs =
+      lowerDiscardableAttrsForLLVMFunc(gpuFuncOp, llvmFuncType);
+  if (failed(loweredAttrs))
+    return failure();
+
+  MLIRContext *ctx = rewriter.getContext();
+  LLVM::LLVMFuncOp::Properties &props = loweredAttrs->properties;
+  props.sym_name = rewriter.getStringAttr(gpuFuncOp.getName());
+  props.function_type = TypeAttr::get(llvmFuncType);
+  const bool isKernelFunc = gpuFuncOp.isKernel();
+  props.setCConv(LLVM::CConvAttr::get(ctx, isKernelFunc
+                                               ? kernelCallingConvention
+                                               : nonKernelCallingConvention));
+
+  NamedAttrList &discardable = loweredAttrs->discardableAttrs;
+  auto *gpuDialect = cast<gpu::GPUDialect>(gpuFuncOp->getDialect());
+
+  auto appendIfNameAndValue = [&](StringAttr name, Attribute value) {
+    if (name && value)
+      discardable.append(name, value);
+  };
+
+  DenseI32ArrayAttr knownBlockSize = gpuFuncOp.getKnownBlockSizeAttr();
+  DenseI32ArrayAttr knownGridSize = gpuFuncOp.getKnownGridSizeAttr();
+  DenseI32ArrayAttr knownClusterSize = gpuFuncOp.getKnownClusterSizeAttr();
+
+  appendIfNameAndValue(gpuDialect->getKnownBlockSizeAttrHelper().getName(),
+                       knownBlockSize);
+  appendIfNameAndValue(gpuDialect->getKnownGridSizeAttrHelper().getName(),
+                       knownGridSize);
+  appendIfNameAndValue(gpuDialect->getKnownClusterSizeAttrHelper().getName(),
+                       knownClusterSize);
+
+  if (isKernelFunc) {
+    discardable.append(gpuDialect->getKernelFuncAttrName(),
+                       rewriter.getUnitAttr());
+    // Add a dialect specific kernel attribute in addition to GPU kernel
+    // attribute. The former is necessary for further translation while the
+    // latter is expected by gpu.launch_func.
+    appendIfNameAndValue(kernelAttributeName, rewriter.getUnitAttr());
+    appendIfNameAndValue(kernelBlockSizeAttributeName, knownBlockSize);
+    appendIfNameAndValue(kernelClusterSizeAttributeName, knownClusterSize);
+  }
+
+  return loweredAttrs;
 }
 
 LogicalResult
@@ -84,7 +138,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     // workgroup attributions.
 
     ArrayRef<BlockArgument> workgroupAttributions =
-        gpuFuncOp.getWorkgroupAttributions();
+        gpuFuncOp.getWorkgroupAttributionBBArgs();
     size_t numAttributions = workgroupAttributions.size();
 
     // Insert all arguments at the end.
@@ -94,7 +148,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     // New arguments will simply be `llvm.ptr` with the correct address space
     Type workgroupPtrType =
         rewriter.getType<LLVM::LLVMPointerType>(workgroupAddrSpace);
-    SmallVector<Type> argTypes(numAttributions, workgroupPtrType);
+    Repeated<Type> argTypes(numAttributions, workgroupPtrType);
 
     // Attributes: noalias, llvm.mlir.workgroup_attribution(<size>, <type>)
     std::array attrs{
@@ -135,7 +189,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   } else {
     workgroupBuffers.reserve(gpuFuncOp.getNumWorkgroupAttributions());
     for (auto [idx, attribution] :
-         llvm::enumerate(gpuFuncOp.getWorkgroupAttributions())) {
+         llvm::enumerate(gpuFuncOp.getWorkgroupAttributionBBArgs())) {
       auto type = dyn_cast<MemRefType>(attribution.getType());
       assert(type && type.hasStaticShape() && "unexpected type in attribution");
 
@@ -151,8 +205,8 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
               gpuFuncOp.getWorkgroupAttributionAttr(
                   idx, LLVM::LLVMDialect::getAlignAttrName())))
         alignment = alignAttr.getInt();
-      auto globalOp = rewriter.create<LLVM::GlobalOp>(
-          gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
+      auto globalOp = LLVM::GlobalOp::create(
+          rewriter, gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
           LLVM::Linkage::Internal, name, /*value=*/Attribute(), alignment,
           workgroupAddrSpace);
       workgroupBuffers.push_back(globalOp);
@@ -173,57 +227,17 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     });
   }
 
-  // Create the new function operation. Only copy those attributes that are
-  // not specific to function modeling.
-  SmallVector<NamedAttribute, 4> attributes;
-  ArrayAttr argAttrs;
-  for (const auto &attr : gpuFuncOp->getAttrs()) {
-    if (attr.getName() == SymbolTable::getSymbolAttrName() ||
-        attr.getName() == gpuFuncOp.getFunctionTypeAttrName() ||
-        attr.getName() ==
-            gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName() ||
-        attr.getName() == gpuFuncOp.getWorkgroupAttribAttrsAttrName() ||
-        attr.getName() == gpuFuncOp.getPrivateAttribAttrsAttrName() ||
-        attr.getName() == gpuFuncOp.getKnownBlockSizeAttrName() ||
-        attr.getName() == gpuFuncOp.getKnownGridSizeAttrName())
-      continue;
-    if (attr.getName() == gpuFuncOp.getArgAttrsAttrName()) {
-      argAttrs = gpuFuncOp.getArgAttrsAttr();
-      continue;
-    }
-    attributes.push_back(attr);
-  }
+  ArrayAttr argAttrs = gpuFuncOp.getArgAttrsAttr();
 
-  DenseI32ArrayAttr knownBlockSize = gpuFuncOp.getKnownBlockSizeAttr();
-  DenseI32ArrayAttr knownGridSize = gpuFuncOp.getKnownGridSizeAttr();
-  // Ensure we don't lose information if the function is lowered before its
-  // surrounding context.
-  auto *gpuDialect = cast<gpu::GPUDialect>(gpuFuncOp->getDialect());
-  if (knownBlockSize)
-    attributes.emplace_back(gpuDialect->getKnownBlockSizeAttrHelper().getName(),
-                            knownBlockSize);
-  if (knownGridSize)
-    attributes.emplace_back(gpuDialect->getKnownGridSizeAttrHelper().getName(),
-                            knownGridSize);
+  FailureOr<LoweredLLVMFuncAttrs> loweredAttrs =
+      buildLoweredGPULLVMFuncAttrs(gpuFuncOp, funcType, rewriter);
+  if (failed(loweredAttrs))
+    return rewriter.notifyMatchFailure(gpuFuncOp,
+                                       "failed to lower func attributes");
 
-  // Add a dialect specific kernel attribute in addition to GPU kernel
-  // attribute. The former is necessary for further translation while the
-  // latter is expected by gpu.launch_func.
-  if (gpuFuncOp.isKernel()) {
-    if (kernelAttributeName)
-      attributes.emplace_back(kernelAttributeName, rewriter.getUnitAttr());
-    // Set the dialect-specific block size attribute if there is one.
-    if (kernelBlockSizeAttributeName && knownBlockSize) {
-      attributes.emplace_back(kernelBlockSizeAttributeName, knownBlockSize);
-    }
-  }
-  LLVM::CConv callingConvention = gpuFuncOp.isKernel()
-                                      ? kernelCallingConvention
-                                      : nonKernelCallingConvention;
-  auto llvmFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
-      gpuFuncOp.getLoc(), gpuFuncOp.getName(), funcType,
-      LLVM::Linkage::External, /*dsoLocal=*/false, callingConvention,
-      /*comdat=*/nullptr, attributes);
+  auto llvmFuncOp = LLVM::LLVMFuncOp::create(rewriter, gpuFuncOp.getLoc(),
+                                             loweredAttrs->properties,
+                                             loweredAttrs->discardableAttrs);
 
   {
     // Insert operations that correspond to converted workgroup and private
@@ -249,8 +263,9 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
       ArrayRef<BlockArgument> attributionArguments =
           gpuFuncOp.getArguments().slice(numProperArguments - numAttributions,
                                          numAttributions);
-      for (auto [idx, vals] : llvm::enumerate(llvm::zip_equal(
-               gpuFuncOp.getWorkgroupAttributions(), attributionArguments))) {
+      for (auto [idx, vals] : llvm::enumerate(
+               llvm::zip_equal(gpuFuncOp.getWorkgroupAttributionBBArgs(),
+                               attributionArguments))) {
         auto [attribution, arg] = vals;
         auto type = cast<MemRefType>(attribution.getType());
 
@@ -266,17 +281,17 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
       for (const auto [idx, global] : llvm::enumerate(workgroupBuffers)) {
         auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext(),
                                                   global.getAddrSpace());
-        Value address = rewriter.create<LLVM::AddressOfOp>(
-            loc, ptrType, global.getSymNameAttr());
+        Value address = LLVM::AddressOfOp::create(rewriter, loc, ptrType,
+                                                  global.getSymNameAttr());
         Value memory =
-            rewriter.create<LLVM::GEPOp>(loc, ptrType, global.getType(),
-                                         address, ArrayRef<LLVM::GEPArg>{0, 0});
+            LLVM::GEPOp::create(rewriter, loc, ptrType, global.getType(),
+                                address, ArrayRef<LLVM::GEPArg>{0, 0});
 
         // Build a memref descriptor pointing to the buffer to plug with the
         // existing memref infrastructure. This may use more registers than
         // otherwise necessary given that memref sizes are fixed, but we can try
         // and canonicalize that away later.
-        Value attribution = gpuFuncOp.getWorkgroupAttributions()[idx];
+        Value attribution = gpuFuncOp.getWorkgroupAttributionBBArgs()[idx];
         auto type = cast<MemRefType>(attribution.getType());
         Value descr = MemRefDescriptor::fromStaticShape(
             rewriter, loc, *getTypeConverter(), type, memory);
@@ -298,15 +313,16 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
       Type elementType = typeConverter->convertType(type.getElementType());
       auto ptrType =
           LLVM::LLVMPointerType::get(rewriter.getContext(), allocaAddrSpace);
-      Value numElements = rewriter.create<LLVM::ConstantOp>(
-          gpuFuncOp.getLoc(), int64Ty, type.getNumElements());
+      Value numElements = LLVM::ConstantOp::create(
+          rewriter, gpuFuncOp.getLoc(), int64Ty, type.getNumElements());
       uint64_t alignment = 0;
       if (auto alignAttr =
               dyn_cast_or_null<IntegerAttr>(gpuFuncOp.getPrivateAttributionAttr(
                   idx, LLVM::LLVMDialect::getAlignAttrName())))
         alignment = alignAttr.getInt();
-      Value allocated = rewriter.create<LLVM::AllocaOp>(
-          gpuFuncOp.getLoc(), ptrType, elementType, numElements, alignment);
+      Value allocated =
+          LLVM::AllocaOp::create(rewriter, gpuFuncOp.getLoc(), ptrType,
+                                 elementType, numElements, alignment);
       Value descr = MemRefDescriptor::fromStaticShape(
           rewriter, loc, *getTypeConverter(), type, allocated);
       signatureConversion.remapInput(
@@ -395,10 +411,11 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
   auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
   mlir::Type llvmI32 = typeConverter->convertType(rewriter.getI32Type());
   mlir::Type llvmI64 = typeConverter->convertType(rewriter.getI64Type());
-  // Note: this is the GPUModule op, not the ModuleOp that surrounds it
-  // This ensures that global constants and declarations are placed within
-  // the device code, not the host code
-  auto moduleOp = gpuPrintfOp->getParentOfType<gpu::GPUModuleOp>();
+
+  Operation *moduleOp = gpuPrintfOp->getParentWithTrait<OpTrait::SymbolTable>();
+  if (!moduleOp)
+    return rewriter.notifyMatchFailure(gpuPrintfOp,
+                                       "Couldn't find a parent module");
 
   auto ocklBegin =
       getOrDefineFunction(moduleOp, loc, rewriter, "__ockl_printf_begin",
@@ -418,8 +435,9 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
           {llvmI64, ptrType, /*length (bytes)*/ llvmI64, /*isLast*/ llvmI32}));
 
   /// Start the printf hostcall
-  Value zeroI64 = rewriter.create<LLVM::ConstantOp>(loc, llvmI64, 0);
-  auto printfBeginCall = rewriter.create<LLVM::CallOp>(loc, ocklBegin, zeroI64);
+  Value zeroI64 = LLVM::ConstantOp::create(rewriter, loc, llvmI64, 0);
+  auto printfBeginCall =
+      LLVM::CallOp::create(rewriter, loc, ocklBegin, zeroI64);
   Value printfDesc = printfBeginCall.getResult();
 
   // Create the global op or find an existing one.
@@ -427,21 +445,21 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
       rewriter, loc, moduleOp, llvmI8, "printfFormat_", adaptor.getFormat());
 
   // Get a pointer to the format string's first element and pass it to printf()
-  Value globalPtr = rewriter.create<LLVM::AddressOfOp>(
-      loc,
+  Value globalPtr = LLVM::AddressOfOp::create(
+      rewriter, loc,
       LLVM::LLVMPointerType::get(rewriter.getContext(), global.getAddrSpace()),
       global.getSymNameAttr());
   Value stringStart =
-      rewriter.create<LLVM::GEPOp>(loc, ptrType, global.getGlobalType(),
-                                   globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
-  Value stringLen = rewriter.create<LLVM::ConstantOp>(
-      loc, llvmI64, cast<StringAttr>(global.getValueAttr()).size());
+      LLVM::GEPOp::create(rewriter, loc, ptrType, global.getGlobalType(),
+                          globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+  Value stringLen = LLVM::ConstantOp::create(
+      rewriter, loc, llvmI64, cast<StringAttr>(global.getValueAttr()).size());
 
-  Value oneI32 = rewriter.create<LLVM::ConstantOp>(loc, llvmI32, 1);
-  Value zeroI32 = rewriter.create<LLVM::ConstantOp>(loc, llvmI32, 0);
+  Value oneI32 = LLVM::ConstantOp::create(rewriter, loc, llvmI32, 1);
+  Value zeroI32 = LLVM::ConstantOp::create(rewriter, loc, llvmI32, 0);
 
-  auto appendFormatCall = rewriter.create<LLVM::CallOp>(
-      loc, ocklAppendStringN,
+  auto appendFormatCall = LLVM::CallOp::create(
+      rewriter, loc, ocklAppendStringN,
       ValueRange{printfDesc, stringStart, stringLen,
                  adaptor.getArgs().empty() ? oneI32 : zeroI32});
   printfDesc = appendFormatCall.getResult();
@@ -456,17 +474,18 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
     SmallVector<mlir::Value, 2 + argsPerAppend + 1> arguments;
     arguments.push_back(printfDesc);
     arguments.push_back(
-        rewriter.create<LLVM::ConstantOp>(loc, llvmI32, numArgsThisCall));
+        LLVM::ConstantOp::create(rewriter, loc, llvmI32, numArgsThisCall));
     for (size_t i = group; i < bound; ++i) {
       Value arg = adaptor.getArgs()[i];
       if (auto floatType = dyn_cast<FloatType>(arg.getType())) {
         if (!floatType.isF64())
-          arg = rewriter.create<LLVM::FPExtOp>(
-              loc, typeConverter->convertType(rewriter.getF64Type()), arg);
-        arg = rewriter.create<LLVM::BitcastOp>(loc, llvmI64, arg);
+          arg = LLVM::FPExtOp::create(
+              rewriter, loc, typeConverter->convertType(rewriter.getF64Type()),
+              arg);
+        arg = LLVM::BitcastOp::create(rewriter, loc, llvmI64, arg);
       }
       if (arg.getType().getIntOrFloatBitWidth() != 64)
-        arg = rewriter.create<LLVM::ZExtOp>(loc, llvmI64, arg);
+        arg = LLVM::ZExtOp::create(rewriter, loc, llvmI64, arg);
 
       arguments.push_back(arg);
     }
@@ -477,7 +496,7 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
 
     auto isLast = (bound == nArgs) ? oneI32 : zeroI32;
     arguments.push_back(isLast);
-    auto call = rewriter.create<LLVM::CallOp>(loc, ocklAppendArgs, arguments);
+    auto call = LLVM::CallOp::create(rewriter, loc, ocklAppendArgs, arguments);
     printfDesc = call.getResult();
   }
   rewriter.eraseOp(gpuPrintfOp);
@@ -493,16 +512,17 @@ LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
   mlir::Type ptrType =
       LLVM::LLVMPointerType::get(rewriter.getContext(), addressSpace);
 
-  // Note: this is the GPUModule op, not the ModuleOp that surrounds it
-  // This ensures that global constants and declarations are placed within
-  // the device code, not the host code
-  auto moduleOp = gpuPrintfOp->getParentOfType<gpu::GPUModuleOp>();
+  Operation *moduleOp = gpuPrintfOp->getParentWithTrait<OpTrait::SymbolTable>();
+  if (!moduleOp)
+    return rewriter.notifyMatchFailure(gpuPrintfOp,
+                                       "Couldn't find a parent module");
 
   auto printfType =
       LLVM::LLVMFunctionType::get(rewriter.getI32Type(), {ptrType},
                                   /*isVarArg=*/true);
   LLVM::LLVMFuncOp printfDecl =
-      getOrDefineFunction(moduleOp, loc, rewriter, "printf", printfType);
+      getOrDefineFunction(moduleOp, loc, rewriter, funcName, printfType);
+  printfDecl.setCConv(callingConvention);
 
   // Create the global op or find an existing one.
   LLVM::GlobalOp global = getOrCreateStringConstant(
@@ -510,13 +530,13 @@ LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
       /*alignment=*/0, addressSpace);
 
   // Get a pointer to the format string's first element
-  Value globalPtr = rewriter.create<LLVM::AddressOfOp>(
-      loc,
+  Value globalPtr = LLVM::AddressOfOp::create(
+      rewriter, loc,
       LLVM::LLVMPointerType::get(rewriter.getContext(), global.getAddrSpace()),
       global.getSymNameAttr());
   Value stringStart =
-      rewriter.create<LLVM::GEPOp>(loc, ptrType, global.getGlobalType(),
-                                   globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+      LLVM::GEPOp::create(rewriter, loc, ptrType, global.getGlobalType(),
+                          globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
 
   // Construct arguments and function call
   auto argsRange = adaptor.getArgs();
@@ -525,7 +545,8 @@ LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
   printfArgs.push_back(stringStart);
   printfArgs.append(argsRange.begin(), argsRange.end());
 
-  rewriter.create<LLVM::CallOp>(loc, printfDecl, printfArgs);
+  auto call = LLVM::CallOp::create(rewriter, loc, printfDecl, printfArgs);
+  call.setCConv(callingConvention);
   rewriter.eraseOp(gpuPrintfOp);
   return success();
 }
@@ -538,25 +559,31 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
   mlir::Type llvmI8 = typeConverter->convertType(rewriter.getIntegerType(8));
   mlir::Type ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
 
-  // Note: this is the GPUModule op, not the ModuleOp that surrounds it
-  // This ensures that global constants and declarations are placed within
-  // the device code, not the host code
-  auto moduleOp = gpuPrintfOp->getParentOfType<gpu::GPUModuleOp>();
+  Operation *moduleOp = gpuPrintfOp->getParentWithTrait<OpTrait::SymbolTable>();
+  if (!moduleOp)
+    return rewriter.notifyMatchFailure(gpuPrintfOp,
+                                       "Couldn't find a parent module");
+
+  // Create a valid global location removing any metadata attached to the
+  // location as debug info metadata inside of a function cannot be used outside
+  // of that function.
+  Location globalLoc = loc->findInstanceOfOrUnknown<FileLineColLoc>();
 
   auto vprintfType =
       LLVM::LLVMFunctionType::get(rewriter.getI32Type(), {ptrType, ptrType});
-  LLVM::LLVMFuncOp vprintfDecl =
-      getOrDefineFunction(moduleOp, loc, rewriter, "vprintf", vprintfType);
+  LLVM::LLVMFuncOp vprintfDecl = getOrDefineFunction(
+      moduleOp, globalLoc, rewriter, "vprintf", vprintfType);
 
   // Create the global op or find an existing one.
-  LLVM::GlobalOp global = getOrCreateStringConstant(
-      rewriter, loc, moduleOp, llvmI8, "printfFormat_", adaptor.getFormat());
+  LLVM::GlobalOp global =
+      getOrCreateStringConstant(rewriter, globalLoc, moduleOp, llvmI8,
+                                "printfFormat_", adaptor.getFormat());
 
   // Get a pointer to the format string's first element
-  Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
+  Value globalPtr = LLVM::AddressOfOp::create(rewriter, loc, global);
   Value stringStart =
-      rewriter.create<LLVM::GEPOp>(loc, ptrType, global.getGlobalType(),
-                                   globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+      LLVM::GEPOp::create(rewriter, loc, ptrType, global.getGlobalType(),
+                          globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
   SmallVector<Type> types;
   SmallVector<Value> args;
   // Promote and pack the arguments into a stack allocation.
@@ -566,27 +593,27 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
     assert(type.isIntOrFloat());
     if (isa<FloatType>(type)) {
       type = rewriter.getF64Type();
-      promotedArg = rewriter.create<LLVM::FPExtOp>(loc, type, arg);
+      promotedArg = LLVM::FPExtOp::create(rewriter, loc, type, arg);
     }
     types.push_back(type);
     args.push_back(promotedArg);
   }
   Type structType =
       LLVM::LLVMStructType::getLiteral(gpuPrintfOp.getContext(), types);
-  Value one = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(),
-                                                rewriter.getIndexAttr(1));
+  Value one = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(),
+                                       rewriter.getIndexAttr(1));
   Value tempAlloc =
-      rewriter.create<LLVM::AllocaOp>(loc, ptrType, structType, one,
-                                      /*alignment=*/0);
+      LLVM::AllocaOp::create(rewriter, loc, ptrType, structType, one,
+                             /*alignment=*/0);
   for (auto [index, arg] : llvm::enumerate(args)) {
-    Value ptr = rewriter.create<LLVM::GEPOp>(
-        loc, ptrType, structType, tempAlloc,
+    Value ptr = LLVM::GEPOp::create(
+        rewriter, loc, ptrType, structType, tempAlloc,
         ArrayRef<LLVM::GEPArg>{0, static_cast<int32_t>(index)});
-    rewriter.create<LLVM::StoreOp>(loc, arg, ptr);
+    LLVM::StoreOp::create(rewriter, loc, arg, ptr);
   }
   std::array<Value, 2> printfArgs = {stringStart, tempAlloc};
 
-  rewriter.create<LLVM::CallOp>(loc, vprintfDecl, printfArgs);
+  LLVM::CallOp::create(rewriter, loc, vprintfDecl, printfArgs);
   rewriter.eraseOp(gpuPrintfOp);
   return success();
 }
@@ -601,23 +628,23 @@ static Value scalarizeVectorOpHelper(Operation *op, ValueRange operands,
   TypeRange operandTypes(operands);
   VectorType vectorType = cast<VectorType>(llvm1DVectorTy);
   Location loc = op->getLoc();
-  Value result = rewriter.create<LLVM::PoisonOp>(loc, vectorType);
+  Value result = LLVM::PoisonOp::create(rewriter, loc, vectorType);
   Type indexType = converter.convertType(rewriter.getIndexType());
   StringAttr name = op->getName().getIdentifier();
   Type elementType = vectorType.getElementType();
 
   for (int64_t i = 0; i < vectorType.getNumElements(); ++i) {
-    Value index = rewriter.create<LLVM::ConstantOp>(loc, indexType, i);
+    Value index = LLVM::ConstantOp::create(rewriter, loc, indexType, i);
     auto extractElement = [&](Value operand) -> Value {
       if (!isa<VectorType>(operand.getType()))
         return operand;
-      return rewriter.create<LLVM::ExtractElementOp>(loc, operand, index);
+      return LLVM::ExtractElementOp::create(rewriter, loc, operand, index);
     };
     auto scalarOperands = llvm::map_to_vector(operands, extractElement);
     Operation *scalarOp =
         rewriter.create(loc, name, scalarOperands, elementType, op->getAttrs());
-    result = rewriter.create<LLVM::InsertElementOp>(
-        loc, result, scalarOp->getResult(0), index);
+    result = LLVM::InsertElementOp::create(rewriter, loc, result,
+                                           scalarOp->getResult(0), index);
   }
   return result;
 }
@@ -654,7 +681,7 @@ static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 /// Generates a symbol with 0-sized array type for dynamic shared memory usage,
 /// or uses existing symbol.
-LLVM::GlobalOp getDynamicSharedMemorySymbol(
+static LLVM::GlobalOp getDynamicSharedMemorySymbol(
     ConversionPatternRewriter &rewriter, gpu::GPUModuleOp moduleOp,
     gpu::DynamicSharedMemoryOp op, const LLVMTypeConverter *typeConverter,
     MemRefType memrefType, unsigned alignmentBit) {
@@ -699,10 +726,10 @@ LLVM::GlobalOp getDynamicSharedMemorySymbol(
   auto zeroSizedArrayType = LLVM::LLVMArrayType::get(
       typeConverter->convertType(memrefType.getElementType()), 0);
 
-  return rewriter.create<LLVM::GlobalOp>(
-      op->getLoc(), zeroSizedArrayType, /*isConstant=*/false,
-      LLVM::Linkage::Internal, symName, /*value=*/Attribute(), alignmentByte,
-      addressSpace.value());
+  return LLVM::GlobalOp::create(rewriter, op->getLoc(), zeroSizedArrayType,
+                                /*isConstant=*/false, LLVM::Linkage::Internal,
+                                symName, /*value=*/Attribute(), alignmentByte,
+                                addressSpace.value());
 }
 
 LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
@@ -726,13 +753,13 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
   // Step 3. Get address of the global symbol
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(op);
-  auto basePtr = rewriter.create<LLVM::AddressOfOp>(loc, shmemOp);
+  auto basePtr = LLVM::AddressOfOp::create(rewriter, loc, shmemOp);
   Type baseType = basePtr->getResultTypes().front();
 
   // Step 4. Generate GEP using offsets
   SmallVector<LLVM::GEPArg> gepArgs = {0};
-  Value shmemPtr = rewriter.create<LLVM::GEPOp>(loc, baseType, elementType,
-                                                basePtr, gepArgs);
+  Value shmemPtr = LLVM::GEPOp::create(rewriter, loc, baseType, elementType,
+                                       basePtr, gepArgs);
   // Step 5. Create a memref descriptor
   SmallVector<Value> shape, strides;
   Value sizeBytes;
@@ -793,9 +820,9 @@ LogicalResult GPUReturnOpLowering::matchAndRewrite(
     return rewriter.notifyMatchFailure(op, "could not convert result types");
   }
 
-  Value packed = rewriter.create<LLVM::PoisonOp>(loc, packedType);
+  Value packed = LLVM::PoisonOp::create(rewriter, loc, packedType);
   for (auto [idx, operand] : llvm::enumerate(updatedOperands)) {
-    packed = rewriter.create<LLVM::InsertValueOp>(loc, packed, operand, idx);
+    packed = LLVM::InsertValueOp::create(rewriter, loc, packed, operand, idx);
   }
   rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), packed,
                                               op->getAttrs());

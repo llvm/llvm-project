@@ -6,8 +6,8 @@
  type :: rpdt(k)
   !REF: /MainProgram1/rpdt/k
   integer, kind :: k
-  !REF: /MainProgram1/rpdt/k
-  !DEF: /MainProgram1/rpdt/x ObjectEntity REAL(int(int(k,kind=4),kind=8))
+  !DEF: /MainProgram1/DerivedType3/k TypeParam INTEGER(4)
+  !DEF: /MainProgram1/rpdt/x ObjectEntity REAL(__builtin_int(__builtin_int(k,kind=4),kind=8))
   real(kind=k) :: x
  end type rpdt
  !DEF: /MainProgram1/zpdt DerivedType
@@ -15,8 +15,8 @@
  type :: zpdt(k)
   !REF: /MainProgram1/zpdt/k
   integer, kind :: k
-  !REF: /MainProgram1/zpdt/k
-  !DEF: /MainProgram1/zpdt/x ObjectEntity COMPLEX(int(int(k,kind=4),kind=8))
+  !DEF: /MainProgram1/DerivedType4/k TypeParam INTEGER(4)
+  !DEF: /MainProgram1/zpdt/x ObjectEntity COMPLEX(__builtin_int(__builtin_int(k,kind=4),kind=8))
   complex(kind=k) :: x
  end type zpdt
  !REF: /MainProgram1/rpdt

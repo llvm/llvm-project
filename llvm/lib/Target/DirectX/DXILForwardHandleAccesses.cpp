@@ -9,10 +9,13 @@
 #include "DXILForwardHandleAccesses.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -70,12 +73,22 @@ static bool forwardHandleAccesses(Function &F, DominatorTree &DT) {
 
   DenseMap<GlobalVariable *, IntrinsicInst *> HandleMap;
   SmallVector<LoadInst *> LoadsToProcess;
+  DenseMap<AllocaInst *, SmallVector<IntrinsicInst *>> LifeTimeIntrinsicMap;
   for (BasicBlock &BB : F)
     for (Instruction &Inst : BB)
       if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
         switch (II->getIntrinsicID()) {
         case Intrinsic::dx_resource_handlefrombinding:
+        case Intrinsic::dx_resource_handlefromimplicitbinding:
           processHandle(II, HandleMap);
+          break;
+        case Intrinsic::lifetime_start:
+        case Intrinsic::lifetime_end:
+          if (II->arg_size() >= 1) {
+            Value *Ptr = II->getArgOperand(0);
+            if (auto *Alloca = dyn_cast<AllocaInst>(Ptr))
+              LifeTimeIntrinsicMap[Alloca].push_back(II);
+          }
           break;
         default:
           continue;
@@ -86,17 +99,58 @@ static bool forwardHandleAccesses(Function &F, DominatorTree &DT) {
 
   for (LoadInst *LI : LoadsToProcess) {
     Value *V = LI->getPointerOperand();
-    auto *GV = dyn_cast<GlobalVariable>(LI->getPointerOperand());
+    auto *GV = dyn_cast<GlobalVariable>(V);
 
     // If we didn't find the global, we may need to walk through a level of
     // indirection. This generally happens at -O0.
-    if (!GV)
+    if (!GV) {
       if (auto *NestedLI = dyn_cast<LoadInst>(V)) {
         BasicBlock::iterator BBI(NestedLI);
         Value *Loaded = FindAvailableLoadedValue(
             NestedLI, NestedLI->getParent(), BBI, 0, nullptr, nullptr);
         GV = dyn_cast_or_null<GlobalVariable>(Loaded);
+      } else if (auto *NestedAlloca = dyn_cast<AllocaInst>(V)) {
+
+        if (auto It = LifeTimeIntrinsicMap.find(NestedAlloca);
+            It != LifeTimeIntrinsicMap.end()) {
+          llvm::for_each(It->second,
+                         [](IntrinsicInst *II) { II->eraseFromParent(); });
+          LifeTimeIntrinsicMap.erase(It);
+        }
+
+        for (auto *User : NestedAlloca->users()) {
+          auto *Store = dyn_cast<StoreInst>(User);
+          if (!Store)
+            continue;
+
+          Value *StoredVal = Store->getValueOperand();
+          if (!StoredVal)
+            continue;
+
+          // Try direct global match
+          GV = dyn_cast<GlobalVariable>(StoredVal);
+          if (GV)
+            break;
+
+          // If it's a load, check its source
+          if (auto *Load = dyn_cast<LoadInst>(StoredVal)) {
+            GV = dyn_cast<GlobalVariable>(Load->getPointerOperand());
+            if (GV)
+              break;
+
+            // If loading from an unmodified stack copy of the global, reuse the
+            // global's value. Note: we are just repeating what we are doing for
+            // the load case for the alloca store pattern.
+            BasicBlock::iterator BBI(Load);
+            Value *Loaded = FindAvailableLoadedValue(Load, Load->getParent(),
+                                                     BBI, 0, nullptr, nullptr);
+            GV = dyn_cast<GlobalVariable>(Loaded);
+            if (GV)
+              break;
+          }
+        }
       }
+    }
 
     auto It = HandleMap.find(GV);
     if (It == HandleMap.end()) {

@@ -67,3 +67,17 @@ func.func @unreachable_block() {
 ^bb1(%arg0: index):
   cf.br ^bb1(%arg0 : index)
 }
+
+// -----
+
+// Test case for cf.cond_br with weights.
+
+// CHECK-LABEL:   func.func @cf_cond_br_with_weights(
+func.func @cf_cond_br_with_weights(%cond: i1, %a: index, %b: index) -> index {
+// CHECK:           llvm.cond_br %{{.*}} weights([90, 10]), ^bb1(%{{.*}} : i64), ^bb2(%{{.*}} : i64)
+  cf.cond_br %cond, ^bb1(%a : index), ^bb2(%b : index) {branch_weights = array<i32: 90, 10>}
+^bb1(%arg1: index):
+  return %arg1 : index
+^bb2(%arg2: index):
+  return %arg2 : index
+}

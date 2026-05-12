@@ -27,6 +27,9 @@ struct EntryProperties {
   unsigned NumThreadsX{0}; // X component
   unsigned NumThreadsY{0}; // Y component
   unsigned NumThreadsZ{0}; // Z component
+  unsigned WaveSizeMin{0}; // Minimum component
+  unsigned WaveSizeMax{0}; // Maximum component
+  unsigned WaveSizePref{0}; // Preferred component
 
   EntryProperties(const Function *Fn = nullptr) : Entry(Fn) {};
 };
@@ -56,15 +59,13 @@ public:
 
 /// Printer pass for the \c DXILMetadataAnalysis results.
 class DXILMetadataAnalysisPrinterPass
-    : public PassInfoMixin<DXILMetadataAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<DXILMetadataAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit DXILMetadataAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Legacy pass

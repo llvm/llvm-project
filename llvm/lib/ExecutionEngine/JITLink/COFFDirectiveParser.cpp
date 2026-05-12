@@ -12,8 +12,6 @@
 
 #include "COFFDirectiveParser.h"
 
-#include <array>
-
 using namespace llvm;
 using namespace jitlink;
 

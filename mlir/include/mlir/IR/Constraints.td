@@ -148,6 +148,15 @@ class Constraint<Pred pred, string desc = ""> {
   string summary = desc;
 }
 
+// Base class for constraints on types and attributes.
+class AttrTypeConstraint<Pred pred, string summary = "",
+                         string cppFunctionNameParam = ""> :
+    Constraint<pred, summary> {
+  // The name of the C++ function that is generated for this constraint.
+  // If empty, no C++ function is generated.
+  string cppFunctionName = cppFunctionNameParam;
+}
+
 // Subclasses used to differentiate different constraint kinds. These are used
 // as markers for the TableGen backend to handle different constraint kinds
 // differently if needed. Constraints not deriving from the following subclasses
@@ -157,17 +166,25 @@ class Constraint<Pred pred, string desc = ""> {
 class TypeConstraint<Pred predicate, string summary = "",
                      string cppTypeParam = "::mlir::Type",
                      string cppFunctionNameParam = ""> :
-    Constraint<predicate, summary> {
+    AttrTypeConstraint<predicate, summary, cppFunctionNameParam> {
   // The name of the C++ Type class if known, or Type if not.
   string cppType = cppTypeParam;
-  // The name of the C++ function that is generated for this type constraint.
-  // If empty, no C++ function is generated.
-  string cppFunctionName = cppFunctionNameParam;
 }
 
 // Subclass for constraints on an attribute.
-class AttrConstraint<Pred predicate, string summary = ""> :
-    Constraint<predicate, summary>;
+class AttrConstraint<Pred predicate, string summary = "",
+                     string cppFunctionNameParam = ""> :
+    AttrTypeConstraint<predicate, summary, cppFunctionNameParam>;
+
+// Subclass for constraints on a property.
+class PropConstraint<Pred predicate, string summary = "", string interfaceTypeParam = ""> :
+    Constraint<predicate, summary> {
+  // The name of the C++ type of $_self, which will be the interface type of the
+  // property being constrained, or "" if it is to be inferred from context.
+  // Note, that leaving the interface type unspecified prevents the constraint from
+  // being uniqued.
+  code interfaceType = interfaceTypeParam;
+}
 
 // Subclass for constraints on a region.
 class RegionConstraint<Pred predicate, string summary = ""> :
@@ -183,10 +200,15 @@ class SuccessorConstraint<Pred predicate, string summary = ""> :
 //   * Constraints on an op's operand/result definition
 //   * Further constraints to match an op's operand/result in source pattern
 //
-// * Use Attr (a subclass for AttrConstraint) for
-//   * Constraints on an op's attribute definition
+// * Use Attr (a subclass of AttrConstraint) for
+//   * Constraints on an op's attribute definitions
 // * Use AttrConstraint to specify
-//   * Further constraints to match an op's attribute in source pattern
+//   * Further constraints to match an op's attribute in rewrite source patterns.
+//
+// * Use Prop (a subclass of PropConstraint) for
+//   * Defining an op's properties or constraining them
+// * Use Prop constraint to specify
+//   * Further constraints to match an op's property in rewrite source patterns.
 //
 // * Use uncategorized constraint to specify
 //   * Multi-entity constraints in rewrite rules

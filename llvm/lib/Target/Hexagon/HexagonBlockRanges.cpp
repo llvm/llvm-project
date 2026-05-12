@@ -24,7 +24,6 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
-#include <utility>
 
 using namespace llvm;
 

@@ -45,9 +45,9 @@ end subroutine test
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>
 ! CHECK:           %[[VAL_13:.*]] = fir.shift %[[VAL_11]]#0 : (index) -> !fir.shift<1>
-! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) {uniq_name = "_QFtestEx"} : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>, !fir.shift<1>) -> (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>, !fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>)
+! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) {uniq_name = "_QFtestEx"} : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>, !fir.shift<1>) -> (!fir.box<!fir.array<?x!fir.type<_QFtestTt>>>, !fir.box<!fir.array<?x!fir.type<_QFtestTt>>>)
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_14]]#0, %[[VAL_15]] : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_14]]#0, %[[VAL_15]] : (!fir.box<!fir.array<?x!fir.type<_QFtestTt>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]]#1 : (index) -> i64
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_11]]#0 : (index) -> i64
 ! CHECK:           %[[VAL_19:.*]] = arith.addi %[[VAL_17]], %[[VAL_18]] : i64

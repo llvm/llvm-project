@@ -181,18 +181,16 @@ attributes #3 = { noreturn nounwind }
 ; LOWERTYPETESTS-NEXT:    store ptr [[COND]], ptr [[FP]], align 8
 ; LOWERTYPETESTS-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[FP]], align 8
 ; LOWERTYPETESTS-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
-; LOWERTYPETESTS-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], ptrtoint (ptr @.cfi.jumptable to i64)
-; LOWERTYPETESTS-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 3
-; LOWERTYPETESTS-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP4]], 61
-; LOWERTYPETESTS-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]]
-; LOWERTYPETESTS-NEXT:    [[TMP8:%.*]] = icmp ule i64 [[TMP7]], 1
-; LOWERTYPETESTS-NEXT:    br i1 [[TMP8]], label [[CONT:%.*]], label [[TRAP:%.*]], !nosanitize [[META4:![0-9]+]]
+; LOWERTYPETESTS-NEXT:    [[TMP4:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 8) to i64), [[TMP3]]
+; LOWERTYPETESTS-NEXT:    [[TMP5:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP4]], i64 [[TMP4]], i64 3)
+; LOWERTYPETESTS-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP5]], 1
+; LOWERTYPETESTS-NEXT:    br i1 [[TMP6]], label [[CONT:%.*]], label [[TRAP:%.*]], !nosanitize [[META4:![0-9]+]]
 ; LOWERTYPETESTS:       trap:
 ; LOWERTYPETESTS-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !nosanitize [[META4]]
 ; LOWERTYPETESTS-NEXT:    unreachable, !nosanitize [[META4]]
 ; LOWERTYPETESTS:       cont:
-; LOWERTYPETESTS-NEXT:    [[TMP9:%.*]] = load i32, ptr [[B_ADDR]], align 4
-; LOWERTYPETESTS-NEXT:    [[CALL:%.*]] = call i32 [[TMP2]](i32 noundef [[TMP9]])
+; LOWERTYPETESTS-NEXT:    [[TMP7:%.*]] = load i32, ptr [[B_ADDR]], align 4
+; LOWERTYPETESTS-NEXT:    [[CALL:%.*]] = call i32 [[TMP2]](i32 noundef [[TMP7]])
 ; LOWERTYPETESTS-NEXT:    ret i32 [[CALL]]
 ;
 ;

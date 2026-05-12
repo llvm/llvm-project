@@ -17,9 +17,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 
-#include <algorithm>
-#include <optional>
-
 #define DEBUG_TYPE "format-qualifier-alignment-fixer"
 
 namespace clang {
@@ -185,8 +182,11 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   // We only need to think about streams that begin with a qualifier.
   if (Tok->isNot(QualifierType))
     return Tok;
+
+  const auto *Next = Tok->getNextNonComment();
+
   // Don't concern yourself if nothing follows the qualifier.
-  if (!Tok->Next)
+  if (!Next)
     return Tok;
 
   // Skip qualifiers to the left to find what preceeds the qualifiers.
@@ -250,9 +250,15 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   }();
 
   // Find the last qualifier to the right.
-  const FormatToken *LastQual = Tok;
-  while (isQualifier(LastQual->getNextNonComment()))
-    LastQual = LastQual->getNextNonComment();
+  const auto *LastQual = Tok;
+  for (; isQualifier(Next); Next = Next->getNextNonComment())
+    LastQual = Next;
+
+  if (!LastQual || !Next ||
+      (LastQual->isOneOf(tok::kw_const, tok::kw_volatile) &&
+       Next->isOneOf(Keywords.kw_override, Keywords.kw_final))) {
+    return Tok;
+  }
 
   // If this qualifier is to the right of a type or pointer do a partial sort
   // and return.
@@ -267,7 +273,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
     return Tok;
 
   // Stay safe and don't move past macros, also don't bother with sorting.
-  if (isPossibleMacro(TypeToken))
+  if (TypeToken->isPossibleMacro())
     return Tok;
 
   // The case `const long long int volatile` -> `long long int const volatile`
@@ -404,7 +410,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   }
 
   // Stay safe and don't move past macros, also don't bother with sorting.
-  if (isPossibleMacro(TypeToken))
+  if (TypeToken->isPossibleMacro())
     return Tok;
 
   // Examples given in order of ['const', 'volatile', 'type']
@@ -511,7 +517,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
     // Don't change declarations such as
     // `foo(struct Foo const a);` -> `foo(struct Foo const a);`
-    if (!Previous || !Previous->isOneOf(tok::kw_struct, tok::kw_class)) {
+    if (!Previous || Previous->isNoneOf(tok::kw_struct, tok::kw_class)) {
       insertQualifierBefore(SourceMgr, Fixes, TypeToken, Qualifier);
       removeToken(SourceMgr, Fixes, Tok);
     }
@@ -574,7 +580,7 @@ void LeftRightQualifierAlignmentFixer::fixQualifierAlignment(
 
     for (const auto *Tok = First; Tok && Tok != Last && Tok->Next;
          Tok = Tok->Next) {
-      if (Tok->MustBreakBefore)
+      if (Tok->MustBreakBefore && Tok != First)
         break;
       if (Tok->is(tok::comment))
         continue;
@@ -633,20 +639,6 @@ bool isConfiguredQualifierOrType(const FormatToken *Tok,
                                  const LangOptions &LangOpts) {
   return Tok && (Tok->isTypeName(LangOpts) || Tok->is(tok::kw_auto) ||
                  isConfiguredQualifier(Tok, Qualifiers));
-}
-
-// If a token is an identifier and it's upper case, it could
-// be a macro and hence we need to be able to ignore it.
-bool isPossibleMacro(const FormatToken *Tok) {
-  if (!Tok)
-    return false;
-  if (Tok->isNot(tok::identifier))
-    return false;
-  if (Tok->TokenText.upper() == Tok->TokenText.str()) {
-    // T,K,U,V likely could be template arguments
-    return Tok->TokenText.size() != 1;
-  }
-  return false;
 }
 
 } // namespace format

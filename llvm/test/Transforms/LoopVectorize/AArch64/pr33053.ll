@@ -2,27 +2,25 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
 
-@b = common local_unnamed_addr global i32 0, align 4
-@a = common local_unnamed_addr global ptr null, align 8
+@b = common global i32 0, align 4
+@a = common global ptr null, align 8
 
-define i32 @fn1() local_unnamed_addr #0 {
+define i32 @fn1() {
 ; We expect the backend to expand all reductions.
 ; CHECK: @llvm.vector.reduce
 entry:
-  %0 = load i32, ptr @b, align 4, !tbaa !1
-  %cmp40 = icmp sgt i32 %0, 0
-  br i1 %cmp40, label %for.body.lr.ph, label %for.end
+  br label %for.body.lr.ph
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %1 = load ptr, ptr @a, align 8, !tbaa !5
   %2 = load i32, ptr @b, align 4, !tbaa !1
   %3 = sext i32 %2 to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
-  %d.043 = phi i16 [ undef, %for.body.lr.ph ], [ %.sink28, %for.body ]
-  %c.042 = phi i16 [ undef, %for.body.lr.ph ], [ %c.0., %for.body ]
+  %d.043 = phi i16 [ 0, %for.body.lr.ph ], [ %.sink28, %for.body ]
+  %c.042 = phi i16 [ 0, %for.body.lr.ph ], [ %c.0., %for.body ]
   %arrayidx = getelementptr inbounds i16, ptr %1, i64 %indvars.iv
   %4 = load i16, ptr %arrayidx, align 2, !tbaa !7
   %cmp2 = icmp sgt i16 %c.042, %4
@@ -33,18 +31,12 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %cmp = icmp slt i64 %indvars.iv.next, %3
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body, %entry
-  %c.0.lcssa = phi i16 [ undef, %entry ], [ %c.0., %for.body ]
-  %d.0.lcssa = phi i16 [ undef, %entry ], [ %.sink28, %for.body ]
-  %cmp26 = icmp sgt i16 %c.0.lcssa, %d.0.lcssa
+for.end:
+  %cmp26 = icmp sgt i16 %c.0., %.sink28
   %conv27 = zext i1 %cmp26 to i32
   ret i32 %conv27
 }
 
-attributes #0 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
-!llvm.ident = !{!0}
-
-!0 = !{!"clang"}
 !1 = !{!2, !2, i64 0}
 !2 = !{!"int", !3, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}

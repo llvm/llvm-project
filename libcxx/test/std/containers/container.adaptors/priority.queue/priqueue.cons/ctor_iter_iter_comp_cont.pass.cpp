@@ -17,13 +17,22 @@
 
 #include "test_macros.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   int a[]     = {3, 5, 2, 0, 6, 8, 1};
   const int n = sizeof(a) / sizeof(a[0]);
   std::vector<int> v(a, a + n / 2);
   std::priority_queue<int> q(a + n / 2, a + n, std::less<int>(), v);
   assert(q.size() == n);
   assert(q.top() == 8);
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

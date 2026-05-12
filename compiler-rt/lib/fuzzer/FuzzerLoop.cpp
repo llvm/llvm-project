@@ -125,8 +125,8 @@ void FreeHook(const volatile void *ptr) {
 void Fuzzer::HandleMalloc(size_t Size) {
   if (!Options.MallocLimitMb || (Size >> 20) < (size_t)Options.MallocLimitMb)
     return;
-  Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n", GetPid(),
-         Size);
+  Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n",
+         (int)GetPid(), Size);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
   PrintStackTrace();
   DumpCurrentUnit("oom-");
@@ -448,9 +448,9 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
   if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
       secondsSinceProcessStartUp() >= 2)
     PrintStats("pulse ");
-  auto Threshhold =
+  auto Threshold =
       static_cast<long>(static_cast<double>(TimeOfLongestUnitInSeconds) * 1.1);
-  if (TimeOfUnit > Threshhold && TimeOfUnit >= Options.ReportSlowUnits) {
+  if (TimeOfUnit > Threshold && TimeOfUnit >= Options.ReportSlowUnits) {
     TimeOfLongestUnitInSeconds = TimeOfUnit;
     Printf("Slowest unit: %ld s:\n", TimeOfLongestUnitInSeconds);
     WriteUnitToFileWithPrefix({Data, Data + Size}, "slow-unit-");
@@ -568,7 +568,7 @@ size_t Fuzzer::GetCurrentUnitInFuzzingThead(const uint8_t **Data) const {
 
 void Fuzzer::CrashOnOverwrittenData() {
   Printf("==%d== ERROR: libFuzzer: fuzz target overwrites its const input\n",
-         GetPid());
+         (int)GetPid());
   PrintStackTrace();
   Printf("SUMMARY: libFuzzer: overwrites-const-input\n");
   DumpCurrentUnit("crash-");
@@ -666,7 +666,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
 }
 
 void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
-  II->NumSuccessfullMutations++;
+  II->NumSuccessfulMutations++;
   MD.RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U, II->Reduced ? "REDUCE" : "NEW   ");
   WriteToOutputCorpus(U);

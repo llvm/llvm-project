@@ -31,7 +31,7 @@ struct RISCVMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   RISCVMachineFunctionInfo(const llvm::RISCVMachineFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~RISCVMachineFunctionInfo() = default;
+  ~RISCVMachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<RISCVMachineFunctionInfo> {
@@ -85,6 +85,9 @@ private:
 
   /// Does it probe the stack for a dynamic allocation?
   bool HasDynamicAllocation = false;
+
+  /// Whether the function has cf-protection-branch module flag set.
+  bool CFProtectionBranch = false;
 
 public:
   RISCVMachineFunctionInfo(const Function &F, const RISCVSubtarget *STI);
@@ -218,6 +221,8 @@ public:
 
   bool hasDynamicAllocation() const { return HasDynamicAllocation; }
   void setDynamicAllocation() { HasDynamicAllocation = true; }
+
+  bool hasCFProtectionBranch() const { return CFProtectionBranch; }
 };
 
 } // end namespace llvm

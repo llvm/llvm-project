@@ -44,8 +44,8 @@ template <typename AnalysisT, bool IsSimple,
           typename AnalysisGraphTraitsT =
               DefaultAnalysisGraphTraits<typename AnalysisT::Result &, GraphT>>
 struct DOTGraphTraitsViewer
-    : PassInfoMixin<DOTGraphTraitsViewer<AnalysisT, IsSimple, GraphT,
-                                         AnalysisGraphTraitsT>> {
+    : RequiredPassInfoMixin<DOTGraphTraitsViewer<AnalysisT, IsSimple, GraphT,
+                                                 AnalysisGraphTraitsT>> {
   DOTGraphTraitsViewer(StringRef GraphName) : Name(GraphName) {}
 
   /// Return true if this function should be processed.
@@ -80,7 +80,7 @@ protected:
   /// virtual destructor needed. Making this dtor protected stops accidental
   /// invocation when the derived class destructor should have been called.
   /// Those derived classes sould be marked final to avoid the warning.
-  ~DOTGraphTraitsViewer() {}
+  ~DOTGraphTraitsViewer() = default;
 
 private:
   StringRef Name;
@@ -124,8 +124,8 @@ template <typename AnalysisT, bool IsSimple,
           typename AnalysisGraphTraitsT =
               DefaultAnalysisGraphTraits<typename AnalysisT::Result &, GraphT>>
 struct DOTGraphTraitsPrinter
-    : PassInfoMixin<DOTGraphTraitsPrinter<AnalysisT, IsSimple, GraphT,
-                                          AnalysisGraphTraitsT>> {
+    : RequiredPassInfoMixin<DOTGraphTraitsPrinter<AnalysisT, IsSimple, GraphT,
+                                                  AnalysisGraphTraitsT>> {
   DOTGraphTraitsPrinter(StringRef GraphName) : Name(GraphName) {}
 
   /// Return true if this function should be processed.
@@ -161,7 +161,7 @@ protected:
   /// virtual destructor needed. Making this dtor protected stops accidental
   /// invocation when the derived class destructor should have been called.
   /// Those derived classes sould be marked final to avoid the warning.
-  ~DOTGraphTraitsPrinter() {}
+  ~DOTGraphTraitsPrinter() = default;
 
 private:
   StringRef Name;

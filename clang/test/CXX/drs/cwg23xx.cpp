@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-14,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-14,since-cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-14,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20
 
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
@@ -270,7 +270,7 @@ namespace cwg2352 { // cwg2352: 10
   // lvalue of type 'const int *const * const'?
   const int * const * r;
   void *y = &(true ? p : r);
-  // expected-error@-1 {{rvalue of type 'const int *const *'}}
+  // expected-error@-1 {{cannot take the address of an rvalue of type 'const int *const *'}}
 
   // FIXME: We order these as a speculative defect resolution.
   void f(const int * const * const &r);
@@ -365,6 +365,35 @@ struct A {
 #endif
 } // namespace cwg2363
 
+namespace cwg2369 { // cwg2369: partial
+#if __cplusplus >= 202002L
+template <class T> struct Z {
+  typedef typename T::x xx;
+};
+
+template <class T>
+concept C = requires { typename T::A; };
+template <C T> typename Z<T>::xx f(void *, T); // #1
+template <class T> void f(int, T);             // #2
+
+struct A {
+} a;
+
+struct ZZ {
+  template <class T, class = typename Z<T>::xx> operator T *();
+  operator int();
+};
+
+void foo() {
+  ZZ zz;
+  f(1, a); // OK, deduction fails for #1 because there is no conversion from int
+           // to void*
+  f(zz, 42); // OK, deduction fails for #1 because C<int> is not satisfied
+}
+
+#endif
+} // namespace cwg2369
+
 namespace cwg2370 { // cwg2370: no
 namespace N {
 typedef int type;
@@ -411,7 +440,7 @@ template <> struct tuple_size<cwg2386::Bad2> {
 namespace cwg2386 {
 void no_value() { auto [x, y] = Bad1(); }
 void wrong_value() { auto [x, y] = Bad2(); }
-// since-cxx17-error@-1 {{type 'Bad2' decomposes into 42 elements, but only 2 names were provided}}
+// since-cxx17-error@-1 {{type 'Bad2' binds to 42 elements, but only 2 names were provided}}
 #endif
 } // namespace cwg2386
 

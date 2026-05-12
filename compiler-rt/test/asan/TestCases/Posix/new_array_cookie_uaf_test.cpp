@@ -5,6 +5,9 @@
 
 // UNSUPPORTED: ios
 
+// Poisoning C++ array redzones is not implemented on arm
+// XFAIL: target=arm{{.*}}
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>

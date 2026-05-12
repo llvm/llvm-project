@@ -797,7 +797,7 @@ define i32 @extractelt_sdiv_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; RV64M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64M-NEXT:    vmv.x.s a0, v8
 ; RV64M-NEXT:    lui a1, 349525
-; RV64M-NEXT:    addiw a1, a1, 1366
+; RV64M-NEXT:    addi a1, a1, 1366
 ; RV64M-NEXT:    mul a0, a0, a1
 ; RV64M-NEXT:    srli a1, a0, 63
 ; RV64M-NEXT:    srli a0, a0, 32
@@ -825,7 +825,7 @@ define i32 @extractelt_udiv_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; RV64M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64M-NEXT:    vmv.x.s a0, v8
 ; RV64M-NEXT:    lui a1, 349525
-; RV64M-NEXT:    addiw a1, a1, 1366
+; RV64M-NEXT:    addi a1, a1, 1366
 ; RV64M-NEXT:    mul a0, a0, a1
 ; RV64M-NEXT:    srli a1, a0, 63
 ; RV64M-NEXT:    srli a0, a0, 32

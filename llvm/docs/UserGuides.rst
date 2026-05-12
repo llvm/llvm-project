@@ -12,72 +12,81 @@ intermediate LLVM representation.
 .. toctree::
    :hidden:
 
-   AArch64SME
-   AddingConstrainedIntrinsics
-   AdvancedBuilds
-   AliasAnalysis
-   AMDGPUUsage
-   Benchmarking
-   BigEndianNEON
-   BuildingADistribution
-   CFIVerify
-   CMake
-   CMakePrimer
-   CodeGenerator
-   CodeOfConduct
-   CommandLine
-   CompileCudaWithLLVM
-   CoverageMappingFormat
-   CycleTerminology
-   DebuggingJITedCode
-   DirectXUsage
-   Docker
-   DTLTO
-   FatLTO
-   ExtendingLLVM
-   GitHub
-   GoldPlugin
-   GlobalISel/MIRPatterns
    HowToBuildOnARM
    HowToBuildWithPGO
+   HowToCrossCompileLLVM
+   CoverageMappingFormat
+   CFIVerify
+   BuildingADistribution
+   CMake
+   Docker
+   SupportLibrary
+   AdvancedBuilds
+   WritingAnLLVMNewPMPass
+   WritingAnLLVMPass
+   Passes
+   StackSafetyAnalysis
+   MergeFunctions
+   AliasAnalysis
+   MemorySSA
+   MemProf
+   LoopTerminology
+   CycleTerminology
+   Vectorizers
+   LinkTimeOptimization
+   DTLTO
+   GoldPlugin
+   Remarks
+   SourceLevelDebugging
+   HowToUpdateDebugInfo
+   InstrRefDebugInfo
+   RemoveDIsDebugInfo
+   KeyInstructionsDebugInfo
+   InstrProfileFormat
+   InstCombineContributorGuide
+   WritingAnLLVMBackend
+   CodeGenerator
+   TableGen/index
+   GlobalISel/MIRPatterns
+   MCJITDesignAndImplementation
+   ORCv2
+   JITLink
+   DebuggingJITedCode
+   CommandLine
+   ExtendingLLVM
+   AddingConstrainedIntrinsics
    HowToBuildWindowsItaniumPrograms
    HowToCrossCompileBuiltinsOnArm
-   HowToCrossCompileLLVM
-   HowToUpdateDebugInfo
-   InstCombineContributorGuide
-   InstrProfileFormat
-   InstrRefDebugInfo
-   LinkTimeOptimization
-   LoopTerminology
-   MarkdownQuickstartTemplate
-   MemorySSA
-   MergeFunctions
-   MCJITDesignAndImplementation
-   MisExpect
-   ORCv2
-   OpaquePointers
-   JITLink
-   NewPassManager
+   BigEndianNEON
+   AArch64SME
+   CompileCudaWithLLVM
    NVPTXUsage
-   Passes
-   ReportingGuide
-   ResponseGuide
-   Remarks
-   RemoveDIsDebugInfo
+   AMDGPUUsage
+   AMDGPUAsyncOperations
+   AMDGPUDwarfExtensionsForHeterogeneousDebugging
+   AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
+   AMDGPUExecutionSynchronization
+   SPIRVUsage
+   DirectXUsage
    RISCVUsage
    RISCV/RISCVVectorExtension
-   SourceLevelDebugging
-   SPIRVUsage
+   RISCV/RISCVVCIX
    SandboxIR
-   StackSafetyAnalysis
-   SupportLibrary
-   TableGen/index
-   TableGenFundamentals
    Telemetry
-   Vectorizers
-   WritingAnLLVMPass
-   WritingAnLLVMNewPMPass
-   WritingAnLLVMBackend
+   LFI
+   AdminTasks
+   Benchmarking
+   CMakePrimer
+   CodeOfConduct
+   FatLTO
+   GitHub
+   MarkdownQuickstartTemplate
+   MisExpect
+   OpaquePointers
+   NewPassManager
+   ReportingGuide
+   ResponseGuide
+   TableGenFundamentals
    yaml2obj
 
 Clang
@@ -152,6 +161,9 @@ Optimizations
 :doc:`MemorySSA`
    Information about the MemorySSA utility in LLVM, as well as how to use it.
 
+:doc:`MemProf`
+   User guide and internals of MemProf, profile guided optimizations for memory.
+
 :doc:`LoopTerminology`
   A document describing Loops and associated terms as used in LLVM.
 
@@ -192,6 +204,10 @@ Optimizations
 :doc:`RemoveDIsDebugInfo`
    This is a migration guide describing how to move from debug info using
    intrinsics such as dbg.value to using the non-instruction DbgRecord object.
+
+:doc:`KeyInstructionsDebugInfo`
+   This document explains how the debug info feature Key Instructions is
+   implemented in LLVM.
 
 :doc:`InstrProfileFormat`
    This document explains two binary formats of instrumentation-based profiles.
@@ -276,6 +292,9 @@ Additional Topics
 :doc:`AMDGPUUsage`
    This document describes using the AMDGPU backend to compile GPU kernels.
 
+:doc:`AMDGPUAsyncOperations`
+   Builtins for invoking asynchronous data transfer operations in AMD GPUs.
+
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
    This document describes DWARF extensions to support heterogeneous debugging
    for targets such as the AMDGPU backend.
@@ -284,6 +303,9 @@ Additional Topics
    This document describes a DWARF extension to allow location descriptions on
    the DWARF expression stack. It is part of
    :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`.
+
+:doc:`AMDGPUExecutionSynchronization`
+   This document describes how execution of threads can be synchronized on AMD GPUs.
 
 :doc:`SPIRVUsage`
    This document describes using the SPIR-V target to compile GPU kernels.
@@ -298,8 +320,14 @@ Additional Topics
 :doc:`RISCV/RISCVVectorExtension`
    This document describes how the RISC-V Vector extension can be expressed in LLVM IR and how code is generated for it in the backend.
 
+:doc:`RISCV/RISCVVCIX`
+   This document shows how the scheduling information for RISC-V's ``XSfvcp`` extension -- SiFive Vector Coprocessor Interface (VCIX) -- works and how to customize them.
+
 :doc:`Sandbox IR <SandboxIR>`
    This document describes the design and usage of Sandbox IR, a transactional layer over LLVM IR.
 
 :doc:`Telemetry`
    This document describes the Telemetry framework in LLVM.
+
+:doc:`LFI <LFI>`
+    This document describes the Lightweight Fault Isolation (LFI) target in LLVM.

@@ -18,12 +18,13 @@
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
-
-#include <functional>
-#include <optional>
+#include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/HashBuilder.h"
 
 namespace llvm {
 namespace memprof {
+class MemProfSummary;
 struct IndexedMemProfData {
   // A map to hold memprof data per function. The lower 64 bits obtained from
   // the md5 hash of the function name is used to index into the map.
@@ -86,10 +87,10 @@ private:
 } // namespace memprof
 
 // Write the MemProf data to OS.
-Error writeMemProf(
+LLVM_ABI Error writeMemProf(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
-    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData);
-
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
+    std::unique_ptr<memprof::MemProfSummary> MemProfSum);
 } // namespace llvm
 #endif

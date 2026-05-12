@@ -141,12 +141,12 @@ TEST(DebugTypeODRUniquingTest, buildODRTypeFields) {
   DO_FOR_FIELD(BaseType)                                                       \
   DO_FOR_FIELD(Elements)                                                       \
   DO_FOR_FIELD(VTableHolder)                                                   \
-  DO_FOR_FIELD(TemplateParams)
+  DO_FOR_FIELD(TemplateParams)                                                 \
+  DO_FOR_FIELD(SizeInBits)                                                     \
+  DO_FOR_FIELD(OffsetInBits)
 #define FOR_EACH_INLINEFIELD()                                                 \
   DO_FOR_FIELD(Line)                                                           \
-  DO_FOR_FIELD(SizeInBits)                                                     \
   DO_FOR_FIELD(AlignInBits)                                                    \
-  DO_FOR_FIELD(OffsetInBits)                                                   \
   DO_FOR_FIELD(NumExtraInhabitants)                                            \
   DO_FOR_FIELD(RuntimeLang)                                                    \
   DO_FOR_FIELD(EnumKind)

@@ -211,7 +211,7 @@ define i64 @udiv64_constant(i64 %a) nounwind {
 ; RV64IM-LABEL: udiv64_constant:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    lui a1, 838861
-; RV64IM-NEXT:    addiw a1, a1, -819
+; RV64IM-NEXT:    addi a1, a1, -819
 ; RV64IM-NEXT:    slli a2, a1, 32
 ; RV64IM-NEXT:    add a1, a1, a2
 ; RV64IM-NEXT:    mulhu a0, a0, a1
@@ -441,7 +441,7 @@ define i16 @udiv16(i16 %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    call __udivdi3
@@ -638,7 +638,7 @@ define i32 @sdiv_constant(i32 %a) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    sext.w a0, a0
 ; RV64IM-NEXT:    lui a1, 419430
-; RV64IM-NEXT:    addiw a1, a1, 1639
+; RV64IM-NEXT:    addi a1, a1, 1639
 ; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    srli a1, a0, 63
 ; RV64IM-NEXT:    srai a0, a0, 33
@@ -1189,7 +1189,7 @@ define i16 @sdiv16_constant(i16 %a) nounwind {
 ; RV64IM-NEXT:    slli a0, a0, 48
 ; RV64IM-NEXT:    lui a1, 6
 ; RV64IM-NEXT:    srai a0, a0, 48
-; RV64IM-NEXT:    addiw a1, a1, 1639
+; RV64IM-NEXT:    addi a1, a1, 1639
 ; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    srli a1, a0, 63
 ; RV64IM-NEXT:    srai a0, a0, 17

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN %s
 
 ; The buffer_loads and buffer_stores all access the same location. Check they do
 ; not get reordered by the scheduler.

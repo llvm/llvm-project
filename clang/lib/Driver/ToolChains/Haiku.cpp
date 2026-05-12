@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Haiku.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Support/Path.h"

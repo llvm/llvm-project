@@ -38,6 +38,7 @@
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -49,6 +50,7 @@
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
@@ -58,6 +60,7 @@
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
@@ -714,6 +717,10 @@ cl::list<ModuleSubsection> DumpModuleSubsections(
 cl::opt<bool> DumpModuleSyms("module-syms", cl::desc("dump module symbols"),
                              cl::cat(FileOptions),
                              cl::sub(PdbToYamlSubcommand));
+cl::opt<bool> DumpSectionHeaders("section-headers",
+                                 cl::desc("Dump section headers."),
+                                 cl::cat(FileOptions),
+                                 cl::sub(PdbToYamlSubcommand));
 
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
@@ -863,13 +870,28 @@ static void yamlToPdb(StringRef Path) {
     }
   }
 
+  std::vector<object::coff_section> Sections;
+  if (!Dbi.SectionHeaders.empty()) {
+    for (const auto &Hdr : Dbi.SectionHeaders)
+      Sections.emplace_back(Hdr.toCoffSection());
+
+    DbiBuilder.createSectionMap(Sections);
+    ExitOnErr(DbiBuilder.addDbgStream(
+        pdb::DbgHeaderType::SectionHdr,
+        // FIXME: Downcasting to an ArrayRef<uint8_t> should use a helper
+        // function in LLVM
+        ArrayRef<uint8_t>{(const uint8_t *)Sections.data(),
+                          Sections.size() * sizeof(object::coff_section)}));
+  }
+
   auto &TpiBuilder = Builder.getTpiBuilder();
   const auto &Tpi = YamlObj.TpiStream.value_or(DefaultTpiStream);
   TpiBuilder.setVersionHeader(Tpi.Version);
   AppendingTypeTableBuilder TS(Allocator);
   for (const auto &R : Tpi.Records) {
     CVType Type = R.toCodeViewRecord(TS);
-    TpiBuilder.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    TpiBuilder.addTypeRecord(Type.RecordData, Hash);
   }
 
   const auto &Ipi = YamlObj.IpiStream.value_or(DefaultIpiStream);
@@ -877,7 +899,26 @@ static void yamlToPdb(StringRef Path) {
   IpiBuilder.setVersionHeader(Ipi.Version);
   for (const auto &R : Ipi.Records) {
     CVType Type = R.toCodeViewRecord(TS);
-    IpiBuilder.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    IpiBuilder.addTypeRecord(Type.RecordData, Hash);
+  }
+
+  if (YamlObj.PublicsStream) {
+    auto &GsiBuilder = Builder.getGsiBuilder();
+    std::vector<BulkPublic> BulkPublics;
+    for (const auto &P : YamlObj.PublicsStream->PubSyms) {
+      CVSymbol CV = P.toCodeViewSymbol(Allocator, CodeViewContainer::Pdb);
+      auto PS = cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(CV));
+
+      BulkPublic BP;
+      BP.Name = PS.Name.data();
+      BP.NameLen = PS.Name.size();
+      BP.setFlags(PS.Flags);
+      BP.Offset = PS.Offset;
+      BP.Segment = PS.Segment;
+      BulkPublics.emplace_back(BP);
+    }
+    GsiBuilder.addPublicSymbols(std::move(BulkPublics));
   }
 
   Builder.getStringTableBuilder().setStrings(*Strings.strings());
@@ -1357,10 +1398,12 @@ static void mergePdbs() {
   auto &DestTpi = Builder.getTpiBuilder();
   auto &DestIpi = Builder.getIpiBuilder();
   MergedTpi.ForEachRecord([&DestTpi](TypeIndex TI, const CVType &Type) {
-    DestTpi.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    DestTpi.addTypeRecord(Type.RecordData, Hash);
   });
   MergedIpi.ForEachRecord([&DestIpi](TypeIndex TI, const CVType &Type) {
-    DestIpi.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    DestIpi.addTypeRecord(Type.RecordData, Hash);
   });
   Builder.getInfoBuilder().addFeature(PdbRaw_FeatureSig::VC140);
 
@@ -1375,7 +1418,6 @@ static void mergePdbs() {
 }
 
 static void explain() {
-  std::unique_ptr<IPDBSession> Session;
   InputFile IF =
       ExitOnErr(InputFile::open(opts::explain::InputFilename.front(), true));
 
@@ -1522,6 +1564,7 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DumpModules = true;
       opts::pdb2yaml::DumpModuleFiles = true;
       opts::pdb2yaml::DumpModuleSyms = true;
+      opts::pdb2yaml::DumpSectionHeaders = true;
       opts::pdb2yaml::DumpModuleSubsections.push_back(
           opts::ModuleSubsection::All);
     }
@@ -1531,6 +1574,9 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DumpModules = true;
 
     if (opts::pdb2yaml::DumpModules)
+      opts::pdb2yaml::DbiStream = true;
+
+    if (opts::pdb2yaml::DumpSectionHeaders)
       opts::pdb2yaml::DbiStream = true;
   }
 

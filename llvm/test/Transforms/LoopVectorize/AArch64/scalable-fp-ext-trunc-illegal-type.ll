@@ -25,13 +25,11 @@ define void @load_ext_trunc_store(ptr readonly %in, ptr noalias %out, i64 %N) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw double, ptr [[IN]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fpext <4 x double> [[WIDE_LOAD]] to <4 x fp128>
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fptrunc <4 x fp128> [[TMP3]] to <4 x float>
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i32 0
-; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP12]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
