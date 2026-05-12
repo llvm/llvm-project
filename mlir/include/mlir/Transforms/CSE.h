@@ -32,7 +32,8 @@ void eliminateCommonSubExpressions(RewriterBase &rewriter,
                                    DominanceInfo &domInfo, Operation *op,
                                    bool *changed = nullptr,
                                    int64_t *numCSE = nullptr,
-                                   int64_t *numDCE = nullptr);
+                                   int64_t *numDCE = nullptr,
+                                   bool hoistPureOps = true);
 
 /// Eliminate common subexpressions within the given region.
 ///
@@ -41,7 +42,8 @@ void eliminateCommonSubExpressions(RewriterBase &rewriter,
 /// DCE counts are needed.
 void eliminateCommonSubExpressions(RewriterBase &rewriter,
                                    DominanceInfo &domInfo, Region &region,
-                                   bool *changed = nullptr);
+                                   bool *changed = nullptr,
+                                   bool hoistPureOps = true);
 
 } // namespace mlir
 
