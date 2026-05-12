@@ -497,7 +497,8 @@ private:
   /// Try to fold the load defined by \p FoldReg into \p MI using
   /// TII->optimizeLoadInstr. On success, updates \p LocalMIs, erases the old
   /// instructions, and returns the replacement; returns nullptr otherwise.
-  MachineInstr *foldLoadInto(MachineInstr &MI, Register FoldReg,
+  MachineInstr *foldLoadInto(MachineFunction &MF, MachineInstr &MI,
+                             Register FoldReg,
                              SmallPtrSet<MachineInstr *, 16> &LocalMIs);
 
   /// Check whether \p MI is understood by the register coalescer
@@ -1399,7 +1400,8 @@ bool PeepholeOptimizer::isLoadFoldable(
 }
 
 MachineInstr *
-PeepholeOptimizer::foldLoadInto(MachineInstr &MI, Register FoldReg,
+PeepholeOptimizer::foldLoadInto(MachineFunction &MF, MachineInstr &MI,
+                                Register FoldReg,
                                 SmallPtrSet<MachineInstr *, 16> &LocalMIs) {
   Register Reg = FoldReg;
   MachineInstr *DefMI = nullptr;
@@ -1407,15 +1409,14 @@ PeepholeOptimizer::foldLoadInto(MachineInstr &MI, Register FoldReg,
   MachineInstr *FoldMI = TII->optimizeLoadInstr(MI, MRI, Reg, DefMI, CopyMI);
   if (!FoldMI)
     return nullptr;
-  LLVM_DEBUG(dbgs() << "Replacing: " << MI);
-  LLVM_DEBUG(dbgs() << "     With: " << *FoldMI);
+  LLVM_DEBUG(dbgs() << "Replacing: " << MI << "     With: " << *FoldMI);
   LocalMIs.erase(&MI);
   LocalMIs.erase(DefMI);
   LocalMIs.insert(FoldMI);
   if (CopyMI)
     LocalMIs.insert(CopyMI);
   if (MI.shouldUpdateAdditionalCallInfo())
-    MI.getMF()->moveAdditionalCallInfo(&MI, FoldMI);
+    MF.moveAdditionalCallInfo(&MI, FoldMI);
   MI.eraseFromParent();
   DefMI->eraseFromParent();
   MRI->markUsesInDebugValueAsUndef(FoldReg);
@@ -1895,7 +1896,7 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
             // optimizeCmpInstr can enable folding by converting SUB to CMP.
             Register FoldedReg = FoldAsLoadDefReg;
             if (MachineInstr *FoldMI =
-                    foldLoadInto(*MI, FoldAsLoadDefReg, LocalMIs)) {
+                    foldLoadInto(MF, *MI, FoldAsLoadDefReg, LocalMIs)) {
               FoldAsLoadDefCandidates.erase(FoldedReg);
               // MI is replaced with FoldMI so we can continue trying to fold
               Changed = true;
