@@ -2991,7 +2991,7 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     Out << "$_C4M";
     break;
 
-  // Unsupported SVE types still use the legacy artificial tag mangling
+  // SVE types not supported by MSVC still use clang-specific artificial tag mangling
   case BuiltinType::SveMFloat8:
     mangleArtificialTagType(TagTypeKind::Struct, "__SVMfloat8_t", {"__clang"});
     break;
