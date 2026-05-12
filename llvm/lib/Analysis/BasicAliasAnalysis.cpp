@@ -967,11 +967,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   // We assume synchronization can not occur if the call does not read/write
   // other memory (this in particular ensures that readonly/argmemonly continue
   // to work as expected for frontends that do not emit nosync).
-  // FIXME: This should apply to all calls, but is limited to inline asm to
-  // limit impact. This ensures that inline asm memory barriers work correctly.
   ModRefInfo SyncMR = ModRefInfo::NoModRef;
-  if (isModAndRefSet(OtherMR) && Call->maySynchronize() &&
-      Call->isInlineAsm()) {
+  if (isModAndRefSet(OtherMR) && Call->maySynchronize()) {
     SyncMR = getSyncEffects(&AAQI.AAR, Loc, AAQI);
     if (isModAndRefSet(SyncMR))
       return SyncMR;
