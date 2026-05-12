@@ -417,8 +417,9 @@ private:
 public:
   /// Make an invalid labeler to be overwritten by a valid one before calling
   /// \c generateLabel.
-  InputAnnotationLabeler() {}
-  /// - \p CheckFileFileBufferID is the buffer ID for the check file.
+  InputAnnotationLabeler()
+      : LabelWidthGlobal(nullptr), LabelIndexPerPattern(nullptr) {}
+  /// - \p CheckFileBufferID is the buffer ID for the check file.
   /// - \p ImpPatBufferIDRange is the buffer ID range for all implicit patterns.
   /// - \p LabelWidthGlobal is the widest label generated so far over all
   ///   patterns.  It will be updated by each call to \c generateLabel.
