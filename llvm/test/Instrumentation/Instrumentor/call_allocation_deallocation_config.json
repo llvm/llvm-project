@@ -1,0 +1,23 @@
+{
+  "configuration": {
+    "runtime_prefix": "__instrumentor_",
+    "runtime_prefix.description": "The runtime API prefix.",
+    "demangle_function_names": false,
+    "demangle_function_names.description": "Demangle functions names passed to the runtime."
+  },
+  "instruction_post": {
+    "call": {
+      "enabled": true,
+      "callee": true,
+      "callee.description": "The callee address, or nullptr if an intrinsic.",
+      "callee_name": true,
+      "callee_name.description": "The callee name (if available).",
+      "intrinsic_id": true,
+      "intrinsic_id.description": "The intrinsic id, or 0 if not an intrinsic.",
+      "allocation_info": true,
+      "allocation_info.description": "Encoding of the allocation made by the call, if any, or nullptr otherwise.",
+      "deallocation_info": true,
+      "deallocation_info.description": "Encoding of the deallocation made by the call, if any, or nullptr otherwise."
+    }
+  }
+}
