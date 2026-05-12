@@ -1,5 +1,4 @@
-libclc_configure_source_list(CLC_PTX_NVIDIACL_SOURCES
-  ${CMAKE_CURRENT_SOURCE_DIR}
+libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
   math/clc_log.cl
   math/clc_rsqrt.cl
   math/clc_sinpi.cl

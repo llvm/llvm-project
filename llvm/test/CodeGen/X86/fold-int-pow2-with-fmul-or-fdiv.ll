@@ -1712,3 +1712,157 @@ define x86_fp80 @pr128528(i1 %cond) {
   %mul = fmul x86_fp80 %conv, 0xK4007D055555555555800
   ret x86_fp80 %mul
 }
+
+define double @fmul_pow_shl_cnt_knownbits(i64 %cnt) nounwind {
+; CHECK-SSE-LABEL: fmul_pow_shl_cnt_knownbits:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    andl $15, %edi
+; CHECK-SSE-NEXT:    shlq $52, %rdi
+; CHECK-SSE-NEXT:    movabsq $8930638061065157010, %rax # imm = 0x7BEFFFFFFF5F3992
+; CHECK-SSE-NEXT:    addq %rdi, %rax
+; CHECK-SSE-NEXT:    movq %rax, %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fmul_pow_shl_cnt_knownbits:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    andl $15, %edi
+; CHECK-AVX-NEXT:    shlq $52, %rdi
+; CHECK-AVX-NEXT:    movabsq $8930638061065157010, %rax # imm = 0x7BEFFFFFFF5F3992
+; CHECK-AVX-NEXT:    addq %rdi, %rax
+; CHECK-AVX-NEXT:    vmovq %rax, %xmm0
+; CHECK-AVX-NEXT:    retq
+  %cnt_masked = and i64 %cnt, 15
+  %shl = shl nuw i64 1, %cnt_masked
+  %conv = uitofp i64 %shl to double
+  %mul = fmul double 9.745314e+288, %conv
+  ret double %mul
+}
+
+define double @fdiv_pow_shl_cnt_knownbits(i64 %cnt) nounwind {
+; CHECK-SSE-LABEL: fdiv_pow_shl_cnt_knownbits:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    andl $15, %edi
+; CHECK-SSE-NEXT:    shlq $52, %rdi
+; CHECK-SSE-NEXT:    movabsq $243194378260042637, %rax # imm = 0x35FFFFF9F8FD38D
+; CHECK-SSE-NEXT:    subq %rdi, %rax
+; CHECK-SSE-NEXT:    movq %rax, %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fdiv_pow_shl_cnt_knownbits:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    andl $15, %edi
+; CHECK-AVX-NEXT:    shlq $52, %rdi
+; CHECK-AVX-NEXT:    movabsq $243194378260042637, %rax # imm = 0x35FFFFF9F8FD38D
+; CHECK-AVX-NEXT:    subq %rdi, %rax
+; CHECK-AVX-NEXT:    vmovq %rax, %xmm0
+; CHECK-AVX-NEXT:    retq
+  %cnt_masked = and i64 %cnt, 15
+  %shl = shl nuw i64 1, %cnt_masked
+  %conv = uitofp i64 %shl to double
+  %mul = fdiv double 2.004168e-292, %conv
+  ret double %mul
+}
+
+; Negative: 1010+16=1026 >= 1023
+define double @fmul_pow_shl_cnt_fail_knownbits_bad_exp(i64 %cnt) nounwind {
+; CHECK-SSE-LABEL: fmul_pow_shl_cnt_fail_knownbits_bad_exp:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    movq %rdi, %rcx
+; CHECK-SSE-NEXT:    andb $15, %cl
+; CHECK-SSE-NEXT:    movl $1, %eax
+; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-SSE-NEXT:    shll %cl, %eax
+; CHECK-SSE-NEXT:    cvtsi2sd %eax, %xmm0
+; CHECK-SSE-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX2-LABEL: fmul_pow_shl_cnt_fail_knownbits_bad_exp:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    movq %rdi, %rcx
+; CHECK-AVX2-NEXT:    andb $15, %cl
+; CHECK-AVX2-NEXT:    movl $1, %eax
+; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-AVX2-NEXT:    shll %cl, %eax
+; CHECK-AVX2-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
+; CHECK-AVX2-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ONLY-AVX512F-LABEL: fmul_pow_shl_cnt_fail_knownbits_bad_exp:
+; CHECK-ONLY-AVX512F:       # %bb.0:
+; CHECK-ONLY-AVX512F-NEXT:    movq %rdi, %rcx
+; CHECK-ONLY-AVX512F-NEXT:    andb $15, %cl
+; CHECK-ONLY-AVX512F-NEXT:    movl $1, %eax
+; CHECK-ONLY-AVX512F-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-ONLY-AVX512F-NEXT:    shll %cl, %eax
+; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    retq
+;
+; CHECK-SKX-LABEL: fmul_pow_shl_cnt_fail_knownbits_bad_exp:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    andb $15, %dil
+; CHECK-SKX-NEXT:    movl $1, %eax
+; CHECK-SKX-NEXT:    shlxq %rdi, %rax, %rax
+; CHECK-SKX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; CHECK-SKX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-SKX-NEXT:    retq
+  %cnt_masked = and i64 %cnt, 15
+  %shl = shl nuw i64 1, %cnt_masked
+  %conv = uitofp i64 %shl to double
+  %mul = fmul double 0x7F18000000000000, %conv
+  ret double %mul
+}
+
+; Negative: -1008-16=-1024 <= -1022
+define double @fdiv_pow_shl_cnt_fail_knownbits_bad_exp(i64 %cnt) nounwind {
+; CHECK-SSE-LABEL: fdiv_pow_shl_cnt_fail_knownbits_bad_exp:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    movq %rdi, %rcx
+; CHECK-SSE-NEXT:    andb $15, %cl
+; CHECK-SSE-NEXT:    movl $1, %eax
+; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-SSE-NEXT:    shll %cl, %eax
+; CHECK-SSE-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK-SSE-NEXT:    movsd {{.*#+}} xmm0 = [5.4683415146672981E-304,0.0E+0]
+; CHECK-SSE-NEXT:    divsd %xmm1, %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX2-LABEL: fdiv_pow_shl_cnt_fail_knownbits_bad_exp:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    movq %rdi, %rcx
+; CHECK-AVX2-NEXT:    andb $15, %cl
+; CHECK-AVX2-NEXT:    movl $1, %eax
+; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-AVX2-NEXT:    shll %cl, %eax
+; CHECK-AVX2-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
+; CHECK-AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = [5.4683415146672981E-304,0.0E+0]
+; CHECK-AVX2-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ONLY-AVX512F-LABEL: fdiv_pow_shl_cnt_fail_knownbits_bad_exp:
+; CHECK-ONLY-AVX512F:       # %bb.0:
+; CHECK-ONLY-AVX512F-NEXT:    movq %rdi, %rcx
+; CHECK-ONLY-AVX512F-NEXT:    andb $15, %cl
+; CHECK-ONLY-AVX512F-NEXT:    movl $1, %eax
+; CHECK-ONLY-AVX512F-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-ONLY-AVX512F-NEXT:    shll %cl, %eax
+; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = [5.4683415146672981E-304,0.0E+0]
+; CHECK-ONLY-AVX512F-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    retq
+;
+; CHECK-SKX-LABEL: fdiv_pow_shl_cnt_fail_knownbits_bad_exp:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    andb $15, %dil
+; CHECK-SKX-NEXT:    movl $1, %eax
+; CHECK-SKX-NEXT:    shlxq %rdi, %rax, %rax
+; CHECK-SKX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; CHECK-SKX-NEXT:    vmovsd {{.*#+}} xmm1 = [5.4683415146672981E-304,0.0E+0]
+; CHECK-SKX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-SKX-NEXT:    retq
+  %cnt_masked = and i64 %cnt, 15
+  %shl = shl nuw i64 1, %cnt_masked
+  %conv = uitofp i64 %shl to double
+  %mul = fdiv double 0x00F8000000000000, %conv
+  ret double %mul
+}
