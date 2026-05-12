@@ -63,3 +63,11 @@ __device__ void test_div_fmas_f32(double* out, float a, float b, float c, int d)
 __device__ void test_div_fmas_f64(double* out, double a, double b, double c, int d) {
   *out = __builtin_amdgcn_div_fmas(a, b, c, d);
 }
+
+// CIR-LABEL: @_Z15test_ds_swizzlePii
+// CIR: cir.call_llvm_intrinsic "amdgcn.ds.swizzle" {{.*}} : (!s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z15test_ds_swizzlePii
+// LLVM: call{{.*}} i32 @llvm.amdgcn.ds.swizzle(i32 %{{.*}}, i32 32)
+__device__ void test_ds_swizzle(int* out, int a) {
+  *out = __builtin_amdgcn_ds_swizzle(a, 32);
+}

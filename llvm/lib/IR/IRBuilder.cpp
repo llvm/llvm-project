@@ -13,6 +13,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -544,16 +545,17 @@ CallInst *IRBuilderBase::CreateThreadLocalAddress(Value *Ptr) {
   return CI;
 }
 
-CallInst *
-IRBuilderBase::CreateAssumption(Value *Cond,
-                                ArrayRef<OperandBundleDef> OpBundles) {
+CallInst *IRBuilderBase::CreateAssumption(Value *Cond) {
   assert(Cond->getType() == getInt1Ty() &&
          "an assumption condition must be of type i1");
+  return CreateIntrinsic(Intrinsic::assume, /*OverloadTypes=*/{}, {Cond});
+}
 
-  Value *Ops[] = { Cond };
-  Module *M = BB->getParent()->getParent();
-  Function *FnAssume = Intrinsic::getOrInsertDeclaration(M, Intrinsic::assume);
-  return CreateCall(FnAssume, Ops, OpBundles);
+CallInst *
+IRBuilderBase::CreateAssumption(ArrayRef<OperandBundleDef> OpBundles) {
+  Value *Args[] = {ConstantInt::getTrue(getContext())};
+  return CreateIntrinsic(Intrinsic::assume, /*OverloadTypes=*/{}, Args,
+                         /*FMFSource=*/nullptr, /*Name=*/"", OpBundles);
 }
 
 Instruction *IRBuilderBase::CreateNoAliasScopeDeclaration(Value *Scope) {
@@ -929,11 +931,11 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
 CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
                                          ArrayRef<Type *> OverloadTypes,
                                          ArrayRef<Value *> Args,
-                                         FMFSource FMFSource,
-                                         const Twine &Name) {
+                                         FMFSource FMFSource, const Twine &Name,
+                                         ArrayRef<OperandBundleDef> OpBundles) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, OverloadTypes);
-  return createCallHelper(Fn, Args, Name, FMFSource);
+  return createCallHelper(Fn, Args, Name, FMFSource, OpBundles);
 }
 
 CallInst *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
@@ -941,12 +943,7 @@ CallInst *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
                                          FMFSource FMFSource,
                                          const Twine &Name) {
   Module *M = BB->getModule();
-
-  SmallVector<Type *> ArgTys;
-  ArgTys.reserve(Args.size());
-  for (auto &I : Args)
-    ArgTys.push_back(I->getType());
-
+  SmallVector<Type *> ArgTys = llvm::map_to_vector(Args, &Value::getType);
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, RetTy, ArgTys);
   return createCallHelper(Fn, Args, Name, FMFSource);
 }
@@ -1362,12 +1359,12 @@ CallInst *IRBuilderBase::CreateAlignmentAssumptionHelper(const DataLayout &DL,
   if (OffsetValue)
     Vals.push_back(OffsetValue);
   OperandBundleDefT<Value *> AlignOpB("align", Vals);
-  return CreateAssumption(ConstantInt::getTrue(getContext()), {AlignOpB});
+  return CreateAssumption({AlignOpB});
 }
 
 CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
                                                    Value *PtrValue,
-                                                   unsigned Alignment,
+                                                   uint64_t Alignment,
                                                    Value *OffsetValue) {
   assert(isa<PointerType>(PtrValue->getType()) &&
          "trying to create an alignment assumption on a non-pointer?");
@@ -1390,11 +1387,16 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
 CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
                                                          Value *SizeValue) {
   assert(isa<PointerType>(PtrValue->getType()) &&
-         "trying to create an deferenceable assumption on a non-pointer?");
+         "trying to create a deferenceable assumption on a non-pointer?");
   SmallVector<Value *, 4> Vals({PtrValue, SizeValue});
   OperandBundleDefT<Value *> DereferenceableOpB("dereferenceable", Vals);
-  return CreateAssumption(ConstantInt::getTrue(getContext()),
-                          {DereferenceableOpB});
+  return CreateAssumption({DereferenceableOpB});
+}
+
+CallInst *IRBuilderBase::CreateNonnullAssumption(Value *PtrValue) {
+  assert(isa<PointerType>(PtrValue->getType()) &&
+         "trying to create a nonnull assumption on a non-pointer?");
+  return CreateAssumption(OperandBundleDef("nonnull", PtrValue));
 }
 
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;

@@ -1201,8 +1201,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     return I;
 
   // trunc (ctlz_i32(zext(A), B) --> add(ctlz_i16(A, B), C)
-  if (match(Src, m_OneUse(m_Intrinsic<Intrinsic::ctlz>(m_ZExt(m_Value(A)),
-                                                       m_Value(B))))) {
+  if (match(Src, m_OneUse(m_Ctlz(m_ZExt(m_Value(A)), m_Value(B))))) {
     unsigned AWidth = A->getType()->getScalarSizeInBits();
     if (AWidth == DestWidth && AWidth > Log2_32(SrcWidth)) {
       Value *WidthDiff = ConstantInt::get(A->getType(), SrcWidth - AWidth);
