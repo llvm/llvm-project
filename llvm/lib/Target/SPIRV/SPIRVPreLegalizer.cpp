@@ -579,6 +579,13 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         SPIRVTypeInst AssignedPtrType = GR->getOrCreateSPIRVPointerType(
             ElementTy, MI,
             addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
+        // The intrinsic also carries vector-of-pointer values produced by
+        // scalarized vector GEPs; wrap the pointer in OpTypeVector to match
+        // the vreg's LLT.
+        LLT RegTy = MRI.getType(Reg);
+        if (RegTy.isValid() && RegTy.isVector())
+          AssignedPtrType = GR->getOrCreateSPIRVVectorType(
+              AssignedPtrType, RegTy.getNumElements(), MIB, true);
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
