@@ -136,7 +136,7 @@ struct LoweringPreparePass
 
   /// Build a module init function that calls all the dynamic initializers.
   void buildCXXGlobalInitFunc();
-  // Build a init function for all of the ordered global thread local storage
+  // Build an init function for all of the ordered global thread local storage
   // variables.
   void buildCXXGlobalTlsFunc();
 
