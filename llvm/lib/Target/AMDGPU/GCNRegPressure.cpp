@@ -552,14 +552,10 @@ bool GCNRPTracker::eraseAllLiveUnits(MCRegister Reg) {
 // units are already live but the full register is still added, leading to
 // over-counted pressure. See PhysicalRegLiveness limitations.
 bool GCNRPTracker::insertIfNotLive(MCRegister Reg) {
-  assert(SRI && "SRI not initialized");
-  const BitVector &Units = PhysLiveRegs.getBitVector();
-  bool NewlyLive = llvm::any_of(SRI->regunits(Reg), [&](MCRegUnit Unit) {
-    return !Units.test(static_cast<unsigned>(Unit));
-  });
-  if (NewlyLive)
-    PhysLiveRegs.add(Reg);
-  return NewlyLive;
+  if (!isAnyRegUnitNotLive(Reg))
+    return false;
+  PhysLiveRegs.add(Reg);
+  return true;
 }
 
 GCNRegPressure GCNRPTracker::constructPhysRegPressure() const {
@@ -719,7 +715,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
     // Physical register handling needs the register directly to avoid aliasing,
     // so we need to iterate over all uses.
     for (const MachineOperand &MO : MI.all_uses()) {
-      if (!MO.isReg() || !MO.readsReg())
+      if (!MO.readsReg())
         continue;
       Register Reg = MO.getReg();
       if (!shouldTrackPhysReg(Reg))
@@ -999,8 +995,6 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
 
     SeenRegs.clear();
     for (const auto &MO : MI->all_uses()) {
-      if (!MO.isReg() || !MO.getReg().isPhysical())
-        continue;
       Register Reg = MO.getReg();
       if (!shouldTrackPhysReg(Reg) || !SeenRegs.insert(Reg).second)
         continue;

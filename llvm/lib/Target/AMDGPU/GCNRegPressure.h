@@ -417,18 +417,6 @@ protected:
     setPhysRegTracking();
   }
 
-  GCNRPTracker(const GCNRPTracker &Other)
-      : LIS(Other.LIS), VirtLiveRegs(Other.VirtLiveRegs),
-        MRI(Other.MRI), SRI(Other.SRI), PhysLiveRegs(*SRI),
-        CurPressure(Other.CurPressure), MaxPressure(Other.MaxPressure),
-        TrackPhysRegs(Other.TrackPhysRegs),
-        LastTrackedMI(Other.LastTrackedMI) {
-    if (TrackPhysRegs) {
-      PhysLiveRegs.Units.addUnits(Other.PhysLiveRegs.getBitVector());
-      PhysLiveRegs.Regs = Other.PhysLiveRegs.Regs;
-    }
-  }
-
   void reset(const MachineInstr &MI, const LiveRegSet *VirtLiveRegsCopy,
              bool After);
 
