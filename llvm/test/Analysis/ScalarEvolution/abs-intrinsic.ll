@@ -18,7 +18,7 @@ define i32 @abs_nsw(i32 %x) {
 ; CHECK-LABEL: 'abs_nsw'
 ; CHECK-NEXT:  Classifying expressions for: @abs_nsw
 ; CHECK-NEXT:    %r = call i32 @llvm.abs.i32(i32 %x, i1 true)
-; CHECK-NEXT:    --> ((-1 * %x)<nsw> smax %x) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * %x)<nsw> smax %x) U: [-2147483647,-2147483648) S: [-2147483647,-2147483648)
 ; CHECK-NEXT:  Determining loop execution counts for: @abs_nsw
 ;
   %r = call i32 @llvm.abs.i32(i32 %x, i1 1)
