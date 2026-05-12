@@ -603,15 +603,7 @@ Check aliases
    :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
-   :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`, :doc:`bugprone-unhandled-code-paths <bugprone/unhandled-code-paths>`,
-   :doc:`hicpp-no-assembler <hicpp/no-assembler>`, :doc:`portability-no-assembler <portability/no-assembler>`,
-   :doc:`hicpp-no-malloc <hicpp/no-malloc>`, :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
-   :doc:`hicpp-special-member-functions <hicpp/special-member-functions>`, :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,
-   :doc:`hicpp-static-assert <hicpp/static-assert>`, :doc:`misc-static-assert <misc/static-assert>`, "Yes"
-   :doc:`hicpp-undelegated-constructor <hicpp/undelegated-constructor>`, :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
    :doc:`hicpp-uppercase-literal-suffix <hicpp/uppercase-literal-suffix>`, :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
-   :doc:`hicpp-use-auto <hicpp/use-auto>`, :doc:`modernize-use-auto <modernize/use-auto>`, "Yes"
-   :doc:`hicpp-use-emplace <hicpp/use-emplace>`, :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes"
    :doc:`hicpp-use-equals-default <hicpp/use-equals-default>`, :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
    :doc:`hicpp-use-equals-delete <hicpp/use-equals-delete>`, :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
    :doc:`hicpp-use-noexcept <hicpp/use-noexcept>`, :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
