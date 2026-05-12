@@ -6233,6 +6233,35 @@ def CIR_AssumeSepStorageOp : CIR_Op<"assume_separate_storage", [
   }];
 }
 
+def CIR_AssumeDereferenceableOp : CIR_Op<"assume_dereferenceable"> {
+  let summary = "Tell the optimizer that a pointer is dereferenceable";
+  let description = [{
+    The `cir.assume_dereferenceable` operation takes a pointer and a size in
+    bytes.  It tells the optimizer that loading from `pointer` is well-defined
+    for any number of bytes up to `size`, i.e. the pointer is known to refer
+    to a region of at least `size` allocated bytes.
+
+    The size argument must be a pointer-sized integer (the lowering converts
+    smaller integer types to the target pointer width before emitting the
+    operand bundle).
+
+    This operation corresponds to the `__builtin_assume_dereferenceable`
+    builtin function.
+
+    Example:
+
+    ```
+    cir.assume_dereferenceable %p, %n : !cir.ptr<!void>, !u64i
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$pointer, CIR_IntType:$size);
+
+  let assemblyFormat = [{
+    $pointer `,` $size `:` qualified(type($pointer)) `,` type($size) attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Branch Probability Operations
 //===----------------------------------------------------------------------===//

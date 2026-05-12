@@ -1098,6 +1098,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
 
+  case Builtin::BI__builtin_assume_dereferenceable: {
+    mlir::Value ptrValue = emitScalarExpr(e->getArg(0));
+    mlir::Value sizeValue = emitScalarExpr(e->getArg(1));
+    // The operand bundle expects a pointer-sized integer; widen/narrow to
+    // intptr_t to match classic CodeGen.
+    mlir::Type intPtrTy = convertType(getContext().getIntPtrType());
+    if (sizeValue.getType() != intPtrTy)
+      sizeValue = builder.createIntCast(sizeValue, intPtrTy);
+    cir::AssumeDereferenceableOp::create(builder, loc, ptrValue, sizeValue);
+    return RValue::get(nullptr);
+  }
+
   case Builtin::BI__builtin_assume_aligned: {
     const Expr *ptrExpr = e->getArg(0);
     mlir::Value ptrValue = emitScalarExpr(ptrExpr);

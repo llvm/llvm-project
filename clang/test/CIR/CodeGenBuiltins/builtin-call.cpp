@@ -160,6 +160,54 @@ void assume_separate_storage(void *p1, void *p2) {
 // OGCG:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
 // OGCG: }
 
+void assume_dereferenceable(void *p, unsigned long n) {
+  __builtin_assume_dereferenceable(p, n);
+}
+
+// CIR: cir.func{{.*}} @_Z22assume_dereferenceablePvm
+// CIR:   cir.assume_dereferenceable %{{.+}}, %{{.+}} : !cir.ptr<!void>, !s64i
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z22assume_dereferenceablePvm
+// LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z22assume_dereferenceablePvm
+// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
+// OGCG: }
+
+void assume_dereferenceable_const(void *p) {
+  __builtin_assume_dereferenceable(p, 16);
+}
+
+// CIR: cir.func{{.*}} @_Z28assume_dereferenceable_constPv
+// CIR:   cir.assume_dereferenceable %{{.+}}, %{{.+}} : !cir.ptr<!void>, !s64i
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z28assume_dereferenceable_constPv
+// LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 16) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z28assume_dereferenceable_constPv
+// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 16) ]
+// OGCG: }
+
+void assume_dereferenceable_narrow_size(void *p, unsigned n) {
+  __builtin_assume_dereferenceable(p, n);
+}
+
+// CIR: cir.func{{.*}} @_Z34assume_dereferenceable_narrow_sizePvj
+// CIR:   cir.assume_dereferenceable %{{.+}}, %{{.+}} : !cir.ptr<!void>, !s64i
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z34assume_dereferenceable_narrow_sizePvj
+// LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z34assume_dereferenceable_narrow_sizePvj
+// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
+// OGCG: }
+
 void expect(int x, int y) {
   __builtin_expect(x, y);
 }

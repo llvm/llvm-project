@@ -859,6 +859,18 @@ mlir::LogicalResult CIRToLLVMAssumeSepStorageOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMAssumeDereferenceableOpLowering::matchAndRewrite(
+    cir::AssumeDereferenceableOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto cond = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getI1Type(), 1);
+  mlir::LLVM::AssumeOp::create(
+      rewriter, op.getLoc(), cond, "dereferenceable",
+      mlir::ValueRange{adaptor.getPointer(), adaptor.getSize()});
+  rewriter.eraseOp(op);
+  return mlir::success();
+}
+
 static mlir::LLVM::AtomicOrdering
 getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
   if (!memorder)
