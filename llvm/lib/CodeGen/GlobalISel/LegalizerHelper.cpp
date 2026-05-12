@@ -10673,6 +10673,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
     return Legalized;
   }
 
+  // TODO: Port other lowerng paths from SelectionDAG.
   LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
   MachineInstrBuilder ExtLHS{}, ExtRHS{}, Shift{};
