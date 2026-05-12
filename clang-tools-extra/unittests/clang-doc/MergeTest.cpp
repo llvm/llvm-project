@@ -20,8 +20,8 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   One.Name = "Namespace";
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  One.Children.Namespaces.emplace_back(NonEmptySID, "ChildNamespace",
-                                       InfoType::IT_namespace);
+  Reference RA(NonEmptySID, "ChildNamespace", InfoType::IT_namespace);
+  One.Children.Namespaces.push_back(RA);
   One.Children.Records.emplace_back(NonEmptySID, "ChildStruct",
                                     InfoType::IT_record);
   One.Children.Functions.emplace_back();
@@ -35,8 +35,8 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   Two.Name = "Namespace";
   Two.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Two.Children.Namespaces.emplace_back(EmptySID, "OtherChildNamespace",
-                                       InfoType::IT_namespace);
+  Reference RB(EmptySID, "OtherChildNamespace", InfoType::IT_namespace);
+  Two.Children.Namespaces.push_back(RB);
   Two.Children.Records.emplace_back(EmptySID, "OtherChildStruct",
                                     InfoType::IT_record);
   Two.Children.Functions.emplace_back();
@@ -52,12 +52,12 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   Expected->Name = "Namespace";
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Expected->Children.Namespaces.emplace_back(NonEmptySID, "ChildNamespace",
-                                             InfoType::IT_namespace);
+  Reference RC(NonEmptySID, "ChildNamespace", InfoType::IT_namespace);
+  Expected->Children.Namespaces.push_back(RC);
   Expected->Children.Records.emplace_back(NonEmptySID, "ChildStruct",
                                           InfoType::IT_record);
-  Expected->Children.Namespaces.emplace_back(EmptySID, "OtherChildNamespace",
-                                             InfoType::IT_namespace);
+  Reference RD(EmptySID, "OtherChildNamespace", InfoType::IT_namespace);
+  Expected->Children.Namespaces.push_back(RD);
   Expected->Children.Records.emplace_back(EmptySID, "OtherChildStruct",
                                           InfoType::IT_record);
   Expected->Children.Functions.emplace_back();
@@ -166,16 +166,11 @@ TEST_F(MergeTest, mergeFunctionInfos) {
   One.IsMethod = true;
   One.Parent = Reference(EmptySID, "Parent", InfoType::IT_namespace);
 
-  One.Description.emplace_back();
-  auto *OneFullComment = &One.Description.back();
-  OneFullComment->Kind = CommentKind::CK_FullComment;
-  auto OneParagraphComment = allocatePtr<CommentInfo>();
-  OneParagraphComment->Kind = CommentKind::CK_ParagraphComment;
-  auto OneTextComment = allocatePtr<CommentInfo>();
-  OneTextComment->Kind = CommentKind::CK_TextComment;
-  OneTextComment->Text = "This is a text comment.";
-  OneParagraphComment->Children.push_back(std::move(OneTextComment));
-  OneFullComment->Children.push_back(std::move(OneParagraphComment));
+  CommentInfo OneText[] = {
+      CommentInfo(CommentKind::CK_TextComment, {}, "This is a text comment.")};
+  CommentInfo OnePara[] = {
+      CommentInfo(CommentKind::CK_ParagraphComment, OneText)};
+  One.Description.emplace_back(CommentKind::CK_FullComment, OnePara);
 
   FunctionInfo Two;
   Two.Name = "f";
@@ -186,16 +181,11 @@ TEST_F(MergeTest, mergeFunctionInfos) {
   Two.ReturnType = TypeInfo("void");
   Two.Params.emplace_back(TypeInfo("int"), "P");
 
-  Two.Description.emplace_back();
-  auto *TwoFullComment = &Two.Description.back();
-  TwoFullComment->Kind = CommentKind::CK_FullComment;
-  auto TwoParagraphComment = allocatePtr<CommentInfo>();
-  TwoParagraphComment->Kind = CommentKind::CK_ParagraphComment;
-  auto TwoTextComment = allocatePtr<CommentInfo>();
-  TwoTextComment->Kind = CommentKind::CK_TextComment;
-  TwoTextComment->Text = "This is a text comment.";
-  TwoParagraphComment->Children.push_back(std::move(TwoTextComment));
-  TwoFullComment->Children.push_back(std::move(TwoParagraphComment));
+  CommentInfo TwoText[] = {
+      CommentInfo(CommentKind::CK_TextComment, {}, "This is a text comment.")};
+  CommentInfo TwoPara[] = {
+      CommentInfo(CommentKind::CK_ParagraphComment, TwoText)};
+  Two.Description.emplace_back(CommentKind::CK_FullComment, TwoPara);
 
   OwningPtrVec<Info> Infos;
   Infos.emplace_back(allocatePtr<FunctionInfo>(std::move(One)));
@@ -213,16 +203,11 @@ TEST_F(MergeTest, mergeFunctionInfos) {
   Expected->IsMethod = true;
   Expected->Parent = Reference(EmptySID, "Parent", InfoType::IT_namespace);
 
-  Expected->Description.emplace_back();
-  auto *ExpectedFullComment = &Expected->Description.back();
-  ExpectedFullComment->Kind = CommentKind::CK_FullComment;
-  auto ExpectedParagraphComment = allocatePtr<CommentInfo>();
-  ExpectedParagraphComment->Kind = CommentKind::CK_ParagraphComment;
-  auto ExpectedTextComment = allocatePtr<CommentInfo>();
-  ExpectedTextComment->Kind = CommentKind::CK_TextComment;
-  ExpectedTextComment->Text = "This is a text comment.";
-  ExpectedParagraphComment->Children.push_back(std::move(ExpectedTextComment));
-  ExpectedFullComment->Children.push_back(std::move(ExpectedParagraphComment));
+  CommentInfo ExpectedText[] = {
+      CommentInfo(CommentKind::CK_TextComment, {}, "This is a text comment.")};
+  CommentInfo ExpectedPara[] = {
+      CommentInfo(CommentKind::CK_ParagraphComment, ExpectedText)};
+  Expected->Description.emplace_back(CommentKind::CK_FullComment, ExpectedPara);
 
   auto Actual = mergeInfos(Infos);
   assert(Actual);

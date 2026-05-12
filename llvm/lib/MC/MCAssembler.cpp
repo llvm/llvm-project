@@ -232,6 +232,9 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     return Size;
   }
 
+  case MCFragment::FT_PrefAlign:
+    return F.getSize();
+
   case MCFragment::FT_Nops:
     return cast<MCNopsFragment>(F).getNumBytes();
 
@@ -464,6 +467,23 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     }
   } break;
 
+  case MCFragment::FT_PrefAlign: {
+    OS << StringRef(F.getContents().data(), F.getContents().size());
+    uint64_t PadSize = FragmentSize - F.getContents().size();
+    if (F.getPrefAlignEmitNops()) {
+      if (!Asm.getBackend().writeNopData(OS, PadSize, F.getSubtargetInfo()))
+        reportFatalInternalError("unable to write nop sequence of " +
+                                 Twine(PadSize) + " bytes");
+    } else if (F.getPrefAlignFill() == 0) {
+      OS.write_zeros(PadSize);
+    } else {
+      char B = char(F.getPrefAlignFill());
+      for (uint64_t I = 0; I < PadSize; ++I)
+        OS << B;
+    }
+    break;
+  }
+
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
     const MCFillFragment &FF = cast<MCFillFragment>(F);
@@ -597,6 +617,10 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
         // 0.
         assert(F.getAlignFill() == 0 && "Invalid align in virtual section!");
         break;
+      case MCFragment::FT_PrefAlign:
+        assert(!F.getPrefAlignEmitNops() && F.getPrefAlignFill() == 0 &&
+               "Invalid align in BSS");
+        break;
       case MCFragment::FT_Fill:
         HasNonZero = cast<MCFillFragment>(F).getValue() != 0;
         break;
@@ -690,6 +714,19 @@ void MCAssembler::layout() {
   // helps check whether a PC-relative fixup is fully resolved.
   this->HasFinalLayout = true;
 
+  // Stores the current .reloc group for each fragment.
+  //
+  // A .reloc group is a consecutive sequence of .reloc relocations that have
+  // an offset <= the first relocation's offset. A relocation with offset > the
+  // first relocation's offset starts a new group. Relocation groups are
+  // inserted in offset order using the offset of the first relocation, but the
+  // source ordering of relocations within the group is preserved.
+  DenseMap<MCFragment *, std::vector<MCFixup>> RelocGroups;
+  auto DrainRelocGroup = [](MCFragment *F, std::vector<MCFixup> &Group) {
+    F->insertRelocFixups(Group);
+    Group.clear();
+  };
+
   // Resolve .reloc offsets and add fixups.
   for (auto &PF : relocDirectives) {
     MCValue Res;
@@ -708,8 +745,15 @@ void MCAssembler::layout() {
     }
 
     uint64_t Offset = Sym ? Sym->getOffset() + Res.getConstant() : 0;
-    F->addFixup(MCFixup::create(Offset, PF.Expr, PF.Kind));
+    auto Fixup = MCFixup::create(Offset, PF.Expr, PF.Kind);
+    auto &Group = RelocGroups[F];
+    if (!Group.empty() && Group[0].getOffset() < Offset)
+      DrainRelocGroup(F, Group);
+    Group.push_back(Fixup);
   }
+
+  for (auto &[F, Group] : RelocGroups)
+    DrainRelocGroup(F, Group);
 
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {
@@ -772,6 +816,39 @@ void MCAssembler::relaxAlign(MCFragment &F) {
   F.VarContentEnd = F.VarContentStart + Size;
   if (F.VarContentEnd > F.getParent()->ContentStorage.size())
     F.getParent()->ContentStorage.resize(F.VarContentEnd);
+}
+
+// Compute the body size by walking forward from F to the End symbol and
+// summing fragment sizes. This avoids depending on stale layout offsets.
+void MCAssembler::relaxPrefAlign(MCFragment &F) {
+  uint64_t RawStart = F.Offset + F.getFixedSize();
+  const MCSymbol &End = F.getPrefAlignEnd();
+  if (!End.getFragment() || End.getFragment()->getParent() != F.getParent()) {
+    recordError(SMLoc(), ".prefalign end symbol '" + End.getName() +
+                             "' must be in the current section");
+    return;
+  }
+  const MCFragment *EndFrag = End.getFragment();
+  if (EndFrag->getLayoutOrder() <= F.getLayoutOrder())
+    return;
+  uint64_t BodySize = End.getOffset();
+  for (auto *Cur = F.getNext(); Cur != EndFrag; Cur = Cur->getNext())
+    BodySize += computeFragmentSize(*Cur);
+  // Intervening FT_Align's padding depends on where this prefalign lands, so
+  // `BodySize` depends on this prefalign's own padding and may not reach a
+  // fixed point. Break the cycle with a monotone value.
+  Align NewAlign =
+      std::min(Align(llvm::bit_ceil(BodySize)), F.getPrefAlignPreferred());
+  NewAlign = std::max(NewAlign, F.getPrefAlignComputed());
+  F.setPrefAlignComputed(NewAlign);
+  uint64_t NewPadSize = offsetToAlignment(RawStart, NewAlign);
+  F.VarContentStart = F.getFixedSize();
+  F.VarContentEnd = F.VarContentStart + NewPadSize;
+  if (F.VarContentEnd > F.getParent()->ContentStorage.size())
+    F.getParent()->ContentStorage.resize(F.VarContentEnd);
+  // Update the maximum alignment on the current section if necessary, similar
+  // to MCObjectStreamer::emitValueToAlignment.
+  F.getParent()->ensureMinAlignment(NewAlign);
 }
 
 bool MCAssembler::fixupNeedsRelaxation(const MCFragment &F,
@@ -994,6 +1071,9 @@ void MCAssembler::relaxFragment(MCFragment &F) {
     break;
   case MCFragment::FT_BoundaryAlign:
     relaxBoundaryAlign(static_cast<MCBoundaryAlignFragment &>(F));
+    break;
+  case MCFragment::FT_PrefAlign:
+    relaxPrefAlign(F);
     break;
   case MCFragment::FT_CVInlineLines:
     getContext().getCVContext().encodeInlineLineTable(

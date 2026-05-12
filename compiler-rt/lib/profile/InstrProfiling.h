@@ -57,6 +57,11 @@ typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT) VTableProfData {
 #include "profile/InstrProfData.inc"
 } VTableProfData;
 
+typedef struct __llvm_profile_gpu_sections {
+#define INSTR_PROF_GPU_SECT(Type, LLVMType, Name, Initializer) Type Name;
+#include "profile/InstrProfData.inc"
+} __llvm_profile_gpu_sections;
+
 typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
     __llvm_gcov_init_func_struct {
 #define COVINIT_FUNC(Type, LLVMType, Name, Initializer) Type Name;
@@ -173,8 +178,8 @@ void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
  * perform the counter update. \c Uniform is an optional counter tracking the
  * number of uniform.
  */
-void __llvm_profile_instrument_gpu(uint64_t *Counter, uint64_t *Uniform,
-                                   uint64_t Step);
+void INSTR_PROF_INSTRUMENT_GPU_FUNC(uint64_t *Counter, uint64_t *Uniform,
+                                    uint64_t Step);
 
 /*!
  * \brief Write instrumentation data to the current file.

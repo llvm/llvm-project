@@ -156,8 +156,8 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-LABEL: kernel_caller_byval:
 ; FLATSCR:       ; %bb.0:
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
-; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
+; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0

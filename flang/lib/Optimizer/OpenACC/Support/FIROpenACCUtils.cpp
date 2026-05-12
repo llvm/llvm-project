@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -55,20 +56,12 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
   while (v && (defOp = v.getDefiningOp()) && iterate) {
     iterate =
         llvm::TypeSwitch<mlir::Operation *, bool>(defOp)
-            .Case([&v](mlir::ViewLikeOpInterface op) {
-              v = op.getViewSource();
-              return true;
-            })
             .Case([&v](fir::ReboxOp op) {
               v = op.getBox();
               return true;
             })
             .Case([&v](fir::EmboxOp op) {
               v = op.getMemref();
-              return true;
-            })
-            .Case([&v](fir::ConvertOp op) {
-              v = op.getValue();
               return true;
             })
             .Case([&v](fir::LoadOp op) {
@@ -147,6 +140,10 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
                                               : "";
               }
               return false;
+            })
+            .Case([&v](mlir::ViewLikeOpInterface op) {
+              v = op.getViewSource();
+              return true;
             })
             .Default([](mlir::Operation *) { return false; });
   }
@@ -229,6 +226,7 @@ static std::string getBoundsString(llvm::ArrayRef<Value> bounds) {
 }
 
 static std::string getRecipeName(mlir::acc::RecipeKind kind, Type type,
+                                 mlir::acc::VariableInfoAttr varInfo,
                                  const fir::KindMapping &kindMap,
                                  llvm::ArrayRef<Value> bounds,
                                  mlir::acc::ReductionOperator reductionOp =
@@ -256,11 +254,19 @@ static std::string getRecipeName(mlir::acc::RecipeKind kind, Type type,
     break;
   }
 
+  if (auto fortranVarInfo =
+          mlir::dyn_cast_if_present<fir::OpenACCFortranVariableInfoAttr>(
+              varInfo))
+    if (fortranVarInfo.getMayBeOptional())
+      prefixOS << "_optional";
+
   if (!bounds.empty())
     prefixOS << getBoundsString(bounds);
 
   return fir::getTypeAsString(type, kindMap, prefixOS.str());
 }
+
+using MappableValue = mlir::TypedValue<mlir::acc::MappableType>;
 
 std::string fir::acc::getRecipeName(mlir::acc::RecipeKind kind, Type type,
                                     Value var, llvm::ArrayRef<Value> bounds,
@@ -268,7 +274,13 @@ std::string fir::acc::getRecipeName(mlir::acc::RecipeKind kind, Type type,
   auto kindMap = var && var.getDefiningOp()
                      ? fir::getKindMapping(var.getDefiningOp())
                      : fir::KindMapping(type.getContext());
-  return ::getRecipeName(kind, type, kindMap, bounds, reductionOp);
+  mlir::acc::VariableInfoAttr varInfo;
+  if (var)
+    if (auto mappableTy =
+            mlir::dyn_cast<mlir::acc::MappableType>(var.getType()))
+      varInfo =
+          mappableTy.genPrivateVariableInfo(mlir::cast<MappableValue>(var));
+  return ::getRecipeName(kind, type, varInfo, kindMap, bounds, reductionOp);
 }
 
 /// Map acc::ReductionOperator to arith::AtomicRMWKind for identity value
@@ -397,8 +409,6 @@ static void addRecipeBoundsArgs(llvm::SmallVector<mlir::Value> &bounds,
   }
 }
 
-using MappableValue = mlir::TypedValue<mlir::acc::MappableType>;
-
 // Generate the combiner or copy region block and block arguments and return the
 // source and destination entities.
 static std::pair<MappableValue, MappableValue>
@@ -420,7 +430,7 @@ genRecipeCombinerOrCopyRegion(fir::FirOpBuilder &builder, mlir::Location loc,
 template <typename RecipeOp>
 static RecipeOp genRecipeOp(
     fir::FirOpBuilder &builder, mlir::ModuleOp mod, llvm::StringRef recipeName,
-    mlir::Location loc, mlir::Type ty,
+    mlir::Location loc, mlir::Type ty, mlir::acc::VariableInfoAttr varInfo,
     llvm::SmallVector<mlir::Value> &dataOperationBounds, bool allConstantBound,
     mlir::acc::ReductionOperator op = mlir::acc::ReductionOperator::AccNone) {
   mlir::OpBuilder modBuilder(mod.getBodyRegion());
@@ -459,13 +469,14 @@ static RecipeOp genRecipeOp(
   auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
   assert(mappableTy &&
          "Expected that all variable types are considered mappable");
+  auto initArg = mlir::cast<MappableValue>(initBlock->getArgument(0));
   bool needsDestroy = false;
   llvm::SmallVector<mlir::Value> initBounds =
       getRecipeBounds(builder, loc, dataOperationBounds,
                       initBlock->getArguments().drop_front(1));
   mlir::Value retVal = mappableTy.generatePrivateInit(
-      builder, loc, mlir::cast<MappableValue>(initBlock->getArgument(0)),
-      initName, initBounds, initValue, needsDestroy);
+      builder, loc, initArg, initName, initBounds, initValue, varInfo,
+      needsDestroy);
   mlir::acc::YieldOp::create(builder, loc, retVal);
   // Create destroy region and generate destruction if requested.
   if (needsDestroy) {
@@ -491,7 +502,7 @@ static RecipeOp genRecipeOp(
         getRecipeBounds(builder, loc, dataOperationBounds,
                         destroyBlock->getArguments().drop_front(2));
     [[maybe_unused]] bool success = mappableTy.generatePrivateDestroy(
-        builder, loc, destroyBlock->getArgument(1), destroyBounds);
+        builder, loc, destroyBlock->getArgument(1), destroyBounds, varInfo);
     assert(success && "failed to generate destroy region");
     mlir::acc::TerminatorOp::create(builder, loc);
   }
@@ -500,31 +511,44 @@ static RecipeOp genRecipeOp(
 
 mlir::SymbolRefAttr
 fir::acc::createOrGetPrivateRecipe(mlir::OpBuilder &mlirBuilder,
-                                   mlir::Location loc, mlir::Type ty,
+                                   mlir::Location loc, mlir::Value var,
                                    llvm::SmallVector<mlir::Value> &bounds) {
+  mlir::Type ty = var.getType();
   mlir::ModuleOp mod =
       mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
   fir::FirOpBuilder builder(mlirBuilder, mod);
-  std::string recipeName = ::getRecipeName(
-      mlir::acc::RecipeKind::private_recipe, ty, builder.getKindMap(), bounds);
+  auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
+  assert(mappableTy &&
+         "Expected that all variable types are considered mappable");
+  mlir::acc::VariableInfoAttr varInfo =
+      mappableTy.genPrivateVariableInfo(mlir::cast<MappableValue>(var));
+  std::string recipeName =
+      ::getRecipeName(mlir::acc::RecipeKind::private_recipe, ty, varInfo,
+                      builder.getKindMap(), bounds);
   if (auto recipe = mod.lookupSymbol<mlir::acc::PrivateRecipeOp>(recipeName))
     return mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName());
 
   mlir::OpBuilder::InsertionGuard guard(builder);
   bool allConstantBound = fir::acc::areAllBoundsConstant(bounds);
   auto recipe = genRecipeOp<mlir::acc::PrivateRecipeOp>(
-      builder, mod, recipeName, loc, ty, bounds, allConstantBound);
+      builder, mod, recipeName, loc, ty, varInfo, bounds, allConstantBound);
   return mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName());
 }
 
 mlir::SymbolRefAttr fir::acc::createOrGetFirstprivateRecipe(
-    mlir::OpBuilder &mlirBuilder, mlir::Location loc, mlir::Type ty,
+    mlir::OpBuilder &mlirBuilder, mlir::Location loc, mlir::Value var,
     llvm::SmallVector<mlir::Value> &dataBoundOps) {
+  mlir::Type ty = var.getType();
   mlir::ModuleOp mod =
       mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
   fir::FirOpBuilder builder(mlirBuilder, mod);
+  auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
+  assert(mappableTy &&
+         "Expected that all variable types are considered mappable");
+  mlir::acc::VariableInfoAttr varInfo =
+      mappableTy.genPrivateVariableInfo(mlir::cast<MappableValue>(var));
   std::string recipeName =
-      ::getRecipeName(mlir::acc::RecipeKind::firstprivate_recipe, ty,
+      ::getRecipeName(mlir::acc::RecipeKind::firstprivate_recipe, ty, varInfo,
                       builder.getKindMap(), dataBoundOps);
   if (auto recipe =
           mod.lookupSymbol<mlir::acc::FirstprivateRecipeOp>(recipeName))
@@ -533,33 +557,37 @@ mlir::SymbolRefAttr fir::acc::createOrGetFirstprivateRecipe(
   mlir::OpBuilder::InsertionGuard guard(builder);
   bool allConstantBound = fir::acc::areAllBoundsConstant(dataBoundOps);
   auto recipe = genRecipeOp<mlir::acc::FirstprivateRecipeOp>(
-      builder, mod, recipeName, loc, ty, dataBoundOps, allConstantBound);
+      builder, mod, recipeName, loc, ty, varInfo, dataBoundOps,
+      allConstantBound);
   auto [source, destination] = genRecipeCombinerOrCopyRegion(
       builder, loc, ty, recipe.getCopyRegion(), dataBoundOps, allConstantBound);
   llvm::SmallVector<mlir::Value> copyBounds =
       getRecipeBounds(builder, loc, dataBoundOps,
                       recipe.getCopyRegion().getArguments().drop_front(2));
 
-  auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
-  assert(mappableTy &&
-         "Expected that all variable types are considered mappable");
-  [[maybe_unused]] bool success =
-      mappableTy.generateCopy(builder, loc, source, destination, copyBounds);
+  [[maybe_unused]] bool success = mappableTy.generateCopy(
+      builder, loc, source, destination, copyBounds, varInfo);
   assert(success && "failed to generate copy");
   mlir::acc::TerminatorOp::create(builder, loc);
   return mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName());
 }
 
 mlir::SymbolRefAttr fir::acc::createOrGetReductionRecipe(
-    mlir::OpBuilder &mlirBuilder, mlir::Location loc, mlir::Type ty,
+    mlir::OpBuilder &mlirBuilder, mlir::Location loc, mlir::Value var,
     mlir::acc::ReductionOperator op,
     llvm::SmallVector<mlir::Value> &dataBoundOps,
     mlir::Attribute fastMathAttr) {
+  mlir::Type ty = var.getType();
   mlir::ModuleOp mod =
       mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
   fir::FirOpBuilder builder(mlirBuilder, mod);
+  auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
+  assert(mappableTy &&
+         "Expected that all variable types are considered mappable");
+  mlir::acc::VariableInfoAttr varInfo =
+      mappableTy.genPrivateVariableInfo(mlir::cast<MappableValue>(var));
   std::string recipeName =
-      ::getRecipeName(mlir::acc::RecipeKind::reduction_recipe, ty,
+      ::getRecipeName(mlir::acc::RecipeKind::reduction_recipe, ty, varInfo,
                       builder.getKindMap(), dataBoundOps, op);
   if (auto recipe = mod.lookupSymbol<mlir::acc::ReductionRecipeOp>(recipeName))
     return mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName());
@@ -567,7 +595,8 @@ mlir::SymbolRefAttr fir::acc::createOrGetReductionRecipe(
   mlir::OpBuilder::InsertionGuard guard(builder);
   bool allConstantBound = fir::acc::areAllBoundsConstant(dataBoundOps);
   auto recipe = genRecipeOp<mlir::acc::ReductionRecipeOp>(
-      builder, mod, recipeName, loc, ty, dataBoundOps, allConstantBound, op);
+      builder, mod, recipeName, loc, ty, varInfo, dataBoundOps,
+      allConstantBound, op);
 
   auto [dest, source] = genRecipeCombinerOrCopyRegion(
       builder, loc, ty, recipe.getCombinerRegion(), dataBoundOps,
@@ -576,9 +605,6 @@ mlir::SymbolRefAttr fir::acc::createOrGetReductionRecipe(
       getRecipeBounds(builder, loc, dataBoundOps,
                       recipe.getCombinerRegion().getArguments().drop_front(2));
 
-  auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
-  assert(mappableTy &&
-         "Expected that all variable types are considered mappable");
   [[maybe_unused]] bool success = mappableTy.generateCombiner(
       builder, loc, dest, source, combinerBounds, op, fastMathAttr);
   assert(success && "failed to generate combiner");
@@ -599,21 +625,25 @@ mlir::Value fir::acc::getOriginalDef(mlir::Value value, bool stripDeclare) {
       continue;
     }
 
+    if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
+      if (stripDeclare) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+      return currentValue;
+    }
+
+    if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
+      if (stripDeclare) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+      return currentValue;
+    }
+
     if (auto viewLike = mlir::dyn_cast<mlir::ViewLikeOpInterface>(definingOp)) {
       currentValue = viewLike.getViewSource();
       continue;
-    }
-
-    if (stripDeclare) {
-      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
-        currentValue = declareOp.getMemref();
-        continue;
-      }
-
-      if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
-        currentValue = declareOp.getMemref();
-        continue;
-      }
     }
     break;
   }

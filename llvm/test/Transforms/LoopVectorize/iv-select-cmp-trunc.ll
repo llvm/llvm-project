@@ -214,11 +214,11 @@ entry:
   %cmp.sgt = icmp sgt i32 %n, 0
   br i1 %cmp.sgt, label %for.body.preheader, label %exit
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv = phi i64 [ 0, %for.body.preheader ], [ %inc, %for.body ]
   %rdx = phi i32 [ 331, %for.body.preheader ], [ %spec.select, %for.body ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -230,7 +230,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %inc, %wide.trip.count
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                            ; preds = %for.body, %entry
+exit:
   %rdx.lcssa = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
   ret i32 %rdx.lcssa
 }
@@ -362,7 +362,7 @@ define i32 @select_icmp_const_truncated_iv_const_exit(ptr %a) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %rdx = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -374,7 +374,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 20000
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                           ; preds = %for.body
+exit:
   ret i32 %spec.select
 }
 
@@ -505,7 +505,7 @@ define i32 @select_fcmp_max_valid_const_ub(ptr %a) {
 entry:
   br label %for.body
 
-for.body:                                        ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %rdx = phi i32 [ -1, %entry ], [ %spec.select, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
@@ -517,7 +517,7 @@ for.body:                                        ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 2147483648
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                            ; preds = %for.body
+exit:
   ret i32 %spec.select
 }
 
@@ -619,8 +619,7 @@ define i32 @select_icmp_truncated_unsigned_iv_range(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 3
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX4:%.*]] = add i64 2147483646, [[INDEX]]
-; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX4]] to i32
+; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
 ; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i32 [[TMP3]], 3
@@ -656,7 +655,7 @@ define i32 @select_icmp_truncated_unsigned_iv_range(ptr %a) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 2147483646, %entry ], [ %inc, %for.body ]
   %rdx = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -668,7 +667,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 4294967294
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i32 %spec.select
 }
 
@@ -918,7 +917,7 @@ entry:
   %cmp.sgt = icmp sgt i64 %n, 0
   br i1 %cmp.sgt, label %for.body, label %exit
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %rdx = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -930,7 +929,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body, %entry
+exit:
   %rdx.lcssa = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
   ret i32 %rdx.lcssa
 }
@@ -1182,11 +1181,11 @@ entry:
   %cmp.not = icmp eq i32 %n, 0
   br i1 %cmp.not, label %exit, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv = phi i64 [ 0, %for.body.preheader ], [ %inc, %for.body ]
   %rdx = phi i32 [ 331, %for.body.preheader ], [ %spec.select, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -1198,7 +1197,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %inc, %wide.trip.count
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body, %entry
+exit:
   %rdx.lcssa = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
   ret i32 %rdx.lcssa
 }
@@ -1322,8 +1321,7 @@ define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = add i64 [[IV]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX4:%.*]] = add i64 4294967294, [[INDEX]]
-; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[OFFSET_IDX4]] to i32
+; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP7]], 2
@@ -1370,7 +1368,7 @@ define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 4294967294, %entry ], [ %inc, %for.body ]
   %rdx = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -1382,7 +1380,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 9223372036854775806
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i32 %spec.select
 }
 
@@ -1420,7 +1418,7 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF4IC1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-VF4IC1:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i32 0
+; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP6]], <4 x i1> [[TMP5]], i32 [[TMP8]])
 ; CHECK-VF4IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1512,7 +1510,7 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF4IC4-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i32 0
+; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP6]], <4 x i1> [[TMP5]], i32 [[TMP8]])
 ; CHECK-VF4IC4-NEXT:    [[TMP35:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP29]], <4 x i1> [[TMP25]], i32 [[TMP9]])
 ; CHECK-VF4IC4-NEXT:    [[TMP36:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP30]], <4 x i1> [[TMP26]], i32 [[TMP35]])
@@ -1638,7 +1636,7 @@ entry:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %rdx = phi i32 [ %start, %entry ], [ %cond, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -1652,7 +1650,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %wide.trip.count
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i32 %cond
 }
 
@@ -1858,7 +1856,7 @@ define i32 @not_vectorized_select_fcmp_invalid_const_ub(ptr %a) {
 entry:
   br label %for.body
 
-for.body:                                        ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %rdx = phi i32 [ -1, %entry ], [ %spec.select, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
@@ -1870,7 +1868,7 @@ for.body:                                        ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, 2147483649
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                            ; preds = %for.body
+exit:
   ret i32 %spec.select
 }
 
@@ -1912,7 +1910,7 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF4IC1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-VF4IC1:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[BROADCAST_SPLAT]], i32 0
+; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP6]], <4 x i1> [[TMP5]], i16 [[TMP8]])
 ; CHECK-VF4IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
@@ -2010,7 +2008,7 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF4IC4-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[BROADCAST_SPLAT]], i32 0
+; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP6]], <4 x i1> [[TMP5]], i16 [[TMP8]])
 ; CHECK-VF4IC4-NEXT:    [[TMP35:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP29]], <4 x i1> [[TMP25]], i16 [[TMP9]])
 ; CHECK-VF4IC4-NEXT:    [[TMP36:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP30]], <4 x i1> [[TMP26]], i16 [[TMP35]])
@@ -2145,11 +2143,11 @@ entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body.preheader, label %exit
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv = phi i64 [ 0, %for.body.preheader ], [ %inc, %for.body ]
   %rdx = phi i16 [ %start, %for.body.preheader ], [ %cond, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -2163,7 +2161,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %inc, %wide.trip.count
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body, %entry
+exit:
   %rdx.0.lcssa = phi i16 [ %start, %entry ], [ %cond, %for.body ]
   ret i16 %rdx.0.lcssa
 }

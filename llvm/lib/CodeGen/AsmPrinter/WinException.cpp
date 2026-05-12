@@ -95,7 +95,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   // If we're not using CFI, we don't want the CFI or the personality, but we
   // might want EH tables if we had EH pads.
-  if (!Asm->MAI->usesWindowsCFI()) {
+  if (!Asm->MAI.usesWindowsCFI()) {
     if (Per == EHPersonality::MSVC_X86SEH && !hasEHFunclets) {
       // If this is 32-bit SEH and we don't have any funclets (really invokes),
       // make sure we emit the parent offset label. Some unreferenced filter
@@ -341,7 +341,7 @@ int WinException::getFrameIndexOffset(int FrameIndex,
                                       const WinEHFuncInfo &FuncInfo) {
   const TargetFrameLowering &TFI = *Asm->MF->getSubtarget().getFrameLowering();
   Register UnusedReg;
-  if (Asm->MAI->usesWindowsCFI()) {
+  if (Asm->MAI.usesWindowsCFI()) {
     StackOffset Offset =
         TFI.getFrameIndexReferencePreferSP(*Asm->MF, FrameIndex, UnusedReg,
                                            /*IgnoreSPUpdates*/ true);
@@ -685,7 +685,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   // second check further below) can be removed if MS C++ unwinding is
   // implemented for ARM, when test/CodeGen/ARM/Windows/wineh-basic.ll
   // passes without the check.
-  if (Asm->MAI->usesWindowsCFI() &&
+  if (Asm->MAI.usesWindowsCFI() &&
       FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max())
     UnwindHelpOffset =
         getFrameIndexOffset(FuncInfo.UnwindHelpFrameIdx, FuncInfo);
@@ -748,7 +748,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   AddComment("IPToStateXData");
   OS.emitValue(create32bitRef(IPToStateXData), 4);
 
-  if (Asm->MAI->usesWindowsCFI() &&
+  if (Asm->MAI.usesWindowsCFI() &&
       FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max()) {
     AddComment("UnwindHelp");
     OS.emitInt32(UnwindHelpOffset);

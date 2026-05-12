@@ -474,7 +474,7 @@ define void @exit_conditions_combined_in_single_branch(ptr noalias dereferenceab
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
   %data = load i16, ptr %st.addr, align 2
@@ -488,7 +488,7 @@ for.body:                                         ; preds = %for.body, %entry
   %or.cond = select i1 %ee.cond, i1 true, i1 %counted.cond
   br i1 %or.cond, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret void
 }
 

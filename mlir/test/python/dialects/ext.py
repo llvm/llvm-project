@@ -3,6 +3,7 @@
 from mlir.ir import *
 from mlir.dialects import arith
 from mlir.dialects.ext import *
+from mlir.rewrite import *
 from mlir import ir
 from typing import Any, Optional, Sequence, TypeVar, Union
 import sys
@@ -23,12 +24,12 @@ def testMyInt():
 
     class ConstantOp(MyInt.Operation, name="constant"):
         value: IntegerAttr
-        cst: Result[i32] = result(infer_type=True)
+        cst: Result[i32] = infer_result()
 
     class AddOp(Operation, dialect=MyInt, name="add"):
         lhs: Operand[i32]
         rhs: Operand[i32]
-        res: Result[i32] = result(infer_type=True)
+        res: Result[i32] = infer_result()
 
     # CHECK: irdl.dialect @myint {
     # CHECK:   irdl.operation @constant {
@@ -444,7 +445,7 @@ def testExtDialectWithRegion():
 
             with InsertionPoint(if_.then.blocks[0]):
                 v = arith.constant(i32, 2)
-                YieldOp(v)
+                yield_ = YieldOp(v)
 
             with InsertionPoint(if_.else_.blocks[0]):
                 v = arith.constant(i32, 3)
@@ -472,6 +473,25 @@ def testExtDialectWithRegion():
         # CHECK:     }) : () -> ()
         # CHECK: }
         print(module)
+
+        # CHECK: True
+        print(yield_.has_trait(IsTerminatorTrait))
+        # CHECK: False
+        print(yield_.has_trait(NoTerminatorTrait))
+        # CHECK: True
+        print(yield_.has_trait(ParentIsIfTrait))
+        # CHECK: False
+        print(nt.operation.has_trait(IsTerminatorTrait))
+        # CHECK: True
+        print(nt.operation.has_trait(NoTerminatorTrait))
+        # CHECK: False
+        print(nt.operation.has_trait(ParentIsIfTrait))
+        # CHECK: False
+        print(NoTermOp.has_trait(IsTerminatorTrait))
+        # CHECK: True
+        print(NoTermOp.has_trait(NoTerminatorTrait))
+        # CHECK: False
+        print(NoTermOp.has_trait(ParentIsIfTrait))
 
         # CHECK: %c2_i32 = arith.constant 2 : i32
         print(if_.then.blocks[0])
@@ -556,9 +576,9 @@ def testExtDialectWithType():
         arr: Result[Array]
 
     class MakeArray3Op(TestType.Operation, name="make_array3"):
-        arr: Result[Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]] = result(
-            infer_type=True
-        )
+        arr: Result[
+            Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]
+        ] = infer_result()
 
     with Context(), Location.unknown():
         TestType.load()
@@ -719,7 +739,7 @@ def testExtDialectWithInvalidOp():
         class InferTypeBeforePositionalOp(
             TestInvalid.Operation, name="infer_before_pos"
         ):
-            res: Result[IntegerType[32]] = result(infer_type=True)
+            res: Result[IntegerType[32]] = infer_result()
             a: Operand[IntegerType[32]]
 
     except ValueError as e:
@@ -734,7 +754,49 @@ def testExtDialectWithInvalidOp():
             a: Operand[IntegerType[32]] = None
 
     except ValueError as e:
-        # CHECK: only optional operand can be a keyword parameter
+        # CHECK: only optional operand can be set to None
+        print(e)
+
+    try:
+
+        class AssignNoneOnnAttributeOp(
+            TestInvalid.Operation, name="assign_none_on_attribute"
+        ):
+            a: IntegerAttr = None
+
+    except ValueError as e:
+        # CHECK: only optional attribute can be set to None
+        print(e)
+
+    try:
+
+        class CannotInferTypeOp(TestInvalid.Operation, name="cannot_infer_type"):
+            a: Result[IntegerType] = infer_result()
+
+    except TypeError as e:
+        # CHECK: unsupported type for inferring
+        print(e)
+
+    try:
+
+        class WrongFieldSpecifierOp(
+            TestInvalid.Operation, name="wrong_field_specifier"
+        ):
+            a: Result[IntegerType] = operand()
+
+    except TypeError as e:
+        # CHECK: only `result` field specifier can be used for result fields
+        print(e)
+
+    try:
+
+        class WrongFieldSpecifierOp2(
+            TestInvalid.Operation, name="wrong_field_specifier2"
+        ):
+            a: IntegerAttr = operand()
+
+    except TypeError as e:
+        # CHECK: only `attribute` field specifier can be used for attribute fields
         print(e)
 
 
@@ -776,4 +838,175 @@ def testExtDialectWithAttrInOp():
         assert module.operation.verify()
         # CHECK: "ext_attr_in_op.op_with_attr"() {a = 42 : i32, b = i32} : () -> ()
         # CHECK: "ext_attr_in_op.op_with_attr"() {a = "hello", b = i64} : () -> ()
+        print(module)
+
+
+# CHECK: TEST: testExtDialectWithInterfaces
+@run
+def testExtDialectWithInterfaces():
+    class TestIface(Dialect, name="ext_iface"):
+        pass
+
+    class NoMemoryEffectModel(ir.MemoryEffectsOpInterface):
+        @staticmethod
+        def get_effects(op, effects):
+            pass
+
+    class AlwaysSpeculatableModel(ir.ConditionallySpeculatable):
+        @staticmethod
+        def get_speculatability(op):
+            print("get_speculatability opview:", type(op).__name__)
+            return ir.Speculatability.Speculatable
+
+    class PureOp(TestIface.Operation, name="pure"):
+        pass
+
+    with Context(), Location.unknown():
+        TestIface.load()
+        NoMemoryEffectModel.attach(PureOp.OPERATION_NAME)
+        AlwaysSpeculatableModel.attach(PureOp.OPERATION_NAME)
+
+        memory_static = ir.MemoryEffectsOpInterface(PureOp)
+        spec_static = ir.ConditionallySpeculatable(PureOp)
+        # CHECK: static memory iface: MemoryEffectsOpInterface
+        print("static memory iface:", type(memory_static).__name__)
+        # CHECK: static spec iface: ConditionallySpeculatable
+        print("static spec iface:", type(spec_static).__name__)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            pure = PureOp()
+
+        memory_iface = ir.MemoryEffectsOpInterface(pure)
+        spec_iface = ir.ConditionallySpeculatable(pure)
+        # CHECK: instance memory iface: MemoryEffectsOpInterface
+        print("instance memory iface:", type(memory_iface).__name__)
+        # CHECK: instance spec iface: ConditionallySpeculatable
+        print("instance spec iface:", type(spec_iface).__name__)
+        # CHECK: get_speculatability opview: PureOp
+        # CHECK: speculatability equals: True
+        print(
+            "speculatability equals:",
+            spec_iface.getSpeculatability() == ir.Speculatability.Speculatable,
+        )
+
+        try:
+            spec_static.getSpeculatability()
+        except TypeError as e:
+            # CHECK: static spec query error: Cannot query speculatability on a static interface
+            print("static spec query error:", e)
+
+
+# CHECK: TEST: testExtDialectWithPure
+@run
+def testExtDialectWithPure():
+    class TestPure(Dialect, name="ext_pure"):
+        pass
+
+    class PureOp(TestPure.Operation, name="pure", traits=[Pure]):
+        a: Operand[IntegerType[32]]
+        b: Operand[IntegerType[32]]
+        res: Result[IntegerType[32]] = infer_result()
+
+    class NoPureOp(TestPure.Operation, name="no_pure"):
+        a: Operand[IntegerType[32]]
+        b: Operand[IntegerType[32]]
+        res: Result[IntegerType[32]] = infer_result()
+
+    with Context(), Location.unknown():
+        TestPure.load()
+
+        i32 = IntegerType.get(32)
+        module = Module.create()
+        with InsertionPoint(module.body):
+            c1 = arith.constant(i32, 1)
+            c2 = arith.constant(i32, 2)
+            c3 = arith.constant(i32, 3)
+            c4 = arith.constant(i32, 4)
+            p1 = PureOp(c1, c2)
+            p2 = PureOp(c2, c3)
+            p3 = PureOp(c1, c4)
+            np = NoPureOp(p1, p2)
+
+        assert module.operation.verify()
+        # CHECK: module {
+        # CHECK:   %c1_i32 = arith.constant 1 : i32
+        # CHECK:   %c2_i32 = arith.constant 2 : i32
+        # CHECK:   %c3_i32 = arith.constant 3 : i32
+        # CHECK:   %c4_i32 = arith.constant 4 : i32
+        # CHECK:   %[[P0:.*]] = "ext_pure.pure"(%c1_i32, %c2_i32) : (i32, i32) -> i32
+        # CHECK:   %[[P1:.*]] = "ext_pure.pure"(%c2_i32, %c3_i32) : (i32, i32) -> i32
+        # CHECK:   %[[P2:.*]] = "ext_pure.pure"(%c1_i32, %c4_i32) : (i32, i32) -> i32
+        # CHECK:   %[[NP:.*]] = "ext_pure.no_pure"(%[[P0]], %[[P1]]) : (i32, i32) -> i32
+        # CHECK: }
+        print(module)
+
+        patterns = RewritePatternSet()
+        apply_patterns_and_fold_greedily(module, patterns.freeze())
+        # CHECK: module {
+        # CHECK:   %c1_i32 = arith.constant 1 : i32
+        # CHECK:   %c2_i32 = arith.constant 2 : i32
+        # CHECK:   %c3_i32 = arith.constant 3 : i32
+        # CHECK-NOT: %c4_i32 = arith.constant 4 : i32
+        # CHECK:   %[[P0_FOLDED:.*]] = "ext_pure.pure"(%c1_i32, %c2_i32) : (i32, i32) -> i32
+        # CHECK:   %[[P1_FOLDED:.*]] = "ext_pure.pure"(%c2_i32, %c3_i32) : (i32, i32) -> i32
+        # CHECK-NOT: "ext_pure.pure"(%c1_i32, %c4_i32)
+        # CHECK:   %[[NP_FOLDED:.*]] = "ext_pure.no_pure"(%[[P0_FOLDED]], %[[P1_FOLDED]]) : (i32, i32) -> i32
+        # CHECK: }
+        print(module)
+
+
+@run
+def testExtDialectFieldSpecifiers():
+    class TestFieldSpecifiers(Dialect, name="ext_field_specifiers"):
+        pass
+
+    class OperandSpecifierOp(TestFieldSpecifiers.Operation, name="operand_specifier"):
+        a: Operand[IntegerType[32]] = operand()
+        b: Optional[Operand[IntegerType[32]]] = None
+        c: Operand[IntegerType[32]] = operand(kw_only=True)
+
+    class ResultSpecifierOp(TestFieldSpecifiers.Operation, name="result_specifier"):
+        a: Result[IntegerType[32]] = result()
+        b: Result[IntegerType[16]] = infer_result()
+        c: Result[IntegerType] = result(
+            default_factory=lambda: IntegerType.get_signless(8)
+        )
+        d: Sequence[Result[IntegerType]] = result(default_factory=list)
+        e: Result[IntegerType[32]] = result(kw_only=True)
+
+    class AttributeSpecifierOp(
+        TestFieldSpecifiers.Operation, name="attribute_specifier"
+    ):
+        a: IntegerAttr = attribute()
+        b: IntegerAttr = attribute(
+            default_factory=lambda: IntegerAttr.get(IntegerType.get_signless(32), 42)
+        )
+        c: StringAttr["a"] | StringAttr["b"] = attribute(
+            default_factory=lambda: StringAttr.get("a"), kw_only=True
+        )
+        d: IntegerAttr = attribute(kw_only=True)
+
+    with Context(), Location.unknown():
+        TestFieldSpecifiers.load()
+
+        # CHECK: (self, /, a, *, b=None, c, loc=None, ip=None)
+        print(OperandSpecifierOp.__init__.__signature__)
+        # CHECK: (self, /, a, *, b=None, c=None, d=None, e, loc=None, ip=None)
+        print(ResultSpecifierOp.__init__.__signature__)
+        # CHECK: (self, /, a, *, b=None, c=None, d, loc=None, ip=None)
+        print(AttributeSpecifierOp.__init__.__signature__)
+
+        module = Module.create()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
+            one = arith.constant(i32, 1)
+            OperandSpecifierOp(one, c=one)
+            ResultSpecifierOp(i32, e=i32)
+            AttributeSpecifierOp(IntegerAttr.get(i32, 43), d=IntegerAttr.get(i32, 100))
+
+        assert module.operation.verify()
+        # CHECK: "ext_field_specifiers.operand_specifier"(%c1_i32, %c1_i32) {operandSegmentSizes = array<i32: 1, 0, 1>} : (i32, i32) -> ()
+        # CHECK: %0:4 = "ext_field_specifiers.result_specifier"() {resultSegmentSizes = array<i32: 1, 1, 1, 0, 1>} : () -> (i32, i16, i8, i32)
+        # CHECK: "ext_field_specifiers.attribute_specifier"() {a = 43 : i32, b = 42 : i32, c = "a", d = 100 : i32} : () -> ()
         print(module)
