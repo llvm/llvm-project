@@ -1942,15 +1942,19 @@ def IncImm : SDNodeXForm<imm, [{
                                      N->getValueType(0));
 }]>;
 
-def SDT_RISCVBuildPairGPRVec : SDTypeProfile<1, 2, [SDTCisSubVecOfVec<1, 0>,
+def SDT_RISCVBuildPairGPRVec : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                    SDTCisVT<1, i32>,
                                                     SDTCisSameAs<1, 2>]>;
-def SDT_RISCVSplitGPRVec : SDTypeProfile<2, 1, [SDTCisSubVecOfVec<0, 2>,
-                                                SDTCisSameAs<0, 1>]>;
+def SDT_RISCVSplitGPRVec : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
+                                                SDTCisSameAs<0, 1>,
+                                                SDTCisVec<2>]>;
 
-// These nodes are used to handle 64-bit vectors on R32. They're equivalent to
-// concat_vectors and a pair of extract_subvectors. We're using custom nodes to
-// prevent some generic DAG combines from pushing the extract_subvectors
-// through 64-bit operations. These may be temporary.
+// These nodes are used to handle 64-bit vector arguments and returns on RV32.
+// One side is a pair of i32 GPRs, the other is a 64-bit vector.
+// TOD: We might be able to use 32-bit vectors with concat_vectors/build_vector
+// and extract_subvector/extract_vectorelt instead. Using custom nodes prevents
+// 64-bit vector aithmetic operations in our lit tests from being split until
+// we can tune some generic combines.
 def RISCVBuildPairGPRVec : RVSDNode<"BuildPairGPRVec",
                                     SDT_RISCVBuildPairGPRVec>;
 def RISCVSplitGPRVec     : RVSDNode<"SplitGPRVec", SDT_RISCVSplitGPRVec>;
