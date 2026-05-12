@@ -10675,7 +10675,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
 
   LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
-  MachineInstrBuilder ExtLHS{}, ExtRHS{};
+  MachineInstrBuilder ExtLHS{}, ExtRHS{}, Shift{};
   if (MI.getOpcode() == TargetOpcode::G_SMULFIX) {
     ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
     ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
@@ -10685,7 +10685,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
   }
 
   auto Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS);
-  auto Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
+  if (MI.getOpcode() == TargetOpcode::G_SMULFIX)
+    Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
+  else
+    Shift = MIRBuilder.buildLShr(WideTy, Mul, ShiftAmt);
+
   MIRBuilder.buildTrunc(Dst, Shift);
 
   MI.eraseFromParent();

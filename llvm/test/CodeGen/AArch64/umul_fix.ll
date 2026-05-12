@@ -13,7 +13,7 @@ define i32 @func(i32 %x, i32 %y) nounwind {
 ; CHECK-GI-LABEL: func:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    umull x8, w0, w1
-; CHECK-GI-NEXT:    asr x0, x8, #2
+; CHECK-GI-NEXT:    lsr x0, x8, #2
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-GI-NEXT:    ret
   %tmp = call i32 @llvm.umul.fix.i32(i32 %x, i32 %y, i32 2)
@@ -45,7 +45,7 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; CHECK-GI-NEXT:    and w8, w0, #0xf
 ; CHECK-GI-NEXT:    and w9, w1, #0xf
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    sbfx w0, w8, #2, #6
+; CHECK-GI-NEXT:    lsr w0, w8, #2
 ; CHECK-GI-NEXT:    ret
   %tmp = call i4 @llvm.umul.fix.i4(i4 %x, i4 %y, i32 2)
   ret i4 %tmp
