@@ -891,13 +891,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                          MVT::v2bf16, Legal);
 
       for (MVT VT : {MVT::v4bf16, MVT::v8bf16, MVT::v16bf16, MVT::v32bf16})
-        setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FABS,
-                            ISD::FCANONICALIZE},
+        setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG,
+                            ISD::FABS, ISD::FCANONICALIZE},
                            VT, Custom);
 
-      setOperationAction({ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM,
-                          ISD::FMAXIMUMNUM},
-                         {MVT::v2bf16, MVT::v4bf16}, Custom);
+      setOperationAction(
+          {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+          {MVT::v2bf16, MVT::v4bf16}, Custom);
     }
 
     if (Subtarget->hasPackedFP32Ops()) {
