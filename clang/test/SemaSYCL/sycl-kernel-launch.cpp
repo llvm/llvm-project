@@ -324,7 +324,7 @@ namespace bad6 {
 
 // No matching function for call to sycl_kernel_launch; mismatched template parameter kind.
 namespace bad7 {
-  // expected-note@+2 {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  // expected-note@+2 {{candidate template ignored: template argument for non-type template parameter must be an expression}}
   template<int, typename... Ts>
   void sycl_kernel_launch(const char *, Ts...);
   // expected-error@+4 {{no matching function for call to 'sycl_kernel_launch'}}

@@ -828,12 +828,12 @@ bool RegBankLegalizeHelper::lowerSplitBitCount64To32(MachineInstr &MI) {
   // Split 64-bit find-first-bit operations into 32-bit halves:
   //   (ffbh hi:lo)            -> umin(ffbh(hi), uaddsat(ffbh(lo), 32))
   //   (ffbl hi:lo)            -> umin(ffbl(lo), uaddsat(ffbl(hi), 32))
-  //   (ctlz_zero_undef hi:lo) -> umin(ffbh(hi), add(ffbh(lo), 32))
-  //   (cttz_zero_undef hi:lo) -> umin(ffbl(lo), add(ffbl(hi), 32))
+  //   (ctlz_zero_poison hi:lo) -> umin(ffbh(hi), add(ffbh(lo), 32))
+  //   (cttz_zero_poison hi:lo) -> umin(ffbl(lo), add(ffbl(hi), 32))
   unsigned Opc = MI.getOpcode();
 
   // FFBH/FFBL return 0xFFFFFFFF on zero input, using uaddsat to avoid
-  // wrapping. CTLZ/CTTZ guarantee non-zero input (zero_undef), so plain add
+  // wrapping. CTLZ/CTTZ guarantee non-zero input (zero_poison), so plain add
   // is fine.
   unsigned FFBOpc;
   unsigned AddOpc;
@@ -849,12 +849,12 @@ bool RegBankLegalizeHelper::lowerSplitBitCount64To32(MachineInstr &MI) {
     AddOpc = AMDGPU::G_UADDSAT;
     SearchFromMSB = false;
     break;
-  case AMDGPU::G_CTLZ_ZERO_UNDEF:
+  case AMDGPU::G_CTLZ_ZERO_POISON:
     FFBOpc = AMDGPU::G_AMDGPU_FFBH_U32;
     AddOpc = AMDGPU::G_ADD;
     SearchFromMSB = true;
     break;
-  case AMDGPU::G_CTTZ_ZERO_UNDEF:
+  case AMDGPU::G_CTTZ_ZERO_POISON:
     FFBOpc = AMDGPU::G_AMDGPU_FFBL_B32;
     AddOpc = AMDGPU::G_ADD;
     SearchFromMSB = false;

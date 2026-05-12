@@ -2326,10 +2326,10 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
 
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
-  if (!(Pred == ICmpInst::ICMP_EQ &&
-        (match(TrueVal, m_Zero()) && match(FalseVal, m_SignMask()))) ||
-      (Pred == ICmpInst::ICMP_NE &&
-       (match(TrueVal, m_SignMask()) && match(FalseVal, m_Zero()))))
+  if (!((Pred == ICmpInst::ICMP_EQ && match(TrueVal, m_Zero()) &&
+         match(FalseVal, m_SignMask())) ||
+        (Pred == ICmpInst::ICMP_NE && match(TrueVal, m_SignMask()) &&
+         match(FalseVal, m_Zero()))))
     return nullptr;
 
   auto *Ty = A->getType();

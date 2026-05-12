@@ -1346,6 +1346,10 @@ LogicalResult LaunchFuncOp::verify() {
              << "expects types of the cluster dimensions must be the same";
   }
 
+  if (!getAsyncDependencies().empty() && getAsyncObject())
+    return emitOpError(
+        "cannot have both async dependencies and an explicit async object");
+
   return success();
 }
 
