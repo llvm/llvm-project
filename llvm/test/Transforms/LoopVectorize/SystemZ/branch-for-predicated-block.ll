@@ -33,7 +33,7 @@ for.end.loopexit:
   ret void
 
 ; CHECK: Cost of 1 for VF 2: profitable to scalarize   store i32 %sub, ptr %arrayidx, align 4
-; CHECK: Cost of 2 for VF 2: profitable to scalarize   %sub = sub nsw i32 0, %l
+; CHECK: Cost of 2.5 for VF 2: profitable to scalarize   %sub = sub nsw i32 0, %l
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%cmp55> = icmp sgt ir<%l>, ir<0>
 ; CHECK: Cost of 0 for VF 2: vector loop backedge
 }

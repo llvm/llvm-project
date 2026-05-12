@@ -1065,6 +1065,31 @@ LogicalResult GlobalLoadAsyncToLDSOp::verify() {
   return success();
 }
 
+static LogicalResult
+foldGlobalLoadAsyncToLDSConstantMask(GlobalLoadAsyncToLDSOp op,
+                                     PatternRewriter &rewriter) {
+  Value mask = op.getMask();
+  if (!mask)
+    return failure();
+
+  APInt maskValue;
+  if (!matchPattern(mask, m_ConstantInt(&maskValue)))
+    return failure();
+
+  if (maskValue.isZero()) {
+    rewriter.eraseOp(op);
+    return success();
+  }
+
+  rewriter.modifyOpInPlace(op, [&]() { op.getMaskMutable().clear(); });
+  return success();
+}
+
+void GlobalLoadAsyncToLDSOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add(foldGlobalLoadAsyncToLDSConstantMask);
+}
+
 //===----------------------------------------------------------------------===//
 // TransposeLoadOp
 //===----------------------------------------------------------------------===//
