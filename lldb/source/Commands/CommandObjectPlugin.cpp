@@ -309,63 +309,22 @@ private:
                         CommandReturnObject &result,
                         Debugger &requesting_debugger,
                         PluginDomainKind domain) {
-
-    auto PrintEnablement = [&](bool enabled,
-                               const RegisteredPluginInfo &plugin) {
-      result.AppendMessageWithFormatv("  {0} {1, -30} {2}",
-                                      enabled ? "[+]" : "[-]", plugin.name,
-                                      plugin.description);
-    };
-
     for (const llvm::StringRef pattern : patterns) {
       int num_matching = ActOnMatchingPlugins(
           pattern, [&](const PluginNamespace &plugin_namespace,
                        const std::vector<RegisteredPluginInfo> &plugins) {
-            switch (domain) {
-
-            case lldb::ePluginDomainKindGlobal: {
-              result.AppendMessage(plugin_namespace.name);
-              for (auto &plugin : plugins)
-                PrintEnablement(plugin.enabled, plugin);
-              break;
-            }
-            case lldb::ePluginDomainKindDebugger:
-              // Currently enablement status of plugins is not stored inside
-              // debugger instances. If that ever changes we can support
-              // querying enablement here.
-              result.AppendErrorWithFormatv(
-                  "plugin namespace {0} does not support querying enablement "
-                  "in the debugger domain",
-                  plugin_namespace.name);
-              return;
-            case lldb::ePluginDomainKindTarget:
-              if (!plugin_namespace.SupportsDomain(
-                      lldb::ePluginDomainKindTarget)) {
-                result.AppendErrorWithFormatv(
-                    "plugin namespace {0} does not support querying enablement "
-                    "in the target domain",
-                    plugin_namespace.name);
+            result.AppendMessage(plugin_namespace.name);
+            for (auto &plugin : plugins) {
+              auto enabled = PluginManager::IsPluginEnabled(
+                  plugin_namespace, plugin, requesting_debugger, domain);
+              if (llvm::Error E = enabled.takeError()) {
+                result.AppendErrorWithFormatv("{}",
+                                              llvm::toString(std::move(E)));
                 return;
               }
-              auto target = requesting_debugger.GetSelectedTarget();
-
-              // Only instrumentation-runtime plugins support the target domain
-              // currently so we can assume that's the case when querying
-              // enablement.
-              assert(plugin_namespace.name == "instrumentation-runtime");
-              result.AppendMessage(plugin_namespace.name);
-              for (auto &plugin : plugins) {
-                auto enabled =
-                    PluginManager::IsInstrumentationRuntimePluginEnabled(
-                        plugin.name, target, domain);
-                if (llvm::Error E = enabled.takeError()) {
-                  result.AppendErrorWithFormatv("{}",
-                                                llvm::toString(std::move(E)));
-                  continue;
-                }
-                PrintEnablement(*enabled, plugin);
-              }
-              break;
+              result.AppendMessageWithFormatv("  {0} {1, -30} {2}",
+                                              *enabled ? "[+]" : "[-]",
+                                              plugin.name, plugin.description);
             }
           });
       if (num_matching == 0) {

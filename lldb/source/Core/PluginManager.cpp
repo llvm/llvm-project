@@ -534,6 +534,31 @@ bool PluginManager::MatchPluginName(llvm::StringRef pattern,
   return pattern == qualified_name;
 }
 
+llvm::Expected<bool> PluginManager::IsPluginEnabled(
+    const PluginNamespace &plugin_ns, const RegisteredPluginInfo &plugin,
+    Debugger &requesting_debugger, lldb::PluginDomainKind domain) {
+  switch (domain) {
+  case lldb::ePluginDomainKindGlobal:
+    return plugin.enabled;
+  case lldb::ePluginDomainKindDebugger:
+    return llvm::createStringErrorV(
+        "plugin namespace {0} does not support querying "
+        "enablement in the debugger domain",
+        plugin_ns.name);
+  case lldb::ePluginDomainKindTarget:
+    if (!plugin_ns.SupportsDomain(lldb::ePluginDomainKindTarget))
+      return llvm::createStringErrorV(
+          "plugin namespace {0} does not support querying "
+          "enablement in the target domain",
+          plugin_ns.name);
+    {
+      auto target = requesting_debugger.GetSelectedTarget();
+      return IsInstrumentationRuntimePluginEnabled(plugin.name, target, domain);
+    }
+  }
+  llvm_unreachable("Unhandled domain");
+}
+
 template <typename Callback> struct PluginInstance {
   typedef Callback CallbackType;
 
