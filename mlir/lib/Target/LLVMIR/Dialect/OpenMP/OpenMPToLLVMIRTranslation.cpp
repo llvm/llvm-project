@@ -5889,16 +5889,8 @@ processIndividualMap(llvm::IRBuilderBase &builder,
   // the host, and then expect it to not be updated in a subsequent impliict map
   // (such as an implicit map on a target).
   if (memberOfFlag != llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE) {
-    // If we are in a declare mapper, we apply MEMBER_OF even if it's an attach
-    // or pointer map, this is to make the MEMBER_OF flag uniform across all
-    // maps within the declare mapper, as even if we do not apply it here on
-    // nestings greater than the first layer we will have a member of flag
-    // applied automatically. So, we canonicalize it here, which keeps the
-    // behaviour of pointer/data maps consistent across layers.
-    if ((!isPtrTy && !isAttachMap) ||
-        mapInfoOp->getParentOfType<omp::DeclareMapperOp>()) {
+    if (!isPtrTy && !isAttachMap)
       ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
-    }
 
     // The return parameter should be the over-riding parent in cases where we
     // have a return parameter that is echoed to all members, the main case of
@@ -5915,8 +5907,7 @@ processIndividualMap(llvm::IRBuilderBase &builder,
   // map-backs in certain cases where an implicit declare mapepr has been
   // emitted for a target region. Applying MAP_PTR_AND_OBJ in these situations
   // circumvents this.
-  if (isPtrTy && !isAttachMap && (mapData.IsDeclareTarget[mapDataIdx] ||
-                  mapInfoOp->getParentOfType<omp::DeclareMapperOp>()))
+  if (isPtrTy && !isAttachMap && mapData.IsDeclareTarget[mapDataIdx])
     mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
 
   // if we're provided a mapDataParentIdx, then the data being mapped is
@@ -6534,7 +6525,8 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
   };
 
   llvm::Expected<llvm::Function *> newFn = ompBuilder->emitUserDefinedMapper(
-      genMapInfoCB, varType, mapperFuncName, customMapperCB);
+      genMapInfoCB, varType, mapperFuncName, customMapperCB,
+      /*PreserveMemberOfFlags=*/true);
   if (!newFn)
     return newFn.takeError();
   if ([[maybe_unused]] llvm::Function *mappedFunc =

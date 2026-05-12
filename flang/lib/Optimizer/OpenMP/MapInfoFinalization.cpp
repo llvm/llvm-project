@@ -103,27 +103,70 @@ public:
     });
   }
 
-  /// Return true if the given path is already present in
-  /// op.getMembersIndexAttr().
-  static bool mappedIndexPathExists(mlir::omp::MapInfoOp op,
-                                    llvm::ArrayRef<int64_t> indexPath) {
-    if (mlir::ArrayAttr attr = op.getMembersIndexAttr()) {
-      for (mlir::Attribute list : attr) {
-        auto listAttr = mlir::cast<mlir::ArrayAttr>(list);
-        if (listAttr.size() != indexPath.size())
-          continue;
+  /// Find a member MapInfoOp by its index path.
+  /// \param op The parent MapInfoOp to search in
+  /// \param indexPath The index path to find
+  /// \return The member MapInfoOp if found, or null MapInfoOp if not found
+  static mlir::omp::MapInfoOp
+  findMemberByIndexPath(mlir::omp::MapInfoOp op,
+                        llvm::ArrayRef<int64_t> indexPath) {
+    mlir::ArrayAttr attr = op.getMembersIndexAttr();
+    if (!attr)
+      return mlir::omp::MapInfoOp();
+
+    size_t memberIdx = 0;
+    for (mlir::Attribute list : attr) {
+      auto listAttr = mlir::cast<mlir::ArrayAttr>(list);
+      if (listAttr.size() == indexPath.size()) {
         bool allEq = true;
-        for (auto [i, val] : llvm::enumerate(listAttr)) {
-          if (mlir::cast<mlir::IntegerAttr>(val).getInt() != indexPath[i]) {
+        for (size_t j = 0; j < listAttr.size(); ++j) {
+          auto indexAttr = mlir::cast<mlir::IntegerAttr>(listAttr[j]);
+          if (indexAttr.getInt() != indexPath[j]) {
             allEq = false;
             break;
           }
         }
-        if (allEq)
-          return true;
+        if (allEq) {
+          if (auto memberOp = mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(
+                  op.getMembers()[memberIdx].getDefiningOp()))
+            return memberOp;
+        }
       }
+      ++memberIdx;
     }
-    return false;
+    return mlir::omp::MapInfoOp();
+  }
+
+  /// Return true if the given path is already present in
+  /// op.getMembersIndexAttr().
+  static bool mappedIndexPathExists(mlir::omp::MapInfoOp op,
+                                    llvm::ArrayRef<int64_t> indexPath) {
+    return findMemberByIndexPath(op, indexPath) != nullptr;
+  }
+
+  /// Get the map type of the nearest explicitly mapped parent for a member.
+  /// "Explicitly mapped" means the map type does NOT have the implicit flag.
+  ///
+  /// \param parentOp The parent MapInfoOp containing members
+  /// \param memberIndex The index path to the child member (e.g., [1, 2, 3])
+  /// \return The map type of the nearest explicitly mapped ancestor, or
+  ///         the parentOp's map type if no explicit ancestor is found.
+  static mlir::omp::ClauseMapFlags
+  getExplicitlyMappedParentMapType(mlir::omp::MapInfoOp parentOp,
+                                   llvm::ArrayRef<int64_t> memberIndex) {
+    llvm::SmallVector<int64_t> currentPath(memberIndex.begin(),
+                                           memberIndex.end());
+
+    while (!currentPath.empty()) {
+      if (auto memberOp = findMemberByIndexPath(parentOp, currentPath)) {
+        if (!bitEnumContainsAll(memberOp.getMapType(),
+                                mlir::omp::ClauseMapFlags::implicit))
+          return memberOp.getMapType();
+      }
+      currentPath.pop_back();
+    }
+
+    return parentOp.getMapType();
   }
 
   /// Build a compact string key for an index path for set-based
@@ -195,10 +238,15 @@ public:
             .first,
         /*dataExvIsAssumedSize=*/false, loc);
 
+    // Get the map type from the nearest explicitly mapped parent, falling back
+    // to the top-level parent's map type if no explicit ancestor is found.
+    mlir::omp::ClauseMapFlags mapType =
+        getExplicitlyMappedParentMapType(op, indexPath);
+
     mlir::omp::MapInfoOp fieldMapOp = mlir::omp::MapInfoOp::create(
         builder, loc, coordRef.getType(), coordRef,
         mlir::TypeAttr::get(fir::unwrapRefType(coordRef.getType())),
-        op.getMapTypeAttr(),
+        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         /*varPtrPtr=*/mlir::Value{}, /*varPtrPtr=*/mlir::TypeAttr{},
