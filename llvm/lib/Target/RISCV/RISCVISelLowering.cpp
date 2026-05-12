@@ -24241,7 +24241,8 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       ArgValue = unpackF64OnRV32DSoftABI(DAG, Chain, VA, ArgLocs[++i], DL);
     } else if (VA.getLocVT() == MVT::i32 &&
                Subtarget.isPExtPackedType(VA.getValVT()) &&
-               VA.getValVT().getSizeInBits() == 64) {
+               VA.getValVT().getSizeInBits() == 64 &&
+               VA.getLocInfo() != CCValAssign::Indirect) {
       assert(VA.needsCustom());
       ArgValue = unpackGPRVecOnRV32(DAG, Chain, VA, ArgLocs[++i], DL);
     } else if (VA.isRegLoc())
@@ -24540,7 +24541,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Handle passing 64-bit vector on RV32 as a special case.
     if (VA.getLocVT() == MVT::i32 &&
         Subtarget.isPExtPackedType(VA.getValVT()) &&
-        VA.getValVT().getSizeInBits() == 64) {
+        VA.getValVT().getSizeInBits() == 64 &&
+        VA.getLocInfo() != CCValAssign::Indirect) {
       assert(VA.isRegLoc() && "Expected register VA assignment");
       assert(VA.needsCustom());
       SDValue SplitGPRVec =
