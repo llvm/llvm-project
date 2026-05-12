@@ -5102,7 +5102,10 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
   if (!llvm::all_equal(STy->elements()))
     return nullptr;
 
-  if (!EltTy->isIntegerTy() && !EltTy->isFloatingPointTy())
+  bool IsIntegralPointerTy =
+      EltTy->isPointerTy() && !DL.isNonIntegralPointerType(EltTy);
+  if (!EltTy->isIntegerTy() && !EltTy->isFloatingPointTy() &&
+      !IsIntegralPointerTy)
     return nullptr;
 
   auto *VTy = FixedVectorType::get(EltTy, NumElts);
