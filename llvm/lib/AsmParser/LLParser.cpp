@@ -346,7 +346,8 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
         SmallVector<Type *> OverloadTys;
         if (IID != Intrinsic::not_intrinsic &&
-            Intrinsic::isSignatureValid(IID, CB->getFunctionType(), OverloadTys,
+            Intrinsic::isSignatureValid(M->getDataLayout(), IID,
+                                        CB->getFunctionType(), OverloadTys,
                                         ErrorOS)) {
           U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
         } else {

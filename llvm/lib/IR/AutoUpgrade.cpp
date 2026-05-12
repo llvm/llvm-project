@@ -1911,7 +1911,8 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   if (Intrinsic::ID id = F->getIntrinsicID()) {
     // Only do this if the intrinsic signature is valid.
     SmallVector<Type *> OverloadTys;
-    if (Intrinsic::isSignatureValid(id, F->getFunctionType(), OverloadTys))
+    if (Intrinsic::isSignatureValid(F->getDataLayout(), id,
+                                    F->getFunctionType(), OverloadTys))
       F->setAttributes(
           Intrinsic::getAttributes(F->getContext(), id, F->getFunctionType()));
   }

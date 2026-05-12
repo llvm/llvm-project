@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class DataLayout;
 class Type;
 class FunctionType;
 class Function;
@@ -77,7 +78,7 @@ LLVM_ABI std::string getName(ID Id, ArrayRef<Type *> OverloadTys, Module *M,
 LLVM_ABI std::string getNameNoUnnamedTypes(ID Id, ArrayRef<Type *> OverloadTys);
 
 /// Return the function type for an intrinsic.
-LLVM_ABI FunctionType *getType(LLVMContext &Context, ID id,
+LLVM_ABI FunctionType *getType(const Module *M, ID id,
                                ArrayRef<Type *> OverloadTys = {});
 
 /// Returns true if the intrinsic can be overloaded.
@@ -161,6 +162,7 @@ struct IITDescriptor {
   enum IITDescriptorKind {
     // Concrete types. Additional qualifiers listed in comments.
     Void,
+    Byte,
     VarArg,
     MMX,
     Token,
@@ -278,7 +280,8 @@ getIntrinsicInfoTableEntries(ID id, SmallVectorImpl<IITDescriptor> &T);
 /// Returns false if the given ID and function type combination is not a
 /// valid intrinsic call. Also prints the error message to indicate the reason
 /// of the mismatch to \p OS.
-LLVM_ABI bool isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
+LLVM_ABI bool isSignatureValid(const DataLayout &DL, Intrinsic::ID ID,
+                               FunctionType *FT,
                                SmallVectorImpl<Type *> &OverloadTys,
                                raw_ostream &OS = nulls());
 

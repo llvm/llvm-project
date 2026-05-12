@@ -5961,7 +5961,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   std::string ErrMsg;
   raw_string_ostream ErrOS(ErrMsg);
   SmallVector<Type *, 4> OverloadTys;
-  bool IsValid = Intrinsic::isSignatureValid(ID, IFTy, OverloadTys, ErrOS);
+  bool IsValid = Intrinsic::isSignatureValid(DL, ID, IFTy, OverloadTys, ErrOS);
   Check(IsValid, ErrMsg, IF);
 
   // Now that we have the intrinsic ID and the actual argument types (and we

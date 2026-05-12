@@ -2568,12 +2568,12 @@ const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength) {
   return Str.data();
 }
 
-LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
+LLVMTypeRef LLVMIntrinsicGetType(LLVMModuleRef Mod, unsigned ID,
                                  LLVMTypeRef *OverloadTypes,
                                  size_t OverloadCount) {
   auto IID = llvm_map_to_intrinsic_id(ID);
   ArrayRef<Type *> OverloadTys(unwrap(OverloadTypes), OverloadCount);
-  return wrap(llvm::Intrinsic::getType(*unwrap(Ctx), IID, OverloadTys));
+  return wrap(llvm::Intrinsic::getType(unwrap(Mod), IID, OverloadTys));
 }
 
 char *LLVMIntrinsicCopyOverloadedName(unsigned ID, LLVMTypeRef *OverloadTypes,
