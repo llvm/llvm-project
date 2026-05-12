@@ -236,11 +236,11 @@ void SSAUpdater::RewriteUseAfterInsertions(Use &U) {
 
 namespace llvm {
 
-cl::opt<unsigned>
-    PhiSearchLimit("phi-search-limit",
-                   cl::desc("Limit number of phi-nodes to be searched when "
-                            "looking for an existing duplicate."),
-                   cl::init(80), cl::Hidden);
+cl::opt<unsigned> SSAUpdaterPhiSearchLimit(
+    "phi-search-limit",
+    cl::desc("Limit number of phi-nodes to be searched when "
+             "looking for an existing duplicate."),
+    cl::init(80), cl::Hidden);
 
 template<>
 class SSAUpdaterTraits<SSAUpdater> {
