@@ -9,8 +9,8 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/AssignmentQuery.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/OriginFlowChain.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/ADT/StringMap.h"
 #include "gmock/gmock.h"
@@ -205,32 +205,20 @@ public:
     return Runner.getAnalysis().getFactManager().getBlockContaining(P);
   }
 
-  std::optional<size_t> getBlockID(ProgramPoint P) {
-    return Runner.getAnalysis().getFactManager().getBlockID(P);
-  }
-
-  void trackAssignmentHistoryInOneBlock(
-      llvm::SmallVectorImpl<AssignmentUnit> &AssignmentList,
-      llvm::StringRef StartOriginVar, llvm::StringRef EndLoanVar) {
+  llvm::SmallVector<OriginID> buildOriginFlowChainInOneBlock(
+      llvm::StringRef StartOriginVar, llvm::StringRef EndLoanVar, llvm::StringRef Annotation) {
     std::optional<OriginID> StartOriginID = getOriginForDecl(StartOriginVar);
     std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
 
-    const CFGBlock *StartBlock = nullptr;
-    const size_t BlockID = getBlockID(getProgramPoint("after_use")).value();
-    for (const CFGBlock *CurrBlock : *Runner.getAnalysisContext().getCFG()) {
-      if (CurrBlock->getBlockID() == BlockID) {
-        StartBlock = CurrBlock;
-        break;
-      }
+    for (const LoanID &LID : EndLoanIDs) {
+      const llvm::SmallVector<OriginID> OriginFlowChain = buildOriginFlowChain(Runner.getAnalysis().getFactManager(),
+                             Runner.getAnalysis().getLoanPropagation(),
+                             getProgramPoint(Annotation), *StartOriginID, LID);
+      if (!OriginFlowChain.empty())
+        return OriginFlowChain;
     }
 
-    for (const LoanID &LID : EndLoanIDs) {
-      trackAssignmentHistory(Runner.getAnalysis().getFactManager(),
-                             Runner.getAnalysis().getLoanPropagation(),
-                             AssignmentList, StartBlock, *StartOriginID, LID);
-      if (!AssignmentList.empty())
-        return;
-    }
+    return {};
   }
 
 private:
@@ -1985,7 +1973,7 @@ TEST_F(LifetimeAnalysisTest, LambdaInitCaptureViewByValue) {
 //                    Tests for trackAssignmentHistory
 // ========================================================================= //
 
-TEST_F(LifetimeAnalysisTest, TrackLinearAssignmentHistoryInOneBlock) {
+TEST_F(LifetimeAnalysisTest, BuildLinearOriginFlowChainInOneBlock) {
   SetupTest(R"(
     void target() {
       int *s;
@@ -2002,10 +1990,10 @@ TEST_F(LifetimeAnalysisTest, TrackLinearAssignmentHistoryInOneBlock) {
     }
   )");
 
-  llvm::SmallVector<AssignmentUnit> AssignmentList;
-  Helper->trackAssignmentHistoryInOneBlock(AssignmentList, "s", "tgt");
+  const llvm::SmallVector<OriginID> OriginFlowChain = Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
 
-  EXPECT_EQ(8u, AssignmentList.size());
+  // 8 == 2 * (e + b + a + tgt)
+  EXPECT_EQ(8u, OriginFlowChain.size());
 }
 } // anonymous namespace
 } // namespace clang::lifetimes::internal

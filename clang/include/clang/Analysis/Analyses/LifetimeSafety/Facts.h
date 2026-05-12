@@ -346,16 +346,6 @@ public:
     return BlockToFacts[B->getBlockID()];
   }
 
-  std::optional<size_t> getBlockID(const Fact *TargetFact) const {
-    for (size_t i = 0; i < BlockToFacts.size(); ++i) {
-      for (const Fact *F : BlockToFacts[i]) {
-        if (F == TargetFact)
-          return i;
-      }
-    }
-    return std::nullopt;
-  }
-
   void addBlockFacts(const CFGBlock *B, llvm::ArrayRef<Fact *> NewFacts) {
     if (!NewFacts.empty())
       BlockToFacts[B->getBlockID()].assign(NewFacts.begin(), NewFacts.end());

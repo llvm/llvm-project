@@ -1,4 +1,4 @@
-//===- AssignmentQuery.cpp - C++ Lifetime Safety Checker --------*- C++ -*-===//
+//====- OriginFlowChain.h - C++ Lifetime Safety Checker --------*- C++ -*-====//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines functions for tracing assignment history,
-// as well as future data structures or other helper functions.
+// This file defines buildOriginFlowChain, which is used to build the
+// propagation flow of a given Loan within a specified Origin, starting
+// from a particular ProgramPoint.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,18 +20,15 @@
 
 namespace clang::lifetimes::internal {
 
-using AssignmentUnit = Origin;
-
-/// Traces the provenance of a pointer to provide contextual notes for
-/// lifetime-related diagnostics.
+/// Builds a chain of origin flows for a specific loan. It tracks how the Loan
+/// moves and transforms.
 ///
-/// To help user understand the data flow, we track where the problematic
-/// address originated.
-void trackAssignmentHistory(
+/// This function starts from a given ProgramPoint and builds the propagation
+/// flow of the specified LoanID within the context of a given OriginID.
+llvm::SmallVector<OriginID> buildOriginFlowChain(
     const FactManager &FactMgr, const LoanPropagationAnalysis &LoanPropagation,
-    llvm::SmallVectorImpl<AssignmentUnit> &AssignmentList,
-    const CFGBlock *StartBlock, const OriginID StartOID,
-    const LoanID &EndLoanID);
+    ProgramPoint StartPoint, const OriginID StartOID,
+    const LoanID TargetLoan);
 } // namespace clang::lifetimes::internal
 
 #endif
