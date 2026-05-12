@@ -161,175 +161,39 @@ foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   //def FDIM_#FPTy : RuntimeLibcall;
 
   //def CABS_#FPTy : RuntimeLibcall;
+
+  def REM_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
+  def SQRT_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+
+  def CBRT_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def LOG_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def LOG_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def LOG2_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def LOG2_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def LOG10_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def LOG10_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def EXP_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def EXP_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def EXP2_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def EXP2_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def EXP10_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+
+  def SIN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def COS_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def TAN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def SINH_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def COSH_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def TANH_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def ASIN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def ACOS_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def ATAN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def ATAN2_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
+  def SINCOS_#FPTy : FPRuntimeLibcall<FPTy, Void, [Flt, Ptr, Ptr]>;
+  def REMQUO_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt, Ptr]>;
+  def FDIM_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
+
+  def CABS_#FPTy : FPRuntimeLibcall<FPTy, NoneType, []>;
 }
-
-  def REM_F32 : RuntimeLibcall<Flt, [Flt, Flt]>;
-  def REM_F64 : RuntimeLibcall<Dbl, [Dbl, Dbl]>;
-  def REM_F128 : RuntimeLibcall<LDbl, [LDbl, LDbl]>;
-  def REM_F80 : RuntimeLibcall;
-  def REM_PPCF128 : RuntimeLibcall;
-
-  def SQRT_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def SQRT_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def SQRT_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def SQRT_F80 : RuntimeLibcall;
-  def SQRT_PPCF128 : RuntimeLibcall;
-
-  def CBRT_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def CBRT_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def CBRT_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def CBRT_F80 : RuntimeLibcall;
-  def CBRT_PPCF128 : RuntimeLibcall;
-
-  def LOG_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def LOG_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def LOG_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def LOG_F80 : RuntimeLibcall;
-  def LOG_PPCF128 : RuntimeLibcall;
-
-  def LOG_FINITE_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def LOG_FINITE_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def LOG_FINITE_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def LOG_FINITE_F80 : RuntimeLibcall;
-  def LOG_FINITE_PPCF128 : RuntimeLibcall;
-
-  def LOG2_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def LOG2_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def LOG2_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def LOG2_F80 : RuntimeLibcall;
-  def LOG2_PPCF128 : RuntimeLibcall;
-
-  def LOG2_FINITE_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def LOG2_FINITE_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def LOG2_FINITE_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def LOG2_FINITE_F80 : RuntimeLibcall;
-  def LOG2_FINITE_PPCF128 : RuntimeLibcall;
-
-  def LOG10_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def LOG10_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def LOG10_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def LOG10_F80 : RuntimeLibcall;
-  def LOG10_PPCF128 : RuntimeLibcall;
-
-  def LOG10_FINITE_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def LOG10_FINITE_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def LOG10_FINITE_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def LOG10_FINITE_F80 : RuntimeLibcall;
-  def LOG10_FINITE_PPCF128 : RuntimeLibcall;
-
-  def EXP_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def EXP_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def EXP_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def EXP_F80 : RuntimeLibcall;
-  def EXP_PPCF128 : RuntimeLibcall;
-
-  def EXP_FINITE_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def EXP_FINITE_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def EXP_FINITE_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def EXP_FINITE_F80 : RuntimeLibcall;
-  def EXP_FINITE_PPCF128 : RuntimeLibcall;
-
-  def EXP2_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def EXP2_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def EXP2_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def EXP2_F80 : RuntimeLibcall;
-  def EXP2_PPCF128 : RuntimeLibcall;
-
-  def EXP2_FINITE_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def EXP2_FINITE_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def EXP2_FINITE_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def EXP2_FINITE_F80 : RuntimeLibcall;
-  def EXP2_FINITE_PPCF128 : RuntimeLibcall;
-
-  def EXP10_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def EXP10_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def EXP10_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def EXP10_F80 : RuntimeLibcall;
-  def EXP10_PPCF128 : RuntimeLibcall;
-
-  def SIN_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def SIN_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def SIN_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def SIN_F80 : RuntimeLibcall;
-  def SIN_PPCF128 : RuntimeLibcall;
-
-  def COS_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def COS_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def COS_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def COS_F80 : RuntimeLibcall;
-  def COS_PPCF128 : RuntimeLibcall;
-
-  def TAN_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def TAN_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def TAN_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def TAN_F80 : RuntimeLibcall;
-  def TAN_PPCF128 : RuntimeLibcall;
-
-  def SINH_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def SINH_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def SINH_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def SINH_F80 : RuntimeLibcall;
-  def SINH_PPCF128 : RuntimeLibcall;
-
-  def COSH_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def COSH_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def COSH_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def COSH_F80 : RuntimeLibcall;
-  def COSH_PPCF128 : RuntimeLibcall;
-
-  def TANH_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def TANH_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def TANH_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def TANH_F80 : RuntimeLibcall;
-  def TANH_PPCF128 : RuntimeLibcall;
-
-  def ASIN_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def ASIN_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def ASIN_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def ASIN_F80 : RuntimeLibcall;
-  def ASIN_PPCF128 : RuntimeLibcall;
-
-  def ACOS_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def ACOS_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def ACOS_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def ACOS_F80 : RuntimeLibcall;
-  def ACOS_PPCF128 : RuntimeLibcall;
-
-  def ATAN_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def ATAN_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def ATAN_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def ATAN_F80 : RuntimeLibcall;
-  def ATAN_PPCF128 : RuntimeLibcall;
-
-  def ATAN2_F32 : RuntimeLibcall<Flt, [Flt, Flt]>;
-  def ATAN2_F64 : RuntimeLibcall<Dbl, [Dbl, Dbl]>;
-  def ATAN2_F128 : RuntimeLibcall<LDbl, [LDbl, LDbl]>;
-  def ATAN2_F80 : RuntimeLibcall;
-  def ATAN2_PPCF128 : RuntimeLibcall;
-
-  def SINCOS_F32 : RuntimeLibcall<Void, [Flt, Ptr, Ptr]>;
-  def SINCOS_F64 : RuntimeLibcall<Void, [Dbl, Ptr, Ptr]>;
-  def SINCOS_F128 : RuntimeLibcall<Void, [LDbl, Ptr, Ptr]>;
-  def SINCOS_F80 : RuntimeLibcall;
-  def SINCOS_PPCF128 : RuntimeLibcall;
-
-  def REMQUO_F32 : RuntimeLibcall<Flt, [Flt, Flt, Ptr]>;
-  def REMQUO_F64 : RuntimeLibcall<Dbl, [Dbl, Dbl, Ptr]>;
-  def REMQUO_F128 : RuntimeLibcall<LDbl, [LDbl, LDbl, Ptr]>;
-  def REMQUO_F80 : RuntimeLibcall;
-  def REMQUO_PPCF128 : RuntimeLibcall;
-
-  def FDIM_F32 : RuntimeLibcall<Flt, [Flt, Flt]>;
-  def FDIM_F64 : RuntimeLibcall<Dbl, [Dbl, Dbl]>;
-  def FDIM_F128 : RuntimeLibcall<LDbl, [LDbl, LDbl]>;
-  def FDIM_F80 : RuntimeLibcall;
-  def FDIM_PPCF128 : RuntimeLibcall;
-
-  def CABS_F32 : RuntimeLibcall<NoneType, []>;
-  def CABS_F64 : RuntimeLibcall<NoneType, []>;
-  def CABS_F128 : RuntimeLibcall<NoneType, []>;
-  def CABS_F80 : RuntimeLibcall;
-  def CABS_PPCF128 : RuntimeLibcall;
 
 foreach FPTy = [ "F32", "F64" ] in {
   def SINCOS_STRET_#FPTy : RuntimeLibcall;
@@ -366,145 +230,34 @@ foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   //def SCALBLN_#FPTy : RuntimeLibcall;
   //def SCALBN_#FPTy : RuntimeLibcall;
   //def TGAMMA_#FPTy : RuntimeLibcall;
+
+  def POW_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
+  def POW_FINITE_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
+  def CEIL_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def TRUNC_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def RINT_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def NEARBYINT_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def ROUND_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def ROUNDEVEN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def FLOOR_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
+  def COPYSIGN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
+  def FMIN_#FPTy : FPRuntimeLibcall<FPTy, Floating, [Same, Same]>;
+  def FMAX_#FPTy : FPRuntimeLibcall<FPTy, Floating, [Same, Same]>;
+
+  def FMINIMUM_NUM_#FPTy : FPRuntimeLibcall<FPTy, Floating, [Same, Same]>;
+  def FMAXIMUM_NUM_#FPTy : FPRuntimeLibcall<FPTy, Floating, [Same, Same]>;
+
+  def LDEXP_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Int]>;
+  def FREXP_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Ptr]>;
+
+  def MODF_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Ptr]>;
+  def NAN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Ptr]>;
+  def NEXTTOWARD_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, LDbl]>;
+  def REMAINDER_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Flt]>;
+  def SCALBLN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Long]>;
+  def SCALBN_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt, Int]>;
+  def TGAMMA_#FPTy : FPRuntimeLibcall<FPTy, Flt, [Flt]>;
 }
-
-  def POW_F32 : RuntimeLibcall<Flt, [Flt, Flt]>;
-  def POW_F64 : RuntimeLibcall<Dbl, [Dbl, Dbl]>;
-  def POW_F128 : RuntimeLibcall<LDbl, [LDbl, LDbl]>;
-  def POW_F80 : RuntimeLibcall;
-  def POW_PPCF128 : RuntimeLibcall;
-
-  def POW_FINITE_F32 : RuntimeLibcall<Flt, [Flt, Flt]>;
-  def POW_FINITE_F64 : RuntimeLibcall<Dbl, [Dbl, Dbl]>;
-  def POW_FINITE_F128 : RuntimeLibcall<LDbl, [LDbl, LDbl]>;
-  def POW_FINITE_F80 : RuntimeLibcall;
-  def POW_FINITE_PPCF128 : RuntimeLibcall;
-
-  def CEIL_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def CEIL_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def CEIL_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def CEIL_F80 : RuntimeLibcall;
-  def CEIL_PPCF128 : RuntimeLibcall;
-
-  def TRUNC_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def TRUNC_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def TRUNC_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def TRUNC_F80 : RuntimeLibcall;
-  def TRUNC_PPCF128 : RuntimeLibcall;
-
-  def RINT_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def RINT_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def RINT_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def RINT_F80 : RuntimeLibcall;
-  def RINT_PPCF128 : RuntimeLibcall;
-
-  def NEARBYINT_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def NEARBYINT_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def NEARBYINT_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def NEARBYINT_F80 : RuntimeLibcall;
-  def NEARBYINT_PPCF128 : RuntimeLibcall;
-
-  def ROUND_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def ROUND_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def ROUND_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def ROUND_F80 : RuntimeLibcall;
-  def ROUND_PPCF128 : RuntimeLibcall;
-
-  def ROUNDEVEN_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def ROUNDEVEN_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def ROUNDEVEN_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def ROUNDEVEN_F80 : RuntimeLibcall;
-  def ROUNDEVEN_PPCF128 : RuntimeLibcall;
-
-  def FLOOR_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def FLOOR_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def FLOOR_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def FLOOR_F80 : RuntimeLibcall;
-  def FLOOR_PPCF128 : RuntimeLibcall;
-
-  def COPYSIGN_F32 : RuntimeLibcall<Flt, [Flt, Flt]>;
-  def COPYSIGN_F64 : RuntimeLibcall<Dbl, [Dbl, Dbl]>;
-  def COPYSIGN_F128 : RuntimeLibcall<LDbl, [LDbl, LDbl]>;
-  def COPYSIGN_F80 : RuntimeLibcall;
-  def COPYSIGN_PPCF128 : RuntimeLibcall;
-
-  def FMIN_F32 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMIN_F64 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMIN_F128 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMIN_F80 : RuntimeLibcall;
-  def FMIN_PPCF128 : RuntimeLibcall;
-
-  def FMAX_F32 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMAX_F64 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMAX_F128 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMAX_F80 : RuntimeLibcall;
-  def FMAX_PPCF128 : RuntimeLibcall;
-
-  def FMINIMUM_NUM_F32 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMINIMUM_NUM_F64 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMINIMUM_NUM_F128 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMINIMUM_NUM_F80 : RuntimeLibcall;
-  def FMINIMUM_NUM_PPCF128 : RuntimeLibcall;
-
-  def FMAXIMUM_NUM_F32 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMAXIMUM_NUM_F64 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMAXIMUM_NUM_F128 : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMAXIMUM_NUM_F80 : RuntimeLibcall;
-  def FMAXIMUM_NUM_PPCF128 : RuntimeLibcall;
-
-  def LDEXP_F32 : RuntimeLibcall<Flt, [Flt, Int]>;
-  def LDEXP_F64 : RuntimeLibcall<Dbl, [Dbl, Int]>;
-  def LDEXP_F128 : RuntimeLibcall<LDbl, [LDbl, Int]>;
-  def LDEXP_F80 : RuntimeLibcall;
-  def LDEXP_PPCF128 : RuntimeLibcall;
-
-  def FREXP_F32 : RuntimeLibcall<Flt, [Flt, Ptr]>;
-  def FREXP_F64 : RuntimeLibcall<Dbl, [Dbl, Ptr]>;
-  def FREXP_F128 : RuntimeLibcall<LDbl, [LDbl, Ptr]>;
-  def FREXP_F80 : RuntimeLibcall;
-  def FREXP_PPCF128 : RuntimeLibcall;
-
-  def MODF_F32 : RuntimeLibcall<Flt, [Flt, Ptr]>;
-  def MODF_F64 : RuntimeLibcall<Dbl, [Dbl, Ptr]>;
-  def MODF_F128 : RuntimeLibcall<LDbl, [LDbl, Ptr]>;
-  def MODF_F80 : RuntimeLibcall;
-  def MODF_PPCF128 : RuntimeLibcall;
-
-  def NAN_F32 : RuntimeLibcall<Flt, [Ptr]>;
-  def NAN_F64 : RuntimeLibcall<Dbl, [Ptr]>;
-  def NAN_F128 : RuntimeLibcall<LDbl, [Ptr]>;
-  def NAN_F80 : RuntimeLibcall;
-  def NAN_PPCF128 : RuntimeLibcall;
-
-  def NEXTTOWARD_F32 : RuntimeLibcall<Flt, [Flt, LDbl]>;
-  def NEXTTOWARD_F64 : RuntimeLibcall<Dbl, [Dbl, LDbl]>;
-  def NEXTTOWARD_F128 : RuntimeLibcall<LDbl, [LDbl, LDbl]>;
-  def NEXTTOWARD_F80 : RuntimeLibcall;
-  def NEXTTOWARD_PPCF128 : RuntimeLibcall;
-
-  def REMAINDER_F32 : RuntimeLibcall<Flt, [Flt, Flt]>;
-  def REMAINDER_F64 : RuntimeLibcall<Dbl, [Dbl, Dbl]>;
-  def REMAINDER_F128 : RuntimeLibcall<LDbl, [LDbl, LDbl]>;
-  def REMAINDER_F80 : RuntimeLibcall;
-  def REMAINDER_PPCF128 : RuntimeLibcall;
-
-  def SCALBLN_F32 : RuntimeLibcall<Flt, [Flt, Long]>;
-  def SCALBLN_F64 : RuntimeLibcall<Dbl, [Dbl, Long]>;
-  def SCALBLN_F128 : RuntimeLibcall<LDbl, [LDbl, Long]>;
-  def SCALBLN_F80 : RuntimeLibcall;
-  def SCALBLN_PPCF128 : RuntimeLibcall;
-
-  def SCALBN_F32 : RuntimeLibcall<Flt, [Flt, Int]>;
-  def SCALBN_F64 : RuntimeLibcall<Dbl, [Dbl, Int]>;
-  def SCALBN_F128 : RuntimeLibcall<LDbl, [LDbl, Int]>;
-  def SCALBN_F80 : RuntimeLibcall;
-  def SCALBN_PPCF128 : RuntimeLibcall;
-
-  def TGAMMA_F32 : RuntimeLibcall<Flt, [Flt]>;
-  def TGAMMA_F64 : RuntimeLibcall<Dbl, [Dbl]>;
-  def TGAMMA_F128 : RuntimeLibcall<LDbl, [LDbl]>;
-  def TGAMMA_F80 : RuntimeLibcall;
-  def TGAMMA_PPCF128 : RuntimeLibcall;
 
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
 defvar F64VectorSuffixes = ["V2F64", "V4F64", "V8F64", "NXV2F64"];
