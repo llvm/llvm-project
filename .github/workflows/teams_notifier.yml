@@ -42,19 +42,23 @@ jobs:
 
           # Parse URLs from the logs using grep
           THE_ROCK_MANIFEST_URL=$(grep -oP '\[TheRock Manifest\]\(\K[^\)]+' "logs.txt" || echo "")
-          ARTIFACTS_URL=$(grep -oP '\[Artifacts\]\(\K[^\)]+' "logs.txt" || echo "") 
-          BUILD_LOGS_URL=$(grep -oP '\[Build Logs\]\(\K[^\)]+' "logs.txt" || echo "")
+          #ARTIFACTS_URL=$(grep -oP '\[Artifacts\]\(\K[^\)]+' "logs.txt" || echo "") 
+          #BUILD_LOGS_URL=$(grep -oP '\[Build Logs\]\(\K[^\)]+' "logs.txt" || echo "")
+          ARTIFACTS_URL="https://therock-ci-artifacts-external.s3.amazonaws.com/ROCm-llvm-project/$RUN_ID-linux/index.html"
+          BUILD_LOGS_URL="https://therock-ci-artifacts-external.s3.amazonaws.com/ROCm-llvm-project/$RUN_ID-linux/logs/index.html"
+          echo "ARTIFACTS_URL=$ARTIFACTS_URL" >> $GITHUB_ENV
+          echo "BUILD_LOGS_URL=$BUILD_LOGS_URL" >> $GITHUB_ENV
 
           # Fetch the manifest file and set URLs as environment variables
-          if [[ -n "$THE_ROCK_MANIFEST_URL" ]]; then
-            curl -L "$THE_ROCK_MANIFEST_URL" -o manifest.json
-            echo "Manifest file has been downloaded."
-            echo "THE_ROCK_MANIFEST_URL=$THE_ROCK_MANIFEST_URL" >> $GITHUB_ENV
-            echo "ARTIFACTS_URL=$ARTIFACTS_URL" >> $GITHUB_ENV
-            echo "BUILD_LOGS_URL=$BUILD_LOGS_URL" >> $GITHUB_ENV
-          else
-            echo "Failed to extract URLs from logs.txt."
-          fi
+          #if [[ -n "$THE_ROCK_MANIFEST_URL" ]]; then
+          #  curl -L "$THE_ROCK_MANIFEST_URL" -o manifest.json
+          #  echo "Manifest file has been downloaded."
+          #  echo "THE_ROCK_MANIFEST_URL=$THE_ROCK_MANIFEST_URL" >> $GITHUB_ENV
+          #  echo "ARTIFACTS_URL=$ARTIFACTS_URL" >> $GITHUB_ENV
+          #  echo "BUILD_LOGS_URL=$BUILD_LOGS_URL" >> $GITHUB_ENV
+          #else
+          #  echo "Failed to extract URLs from logs.txt."
+          #fi
 
       - name: Set environment variables
         run: |
@@ -70,8 +74,8 @@ jobs:
           ORG_NAME: ${{ env.ORG_NAME }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           RUN_ID: ${{ env.RUN_ID }}
-          MANIFEST_FILE: ${{ env.MANIFEST_FILE }}
-          ROCK_MANIFEST_URL: ${{ env.THE_ROCK_MANIFEST_URL }}
+          #MANIFEST_FILE: ${{ env.MANIFEST_FILE }}
+          #ROCK_MANIFEST_URL: ${{ env.THE_ROCK_MANIFEST_URL }}
           ARTIFACTS_URL: ${{ env.ARTIFACTS_URL }}
           BUILD_LOGS_URL: ${{ env.BUILD_LOGS_URL }}
           OUTPUT_FILE: ${{ env.OUTPUT_FILE }}
@@ -122,5 +126,5 @@ jobs:
           echo "Notification JSON Content:"
           echo "$NOTIFICATION_CONTENT"
 
-          curl -H "Content-Type: application/json" -d "$NOTIFICATION_CONTENT" ${{ secrets.AMD_STAGING_NIGHTLY_TEAMS_WEBHOOK_URL }}
+          #curl -H "Content-Type: application/json" -d "$NOTIFICATION_CONTENT" ${{ secrets.AMD_STAGING_NIGHTLY_TEAMS_WEBHOOK_URL }}
 

@@ -41,14 +41,12 @@ import requests
 
 
 class BuildMetadataExtractor:
-    def __init__(self, org_name, project_name, run_id, github_token, manifest_path, rock_manifest_url, artifacts_url, build_logs_url, output_file):
+    def __init__(self, org_name, project_name, run_id, github_token, artifacts_url, build_logs_url, output_file):
         """Initialize the extractor with organization, project info, and additional inputs."""
         self.org_name = org_name
         self.project_name = project_name
         self.run_id = run_id
         self.github_token = github_token
-        self.manifest_path = manifest_path
-        self.rock_manifest_url = rock_manifest_url
         self.artifacts_url = artifacts_url
         self.build_logs_url = build_logs_url
         self.output_file = output_file
@@ -84,7 +82,7 @@ class BuildMetadataExtractor:
     def generate_manifest_artifact_logs_table(self):
         """Creates a table for Rock Manifest, Artifacts, and Build Logs."""
         table = '| Description | URL |\n|-------------|-----|\n'
-        table += f'| Rock Manifest | ({self.rock_manifest_url}) |\\n'
+        #table += f'| Rock Manifest | ({self.rock_manifest_url}) |\\n'
         table += f'| Artifacts | ({self.artifacts_url}) |\\n'
         table += f'| Build Logs | ({self.build_logs_url}) |\\n'
 
@@ -104,7 +102,6 @@ class BuildMetadataExtractor:
 
             failure_jobs.extend([job for job in jobs_data['jobs'] if job.get('conclusion') == 'failure'])
             page += 1
-
         if not failure_jobs:
             return None  # No failures, return None
 
@@ -115,10 +112,10 @@ class BuildMetadataExtractor:
             failure_table += f'| {job_name} | ({job_url}) |\\n'
         return failure_table
 
-    def save_results_to_file(self, submodule_table, manifest_artifacts_table, failure_table):
+    def save_results_to_file(self, manifest_artifacts_table, failure_table):
         """Saves the results to a file in structured JSON format."""
         results = {
-            "submodule_table": submodule_table,
+            #"submodule_table": submodule_table,
             "manifest_artifacts_table": manifest_artifacts_table,
             "failure_table": failure_table or "No failures found"
         }
@@ -132,25 +129,31 @@ if __name__ == "__main__":
     PROJECT_NAME = os.getenv("PROJECT_NAME", "llvm-project")
     RUN_ID = os.getenv("RUN_ID", "")
     GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-    MANIFEST_FILE = os.getenv("MANIFEST_FILE", "manifest.json")
-    ROCK_MANIFEST_URL = os.getenv("ROCK_MANIFEST_URL")
+    #MANIFEST_FILE = os.getenv("MANIFEST_FILE", "manifest.json")
+    #ROCK_MANIFEST_URL = os.getenv("ROCK_MANIFEST_URL")
     ARTIFACTS_URL = os.getenv("ARTIFACTS_URL")
     BUILD_LOGS_URL = os.getenv("BUILD_LOGS_URL")
     OUTPUT_FILE = os.getenv("OUTPUT_FILE", "results.json")
 
     # Initialize extractor
+    #extractor = BuildMetadataExtractor(
+    #    ORG_NAME, PROJECT_NAME, RUN_ID, GITHUB_TOKEN, MANIFEST_FILE, 
+    #    ROCK_MANIFEST_URL, ARTIFACTS_URL, BUILD_LOGS_URL, OUTPUT_FILE
+    #)
+
     extractor = BuildMetadataExtractor(
-        ORG_NAME, PROJECT_NAME, RUN_ID, GITHUB_TOKEN, MANIFEST_FILE, 
-        ROCK_MANIFEST_URL, ARTIFACTS_URL, BUILD_LOGS_URL, OUTPUT_FILE
+        ORG_NAME, PROJECT_NAME, RUN_ID, GITHUB_TOKEN, ARTIFACTS_URL, BUILD_LOGS_URL, OUTPUT_FILE
     )
 
+
     # Process the manifest file
-    manifest_data = extractor.read_manifest_file()
-    if manifest_data:
-        submodule_table = extractor.extract_submodule_table(manifest_data)
-        manifest_artifacts_table = extractor.generate_manifest_artifact_logs_table()
-        failure_table = extractor.list_failures()
+    #manifest_data = extractor.read_manifest_file()
+    #if manifest_data:
+    #submodule_table = extractor.extract_submodule_table(manifest_data)
+    manifest_artifacts_table = extractor.generate_manifest_artifact_logs_table()
+    failure_table = extractor.list_failures()
 
         # Save results to an output file
-        extractor.save_results_to_file(submodule_table, manifest_artifacts_table, failure_table)
+    #extractor.save_results_to_file(submodule_table, manifest_artifacts_table, failure_table)
+    extractor.save_results_to_file(manifest_artifacts_table, failure_table)
 
