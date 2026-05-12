@@ -4688,6 +4688,24 @@ def : Pat<(v2i64 (saddsat (v2i64 QPR:$src1),
                                 (v2i32 (ARMvduplane (v2i32 DPR_VFP2:$Vm),
                                                      imm:$lane)))))),
           (VQDMLALslv2i32 QPR:$src1, DPR:$Vn, DPR_VFP2:$Vm, imm:$lane)>;
+def : Pat<(v4i32 (saddsat (v4i32 (int_arm_neon_vqdmull (v4i16 DPR:$Vn),
+                                                  (v4i16 DPR:$Vm))),
+                     (v4i32 QPR:$src1))),
+          (VQDMLALv4i32 QPR:$src1, DPR:$Vn, DPR:$Vm)>;
+def : Pat<(v2i64 (saddsat (v2i64 (int_arm_neon_vqdmull (v2i32 DPR:$Vn),
+                                                  (v2i32 DPR:$Vm))),
+                     (v2i64 QPR:$src1))),
+          (VQDMLALv2i64 QPR:$src1, DPR:$Vn, DPR:$Vm)>;
+def : Pat<(v4i32 (saddsat (v4i32 (int_arm_neon_vqdmull (v4i16 DPR:$Vn),
+                                (v4i16 (ARMvduplane (v4i16 DPR_8:$Vm),
+                                                     imm:$lane)))),
+                     (v4i32 QPR:$src1))),
+          (VQDMLALslv4i16 QPR:$src1, DPR:$Vn, DPR_8:$Vm, imm:$lane)>;
+def : Pat<(v2i64 (saddsat (v2i64 (int_arm_neon_vqdmull (v2i32 DPR:$Vn),
+                                (v2i32 (ARMvduplane (v2i32 DPR_VFP2:$Vm),
+                                                     imm:$lane)))),
+                     (v2i64 QPR:$src1))),
+          (VQDMLALslv2i32 QPR:$src1, DPR:$Vn, DPR_VFP2:$Vm, imm:$lane)>;
 }
 
 //   VMLS     : Vector Multiply Subtract (integer and floating-point)

@@ -219,6 +219,28 @@ define <2 x i64> @vqdmlals32_natural(ptr %A, ptr %B, ptr %C) nounwind {
         ret <2 x i64> %tmp5
 }
 
+define <4 x i32> @vqdmlals16_commuted(ptr %A, ptr %B, ptr %C) nounwind {
+;CHECK-LABEL: vqdmlals16_commuted:
+;CHECK: vqdmlal.s16
+        %tmp1 = load <4 x i32>, ptr %A
+        %tmp2 = load <4 x i16>, ptr %B
+        %tmp3 = load <4 x i16>, ptr %C
+        %tmp4 = call <4 x i32> @llvm.arm.neon.vqdmull.v4i32(<4 x i16> %tmp2, <4 x i16> %tmp3)
+        %tmp5 = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %tmp4, <4 x i32> %tmp1)
+        ret <4 x i32> %tmp5
+}
+
+define <2 x i64> @vqdmlals32_commuted(ptr %A, ptr %B, ptr %C) nounwind {
+;CHECK-LABEL: vqdmlals32_commuted:
+;CHECK: vqdmlal.s32
+        %tmp1 = load <2 x i64>, ptr %A
+        %tmp2 = load <2 x i32>, ptr %B
+        %tmp3 = load <2 x i32>, ptr %C
+        %tmp4 = call <2 x i64> @llvm.arm.neon.vqdmull.v2i64(<2 x i32> %tmp2, <2 x i32> %tmp3)
+        %tmp5 = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> %tmp4, <2 x i64> %tmp1)
+        ret <2 x i64> %tmp5
+}
+
 define arm_aapcs_vfpcc <4 x i32> @test_vqdmlal_lanes16_natural(<4 x i32> %arg0_int32x4_t, <4 x i16> %arg1_int16x4_t, <4 x i16> %arg2_int16x4_t) nounwind readnone {
 entry:
 ; CHECK-LABEL: test_vqdmlal_lanes16_natural:
@@ -236,6 +258,26 @@ entry:
   %0 = shufflevector <2 x i32> %arg2_int32x2_t, <2 x i32> undef, <2 x i32> <i32 1, i32 1> ; <<2 x i32>> [#uses=1]
   %1 = tail call <2 x i64> @llvm.arm.neon.vqdmull.v2i64(<2 x i32> %arg1_int32x2_t, <2 x i32> %0)
   %2 = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> %arg0_int64x2_t, <2 x i64> %1)
+  ret <2 x i64> %2
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vqdmlal_lanes16_commuted(<4 x i32> %arg0_int32x4_t, <4 x i16> %arg1_int16x4_t, <4 x i16> %arg2_int16x4_t) nounwind readnone {
+entry:
+; CHECK-LABEL: test_vqdmlal_lanes16_commuted:
+; CHECK: vqdmlal.s16 q0, d2, d3[1]
+  %0 = shufflevector <4 x i16> %arg2_int16x4_t, <4 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %1 = tail call <4 x i32> @llvm.arm.neon.vqdmull.v4i32(<4 x i16> %arg1_int16x4_t, <4 x i16> %0)
+  %2 = tail call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %1, <4 x i32> %arg0_int32x4_t)
+  ret <4 x i32> %2
+}
+
+define arm_aapcs_vfpcc <2 x i64> @test_vqdmlal_lanes32_commuted(<2 x i64> %arg0_int64x2_t, <2 x i32> %arg1_int32x2_t, <2 x i32> %arg2_int32x2_t) nounwind readnone {
+entry:
+; CHECK-LABEL: test_vqdmlal_lanes32_commuted:
+; CHECK: vqdmlal.s32 q0, d2, d3[1]
+  %0 = shufflevector <2 x i32> %arg2_int32x2_t, <2 x i32> undef, <2 x i32> <i32 1, i32 1>
+  %1 = tail call <2 x i64> @llvm.arm.neon.vqdmull.v2i64(<2 x i32> %arg1_int32x2_t, <2 x i32> %0)
+  %2 = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> %1, <2 x i64> %arg0_int64x2_t)
   ret <2 x i64> %2
 }
 
