@@ -48,6 +48,7 @@ static_library("Utils") {
     "InstructionNamer.cpp",
     "Instrumentation.cpp",
     "IntegerDivision.cpp",
+    "KCFIHash.cpp",
     "LCSSA.cpp",
     "LibCallsShrinkWrap.cpp",
     "Local.cpp",
