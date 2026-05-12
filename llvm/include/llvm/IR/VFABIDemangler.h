@@ -131,13 +131,12 @@ struct VFInfo {
   /// Returns true if the last operand to the vectorized function has the
   /// kind 'GlobalPredicate'.
   bool isMasked() const {
-    // There should be at most one GlobalPredicate parameter.
 #ifndef NDEBUG
     unsigned NumMaskParams =
         llvm::count_if(Shape.Parameters, [](const VFParameter &I) {
           return I.ParamKind == VFParamKind::GlobalPredicate;
         });
-    assert(NumMaskParams <= 1 && "Unexpected number of mask parameters");
+    assert(NumMaskParams <= 1 && "Should be at most one mask parameter");
     assert((!NumMaskParams || Shape.Parameters.back().ParamKind ==
                                   VFParamKind::GlobalPredicate) &&
            "Mask parameter in unexpected position");
