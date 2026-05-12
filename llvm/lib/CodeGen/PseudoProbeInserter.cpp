@@ -54,7 +54,9 @@ public:
     for (MachineBasicBlock &MBB : MF) {
       MachineInstr *FirstInstr = nullptr;
       for (MachineInstr &MI : MBB) {
-        if (!MI.isPseudo())
+        // Pseudo instructions like TCRETURNbi results in a branch instruction
+        // and the call probe for that tail call should be preserved.
+        if (!MI.isPseudo() || MI.isCall())
           FirstInstr = &MI;
         if (MI.isCall()) {
           if (DILocation *DL = MI.getDebugLoc()) {
