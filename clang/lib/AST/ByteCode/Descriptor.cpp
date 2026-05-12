@@ -493,6 +493,8 @@ bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
 unsigned Descriptor::getElemDataSize() const {
   if ((isPrimitive() || isPrimitiveArray()) &&
       isIntegerOrBoolType(getPrimType())) {
+    if (getPrimType() == PT_Bool)
+      return 1;
     FIXED_SIZE_INT_TYPE_SWITCH(getPrimType(), { return T::bitWidth() / 8; });
   }
   return ElemSize;

@@ -1,1 +1,1 @@
-Checks: "-*,hicpp-uppercase-literal-suffix"
+Checks: "-*,modernize-use-nullptr"
