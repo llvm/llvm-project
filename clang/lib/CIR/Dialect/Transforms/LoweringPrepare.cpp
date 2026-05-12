@@ -138,7 +138,7 @@ struct LoweringPreparePass
   void buildCXXGlobalInitFunc();
   // Build a init function for all of the ordered global thread local storage
   // variables.
- void buildCXXGlobalTlsFunc();
+  void buildCXXGlobalTlsFunc();
 
   /// Materialize global ctor/dtor list
   void buildGlobalCtorDtorList();
@@ -1577,7 +1577,7 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
     // If this is a declaration and has no init function, we probably DO have to
     // create an alias that needs checking, so create it as extern-weak.
     initAlias = defineGlobalThreadLocalInitAlias(op, {});
-   }
+  }
 
   // We need a wrapper for TLS globals that MIGHT have a non-constant
   // initialization. The FE will have generated the DynTlsRefs for any with
