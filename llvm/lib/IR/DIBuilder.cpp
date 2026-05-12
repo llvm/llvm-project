@@ -639,13 +639,13 @@ DICompositeType *DIBuilder::createStructType(
     Metadata *SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
     DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang,
     DIType *VTableHolder, StringRef UniqueIdentifier, DIType *Specification,
-    uint32_t NumExtraInhabitants) {
+    uint32_t NumExtraInhabitants, DINodeArray Annotations) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
       Flags, Elements, RunTimeLang, /*EnumKind=*/std::nullopt, VTableHolder,
       nullptr, UniqueIdentifier, nullptr, nullptr, nullptr, nullptr, nullptr,
-      nullptr, Specification, NumExtraInhabitants);
+      Annotations, Specification, NumExtraInhabitants);
   trackIfUnresolved(R);
   if (isa_and_nonnull<DILocalScope>(Context))
     getSubprogramNodesTrackingVector(Context).emplace_back(R);
