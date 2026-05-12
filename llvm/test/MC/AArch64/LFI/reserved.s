@@ -43,3 +43,7 @@ ldr x0, [x27], #8
 ldr x0, [x28, #8]!
 // CHECK: error: illegal modification of reserved LFI register X28
 // CHECK:        ldr x0, [x28, #8]!
+
+mov x25, x0
+// CHECK: error: illegal modification of reserved LFI register X25
+// CHECK:        mov x25, x0

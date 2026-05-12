@@ -70,7 +70,7 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
     if (mayModifyRegister(Inst, Reg))
       return Reg;
   }
-  return MCRegister();
+  return {};
 }
 
 void AArch64MCLFIRewriter::emitInst(const MCInst &Inst, MCStreamer &Out,
