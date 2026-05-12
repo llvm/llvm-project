@@ -4,9 +4,7 @@
 name:            repro
 tracksRegLiveness: true
 stack:
-  - { id: 0, name: '', type: default, offset: 0, size: 16384, alignment: 1,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 0, offset: 0, size: 16384, callee-saved-restored: true }
 body:             |
   bb.0 :
     liveins: $r2d, $r3d
