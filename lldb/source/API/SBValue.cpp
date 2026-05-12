@@ -598,6 +598,20 @@ SBValue::GetChildMemberWithName(const char *name,
   return sb_value;
 }
 
+lldb::SBValue SBValue::GetParent() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBValue sb_value;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (value_sp) {
+    ValueObject *parent = value_sp->GetParent();
+    if (parent)
+      sb_value.SetSP(parent->GetSP());
+  }
+  return sb_value;
+}
+
 lldb::SBValue SBValue::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
   LLDB_INSTRUMENT_VA(this, use_dynamic);
 
