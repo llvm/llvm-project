@@ -4491,16 +4491,15 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
           bool UnifiedMemoryEnabled =
               getOpenMPRuntime().hasRequiresUnifiedSharedMemory();
-          if ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-               *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
-               *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
-              !UnifiedMemoryEnabled) {
+          if (*Res == OMPDeclareTargetDeclAttr::MT_Local ||
+              ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+                *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+               !UnifiedMemoryEnabled)) {
             (void)GetAddrOfGlobalVar(VD);
           } else {
             assert(((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
                     ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                      *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
-                      *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
+                      *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
                      UnifiedMemoryEnabled)) &&
                    "Link clause or to clause with unified memory expected.");
             (void)getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);

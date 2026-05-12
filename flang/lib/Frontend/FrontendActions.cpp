@@ -1345,8 +1345,6 @@ void CodeGenAction::executeAction() {
   clang::DiagnosticsEngine &diags = ci.getDiagnostics();
   const CodeGenOptions &codeGenOpts = ci.getInvocation().getCodeGenOpts();
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
-  Fortran::lower::LoweringOptions &loweringOpts =
-      ci.getInvocation().getLoweringOpts();
   mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
   mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
@@ -1375,16 +1373,12 @@ void CodeGenAction::executeAction() {
   }
 
   if (action == BackendActionTy::Backend_EmitFIR) {
-    if (loweringOpts.getLowerToHighLevelFIR()) {
-      lowerHLFIRToFIR();
-    }
+    lowerHLFIRToFIR();
     mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }
 
   if (action == BackendActionTy::Backend_EmitHLFIR) {
-    assert(loweringOpts.getLowerToHighLevelFIR() &&
-           "Lowering must have been configured to emit HLFIR");
     mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }

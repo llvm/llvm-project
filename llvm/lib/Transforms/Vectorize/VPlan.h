@@ -3479,13 +3479,6 @@ public:
     return 0;
   }
 
-  /// Returns true if the recipe uses scalars of operand \p Op.
-  bool usesScalars(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
-
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
