@@ -22,7 +22,7 @@ module @gemm attributes {gpu.container_module} {
 
       %id_x = gpu.thread_id x
       %c8 = arith.constant 8 : index
-      %idx_x = arith.remui %id_x, %c8 : index
+      %idx_x = arith.remsi %id_x, %c8 : index
       %c0 = arith.constant 0 : index
       %scale = memref.load %scale_a[%idx_x, %c0] : memref<8x1xf8E8M0FNU>
       %scale_a_undef = arith.constant dense<1.0> : vector<1xf8E8M0FNU>
