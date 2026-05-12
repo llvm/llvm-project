@@ -130,6 +130,16 @@ define i1 @squared_eq_non_sqr(i8 %x) {
   ret i1 %r
 }
 
+define <2 x i1> @squared_nuw_sqr_v(<2 x i8> %x) {
+; CHECK-LABEL: @squared_nuw_sqr_v(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[X:%.*]], splat (i8 3)
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %m = mul nuw <2 x i8> %x, %x
+  %r = icmp ult <2 x i8> %m, <i8 9, i8 9>
+  ret <2 x i1> %r
+}
+
 ; negative test - signed compare
 
 define i1 @squared_nuw_slt_sqr(i8 %x) {
@@ -140,6 +150,41 @@ define i1 @squared_nuw_slt_sqr(i8 %x) {
 ;
   %m = mul nuw i8 %x, %x
   %r = icmp slt i8 %m, 9
+  ret i1 %r
+}
+
+; negative test - close to unsigned integer type max value
+
+define i1 @squared_nuw_ult_sqr_u32_max(i32 %x) {
+; CHECK-LABEL: @squared_nuw_ult_sqr_u32_max(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[M]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i32 %x, %x
+  %r = icmp ult i32 %m, -1
+  ret i1 %r
+}
+
+define i1 @squared_nuw_ult_sqr_u64_max(i64 %x) {
+; CHECK-LABEL: @squared_nuw_ult_sqr_u64_max(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i64 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[M]], -2
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i64 %x, %x
+  %r = icmp ult i64 %m, -2
+  ret i1 %r
+}
+
+define i1 @squared_nuw_ult_sqr_u128_max(i128 %x) {
+; CHECK-LABEL: @squared_nuw_ult_sqr_u128_max(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i128 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i128 [[M]], -3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i128 %x, %x
+  %r = icmp ult i128 %m, -3
   ret i1 %r
 }
 

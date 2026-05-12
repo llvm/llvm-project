@@ -2190,49 +2190,54 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
 
   // If comparing a square with a constant, try simplifying to comparing square
   // roots
-  if (X == Mul->getOperand(1)) {
+  if (X == Mul->getOperand(1) && !Cmp.isSigned()) {
     APInt R = C.sqrt();
-    bool IsSqr = C == R * R;
+    bool Overflow;
+    APInt R2 = R.umul_ov(R, Overflow);
 
-    // X * X eq/ne C
-    if (Cmp.isEquality() &&
-        (Mul->hasNoUnsignedWrap() || (Mul->hasNoSignedWrap() && C.isZero()))) {
+    if (!Overflow) {
+      bool IsSqr = C == R2;
 
-      // If constant is not a square, eq/ne is false/true respectively
-      if (!IsSqr)
-        return replaceInstUsesWith(
-            Cmp, ConstantInt::getBool(Cmp.getType(),
-                                      CmpInst::isFalseWhenEqual(Pred)));
+      // X * X eq/ne C
+      if (Cmp.isEquality() && (Mul->hasNoUnsignedWrap() ||
+                               (Mul->hasNoSignedWrap() && C.isZero()))) {
 
-      return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
-    }
+        // If constant is not a square, eq/ne is false/true respectively
+        if (!IsSqr)
+          return replaceInstUsesWith(
+              Cmp, ConstantInt::getBool(Cmp.getType(),
+                                        CmpInst::isFalseWhenEqual(Pred)));
 
-    // If the multiply does not wrap
-    // X * X pred C --> X pred R
-    if (Cmp.isUnsigned() && Mul->hasNoUnsignedWrap()) {
-
-      if (IsSqr)
         return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
+      }
 
-      // If C is not a square, we use floor/ceil of sqrt(C)
-      //
-      // If LT or LE, we need R to be an overestimate of sqrt(C),
-      // then use the strict predicate (LT->LT, LE->LT).
-      //
-      // If GT or GE, we need R to be an underestimate of sqrt(C),
-      // then use the strict predicate (GT->GT, GE->GT).
-      bool NeedOverestimate = ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
+      // If the multiply does not wrap
+      // X * X pred C --> X pred R
+      if (Mul->hasNoUnsignedWrap()) {
 
-      // Is R currently an underestimate or overestimate of sqrt(C)?
-      bool Overestimate = C.ult(R * R);
+        if (IsSqr)
+          return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
 
-      if (Overestimate && !NeedOverestimate)
-        --R;
-      if (!Overestimate && NeedOverestimate)
-        ++R;
+        // If C is not a square, we use floor/ceil of sqrt(C)
+        //
+        // If LT or LE, we need R to be an overestimate of sqrt(C),
+        // then use the strict predicate (LT->LT, LE->LT).
+        //
+        // If GT or GE, we need R to be an underestimate of sqrt(C),
+        // then use the strict predicate (GT->GT, GE->GT).
+        bool NeedOverestimate = ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
 
-      return new ICmpInst(Cmp.getStrictPredicate(), X,
-                          ConstantInt::get(MulTy, R));
+        // Is R currently an underestimate or overestimate of sqrt(C)?
+        bool Overestimate = C.ult(R2);
+
+        if (Overestimate && !NeedOverestimate)
+          --R;
+        if (!Overestimate && NeedOverestimate)
+          ++R;
+
+        return new ICmpInst(Cmp.getStrictPredicate(), X,
+                            ConstantInt::get(MulTy, R));
+      }
     }
   }
 
