@@ -241,7 +241,7 @@ genrule(
     name = "copy_llvm_libc_static_headers",
     srcs = STATIC_HEADERS,
     outs = ["staging/" + f for f in STATIC_HEADERS],
-    cmd = """srcs=($(SRCS))\n outs=($(OUTS))\n for i in "$${!srcs[@]}"; do cp "$${srcs[$$i]}" "$${outs[$$i]}"; done""",
+    cmd = """srcs=($(SRCS))\n outs=($(OUTS))\n for i in "$${!srcs[@]}"; do sed 's|../llvm-libc-types/stdint-macros.h|../llvm-libc-macros/stdint-macros.h|g' "$${srcs[$$i]}" > "$${outs[$$i]}"; done""",
 )
 
 genrule(
