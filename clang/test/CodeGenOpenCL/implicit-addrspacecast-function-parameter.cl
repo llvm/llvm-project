@@ -33,7 +33,7 @@ __kernel void use_of_local_var()
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[X]]) #[[ATTR5:[0-9]+]]
-// CHECK-NEXT:    store i32 0, ptr addrspace(5) [[X]], align 4, !tbaa [[INT_TBAA4:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr addrspace(5) [[X]], align 4, !tbaa [[INT_TBAA3:![0-9]+]]
 // CHECK-NEXT:    call void @private_ptr(ptr addrspace(5) noundef [[X]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
 // CHECK-NEXT:    call void @generic_ptr(ptr noundef [[X_ASCAST]]) #[[ATTR6]]
@@ -45,32 +45,31 @@ __kernel void use_of_local_var()
 // CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store i32 [[X]], ptr addrspace(5) [[X_ADDR]], align 4, !tbaa [[INT_TBAA3]]
+// CHECK-NEXT:    call void @private_ptr(ptr addrspace(5) noundef [[X_ADDR]]) #[[ATTR6]]
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
-// CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR_ASCAST]], align 4, !tbaa [[INT_TBAA4]]
-// CHECK-NEXT:    [[X_ADDR_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[X_ADDR_ASCAST]] to ptr addrspace(5)
-// CHECK-NEXT:    call void @private_ptr(ptr addrspace(5) noundef [[X_ADDR_ASCAST_ASCAST]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @generic_ptr(ptr noundef [[X_ADDR_ASCAST]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define dso_local amdgpu_kernel void @use_of_local_var(
-// CHECK-SAME: ) #[[ATTR3:[0-9]+]] !kernel_arg_addr_space [[META8:![0-9]+]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META8]] !kernel_arg_base_type [[META8]] !kernel_arg_type_qual [[META8]] {
+// CHECK-SAME: ) #[[ATTR3:[0-9]+]] !kernel_arg_addr_space [[META7:![0-9]+]] !kernel_arg_access_qual [[META7]] !kernel_arg_type [[META7]] !kernel_arg_base_type [[META7]] !kernel_arg_type_qual [[META7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    call void @__clang_ocl_kern_imp_use_of_local_var() #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define dso_local void @__clang_ocl_kern_imp_use_of_local_var(
-// CHECK-SAME: ) #[[ATTR4:[0-9]+]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META8]] !kernel_arg_base_type [[META8]] !kernel_arg_type_qual [[META8]] {
+// CHECK-SAME: ) #[[ATTR4:[0-9]+]] !kernel_arg_addr_space [[META7]] !kernel_arg_access_qual [[META7]] !kernel_arg_type [[META7]] !kernel_arg_base_type [[META7]] !kernel_arg_type_qual [[META7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    call void @local_ptr(ptr addrspace(3) noundef @use_of_local_var.x) #[[ATTR6]]
 // CHECK-NEXT:    call void @generic_ptr(ptr noundef addrspacecast (ptr addrspace(3) @use_of_local_var.x to ptr)) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 //.
-// CHECK: [[INT_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-// CHECK: [[META5]] = !{!"int", [[META6:![0-9]+]], i64 0}
-// CHECK: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
-// CHECK: [[META7]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[META8]] = !{}
+// CHECK: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+// CHECK: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+// CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META7]] = !{}
 //.

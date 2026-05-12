@@ -338,7 +338,7 @@ define <8 x i16> @concat_high_low_v8i16(<8 x i16> %a_vec, <8 x i16> %b_vec) {
 ;
 ; CHECK-GI-LABEL: concat_high_low_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -351,7 +351,7 @@ entry:
 define <8 x i16> @concat_low_high_v8i16(<8 x i16> %a_vec, <8 x i16> %b_vec) {
 ; CHECK-LABEL: concat_low_high_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:

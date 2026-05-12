@@ -1629,25 +1629,6 @@ bool CompilerInvocation::createFromArgs(
     success = false;
   }
 
-  // -flang-experimental-hlfir
-  if (args.hasArg(clang::options::OPT_flang_experimental_hlfir) ||
-      args.hasArg(clang::options::OPT_emit_hlfir)) {
-    invoc.loweringOpts.setLowerToHighLevelFIR(true);
-  }
-
-  // -flang-deprecated-no-hlfir
-  if (args.hasArg(clang::options::OPT_flang_deprecated_no_hlfir) &&
-      !args.hasArg(clang::options::OPT_emit_hlfir)) {
-    if (args.hasArg(clang::options::OPT_flang_experimental_hlfir)) {
-      const unsigned diagID = diags.getCustomDiagID(
-          clang::DiagnosticsEngine::Error,
-          "Options '-flang-experimental-hlfir' and "
-          "'-flang-deprecated-no-hlfir' cannot be both specified");
-      diags.Report(diagID);
-    }
-    invoc.loweringOpts.setLowerToHighLevelFIR(false);
-  }
-
   // -fno-ppc-native-vector-element-order
   if (args.hasArg(clang::options::OPT_fno_ppc_native_vec_elem_order)) {
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
