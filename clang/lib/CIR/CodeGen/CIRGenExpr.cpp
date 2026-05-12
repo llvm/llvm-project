@@ -528,9 +528,27 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
 
   assert(currSrcLoc && "must pass in source location");
 
-  return builder.createSetBitfield(*currSrcLoc, resLTy, ptr,
-                                   ptr.getElementType(), src.getValue(), info,
-                                   dst.isVolatileQualified(), useVoaltile);
+  // cir.set_bitfield consumes and produces integer values only.  When the
+  // user-visible field type is bool (e.g. `bool flag : 1;`), widen the
+  // source to the storage's integer type for the op call and narrow the
+  // op's integer result back to bool for callers that consume the value
+  // of the assignment expression.
+  bool isBool = mlir::isa<cir::BoolType>(resLTy);
+  mlir::Value srcVal = src.getValue();
+  mlir::Type opResLTy = resLTy;
+  if (isBool) {
+    opResLTy = ptr.getElementType();
+    srcVal = builder.createBoolToInt(srcVal, opResLTy);
+  }
+
+  mlir::Value stored = builder.createSetBitfield(
+      *currSrcLoc, opResLTy, ptr, ptr.getElementType(), srcVal, info,
+      dst.isVolatileQualified(), useVoaltile);
+
+  if (isBool)
+    stored = builder.createCast(*currSrcLoc, cir::CastKind::int_to_bool, stored,
+                                resLTy);
+  return stored;
 }
 
 RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
@@ -543,9 +561,21 @@ RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
   bool useVoaltile = lv.isVolatileQualified() && info.volatileOffset != 0 &&
                      isAAPCS(cgm.getTarget());
 
-  mlir::Value field =
-      builder.createGetBitfield(getLoc(loc), resLTy, ptr, ptr.getElementType(),
-                                info, lv.isVolatile(), useVoaltile);
+  // cir.get_bitfield always produces an integer.  When the user-visible
+  // field type is bool (e.g. `bool flag : 1;`), perform the load in the
+  // storage's integer type and narrow the result back to bool with
+  // int_to_bool (i != 0).
+  bool isBool = mlir::isa<cir::BoolType>(resLTy);
+  mlir::Type opResLTy = isBool ? ptr.getElementType() : resLTy;
+
+  mlir::Value field = builder.createGetBitfield(getLoc(loc), opResLTy, ptr,
+                                                ptr.getElementType(), info,
+                                                lv.isVolatile(), useVoaltile);
+
+  if (isBool)
+    field = builder.createCast(getLoc(loc), cir::CastKind::int_to_bool, field,
+                               resLTy);
+
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
   return RValue::get(field);
 }
