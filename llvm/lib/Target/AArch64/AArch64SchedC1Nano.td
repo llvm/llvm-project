@@ -551,6 +551,8 @@ def : InstRW<[C1NanoWriteVST1Release1], (instregex "ST1Onev(8b|4h|2s|1d)$")>;
 def : InstRW<[C1NanoWriteVST1Release1], (instregex "ST1Onev(16b|8h|4s|2d)$")>;
 def : InstRW<[C1NanoWriteVST1Release1], (instregex "ST1Twov(8b|4h|2s|1d)$")>;
 def : InstRW<[C1NanoWriteVST1Release2], (instregex "ST1Twov(16b|8h|4s|2d)$")>;
+// TODO: Handle the special case of ASIMD store, 1 element, multiple, 3 reg, D-form when:
+//   Throughput=1/3 when the access is aligned and crosses 16B boundary, one more cycle is needed
 def : InstRW<[C1NanoWriteVST1Release2], (instregex "ST1Threev(8b|4h|2s|1d)$")>;
 def : InstRW<[C1NanoWriteVST1Release3], (instregex "ST1Threev(16b|8h|4s|2d)$")>;
 def : InstRW<[C1NanoWriteVST1Release2], (instregex "ST1Fourv(8b|4h|2s|1d)$")>;
@@ -561,6 +563,8 @@ def : InstRW<[WriteAdr, C1NanoWriteVST1Release1], (instregex "ST1Onev(8b|4h|2s|1
 def : InstRW<[WriteAdr, C1NanoWriteVST1Release1], (instregex "ST1Onev(16b|8h|4s|2d)_POST$")>;
 def : InstRW<[WriteAdr, C1NanoWriteVST1Release1], (instregex "ST1Twov(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[WriteAdr, C1NanoWriteVST1Release2], (instregex "ST1Twov(16b|8h|4s|2d)_POST$")>;
+// TODO: Handle the special case of ASIMD store, 1 element, multiple, 3 reg, D-form when:
+//   Throughput=1/3 when the access is aligned and crosses 16B boundary, one more cycle is needed
 def : InstRW<[WriteAdr, C1NanoWriteVST1Release2], (instregex "ST1Threev(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[WriteAdr, C1NanoWriteVST1Release3], (instregex "ST1Threev(16b|8h|4s|2d)_POST$")>;
 def : InstRW<[WriteAdr, C1NanoWriteVST1Release2], (instregex "ST1Fourv(8b|4h|2s|1d)_POST$")>;
