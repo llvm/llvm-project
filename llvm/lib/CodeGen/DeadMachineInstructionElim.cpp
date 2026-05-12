@@ -120,7 +120,8 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
         ++NumDeletes;
         continue;
       }
-      LivePhysRegs.stepBackward(MI);
+      if (!MI.isDebugInstr())
+        LivePhysRegs.stepBackward(MI);
     }
   }
   LivePhysRegs.clear();

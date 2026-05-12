@@ -80,7 +80,8 @@ void RegScavenger::enterBasicBlockEnd(MachineBasicBlock &MBB) {
 
 void RegScavenger::backward() {
   const MachineInstr &MI = *--MBBI;
-  LiveUnits.stepBackward(MI);
+  if (!MI.isDebugInstr())
+    LiveUnits.stepBackward(MI);
 
   // Expire scavenge spill frameindex uses.
   for (ScavengedInfo &I : Scavenged) {

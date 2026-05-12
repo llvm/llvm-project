@@ -10613,7 +10613,8 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
   // SKIP: <unsafe use>
   auto FirstPossibleEndPt = MBB.instr_rbegin();
   for (; FirstPossibleEndPt != MBB.instr_rend(); ++FirstPossibleEndPt) {
-    LRU.stepBackward(*FirstPossibleEndPt);
+    if (!FirstPossibleEndPt->isDebugInstr())
+      LRU.stepBackward(*FirstPossibleEndPt);
     // Update flags that impact how we outline across the entire block,
     // regardless of safety.
     UpdateWholeMBBFlags(*FirstPossibleEndPt);
@@ -10629,7 +10630,8 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
   // are dead (if there is any such point). Begin partitioning the MBB into
   // ranges.
   for (auto &MI : make_range(FirstPossibleEndPt, MBB.instr_rend())) {
-    LRU.stepBackward(MI);
+    if (!MI.isDebugInstr())
+      LRU.stepBackward(MI);
     UpdateWholeMBBFlags(MI);
     if (!AreAllUnsafeRegsDead()) {
       SaveRangeIfNonEmpty();
