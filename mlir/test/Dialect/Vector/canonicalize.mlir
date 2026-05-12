@@ -4436,6 +4436,20 @@ func.func @negative_read_not_empty_tensor(%t: tensor<128xf16>) -> vector<128xf16
 
 // -----
 
+// transfer_read from tensor.empty wrapped in vector.mask: pattern must not fire.
+// CHECK-LABEL: func.func @negative_read_empty_vector_mask
+// CHECK:         tensor.empty
+// CHECK:         vector.mask
+func.func @negative_read_empty_vector_mask(%mask: vector<128xi1>) -> vector<128xf16> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %e = tensor.empty() : tensor<128xf16>
+  %r = vector.mask %mask { vector.transfer_read %e[%c0], %cst {in_bounds = [true]} : tensor<128xf16>, vector<128xf16> } : vector<128xi1> -> vector<128xf16>
+  return %r : vector<128xf16>
+}
+
+// -----
+
 // transfer_read from tensor.empty with a transposing permutation map: bail.
 // CHECK-LABEL: func.func @negative_read_empty_non_identity_map
 // CHECK:         tensor.empty

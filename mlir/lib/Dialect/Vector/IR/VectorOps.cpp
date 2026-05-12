@@ -5563,6 +5563,9 @@ struct FoldTransferReadOfEmptyTensor : public OpRewritePattern<TransferReadOp> {
     if (!op.getPermutationMap().isMinorIdentity())
       return failure();
 
+    if (op.isMasked())
+      return failure();
+
     bool fullyInBounds =
         llvm::all_of(op.getInBoundsValues(), [](bool v) { return v; });
 
