@@ -1,9 +1,6 @@
-set(_gen ${CMAKE_CURRENT_SOURCE_DIR}/../generic)
-
 # Vulkan uses a curated subset of generic builtins plus its own overrides,
 # so this list is self-contained rather than merged with the generic set.
-libclc_configure_source_list(_vulkan_sources
-  ${CMAKE_CURRENT_SOURCE_DIR}
+libclc_add_sources(${LIBCLC_OPENCL_TARGET} FILES
   conversion/convert_float2float.cl
   conversion/convert_float2int.cl
   conversion/convert_int2float.cl
@@ -12,8 +9,9 @@ libclc_configure_source_list(_vulkan_sources
   shared/vstore_half.cl
 )
 
-libclc_configure_source_list(_gen_sources
-  ${_gen}
+libclc_add_sources(${LIBCLC_OPENCL_TARGET}
+  BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../generic
+  FILES
   geometric/distance.cl
   geometric/length.cl
   math/acos.cl
@@ -84,5 +82,3 @@ libclc_configure_source_list(_gen_sources
   math/tanpi.cl
   math/tgamma.cl
 )
-
-set(OPENCL_VULKAN_SOURCES ${_vulkan_sources} ${_gen_sources} PARENT_SCOPE)

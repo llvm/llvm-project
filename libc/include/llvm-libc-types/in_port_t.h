@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_IN_PORT_T_H
 #define LLVM_LIBC_TYPES_IN_PORT_T_H
 
-#include "../llvm-libc-types/stdint-macros.h"
+#include "../llvm-libc-macros/stdint-macros.h"
 
 typedef uint16_t in_port_t;
 
