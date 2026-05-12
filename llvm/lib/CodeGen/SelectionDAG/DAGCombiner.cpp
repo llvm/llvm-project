@@ -24897,13 +24897,14 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
   // Extracting an element of a vector constant is constant-folded, so this
   // transform is just replacing a vector op with a scalar op while moving the
   // extract.
+  auto IsExtractFree = [](SDValue Op) {
+    APInt SplatVal;
+    return isAnyConstantBuildVector(Op, true) ||
+           ISD::isConstantSplatVector(Op.getNode(), SplatVal);
+  };
   SDValue Op0 = Vec.getOperand(0);
   SDValue Op1 = Vec.getOperand(1);
-  APInt SplatVal;
-  if (!isAnyConstantBuildVector(Op0, true) &&
-      !ISD::isConstantSplatVector(Op0.getNode(), SplatVal) &&
-      !isAnyConstantBuildVector(Op1, true) &&
-      !ISD::isConstantSplatVector(Op1.getNode(), SplatVal))
+  if (!IsExtractFree(Op0) && !IsExtractFree(Op1))
     return SDValue();
 
   // extractelt (op X, C), IndexC --> op (extractelt X, IndexC), C'
