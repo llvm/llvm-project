@@ -16,25 +16,28 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include <cassert>
 #include <initializer_list>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-namespace {
-
 constexpr std::array<llvm::StringRef, 2> EraseEndMethodNames = {"end", "cend"};
 constexpr std::array<llvm::StringRef, 2> EraseEndFreeNames = {"end", "cend"};
-constexpr const char *EraseThis = "EraseThis";
+constexpr const llvm::StringRef EraseThis = "EraseThis";
 
+namespace {
 AST_MATCHER(Expr, hasSideEffects) {
   return Node.HasSideEffects(Finder->getASTContext());
 }
+} // namespace
 
-auto makeExprMatcher(
-    const ast_matchers::internal::Matcher<Expr> &ArgumentMatcher,
-    ArrayRef<StringRef> MethodNames, ArrayRef<StringRef> FreeNames) {
+static auto
+makeExprMatcher(const ast_matchers::internal::Matcher<Expr> &ArgumentMatcher,
+                ArrayRef<StringRef> MethodNames,
+                ArrayRef<StringRef> FreeNames) {
   return expr(
       anyOf(cxxMemberCallExpr(argumentCountIs(0),
                               callee(cxxMethodDecl(hasAnyName(MethodNames))),
@@ -43,23 +46,21 @@ auto makeExprMatcher(
                      hasDeclaration(functionDecl(hasAnyName(FreeNames))))));
 }
 
-ast_matchers::internal::Matcher<Expr> makeMatcherPair() {
+static ast_matchers::internal::Matcher<Expr> makeMatcherPair() {
   ast_matchers::internal::Matcher<CallExpr> ArgumentMatcher = allOf(
       hasArgument(
           0, makeExprMatcher(expr(unless(hasSideEffects())).bind(EraseThis),
                              {"begin"}, {"::std::begin"})),
       hasArgument(
-          1, makeExprMatcher(
-                 expr(matchers::isStatementIdenticalToBoundNode(EraseThis)),
-                 {"end"}, {"::std::end"})),
+          1, makeExprMatcher(expr(matchers::isStatementIdenticalToBoundNode(
+                                 EraseThis.str())),
+                             {"end"}, {"::std::end"})),
       hasArgument(2, expr().bind("valueOrCond")));
 
   return callExpr(callee(functionDecl(hasAnyName("remove", "remove_if"))),
                   argumentCountIs(3), ArgumentMatcher)
       .bind("remove");
 }
-
-} // namespace
 
 void UseStdEraseCheck::registerMatchers(MatchFinder *Finder) {
   const auto IsCpp20EraseContainer = cxxRecordDecl(
@@ -70,7 +71,7 @@ void UseStdEraseCheck::registerMatchers(MatchFinder *Finder) {
       tagType(hasDeclaration(IsCpp20EraseContainer))));
 
   auto EraseEndCheck = makeExprMatcher(
-      expr(matchers::isStatementIdenticalToBoundNode(EraseThis)),
+      expr(matchers::isStatementIdenticalToBoundNode(EraseThis.str())),
       EraseEndMethodNames, EraseEndFreeNames);
 
   Finder->addMatcher(
@@ -93,8 +94,7 @@ void UseStdEraseCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const CXXMethodDecl *EraseMethod = EraseCall->getMethodDecl();
-  if (!EraseMethod)
-    return;
+  assert(EraseMethod);
 
   const StringRef RemoveFuncName = RemoveCall->getDirectCallee()->getName();
 
@@ -102,7 +102,7 @@ void UseStdEraseCheck::check(const MatchFinder::MatchResult &Result) {
       RemoveFuncName == "remove" ? "std::erase" : "std::erase_if";
 
   std::string Replacement =
-      (ReplacementFreeFunc + "(" +
+      (ReplacementFreeFunc + llvm::Twine{"("} +
        Lexer::getSourceText(
            CharSourceRange::getTokenRange(ContainerThis->getSourceRange()),
            Result.Context->getSourceManager(), Result.Context->getLangOpts()) +
@@ -110,13 +110,15 @@ void UseStdEraseCheck::check(const MatchFinder::MatchResult &Result) {
        Lexer::getSourceText(
            CharSourceRange::getTokenRange(ValueOrCond->getSourceRange()),
            Result.Context->getSourceManager(), Result.Context->getLangOpts()) +
-       ")")
+       llvm::Twine{")"})
           .str();
 
-  diag(EraseCall->getExprLoc(),
-       ("prefer %0 over the erase-" + RemoveFuncName + " idiom").str())
-      << ReplacementFreeFunc
-      << FixItHint::CreateReplacement(EraseCall->getSourceRange(), Replacement);
+  DiagnosticBuilder Diag =
+      diag(EraseCall->getExprLoc(), "prefer %0 over the erase-%1 idiom")
+      << ReplacementFreeFunc << RemoveFuncName;
+
+  Diag << FixItHint::CreateReplacement(EraseCall->getSourceRange(),
+                                       Replacement);
 }
 
 } // namespace clang::tidy::modernize
