@@ -339,6 +339,7 @@ void SourceManager::clearIDTables() {
   LastLookupStartOffset = LastLookupEndOffset = 0;
 
   IncludedLocMap.clear();
+  FileIDLookup.clear();
   if (LineTable)
     LineTable->clear();
 
@@ -540,6 +541,19 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                    SrcMgr::CharacteristicKind FileCharacter,
                                    int LoadedID,
                                    SourceLocation::UIntTy LoadedOffset) {
+  if (LoadedID >= 0 && MainFileID.isValid()) {
+    // If this file was already registered as a virtual/overridden file (e.g.,
+    // eagerly loaded input files in ASTReader), force the deserialization of
+    // its SLocEntry now. This ensures the embedded MemoryBuffer is filled from
+    // the PCM before we create a new FileID, avoiding incorrect fallbacks to
+    // disk when Preprocessor attempts to read it.
+    FileID ExistingFID = translateFile(SourceFile);
+    if (ExistingFID.isValid()) {
+      bool Invalid = false;
+      (void)getSLocEntry(ExistingFID, &Invalid);
+    }
+  }
+
   SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile,
                                                      isSystem(FileCharacter));
 
@@ -605,6 +619,10 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     LoadedSLocEntryTable[Index] = SLocEntry::get(
         LoadedOffset, FileInfo::get(IncludePos, File, FileCharacter, Filename));
     SLocEntryLoaded[Index] = SLocEntryOffsetLoaded[Index] = true;
+    if (File.OrigEntry) {
+      FileIDLookup.try_emplace(&File.OrigEntry->getFileEntry(),
+                               FileID::get(LoadedID));
+    }
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
@@ -643,6 +661,9 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
   // Set LastFileIDLookup to the newly created file.  The next getFileID call is
   // almost guaranteed to be from that file.
   FileID FID = FileID::get(LocalSLocEntryTable.size()-1);
+  if (File.OrigEntry) {
+    FileIDLookup.try_emplace(&File.OrigEntry->getFileEntry(), FID);
+  }
   return LastFileIDLookup = FID;
 }
 
@@ -1572,8 +1593,18 @@ SourceLocation SourceManager::translateFileLineCol(const FileEntry *SourceFile,
 FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
   assert(SourceFile && "Null source file!");
 
-  // First, check the main file ID, since it is common to look for a
-  // location in the main file.
+  // First, consult the O(1) fast cache map.
+  // Historically, translateFile performs an expensive linear scan through both
+  // LocalSLocEntryTable and LoadedSLocEntryTable. Under lazy-loading (modules),
+  // accessing un-deserialized loaded SLocEntries triggers their full parsing
+  // (e.g., getLoadedSLocEntry -> loadSLocEntry), severely degrading compilation
+  // performance if called frequently (like during createFileID).
+  // Using this cache bypasses the linear scan and lazy-loading overhead.
+  auto It = FileIDLookup.find(SourceFile);
+  if (It != FileIDLookup.end())
+    return It->second;
+
+  FileID Result;
   if (MainFileID.isValid()) {
     bool Invalid = false;
     const SLocEntry &MainSLoc = getSLocEntry(MainFileID, &Invalid);
@@ -1582,28 +1613,41 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
 
     if (MainSLoc.isFile()) {
       if (MainSLoc.getFile().getContentCache().OrigEntry == SourceFile)
-        return MainFileID;
+        Result = MainFileID;
     }
   }
 
-  // The location we're looking for isn't in the main file; look
-  // through all of the local source locations.
-  for (unsigned I = 0, N = local_sloc_entry_size(); I != N; ++I) {
-    const SLocEntry &SLoc = getLocalSLocEntry(I);
-    if (SLoc.isFile() &&
-        SLoc.getFile().getContentCache().OrigEntry == SourceFile)
-      return FileID::get(I);
+  if (Result.isInvalid()) {
+    // The location we're looking for isn't in the main file; look
+    // through all of the local source locations.
+    for (unsigned I = 0, N = local_sloc_entry_size(); I != N; ++I) {
+      const SLocEntry &SLoc = getLocalSLocEntry(I);
+      if (SLoc.isFile() &&
+          SLoc.getFile().getContentCache().OrigEntry == SourceFile) {
+        Result = FileID::get(I);
+        break;
+      }
+    }
   }
 
-  // If that still didn't help, try the modules.
-  for (unsigned I = 0, N = loaded_sloc_entry_size(); I != N; ++I) {
-    const SLocEntry &SLoc = getLoadedSLocEntry(I);
-    if (SLoc.isFile() &&
-        SLoc.getFile().getContentCache().OrigEntry == SourceFile)
-      return FileID::get(-int(I) - 2);
+  if (Result.isInvalid()) {
+    // If that still didn't help, try the modules.
+    for (unsigned I = 0, N = loaded_sloc_entry_size(); I != N; ++I) {
+      const SLocEntry &SLoc = getLoadedSLocEntry(I);
+      if (SLoc.isFile() &&
+          SLoc.getFile().getContentCache().OrigEntry == SourceFile) {
+        Result = FileID::get(-int(I) - 2);
+        break;
+      }
+    }
   }
 
-  return FileID();
+  if (Result.isValid()) {
+    FileIDLookup[SourceFile] =
+        Result; // Cache the result for subsequent lookups.
+  }
+
+  return Result;
 }
 
 /// Get the source location in \arg FID for the given line:col.

@@ -714,6 +714,10 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// as they do not refer to a file.
   std::vector<SrcMgr::ContentCache*> MemBufferInfos;
 
+  /// A cache to speed up FileID lookup by FileEntryRef, avoiding expensive
+  /// linear scans through LoadedSLocEntryTable and LocalSLocEntryTable.
+  mutable llvm::DenseMap<const FileEntry *, FileID> FileIDLookup;
+
   /// The table of SLocEntries that are local to this module.
   ///
   /// Positive FileIDs are indexes into this table. Entry 0 indicates an invalid

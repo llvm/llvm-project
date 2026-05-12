@@ -21,7 +21,8 @@ module a { header "a.h" }
 //--- dir2/b.modulemap
 module b { header "b.h" }
 //--- dir2/b.h
-#include "search.h" // expected-error{{'search.h' file not found}}
+// expected-no-diagnostics
+#include "search.h"
 // The second compilation is configured such that -I search is an empty directory.
 // However, since b.pcm simply embeds the headers as "search/search.h", this compilation
 // ends up seeing it too. This relies solely on ASTReader::ReadPragmaDiagnosticMappings()
