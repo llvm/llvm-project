@@ -1033,20 +1033,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   if (!isModAndRefSet(Result))
     return Result;
 
-  // If the call is malloc/calloc like, we can assume that it doesn't
-  // modify any IR visible value.  This is only valid because we assume these
-  // routines do not read values visible in the IR.  TODO: Consider special
-  // casing realloc and strdup routines which access only their arguments as
-  // well.  Or alternatively, replace all of this with inaccessiblememonly once
-  // that's implemented fully.
-  if (isMallocOrCallocLikeFn(Call, &TLI)) {
-    // Be conservative if the accessed pointer may alias the allocation -
-    // fallback to the generic handling below.
-    if (AAQI.AAR.alias(MemoryLocation::getBeforeOrAfter(Call), Loc, AAQI) ==
-        AliasResult::NoAlias)
-      return ModRefInfo::NoModRef;
-  }
-
   // Like assumes, invariant.start intrinsics were also marked as arbitrarily
   // writing so that proper control dependencies are maintained but they never
   // mod any particular memory location visible to the IR.
