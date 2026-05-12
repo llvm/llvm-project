@@ -1808,8 +1808,9 @@ TEST_F(VPRecipeTest, UFAddUsersBeforeMaterialization) {
   VPlan &Plan = getPlan();
   VPBasicBlock *Header = Plan.createVPBasicBlock("vector.header");
   VPBasicBlock *Latch = Plan.createVPBasicBlock("vector.latch");
-  VPRegionBlock *LoopRegion = Plan.createLoopRegion(
-      Type::getInt32Ty(C), DebugLoc(), "vector.loop", Header, Latch);
+  VPRegionBlock *LoopRegion =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc::getUnknown(),
+                            "vector.loop", Header, Latch);
   VPBlockUtils::connectBlocks(Header, Latch);
   VPBlockUtils::connectBlocks(Plan.getEntry(), LoopRegion);
   VPBlockUtils::connectBlocks(LoopRegion, Plan.getScalarHeader());
@@ -1818,15 +1819,14 @@ TEST_F(VPRecipeTest, UFAddUsersBeforeMaterialization) {
   Plan.getVectorPreheader()->appendRecipe(VScale);
 
   VPValue *UF = &Plan.getUF();
-  auto *Step =
-      new VPInstruction(Instruction::Mul, {VScale, UF},
-                        VPIRFlags(VPIRFlags::WrapFlagsTy(false, false)));
+  auto *Step = new VPInstruction(Instruction::Mul, {VScale, UF},
+                                 VPIRFlags::getDefaultFlags(Instruction::Mul));
   Plan.getVectorPreheader()->appendRecipe(Step);
 
   auto *Increment = new VPInstruction(
       Instruction::Add, {LoopRegion->getCanonicalIV(), Step},
-      VPIRFlags(VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false)),
-      {}, DebugLoc(), "index.next");
+      VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false), {},
+      DebugLoc::getUnknown(), "index.next");
   Latch->appendRecipe(Increment);
 
   auto *Br = new VPInstruction(VPInstruction::BranchOnCount,
