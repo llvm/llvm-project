@@ -554,3 +554,323 @@ void test_nested_ewc(bool c1, bool c2) {
 // OGCG:       [[OUTER_MERGE2]]:
 // OGCG:         call void @_ZN1TD1Ev({{.*}} %[[REF_TMP]])
 // OGCG:         call void @_ZN1TD1Ev({{.*}} %[[RESULT]])
+
+// The result of the ternary is bound to an lvalue (the parameter of
+// operator=), so the enclosing ExprWithCleanups is lowered through the
+// LValue emission path.  The lvalue path must still open a
+// FullExprCleanupScope so that conditional cleanups deferred by the
+// ternary (here, the D temporary created by the default argument inside
+// each branch) are consumed before the full-expression boundary.
+struct U {
+  U();
+  ~U();
+};
+
+struct V {
+  V(int, const U & = U());
+  ~V();
+  V &operator=(const V &);
+};
+
+void test_lvalue_ternary_cleanup(bool c, V &y) {
+  y = c ? V(1) : V(2);
+}
+// CIR-LABEL: @_Z27test_lvalue_ternary_cleanupbR1V
+// CIR:   %[[REFTMP:.*]] = cir.alloca !rec_V, !cir.ptr<!rec_V>, ["ref.tmp0"]
+// CIR:   %[[UTRUE:.*]] = cir.alloca !rec_U, !cir.ptr<!rec_U>, ["ref.tmp1"]
+// CIR:   %[[ACTTRUE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[UFALSE:.*]] = cir.alloca !rec_U, !cir.ptr<!rec_U>, ["ref.tmp2"]
+// CIR:   %[[ACTFALSE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// The outer cleanup scope wraps the full expression containing the ternary
+// and the operator= call.
+// CIR:   cir.cleanup.scope {
+// Both cleanup flags initialized to false before the ternary.
+// CIR:     cir.store {{.*}}, %[[ACTTRUE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     cir.store {{.*}}, %[[ACTFALSE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     cir.if %{{.*}} {
+// CIR:       cir.call @_ZN1UC1Ev(%[[UTRUE]])
+// CIR:       cir.store {{.*}}, %[[ACTTRUE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       cir.call @_ZN1VC1EiRK1U(%[[REFTMP]], %{{.*}}, %[[UTRUE]])
+// CIR:     } else {
+// CIR:       cir.call @_ZN1UC1Ev(%[[UFALSE]])
+// CIR:       cir.store {{.*}}, %[[ACTFALSE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       cir.call @_ZN1VC1EiRK1U(%[[REFTMP]], %{{.*}}, %[[UFALSE]])
+// CIR:     }
+// Inner cleanup scope for the operator= call destroys the ref.tmp.
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.call @_ZN1VaSERKS_(%{{.*}}, %[[REFTMP]])
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN1VD1Ev(%[[REFTMP]])
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// Outer cleanup region: conditionally destroy U temporaries by active flag.
+// CIR:   } cleanup normal {
+// CIR:     %[[F2:.*]] = cir.load {{.*}} %[[ACTFALSE]]
+// CIR:     cir.if %[[F2]] {
+// CIR:       cir.call @_ZN1UD1Ev(%[[UFALSE]])
+// CIR:     }
+// CIR:     %[[F1:.*]] = cir.load {{.*}} %[[ACTTRUE]]
+// CIR:     cir.if %[[F1]] {
+// CIR:       cir.call @_ZN1UD1Ev(%[[UTRUE]])
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   }
+
+// LLVM-LABEL: define dso_local void @_Z27test_lvalue_ternary_cleanupbR1V(
+// LLVM:         %[[REFTMP:.*]] = alloca %struct.V
+// LLVM:         %[[UTRUE:.*]] = alloca %struct.U
+// LLVM:         %[[ACTTRUE:.*]] = alloca i8
+// LLVM:         %[[UFALSE:.*]] = alloca %struct.U
+// LLVM:         %[[ACTFALSE:.*]] = alloca i8
+// LLVM:         store i8 0, ptr %[[ACTTRUE]]
+// LLVM:         store i8 0, ptr %[[ACTFALSE]]
+// LLVM:         br i1 %{{.*}}, label %[[CONS_TRUE:.*]], label %[[CONS_FALSE:.*]]
+// LLVM:       [[CONS_TRUE]]:
+// LLVM:         call void @_ZN1UC1Ev({{.*}} %[[UTRUE]])
+// LLVM:         store i8 1, ptr %[[ACTTRUE]]
+// LLVM:         call void @_ZN1VC1EiRK1U({{.*}} %[[REFTMP]], i32 {{.*}} 1, {{.*}} %[[UTRUE]])
+// LLVM:         br label %[[MERGE:.*]]
+// LLVM:       [[CONS_FALSE]]:
+// LLVM:         call void @_ZN1UC1Ev({{.*}} %[[UFALSE]])
+// LLVM:         store i8 1, ptr %[[ACTFALSE]]
+// LLVM:         call void @_ZN1VC1EiRK1U({{.*}} %[[REFTMP]], i32 {{.*}} 2, {{.*}} %[[UFALSE]])
+// LLVM:         br label %[[MERGE]]
+// LLVM:       [[MERGE]]:
+// LLVM:         call {{.*}} ptr @_ZN1VaSERKS_({{.*}}, {{.*}} %[[REFTMP]])
+// LLVM:         call void @_ZN1VD1Ev({{.*}} %[[REFTMP]])
+// LLVM:         %[[F2_BYTE:.*]] = load i8, ptr %[[ACTFALSE]]
+// LLVM:         %[[F2:.*]] = trunc i8 %[[F2_BYTE]] to i1
+// LLVM:         br i1 %[[F2]], label %[[DTOR_F:.*]], label %[[SKIP_F:.*]]
+// LLVM:       [[DTOR_F]]:
+// LLVM:         call void @_ZN1UD1Ev({{.*}} %[[UFALSE]])
+// LLVM:         br label %[[SKIP_F]]
+// LLVM:       [[SKIP_F]]:
+// LLVM:         %[[F1_BYTE:.*]] = load i8, ptr %[[ACTTRUE]]
+// LLVM:         %[[F1:.*]] = trunc i8 %[[F1_BYTE]] to i1
+// LLVM:         br i1 %[[F1]], label %[[DTOR_T:.*]], label %[[SKIP_T:.*]]
+// LLVM:       [[DTOR_T]]:
+// LLVM:         call void @_ZN1UD1Ev({{.*}} %[[UTRUE]])
+// LLVM:         br label %[[SKIP_T]]
+
+// OGCG-LABEL: define dso_local void @_Z27test_lvalue_ternary_cleanupbR1V(
+// OGCG:         store i1 false, ptr %[[ACTTRUE:.*]]
+// OGCG:         store i1 false, ptr %[[ACTFALSE:.*]]
+// OGCG:         br i1 %{{.*}}, label %[[CTRUE:.*]], label %[[CFALSE:.*]]
+// OGCG:       [[CTRUE]]:
+// OGCG:         call void @_ZN1UC1Ev({{.*}} %[[UTRUE:.*]])
+// OGCG:         store i1 true, ptr %[[ACTTRUE]]
+// OGCG:         call void @_ZN1VC1EiRK1U({{.*}} %[[REFTMP:.*]], i32 {{.*}} 1, {{.*}} %[[UTRUE]])
+// OGCG:         br label %[[MERGE:.*]]
+// OGCG:       [[CFALSE]]:
+// OGCG:         call void @_ZN1UC1Ev({{.*}} %[[UFALSE:.*]])
+// OGCG:         store i1 true, ptr %[[ACTFALSE]]
+// OGCG:         call void @_ZN1VC1EiRK1U({{.*}} %[[REFTMP]], i32 {{.*}} 2, {{.*}} %[[UFALSE]])
+// OGCG:         br label %[[MERGE]]
+// OGCG:       [[MERGE]]:
+// OGCG:         call {{.*}} ptr @_ZN1VaSERKS_({{.*}}, {{.*}} %[[REFTMP]])
+// OGCG:         call void @_ZN1VD1Ev({{.*}} %[[REFTMP]])
+// OGCG:         br i1 %{{.*}}, label %[[DTOR_F:.*]], label %[[AFTER_F:.*]]
+// OGCG:       [[DTOR_F]]:
+// OGCG:         call void @_ZN1UD1Ev({{.*}} %[[UFALSE]])
+// OGCG:         br label %[[AFTER_F]]
+// OGCG:       [[AFTER_F]]:
+// OGCG:         br i1 %{{.*}}, label %[[DTOR_T:.*]], label %[[AFTER_T:.*]]
+// OGCG:       [[DTOR_T]]:
+// OGCG:         call void @_ZN1UD1Ev({{.*}} %[[UTRUE]])
+// OGCG:         br label %[[AFTER_T]]
+
+// When an ExprWithCleanups produces an lvalue whose base pointer is computed
+// *inside* the FullExprCleanupScope (here, via the `.field` GEP on the
+// conditional's lvalue result), the lvalue path must spill the base pointer
+// before the scope closes and reload it afterward so that uses outside the
+// scope (the reference binding to `r`) see a dominating SSA value.
+struct R {
+  R(int);
+  R(const R &);
+  ~R();
+  int field;
+};
+
+R &pickR(const R &x);
+
+int *sink;
+
+void test_lvalue_reload(bool c) {
+  int &r = (c ? pickR(R(1)) : pickR(R(2))).field;
+  sink = &r;
+}
+// CIR-LABEL: @_Z18test_lvalue_reloadb
+// CIR:   %[[R_REF:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["r", init, const]
+// CIR:   %[[TMP0:.*]] = cir.alloca !rec_R, !cir.ptr<!rec_R>, ["ref.tmp0"]
+// CIR:   %[[ACT0:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[TMP1:.*]] = cir.alloca !rec_R, !cir.ptr<!rec_R>, ["ref.tmp1"]
+// CIR:   %[[ACT1:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// The spill slot for the lvalue's base pointer.
+// CIR:   %[[SPILL:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["tmp.exprcleanup"]
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.store {{.*}}, %[[ACT0]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     cir.store {{.*}}, %[[ACT1]] : !cir.bool, !cir.ptr<!cir.bool>
+// The ternary returns an !cir.ptr<!rec_R> lvalue from pickR().
+// CIR:     %[[TERN:.*]] = cir.ternary({{.*}}, true {
+// CIR:       cir.call @_ZN1RC1Ei(%[[TMP0]], %{{.*}})
+// CIR:       cir.store {{.*}}, %[[ACT0]]
+// CIR:       %[[CALL_T:.*]] = cir.call @_Z5pickRRK1R(%[[TMP0]])
+// CIR:       cir.yield %[[CALL_T]] : !cir.ptr<!rec_R>
+// CIR:     }, false {
+// CIR:       cir.call @_ZN1RC1Ei(%[[TMP1]], %{{.*}})
+// CIR:       cir.store {{.*}}, %[[ACT1]]
+// CIR:       %[[CALL_F:.*]] = cir.call @_Z5pickRRK1R(%[[TMP1]])
+// CIR:       cir.yield %[[CALL_F]] : !cir.ptr<!rec_R>
+// CIR:     }) : (!cir.bool) -> !cir.ptr<!rec_R>
+// `.field` GEP and its spill happen inside the cleanup scope body.
+// CIR:     %[[GEP:.*]] = cir.get_member %[[TERN]][0] {name = "field"} : !cir.ptr<!rec_R> -> !cir.ptr<!s32i>
+// CIR:     cir.store {{.*}} %[[GEP]], %[[SPILL]]
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     %[[F1:.*]] = cir.load {{.*}} %[[ACT1]]
+// CIR:     cir.if %[[F1]] {
+// CIR:       cir.call @_ZN1RD1Ev(%[[TMP1]])
+// CIR:     }
+// CIR:     %[[F0:.*]] = cir.load {{.*}} %[[ACT0]]
+// CIR:     cir.if %[[F0]] {
+// CIR:       cir.call @_ZN1RD1Ev(%[[TMP0]])
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   }
+// Reload happens after the cleanup scope; the reloaded pointer initializes r.
+// CIR:   %[[RELOAD:.*]] = cir.load {{.*}} %[[SPILL]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:   cir.store {{.*}} %[[RELOAD]], %[[R_REF]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+
+// LLVM-LABEL: define dso_local void @_Z18test_lvalue_reloadb(
+// LLVM:         %[[R_REF:.*]] = alloca ptr
+// LLVM:         %[[TMP0:.*]] = alloca %struct.R
+// LLVM:         %[[ACT0:.*]] = alloca i8
+// LLVM:         %[[TMP1:.*]] = alloca %struct.R
+// LLVM:         %[[ACT1:.*]] = alloca i8
+// LLVM:         %[[SPILL:.*]] = alloca ptr
+// LLVM:         br i1 %{{.*}}, label %[[BR_T:.*]], label %[[BR_F:.*]]
+// LLVM:       [[BR_T]]:
+// LLVM:         call void @_ZN1RC1Ei({{.*}} %[[TMP0]], i32 {{.*}} 1)
+// LLVM:         store i8 1, ptr %[[ACT0]]
+// LLVM:         %[[CALL_T:.*]] = call {{.*}} ptr @_Z5pickRRK1R({{.*}} %[[TMP0]])
+// LLVM:         br label %[[MERGE:.*]]
+// LLVM:       [[BR_F]]:
+// LLVM:         call void @_ZN1RC1Ei({{.*}} %[[TMP1]], i32 {{.*}} 2)
+// LLVM:         store i8 1, ptr %[[ACT1]]
+// LLVM:         %[[CALL_F:.*]] = call {{.*}} ptr @_Z5pickRRK1R({{.*}} %[[TMP1]])
+// LLVM:         br label %[[MERGE]]
+// LLVM:       [[MERGE]]:
+// LLVM:         %[[PHI:.*]] = phi ptr [ %[[CALL_F]], %[[BR_F]] ], [ %[[CALL_T]], %[[BR_T]] ]
+// LLVM:         %[[GEP:.*]] = getelementptr {{.*}} %struct.R, ptr %[[PHI]]
+// LLVM:         store ptr %[[GEP]], ptr %[[SPILL]]
+// Cleanup checks happen between the spill and the reload.
+// LLVM:         load i8, ptr %[[ACT1]]
+// LLVM:         load i8, ptr %[[ACT0]]
+// LLVM:         %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
+// LLVM:         store ptr %[[RELOAD]], ptr %[[R_REF]]
+
+// OGCG-LABEL: define dso_local void @_Z18test_lvalue_reloadb(
+// OGCG:         %[[R_REF:.*]] = alloca ptr
+// OGCG:         br i1 %{{.*}}, label %[[BR_T:.*]], label %[[BR_F:.*]]
+// OGCG:       [[BR_T]]:
+// OGCG:         call void @_ZN1RC1Ei({{.*}} %[[TMP0:.*]], i32 {{.*}} 1)
+// OGCG:         %[[CALL_T:.*]] = call {{.*}} ptr @_Z5pickRRK1R({{.*}} %[[TMP0]])
+// OGCG:         br label %[[MERGE:.*]]
+// OGCG:       [[BR_F]]:
+// OGCG:         call void @_ZN1RC1Ei({{.*}} %[[TMP1:.*]], i32 {{.*}} 2)
+// OGCG:         %[[CALL_F:.*]] = call {{.*}} ptr @_Z5pickRRK1R({{.*}} %[[TMP1]])
+// OGCG:         br label %[[MERGE]]
+// OGCG:       [[MERGE]]:
+// OGCG:         %[[PHI:.*]] = phi ptr [ %[[CALL_T]], %[[BR_T]] ], [ %[[CALL_F]], %[[BR_F]] ]
+// OGCG:         %[[GEP:.*]] = getelementptr {{.*}} %struct.R, ptr %[[PHI]]
+// Classic codegen uses the phi-merged pointer directly; the cleanups run, and
+// then the lvalue address is stored into r.
+// OGCG:         call void @_ZN1RD1Ev({{.*}} %[[TMP1]])
+// OGCG:         call void @_ZN1RD1Ev({{.*}} %[[TMP0]])
+// OGCG:         store ptr %[[GEP]], ptr %[[R_REF]]
+
+// When the result of an ExprWithCleanups is a _Complex value, the complex
+// emitter must use FullExprCleanupScope so that conditional cleanups deferred
+// by the inner conditional operator are consumed at the full-expression
+// boundary.  Without this, the destructor cleanup for the temporary `D` in the
+// true branch would remain on the deferredConditionalCleanupStack and trip
+// the assertion in finishFunction.
+struct CplxD {
+  CplxD();
+  ~CplxD();
+  _Complex float get();
+};
+
+_Complex float test_complex_cond_cleanup(bool b, _Complex float x) {
+  return b ? CplxD().get() : x;
+}
+// CIR-LABEL: @_Z25test_complex_cond_cleanupbCf
+// CIR:   %[[TMP:.*]] = cir.alloca !rec_CplxD, !cir.ptr<!rec_CplxD>, ["ref.tmp0"]
+// CIR:   %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// The full expression is wrapped in a single cleanup scope.
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// Active flag is initialized to false before the ternary so the dtor only runs
+// when the true branch was actually taken.
+// CIR:     %[[FALSE:.*]] = cir.const #false
+// CIR:     cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     %{{.*}} = cir.ternary(%[[COND]], true {
+// CIR:       cir.call @_ZN5CplxDC1Ev(%[[TMP]])
+// CIR:       %[[SET_TRUE:.*]] = cir.const #true
+// CIR:       cir.store %[[SET_TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:       %[[CALL:.*]] = cir.call @_ZN5CplxD3getEv(%[[TMP]])
+// CIR:       cir.yield %[[CALL]] : !cir.complex<!cir.float>
+// CIR:     }, false {
+// CIR:       %[[XV:.*]] = cir.load {{.*}} : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR:       cir.yield %[[XV]] : !cir.complex<!cir.float>
+// CIR:     }) : (!cir.bool) -> !cir.complex<!cir.float>
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR:     cir.if %[[IS_ACTIVE]] {
+// CIR:       cir.call @_ZN5CplxDD1Ev(%[[TMP]])
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   }
+
+// LLVM-LABEL: define dso_local {{.*}} { float, float } @_Z25test_complex_cond_cleanupbCf(
+// LLVM:         %[[TMP:.*]] = alloca %struct.CplxD
+// LLVM:         %[[ACTIVE:.*]] = alloca i8
+// LLVM:         br i1 %{{.*}}, label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
+// LLVM:       [[TRUE_BR]]:
+// LLVM:         call void @_ZN5CplxDC1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:         store i8 1, ptr %[[ACTIVE]]
+// LLVM:         %[[CALL:.*]] = call {{.*}} { float, float } @_ZN5CplxD3getEv(ptr {{.*}} %[[TMP]])
+// LLVM:         br label %[[MERGE:.*]]
+// LLVM:       [[FALSE_BR]]:
+// LLVM:         %[[XV:.*]] = load { float, float }, ptr %{{.*}}
+// LLVM:         br label %[[MERGE]]
+// LLVM:       [[MERGE]]:
+// LLVM:         %{{.*}} = phi { float, float } [ %[[XV]], %[[FALSE_BR]] ], [ %[[CALL]], %[[TRUE_BR]] ]
+// LLVM:         %[[ACT:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVM:         %[[ACT_B:.*]] = trunc i8 %[[ACT]] to i1
+// LLVM:         br i1 %[[ACT_B]], label %[[DTOR:.*]], label %[[SKIP:.*]]
+// LLVM:       [[DTOR]]:
+// LLVM:         call void @_ZN5CplxDD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:         br label %[[SKIP]]
+
+// OGCG-LABEL: define dso_local {{.*}} <2 x float> @_Z25test_complex_cond_cleanupbCf(
+// OGCG:         %[[TMP:.*]] = alloca %struct.CplxD
+// OGCG:         %[[ACTIVE:.*]] = alloca i1
+// OGCG:         store i1 false, ptr %[[ACTIVE]]
+// OGCG:         br i1 %{{.*}}, label %[[CTRUE:.*]], label %[[CFALSE:.*]]
+// OGCG:       [[CTRUE]]:
+// OGCG:         call void @_ZN5CplxDC1Ev(ptr {{.*}} %[[TMP]])
+// OGCG:         store i1 true, ptr %[[ACTIVE]]
+// OGCG:         %[[CALL:.*]] = call {{.*}} <2 x float> @_ZN5CplxD3getEv(ptr {{.*}} %[[TMP]])
+// OGCG:         br label %[[MERGE:.*]]
+// OGCG:       [[CFALSE]]:
+// OGCG:         br label %[[MERGE]]
+// OGCG:       [[MERGE]]:
+// OGCG:         %[[ACT:.*]] = load i1, ptr %[[ACTIVE]]
+// OGCG:         br i1 %[[ACT]], label %[[DTOR:.*]], label %[[DONE:.*]]
+// OGCG:       [[DTOR]]:
+// OGCG:         call void @_ZN5CplxDD1Ev(ptr {{.*}} %[[TMP]])
+// OGCG:         br label %[[DONE]]

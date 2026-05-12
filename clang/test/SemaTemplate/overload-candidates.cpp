@@ -17,9 +17,9 @@ void test_dyn_cast(int* ptr) {
 }
 
 template<int I, typename T>
-  void get(const T&); // expected-note{{candidate template ignored: invalid explicitly-specified argument for template parameter 'I'}}
+  void get(const T&); // expected-note{{candidate template ignored: template argument for non-type template parameter must be an expression for template parameter 'I'}}
 template<template<class T> class, typename T>
-  void get(const T&); // expected-note{{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  void get(const T&); // expected-note{{candidate template ignored: template argument for template template parameter must be a class template}}
 
 void test_get(void *ptr) {
   get<int>(ptr); // expected-error{{no matching function for call to 'get'}}

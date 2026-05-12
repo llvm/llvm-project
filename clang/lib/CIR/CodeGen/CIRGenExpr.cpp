@@ -425,10 +425,9 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                       const VarDecl *vd) {
   QualType t = e->getType();
 
-  // If it's thread_local, emit a call to its wrapper function instead.
-  if (vd->getTLSKind() == VarDecl::TLS_Dynamic)
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "emitGlobalVarDeclLValue: thread_local variable");
+  // In classic codegen, thread-locals get a wrapper function here. Rather than
+  // doing that, we instead treat this as a normal 'global', and leave it to
+  // lowerng-prepare to correctly generate the wrapper/etc.
 
   // Check if the variable is marked as declare target with link clause in
   // device codegen.
@@ -1676,16 +1675,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_AddressSpaceConversion: {
     LValue lv = emitLValue(e->getSubExpr());
     QualType destTy = getContext().getPointerType(e->getType());
-
-    clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
-    mlir::ptr::MemorySpaceAttrInterface srcAS;
-    if (clang::isTargetAddressSpace(srcLangAS))
-      srcAS = cir::toCIRAddressSpaceAttr(getMLIRContext(), srcLangAS);
-    else
-      cgm.errorNYI(
-          e->getSourceRange(),
-          "emitCastLValue: address space conversion from unknown address "
-          "space");
 
     mlir::Value v = performAddrSpaceCast(lv.getPointer(), convertType(destTy));
 

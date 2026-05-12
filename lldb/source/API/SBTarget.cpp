@@ -29,6 +29,7 @@
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Breakpoint/ScriptedBreakpointOverrideResolver.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressResolver.h"
 #include "lldb/Core/Debugger.h"
@@ -40,6 +41,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -677,6 +679,48 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
   }
 
   return bytes_read;
+}
+
+uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
+                                         const char *description,
+                                         SBStructuredData &args_data,
+                                         SBError &error) {
+  if (!class_name || class_name[0] == '\0') {
+    error.SetErrorString("empty class name");
+    return LLDB_INVALID_INDEX64;
+  }
+
+  if (TargetSP target_sp = GetSP()) {
+    StructuredDataImpl impl;
+    args_data.CopyImpl(impl);
+    StructuredData::ObjectSP object_sp = impl.GetObjectSP();
+    StructuredData::DictionarySP args_dict(
+        new StructuredData::Dictionary(object_sp));
+    if (!args_dict->IsValid()) {
+      error.SetErrorString("args data is not a dictionary");
+      return LLDB_INVALID_INDEX64;
+    }
+
+    llvm::Expected<lldb::user_id_t> id_or_err =
+        target_sp->AddBreakpointResolverOverride(
+            class_name, args_dict,
+            description ? description : "<No Description>");
+    if (id_or_err)
+      return *id_or_err;
+    error.SetErrorString(llvm::toString(id_or_err.takeError()).c_str());
+    return LLDB_INVALID_INDEX64;
+
+  } else {
+    error.SetErrorString("invalid SBTarget.");
+    return LLDB_INVALID_INDEX64;
+  }
+}
+
+bool SBTarget::RemoveBreakpointOverride(uint64_t id) {
+  if (TargetSP target_sp = GetSP()) {
+    return target_sp->RemoveBreakpointResolverOverride(id);
+  }
+  return false;
 }
 
 SBBreakpoint SBTarget::BreakpointCreateByLocation(const char *file,

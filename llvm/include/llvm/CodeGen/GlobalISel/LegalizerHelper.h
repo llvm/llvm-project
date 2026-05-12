@@ -576,6 +576,7 @@ public:
   LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI,
                                             unsigned MaxLen = 0);
   LLVM_ABI LegalizeResult lowerVAArg(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerSmulfix(MachineInstr &MI);
 };
 
 } // End namespace llvm.

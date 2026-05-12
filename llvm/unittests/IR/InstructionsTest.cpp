@@ -33,8 +33,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 
-namespace llvm {
-namespace {
+using namespace llvm;
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
@@ -43,6 +42,8 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
     Err.print("InstructionsTests", errs());
   return Mod;
 }
+
+namespace {
 
 TEST(InstructionsTest, ReturnInst) {
   LLVMContext C;
@@ -2011,4 +2012,3 @@ TEST(InstructionsTest, StripAndAccumulateConstantOffset) {
 }
 
 } // end anonymous namespace
-} // end namespace llvm

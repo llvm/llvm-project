@@ -320,7 +320,7 @@ ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
                        const MachineRegisterInfo &MRI);
 
 /// Tries to constant fold a unary integer operation (G_CTLZ, G_CTTZ, G_CTPOP
-/// and their _ZERO_UNDEF variants, G_ABS, G_BSWAP, G_BITREVERSE) on \p Src.
+/// and their _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) on \p Src.
 /// If \p Src is a vector then it tries to do an element-wise constant fold.
 LLVM_ABI SmallVector<APInt>
 ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,

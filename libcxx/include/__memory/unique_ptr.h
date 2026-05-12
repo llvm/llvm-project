@@ -117,6 +117,12 @@ struct __unique_ptr_deleter_sfinae<_Deleter&> {
   typedef false_type __enable_rval_overload;
 };
 
+template <class, class = void>
+inline const bool __can_dereference = false;
+
+template <class _Tp>
+inline const bool __can_dereference<_Tp, decltype((void)*std::declval<_Tp>())> = true;
+
 #if defined(_LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI)
 #  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI __attribute__((__trivial_abi__))
 #else
@@ -258,6 +264,7 @@ public:
     return *this;
   }
 
+  template <class _Ptr = pointer, __enable_if_t<__can_dereference<_Ptr>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __add_lvalue_reference_t<_Tp> operator*() const
       _NOEXCEPT_(_NOEXCEPT_(*std::declval<pointer>())) {
     return *__ptr_;

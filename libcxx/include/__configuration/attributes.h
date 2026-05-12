@@ -12,6 +12,7 @@
 #include <__config_site>
 #include <__configuration/hardening.h>
 #include <__configuration/language.h>
+#include <__configuration/utility.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header

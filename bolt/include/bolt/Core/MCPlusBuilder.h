@@ -861,12 +861,7 @@ public:
     return false;
   }
 
-  virtual bool isLDRWl(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
-  virtual bool isLDRXl(const MCInst &Inst) const {
+  virtual bool isLoadLiteralGPR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }

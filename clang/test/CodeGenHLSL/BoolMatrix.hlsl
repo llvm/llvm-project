@@ -75,9 +75,7 @@ bool fn3() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 4
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x [2 x <2 x i32>]], align 4
-// CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[ARR]], align 4
-// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [2 x <2 x i32>], ptr [[ARR]], i32 1
-// CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[ARRAYINIT_ELEMENT]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @constinit, i32 32, i1 false)
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x [2 x <2 x i32>]], ptr [[ARR]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
@@ -129,9 +127,7 @@ void fn6() {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x [2 x <2 x i32>]], align 4
-// CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[ARR]], align 4
-// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [2 x <2 x i32>], ptr [[ARR]], i32 1
-// CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[ARRAYINIT_ELEMENT]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @constinit.1, i32 32, i1 false)
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x [2 x <2 x i32>]], ptr [[ARR]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <4 x i32>, ptr [[ARRAYIDX]], i32 0, i32 1
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4

@@ -101,3 +101,25 @@ TEST_F(SPIRVGlobalRegistryTest, PrepareFunctionsClearsStalePointers) {
 
   EXPECT_EQ(GR->findDeducedElementType(F), nullptr);
 }
+
+TEST_F(SPIRVGlobalRegistryTest, FinalizeLoweringFreezesAcrossAliasedMFs) {
+  auto *STM = static_cast<SPIRVTargetMachine *>(TM.get());
+  Function *F = Mod->getFunction("f");
+  ASSERT_NE(F, nullptr);
+  const auto *Sub = STM->getSubtargetImpl(*F);
+  const SPIRVTargetLowering *TLI = Sub->getTargetLowering();
+
+  MF.reset();
+  std::optional<MachineFunction> Slot;
+
+  Slot.emplace(*F, *TM, *Sub, MMI->getContext(), 0);
+  Slot->push_back(Slot->CreateMachineBasicBlock());
+  TLI->finalizeLowering(*Slot);
+  ASSERT_TRUE(Slot->getRegInfo().reservedRegsFrozen());
+
+  Slot.reset();
+  Slot.emplace(*F, *TM, *Sub, MMI->getContext(), 0);
+  Slot->push_back(Slot->CreateMachineBasicBlock());
+  TLI->finalizeLowering(*Slot);
+  EXPECT_TRUE(Slot->getRegInfo().reservedRegsFrozen());
+}

@@ -292,9 +292,8 @@ define <3 x i64> @zext_v3i8_v3i64(<3 x i8> %a) {
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ushll v1.2d, v3.2s, #0
 ; CHECK-SD-NEXT:    mov v2.b[0], v1.b[0]
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ret
 ;
@@ -344,9 +343,8 @@ define <3 x i64> @zext_v3i16_v3i64(<3 x i16> %a) {
 ; CHECK-SD-NEXT:    ushll v0.2d, v2.2s, #0
 ; CHECK-SD-NEXT:    ushll2 v2.2d, v2.4s, #0
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: zext_v3i16_v3i64:
@@ -370,9 +368,8 @@ define <3 x i64> @zext_v3i32_v3i64(<3 x i32> %a) {
 ; CHECK-SD-NEXT:    ushll v3.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    ushll2 v2.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-SD-NEXT:    mov d1, v3.d[1]
 ; CHECK-SD-NEXT:    fmov d0, d3
-; CHECK-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: zext_v3i32_v3i64:
@@ -443,17 +440,16 @@ define <3 x i64> @zext_v3i10_v3i64(<3 x i10> %a) {
 ; CHECK-SD-LABEL: zext_v3i10_v3i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    fmov s1, w2
 ; CHECK-SD-NEXT:    mov w8, #1023 // =0x3ff
+; CHECK-SD-NEXT:    fmov s1, w2
 ; CHECK-SD-NEXT:    dup v2.2d, x8
 ; CHECK-SD-NEXT:    mov v0.s[1], w1
 ; CHECK-SD-NEXT:    zip1 v3.2s, v1.2s, v1.2s
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-SD-NEXT:    and v2.8b, v3.8b, v2.8b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: zext_v3i10_v3i64:

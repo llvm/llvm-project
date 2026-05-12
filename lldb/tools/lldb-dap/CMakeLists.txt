@@ -77,6 +77,13 @@ add_lldb_library(lldbDAP OBJECT
   Protocol/ProtocolRequests.cpp
   )
 
+# When building with precompiled headers and Xcode as a generator,
+# It adds obj.lldbDAP.dir/${BUILD_TYPE}/cmake_pch.xxx but does not generate one
+# causing the build to fail.
+if(CMAKE_GENERATOR STREQUAL "Xcode")
+  set_target_properties(lldbDAP PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
+endif()
+
 target_include_directories(lldbDAP
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "AMDGPUUnitTests.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -19,25 +20,11 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
-
-static std::unique_ptr<TargetMachine>
-createAMDGPUTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
-  Triple TT(TStr);
-  std::string Error;
-  const Target *T = TargetRegistry::lookupTarget(TT, Error);
-  if (!T)
-    return nullptr;
-  return std::unique_ptr<TargetMachine>(
-      T->createTargetMachine(TT, CPU, FS, {}, std::nullopt));
-}
 
 static UniformityInfo computeUniformity(const TargetTransformInfo *TTI,
                                         Function *F) {
@@ -50,10 +37,7 @@ static UniformityInfo computeUniformity(const TargetTransformInfo *TTI,
   return UI;
 }
 
-TEST(UniformityAnalysis, NewValueIsConservativelyDivergent) {
-  LLVMInitializeAMDGPUTargetInfo();
-  LLVMInitializeAMDGPUTarget();
-  LLVMInitializeAMDGPUTargetMC();
+TEST_F(AMDGPUTestBase, NewValueIsConservativelyDivergent) {
 
   StringRef ModuleString = R"(
   target triple = "amdgcn-unknown-amdhsa"

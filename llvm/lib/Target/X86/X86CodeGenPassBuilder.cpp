@@ -46,6 +46,7 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) const;
   void addPreISel(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) const;
   void addILPOpts(PassManagerWrapper &PMW) const;
   void addPreRegBankSelect(PassManagerWrapper &PMW) const;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
@@ -115,6 +116,11 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
   addMachineFunctionPass(X86ArgumentStackSlotPass(), PMW);
   return Error::success();
+}
+
+void X86CodeGenPassBuilder::addPreLegalizeMachineIR(
+    PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {

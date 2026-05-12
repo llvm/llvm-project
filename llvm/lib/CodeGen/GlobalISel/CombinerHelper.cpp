@@ -62,6 +62,7 @@ CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
                                const LegalizerInfo *LI)
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer), VT(VT),
       MDT(MDT), IsPreLegalize(IsPreLegalize), LI(LI),
+      TII(Builder.getMF().getSubtarget().getInstrInfo()),
       RBI(Builder.getMF().getSubtarget().getRegBankInfo()),
       TRI(Builder.getMF().getSubtarget().getRegisterInfo()) {
   (void)this->VT;
@@ -8642,7 +8643,7 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
 bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
                                BuildFnTy &MatchInfo) const {
   assert((CtlzMI.getOpcode() == TargetOpcode::G_CTLZ ||
-          CtlzMI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) &&
+          CtlzMI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_POISON) &&
          "Expected G_CTLZ variant");
 
   const Register Dst = CtlzMI.getOperand(0).getReg();

@@ -1,13 +1,10 @@
 ; REQUIRES: asserts
 
-; RUN: opt -S -passes=loop-fusion -loop-fusion-dependence-analysis=da -debug-only=loop-fusion -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DA
-; RUN: opt -S -passes=loop-fusion -loop-fusion-dependence-analysis=scev -debug-only=loop-fusion -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCEV
+; RUN: opt -S -passes=loop-fusion -debug-only=loop-fusion -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DA
 
 define void @loop_invariant(i32 %N) {
 ; CHECK-DA: Performing Loop Fusion on function loop_invariant
 ; CHECK-DA: Safe to fuse due to a loop-invariant non-anti dependency
-; CHECK-SCEV: Performing Loop Fusion on function loop_invariant
-; CHECK-SCEV: Fusion done
 ;
 pre1:
   %ptr = alloca i32, align 4
@@ -34,13 +31,9 @@ exit:
   ret void
 }
 
-; TODO: improve SCEV check to detect the loop-invariant anti dependence with
-; scalar access and prevent fusion.
 define void @anti_loop_invariant(i32 %N) {
 ; CHECK-DA: Performing Loop Fusion on function anti_loop_invariant
 ; CHECK-DA: Memory dependencies do not allow fusion!
-; CHECK-SCEV: Performing Loop Fusion on function anti_loop_invariant
-; XFAIL-CHECK-SCEV: Memory dependencies do not allow fusion!
 ;
 pre1:
   %ptr = alloca i32, align 4

@@ -891,7 +891,7 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
-  bool Pre(const parser::OpenMPGroupprivate &x) {
+  bool Pre(const parser::OmpGroupprivateDirective &x) {
     checker_(x.v.DirName().source, Directive::OMPD_groupprivate);
     return false;
   }
@@ -1574,7 +1574,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
+void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
   PushContextAndClauseSets(
       x.v.DirName().source, llvm::omp::Directive::OMPD_groupprivate);
 
@@ -1626,16 +1626,16 @@ void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPGroupprivate &x) {
+void OmpStructureChecker::Leave(const parser::OmpGroupprivateDirective &x) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPThreadprivate &x) {
+void OmpStructureChecker::Enter(const parser::OmpThreadprivateDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &x) {
+void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.v};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{GetArgumentObject(arg)}) {
@@ -1881,7 +1881,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDepobjConstruct &x) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
+void OmpStructureChecker::Enter(const parser::OmpRequiresDirective &x) {
   const auto &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
   unsigned version{context_.langOptions().OpenMPVersion};
@@ -1924,7 +1924,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPRequiresConstruct &) {
+void OmpStructureChecker::Leave(const parser::OmpRequiresDirective &) {
   dirContext_.pop_back();
 }
 

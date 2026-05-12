@@ -35,13 +35,14 @@ private:
   StringRef toStringViewTypeStr(StringRef Type) const;
   void parseReplacementStringViewClass(StringRef Options);
 
+  bool CheckOverloadedFunctions = false;
+  const std::vector<StringRef> IgnoredFunctions;
+
   StringRef StringViewClass = "std::string_view";
   StringRef WStringViewClass = "std::wstring_view";
   StringRef U8StringViewClass = "std::u8string_view";
   StringRef U16StringViewClass = "std::u16string_view";
   StringRef U32StringViewClass = "std::u32string_view";
-
-  const std::vector<StringRef> IgnoredFunctions;
 };
 
 } // namespace clang::tidy::modernize

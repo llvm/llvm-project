@@ -39,617 +39,612 @@
 using namespace llvm;
 
 namespace llvm {
-  void initializeModuleNDMPass(PassRegistry&);
-  void initializeFPassPass(PassRegistry&);
-  void initializeCGPassPass(PassRegistry&);
-  void initializeLPassPass(PassRegistry&);
+void initializeModuleNDMPass(PassRegistry &);
+void initializeFPassPass(PassRegistry &);
+void initializeCGPassPass(PassRegistry &);
+void initializeLPassPass(PassRegistry &);
+} // namespace llvm
 
-  namespace {
-    // ND = no deps
-    // NM = no modifications
-    struct ModuleNDNM: public ModulePass {
-    public:
-      static char run;
-      static char ID;
-      ModuleNDNM() : ModulePass(ID) { }
-      bool runOnModule(Module &M) override {
-        run++;
-        return false;
-      }
-      void getAnalysisUsage(AnalysisUsage &AU) const override {
-        AU.setPreservesAll();
-      }
-    };
-    char ModuleNDNM::ID=0;
-    char ModuleNDNM::run=0;
+namespace {
+// ND = no deps
+// NM = no modifications
+struct ModuleNDNM : public ModulePass {
+public:
+  static char run;
+  static char ID;
+  ModuleNDNM() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override {
+    run++;
+    return false;
+  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+};
+char ModuleNDNM::ID = 0;
+char ModuleNDNM::run = 0;
 
-    struct ModuleNDM : public ModulePass {
-    public:
-      static char run;
-      static char ID;
-      ModuleNDM() : ModulePass(ID) {}
-      bool runOnModule(Module &M) override {
-        run++;
-        return true;
-      }
-    };
-    char ModuleNDM::ID=0;
-    char ModuleNDM::run=0;
+struct ModuleNDM : public ModulePass {
+public:
+  static char run;
+  static char ID;
+  ModuleNDM() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override {
+    run++;
+    return true;
+  }
+};
+char ModuleNDM::ID = 0;
+char ModuleNDM::run = 0;
 
-    struct ModuleNDM2 : public ModulePass {
-    public:
-      static char run;
-      static char ID;
-      ModuleNDM2() : ModulePass(ID) {}
-      bool runOnModule(Module &M) override {
-        run++;
-        return true;
-      }
-    };
-    char ModuleNDM2::ID=0;
-    char ModuleNDM2::run=0;
+struct ModuleNDM2 : public ModulePass {
+public:
+  static char run;
+  static char ID;
+  ModuleNDM2() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override {
+    run++;
+    return true;
+  }
+};
+char ModuleNDM2::ID = 0;
+char ModuleNDM2::run = 0;
 
-    struct ModuleDNM : public ModulePass {
-    public:
-      static char run;
-      static char ID;
-      ModuleDNM() : ModulePass(ID) {
-        initializeModuleNDMPass(*PassRegistry::getPassRegistry());
-      }
-      bool runOnModule(Module &M) override {
-        run++;
-        return false;
-      }
-      void getAnalysisUsage(AnalysisUsage &AU) const override {
-        AU.addRequired<ModuleNDM>();
-        AU.setPreservesAll();
-      }
-    };
-    char ModuleDNM::ID=0;
-    char ModuleDNM::run=0;
+struct ModuleDNM : public ModulePass {
+public:
+  static char run;
+  static char ID;
+  ModuleDNM() : ModulePass(ID) {
+    initializeModuleNDMPass(*PassRegistry::getPassRegistry());
+  }
+  bool runOnModule(Module &M) override {
+    run++;
+    return false;
+  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ModuleNDM>();
+    AU.setPreservesAll();
+  }
+};
+char ModuleDNM::ID = 0;
+char ModuleDNM::run = 0;
 
-    template<typename P>
-    struct PassTestBase : public P {
-    protected:
-      static int runc;
-      static bool initialized;
-      static bool finalized;
-      int allocated;
-      void run() {
-        EXPECT_TRUE(initialized);
-        EXPECT_FALSE(finalized);
-        EXPECT_EQ(0, allocated);
-        allocated++;
-        runc++;
-      }
-    public:
-      static char ID;
-      static void finishedOK(int run) {
-        EXPECT_GT(runc, 0);
-        EXPECT_TRUE(initialized);
-        EXPECT_TRUE(finalized);
-        EXPECT_EQ(run, runc);
-      }
-      PassTestBase() : P(ID), allocated(0) {
-        initialized = false;
-        finalized = false;
-        runc = 0;
-      }
+template <typename P> struct PassTestBase : public P {
+protected:
+  static int runc;
+  static bool initialized;
+  static bool finalized;
+  int allocated;
+  void run() {
+    EXPECT_TRUE(initialized);
+    EXPECT_FALSE(finalized);
+    EXPECT_EQ(0, allocated);
+    allocated++;
+    runc++;
+  }
 
-      void releaseMemory() override {
-        EXPECT_GT(runc, 0);
-        EXPECT_GT(allocated, 0);
-        allocated--;
-      }
-    };
-    template<typename P> char PassTestBase<P>::ID;
-    template<typename P> int PassTestBase<P>::runc;
-    template<typename P> bool PassTestBase<P>::initialized;
-    template<typename P> bool PassTestBase<P>::finalized;
+public:
+  static char ID;
+  static void finishedOK(int run) {
+    EXPECT_GT(runc, 0);
+    EXPECT_TRUE(initialized);
+    EXPECT_TRUE(finalized);
+    EXPECT_EQ(run, runc);
+  }
+  PassTestBase() : P(ID), allocated(0) {
+    initialized = false;
+    finalized = false;
+    runc = 0;
+  }
 
-    template<typename T, typename P>
-    struct PassTest : public PassTestBase<P> {
-    public:
+  void releaseMemory() override {
+    EXPECT_GT(runc, 0);
+    EXPECT_GT(allocated, 0);
+    allocated--;
+  }
+};
+template <typename P> char PassTestBase<P>::ID;
+template <typename P> int PassTestBase<P>::runc;
+template <typename P> bool PassTestBase<P>::initialized;
+template <typename P> bool PassTestBase<P>::finalized;
+
+template <typename T, typename P> struct PassTest : public PassTestBase<P> {
+public:
 #ifndef _MSC_VER // MSVC complains that Pass is not base class.
-      using llvm::Pass::doInitialization;
-      using llvm::Pass::doFinalization;
+  using llvm::Pass::doFinalization;
+  using llvm::Pass::doInitialization;
 #endif
-      bool doInitialization(T &t) override {
-        EXPECT_FALSE(PassTestBase<P>::initialized);
-        PassTestBase<P>::initialized = true;
-        return false;
-      }
-      bool doFinalization(T &t) override {
-        EXPECT_FALSE(PassTestBase<P>::finalized);
-        PassTestBase<P>::finalized = true;
-        EXPECT_EQ(0, PassTestBase<P>::allocated);
-        return false;
-      }
-    };
+  bool doInitialization(T &t) override {
+    EXPECT_FALSE(PassTestBase<P>::initialized);
+    PassTestBase<P>::initialized = true;
+    return false;
+  }
+  bool doFinalization(T &t) override {
+    EXPECT_FALSE(PassTestBase<P>::finalized);
+    PassTestBase<P>::finalized = true;
+    EXPECT_EQ(0, PassTestBase<P>::allocated);
+    return false;
+  }
+};
 
-    struct CGPass : public PassTest<CallGraph, CallGraphSCCPass> {
-    public:
-      CGPass() {
-        initializeCGPassPass(*PassRegistry::getPassRegistry());
-      }
-      bool runOnSCC(CallGraphSCC &SCMM) override {
-        run();
-        return false;
-      }
-    };
+struct CGPass : public PassTest<CallGraph, CallGraphSCCPass> {
+public:
+  CGPass() { initializeCGPassPass(*PassRegistry::getPassRegistry()); }
+  bool runOnSCC(CallGraphSCC &SCMM) override {
+    run();
+    return false;
+  }
+};
 
-    struct FPass : public PassTest<Module, FunctionPass> {
-    public:
-      bool runOnFunction(Function &F) override {
-        // FIXME: PR4112
-        // EXPECT_TRUE(getAnalysisIfAvailable<DataLayout>());
-        run();
-        return false;
-      }
-    };
+struct FPass : public PassTest<Module, FunctionPass> {
+public:
+  bool runOnFunction(Function &F) override {
+    // FIXME: PR4112
+    // EXPECT_TRUE(getAnalysisIfAvailable<DataLayout>());
+    run();
+    return false;
+  }
+};
 
-    struct LPass : public PassTestBase<LoopPass> {
-    private:
-      static int initcount;
-      static int fincount;
-    public:
-      LPass() {
-        initializeLPassPass(*PassRegistry::getPassRegistry());
-        initcount = 0; fincount=0;
-        EXPECT_FALSE(initialized);
-      }
-      static void finishedOK(int run, int finalized) {
-        PassTestBase<LoopPass>::finishedOK(run);
-        EXPECT_EQ(run, initcount);
-        EXPECT_EQ(finalized, fincount);
-      }
-      using llvm::Pass::doInitialization;
-      using llvm::Pass::doFinalization;
-      bool doInitialization(Loop* L, LPPassManager &LPM) override {
-        initialized = true;
-        initcount++;
-        return false;
-      }
-      bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-        run();
-        return false;
-      }
-      bool doFinalization() override {
-        fincount++;
-        finalized = true;
-        return false;
-      }
-    };
-    int LPass::initcount=0;
-    int LPass::fincount=0;
+struct LPass : public PassTestBase<LoopPass> {
+private:
+  static int initcount;
+  static int fincount;
 
-    struct OnTheFlyTest: public ModulePass {
-    public:
-      static char ID;
-      OnTheFlyTest() : ModulePass(ID) {
-        initializeFPassPass(*PassRegistry::getPassRegistry());
-      }
-      bool runOnModule(Module &M) override {
-        for (Module::iterator I=M.begin(),E=M.end(); I != E; ++I) {
-          Function &F = *I;
-          {
-            SCOPED_TRACE("Running on the fly function pass");
-            getAnalysis<FPass>(F);
-          }
-        }
-        return false;
-      }
-      void getAnalysisUsage(AnalysisUsage &AU) const override {
-        AU.addRequired<FPass>();
-      }
-    };
-    char OnTheFlyTest::ID=0;
+public:
+  LPass() {
+    initializeLPassPass(*PassRegistry::getPassRegistry());
+    initcount = 0;
+    fincount = 0;
+    EXPECT_FALSE(initialized);
+  }
+  static void finishedOK(int run, int finalized) {
+    PassTestBase<LoopPass>::finishedOK(run);
+    EXPECT_EQ(run, initcount);
+    EXPECT_EQ(finalized, fincount);
+  }
+  using llvm::Pass::doFinalization;
+  using llvm::Pass::doInitialization;
+  bool doInitialization(Loop *L, LPPassManager &LPM) override {
+    initialized = true;
+    initcount++;
+    return false;
+  }
+  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
+    run();
+    return false;
+  }
+  bool doFinalization() override {
+    fincount++;
+    finalized = true;
+    return false;
+  }
+};
+int LPass::initcount = 0;
+int LPass::fincount = 0;
 
-    TEST(PassManager, RunOnce) {
-      LLVMContext Context;
-      Module M("test-once", Context);
-      struct ModuleNDNM *mNDNM = new ModuleNDNM();
-      struct ModuleDNM *mDNM = new ModuleDNM();
-      struct ModuleNDM *mNDM = new ModuleNDM();
-      struct ModuleNDM2 *mNDM2 = new ModuleNDM2();
-
-      mNDM->run = mNDNM->run = mDNM->run = mNDM2->run = 0;
-
-      legacy::PassManager Passes;
-      Passes.add(mNDM2);
-      Passes.add(mNDM);
-      Passes.add(mNDNM);
-      Passes.add(mDNM);
-
-      Passes.run(M);
-      // each pass must be run exactly once, since nothing invalidates them
-      EXPECT_EQ(1, mNDM->run);
-      EXPECT_EQ(1, mNDNM->run);
-      EXPECT_EQ(1, mDNM->run);
-      EXPECT_EQ(1, mNDM2->run);
-    }
-
-    TEST(PassManager, ReRun) {
-      LLVMContext Context;
-      Module M("test-rerun", Context);
-      struct ModuleNDNM *mNDNM = new ModuleNDNM();
-      struct ModuleDNM *mDNM = new ModuleDNM();
-      struct ModuleNDM *mNDM = new ModuleNDM();
-      struct ModuleNDM2 *mNDM2 = new ModuleNDM2();
-
-      mNDM->run = mNDNM->run = mDNM->run = mNDM2->run = 0;
-
-      legacy::PassManager Passes;
-      Passes.add(mNDM);
-      Passes.add(mNDNM);
-      Passes.add(mNDM2);// invalidates mNDM needed by mDNM
-      Passes.add(mDNM);
-
-      Passes.run(M);
-      // Some passes must be rerun because a pass that modified the
-      // module/function was run in between
-      EXPECT_EQ(2, mNDM->run);
-      EXPECT_EQ(1, mNDNM->run);
-      EXPECT_EQ(1, mNDM2->run);
-      EXPECT_EQ(1, mDNM->run);
-    }
-
-    Module *makeLLVMModule(LLVMContext &Context);
-
-    template<typename T>
-    void MemoryTestHelper(int run) {
-      LLVMContext Context;
-      std::unique_ptr<Module> M(makeLLVMModule(Context));
-      T *P = new T();
-      legacy::PassManager Passes;
-      Passes.add(P);
-      Passes.run(*M);
-      T::finishedOK(run);
-    }
-
-    template<typename T>
-    void MemoryTestHelper(int run, int N) {
-      LLVMContext Context;
-      Module *M = makeLLVMModule(Context);
-      T *P = new T();
-      legacy::PassManager Passes;
-      Passes.add(P);
-      Passes.run(*M);
-      T::finishedOK(run, N);
-      delete M;
-    }
-
-    TEST(PassManager, Memory) {
-      // SCC#1: test1->test2->test3->test1
-      // SCC#2: test4
-      // SCC#3: indirect call node
+struct OnTheFlyTest : public ModulePass {
+public:
+  static char ID;
+  OnTheFlyTest() : ModulePass(ID) {
+    initializeFPassPass(*PassRegistry::getPassRegistry());
+  }
+  bool runOnModule(Module &M) override {
+    for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+      Function &F = *I;
       {
-        SCOPED_TRACE("Callgraph pass");
-        MemoryTestHelper<CGPass>(3);
+        SCOPED_TRACE("Running on the fly function pass");
+        getAnalysis<FPass>(F);
       }
-
-      {
-        SCOPED_TRACE("Function pass");
-        MemoryTestHelper<FPass>(4);// 4 functions
-      }
-
-      {
-        SCOPED_TRACE("Loop pass");
-        MemoryTestHelper<LPass>(2, 1); //2 loops, 1 function
-      }
-
     }
+    return false;
+  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<FPass>();
+  }
+};
+char OnTheFlyTest::ID = 0;
 
-    TEST(PassManager, MemoryOnTheFly) {
-      LLVMContext Context;
-      Module *M = makeLLVMModule(Context);
-      {
-        SCOPED_TRACE("Running OnTheFlyTest");
-        struct OnTheFlyTest *O = new OnTheFlyTest();
-        legacy::PassManager Passes;
-        Passes.add(O);
-        Passes.run(*M);
+TEST(PassManager, RunOnce) {
+  LLVMContext Context;
+  Module M("test-once", Context);
+  struct ModuleNDNM *mNDNM = new ModuleNDNM();
+  struct ModuleDNM *mDNM = new ModuleDNM();
+  struct ModuleNDM *mNDM = new ModuleNDM();
+  struct ModuleNDM2 *mNDM2 = new ModuleNDM2();
 
-        FPass::finishedOK(4);
-      }
-      delete M;
-    }
+  mNDM->run = mNDNM->run = mDNM->run = mNDM2->run = 0;
 
-    // Skips or runs optional passes.
-    struct CustomOptPassGate : public OptPassGate {
-      bool Skip;
-      CustomOptPassGate(bool Skip) : Skip(Skip) { }
-      bool shouldRunPass(StringRef PassName,
-                         StringRef IRDescription) const override {
-        return !Skip;
-      }
-      bool isEnabled() const override { return true; }
-    };
+  legacy::PassManager Passes;
+  Passes.add(mNDM2);
+  Passes.add(mNDM);
+  Passes.add(mNDNM);
+  Passes.add(mDNM);
 
-    // Optional module pass.
-    struct ModuleOpt: public ModulePass {
-      char run = 0;
-      static char ID;
-      ModuleOpt() : ModulePass(ID) { }
-      bool runOnModule(Module &M) override {
-        if (!skipModule(M))
-          run++;
-        return false;
-      }
-    };
-    char ModuleOpt::ID=0;
+  Passes.run(M);
+  // each pass must be run exactly once, since nothing invalidates them
+  EXPECT_EQ(1, mNDM->run);
+  EXPECT_EQ(1, mNDNM->run);
+  EXPECT_EQ(1, mDNM->run);
+  EXPECT_EQ(1, mNDM2->run);
+}
 
-    TEST(PassManager, CustomOptPassGate) {
-      LLVMContext Context0;
-      LLVMContext Context1;
-      LLVMContext Context2;
-      CustomOptPassGate SkipOptionalPasses(true);
-      CustomOptPassGate RunOptionalPasses(false);
+TEST(PassManager, ReRun) {
+  LLVMContext Context;
+  Module M("test-rerun", Context);
+  struct ModuleNDNM *mNDNM = new ModuleNDNM();
+  struct ModuleDNM *mDNM = new ModuleDNM();
+  struct ModuleNDM *mNDM = new ModuleNDM();
+  struct ModuleNDM2 *mNDM2 = new ModuleNDM2();
 
-      Module M0("custom-opt-bisect", Context0);
-      Module M1("custom-opt-bisect", Context1);
-      Module M2("custom-opt-bisect2", Context2);
-      struct ModuleOpt *mOpt0 = new ModuleOpt();
-      struct ModuleOpt *mOpt1 = new ModuleOpt();
-      struct ModuleOpt *mOpt2 = new ModuleOpt();
+  mNDM->run = mNDNM->run = mDNM->run = mNDM2->run = 0;
 
-      mOpt0->run = mOpt1->run = mOpt2->run = 0;
+  legacy::PassManager Passes;
+  Passes.add(mNDM);
+  Passes.add(mNDNM);
+  Passes.add(mNDM2); // invalidates mNDM needed by mDNM
+  Passes.add(mDNM);
 
-      legacy::PassManager Passes0;
-      legacy::PassManager Passes1;
-      legacy::PassManager Passes2;
+  Passes.run(M);
+  // Some passes must be rerun because a pass that modified the
+  // module/function was run in between
+  EXPECT_EQ(2, mNDM->run);
+  EXPECT_EQ(1, mNDNM->run);
+  EXPECT_EQ(1, mNDM2->run);
+  EXPECT_EQ(1, mDNM->run);
+}
 
-      Passes0.add(mOpt0);
-      Passes1.add(mOpt1);
-      Passes2.add(mOpt2);
+Module *makeLLVMModule(LLVMContext &Context);
 
-      Context1.setOptPassGate(SkipOptionalPasses);
-      Context2.setOptPassGate(RunOptionalPasses);
+template <typename T> void MemoryTestHelper(int run) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M(makeLLVMModule(Context));
+  T *P = new T();
+  legacy::PassManager Passes;
+  Passes.add(P);
+  Passes.run(*M);
+  T::finishedOK(run);
+}
 
-      Passes0.run(M0);
-      Passes1.run(M1);
-      Passes2.run(M2);
+template <typename T> void MemoryTestHelper(int run, int N) {
+  LLVMContext Context;
+  Module *M = makeLLVMModule(Context);
+  T *P = new T();
+  legacy::PassManager Passes;
+  Passes.add(P);
+  Passes.run(*M);
+  T::finishedOK(run, N);
+  delete M;
+}
 
-      // By default optional passes are run.
-      EXPECT_EQ(1, mOpt0->run);
+TEST(PassManager, Memory) {
+  // SCC#1: test1->test2->test3->test1
+  // SCC#2: test4
+  // SCC#3: indirect call node
+  {
+    SCOPED_TRACE("Callgraph pass");
+    MemoryTestHelper<CGPass>(3);
+  }
 
-      // The first context skips optional passes.
-      EXPECT_EQ(0, mOpt1->run);
+  {
+    SCOPED_TRACE("Function pass");
+    MemoryTestHelper<FPass>(4); // 4 functions
+  }
 
-      // The second context runs optional passes.
-      EXPECT_EQ(1, mOpt2->run);
-    }
-
-    Module *makeLLVMModule(LLVMContext &Context) {
-      // Module Construction
-      Module *mod = new Module("test-mem", Context);
-      mod->setDataLayout("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
-                         "i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-"
-                         "a:0:64-s:64:64-f80:128:128");
-      mod->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
-
-      // Type Definitions
-      std::vector<Type*>FuncTy_0_args;
-      FunctionType *FuncTy_0 = FunctionType::get(
-          /*Result=*/IntegerType::get(Context, 32),
-          /*Params=*/FuncTy_0_args,
-          /*isVarArg=*/false);
-
-      std::vector<Type*>FuncTy_2_args;
-      FuncTy_2_args.push_back(IntegerType::get(Context, 1));
-      FunctionType *FuncTy_2 = FunctionType::get(
-          /*Result=*/Type::getVoidTy(Context),
-          /*Params=*/FuncTy_2_args,
-          /*isVarArg=*/false);
-
-      // Function Declarations
-
-      Function* func_test1 = Function::Create(
-        /*Type=*/FuncTy_0,
-        /*Linkage=*/GlobalValue::ExternalLinkage,
-        /*Name=*/"test1", mod);
-      func_test1->setCallingConv(CallingConv::C);
-      AttributeList func_test1_PAL;
-      func_test1->setAttributes(func_test1_PAL);
-
-      Function* func_test2 = Function::Create(
-        /*Type=*/FuncTy_0,
-        /*Linkage=*/GlobalValue::ExternalLinkage,
-        /*Name=*/"test2", mod);
-      func_test2->setCallingConv(CallingConv::C);
-      AttributeList func_test2_PAL;
-      func_test2->setAttributes(func_test2_PAL);
-
-      Function* func_test3 = Function::Create(
-        /*Type=*/FuncTy_0,
-        /*Linkage=*/GlobalValue::InternalLinkage,
-        /*Name=*/"test3", mod);
-      func_test3->setCallingConv(CallingConv::C);
-      AttributeList func_test3_PAL;
-      func_test3->setAttributes(func_test3_PAL);
-
-      Function* func_test4 = Function::Create(
-        /*Type=*/FuncTy_2,
-        /*Linkage=*/GlobalValue::ExternalLinkage,
-        /*Name=*/"test4", mod);
-      func_test4->setCallingConv(CallingConv::C);
-      AttributeList func_test4_PAL;
-      func_test4->setAttributes(func_test4_PAL);
-
-      // Global Variable Declarations
-
-
-      // Constant Definitions
-
-      // Global Variable Definitions
-
-      // Function Definitions
-
-      // Function: test1 (func_test1)
-      {
-
-        BasicBlock *label_entry =
-            BasicBlock::Create(Context, "entry", func_test1, nullptr);
-
-        // Block entry (label_entry)
-        CallInst* int32_3 = CallInst::Create(func_test2, "", label_entry);
-        int32_3->setCallingConv(CallingConv::C);
-        int32_3->setTailCall(false);
-        AttributeList int32_3_PAL;
-        int32_3->setAttributes(int32_3_PAL);
-
-        ReturnInst::Create(Context, int32_3, label_entry);
-      }
-
-      // Function: test2 (func_test2)
-      {
-
-        BasicBlock *label_entry_5 =
-            BasicBlock::Create(Context, "entry", func_test2, nullptr);
-
-        // Block entry (label_entry_5)
-        CallInst* int32_6 = CallInst::Create(func_test3, "", label_entry_5);
-        int32_6->setCallingConv(CallingConv::C);
-        int32_6->setTailCall(false);
-        AttributeList int32_6_PAL;
-        int32_6->setAttributes(int32_6_PAL);
-
-        ReturnInst::Create(Context, int32_6, label_entry_5);
-      }
-
-      // Function: test3 (func_test3)
-      {
-
-        BasicBlock *label_entry_8 =
-            BasicBlock::Create(Context, "entry", func_test3, nullptr);
-
-        // Block entry (label_entry_8)
-        CallInst* int32_9 = CallInst::Create(func_test1, "", label_entry_8);
-        int32_9->setCallingConv(CallingConv::C);
-        int32_9->setTailCall(false);
-        AttributeList int32_9_PAL;
-        int32_9->setAttributes(int32_9_PAL);
-
-        ReturnInst::Create(Context, int32_9, label_entry_8);
-      }
-
-      // Function: test4 (func_test4)
-      {
-        Function::arg_iterator args = func_test4->arg_begin();
-        Value *int1_f = &*args++;
-        int1_f->setName("f");
-
-        BasicBlock *label_entry_11 =
-            BasicBlock::Create(Context, "entry", func_test4, nullptr);
-        BasicBlock *label_bb =
-            BasicBlock::Create(Context, "bb", func_test4, nullptr);
-        BasicBlock *label_bb1 =
-            BasicBlock::Create(Context, "bb1", func_test4, nullptr);
-        BasicBlock *label_return =
-            BasicBlock::Create(Context, "return", func_test4, nullptr);
-
-        // Block entry (label_entry_11)
-        auto *AI = new AllocaInst(func_test3->getType(), 0, "func3ptr",
-                                  label_entry_11);
-        new StoreInst(func_test3, AI, label_entry_11);
-        UncondBrInst::Create(label_bb, label_entry_11);
-
-        // Block bb (label_bb)
-        CondBrInst::Create(int1_f, label_bb, label_bb1, label_bb);
-
-        // Block bb1 (label_bb1)
-        CondBrInst::Create(int1_f, label_bb1, label_return, label_bb1);
-
-        // Block return (label_return)
-        ReturnInst::Create(Context, label_return);
-      }
-      return mod;
-    }
-
-    // Test for call graph SCC pass that replaces all callback call instructions
-    // with clones and updates CallGraph by calling CallGraph::replaceCallEdge()
-    // method. Test is expected to complete successfully after running pass on
-    // all SCCs in the test module.
-    struct CallbackCallsModifierPass : public CGPass {
-      bool runOnSCC(CallGraphSCC &SCC) override {
-        CGPass::run();
-
-        CallGraph &CG = const_cast<CallGraph &>(SCC.getCallGraph());
-
-        bool Changed = false;
-        for (CallGraphNode *CGN : SCC) {
-          Function *F = CGN->getFunction();
-          if (!F || F->isDeclaration())
-            continue;
-
-          SmallVector<CallBase *, 4u> Calls;
-          for (Use &U : F->uses()) {
-            AbstractCallSite ACS(&U);
-            if (!ACS || !ACS.isCallbackCall() || !ACS.isCallee(&U))
-              continue;
-            Calls.push_back(cast<CallBase>(ACS.getInstruction()));
-          }
-          if (Calls.empty())
-            continue;
-
-          for (CallBase *OldCB : Calls) {
-            CallGraphNode *CallerCGN = CG[OldCB->getParent()->getParent()];
-            assert(any_of(*CallerCGN,
-                          [CGN](const CallGraphNode::CallRecord &CallRecord) {
-                            return CallRecord.second == CGN;
-                          }) &&
-                   "function is not a callee");
-
-            CallBase *NewCB = cast<CallBase>(OldCB->clone());
-
-            NewCB->insertBefore(OldCB->getIterator());
-            NewCB->takeName(OldCB);
-
-            CallerCGN->replaceCallEdge(*OldCB, *NewCB, CG[F]);
-
-            OldCB->replaceAllUsesWith(NewCB);
-            OldCB->eraseFromParent();
-          }
-          Changed = true;
-        }
-        return Changed;
-      }
-    };
-
-    TEST(PassManager, CallbackCallsModifier0) {
-      LLVMContext Context;
-
-      const char *IR = "define void @foo() {\n"
-                       "  call void @broker(ptr @callback0, ptr null)\n"
-                       "  call void @broker(ptr @callback1, ptr null)\n"
-                       "  ret void\n"
-                       "}\n"
-                       "\n"
-                       "declare !callback !0 void @broker(ptr, ptr)\n"
-                       "\n"
-                       "define internal void @callback0(ptr %arg) {\n"
-                       "  ret void\n"
-                       "}\n"
-                       "\n"
-                       "define internal void @callback1(ptr %arg) {\n"
-                       "  ret void\n"
-                       "}\n"
-                       "\n"
-                       "!0 = !{!1}\n"
-                       "!1 = !{i64 0, i64 1, i1 false}";
-
-      SMDiagnostic Err;
-      std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Context);
-      if (!M)
-        Err.print("LegacyPassManagerTest", errs());
-
-      CallbackCallsModifierPass *P = new CallbackCallsModifierPass();
-      legacy::PassManager Passes;
-      Passes.add(P);
-      Passes.run(*M);
-    }
+  {
+    SCOPED_TRACE("Loop pass");
+    MemoryTestHelper<LPass>(2, 1); // 2 loops, 1 function
   }
 }
+
+TEST(PassManager, MemoryOnTheFly) {
+  LLVMContext Context;
+  Module *M = makeLLVMModule(Context);
+  {
+    SCOPED_TRACE("Running OnTheFlyTest");
+    struct OnTheFlyTest *O = new OnTheFlyTest();
+    legacy::PassManager Passes;
+    Passes.add(O);
+    Passes.run(*M);
+
+    FPass::finishedOK(4);
+  }
+  delete M;
+}
+
+// Skips or runs optional passes.
+struct CustomOptPassGate : public OptPassGate {
+  bool Skip;
+  CustomOptPassGate(bool Skip) : Skip(Skip) {}
+  bool shouldRunPass(StringRef PassName,
+                     StringRef IRDescription) const override {
+    return !Skip;
+  }
+  bool isEnabled() const override { return true; }
+};
+
+// Optional module pass.
+struct ModuleOpt : public ModulePass {
+  char run = 0;
+  static char ID;
+  ModuleOpt() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override {
+    if (!skipModule(M))
+      run++;
+    return false;
+  }
+};
+char ModuleOpt::ID = 0;
+
+TEST(PassManager, CustomOptPassGate) {
+  LLVMContext Context0;
+  LLVMContext Context1;
+  LLVMContext Context2;
+  CustomOptPassGate SkipOptionalPasses(true);
+  CustomOptPassGate RunOptionalPasses(false);
+
+  Module M0("custom-opt-bisect", Context0);
+  Module M1("custom-opt-bisect", Context1);
+  Module M2("custom-opt-bisect2", Context2);
+  struct ModuleOpt *mOpt0 = new ModuleOpt();
+  struct ModuleOpt *mOpt1 = new ModuleOpt();
+  struct ModuleOpt *mOpt2 = new ModuleOpt();
+
+  mOpt0->run = mOpt1->run = mOpt2->run = 0;
+
+  legacy::PassManager Passes0;
+  legacy::PassManager Passes1;
+  legacy::PassManager Passes2;
+
+  Passes0.add(mOpt0);
+  Passes1.add(mOpt1);
+  Passes2.add(mOpt2);
+
+  Context1.setOptPassGate(SkipOptionalPasses);
+  Context2.setOptPassGate(RunOptionalPasses);
+
+  Passes0.run(M0);
+  Passes1.run(M1);
+  Passes2.run(M2);
+
+  // By default optional passes are run.
+  EXPECT_EQ(1, mOpt0->run);
+
+  // The first context skips optional passes.
+  EXPECT_EQ(0, mOpt1->run);
+
+  // The second context runs optional passes.
+  EXPECT_EQ(1, mOpt2->run);
+}
+
+Module *makeLLVMModule(LLVMContext &Context) {
+  // Module Construction
+  Module *mod = new Module("test-mem", Context);
+  mod->setDataLayout("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
+                     "i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-"
+                     "a:0:64-s:64:64-f80:128:128");
+  mod->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+
+  // Type Definitions
+  std::vector<Type *> FuncTy_0_args;
+  FunctionType *FuncTy_0 = FunctionType::get(
+      /*Result=*/IntegerType::get(Context, 32),
+      /*Params=*/FuncTy_0_args,
+      /*isVarArg=*/false);
+
+  std::vector<Type *> FuncTy_2_args;
+  FuncTy_2_args.push_back(IntegerType::get(Context, 1));
+  FunctionType *FuncTy_2 = FunctionType::get(
+      /*Result=*/Type::getVoidTy(Context),
+      /*Params=*/FuncTy_2_args,
+      /*isVarArg=*/false);
+
+  // Function Declarations
+
+  Function *func_test1 = Function::Create(
+      /*Type=*/FuncTy_0,
+      /*Linkage=*/GlobalValue::ExternalLinkage,
+      /*Name=*/"test1", mod);
+  func_test1->setCallingConv(CallingConv::C);
+  AttributeList func_test1_PAL;
+  func_test1->setAttributes(func_test1_PAL);
+
+  Function *func_test2 = Function::Create(
+      /*Type=*/FuncTy_0,
+      /*Linkage=*/GlobalValue::ExternalLinkage,
+      /*Name=*/"test2", mod);
+  func_test2->setCallingConv(CallingConv::C);
+  AttributeList func_test2_PAL;
+  func_test2->setAttributes(func_test2_PAL);
+
+  Function *func_test3 = Function::Create(
+      /*Type=*/FuncTy_0,
+      /*Linkage=*/GlobalValue::InternalLinkage,
+      /*Name=*/"test3", mod);
+  func_test3->setCallingConv(CallingConv::C);
+  AttributeList func_test3_PAL;
+  func_test3->setAttributes(func_test3_PAL);
+
+  Function *func_test4 = Function::Create(
+      /*Type=*/FuncTy_2,
+      /*Linkage=*/GlobalValue::ExternalLinkage,
+      /*Name=*/"test4", mod);
+  func_test4->setCallingConv(CallingConv::C);
+  AttributeList func_test4_PAL;
+  func_test4->setAttributes(func_test4_PAL);
+
+  // Global Variable Declarations
+
+  // Constant Definitions
+
+  // Global Variable Definitions
+
+  // Function Definitions
+
+  // Function: test1 (func_test1)
+  {
+
+    BasicBlock *label_entry =
+        BasicBlock::Create(Context, "entry", func_test1, nullptr);
+
+    // Block entry (label_entry)
+    CallInst *int32_3 = CallInst::Create(func_test2, "", label_entry);
+    int32_3->setCallingConv(CallingConv::C);
+    int32_3->setTailCall(false);
+    AttributeList int32_3_PAL;
+    int32_3->setAttributes(int32_3_PAL);
+
+    ReturnInst::Create(Context, int32_3, label_entry);
+  }
+
+  // Function: test2 (func_test2)
+  {
+
+    BasicBlock *label_entry_5 =
+        BasicBlock::Create(Context, "entry", func_test2, nullptr);
+
+    // Block entry (label_entry_5)
+    CallInst *int32_6 = CallInst::Create(func_test3, "", label_entry_5);
+    int32_6->setCallingConv(CallingConv::C);
+    int32_6->setTailCall(false);
+    AttributeList int32_6_PAL;
+    int32_6->setAttributes(int32_6_PAL);
+
+    ReturnInst::Create(Context, int32_6, label_entry_5);
+  }
+
+  // Function: test3 (func_test3)
+  {
+
+    BasicBlock *label_entry_8 =
+        BasicBlock::Create(Context, "entry", func_test3, nullptr);
+
+    // Block entry (label_entry_8)
+    CallInst *int32_9 = CallInst::Create(func_test1, "", label_entry_8);
+    int32_9->setCallingConv(CallingConv::C);
+    int32_9->setTailCall(false);
+    AttributeList int32_9_PAL;
+    int32_9->setAttributes(int32_9_PAL);
+
+    ReturnInst::Create(Context, int32_9, label_entry_8);
+  }
+
+  // Function: test4 (func_test4)
+  {
+    Function::arg_iterator args = func_test4->arg_begin();
+    Value *int1_f = &*args++;
+    int1_f->setName("f");
+
+    BasicBlock *label_entry_11 =
+        BasicBlock::Create(Context, "entry", func_test4, nullptr);
+    BasicBlock *label_bb =
+        BasicBlock::Create(Context, "bb", func_test4, nullptr);
+    BasicBlock *label_bb1 =
+        BasicBlock::Create(Context, "bb1", func_test4, nullptr);
+    BasicBlock *label_return =
+        BasicBlock::Create(Context, "return", func_test4, nullptr);
+
+    // Block entry (label_entry_11)
+    auto *AI =
+        new AllocaInst(func_test3->getType(), 0, "func3ptr", label_entry_11);
+    new StoreInst(func_test3, AI, label_entry_11);
+    UncondBrInst::Create(label_bb, label_entry_11);
+
+    // Block bb (label_bb)
+    CondBrInst::Create(int1_f, label_bb, label_bb1, label_bb);
+
+    // Block bb1 (label_bb1)
+    CondBrInst::Create(int1_f, label_bb1, label_return, label_bb1);
+
+    // Block return (label_return)
+    ReturnInst::Create(Context, label_return);
+  }
+  return mod;
+}
+
+// Test for call graph SCC pass that replaces all callback call instructions
+// with clones and updates CallGraph by calling CallGraph::replaceCallEdge()
+// method. Test is expected to complete successfully after running pass on
+// all SCCs in the test module.
+struct CallbackCallsModifierPass : public CGPass {
+  bool runOnSCC(CallGraphSCC &SCC) override {
+    CGPass::run();
+
+    CallGraph &CG = const_cast<CallGraph &>(SCC.getCallGraph());
+
+    bool Changed = false;
+    for (CallGraphNode *CGN : SCC) {
+      Function *F = CGN->getFunction();
+      if (!F || F->isDeclaration())
+        continue;
+
+      SmallVector<CallBase *, 4u> Calls;
+      for (Use &U : F->uses()) {
+        AbstractCallSite ACS(&U);
+        if (!ACS || !ACS.isCallbackCall() || !ACS.isCallee(&U))
+          continue;
+        Calls.push_back(cast<CallBase>(ACS.getInstruction()));
+      }
+      if (Calls.empty())
+        continue;
+
+      for (CallBase *OldCB : Calls) {
+        CallGraphNode *CallerCGN = CG[OldCB->getParent()->getParent()];
+        assert(any_of(*CallerCGN,
+                      [CGN](const CallGraphNode::CallRecord &CallRecord) {
+                        return CallRecord.second == CGN;
+                      }) &&
+               "function is not a callee");
+
+        CallBase *NewCB = cast<CallBase>(OldCB->clone());
+
+        NewCB->insertBefore(OldCB->getIterator());
+        NewCB->takeName(OldCB);
+
+        CallerCGN->replaceCallEdge(*OldCB, *NewCB, CG[F]);
+
+        OldCB->replaceAllUsesWith(NewCB);
+        OldCB->eraseFromParent();
+      }
+      Changed = true;
+    }
+    return Changed;
+  }
+};
+
+TEST(PassManager, CallbackCallsModifier0) {
+  LLVMContext Context;
+
+  const char *IR = "define void @foo() {\n"
+                   "  call void @broker(ptr @callback0, ptr null)\n"
+                   "  call void @broker(ptr @callback1, ptr null)\n"
+                   "  ret void\n"
+                   "}\n"
+                   "\n"
+                   "declare !callback !0 void @broker(ptr, ptr)\n"
+                   "\n"
+                   "define internal void @callback0(ptr %arg) {\n"
+                   "  ret void\n"
+                   "}\n"
+                   "\n"
+                   "define internal void @callback1(ptr %arg) {\n"
+                   "  ret void\n"
+                   "}\n"
+                   "\n"
+                   "!0 = !{!1}\n"
+                   "!1 = !{i64 0, i64 1, i1 false}";
+
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Context);
+  if (!M)
+    Err.print("LegacyPassManagerTest", errs());
+
+  CallbackCallsModifierPass *P = new CallbackCallsModifierPass();
+  legacy::PassManager Passes;
+  Passes.add(P);
+  Passes.run(*M);
+}
+} // namespace
 
 INITIALIZE_PASS(ModuleNDM, "mndm", "mndm", false, false)
 INITIALIZE_PASS_BEGIN(CGPass, "cgp","cgp", false, false)

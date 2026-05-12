@@ -4,7 +4,7 @@
 define <2 x i64> @v2i64_02(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: v2i64_02:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ret
@@ -16,7 +16,7 @@ define <2 x i64> @v2i64_02(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @v2i64_13(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: v2i64_13:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    zip2 v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ret
@@ -50,8 +50,8 @@ define <2 x i64> @v2i64_15913(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @v2i64_261014(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: v2i64_261014:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v1.d[1]
+; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ret
@@ -63,8 +63,8 @@ define <2 x i64> @v2i64_261014(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @v2i64_37(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: v2i64_37:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v1.d[1]
+; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    zip2 v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ret

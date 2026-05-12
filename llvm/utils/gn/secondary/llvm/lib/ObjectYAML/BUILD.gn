@@ -10,6 +10,7 @@ static_library("ObjectYAML") {
   sources = [
     "ArchiveEmitter.cpp",
     "ArchiveYAML.cpp",
+    "BBAddrMapYAML.cpp",
     "COFFEmitter.cpp",
     "COFFYAML.cpp",
     "CodeViewYAMLDebugSections.cpp",

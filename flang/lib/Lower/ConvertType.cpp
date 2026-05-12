@@ -409,7 +409,7 @@ struct TypeBuilderImpl {
 
     // Gather the record type fields.
     // (1) The data components.
-    if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    {
       size_t prev_offset{0};
       unsigned padCounter{0};
       // In HLFIR the parent component is the first fir.type component.
@@ -453,34 +453,6 @@ struct TypeBuilderImpl {
             }
           }
         }
-      }
-    } else {
-      for (const auto &component :
-           Fortran::semantics::OrderedComponentIterator(tySpec)) {
-        // In the lowering to FIR the parent component does not appear in the
-        // fir.type and its components are inlined at the beginning of the
-        // fir.type<>.
-        // FIXME: this strategy leads to bugs because padding should be inserted
-        // after the component of the parents so that the next components do not
-        // end-up in the parent storage if the sum of the parent's component
-        // storage size is not a multiple of the parent type storage alignment.
-
-        // Lowering is assuming non deferred component lower bounds are
-        // always 1. Catch any situations where this is not true for now.
-        if (componentHasNonDefaultLowerBounds(component))
-          TODO(converter.genLocation(component.name()),
-               "derived type components with non default lower bounds");
-        if (IsProcedure(component))
-          TODO(converter.genLocation(component.name()), "procedure components");
-        mlir::Type ty = genSymbolType(component);
-        // Do not add the parent component (component of the parents are
-        // added and should be sufficient, the parent component would
-        // duplicate the fields). Note that genSymbolType must be called above
-        // on it so that the dispatch table for the parent type still gets
-        // emitted as needed.
-        if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
-          continue;
-        cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
       }
     }
 

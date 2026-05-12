@@ -114,6 +114,7 @@ static_library("bugprone") {
     "UncheckedStringToNumberConversionCheck.cpp",
     "UndefinedMemoryManipulationCheck.cpp",
     "UndelegatedConstructorCheck.cpp",
+    "UnhandledCodePathsCheck.cpp",
     "UnhandledExceptionAtNewCheck.cpp",
     "UnhandledSelfAssignmentCheck.cpp",
     "UnintendedCharOstreamOutputCheck.cpp",

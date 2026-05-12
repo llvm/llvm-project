@@ -305,6 +305,7 @@
 ; CHECK-NEXT:   zicboz                           - 'Zicboz' (Cache-Block Zero Instructions).
 ; CHECK-NEXT:   ziccamoa                         - 'Ziccamoa' (Main Memory Supports All Atomics in A).
 ; CHECK-NEXT:   ziccamoc                         - 'Ziccamoc' (Main Memory Supports Atomics in Zacas).
+; CHECK-NEXT:   ziccid                           - 'Ziccid' (Instruction/Data Coherence and Consistency).
 ; CHECK-NEXT:   ziccif                           - 'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement).
 ; CHECK-NEXT:   zicclsm                          - 'Zicclsm' (Main Memory Supports Misaligned Loads/Stores).
 ; CHECK-NEXT:   ziccrse                          - 'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences).

@@ -2598,7 +2598,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
       Instruction *Inst = InstructionList[Record[0]];
       for (unsigned i = 1; i != RecordLength; i = i + 2) {
         unsigned Kind = Record[i];
-        DenseMap<unsigned, unsigned>::iterator I = MDKindMap.find(Kind);
+        auto I = MDKindMap.find(Kind);
         if (I == MDKindMap.end())
           return error("Invalid ID");
         if (I->second == LLVMContext::MD_tbaa && StripTBAA)

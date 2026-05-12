@@ -5976,6 +5976,12 @@ def mxcoff_roptr : Flag<["-"], "mxcoff-roptr">, Group<m_Group>,
   Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Place constant objects with relocatable address values in the RO data section and add -bforceimprw to the linker flags (AIX only)">;
 def mno_xcoff_roptr : Flag<["-"], "mno-xcoff-roptr">, Group<m_Group>, TargetSpecific;
+def maix_use_ptrgl : Flag<["-"], "maix-use-ptrgl">, Group<m_Group>,
+  Flags<[TargetSpecific]>,
+  HelpText<"Use ._ptrgl routine for indirect calls (AIX only)">;
+def mnoaix_use_ptrgl : Flag<["-"], "mno-aix-use-ptrgl">, Group<m_Group>, TargetSpecific,
+  HelpText<"Emit indirect calls inline (AIX only) (default)">;
+
 
 let Flags = [TargetSpecific] in {
 def mvx : Flag<["-"], "mvx">, Group<m_Group>;

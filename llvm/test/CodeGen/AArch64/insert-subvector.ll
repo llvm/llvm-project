@@ -340,7 +340,7 @@ define <8 x i8> @load_v8i8_4_2(float %tmp, <8 x i8> %b, ptr %a) {
 define <16 x i8> @load_v16i8_8_1(float %tmp, <16 x i8> %b, ptr %a) {
 ; CHECK-LABEL: load_v16i8_8_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
@@ -557,7 +557,7 @@ define <4 x i16> @load_v4i16_2_2(float %tmp, <4 x i16> %b, ptr %a) {
 define <8 x i16> @load_v8i16_4_1(float %tmp, <8 x i16> %b, ptr %a) {
 ; CHECK-LABEL: load_v8i16_4_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
@@ -585,7 +585,7 @@ define <8 x i16> @load_v8i16_4_2(float %tmp, <8 x i16> %b, ptr %a) {
 define <4 x i32> @load_v4i32_2_1(float %tmp, <4 x i32> %b, ptr %a) {
 ; CHECK-LABEL: load_v4i32_2_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret

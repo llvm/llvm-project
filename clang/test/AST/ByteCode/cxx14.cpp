@@ -35,3 +35,15 @@ constexpr bool f() { // both-error {{constexpr function never produces a constan
                     // both-warning {{array index 3 is past the end of the array}}
   return true;
 }
+
+namespace InitListModify {
+  struct Aggregate {
+    int x = 0;
+    int y = ++x;
+  };
+  constexpr Aggregate aggr1;
+  static_assert(aggr1.x == 1 && aggr1.y == 1, "");
+  // FIXME: This is not specified by the standard, but sanity requires it.
+  constexpr Aggregate aggr2 = {};
+  static_assert(aggr2.x == 1 && aggr2.y == 1, "");
+}

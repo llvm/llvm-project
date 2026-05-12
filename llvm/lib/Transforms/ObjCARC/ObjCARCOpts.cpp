@@ -1262,8 +1262,7 @@ ObjCARCOpt::CheckForCFGHazards(const BasicBlock *BB,
     for (const BasicBlock *Succ : successors(BB)) {
       // If VisitBottomUp has pointer information for this successor, take
       // what we know about it.
-      const DenseMap<const BasicBlock *, BBState>::iterator BBI =
-          BBStates.find(Succ);
+      const auto BBI = BBStates.find(Succ);
       assert(BBI != BBStates.end());
       const BottomUpPtrState &SuccS = BBI->second.getPtrBottomUpState(Arg);
       const Sequence SuccSSeq = SuccS.GetSeq();
@@ -1405,7 +1404,7 @@ bool ObjCARCOpt::VisitBottomUp(BasicBlock *BB,
                          SE(MyStates.succ_end());
   if (SI != SE) {
     const BasicBlock *Succ = *SI;
-    DenseMap<const BasicBlock *, BBState>::iterator I = BBStates.find(Succ);
+    auto I = BBStates.find(Succ);
     assert(I != BBStates.end());
     MyStates.InitFromSucc(I->second);
     ++SI;
@@ -1589,7 +1588,7 @@ bool ObjCARCOpt::VisitTopDown(
                          PE(MyStates.pred_end());
   if (PI != PE) {
     const BasicBlock *Pred = *PI;
-    DenseMap<const BasicBlock *, BBState>::iterator I = BBStates.find(Pred);
+    auto I = BBStates.find(Pred);
     assert(I != BBStates.end());
     MyStates.InitFromPred(I->second);
     ++PI;

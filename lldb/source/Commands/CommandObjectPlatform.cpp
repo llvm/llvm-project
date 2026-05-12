@@ -1300,6 +1300,7 @@ protected:
                 ostrm, platform_sp->GetUserIDResolver(), m_options.show_args,
                 m_options.verbose);
           }
+          result.SetStatus(eReturnStatusSuccessFinishResult);
         }
       }
     } else {

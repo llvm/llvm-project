@@ -53,7 +53,7 @@ define float @fmul_f32(<8 x float> %a, <4 x float> %b) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    fmul v0.4s, v0.4s, v2.4s
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v0.s[1]
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
@@ -62,8 +62,8 @@ define float @fmul_f32(<8 x float> %a, <4 x float> %b) {
 ; CHECK-GI-LABEL: fmul_f32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmul v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d3, v2.d[1]
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v2.2s, v3.2s
 ; CHECK-GI-NEXT:    mov s2, v0.s[1]
@@ -82,7 +82,7 @@ define float @fmul_f32_same(<4 x float> %a, <4 x float> %b) {
 ; CHECK-SD-LABEL: fmul_f32_same:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmul v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v0.s[1]
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
@@ -90,8 +90,8 @@ define float @fmul_f32_same(<4 x float> %a, <4 x float> %b) {
 ;
 ; CHECK-GI-LABEL: fmul_f32_same:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    mov s2, v0.s[1]
@@ -378,7 +378,7 @@ define i32 @mul_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mul v0.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    mul v0.4s, v0.4s, v2.4s
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
 ; CHECK-SD-NEXT:    fmov w0, s0
@@ -386,11 +386,11 @@ define i32 @mul_i32(<8 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: mul_i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d3, v0.d[1]
+; CHECK-GI-NEXT:    mov d4, v1.d[1]
 ; CHECK-GI-NEXT:    mul v0.2s, v0.2s, v3.2s
 ; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v4.2s
-; CHECK-GI-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-GI-NEXT:    mov d3, v2.d[1]
 ; CHECK-GI-NEXT:    mul v0.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mul v1.2s, v2.2s, v3.2s
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
@@ -411,7 +411,7 @@ define i32 @mul_i32_same(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD-LABEL: mul_i32_same:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mul v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
 ; CHECK-SD-NEXT:    fmov w0, s0
@@ -419,8 +419,8 @@ define i32 @mul_i32_same(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: mul_i32_same:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    mul v0.2s, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
@@ -442,7 +442,7 @@ define i32 @and_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    lsr x9, x8, #32
@@ -452,8 +452,8 @@ define i32 @and_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-GI-LABEL: and_i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v2.d[1]
+; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    and v1.8b, v2.8b, v1.8b
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v3.8b
 ; CHECK-GI-NEXT:    mov w8, v1.s[1]
@@ -474,7 +474,7 @@ define i32 @and_i32_same(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD-LABEL: and_i32_same:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    lsr x9, x8, #32
@@ -483,8 +483,8 @@ define i32 @and_i32_same(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: and_i32_same:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
@@ -506,7 +506,7 @@ define i32 @or_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    lsr x9, x8, #32
@@ -516,8 +516,8 @@ define i32 @or_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-GI-LABEL: or_i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v2.d[1]
+; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    orr v1.8b, v2.8b, v1.8b
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v3.8b
 ; CHECK-GI-NEXT:    mov w8, v1.s[1]
@@ -538,7 +538,7 @@ define i32 @or_i32_same(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD-LABEL: or_i32_same:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    lsr x9, x8, #32
@@ -547,8 +547,8 @@ define i32 @or_i32_same(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: or_i32_same:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    orr v1.8b, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
@@ -570,7 +570,7 @@ define i32 @xor_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    lsr x9, x8, #32
@@ -580,8 +580,8 @@ define i32 @xor_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-GI-LABEL: xor_i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v2.d[1]
+; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    eor v1.8b, v2.8b, v1.8b
 ; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v3.8b
 ; CHECK-GI-NEXT:    mov w8, v1.s[1]
@@ -602,7 +602,7 @@ define i32 @xor_i32_same(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD-LABEL: xor_i32_same:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    lsr x9, x8, #32
@@ -611,8 +611,8 @@ define i32 @xor_i32_same(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: xor_i32_same:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
@@ -905,7 +905,7 @@ define float @nested_mul_f32(<4 x float> %a, <4 x float> %b, float %c, float %d)
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    fmul s2, s2, s3
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v0.s[1]
 ; CHECK-SD-NEXT:    fmul s0, s2, s0
@@ -913,8 +913,8 @@ define float @nested_mul_f32(<4 x float> %a, <4 x float> %b, float %c, float %d)
 ;
 ; CHECK-GI-LABEL: nested_mul_f32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d4, v0.d[1]
+; CHECK-GI-NEXT:    mov d5, v1.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v4.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v5.2s
 ; CHECK-GI-NEXT:    mov s4, v0.s[1]
@@ -1056,7 +1056,7 @@ define i32 @nested_mul_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mul v0.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    mul w8, w0, w1
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
 ; CHECK-SD-NEXT:    fmov w9, s0
@@ -1065,8 +1065,8 @@ define i32 @nested_mul_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ;
 ; CHECK-GI-LABEL: nested_mul_i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    mul v0.2s, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
@@ -1092,7 +1092,7 @@ define i32 @nested_and_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    and w8, w0, w1
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x9, d0
 ; CHECK-SD-NEXT:    lsr x10, x9, #32
@@ -1102,8 +1102,8 @@ define i32 @nested_and_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ;
 ; CHECK-GI-LABEL: nested_and_i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
@@ -1129,7 +1129,7 @@ define i32 @nested_or_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    orr w8, w0, w1
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x9, d0
 ; CHECK-SD-NEXT:    lsr x10, x9, #32
@@ -1139,8 +1139,8 @@ define i32 @nested_or_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ;
 ; CHECK-GI-LABEL: nested_or_i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    orr v1.8b, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
@@ -1166,7 +1166,7 @@ define i32 @nested_xor_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    eor w8, w0, w1
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x9, d0
 ; CHECK-SD-NEXT:    lsr x10, x9, #32
@@ -1176,8 +1176,8 @@ define i32 @nested_xor_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ;
 ; CHECK-GI-LABEL: nested_xor_i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]

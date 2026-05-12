@@ -248,6 +248,7 @@ class PRGreeter:
     def __init__(self, token: str, repo: str, pr_number: int):
         repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo)
         self.pr = repo.get_issue(pr_number).as_pull_request()
+        self.author = self.pr.user
 
     def run(self) -> bool:
         # We assume that this is only called for a PR that has just been opened
@@ -257,19 +258,40 @@ class PRGreeter:
 
         comment = f"""\
 {PRGreeter.COMMENT_TAG}
-Thank you for submitting a Pull Request (PR) to the LLVM Project!
+Hello @{self.author} :wave:
 
-This PR will be automatically labeled and the relevant teams will be notified.
+Thank you for submitting a Pull Request (PR) to the LLVM Project. Since this is your first PR, here are a few useful links covering our main contribution policies and review practices.
 
-If you wish to, you can add reviewers by using the "Reviewers" section on this page.
+* All contributions to LLVM must follow our [LLVM AI Tool Use Policy](https://llvm.org/docs/AIToolPolicy.html). In particular, if you used AI while working on this PR, remember to add a note to the PR description.
+* The [LLVM Code-Review Policy and Practices](https://llvm.org/docs/CodeReview.html) document contains practical information about the PR process, including how patches are reviewed and accepted, and who can review a PR.
+* Our [LLVM Developer Policy](https://llvm.org/docs/DeveloperPolicy.html) describes our expectations for code quality, commit summaries and contains notes on our CI system.
 
-If this is not working for you, it is probably because you do not have write permissions for the repository. In which case you can instead tag reviewers by name in a comment by using `@` followed by their GitHub username.
+Please reply to this message to confirm that you have read these policies, especially the LLVM AI Tool Use Policy, and that any AI tool usage has been noted in the PR description.
 
-If you have received no comments on your PR for a week, you can request a review by "ping"ing the PR by adding a comment “Ping”. The common courtesy "ping" rate is once a week. Please remember that you are asking for valuable time from other developers.
+---
 
-If you have further questions, they may be answered by the [LLVM GitHub User Guide](https://llvm.org/docs/GitHub.html).
+### Frequently asked questions
 
-You can also ask questions in a comment on this PR, on the [LLVM Discord](https://discord.com/invite/xS7Z362) or on the [forums](https://discourse.llvm.org/)."""
+**How do I add reviewers?**
+
+This PR will be automatically labeled, and the relevant teams will be notified. For some parts of the project, reviewers may also be added automatically.
+
+You can also add reviewers manually using the **Reviewers** section on this page. If you cannot use that section, it is probably because you do not have write permissions for the repository. In that case, you can request a review by tagging reviewers in a comment using `@` followed by their GitHub username.
+
+**What if there are no comments?**
+
+If you have not received any comments on your PR after a week, you can request a review by pinging the PR with a comment such as “Ping”. The common courtesy ping rate is once a week. Please remember that you are asking for volunteer time from other developers.
+
+**Are any special GitHub settings required to contribute to LLVM?**
+
+We only require contributors to have a public email address associated with their GitHub commits, see this [section](https://llvm.org/docs/DeveloperPolicy.html#email-addresses) of LLVM Developer Policy for details.
+
+---
+
+If you have questions, feel free to leave a comment on this PR, or ask on [LLVM Discord](https://discord.com/invite/xS7Z362) or [LLVM Discourse](https://discourse.llvm.org/).
+
+Thank you,
+The LLVM Community"""
         self.pr.as_issue().create_comment(comment)
         return True
 

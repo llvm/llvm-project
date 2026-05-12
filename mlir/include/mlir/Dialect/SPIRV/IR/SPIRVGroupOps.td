@@ -18,7 +18,8 @@
 // -----
 
 def SPIRV_GroupFMulKHROp : SPIRV_KhrVendorOp<"GroupFMul", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A floating-point multiplication group operation specified for all values of
     'X' specified by invocations in the group.
@@ -67,13 +68,16 @@ def SPIRV_GroupFMulKHROp : SPIRV_KhrVendorOp<"GroupFMul", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
                               [Pure,
-                               AllTypesMatch<["value", "result"]>]> {
+                               AllTypesMatch<["value", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     Broadcast the Value of the invocation identified by the local id LocalId
     to the result of all invocations in the group.
@@ -135,7 +139,8 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
 // -----
 
 def SPIRV_GroupFAddOp : SPIRV_Op<"GroupFAdd", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A floating-point add group operation specified for all values of X
     specified by invocations in the group.
@@ -183,12 +188,15 @@ def SPIRV_GroupFAddOp : SPIRV_Op<"GroupFAdd", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupFMaxOp : SPIRV_Op<"GroupFMax", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A floating-point maximum group operation specified for all values of X
     specified by invocations in the group.
@@ -236,12 +244,15 @@ def SPIRV_GroupFMaxOp : SPIRV_Op<"GroupFMax", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupFMinOp : SPIRV_Op<"GroupFMin", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A floating-point minimum group operation specified for all values of X
     specified by invocations in the group.
@@ -289,12 +300,15 @@ def SPIRV_GroupFMinOp : SPIRV_Op<"GroupFMin", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupIAddOp : SPIRV_Op<"GroupIAdd", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     An integer add group operation specified for all values of X specified
     by invocations in the group.
@@ -342,12 +356,15 @@ def SPIRV_GroupIAddOp : SPIRV_Op<"GroupIAdd", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupIMulKHROp : SPIRV_KhrVendorOp<"GroupIMul", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     An integer multiplication group operation specified for all values of 'X'
     specified by invocations in the group.
@@ -395,12 +412,15 @@ def SPIRV_GroupIMulKHROp : SPIRV_KhrVendorOp<"GroupIMul", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupSMaxOp : SPIRV_Op<"GroupSMax", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A signed integer maximum group operation specified for all values of X
     specified by invocations in the group.
@@ -449,12 +469,15 @@ def SPIRV_GroupSMaxOp : SPIRV_Op<"GroupSMax", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupSMinOp : SPIRV_Op<"GroupSMin", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A signed integer minimum group operation specified for all values of X
     specified by invocations in the group.
@@ -503,12 +526,15 @@ def SPIRV_GroupSMinOp : SPIRV_Op<"GroupSMin", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupUMaxOp : SPIRV_Op<"GroupUMax", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     An unsigned integer maximum group operation specified for all values of
     X specified by invocations in the group.
@@ -556,12 +582,15 @@ def SPIRV_GroupUMaxOp : SPIRV_Op<"GroupUMax", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupUMinOp : SPIRV_Op<"GroupUMin", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     An unsigned integer minimum group operation specified for all values of
     X specified by invocations in the group.
@@ -610,6 +639,8 @@ def SPIRV_GroupUMinOp : SPIRV_Op<"GroupUMin", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----

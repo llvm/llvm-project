@@ -86,8 +86,7 @@ public:
     return Visit(pe->getReplacement());
   }
   mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
-    cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoawaitExpr");
-    return {};
+    return cgf.emitCoawaitExpr(*s).getComplexValue();
   }
   mlir::Value VisitCoyieldExpr(CoyieldExpr *s) {
     cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoyieldExpr");
@@ -201,11 +200,11 @@ public:
     return Visit(die->getExpr());
   }
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e) {
-    CIRGenFunction::RunCleanupsScope scope(cgf);
+    CIRGenFunction::FullExprCleanupScope scope(cgf, e->getSubExpr());
     mlir::Value complexVal = Visit(e->getSubExpr());
     // Defend against dominance problems caused by jumps out of expression
     // evaluation through the shared cleanup block.
-    scope.forceCleanup({&complexVal});
+    scope.exit({&complexVal});
     return complexVal;
   }
   mlir::Value VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {

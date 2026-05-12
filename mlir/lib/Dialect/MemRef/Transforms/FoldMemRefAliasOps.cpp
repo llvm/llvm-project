@@ -25,7 +25,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
 
@@ -52,6 +51,8 @@ hasTrivialReassociationSuffix(ArrayRef<ReassociationIndices> reassocs,
                               int64_t n) {
   if (n <= 0)
     return true;
+  if (n > static_cast<int64_t>(reassocs.size()))
+    return false;
   return llvm::all_of(
       reassocs.take_back(n),
       [&](const ReassociationIndices &indices) { return indices.size() == 1; });
@@ -60,89 +61,17 @@ hasTrivialReassociationSuffix(ArrayRef<ReassociationIndices> reassocs,
 static bool hasTrailingUnitStrides(memref::SubViewOp subview, int64_t n) {
   if (n <= 0)
     return true;
-  return llvm::all_of(subview.getStaticStrides().take_back(n),
-                      [](int64_t s) { return s == 1; });
+  ArrayRef<int64_t> strides = subview.getStaticStrides();
+  if (n > static_cast<int64_t>(strides.size()))
+    return false;
+  return llvm::all_of(strides.take_back(n), [](int64_t s) { return s == 1; });
 }
-
-/// Helpers to access the memref operand for each op.
-template <typename LoadOrStoreOpTy>
-static Value getMemRefOperand(LoadOrStoreOpTy op) {
-  return op.getMemref();
-}
-
-static Value getMemRefOperand(vector::LoadOp op) { return op.getBase(); }
-
-static Value getMemRefOperand(vector::StoreOp op) { return op.getBase(); }
-
-static Value getMemRefOperand(vector::MaskedLoadOp op) { return op.getBase(); }
-
-static Value getMemRefOperand(vector::MaskedStoreOp op) { return op.getBase(); }
 
 //===----------------------------------------------------------------------===//
 // Patterns
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// Merges subview operation with load/transferRead operation.
-template <typename OpTy>
-class LoadOpOfSubViewOpFolder final : public OpRewritePattern<OpTy> {
-public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpTy loadOp,
-                                PatternRewriter &rewriter) const override;
-};
-
-/// Merges expand_shape operation with load/transferRead operation.
-template <typename OpTy>
-class LoadOpOfExpandShapeOpFolder final : public OpRewritePattern<OpTy> {
-public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpTy loadOp,
-                                PatternRewriter &rewriter) const override;
-};
-
-/// Merges collapse_shape operation with load/transferRead operation.
-template <typename OpTy>
-class LoadOpOfCollapseShapeOpFolder final : public OpRewritePattern<OpTy> {
-public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpTy loadOp,
-                                PatternRewriter &rewriter) const override;
-};
-
-/// Merges subview operation with store/transferWriteOp operation.
-template <typename OpTy>
-class StoreOpOfSubViewOpFolder final : public OpRewritePattern<OpTy> {
-public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpTy storeOp,
-                                PatternRewriter &rewriter) const override;
-};
-
-/// Merges expand_shape operation with store/transferWriteOp operation.
-template <typename OpTy>
-class StoreOpOfExpandShapeOpFolder final : public OpRewritePattern<OpTy> {
-public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpTy storeOp,
-                                PatternRewriter &rewriter) const override;
-};
-
-/// Merges collapse_shape operation with store/transferWriteOp operation.
-template <typename OpTy>
-class StoreOpOfCollapseShapeOpFolder final : public OpRewritePattern<OpTy> {
-public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpTy storeOp,
-                                PatternRewriter &rewriter) const override;
-};
-
 /// Folds subview(subview(x)) to a single subview(x).
 class SubViewOfSubViewFolder : public OpRewritePattern<memref::SubViewOp> {
 public:
@@ -285,226 +214,6 @@ struct TransferOpOfCollapseShapeOpFolder final
                                 PatternRewriter &rewriter) const override;
 };
 } // namespace
-
-static LogicalResult preconditionsFoldSubViewOp(RewriterBase &rewriter,
-                                                Operation *op,
-                                                memref::SubViewOp subviewOp) {
-  return success();
-}
-
-template <typename OpTy>
-LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
-    OpTy loadOp, PatternRewriter &rewriter) const {
-  auto subViewOp =
-      getMemRefOperand(loadOp).template getDefiningOp<memref::SubViewOp>();
-
-  if (!subViewOp)
-    return rewriter.notifyMatchFailure(loadOp, "not a subview producer");
-
-  LogicalResult preconditionResult =
-      preconditionsFoldSubViewOp(rewriter, loadOp, subViewOp);
-  if (failed(preconditionResult))
-    return preconditionResult;
-
-  SmallVector<Value> sourceIndices;
-  affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-      rewriter, loadOp.getLoc(), subViewOp.getMixedOffsets(),
-      subViewOp.getMixedStrides(), subViewOp.getDroppedDims(),
-      loadOp.getIndices(), sourceIndices);
-
-  llvm::TypeSwitch<Operation *, void>(loadOp)
-      .Case([&](memref::LoadOp op) {
-        rewriter.replaceOpWithNewOp<memref::LoadOp>(
-            loadOp, subViewOp.getSource(), sourceIndices, op.getNontemporal());
-      })
-      .Case([&](vector::LoadOp op) {
-        rewriter.replaceOpWithNewOp<vector::LoadOp>(
-            op, op.getType(), subViewOp.getSource(), sourceIndices);
-      })
-      .Case([&](vector::MaskedLoadOp op) {
-        rewriter.replaceOpWithNewOp<vector::MaskedLoadOp>(
-            op, op.getType(), subViewOp.getSource(), sourceIndices,
-            op.getMask(), op.getPassThru());
-      })
-      .DefaultUnreachable("unexpected operation");
-  return success();
-}
-
-template <typename OpTy>
-LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
-    OpTy loadOp, PatternRewriter &rewriter) const {
-  auto expandShapeOp =
-      getMemRefOperand(loadOp).template getDefiningOp<memref::ExpandShapeOp>();
-
-  if (!expandShapeOp)
-    return failure();
-
-  SmallVector<Value> sourceIndices;
-  // memref.load guarantees that indexes start inbounds while the vector
-  // operations don't. This impacts if our linearization is `disjoint`
-  resolveSourceIndicesExpandShape(loadOp.getLoc(), rewriter, expandShapeOp,
-                                  loadOp.getIndices(), sourceIndices,
-                                  isa<memref::LoadOp>(loadOp.getOperation()));
-
-  return llvm::TypeSwitch<Operation *, LogicalResult>(loadOp)
-      .Case([&](memref::LoadOp op) {
-        rewriter.replaceOpWithNewOp<memref::LoadOp>(
-            loadOp, expandShapeOp.getViewSource(), sourceIndices,
-            op.getNontemporal());
-        return success();
-      })
-      .Case([&](vector::LoadOp op) {
-        rewriter.replaceOpWithNewOp<vector::LoadOp>(
-            op, op.getType(), expandShapeOp.getViewSource(), sourceIndices,
-            op.getNontemporal());
-        return success();
-      })
-      .Case([&](vector::MaskedLoadOp op) {
-        rewriter.replaceOpWithNewOp<vector::MaskedLoadOp>(
-            op, op.getType(), expandShapeOp.getViewSource(), sourceIndices,
-            op.getMask(), op.getPassThru());
-        return success();
-      })
-      .DefaultUnreachable("unexpected operation");
-}
-
-template <typename OpTy>
-LogicalResult LoadOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
-    OpTy loadOp, PatternRewriter &rewriter) const {
-  auto collapseShapeOp = getMemRefOperand(loadOp)
-                             .template getDefiningOp<memref::CollapseShapeOp>();
-
-  if (!collapseShapeOp)
-    return failure();
-
-  SmallVector<Value> sourceIndices;
-  resolveSourceIndicesCollapseShape(loadOp.getLoc(), rewriter, collapseShapeOp,
-                                    loadOp.getIndices(), sourceIndices);
-  llvm::TypeSwitch<Operation *, void>(loadOp)
-      .Case([&](memref::LoadOp op) {
-        rewriter.replaceOpWithNewOp<memref::LoadOp>(
-            loadOp, collapseShapeOp.getViewSource(), sourceIndices,
-            op.getNontemporal());
-      })
-      .Case([&](vector::LoadOp op) {
-        rewriter.replaceOpWithNewOp<vector::LoadOp>(
-            op, op.getType(), collapseShapeOp.getViewSource(), sourceIndices,
-            op.getNontemporal());
-      })
-      .Case([&](vector::MaskedLoadOp op) {
-        rewriter.replaceOpWithNewOp<vector::MaskedLoadOp>(
-            op, op.getType(), collapseShapeOp.getViewSource(), sourceIndices,
-            op.getMask(), op.getPassThru());
-      })
-      .DefaultUnreachable("unexpected operation");
-  return success();
-}
-
-template <typename OpTy>
-LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
-    OpTy storeOp, PatternRewriter &rewriter) const {
-  auto subViewOp =
-      getMemRefOperand(storeOp).template getDefiningOp<memref::SubViewOp>();
-
-  if (!subViewOp)
-    return rewriter.notifyMatchFailure(storeOp, "not a subview producer");
-
-  LogicalResult preconditionResult =
-      preconditionsFoldSubViewOp(rewriter, storeOp, subViewOp);
-  if (failed(preconditionResult))
-    return preconditionResult;
-
-  SmallVector<Value> sourceIndices;
-  affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-      rewriter, storeOp.getLoc(), subViewOp.getMixedOffsets(),
-      subViewOp.getMixedStrides(), subViewOp.getDroppedDims(),
-      storeOp.getIndices(), sourceIndices);
-
-  llvm::TypeSwitch<Operation *, void>(storeOp)
-      .Case([&](memref::StoreOp op) {
-        rewriter.replaceOpWithNewOp<memref::StoreOp>(
-            op, op.getValue(), subViewOp.getSource(), sourceIndices,
-            op.getNontemporal());
-      })
-      .Case([&](vector::StoreOp op) {
-        rewriter.replaceOpWithNewOp<vector::StoreOp>(
-            op, op.getValueToStore(), subViewOp.getSource(), sourceIndices);
-      })
-      .Case([&](vector::MaskedStoreOp op) {
-        rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
-            op, subViewOp.getSource(), sourceIndices, op.getMask(),
-            op.getValueToStore());
-      })
-      .DefaultUnreachable("unexpected operation");
-  return success();
-}
-
-template <typename OpTy>
-LogicalResult StoreOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
-    OpTy storeOp, PatternRewriter &rewriter) const {
-  auto expandShapeOp =
-      getMemRefOperand(storeOp).template getDefiningOp<memref::ExpandShapeOp>();
-
-  if (!expandShapeOp)
-    return failure();
-
-  SmallVector<Value> sourceIndices;
-  // memref.store guarantees that indexes start inbounds while the vector
-  // operations don't. This impacts if our linearization is `disjoint`
-  resolveSourceIndicesExpandShape(storeOp.getLoc(), rewriter, expandShapeOp,
-                                  storeOp.getIndices(), sourceIndices,
-                                  isa<memref::StoreOp>(storeOp.getOperation()));
-  llvm::TypeSwitch<Operation *, void>(storeOp)
-      .Case([&](memref::StoreOp op) {
-        rewriter.replaceOpWithNewOp<memref::StoreOp>(
-            storeOp, op.getValueToStore(), expandShapeOp.getViewSource(),
-            sourceIndices, op.getNontemporal());
-      })
-      .Case([&](vector::StoreOp op) {
-        rewriter.replaceOpWithNewOp<vector::StoreOp>(
-            op, op.getValueToStore(), expandShapeOp.getViewSource(),
-            sourceIndices, op.getNontemporal());
-      })
-      .Case([&](vector::MaskedStoreOp op) {
-        rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
-            op, expandShapeOp.getViewSource(), sourceIndices, op.getMask(),
-            op.getValueToStore());
-      })
-      .DefaultUnreachable("unexpected operation");
-  return success();
-}
-
-template <typename OpTy>
-LogicalResult StoreOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
-    OpTy storeOp, PatternRewriter &rewriter) const {
-  auto collapseShapeOp = getMemRefOperand(storeOp)
-                             .template getDefiningOp<memref::CollapseShapeOp>();
-
-  if (!collapseShapeOp)
-    return failure();
-
-  SmallVector<Value> sourceIndices;
-  resolveSourceIndicesCollapseShape(storeOp.getLoc(), rewriter, collapseShapeOp,
-                                    storeOp.getIndices(), sourceIndices);
-  llvm::TypeSwitch<Operation *, void>(storeOp)
-      .Case([&](memref::StoreOp op) {
-        rewriter.replaceOpWithNewOp<memref::StoreOp>(
-            storeOp, op.getValueToStore(), collapseShapeOp.getViewSource(),
-            sourceIndices, op.getNontemporal());
-      })
-      .Case([&](vector::StoreOp op) {
-        rewriter.replaceOpWithNewOp<vector::StoreOp>(
-            op, op.getValueToStore(), collapseShapeOp.getViewSource(),
-            sourceIndices, op.getNontemporal());
-      })
-      .Case([&](vector::MaskedStoreOp op) {
-        rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
-            op, collapseShapeOp.getViewSource(), sourceIndices, op.getMask(),
-            op.getValueToStore());
-      })
-      .DefaultUnreachable("unexpected operation");
-  return success();
-}
 
 LogicalResult
 AccessOpOfSubViewOpFolder::matchAndRewrite(memref::IndexedAccessOpInterface op,
@@ -849,27 +558,13 @@ LogicalResult TransferOpOfCollapseShapeOpFolder::matchAndRewrite(
 }
 
 void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
-  patterns.add<
-      // Interface-based patterns to which we will be migrating.
-      AccessOpOfSubViewOpFolder, AccessOpOfExpandShapeOpFolder,
-      AccessOpOfCollapseShapeOpFolder, IndexedMemCopyOpOfSubViewOpFolder,
-      IndexedMemCopyOpOfExpandShapeOpFolder,
-      IndexedMemCopyOpOfCollapseShapeOpFolder, TransferOpOfSubViewOpFolder,
-      TransferOpOfExpandShapeOpFolder, TransferOpOfCollapseShapeOpFolder,
-      // The old way of doing things. Don't add more of these.
-      LoadOpOfSubViewOpFolder<vector::LoadOp>,
-      LoadOpOfSubViewOpFolder<vector::MaskedLoadOp>,
-      StoreOpOfSubViewOpFolder<vector::StoreOp>,
-      StoreOpOfSubViewOpFolder<vector::MaskedStoreOp>,
-      LoadOpOfExpandShapeOpFolder<vector::LoadOp>,
-      LoadOpOfExpandShapeOpFolder<vector::MaskedLoadOp>,
-      StoreOpOfExpandShapeOpFolder<vector::StoreOp>,
-      StoreOpOfExpandShapeOpFolder<vector::MaskedStoreOp>,
-      LoadOpOfCollapseShapeOpFolder<vector::LoadOp>,
-      LoadOpOfCollapseShapeOpFolder<vector::MaskedLoadOp>,
-      StoreOpOfCollapseShapeOpFolder<vector::StoreOp>,
-      StoreOpOfCollapseShapeOpFolder<vector::MaskedStoreOp>,
-      SubViewOfSubViewFolder>(patterns.getContext());
+  patterns
+      .add<AccessOpOfSubViewOpFolder, AccessOpOfExpandShapeOpFolder,
+           AccessOpOfCollapseShapeOpFolder, IndexedMemCopyOpOfSubViewOpFolder,
+           IndexedMemCopyOpOfExpandShapeOpFolder,
+           IndexedMemCopyOpOfCollapseShapeOpFolder, TransferOpOfSubViewOpFolder,
+           TransferOpOfExpandShapeOpFolder, TransferOpOfCollapseShapeOpFolder,
+           SubViewOfSubViewFolder>(patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//

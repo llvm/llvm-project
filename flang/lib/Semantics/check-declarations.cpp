@@ -1243,7 +1243,14 @@ void CheckHelper::CheckObjectEntity(
     case common::CUDADataAttr::UseDevice:
       break;
     }
-    if (attr != common::CUDADataAttr::Pinned) {
+    // CUDADataAttr::UseDevice is not user-spellable; it is set internally on
+    // construct-scoped symbol copies created for OpenACC `host_data
+    // use_device(...)` operands so that later passes can resolve them to the
+    // device address. The original symbol that actually lives in COMMON or an
+    // equivalence group carries no CUDA attribute, so the CUDA Fortran
+    // restrictions on user-written ATTRIBUTES(...) do not apply to it.
+    if (attr != common::CUDADataAttr::Pinned &&
+        attr != common::CUDADataAttr::UseDevice) {
       if (details.commonBlock()) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(%s) may not be in COMMON"_err_en_US,

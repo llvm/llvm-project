@@ -108,10 +108,10 @@ add_or_sub(InType x, InType y) {
 
       if constexpr (cpp::is_same_v<InType, bfloat16> &&
                     cpp::is_same_v<OutType, bfloat16>) {
-        OutFPBits y_bits(y);
+        OutFPBits out_y_bits(y);
         if constexpr (IsSub)
-          y_bits.set_sign(y_bits.sign().negate());
-        return y_bits.get_val();
+          out_y_bits.set_sign(out_y_bits.sign().negate());
+        return out_y_bits.get_val();
       } else {
 
 #ifdef LIBC_HAS_CONSTANT_EVALUATION

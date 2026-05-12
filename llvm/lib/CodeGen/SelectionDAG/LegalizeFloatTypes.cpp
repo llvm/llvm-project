@@ -3197,6 +3197,9 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND:  Res = SoftPromoteHalfOp_FP_EXTEND(N); break;
   case ISD::SELECT_CC:  Res = SoftPromoteHalfOp_SELECT_CC(N, OpNo); break;
+  case ISD::BR_CC:
+    Res = SoftPromoteHalfOp_BR_CC(N);
+    break;
   case ISD::SETCC:      Res = SoftPromoteHalfOp_SETCC(N); break;
   case ISD::STORE:      Res = SoftPromoteHalfOp_STORE(N, OpNo); break;
   case ISD::ATOMIC_STORE:
@@ -3307,6 +3310,30 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT_SAT(SDNode *N) {
 
   return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Res,
                      N->getOperand(1));
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BR_CC(SDNode *N) {
+  // ISD::BR_CC node: chain(0), condcode(1), LHS(2), RHS(3), dest(4)
+  // The comparison operands (LHS, RHS) are soft-promoted halfs.
+  SDValue Op0 = N->getOperand(2);
+  SDValue Op1 = N->getOperand(3);
+  SDLoc dl(N);
+
+  EVT SVT = Op0.getValueType();
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), SVT);
+
+  // Get the soft-promoted i16 values
+  Op0 = GetSoftPromotedHalf(Op0);
+  Op1 = GetSoftPromotedHalf(Op1);
+
+  // Promote both comparison operands to the larger FP type.
+  unsigned PromotionOpcode = GetPromotionOpcode(SVT, NVT);
+  Op0 = DAG.getNode(PromotionOpcode, dl, NVT, Op0);
+  Op1 = DAG.getNode(PromotionOpcode, dl, NVT, Op1);
+
+  // Create a new BR_CC node with promoted operands
+  return DAG.getNode(ISD::BR_CC, dl, MVT::Other, N->getOperand(0),
+                     N->getOperand(1), Op0, Op1, N->getOperand(4));
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_SELECT_CC(SDNode *N,

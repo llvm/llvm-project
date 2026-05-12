@@ -551,6 +551,13 @@ void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
     MDC.addFileDep(llvm::sys::path::remove_leading_dotslash(*Filename));
 }
 
+void ModuleDepCollectorPP::HasInclude(SourceLocation Loc, StringRef FileName,
+                                      bool IsAngled, OptionalFileEntryRef File,
+                                      SrcMgr::CharacteristicKind FileType) {
+  if (File)
+    MDC.addFileDep(File->getName());
+}
+
 void ModuleDepCollectorPP::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,

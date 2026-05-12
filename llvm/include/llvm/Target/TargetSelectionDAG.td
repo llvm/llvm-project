@@ -535,8 +535,8 @@ def ctlz       : SDNode<"ISD::CTLZ"       , SDTIntBitCountUnaryOp>;
 def cttz       : SDNode<"ISD::CTTZ"       , SDTIntBitCountUnaryOp>;
 def ctpop      : SDNode<"ISD::CTPOP"      , SDTIntBitCountUnaryOp>;
 def ctls       : SDNode<"ISD::CTLS"       , SDTIntBitCountUnaryOp>;
-def ctlz_zero_undef : SDNode<"ISD::CTLZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
-def cttz_zero_undef : SDNode<"ISD::CTTZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
+def ctlz_zero_poison : SDNode<"ISD::CTLZ_ZERO_POISON", SDTIntBitCountUnaryOp>;
+def cttz_zero_poison : SDNode<"ISD::CTTZ_ZERO_POISON", SDTIntBitCountUnaryOp>;
 def sext       : SDNode<"ISD::SIGN_EXTEND", SDTIntExtendOp>;
 def zext       : SDNode<"ISD::ZERO_EXTEND", SDTIntExtendOp>;
 def anyext     : SDNode<"ISD::ANY_EXTEND" , SDTIntExtendOp>;
@@ -2109,6 +2109,20 @@ def atomic_load_64 :
           (atomic_load node:$ptr)> {
   let IsAtomic = true;
   let MemoryVT = i64;
+}
+
+def atomic_load_128_v2i64 :
+  PatFrag<(ops node:$ptr),
+          (atomic_load node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = v2i64;
+}
+
+def atomic_load_128_v4i32 :
+  PatFrag<(ops node:$ptr),
+          (atomic_load node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = v4i32;
 }
 
 def atomic_load_nonext_8 :

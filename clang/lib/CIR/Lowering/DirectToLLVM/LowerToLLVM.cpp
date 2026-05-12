@@ -1720,6 +1720,7 @@ static mlir::LogicalResult
 rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                     mlir::ConversionPatternRewriter &rewriter,
                     const mlir::TypeConverter *converter,
+                    mlir::SymbolTableCollection &symbolTables,
                     mlir::FlatSymbolRefAttr calleeAttr,
                     mlir::Block *continueBlock = nullptr,
                     mlir::Block *landingPadBlock = nullptr) {
@@ -1750,7 +1751,7 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
 
   if (calleeAttr) { // direct call
     mlir::Operation *callee =
-        mlir::SymbolTable::lookupNearestSymbolFrom(op, calleeAttr);
+        symbolTables.lookupNearestSymbolFrom(op, calleeAttr);
     if (auto fn = mlir::dyn_cast<mlir::FunctionOpInterface>(callee)) {
       llvmFnTy = converter->convertType<mlir::LLVM::LLVMFunctionType>(
           fn.getFunctionType());
@@ -1820,16 +1821,17 @@ mlir::LogicalResult CIRToLLVMCallOpLowering::matchAndRewrite(
     cir::CallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return rewriteCallOrInvoke(op.getOperation(), adaptor.getOperands(), rewriter,
-                             getTypeConverter(), op.getCalleeAttr());
+                             getTypeConverter(), symbolTables,
+                             op.getCalleeAttr());
 }
 
 mlir::LogicalResult CIRToLLVMTryCallOpLowering::matchAndRewrite(
     cir::TryCallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   assert(!cir::MissingFeatures::opCallCallConv());
-  return rewriteCallOrInvoke(op.getOperation(), adaptor.getOperands(), rewriter,
-                             getTypeConverter(), op.getCalleeAttr(),
-                             op.getNormalDest(), op.getUnwindDest());
+  return rewriteCallOrInvoke(
+      op.getOperation(), adaptor.getOperands(), rewriter, getTypeConverter(),
+      symbolTables, op.getCalleeAttr(), op.getNormalDest(), op.getUnwindDest());
 }
 
 mlir::LogicalResult CIRToLLVMReturnAddrOpLowering::matchAndRewrite(
@@ -3778,9 +3780,14 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   /// of unresolved `BlockAddressOp`s until they are matched with the
   /// corresponding `BlockTagOp` in `resolveBlockAddressOp`.
   LLVMBlockAddressInfo blockInfoAddr;
+  /// Cached symbol table collection used by call lowering patterns to avoid
+  /// repeated O(M) module-wide symbol scans for every call site.
+  mlir::SymbolTableCollection symbolTables;
   mlir::RewritePatternSet patterns(&getContext());
   patterns.add<CIRToLLVMBlockAddressOpLowering, CIRToLLVMLabelOpLowering>(
       converter, patterns.getContext(), dl, blockInfoAddr);
+  patterns.add<CIRToLLVMCallOpLowering, CIRToLLVMTryCallOpLowering>(
+      converter, patterns.getContext(), dl, symbolTables);
 
   patterns.add<
 #define GET_LLVM_LOWERING_PATTERNS_LIST

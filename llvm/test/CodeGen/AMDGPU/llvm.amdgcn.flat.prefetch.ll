@@ -107,3 +107,22 @@ entry:
   tail call void @llvm.amdgcn.flat.prefetch(ptr %ptr, i32 27)
   ret void
 }
+
+define amdgpu_ps float @flat_prefetch_and_load_b32_idxprom(ptr align 4 inreg %p, i32 %idx) {
+; GCN-LABEL: flat_prefetch_and_load_b32_idxprom:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 2, s[0:1]
+; GCN-NEXT:    flat_prefetch_b8 v[2:3]
+; GCN-NEXT:    flat_load_b32 v0, v0, s[0:1] scale_offset
+; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GCN-NEXT:    ; return to shader part epilog
+entry:
+  %idxprom = sext i32 %idx to i64
+  %ptr = getelementptr inbounds float, ptr %p, i64 %idxprom
+  tail call void @llvm.amdgcn.flat.prefetch(ptr %ptr, i32 0)
+  %ret = load float, ptr %ptr, align 4
+  ret float %ret
+}

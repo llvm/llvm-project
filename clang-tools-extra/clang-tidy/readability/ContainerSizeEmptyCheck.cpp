@@ -144,15 +144,18 @@ void ContainerSizeEmptyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
-  const auto ValidContainerRecord = cxxRecordDecl(isSameOrDerivedFrom(namedDecl(
-      has(cxxMethodDecl(
-              isConst(), parameterCountIs(0), isPublic(),
-              hasAnyName("size", "length"),
-              returns(qualType(isIntegralType(), unless(booleanType()))))
-              .bind("size")),
-      has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
-                        hasName("empty"), returns(booleanType()))
-              .bind("empty")))));
+  const auto ValidContainerRecord =
+      cxxRecordDecl(
+          isSameOrDerivedFrom(namedDecl(
+              has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
+                                hasAnyName("size", "length"),
+                                returns(qualType(isIntegralType(),
+                                                 unless(booleanType()))))
+                      .bind("size")),
+              has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
+                                hasName("empty"), returns(booleanType()))
+                      .bind("empty")))))
+          .bind("ContainerDecl");
 
   const auto ValidContainerNonTemplateType =
       qualType(hasUnqualifiedDesugaredType(
@@ -235,6 +238,13 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperation(
           hasAnyOperatorName("==", "!="), hasOperands(WrongComparend, STLArg),
+          unless(hasEitherOperand(cxxConstructExpr(
+              argumentCountIs(0),
+              unless(hasType(qualType(hasCanonicalType(hasDeclaration(
+                  // 'equalsBoundNode' needs the 'ContainerDecl' binding
+                  // from 'STLArg' to already exist, so this constraint must
+                  // appear after 'hasOperands' matcher
+                  namedDecl(equalsBoundNode("ContainerDecl")))))))))),
           unless(allOf(hasLHS(hasType(ExcludedComparisonTypesMatcher)),
                        hasRHS(hasType(SameExcludedComparisonTypesMatcher)))),
           NotInEmptyMethodOfContainer)

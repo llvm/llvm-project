@@ -155,7 +155,8 @@ public:
           dependencies::DependencyScanningServiceOptions Opts;
           Opts.MakeVFS = [&] { return TFS.view(std::nullopt); };
           Opts.Mode = dependencies::ScanningMode::CanonicalPreprocessing;
-          Opts.Format = dependencies::ScanningOutputFormat::P1689;
+          Opts.EmitWarnings = false;
+          Opts.ReportAbsolutePaths = false;
           return Opts;
         }()) {}
 

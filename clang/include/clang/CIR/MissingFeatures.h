@@ -38,6 +38,7 @@ struct MissingFeatures {
   static bool opGlobalPragmaClangSection() { return false; }
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalCtorPriority() { return false; }
+  static bool emitNVVMMetadata() { return false; }
   static bool setDSOLocal() { return false; }
 
   static bool supportIFuncAttr() { return false; }
@@ -88,6 +89,7 @@ struct MissingFeatures {
   static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
   static bool opFuncNoReturn() { return false; }
+  static bool handleCUDALaunchBoundsAttr() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
 
   // CallOp handling

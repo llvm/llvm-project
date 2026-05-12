@@ -140,9 +140,8 @@ define <3 x double> @min_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-SD-NEXT:    fmin v2.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fmin v0.2d, v0.2d, v3.2d
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: min_v3f64:
@@ -177,9 +176,8 @@ define <3 x double> @max_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-SD-NEXT:    fmax v2.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fmax v0.2d, v0.2d, v3.2d
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: max_v3f64:

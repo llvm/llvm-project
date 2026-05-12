@@ -49,6 +49,11 @@ C++ Specific Potentially Breaking Changes
 - Clang now correctly rejects ``export`` declarations in module implementation
   partitions. (#GH107602)
 
+- Template argument deduction now treats the ``N`` in ``_BitInt(N)``
+  as being of type ``std::size_t`` instead of ``int``,
+  matching the deduction of array sizes from ``int(&)[N]``.
+  This is a breaking change for code that depended on the previously deduced type. (#GH195033)
+
 ABI Changes in This Version
 ---------------------------
 
@@ -160,6 +165,8 @@ C++17 Feature Support
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Implemented `CWG1780 Explicit instantiation/specialization of generic lambda
+  operator() <https://cplusplus.github.io/CWG/issues/1780.html>`_
 
 - Clang now allows omitting ``typename`` before a template name in a
   conversion operator, implementing `CWG2413 <https://wg21.link/cwg2413>`_.
@@ -242,6 +249,9 @@ Non-comprehensive list of changes in this release
   keywords, qualifiers, template arguments as written, and the declared type,
   enabling tools such as language servers and refactoring engines to accurately
   map source locations back to explicit instantiation sites.
+
+- ``typeid`` on references and pointers of ``final`` types no longer emits a
+  vtable lookup at runtime.
 
 New Compiler Flags
 ------------------
@@ -356,7 +366,6 @@ Attribute Changes in Clang
   usage.
 
 - Clang now allows GNU attributes between a member declarator and bit-field width. (#GH184954)
-- Clang now disallows use of the ``selectany`` attribute on non-global-variable declarations. (#GH189141)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -470,6 +479,8 @@ Improvements to Clang's diagnostics
   code can automatically be made portable to other host platforms that don't
   support backslashes.
 
+- Clang now explains why template deduction fails for explicit template arguments.
+
 - No longer emitting a ``-Wpre-c2y-compat`` or extension diagnostic about use
   of octal literals with a ``0o`` prefix, and no longer emitting a
   ``-Wdeprecated-octal-literals`` diagnostic for use of octal literals without
@@ -480,6 +491,9 @@ Improvements to Clang's diagnostics
   skipping subsequent valid declarations when their previous decl is missing semicolon.
 
 - Removed the body of lambdas from some diagnostic messages.
+
+- Fixed false positive host-device mismatch errors in discarded `if constexpr` branches for CUDA/HIP;
+  such calls are now correctly skipped.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -530,6 +544,8 @@ Bug Fixes in This Version
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
 - Fixed a crash caused by lambda capture handling in delayed default arguments. (#GH176534)
 - Fixed a crash when parsing invalid ``static_assert`` declarations with string-literal messages (#GH187690).
+- Fixed a potential stack-use-after-return issue in Clang when copy-initializing
+  an array via an element-at-a-time copy loop (#GH192026)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -559,7 +575,6 @@ Bug Fixes to C++ Support
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
-- Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
@@ -581,6 +596,7 @@ Bug Fixes to C++ Support
 - Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
 - Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
 - Fixed an invalid rejection and assertion failure while generating ``operator=`` for fields with the ``__restrict`` qualifier. (#GH37979)
+- Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -735,6 +751,8 @@ clang-format
 - Extend ``BreakBinaryOperations`` to accept a structured configuration with
   per-operator break rules and minimum chain length gating via ``PerOperator``.
 - Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyAndAttached`` for LLVM style.
+- Add ``BreakFunctionDeclarationParameters`` option to always break before function
+  declaration parameters.
 
 libclang
 --------
@@ -795,6 +813,8 @@ OpenMP Support
 - Added support for ``transparent`` clause in task and taskloop directives.
 - Added support for ``use_device_ptr`` clause to accept an optional
   ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
+- Added support for ``local`` clause with declare_target directive when
+  OpenMP >= 60.
 
 Improvements
 ^^^^^^^^^^^^

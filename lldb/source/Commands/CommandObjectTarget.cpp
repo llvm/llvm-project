@@ -305,6 +305,8 @@ protected:
       if (!label.empty()) {
         if (auto E = target_sp->SetLabel(label))
           result.SetError(std::move(E));
+        else
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
         return;
       }
 
@@ -989,6 +991,8 @@ protected:
 
     m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
                                            m_cmd_name);
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupOptions m_option_group;
@@ -3104,6 +3108,8 @@ protected:
       result.AppendError("either the \"--file <module>\" or the \"--uuid "
                          "<uuid>\" option must be specified.\n");
     }
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupOptions m_option_group;
@@ -3772,6 +3778,7 @@ protected:
 
       result.GetOutputStream().Printf("\n");
     }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   CommandOptions m_options;

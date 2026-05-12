@@ -2707,8 +2707,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   }
   case AMDGPU::G_AMDGPU_FFBH_U32:
   case AMDGPU::G_AMDGPU_FFBL_B32:
-  case AMDGPU::G_CTLZ_ZERO_UNDEF:
-  case AMDGPU::G_CTTZ_ZERO_UNDEF: {
+  case AMDGPU::G_CTLZ_ZERO_POISON:
+  case AMDGPU::G_CTTZ_ZERO_POISON: {
     const RegisterBank *DstBank =
         OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
     if (DstBank == &AMDGPU::SGPRRegBank)
@@ -2722,22 +2722,22 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     // We can narrow this more efficiently than Helper can by using ffbh/ffbl
     // which return -1 when the input is zero:
-    // (ctlz_zero_undef hi:lo) -> (umin (ffbh hi), (add (ffbh lo), 32))
-    // (cttz_zero_undef hi:lo) -> (umin (add (ffbl hi), 32), (ffbl lo))
+    // (ctlz_zero_poison hi:lo) -> (umin (ffbh hi), (add (ffbh lo), 32))
+    // (cttz_zero_poison hi:lo) -> (umin (add (ffbl hi), 32), (ffbl lo))
     // (ffbh hi:lo) -> (umin (ffbh hi), (uaddsat (ffbh lo), 32))
     // (ffbl hi:lo) -> (umin (uaddsat (ffbh hi), 32), (ffbh lo))
     ApplyRegBankMapping ApplyVALU(B, *this, MRI, &AMDGPU::VGPRRegBank);
     SmallVector<Register, 2> SrcRegs(OpdMapper.getVRegs(1));
-    unsigned NewOpc = Opc == AMDGPU::G_CTLZ_ZERO_UNDEF
+    unsigned NewOpc = Opc == AMDGPU::G_CTLZ_ZERO_POISON
                           ? (unsigned)AMDGPU::G_AMDGPU_FFBH_U32
-                          : Opc == AMDGPU::G_CTTZ_ZERO_UNDEF
-                                ? (unsigned)AMDGPU::G_AMDGPU_FFBL_B32
-                                : Opc;
+                      : Opc == AMDGPU::G_CTTZ_ZERO_POISON
+                          ? (unsigned)AMDGPU::G_AMDGPU_FFBL_B32
+                          : Opc;
     unsigned Idx = NewOpc == AMDGPU::G_AMDGPU_FFBH_U32;
     auto X = B.buildInstr(NewOpc, {S32}, {SrcRegs[Idx]});
     auto Y = B.buildInstr(NewOpc, {S32}, {SrcRegs[Idx ^ 1]});
     unsigned AddOpc =
-        Opc == AMDGPU::G_CTLZ_ZERO_UNDEF || Opc == AMDGPU::G_CTTZ_ZERO_UNDEF
+        Opc == AMDGPU::G_CTLZ_ZERO_POISON || Opc == AMDGPU::G_CTTZ_ZERO_POISON
             ? AMDGPU::G_ADD
             : AMDGPU::G_UADDSAT;
     Y = B.buildInstr(AddOpc, {S32}, {Y, B.buildConstant(S32, 32)});
@@ -4294,8 +4294,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case AMDGPU::G_AMDGPU_FFBH_U32:
   case AMDGPU::G_AMDGPU_FFBL_B32:
-  case AMDGPU::G_CTLZ_ZERO_UNDEF:
-  case AMDGPU::G_CTTZ_ZERO_UNDEF: {
+  case AMDGPU::G_CTLZ_ZERO_POISON:
+  case AMDGPU::G_CTTZ_ZERO_POISON: {
     unsigned Size = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
     unsigned BankID = getRegBankID(MI.getOperand(1).getReg(), MRI);
     OpdsMapping[0] = AMDGPU::getValueMapping(BankID, 32);

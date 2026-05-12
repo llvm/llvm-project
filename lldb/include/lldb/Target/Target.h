@@ -38,6 +38,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RealpathPrefixes.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
@@ -997,6 +998,79 @@ public:
 
   /// Resets the hit count of all breakpoints.
   void ResetBreakpointHitCounts();
+
+  // This callout implements the "Resolver Override".  When we have determined
+  // the Resolver for a given breakpoint, we pass each of the registered
+  // overrides the "natural" resolver, and then we will use whatever resolver
+  // we get back from it if it is non-null.
+  // We keep a list of overrides ordered by ID - and we search through the list
+  // by ID order, and the first override that returns a non-null Resolver will
+  // be the one we use.  If no overrides return an override resolver, we'll use
+  // the original one.
+
+  // This is the abstract version of the override.  Particular implementations
+  // e.g. the scripted override will derive from this.
+  class BreakpointResolverOverride;
+  using BreakpointResolverOverrideUP =
+      std::unique_ptr<BreakpointResolverOverride>;
+
+  class BreakpointResolverOverride {
+  public:
+    BreakpointResolverOverride(Target &target, const std::string &description)
+        : m_target(target), m_desc(description) {}
+
+    virtual BreakpointResolverOverrideUP CopyIntoNewTarget(Target &target) = 0;
+
+    virtual ~BreakpointResolverOverride() {}
+    virtual lldb::BreakpointResolverSP
+    CheckForOverride(Target &target, lldb::BreakpointResolverSP initial_sp) = 0;
+    // Return whether constructing this resolver was successful.
+    virtual llvm::Error Validate() = 0;
+    const std::string &GetDescription() { return m_desc; }
+
+  protected:
+    Target &m_target;
+    std::string m_desc;
+  };
+
+  /// Add a breakpoint override resolver.  This version can't fail.
+  lldb::user_id_t
+  AddBreakpointResolverOverride(BreakpointResolverOverrideUP override_up) {
+    lldb::user_id_t id_used = m_override_id;
+    m_breakpoint_overrides.emplace(m_override_id, std::move(override_up));
+    m_override_id++;
+    return id_used;
+  }
+
+  /// Add a breakpoint override resolver.  Return the ID or an error:
+  llvm::Expected<lldb::user_id_t>
+  AddBreakpointResolverOverride(llvm::StringRef class_name,
+                                StructuredData::DictionarySP args_data_sp,
+                                llvm::StringRef description);
+
+  bool RemoveBreakpointResolverOverride(lldb::user_id_t override_id) {
+    size_t removed = m_breakpoint_overrides.erase(override_id);
+    return removed == 1;
+  }
+
+  void ClearBreakpointResolverOverrides() { m_breakpoint_overrides.clear(); }
+
+  lldb::BreakpointResolverSP
+  CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
+    for (auto const &elem : m_breakpoint_overrides) {
+      if (lldb::BreakpointResolverSP overriden_sp =
+              elem.second->CheckForOverride(*this, original_sp))
+        return overriden_sp;
+    }
+    return {};
+  }
+
+  /// Describe the breakpoint overrides.  If ixds is empty, list all.  Otherwise
+  /// list the overrides whose ids match the ones given in idxs.  The matched
+  /// elements are removed from the list, so any elements remaining in idxs are
+  /// indexes that are not breakpoint override indexes.
+  void DescribeBreakpointOverrides(Stream &stream,
+                                   std::vector<lldb::user_id_t> &idxs);
 
   // The flag 'end_to_end', default to true, signifies that the operation is
   // performed end to end, for both the debugger and the debuggee.
@@ -2019,6 +2093,12 @@ protected:
   using BreakpointNameList =
       std::map<ConstString, std::unique_ptr<BreakpointName>>;
   BreakpointNameList m_breakpoint_names;
+
+  std::map<lldb::user_id_t, BreakpointResolverOverrideUP>
+      m_breakpoint_overrides;
+  /// This is the ID that will be handed out for the next added breakpoint
+  /// override resolver for this target.
+  lldb::user_id_t m_override_id = 0;
 
   lldb::BreakpointSP m_last_created_breakpoint;
   WatchpointList m_watchpoint_list;

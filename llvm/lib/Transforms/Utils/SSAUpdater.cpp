@@ -499,7 +499,7 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       // Propagate down to the ultimate replacee.  The intermediately loads
       // could theoretically already have been deleted, so we don't want to
       // dereference the Value*'s.
-      DenseMap<Value*, Value*>::iterator RLI = ReplacedLoads.find(NewVal);
+      auto RLI = ReplacedLoads.find(NewVal);
       while (RLI != ReplacedLoads.end()) {
         NewVal = RLI->second;
         RLI = ReplacedLoads.find(NewVal);

@@ -140,5 +140,92 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
+#if TEST_HAS_EXTENSION(bit_int)
+    {
+      using T13 = unsigned _BitInt(13);
+      using T32 = unsigned _BitInt(32);
+      using T64 = unsigned _BitInt(64);
+
+      assert(!std::has_single_bit(T32(0)));
+      assert(std::has_single_bit(T32(1)));
+      assert(std::has_single_bit(T32(2)));
+      assert(!std::has_single_bit(T32(3)));
+      assert(std::has_single_bit(T32(4)));
+      assert(!std::has_single_bit(T32(5)));
+      assert(!std::has_single_bit(T32(6)));
+      assert(!std::has_single_bit(T32(7)));
+      assert(std::has_single_bit(T32(8)));
+      assert(!std::has_single_bit(T32(9)));
+      assert(std::has_single_bit(T32(128)));
+      assert(!std::has_single_bit(T32(127)));
+      assert(!std::has_single_bit(T32(129)));
+      assert(!std::has_single_bit(T32(~T32(0))));
+      assert(!std::has_single_bit(T64(0)));
+      assert(std::has_single_bit(T64(1)));
+      assert(std::has_single_bit(T64(T64(1) << 32)));
+      assert(std::has_single_bit(T64(T64(1) << 63)));
+      assert(!std::has_single_bit(T64(~T64(0))));
+
+      // Odd widths: has_single_bit has no digits dependency.
+      assert(!std::has_single_bit(T13(0)));
+      assert(std::has_single_bit(T13(1)));
+      assert(std::has_single_bit(T13(2)));
+      assert(!std::has_single_bit(T13(3)));
+      assert(std::has_single_bit(T13(4)));
+      assert(std::has_single_bit(T13(64)));
+      assert(!std::has_single_bit(T13(65)));
+      assert(!std::has_single_bit(T13(~T13(0))));
+    }
+#  if __BITINT_MAXWIDTH__ >= 128
+    {
+      using T77  = unsigned _BitInt(77);
+      using T128 = unsigned _BitInt(128);
+      assert(!std::has_single_bit(T77(0)));
+      assert(std::has_single_bit(T77(1)));
+      assert(std::has_single_bit(T77(2)));
+      assert(!std::has_single_bit(T77(3)));
+      assert(std::has_single_bit(T77(T77(1) << 76)));
+      assert(!std::has_single_bit(T77((T77(1) << 76) | T77(1))));
+      assert(!std::has_single_bit(T77(~T77(0))));
+
+      assert(!std::has_single_bit(T128(0)));
+      assert(std::has_single_bit(T128(1)));
+      assert(std::has_single_bit(T128(T128(1) << 64)));
+      assert(std::has_single_bit(T128(T128(1) << 127)));
+      assert(!std::has_single_bit(T128(~T128(0))));
+      // Two bits: definitely not a single bit.
+      assert(!std::has_single_bit(T128((T128(1) << 127) | T128(1))));
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T129 = unsigned _BitInt(129);
+      using T256 = unsigned _BitInt(256);
+      assert(std::has_single_bit(T129(1) << 128));
+      assert(!std::has_single_bit(T129(~T129(0))));
+
+      assert(!std::has_single_bit(T256(0)));
+      assert(std::has_single_bit(T256(1)));
+      assert(std::has_single_bit(T256(1) << 200));
+      assert(std::has_single_bit(T256(1) << 255));
+      assert(!std::has_single_bit((T256(1) << 200) | T256(1)));
+      assert(!std::has_single_bit(T256(~T256(0))));
+      assert(!std::has_single_bit(T256(~T256(0) / 3))); // 0x5555... = 128 bits
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 4096
+    {
+      using T4096 = unsigned _BitInt(4096);
+      assert(!std::has_single_bit(T4096(0)));
+      assert(std::has_single_bit(T4096(1)));
+      assert(std::has_single_bit(T4096(1) << 4095));
+      assert(std::has_single_bit(T4096(1) << 2048));
+      assert(!std::has_single_bit(T4096(~T4096(0))));
+      assert(!std::has_single_bit((T4096(1) << 4095) | T4096(1)));
+    }
+#  endif
+#endif // TEST_HAS_EXTENSION(bit_int)
+
     return 0;
 }

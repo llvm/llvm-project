@@ -7,7 +7,7 @@ set(LIBCLC_TEST_DEPS
 umbrella_lit_testsuite_begin(check-libclc)
 
 # Testing unresolved symbols.
-# Skip nvptx, clspv, spirv targets
+# Skip nvptx and spirv targets.
 if(ARCH MATCHES amdgcn)
   foreach(tgt IN LISTS LIBCLC_UNRESOLVED_SYMBOL_TEST_TARGETS)
     set(target_file "$<TARGET_PROPERTY:${tgt},TARGET_FILE>")

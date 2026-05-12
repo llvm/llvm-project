@@ -913,11 +913,12 @@ void ReportFile::Write(const char *buffer, uptr length) {
   }
 }
 
-void SetAlternateSignalStack() {
+void* SetAlternateSignalStack() {
   // FIXME: Decide what to do on Windows.
+  return nullptr;
 }
 
-void UnsetAlternateSignalStack() {
+void UnsetAlternateSignalStack(void* altstack_base) {
   // FIXME: Decide what to do on Windows.
 }
 

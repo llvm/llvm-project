@@ -33,6 +33,7 @@
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI messages_base {
 public:
@@ -136,6 +137,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<wchar_t>;
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION

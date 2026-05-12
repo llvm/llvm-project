@@ -137,6 +137,7 @@
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for min_v8f16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for min_v9f16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for min_v16f16
+;
 
 ;;;;;;;;;;;;;;;;  max_f64
 define double @max_nnan_f64(double %a, double %b) {
@@ -173,9 +174,8 @@ define <3 x double> @max_nnan_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-NEXT:    fmaxnm v2.2d, v2.2d, v5.2d
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    fmaxnm v0.2d, v0.2d, v3.2d
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    ret
 entry:
   %c = call nnan <3 x double> @llvm.maximumnum.v3f64(<3 x double> %a, <3 x double> %b)
@@ -710,9 +710,8 @@ define <3 x double> @min_nnan_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-NEXT:    fminnm v2.2d, v2.2d, v5.2d
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    fminnm v0.2d, v0.2d, v3.2d
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    ret
 entry:
   %c = call nnan <3 x double> @llvm.minimumnum.v3f64(<3 x double> %a, <3 x double> %b)
@@ -1316,9 +1315,8 @@ define <3 x double> @max_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-NEXT:    fmaxnm v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    fminnm v1.2d, v5.2d, v5.2d
 ; CHECK-NEXT:    fmaxnm v2.2d, v2.2d, v1.2d
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    ret
 entry:
@@ -1960,9 +1958,8 @@ define <3 x double> @min_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-NEXT:    fminnm v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    fminnm v1.2d, v5.2d, v5.2d
 ; CHECK-NEXT:    fminnm v2.2d, v2.2d, v1.2d
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    ret
 entry:

@@ -89,9 +89,15 @@ void populateMemRefWideIntEmulationConversions(
 /// over wider types.
 /// When `disableAtomicRMW` is true, the store patterns generate non-atomic
 /// read-modify-write sequences instead of atomic operations.
+/// When `assumeAligned` is true, `memref.subview` and
+/// `memref.reinterpret_cast` patterns accept dynamic offsets under the
+/// alignment contract that the caller guarantees those offsets are a multiple
+/// of `dstBits / srcBits`. When false (the default), dynamic offsets are
+/// rejected to preserve soundness for callers that cannot prove divisibility.
 void populateMemRefNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns, bool disableAtomicRMW = false);
+    RewritePatternSet &patterns, bool disableAtomicRMW = false,
+    bool assumeAligned = false);
 
 /// Appends type conversions for emulating memref operations over narrow types
 /// with ops over wider types.

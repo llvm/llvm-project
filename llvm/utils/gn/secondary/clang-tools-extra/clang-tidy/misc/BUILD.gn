@@ -37,6 +37,7 @@ static_library("misc") {
     "ConstCorrectnessCheck.cpp",
     "CoroutineHostileRAIICheck.cpp",
     "DefinitionsInHeadersCheck.cpp",
+    "ExplicitConstructorCheck.cpp",
     "HeaderIncludeCycleCheck.cpp",
     "IncludeCleanerCheck.cpp",
     "MiscTidyModule.cpp",

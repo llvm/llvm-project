@@ -769,6 +769,7 @@ protected:
             result.GetOutputStream().Printf(
                 "%zi bytes %s to '%s'\n", bytes_written,
                 append ? "appended" : "written", path.c_str());
+            result.SetStatus(eReturnStatusSuccessFinishResult);
             return;
           } else {
             result.AppendErrorWithFormat("Failed to write %" PRIu64
@@ -820,6 +821,7 @@ protected:
           return;
         }
       }
+      result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
     }
 
@@ -1510,6 +1512,7 @@ protected:
         return;
       }
     }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
   OptionGroupOptions m_option_group;

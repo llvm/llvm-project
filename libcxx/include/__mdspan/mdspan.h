@@ -204,7 +204,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference
   operator[](const array< _OtherIndexType, rank()>& __indices) const {
     return __acc_.access(__ptr_, [&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
-      return __map_(__indices[_Idxs]...);
+      return __map_(extents_type::__index_cast(__indices[_Idxs])...);
     }(make_index_sequence<rank()>()));
   }
 
@@ -213,7 +213,7 @@ public:
              is_nothrow_constructible_v<index_type, const _OtherIndexType&>)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](span<_OtherIndexType, rank()> __indices) const {
     return __acc_.access(__ptr_, [&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
-      return __map_(__indices[_Idxs]...);
+      return __map_(extents_type::__index_cast(__indices[_Idxs])...);
     }(make_index_sequence<rank()>()));
   }
 

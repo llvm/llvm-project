@@ -149,6 +149,11 @@ bool CXXTypeidExpr::isPotentiallyEvaluated() const {
 bool CXXTypeidExpr::isMostDerived(const ASTContext &Context) const {
   assert(!isTypeOperand() && "Cannot call isMostDerived for typeid(type)");
   const Expr *E = getExprOperand()->IgnoreParenNoopCasts(Context);
+
+  if (const CXXRecordDecl *RD = E->getType()->getAsCXXRecordDecl())
+    if (RD->isEffectivelyFinal())
+      return true;
+
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     QualType Ty = DRE->getDecl()->getType();
     if (!Ty->isPointerOrReferenceType())

@@ -169,6 +169,17 @@ enum struct E4 : int { e = static_cast<int>(E4()) };
 #endif
 } // namespace cwg977
 
+namespace cwg988 { // cwg988: 2.7
+#if __cplusplus >= 201103L
+void f(int& lvalue_ref, int&& rvalue_ref) {
+  static_assert(__is_same(decltype(lvalue_ref)&,  int&),  "");
+  static_assert(__is_same(decltype(lvalue_ref)&&, int&),  "");
+  static_assert(__is_same(decltype(rvalue_ref)&,  int&),  "");
+  static_assert(__is_same(decltype(rvalue_ref)&&, int&&), "");
+}
+#endif
+} // namespace cwg988
+
 namespace cwg990 { // cwg990: 3.5
 #if __cplusplus >= 201103L
   struct A { // #cwg990-A

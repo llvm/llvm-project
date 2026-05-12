@@ -58,3 +58,52 @@ void test_complex(void *p) { new (p) int _Complex(); }
 // OGCG:   %[[P_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[TMP_P]], i32 0, i32 1
 // OGCG:   store i32 0, ptr %[[P_REAL_PTR]], align 4
 // OGCG:   store i32 0, ptr %[[P_IMAG_PTR]], align 4
+
+struct S {
+  double filler;
+};
+
+struct Foo {
+  Foo() : bar_(), dbar_(), sbar_() {}
+
+  int bar_[5];
+  double dbar_[5];
+  S sbar_[5];
+};
+
+void test_aggregate() {
+  Foo a;
+}
+
+// CIR: cir.func {{.*}} @_ZN3FooC2Ev(
+// CIR:   %[[THIS:.*]] = cir.load %{{.*}}
+// CIR:   %[[BAR:.*]] = cir.get_member %[[THIS]][0] {name = "bar_"} : !cir.ptr<!rec_Foo> -> !cir.ptr<!cir.array<!s32i x 5>>
+// CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!s32i x 5>
+// CIR:   cir.store{{.*}} %[[ZERO]], %[[BAR]] : !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>
+// CIR:   %[[DBAR:.*]] = cir.get_member %[[THIS]][1] {name = "dbar_"} : !cir.ptr<!rec_Foo> -> !cir.ptr<!cir.array<!cir.double x 5>>
+// CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!cir.double x 5>
+// CIR:   cir.store{{.*}} %[[ZERO]], %[[DBAR]] : !cir.array<!cir.double x 5>, !cir.ptr<!cir.array<!cir.double x 5>>
+// CIR:   %[[SBAR:.*]] = cir.get_member %[[THIS]][2] {name = "sbar_"} : !cir.ptr<!rec_Foo> -> !cir.ptr<!cir.array<!rec_S x 5>>
+// CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!rec_S x 5>
+// CIR:   cir.store{{.*}} %[[ZERO]], %[[SBAR]] : !cir.array<!rec_S x 5>, !cir.ptr<!cir.array<!rec_S x 5>>
+// CIR:   cir.return
+
+// LLVM: define {{.*}} void @_ZN3FooC2Ev(
+// LLVM:   %[[THIS:.*]] = load ptr, ptr
+// LLVM:   %[[BAR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %[[THIS]], i32 0, i32 0
+// LLVM:   store [5 x i32] zeroinitializer, ptr %[[BAR]]
+// LLVM:   %[[DBAR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %[[THIS]], i32 0, i32 1
+// LLVM:   store [5 x double] zeroinitializer, ptr %[[DBAR]]
+// LLVM:   %[[SBAR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %[[THIS]], i32 0, i32 2
+// LLVM:   store [5 x %struct.S] zeroinitializer, ptr %[[SBAR]]
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_ZN3FooC2Ev(
+// OGCG:   %[[THIS:.*]] = load ptr, ptr
+// OGCG:   %[[BAR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %[[THIS]], i32 0, i32 0
+// OGCG:   call void @llvm.memset.p0.i64(ptr {{.*}}%[[BAR]], i8 0, i64 20, i1 false)
+// OGCG:   %[[DBAR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %[[THIS]], i32 0, i32 1
+// OGCG:   call void @llvm.memset.p0.i64(ptr {{.*}}%[[DBAR]], i8 0, i64 40, i1 false)
+// OGCG:   %[[SBAR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %[[THIS]], i32 0, i32 2
+// OGCG:   call void @llvm.memset.p0.i64(ptr {{.*}}%[[SBAR]], i8 0, i64 40, i1 false)
+// OGCG:   ret void

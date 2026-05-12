@@ -1194,7 +1194,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::TRUNCATE_USAT_U, VT, Expand);
 
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
-    setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+    setOperationAction({ISD::CTLZ_ZERO_POISON, ISD::CTTZ_ZERO_POISON}, VT,
                        Expand);
     setOperationAction(ISD::CTLS, VT, Expand);
 

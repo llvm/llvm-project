@@ -669,15 +669,14 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // registers. If we don't apply the reg fixups before, some registers may
   // appear as unused and will be skipped, resulting in bad MI.
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  for (DenseMap<Register, Register>::iterator I = FuncInfo->RegFixups.begin(),
-                                              E = FuncInfo->RegFixups.end();
+  for (auto I = FuncInfo->RegFixups.begin(), E = FuncInfo->RegFixups.end();
        I != E; ++I) {
     Register From = I->first;
     Register To = I->second;
     // If To is also scheduled to be replaced, find what its ultimate
     // replacement is.
     while (true) {
-      DenseMap<Register, Register>::iterator J = FuncInfo->RegFixups.find(To);
+      auto J = FuncInfo->RegFixups.find(To);
       if (J == E)
         break;
       To = J->second;
@@ -752,7 +751,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     // If Reg is live-in then update debug info to track its copy in a vreg.
     if (!Reg.isPhysical())
       continue;
-    DenseMap<MCRegister, Register>::iterator LDI = LiveInMap.find(Reg);
+    auto LDI = LiveInMap.find(Reg);
     if (LDI != LiveInMap.end()) {
       assert(!hasFI && "There's no handling of frame pointer updating here yet "
                        "- add if needed");

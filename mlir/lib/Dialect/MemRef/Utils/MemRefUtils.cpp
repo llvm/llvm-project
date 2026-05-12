@@ -51,7 +51,8 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
 std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     OpBuilder &builder, Location loc, int srcBits, int dstBits,
     OpFoldResult offset, ArrayRef<OpFoldResult> sizes,
-    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices) {
+    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices,
+    LinearizedDivKind sizeDivKind) {
   unsigned sourceRank = sizes.size();
   assert(sizes.size() == strides.size() &&
          "expected as many sizes as strides for a memref");
@@ -88,7 +89,10 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     AffineExpr sizeExpr = symbols[symbolIndex++];
     values.push_back(sizes[i]);
 
-    productExpressions.push_back((strideExpr * sizeExpr).floorDiv(scaler));
+    AffineExpr product = strideExpr * sizeExpr;
+    productExpressions.push_back(sizeDivKind == LinearizedDivKind::Ceil
+                                     ? product.ceilDiv(scaler)
+                                     : product.floorDiv(scaler));
   }
   AffineMap maxMap = AffineMap::get(
       /*dimCount=*/0, /*symbolCount=*/symbolIndex, productExpressions,
@@ -112,7 +116,8 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
 LinearizedMemRefInfo
 getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
                                  int dstBits, OpFoldResult offset,
-                                 ArrayRef<OpFoldResult> sizes) {
+                                 ArrayRef<OpFoldResult> sizes,
+                                 LinearizedDivKind sizeDivKind) {
   SmallVector<OpFoldResult> strides(sizes.size());
   if (!sizes.empty()) {
     strides.back() = builder.getIndexAttr(1);
@@ -128,7 +133,8 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
   LinearizedMemRefInfo linearizedMemRefInfo;
   std::tie(linearizedMemRefInfo, std::ignore) =
       getLinearizedMemRefOffsetAndSize(builder, loc, srcBits, dstBits, offset,
-                                       sizes, strides);
+                                       sizes, strides, /*indices=*/{},
+                                       sizeDivKind);
   return linearizedMemRefInfo;
 }
 

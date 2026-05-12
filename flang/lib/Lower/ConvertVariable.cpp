@@ -66,15 +66,10 @@ static mlir::Value genScalarValue(Fortran::lower::AbstractConverter &converter,
                                   Fortran::lower::StatementContext &context) {
   // This does not use the AbstractConverter member function to override the
   // symbol mapping to be used expression lowering.
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
-    hlfir::EntityWithAttributes loweredExpr =
-        Fortran::lower::convertExprToHLFIR(loc, converter, expr, symMap,
-                                           context);
-    return hlfir::loadTrivialScalar(loc, converter.getFirOpBuilder(),
-                                    loweredExpr);
-  }
-  return fir::getBase(Fortran::lower::createSomeExtendedExpression(
-      loc, converter, expr, symMap, context));
+  hlfir::EntityWithAttributes loweredExpr =
+      Fortran::lower::convertExprToHLFIR(loc, converter, expr, symMap, context);
+  return hlfir::loadTrivialScalar(loc, converter.getFirOpBuilder(),
+                                  loweredExpr);
 }
 
 /// Does this variable have a default initialization?
@@ -255,11 +250,8 @@ fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
                                         storeMap);
   }
 
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    return Fortran::lower::convertExprToAddress(loc, converter, addr,
-                                                globalOpSymMap, stmtCtx);
-  return Fortran::lower::createInitializerAddress(loc, converter, addr,
-                                                  globalOpSymMap, stmtCtx);
+  return Fortran::lower::convertExprToAddress(loc, converter, addr,
+                                              globalOpSymMap, stmtCtx);
 }
 
 /// create initial-data-target fir.box in a global initializer region.
@@ -326,23 +318,11 @@ mlir::Value Fortran::lower::genInitialDataTarget(
 
   mlir::Value targetBox;
   mlir::Value targetShift;
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+  {
     auto target = Fortran::lower::convertExprToBox(
         loc, converter, initialTarget, globalOpSymMap, stmtCtx);
     targetBox = fir::getBase(target);
     targetShift = builder.createShape(loc, target);
-  } else {
-    if (initialTarget.Rank() > 0) {
-      auto target = Fortran::lower::createSomeArrayBox(converter, initialTarget,
-                                                       globalOpSymMap, stmtCtx);
-      targetBox = fir::getBase(target);
-      targetShift = builder.createShape(loc, target);
-    } else {
-      fir::ExtendedValue addr = Fortran::lower::createInitializerAddress(
-          loc, converter, initialTarget, globalOpSymMap, stmtCtx);
-      targetBox = builder.createBox(loc, addr);
-      // Nothing to do for targetShift, the target is a scalar.
-    }
   }
   // The targetBox is a fir.box<T>, not a fir.box<fir.ptr<T>> as it should for
   // pointers (this matters to get the POINTER attribute correctly inside the
@@ -446,36 +426,21 @@ static mlir::Value genDefaultInitializerValue(
   const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType();
   assert(declTy && "var with default initialization must have a type");
 
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
-    // In HLFIR, the parent type is the first component, while in FIR there is
-    // not parent component in the fir.type and the component of the parent are
-    // "inlined" at the beginning of the fir.type.
-    const Fortran::semantics::Symbol &typeSymbol =
-        declTy->derivedTypeSpec().typeSymbol();
-    const Fortran::semantics::Scope *derivedScope =
-        declTy->derivedTypeSpec().GetScope();
-    assert(derivedScope && "failed to retrieve derived type scope");
-    for (const auto &componentName :
-         typeSymbol.get<Fortran::semantics::DerivedTypeDetails>()
-             .componentNames()) {
-      auto scopeIter = derivedScope->find(componentName);
-      assert(scopeIter != derivedScope->cend() &&
-             "failed to find derived type component symbol");
-      const Fortran::semantics::Symbol &component = scopeIter->second.get();
-      initialValue = genComponentDefaultInit(converter, loc, component, recTy,
-                                             initialValue, stmtCtx);
-    }
-  } else {
-    Fortran::semantics::OrderedComponentIterator components(
-        declTy->derivedTypeSpec());
-    for (const auto &component : components) {
-      // Skip parent components, the sub-components of parent types are part of
-      // components and will be looped through right after.
-      if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
-        continue;
-      initialValue = genComponentDefaultInit(converter, loc, component, recTy,
-                                             initialValue, stmtCtx);
-    }
+  // In HLFIR, the parent type is the first component of the fir.type.
+  const Fortran::semantics::Symbol &typeSymbol =
+      declTy->derivedTypeSpec().typeSymbol();
+  const Fortran::semantics::Scope *derivedScope =
+      declTy->derivedTypeSpec().GetScope();
+  assert(derivedScope && "failed to retrieve derived type scope");
+  for (const auto &componentName :
+       typeSymbol.get<Fortran::semantics::DerivedTypeDetails>()
+           .componentNames()) {
+    auto scopeIter = derivedScope->find(componentName);
+    assert(scopeIter != derivedScope->cend() &&
+           "failed to find derived type component symbol");
+    const Fortran::semantics::Symbol &component = scopeIter->second.get();
+    initialValue = genComponentDefaultInit(converter, loc, component, recTy,
+                                           initialValue, stmtCtx);
   }
 
   if (sequenceType) {
@@ -543,10 +508,6 @@ fir::GlobalOp Fortran::lower::defineGlobal(
 
   if (global && globalIsInitialized(global))
     return global;
-
-  if (!converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-      Fortran::semantics::IsProcedurePointer(sym))
-    TODO(loc, "procedure pointer globals");
 
   const auto *oeDetails =
       sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
@@ -1935,8 +1896,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
   // Commonblock names are not variables, but in some lowerings (like OpenMP) it
   // is useful to maintain the address of the commonblock in an MLIR value and
   // query it. hlfir.declare need not be created for these.
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-      (!Fortran::semantics::IsProcedure(sym) ||
+  if ((!Fortran::semantics::IsProcedure(sym) ||
        Fortran::semantics::IsPointer(sym)) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -2043,8 +2003,7 @@ void Fortran::lower::genDeclareSymbol(
     Fortran::lower::SymMap &symMap, const Fortran::semantics::Symbol &sym,
     const fir::ExtendedValue &exv, fir::FortranVariableFlagsEnum extraFlags,
     bool force) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-      (!Fortran::semantics::IsProcedure(sym) ||
+  if ((!Fortran::semantics::IsProcedure(sym) ||
        Fortran::semantics::IsPointer(sym.GetUltimate())) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -2087,10 +2046,6 @@ genAllocatableOrPointerDeclare(Fortran::lower::AbstractConverter &converter,
                                Fortran::lower::SymMap &symMap,
                                const Fortran::semantics::Symbol &sym,
                                fir::MutableBoxValue box, bool force = false) {
-  if (!converter.getLoweringOptions().getLowerToHighLevelFIR()) {
-    symMap.addAllocatableOrPointer(sym, box, force);
-    return;
-  }
   assert(!box.isDescribedByVariables() &&
          "HLFIR alloctables/pointers must be fir.ref<fir.box>");
   mlir::Value base = box.getAddr();
@@ -2125,15 +2080,10 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
                           llvm::ArrayRef<mlir::Value> explicitParams,
                           llvm::ArrayRef<mlir::Value> explicitExtents,
                           bool replace = false) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
-    fir::BoxValue boxValue{box, lbounds, explicitParams, explicitExtents};
-    Fortran::lower::genDeclareSymbol(
-        converter, symMap, sym, std::move(boxValue),
-        fir::FortranVariableFlagsEnum::None, replace);
-    return;
-  }
-  symMap.addBoxSymbol(sym, box, lbounds, explicitParams, explicitExtents,
-                      replace);
+  fir::BoxValue boxValue{box, lbounds, explicitParams, explicitExtents};
+  Fortran::lower::genDeclareSymbol(converter, symMap, sym, std::move(boxValue),
+                                   fir::FortranVariableFlagsEnum::None,
+                                   replace);
 }
 
 /// Lower specification expressions and attributes of variable \p var and
@@ -2228,8 +2178,6 @@ void Fortran::lower::mapSymbolAttributes(
     }
     fir::MutableBoxValue box = Fortran::lower::createMutableBox(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
-        /*alwaysUseBox=*/
-        converter.getLoweringOptions().getLowerToHighLevelFIR(),
         Fortran::lower::getAllocatorIdx(var.getSymbol()));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);

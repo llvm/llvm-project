@@ -170,9 +170,7 @@ export namespace std {
     using std::ranges::fold_left_with_iter;
     using std::ranges::fold_left_with_iter_result;
     using std::ranges::fold_right;
-#  if 0
     using std::ranges::fold_right_last;
-#  endif
 #endif // _LIBCPP_STD_VER >= 23
   }    // namespace ranges
 

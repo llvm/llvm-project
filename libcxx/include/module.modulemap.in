@@ -13,6 +13,7 @@ module std_config [system] {
   textual header "__configuration/language.h"
   textual header "__configuration/namespace.h"
   textual header "__configuration/platform.h"
+  textual header "__configuration/utility.h"
   textual header "version"
 }
 

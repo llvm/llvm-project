@@ -1283,7 +1283,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::CTTZ_ELTS:
   case ISD::CTTZ_ELTS_ZERO_POISON:
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -3261,7 +3261,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Tmp1);
     break;
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     if ((Tmp1 = TLI.expandCTLZ(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -3270,7 +3270,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Tmp1);
     break;
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
     if ((Tmp1 = TLI.expandCTTZ(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -4623,7 +4623,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     break;
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Results.push_back(TLI.expandVPCTTZElements(Node, DAG));
     break;
   case ISD::CLEAR_CACHE:
@@ -5373,7 +5373,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                        RTLIB::MUL_I16, RTLIB::MUL_I32,
                                        RTLIB::MUL_I64, RTLIB::MUL_I128));
     break;
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     Results.push_back(ExpandBitCountingLibCall(
         Node, RTLIB::CTLZ_I32, RTLIB::CTLZ_I64, RTLIB::CTLZ_I128));
     break;
@@ -5510,12 +5510,12 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
   switch (Node->getOpcode()) {
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::CTLZ:
   case ISD::CTPOP: {
     // Zero extend the argument unless its cttz, then use any_extend.
     if (Node->getOpcode() == ISD::CTTZ ||
-        Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF)
+        Node->getOpcode() == ISD::CTTZ_ZERO_POISON)
       Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
     else
       Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
@@ -5529,9 +5529,9 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                                         OVT.getSizeInBits());
       Tmp1 = DAG.getNode(ISD::OR, dl, NVT, Tmp1,
                          DAG.getConstant(TopBit, dl, NVT));
-      NewOpc = ISD::CTTZ_ZERO_UNDEF;
+      NewOpc = ISD::CTTZ_ZERO_POISON;
     }
-    // Perform the larger operation. For CTPOP and CTTZ_ZERO_UNDEF, this is
+    // Perform the larger operation. For CTPOP and CTTZ_ZERO_POISON, this is
     // already the correct result.
     Tmp1 = DAG.getNode(NewOpc, dl, NVT, Tmp1);
     if (NewOpc == ISD::CTLZ) {
@@ -5544,7 +5544,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
         DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1, SDNodeFlags::NoWrap));
     break;
   }
-  case ISD::CTLZ_ZERO_UNDEF: {
+  case ISD::CTLZ_ZERO_POISON: {
     // We know that the argument is unlikely to be zero, hence we can take a
     // different approach as compared to ISD::CTLZ
 

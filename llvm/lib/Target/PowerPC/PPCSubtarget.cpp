@@ -144,6 +144,10 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     report_fatal_error("The aix-shared-lib-tls-model-opt attribute "
                        "is only supported on AIX in 64-bit mode.\n",
                        false);
+
+  if (UsePointerGlueHelper && !getTargetTriple().isOSAIX())
+    report_fatal_error("use-ptrgl-helper feature is only supported on AIX\n",
+                       false);
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }

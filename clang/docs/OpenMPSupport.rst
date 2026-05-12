@@ -595,7 +595,8 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Message and severity clauses                                | :good:`done`              | :none:`unclaimed`         |  https://github.com/llvm/llvm-project/pull/146093                        |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| Local clause on declare target                              | :part:`In Progress`       | :none:`unclaimed`         |                                                                          |
+| Local clause on declare target                              | :good:`done`              | :none:`unclaimed`         | clang Parse/Sema: https://github.com/llvm/llvm-project/pull/186281       |
+|                                                             |                           |                           | clang Codegen   : https://github.com/llvm/llvm-project/pull/196431       |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | groupprivate directive                                      | :part:`In Progress`       | :part:`partial`           | Flang: kparzysz, mjklemm                                                 |
 |                                                             |                           |                           |                                                                          |

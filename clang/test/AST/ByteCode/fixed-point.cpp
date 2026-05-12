@@ -20,6 +20,11 @@ static_assert(A == 0.0k);
 static_assert(A == 0);
 static_assert(!A);
 
+#ifdef __SIZEOF_INT128__
+constexpr __int128 i128 = 42;
+static_assert(i128 == 42.0k, "");
+#endif
+
 constexpr bool toBool() {
   if (A)
     return true;

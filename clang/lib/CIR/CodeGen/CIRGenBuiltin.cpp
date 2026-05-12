@@ -955,21 +955,13 @@ static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
   using namespace llvm::Intrinsic;
 
   SmallVector<IITDescriptor, 8> table;
-  getIntrinsicInfoTableEntries(id, table);
+  auto [tableRef, _, isVarArg] = getIntrinsicInfoTableEntries(id, table);
 
-  ArrayRef<IITDescriptor> tableRef = table;
   mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
 
   SmallVector<mlir::Type, 8> argTypes;
-  bool isVarArg = false;
-  while (!tableRef.empty()) {
-    IITDescriptor::IITDescriptorKind kind = tableRef.front().Kind;
-    if (kind == IITDescriptor::VarArg) {
-      isVarArg = true;
-      break; // VarArg is last
-    }
+  while (!tableRef.empty())
     argTypes.push_back(decodeFixedType(cgf, tableRef, context));
-  }
 
   // CIR convention: no explicit void return type
   if (isa<cir::VoidType>(resultTy))

@@ -59,3 +59,114 @@ exit:
   %res = add i64 %ext, %mul
   ret i64 %res
 }
+
+; The scalar cost of this loop must include the freeze's cost, otherwise VF=2
+; is incorrectly rejected as unprofitable.
+define i32 @or_reduction_with_freeze(ptr %dst, ptr %src) {
+; CHECK-LABEL: define i32 @or_reduction_with_freeze(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SRC7:%.*]] = ptrtoint ptr [[SRC]] to i64
+; CHECK-NEXT:    [[DST6:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC4:%.*]] = ptrtoint ptr [[SRC]] to i64
+; CHECK-NEXT:    [[DST3:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST6]], [[SRC7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 18
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK:       [[VECTOR_SCEVCHECK]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[DST1]] to i3
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[SRC2]] to i3
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i3 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i3 [[TMP5]] to i64
+; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP6]], 0
+; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[DST3]], [[SRC4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 3
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP10]]
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[DST]], i64 8
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP5]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr [[DST]], align 8, !alias.scope [[META4:![0-9]+]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP11]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[N_VEC]], 3
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP12]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP20:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 2
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[NEXT_GEP]], align 8, !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP15]], align 8, !alias.scope [[META7]], !noalias [[META4]]
+; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[NEXT_GEP]], align 8, !alias.scope [[META7]], !noalias [[META4]]
+; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP15]], align 8, !alias.scope [[META7]], !noalias [[META4]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or <2 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or <2 x i64> [[WIDE_LOAD9]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP18:%.*]] = freeze <2 x i64> [[TMP16]]
+; CHECK-NEXT:    [[TMP19:%.*]] = freeze <2 x i64> [[TMP17]]
+; CHECK-NEXT:    [[TMP20]] = or <2 x i64> [[TMP18]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP21]] = or <2 x i64> [[TMP19]], [[VEC_PHI8]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i64> [[TMP21]], [[TMP20]]
+; CHECK-NEXT:    [[TMP23:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[BIN_RDX]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP23]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[SRC]], %[[ENTRY]] ], [ [[SRC]], %[[VECTOR_SCEVCHECK]] ], [ [[SRC]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[MASK:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[OR:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INCDEC_PTR:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[L_SRC:%.*]] = load i64, ptr [[PTR_IV]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[PTR_IV]], align 8
+; CHECK-NEXT:    [[L_DST:%.*]] = load i64, ptr [[DST]], align 8
+; CHECK-NEXT:    [[OR_1:%.*]] = or i64 [[L_SRC]], [[L_DST]]
+; CHECK-NEXT:    [[FR:%.*]] = freeze i64 [[OR_1]]
+; CHECK-NEXT:    [[OR]] = or i64 [[FR]], [[MASK]]
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[PTR_IV]], i64 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR_IV]], [[DST]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i64 [ [[OR]], %[[LOOP]] ], [ [[TMP23]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[OR_LCSSA]] to i32
+; CHECK-NEXT:    ret i32 [[CAST]]
+;
+entry:
+  br label %loop
+
+loop:
+  %mask = phi i64 [ 0, %entry ], [ %or, %loop ]
+  %ptr.iv = phi ptr [ %src, %entry ], [ %incdec.ptr, %loop ]
+  %l.src = load i64, ptr %ptr.iv, align 8
+  store i64 0, ptr %ptr.iv, align 8
+  %l.dst = load i64, ptr %dst, align 8
+  %or.1 = or i64 %l.src, %l.dst
+  %fr = freeze i64 %or.1
+  %or = or i64 %fr, %mask
+  %incdec.ptr = getelementptr i8, ptr %ptr.iv, i64 8
+  %cmp = icmp eq ptr %ptr.iv, %dst
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  %cast = trunc i64 %or to i32
+  ret i32 %cast
+}

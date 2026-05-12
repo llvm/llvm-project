@@ -551,8 +551,8 @@ public:
     GetContext().withinConstruct = true;
   }
 
-  bool Pre(const parser::OpenMPGroupprivate &);
-  void Post(const parser::OpenMPGroupprivate &) { PopContext(); }
+  bool Pre(const parser::OmpGroupprivateDirective &);
+  void Post(const parser::OmpGroupprivateDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPStandaloneConstruct &x) {
     common::visit(
@@ -636,7 +636,7 @@ public:
   }
   void Post(const parser::OpenMPFlushConstruct &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
+  bool Pre(const parser::OmpRequiresDirective &x) {
     using RequiresClauses = WithOmpDeclarative::RequiresClauses;
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
 
@@ -689,7 +689,7 @@ public:
     AddOmpRequiresToScope(currScope(), &reqs, memOrder);
     return true;
   }
-  void Post(const parser::OpenMPRequiresConstruct &) { PopContext(); }
+  void Post(const parser::OmpRequiresDirective &) { PopContext(); }
 
   bool Pre(const parser::OmpDeclareTargetDirective &);
   void Post(const parser::OmpDeclareTargetDirective &) { PopContext(); }
@@ -700,8 +700,8 @@ public:
   bool Pre(const parser::OmpDeclareReductionDirective &);
   void Post(const parser::OmpDeclareReductionDirective &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPThreadprivate &);
-  void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
+  bool Pre(const parser::OmpThreadprivateDirective &);
+  void Post(const parser::OmpThreadprivateDirective &) { PopContext(); }
 
   bool Pre(const parser::OmpAllocateDirective &);
 
@@ -717,11 +717,11 @@ public:
   bool Pre(const parser::OpenMPAllocatorsConstruct &);
   void Post(const parser::OpenMPAllocatorsConstruct &);
 
-  bool Pre(const parser::OpenMPUtilityConstruct &x) {
+  bool Pre(const parser::OmpUtilityDirective &x) {
     PushContext(x.source, parser::omp::GetOmpDirectiveName(x).v);
     return true;
   }
-  void Post(const parser::OpenMPUtilityConstruct &) { PopContext(); }
+  void Post(const parser::OmpUtilityDirective &) { PopContext(); }
 
   bool Pre(const parser::OmpDeclareVariantDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_declare_variant);
@@ -2142,7 +2142,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
   }
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPGroupprivate &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_groupprivate);
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{parser::omp::GetArgumentObject(arg)}) {
@@ -2211,7 +2211,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareReductionDirective &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpThreadprivateDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContext(dirName.source, dirName.v);
 

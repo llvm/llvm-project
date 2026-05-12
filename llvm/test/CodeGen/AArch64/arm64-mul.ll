@@ -210,6 +210,21 @@ entry:
   ret i64 %tmp4
 }
 
+define i64 @t13b(i32 %a, i64 %b) nounwind {
+; CHECK-LABEL: t13b:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, #-24910 // =0xffffffffffff9eb2
+; CHECK-NEXT:    mov w9, w0
+; CHECK-NEXT:    movk x8, #65347, lsl #16
+; CHECK-NEXT:    madd x0, x9, x8, x1
+; CHECK-NEXT:    ret
+entry:
+  %tmp1 = zext i32 %a to i64
+  %tmp3 = mul i64 %tmp1, -12345678
+  %tmp4 = add i64 %b, %tmp3
+  ret i64 %tmp4
+}
+
 define i64 @t14(i32 %a, i64 %b) nounwind {
 ; CHECK-SD-LABEL: t14:
 ; CHECK-SD:       // %bb.0: // %entry

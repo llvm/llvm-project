@@ -16,6 +16,7 @@
 #include "lldb/Breakpoint/BreakpointResolverFileRegex.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
+#include "lldb/Breakpoint/ScriptedBreakpointOverrideResolver.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -238,6 +239,13 @@ void Target::PrimeFromDummyTarget(Target &target) {
 
   for (const auto &bp_name_entry : target.m_breakpoint_names) {
     AddBreakpointName(std::make_unique<BreakpointName>(*bp_name_entry.second));
+  }
+
+  for (auto const &elem : target.m_breakpoint_overrides) {
+    BreakpointResolverOverrideUP new_override_up =
+        elem.second->CopyIntoNewTarget(*this);
+    if (new_override_up->Validate())
+      AddBreakpointResolverOverride(std::move(new_override_up));
   }
 
   m_frame_recognizer_manager_up = std::make_unique<StackFrameRecognizerManager>(
@@ -800,6 +808,15 @@ BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
                                       bool resolve_indirect_symbols) {
   BreakpointSP bp_sp;
   if (filter_sp && resolver_sp) {
+    // Now check whether there are any "Breakpoint Overrides" registered, and
+    // if there are see if one of them want to handle this request instead.
+    // But we don't allow overrides for internal breakpoints:
+    if (!internal) {
+      BreakpointResolverSP overridden_sp =
+          CheckBreakpointOverrides(resolver_sp);
+      if (overridden_sp)
+        resolver_sp = overridden_sp;
+    }
     const bool hardware = request_hardware || GetRequireHardwareBreakpoints();
     bp_sp.reset(new Breakpoint(*this, filter_sp, resolver_sp, hardware,
                                resolve_indirect_symbols));
@@ -931,6 +948,53 @@ void Target::GetBreakpointNames(std::vector<std::string> &names) {
     names.push_back(bp_name_entry.first.GetString());
   }
   llvm::sort(names);
+}
+
+llvm::Expected<lldb::user_id_t>
+Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
+                                      StructuredData::DictionarySP args_data_sp,
+                                      llvm::StringRef description) {
+  if (class_name.empty())
+    return LLDB_INVALID_INDEX64;
+
+  StructuredDataImpl impl;
+  impl.SetObjectSP(args_data_sp);
+
+  BreakpointResolverOverrideUP new_override_up(
+      new ScriptedBreakpointResolverOverride(*this, std::string(description),
+                                             std::string(class_name), impl));
+  llvm::Error error = new_override_up->Validate();
+  if (error)
+    return error;
+
+  return AddBreakpointResolverOverride(std::move(new_override_up));
+}
+
+void Target::DescribeBreakpointOverrides(Stream &stream,
+                                         std::vector<lldb::user_id_t> &idxs) {
+  if (m_breakpoint_overrides.size() == 0) {
+    stream << "No overrides.\n";
+    return;
+  }
+
+  auto begin = idxs.begin();
+  auto end = idxs.end();
+  bool empty = idxs.empty();
+  bool print_first = true;
+  for (auto const &elem : m_breakpoint_overrides) {
+    auto idx_pos = std::find(begin, end, elem.first);
+    if (empty || idx_pos != end) {
+      if (print_first) {
+        // FIXME: Is there some good way to flow the description?
+        stream << "ID    Description\n";
+        stream << "----  -----------\n";
+        print_first = false;
+      }
+      stream.Format("{0,4}  {1}\n", elem.first, elem.second->GetDescription());
+      if (!empty)
+        idxs.erase(idx_pos);
+    }
+  }
 }
 
 bool Target::ProcessIsValid() {

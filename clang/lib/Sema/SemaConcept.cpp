@@ -482,11 +482,6 @@ class ConstraintSatisfactionChecker {
   ConstraintSatisfaction &Satisfaction;
   bool BuildExpression;
 
-  // The most closest concept declaration when evaluating atomic constriants.
-  // This is to make sure that lambdas in the atomic expression live in the
-  // right context.
-  ConceptDecl *ParentConcept = nullptr;
-
   // This is for TemplateInstantiator to not instantiate the same template
   // parameter mapping many times, in order to improve substitution performance.
   llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
@@ -728,20 +723,6 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprEmpty();
-  }
-
-  // Note that generic lambdas inside requires body require a lambda context
-  // decl from which to fetch correct template arguments. But we don't have any
-  // proper decls because the constraints are already normalized.
-  if (ParentConcept) {
-    // FIXME: the evaluation context should learn to track template arguments
-    // separately from a Decl.
-    EvaluationContext.emplace(
-        S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-        /*LambdaContextDecl=*/
-        ImplicitConceptSpecializationDecl::Create(
-            S.Context, ParentConcept->getDeclContext(),
-            ParentConcept->getBeginLoc(), SubstitutedOutermost));
   }
 
   Sema::ArgPackSubstIndexRAII SubstIndex(S, PackSubstitutionIndex);
@@ -1051,9 +1032,6 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
       Constraint.getSourceRange());
   if (InstTemplate.isInvalid())
     return ExprError();
-
-  llvm::SaveAndRestore PushConceptDecl(
-      ParentConcept, cast<ConceptDecl>(ConceptId->getNamedConcept()));
 
   unsigned Size = Satisfaction.Details.size();
 
@@ -2312,6 +2290,14 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
     }
     assert(!ArgsAsWritten);
     const ConceptSpecializationExpr *CSE = CC.getConceptSpecializationExpr();
+    // Make sure that lambdas within template arguments live in a
+    // dependent context such that they are assured to be transformed during
+    // constraint evaluation.
+    EnterExpressionEvaluationContext EECtx(
+        SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        /*LambdaContextDecl=*/
+        const_cast<ImplicitConceptSpecializationDecl *>(
+            CSE->getSpecializationDecl()));
     SmallVector<TemplateArgument> InnerArgs(CSE->getTemplateArguments());
     ConceptDecl *Concept = CSE->getNamedConcept();
     if (RemovePacksForFoldExpr) {

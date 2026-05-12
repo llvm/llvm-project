@@ -249,8 +249,12 @@ struct IfOpConversion : SCFToSPIRVPattern<scf::IfOp> {
 
     // Create `spirv.selection` operation, selection header block and merge
     // block.
-    auto selectionOp = spirv::SelectionOp::create(
-        rewriter, loc, spirv::SelectionControl::None);
+    auto selectionControl = spirv::SelectionControl::None;
+    if (auto attr = ifOp->getAttrOfType<spirv::SelectionControlAttr>(
+            spirv::getSelectionControlAttrName()))
+      selectionControl = attr.getValue();
+    auto selectionOp =
+        spirv::SelectionOp::create(rewriter, loc, selectionControl);
     auto *mergeBlock = rewriter.createBlock(&selectionOp.getBody(),
                                             selectionOp.getBody().end());
     spirv::MergeOp::create(rewriter, loc);

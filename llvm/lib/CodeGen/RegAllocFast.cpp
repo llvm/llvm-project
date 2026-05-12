@@ -1776,7 +1776,7 @@ void RegAllocFastImpl::handleBundle(MachineInstr &MI) {
       if (!Reg.isVirtual() || !shouldAllocateRegister(Reg))
         continue;
 
-      DenseMap<Register, LiveReg>::iterator DI = BundleVirtRegsMap.find(Reg);
+      auto DI = BundleVirtRegsMap.find(Reg);
       assert(DI != BundleVirtRegsMap.end() && "Unassigned virtual register");
 
       setPhysReg(MI, MO, DI->second);

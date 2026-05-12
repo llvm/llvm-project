@@ -625,7 +625,8 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
     }
     break;
   }
-  case TargetOpcode::G_GLOBAL_VALUE: {
+  case TargetOpcode::G_GLOBAL_VALUE:
+  case X86::G_WRAPPER_RIP: {
     auto GV = I.getOperand(1).getGlobal();
     if (GV->isThreadLocal()) {
       return false; // TODO: we don't support TLS yet.
@@ -633,24 +634,15 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
     // Can't handle alternate code models yet.
     if (TM.getCodeModel() != CodeModel::Small)
       return false;
-
-    unsigned int GVOpFlags = STI.classifyGlobalReference(GV);
-
-    // If it's a stub, we need to do a load to find the real address, and we
-    // can't fold that into just an AM. The load will come from lowering this
-    // G_GLOBAL_VALUE later.
-    if (isGlobalStubReference(GVOpFlags))
-      break;
-
-    // If it's not a stub, point AM directly at the global.
     AM.GV = GV;
-    AM.GVOpFlags = GVOpFlags;
+    AM.GVOpFlags = STI.classifyGlobalReference(GV);
 
     // TODO: This reference is relative to the pic base. not supported yet.
     if (isGlobalRelativeToPICBase(AM.GVOpFlags))
       return false;
 
-    if (STI.isPICStyleRIPRel()) {
+    if (STI.isPICStyleRIPRel() || AM.GVOpFlags == X86II::MO_GOTPCREL ||
+        AM.GVOpFlags == X86II::MO_GOTPCREL_NORELAX) {
       // Use rip-relative addressing.
       assert(AM.Base.Reg == 0 && AM.IndexReg == 0 &&
              "RIP-relative addresses can't have additional register operands");
@@ -779,27 +771,12 @@ bool X86InstructionSelector::selectGlobalValue(MachineInstr &I,
          "unexpected instruction");
 
   X86AddressMode AM;
-  unsigned NewOpc;
+  if (!X86SelectAddress(I, TM, MRI, STI, AM))
+    return false;
 
-  const GlobalValue *GV = I.getOperand(1).getGlobal();
-  const auto GVOpFlags = STI.classifyGlobalReference(GV);
-  if (isGlobalStubReference(GVOpFlags)) {
-    // If it's a stub, we need a load from the GOT instead of lea.
-    AM.GV = GV;
-    AM.GVOpFlags = GVOpFlags;
-    if (STI.isPICStyleRIPRel() || AM.GVOpFlags == X86II::MO_GOTPCREL ||
-        AM.GVOpFlags == X86II::MO_GOTPCREL_NORELAX)
-      AM.Base.Reg = X86::RIP;
-
-    NewOpc = STI.isTarget64BitLP64() ? X86::MOV64rm : X86::MOV32rm;
-  } else {
-    if (!X86SelectAddress(I, TM, MRI, STI, AM))
-      return false;
-
-    const Register DefReg = I.getOperand(0).getReg();
-    LLT Ty = MRI.getType(DefReg);
-    NewOpc = getLeaOP(Ty, STI);
-  }
+  const Register DefReg = I.getOperand(0).getReg();
+  LLT Ty = MRI.getType(DefReg);
+  unsigned NewOpc = getLeaOP(Ty, STI);
 
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
@@ -2001,7 +1978,8 @@ X86InstructionSelector::selectAddr(MachineOperand &Root) const {
   MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
   MachineInstr *Ptr = MRI.getVRegDef(Root.getReg());
   X86AddressMode AM;
-  X86SelectAddress(*Ptr, TM, MRI, STI, AM);
+  if (!X86SelectAddress(*Ptr, TM, MRI, STI, AM))
+    return std::nullopt;
 
   if (AM.IndexReg)
     return std::nullopt;

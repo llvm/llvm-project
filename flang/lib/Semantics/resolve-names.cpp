@@ -1730,7 +1730,7 @@ public:
   static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
+  bool Pre(const parser::OmpRequiresDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1815,11 +1815,13 @@ public:
   void Post(const parser::OmpEndSectionsDirective &x) {
     Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
-  bool Pre(const parser::OpenMPThreadprivate &) {
+  bool Pre(const parser::OmpThreadprivateDirective &) {
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
+  void Post(const parser::OmpThreadprivateDirective &) {
+    SkipImplicitTyping(false);
+  }
   bool Pre(const parser::OmpDeclareTargetDirective &x) {
     auto addObjectName{[&](const parser::OmpObject &object) {
       common::visit(
@@ -4836,6 +4838,11 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
       name.symbol = nullptr;
     } else if (auto *entity{ultimate.detailsIf<EntityDetails>()};
                entity && !ultimate.has<ProcEntityDetails>()) {
+      if (entity->isDummy()) {
+        Say(name,
+            "Dummy argument '%s' may not be used as a statement function"_err_en_US);
+        return false;
+      }
       resultType = entity->type();
       ultimate.details() = UnknownDetails{}; // will be replaced below
     } else {

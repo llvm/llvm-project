@@ -134,3 +134,63 @@ define bfloat @vreduce_fmaximum_nnan_nxv4bf16(<vscale x 4 x bfloat> %val) {
   ret bfloat %s
 }
 
+
+define bfloat @vreduce_fadd_nxv1bf16(<vscale x 1 x bfloat> %v, bfloat %s) {
+; CHECK-LABEL: vreduce_fadd_nxv1bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vfredusum.vs v8, v9, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    fadd.s fa5, fa4, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
+  %red = call reassoc bfloat @llvm.vector.reduce.fadd.nxv1bf16(bfloat %s, <vscale x 1 x bfloat> %v)
+  ret bfloat %red
+}
+
+define bfloat @vreduce_fadd_nxv2bf16(<vscale x 2 x bfloat> %v, bfloat %s) {
+; CHECK-LABEL: vreduce_fadd_nxv2bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vfredusum.vs v8, v9, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    fadd.s fa5, fa4, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
+  %red = call reassoc bfloat @llvm.vector.reduce.fadd.nxv2bf16(bfloat %s, <vscale x 2 x bfloat> %v)
+  ret bfloat %red
+}
+
+define bfloat @vreduce_fadd_nxv4bf16(<vscale x 4 x bfloat> %v, bfloat %s) {
+; CHECK-LABEL: vreduce_fadd_nxv4bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vfredusum.vs v8, v10, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    fadd.s fa5, fa4, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
+  %red = call reassoc bfloat @llvm.vector.reduce.fadd.nxv4bf16(bfloat %s, <vscale x 4 x bfloat> %v)
+  ret bfloat %red
+}

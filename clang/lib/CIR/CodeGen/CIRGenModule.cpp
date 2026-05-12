@@ -1160,11 +1160,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
     setLinkageForGV(gv, d);
 
-    if (d->getTLSKind()) {
-      if (d->getTLSKind() == VarDecl::TLS_Dynamic)
-        errorNYI(d->getSourceRange(), "getOrCreateCIRGlobal: TLS dynamic");
+    if (d->getTLSKind())
       setTLSMode(gv, *d);
-    }
 
     setGVProperties(gv, d);
 
@@ -1508,7 +1505,8 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   setNonAliasAttributes(vd, gv);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  if (vd->getTLSKind() && !vd->isStaticLocal())
+    setTLSMode(gv, *vd);
 
   maybeSetTrivialComdat(*vd, gv);
 
@@ -2774,6 +2772,13 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
 
   auto global = cast<cir::GlobalOp>(op);
   global.setTlsModel(tlm);
+
+  // For namespace-scope dyanmic TLS we need to set the wrapper, int, or guard
+  // info.
+  if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
+    return;
+
+  setGlobalTlsReferences(d, global);
 }
 
 void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,

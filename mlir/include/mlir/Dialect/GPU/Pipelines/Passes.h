@@ -64,6 +64,59 @@ struct GPUToNVVMPipelineOptions
       llvm::cl::init(true)};
 };
 
+/// Options for the gpu to rocdl pipeline.
+struct GPUToROCDLPipelineOptions
+    : public PassPipelineOptions<GPUToROCDLPipelineOptions> {
+  PassOptions::Option<int64_t> indexBitWidth{
+      *this, "index-bitwidth",
+      llvm::cl::desc("Bitwidth of the index type for the host (warning this "
+                     "should be 64 until the GPU layering is fixed)"),
+      llvm::cl::init(64)};
+  PassOptions::Option<std::string> triple{
+      *this, "triple",
+      llvm::cl::desc("AMDGPU target triple (e.g. amdgcn-amd-amdhsa)."),
+      llvm::cl::init("amdgcn-amd-amdhsa")};
+  PassOptions::Option<std::string> chip{
+      *this, "chip",
+      llvm::cl::desc(
+          "AMDGPU target chip (e.g. gfx90a, gfx942, gfx1100). Required: "
+          "AMDGCN binaries are not forward-compatible across chip families.")};
+  PassOptions::Option<std::string> features{
+      *this, "features", llvm::cl::desc("AMDGPU target features."),
+      llvm::cl::init("")};
+  PassOptions::Option<std::string> binaryFormat{
+      *this, "binary-format",
+      llvm::cl::desc("Final GPU binary emission format (e.g. fatbin, binary, "
+                     "isa, llvm, offloading)."),
+      llvm::cl::init("fatbin")};
+  PassOptions::Option<std::string> abiVersion{
+      *this, "abi",
+      llvm::cl::desc("AMDHSA ABI version (e.g. \"500\", \"600\")."),
+      llvm::cl::init("600")};
+  PassOptions::Option<bool> wave64{
+      *this, "wave64",
+      llvm::cl::desc("Use Wave64 mode (default true; wave32 if false, "
+                     "appropriate for RDNA / gfx10+ where supported)."),
+      llvm::cl::init(true)};
+  PassOptions::Option<int> optLevel{
+      *this, "opt-level",
+      llvm::cl::desc("Optimization level for ROCDL/AMDGPU compilation."),
+      llvm::cl::init(2)};
+  PassOptions::Option<std::string> cmdOptions{
+      *this, "rocdl-cmd-options",
+      llvm::cl::desc(
+          "Command line options to pass to the downstream AMDGPU compiler."),
+      llvm::cl::init("")};
+  PassOptions::Option<bool> kernelUseBarePtrCallConv{
+      *this, "kernel-bare-ptr-calling-convention",
+      llvm::cl::desc("Use bareptr calling convention for device kernels."),
+      llvm::cl::init(false)};
+  PassOptions::Option<bool> hostUseBarePtrCallConv{
+      *this, "host-bare-ptr-calling-convention",
+      llvm::cl::desc("Use bareptr calling convention for the host."),
+      llvm::cl::init(false)};
+};
+
 // Options for the gpu to xevm pipeline.
 struct GPUToXeVMPipelineOptions
     : public PassPipelineOptions<GPUToXeVMPipelineOptions> {
@@ -120,6 +173,12 @@ struct GPUToXeVMPipelineOptions
 void buildLowerToNVVMPassPipeline(OpPassManager &pm,
                                   const GPUToNVVMPipelineOptions &options);
 
+/// Adds the GPU to ROCDL pipeline to the given pass manager. Transforms main
+/// dialects (arith, memref, scf, vector, gpu) into ROCDL/AMDGPU. Begins with
+/// GPU code regions, then handles host code.
+void buildLowerToROCDLPassPipeline(OpPassManager &pm,
+                                   const GPUToROCDLPipelineOptions &options);
+
 /// Adds the GPU to XeVM pipeline to the given pass manager. Transforms main
 /// dialects into XeVM targets. Begins with GPU code regions, then handles host
 /// code.
@@ -128,6 +187,7 @@ void buildLowerToXeVMPassPipeline(OpPassManager &pm,
 
 /// Register all pipelines for the `gpu` dialect.
 void registerGPUToNVVMPipeline();
+void registerGPUToROCDLPipeline();
 void registerGPUToXeVMPipeline();
 
 } // namespace gpu

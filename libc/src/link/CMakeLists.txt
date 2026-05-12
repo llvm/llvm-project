@@ -6,4 +6,6 @@ add_entrypoint_object(
     dl_iterate_phdr.h
   DEPENDS
     libc.hdr.stdint_proxy
+    libc.src.__support.CPP.span
+    libc.src.__support.OSUtil.linux.auxv
 )

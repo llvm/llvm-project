@@ -445,7 +445,8 @@ class SwitchMatcher : public Matcher {
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
 
 public:
-  SwitchMatcher() : Matcher(MK_Switch) {}
+  SwitchMatcher();
+  ~SwitchMatcher();
 
   static bool classof(const Matcher *M) { return M->getKind() == MK_Switch; }
 

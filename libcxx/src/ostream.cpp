@@ -15,6 +15,7 @@
 #include "std_stream.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os) {
   // dynamic_cast requires RTTI, this only affects users whose vendor builds
@@ -38,4 +39,5 @@ _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os) {
   return nullptr;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

@@ -131,6 +131,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64BranchTargets.cpp",
     "AArch64CallingConvention.cpp",
     "AArch64CleanupLocalDynamicTLSPass.cpp",
+    "AArch64CodeLayoutOpt.cpp",
     "AArch64CollectLOH.cpp",
     "AArch64CompressJumpTables.cpp",
     "AArch64CondBrTuning.cpp",

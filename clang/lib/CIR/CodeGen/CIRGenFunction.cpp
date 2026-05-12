@@ -1191,9 +1191,19 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(e);
-    RunCleanupsScope scope(*this);
+    FullExprCleanupScope scope(*this, cleanups->getSubExpr());
     LValue lv = emitLValue(cleanups->getSubExpr());
-    assert(!cir::MissingFeatures::cleanupWithPreservedValues());
+    if (lv.isSimple()) {
+      // Defend against branches out of gnu statement expressions surrounded by
+      // cleanups.
+      Address addr = lv.getAddress();
+      mlir::Value v = addr.getPointer();
+      scope.exit({&v});
+      return LValue::makeAddr(addr.withPointer(v), lv.getType(),
+                              lv.getBaseInfo());
+    }
+    // FIXME: Is it possible to create an ExprWithCleanups that produces a
+    // bitfield lvalue or some other non-simple lvalue?
     return lv;
   }
   case Expr::CXXDefaultArgExprClass: {

@@ -55,6 +55,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifdef PRINT
 template <>
@@ -1055,4 +1056,5 @@ time_zone::__get_info(local_seconds __local_time) const {
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

@@ -468,7 +468,7 @@ public:
     return ConstString();
   }
 
-  virtual llvm::StringRef GetInstanceVariableName() { return {}; }
+  virtual llvm::StringRef GetInstanceName() { return {}; }
 
   /// Given a symbol context list of matches which supposedly represent the
   /// same file and line number in a CU, erases those that should be ignored

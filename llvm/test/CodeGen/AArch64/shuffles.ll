@@ -576,3 +576,187 @@ define <4 x i32> @extract_shuffle(<8 x i16> %j, <4 x i16> %k) {
   ret <4 x i32> %d
 }
 
+; Zero/splat-fill EXT: splat prefix (zero inserted at the start, data shifted right)
+define <16 x i8> @test_shuf_zero_ext_start_lhs(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_start_lhs:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_start_lhs:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <16 x i32> <i32 16, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_start_lhs2(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_start_lhs2:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_start_lhs2:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <16 x i32> <i32 16, i32 16, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_start_rhs(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_start_rhs:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_start_rhs:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #15
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_start_rhs2(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_start_rhs2:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_start_rhs2:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #14
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 0, i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29>
+  ret <16 x i8> %r
+}
+
+; Zero/splat-fill EXT: splat suffix (zero appended at the end, data shifted left)
+define <16 x i8> @test_shuf_zero_ext_end_lhs(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_end_lhs:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_end_lhs:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_end_lhs2(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_end_lhs2:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_end_lhs2:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <16 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 16>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_end_rhs(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_end_rhs:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_end_rhs:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 0>
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @test_shuf_zero_ext_end_rhs2(<16 x i8> %a) {
+; CHECKLE-LABEL: test_shuf_zero_ext_end_rhs2:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKLE-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_end_rhs2:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    movi v1.2d, #0000000000000000
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 0, i32 0>
+  ret <16 x i8> %r
+}
+
+; Zero/splat-fill EXT: non-zero splat prefix (splat of a scalar, data shifted right)
+define <4 x i32> @test_shuf_zero_ext_start_lhs_splat(<4 x i32> %a, i32 %b) {
+; CHECKLE-LABEL: test_shuf_zero_ext_start_lhs_splat:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    dup v1.4s, w0
+; CHECKLE-NEXT:    ext v0.16b, v1.16b, v0.16b, #12
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: test_shuf_zero_ext_start_lhs_splat:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.4s, v0.4s
+; CHECKBE-NEXT:    dup v1.4s, w0
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ext v0.16b, v1.16b, v0.16b, #12
+; CHECKBE-NEXT:    rev64 v0.4s, v0.4s
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %i = insertelement <4 x i32> poison, i32 %b, i64 0
+  %s = shufflevector <4 x i32> %i, <4 x i32> poison, <4 x i32> zeroinitializer
+  %r = shufflevector <4 x i32> %a, <4 x i32> %s, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
+  ret <4 x i32> %r
+}

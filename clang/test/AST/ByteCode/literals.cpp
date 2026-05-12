@@ -1503,3 +1503,7 @@ namespace ExternRedecl {
   constexpr int a = 10;
   static_assert(*p == 10, "");
 }
+
+namespace GetElemDataSizeBool {
+  int foo[(intptr_t)(bool *)0]; // both-warning {{variable length array folded to constant array as an extension}}
+}

@@ -1404,7 +1404,7 @@ def constant_fold_cast_op : GICombineRule<
 def unary_int_op_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op,
-           [G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP,
+           [G_CTLZ, G_CTLZ_ZERO_POISON, G_CTTZ, G_CTTZ_ZERO_POISON, G_CTPOP,
             G_ABS, G_BSWAP, G_BITREVERSE],
            (pattern (op $dst, $src)))>;
 
@@ -2230,11 +2230,11 @@ class ctlz_to_ctls_op<Instruction ctlzOpcode> : GICombineRule <
   (apply [{Helper.applyBuildFn(*${root}, ${matchinfo});}])>;
 
 def ctlz_to_ctls : ctlz_to_ctls_op<G_CTLZ>;
-def ctlz_zero_undef_to_ctls : ctlz_to_ctls_op<G_CTLZ_ZERO_UNDEF>;
+def ctlz_zero_poison_to_ctls : ctlz_to_ctls_op<G_CTLZ_ZERO_POISON>;
 
 def ctls_combines : GICombineGroup<[
   ctlz_to_ctls,
-  ctlz_zero_undef_to_ctls,
+  ctlz_zero_poison_to_ctls,
 ]>;
 
 def narrow_binop_add : narrow_binop_opcode<G_ADD>;

@@ -414,8 +414,14 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     if (!IsShared) {
       if (HTC.GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
         SmallString<128> Crt0 = LibraryDir;
-        llvm::sys::path::append(Crt0, "crt0-semihost.o");
-        CmdArgs.push_back(Args.MakeArgString(Crt0));
+        if (HTC.getTriple().isOSH2()) {
+          llvm::sys::path::append(Crt0, "crt0-noflash-hosted.o");
+          CmdArgs.push_back(Args.MakeArgString(Crt0));
+        } else if (HTC.getTriple().isOSUnknown()) {
+          llvm::sys::path::append(Crt0, "crt0-semihost.o");
+          CmdArgs.push_back(Args.MakeArgString(Crt0));
+        }
+        // Known OS other than H2: no semihost crt0; OS provides its own.
       } else {
         if (HasStandalone) {
           SmallString<128> Crt0SA = LibraryDir;
@@ -468,7 +474,13 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
     if (!IsShared) {
       if (HTC.GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
-        CmdArgs.push_back("-lsemihost");
+        if (HTC.getTriple().isOSH2()) {
+          CmdArgs.push_back("-lh2");
+          CmdArgs.push_back("-lsyscall_wrapper");
+        } else if (HTC.getTriple().isOSUnknown()) {
+          CmdArgs.push_back("-lsemihost");
+        }
+        // Known OS other than H2: no semihost lib; OS provides its own.
       } else {
         for (StringRef Lib : OsLibs)
           CmdArgs.push_back(Args.MakeArgString("-l" + Lib));

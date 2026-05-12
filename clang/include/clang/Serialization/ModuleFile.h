@@ -447,8 +447,24 @@ public:
   /// Base submodule ID for submodules local to this module.
   serialization::SubmoduleID BaseSubmoduleID = 0;
 
+  /// Base submodule ID for submodules local to this module within its own
+  /// address space.
+  unsigned LocalBaseSubmoduleID = 0;
+
+  /// Local submodule ID of the top-level module.
+  unsigned LocalTopLevelSubmoduleID = 0;
+
   /// Remapping table for submodule IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> SubmoduleRemap;
+
+  /// The cursor to the start of the submodules block.
+  llvm::BitstreamCursor SubmodulesCursor;
+
+  /// Absolute offset of the start of the submodules block.
+  uint64_t SubmodulesOffsetBase = 0;
+
+  /// Relative offsets for all submodule entries in the AST file.
+  const llvm::support::unaligned_uint64_t *SubmoduleOffsets = nullptr;
 
   // === Selectors ===
 

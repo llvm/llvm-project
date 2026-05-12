@@ -15,7 +15,9 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
@@ -433,6 +435,10 @@ protected:
   llvm::StringMap<uint32_t> NameToAtSpecifier;
   void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
+  // Lowercase identifiers (e.g. register names, dialect keywords) that must be
+  // quoted when used as a symbol name.
+  llvm::DenseSet<llvm::CachedHashStringRef> ReservedIdentifiers;
+
   const MCTargetOptions &TargetOptions;
 
 public:
@@ -491,6 +497,14 @@ public:
   /// Return true if the identifier \p Name does not need quotes to be
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
+
+  llvm::DenseSet<llvm::CachedHashStringRef> &getReservedIdentifiers() {
+    return ReservedIdentifiers;
+  }
+  const llvm::DenseSet<llvm::CachedHashStringRef> &
+  getReservedIdentifiers() const {
+    return ReservedIdentifiers;
+  }
 
   virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
                                     const Triple &, raw_ostream &) const {}

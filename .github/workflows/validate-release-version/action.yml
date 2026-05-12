@@ -1,0 +1,15 @@
+name: Validate Release String
+description: >-
+  This checks to make sure that the given release-version string is well formed.
+inputs:
+  release-version:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - env:
+      RELEASE_VERSON: ${{ inputs.release-version }}
+
+      run: |
+        grep -e '^[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$' <<< "$RELEASE_VERSION"

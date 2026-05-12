@@ -411,7 +411,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     return false;
 
   // TODO: tail calls
-  if (Info.CB->isMustTailCall())
+  if (Info.IsMustTailCall)
     return false;
 
   // TODO: varargs
@@ -429,14 +429,6 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     return false;
 
   CallInst = MIRBuilder.buildInstrNoInsert(WebAssembly::CALL);
-
-  if (Info.Callee.isGlobal()) {
-    CallInst.addGlobalAddress(Info.Callee.getGlobal());
-  } else if (Info.Callee.isSymbol()) {
-    CallInst.addExternalSymbol(Info.Callee.getSymbolName());
-  } else {
-    return false;
-  }
 
   SmallVector<ArgInfo, 8> SplitArgs;
 
@@ -456,6 +448,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
     splitToValueTypes(Arg, SplitArgs, DL, CallConv);
   }
+
+  SmallVector<Register> CallUseRegs;
 
   for (ArgInfo &Arg : SplitArgs) {
     const EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
@@ -499,14 +493,14 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       for (unsigned Part = 0; Part < NumParts; ++Part) {
         Register NewReg = MRI.createVirtualRegister(&NewRegClass);
         MRI.setType(NewReg, NewLLT);
-        CallInst.addUse(NewReg);
+        CallUseRegs.push_back(NewReg);
         Arg.Regs[Part] = NewReg;
       }
 
       buildCopyToRegs(MIRBuilder, Arg.Regs, Arg.OrigRegs[0], OrigLLT, NewLLT,
                       extendOpFromFlags(Arg.Flags[0]));
     } else {
-      CallInst.addUse(Arg.Regs[0]);
+      CallUseRegs.push_back(Arg.Regs[0]);
     }
   }
 
@@ -603,9 +597,22 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         buildCopyFromRegs(MIRBuilder, Ret.OrigRegs, Ret.Regs, OrigLLT, NewLLT,
                           Ret.Flags[0]);
       } else {
+        MRI.setRegClass(Ret.Regs[0], &NewRegClass);
         CallInst.addDef(Ret.Regs[0]);
       }
     }
+  }
+
+  if (Info.Callee.isGlobal()) {
+    CallInst.addGlobalAddress(Info.Callee.getGlobal());
+  } else if (Info.Callee.isSymbol()) {
+    CallInst.addExternalSymbol(Info.Callee.getSymbolName());
+  } else {
+    return false;
+  }
+
+  for (Register Reg : CallUseRegs) {
+    CallInst.addUse(Reg);
   }
 
   if (!Info.CanLowerReturn)

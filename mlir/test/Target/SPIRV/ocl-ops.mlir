@@ -17,6 +17,14 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     %3 = spirv.CL.cos %arg0 : f32
     // CHECK: {{%.*}} = spirv.CL.log {{%.*}} : f32
     %4 = spirv.CL.log %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.exp2 {{%.*}} : f32
+    %exp2 = spirv.CL.exp2 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.exp10 {{%.*}} : f32
+    %exp10 = spirv.CL.exp10 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.log2 {{%.*}} : f32
+    %log2 = spirv.CL.log2 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.log10 {{%.*}} : f32
+    %log10 = spirv.CL.log10 %arg0 : f32
     // CHECK: {{%.*}} = spirv.CL.sqrt {{%.*}} : f32
     %5 = spirv.CL.sqrt %arg0 : f32
     // CHECK: {{%.*}} = spirv.CL.ceil {{%.*}} : f32

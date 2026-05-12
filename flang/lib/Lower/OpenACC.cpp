@@ -1504,13 +1504,22 @@ static void determineDefaultLoopParMode(
 }
 
 // Helper to visit Bounds of DO LOOP nest.
+//
+// When `markInnerCollapsed` is true (the default), inner DOs that are absorbed
+// into the parent acc.loop's collapse semantics are tagged via
+// markDoConstructAsCollapsed so that genFIR(DoConstruct) skips re-emitting
+// their loop machinery (the parent acc.loop iterates and supplies the IV via
+// a block argument). Pass `false` when the parent acc.loop is unstructured:
+// it has no IV block arguments and the inner DO's iteration mechanics must
+// be emitted as ordinary control flow inside the acc.loop body.
 static void visitLoopControl(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::DoConstruct &outerDoConstruct,
     uint64_t loopsToProcess, Fortran::lower::pft::Evaluation &eval,
     std::function<void(const Fortran::parser::LoopControl::Bounds &,
                        mlir::Location)>
-        callback) {
+        callback,
+    bool markInnerCollapsed = true) {
   Fortran::lower::pft::Evaluation *crtEval = &eval.getFirstNestedEvaluation();
   for (uint64_t i = 0; i < loopsToProcess; ++i) {
     const Fortran::parser::LoopControl *loopControl;
@@ -1537,7 +1546,8 @@ static void visitLoopControl(
       if (!innerDo)
         break; // No deeper loop; stop collecting collapsed bounds.
 
-      Fortran::lower::markDoConstructAsCollapsed(*innerDo);
+      if (markInnerCollapsed)
+        Fortran::lower::markDoConstructAsCollapsed(*innerDo);
       mlir::Location loc =
           converter.genLocation(Fortran::parser::FindSourceLocation(*innerDo));
       if (innerDo->IsDoConcurrent())
@@ -1920,15 +1930,24 @@ static void privatizeInductionVariables(
   llvm::SmallVector<mlir::Location> ivLocs;
   assert(!outerDoConstruct.IsDoConcurrent() &&
          "do concurrent loops are not expected to contained early exits");
-  visitLoopControl(converter, outerDoConstruct, loopsToProcess, eval,
-                   [&](const Fortran::parser::LoopControl::Bounds &bounds,
-                       mlir::Location loc) {
-                     locs.push_back(loc);
-                     Fortran::semantics::Symbol &ivSym =
-                         bounds.Name().thing.symbol->GetUltimate();
-                     privatizeIv(converter, ivSym, currentLocation, ivTypes,
-                                 ivLocs, privateOperands, ivPrivate);
-                   });
+  // Do not mark inner DOs as "collapsed": the parent acc.loop is unstructured
+  // and has no IV block arguments, so each inner DO must emit its own
+  // iteration mechanics as cf inside the acc.loop body. Marking them collapsed
+  // would cause genFIR(DoConstruct) to lower only the body and leave the
+  // pre-allocated PFT scaffold blocks (preheader, header, exit) without
+  // terminators -- which then trips runRegionDCE's mightHaveTerminator
+  // assertion.
+  visitLoopControl(
+      converter, outerDoConstruct, loopsToProcess, eval,
+      [&](const Fortran::parser::LoopControl::Bounds &bounds,
+          mlir::Location loc) {
+        locs.push_back(loc);
+        Fortran::semantics::Symbol &ivSym =
+            bounds.Name().thing.symbol->GetUltimate();
+        privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
+                    privateOperands, ivPrivate);
+      },
+      /*markInnerCollapsed=*/false);
 }
 
 static mlir::acc::LoopOp
