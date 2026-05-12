@@ -51,10 +51,9 @@ protected:
 TEST(SerializedDiagnostics, LargeFixItRoundTrips) {
   // Build a temp output path for the .dia file.
   SmallString<128> TmpPath;
-  ASSERT_FALSE(sys::fs::createTemporaryFile("sdiag-large-fixit", "dia",
-                                            TmpPath));
-  auto Cleanup =
-      llvm::scope_exit([&] { sys::fs::remove(TmpPath); });
+  ASSERT_FALSE(
+      sys::fs::createTemporaryFile("sdiag-large-fixit", "dia", TmpPath));
+  auto Cleanup = llvm::scope_exit([&] { sys::fs::remove(TmpPath); });
 
   // Build a 70 KiB FixIt payload — comfortably above the historical 65535
   // limit but small enough to keep the test cheap.
