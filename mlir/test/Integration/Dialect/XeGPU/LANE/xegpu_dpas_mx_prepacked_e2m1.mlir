@@ -42,8 +42,12 @@ module @gemm attributes {gpu.container_module} {
       %scale_a_tmp = vector.insert %first, %scale_a_undef[%c0] : f8E8M0FNU into vector<2xf8E8M0FNU>
       %scale_a_loaded = vector.insert %second, %scale_a_tmp[%c1] : f8E8M0FNU into vector<2xf8E8M0FNU>
 
-      %tdesc_scale_b = xegpu.create_nd_tdesc %scale_b : memref<2x16xf8E8M0FNU> -> !xegpu.tensor_desc<2x16xf8E8M0FNU>
-      %scale_b_loaded = xegpu.load_nd %tdesc_scale_b[0, 0] : !xegpu.tensor_desc<2x16xf8E8M0FNU> -> vector<2xf8E8M0FNU>
+      // scale_b cannot use 2d block load. 8bit load with 16 columns is not supported
+      %scale_b_undef = arith.constant dense<1.0> : vector<2xf8E8M0FNU>
+      %first_b = memref.load %scale_b[%c0, %id_x] : memref<2x16xf8E8M0FNU>
+      %second_b = memref.load %scale_b[%c1, %id_x] : memref<2x16xf8E8M0FNU>
+      %scale_b_tmp = vector.insert %first_b, %scale_b_undef[%c0] : f8E8M0FNU into vector<2xf8E8M0FNU>
+      %scale_b_loaded = vector.insert %second_b, %scale_b_tmp[%c1] : f8E8M0FNU into vector<2xf8E8M0FNU>
 
       %c_result = xegpu.dpas_mx %a_trunc, %b_trunc, %c_loaded scale_a = %scale_a_loaded scale_b = %scale_b_loaded : vector<32xf4E2M1FN>, vector<64xf4E2M1FN>, vector<8xf32>, vector<2xf8E8M0FNU>, vector<2xf8E8M0FNU> -> vector<8xf32>
 

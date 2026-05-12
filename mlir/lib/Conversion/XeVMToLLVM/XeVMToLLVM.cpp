@@ -810,8 +810,14 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
     } else {
       auto vecElemType = vecType.getElementType();
       auto vecElemBitWidth = vecElemType.getIntOrFloatBitWidth();
-      Value numElems = LLVM::ConstantOp::create(rewriter, loc, i32Type,
-                                                vecType.getNumElements());
+      auto vecNumElems = vecType.getNumElements();
+      if (op.getElemSizeInBits() == 8 && op.getTileWidth() == 32) {
+        vecElemBitWidth = 16;
+        vecElemType = rewriter.getI16Type();
+        vecNumElems = vecNumElems / 2;
+      }
+      Value numElems =
+          LLVM::ConstantOp::create(rewriter, loc, i32Type, vecNumElems);
       auto dstOrSrcPtr = LLVM::AllocaOp::create(
           rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()),
           vecElemType, numElems);
