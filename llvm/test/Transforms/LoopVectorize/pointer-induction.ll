@@ -528,8 +528,7 @@ define i64 @ivopt_widen_ptr_indvar_2(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED:       vector.body:
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], [[TMP1]]
-; STRIDED-NEXT:    [[TMP10:%.*]] = mul i64 1, [[TMP1]]
-; STRIDED-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], [[TMP10]]
+; STRIDED-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], [[TMP1]]
 ; STRIDED-NEXT:    [[TMP12:%.*]] = mul i64 2, [[TMP1]]
 ; STRIDED-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], [[TMP12]]
 ; STRIDED-NEXT:    [[TMP14:%.*]] = mul i64 3, [[TMP1]]

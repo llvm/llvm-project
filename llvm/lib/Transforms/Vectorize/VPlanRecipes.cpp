@@ -23,6 +23,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/BasicBlock.h"
@@ -2580,20 +2581,26 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
-  // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  State.Builder.setFastMathFlags(getFastMathFlags());
-
   /// Compute scalar induction steps. \p ScalarIV is the scalar induction
   /// variable on which to base the steps, \p Step is the size of the step.
 
   Value *BaseIV = State.get(getOperand(0), VPLane(0));
   Value *Step = State.get(getStepValue(), VPLane(0));
-  IRBuilderBase &Builder = State.Builder;
 
   // Ensure step has the same type as that of scalar IV.
   Type *BaseIVTy = BaseIV->getType()->getScalarType();
   assert(BaseIVTy == Step->getType() && "Types of BaseIV and Step must match!");
+
+  // Use the instsimplify folder to clean up any inefficient IR due to
+  // add of zero, or multiply by one, etc.
+  InstSimplifyFolder Folder(State.Builder.GetInsertBlock()->getDataLayout());
+  IRBuilder<InstSimplifyFolder> Builder(BaseIV->getType()->getContext(),
+                                        Folder);
+  Builder.SetInsertPoint(State.Builder.GetInsertPoint());
+  Builder.SetCurrentDebugLocation(getDebugLoc());
+
+  // Fast-math-flags propagate from the original induction instruction.
+  Builder.setFastMathFlags(getFastMathFlags());
 
   // We build scalar steps for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.

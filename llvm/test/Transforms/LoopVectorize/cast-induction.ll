@@ -194,8 +194,7 @@ define void @cast_variable_step(i64 %step) {
 ; IC2-NEXT:    [[TMP2:%.*]] = mul i64 [[INDEX]], [[STEP]]
 ; IC2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 10, [[TMP2]]
 ; IC2-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
-; IC2-NEXT:    [[TMP4:%.*]] = mul i32 1, [[TMP0]]
-; IC2-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], [[TMP4]]
+; IC2-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], [[TMP0]]
 ; IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[INDEX]]
 ; IC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[TMP1]]
 ; IC2-NEXT:    store i32 [[TMP3]], ptr [[TMP6]], align 4
@@ -369,8 +368,7 @@ define void @test_start_zext(i32 %start, ptr %dst) {
 ; IC2:       [[VECTOR_BODY]]:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], [[START_EXT]]
-; IC2-NEXT:    [[TMP3:%.*]] = mul i64 1, [[START_EXT]]
-; IC2-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], [[TMP3]]
+; IC2-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], [[START_EXT]]
 ; IC2-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; IC2-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[DST]], i64 [[TMP4]]
 ; IC2-NEXT:    store float 0.000000e+00, ptr [[TMP5]], align 4
@@ -521,8 +519,7 @@ define i64 @induction_cast_chain_cleared_by_dce(i64 %n, i64 %mask.init) {
 ; IC2-NEXT:    [[VEC_PHI2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[TMP16:%.*]] = mul i64 [[INDEX]], [[TMP3]]
 ; IC2-NEXT:    [[TMP17:%.*]] = add i64 1, [[TMP16]]
-; IC2-NEXT:    [[TMP18:%.*]] = mul i64 1, [[TMP3]]
-; IC2-NEXT:    [[TMP19:%.*]] = add i64 [[TMP17]], [[TMP18]]
+; IC2-NEXT:    [[TMP19:%.*]] = add i64 [[TMP17]], [[TMP3]]
 ; IC2-NEXT:    [[TMP20]] = add i64 [[VEC_PHI]], [[TMP17]]
 ; IC2-NEXT:    [[TMP21]] = add i64 [[VEC_PHI2]], [[TMP19]]
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

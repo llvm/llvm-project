@@ -1086,8 +1086,7 @@ define void @replicated_load_wide_store_derived_iv_zext_and(ptr noalias %src, pt
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; I64-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
 ; I64-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[DOTCAST]], [[STEP]]
-; I64-NEXT:    [[TMP15:%.*]] = mul i32 1, [[STEP]]
-; I64-NEXT:    [[TMP16:%.*]] = add i32 [[OFFSET_IDX]], [[TMP15]]
+; I64-NEXT:    [[TMP16:%.*]] = add i32 [[OFFSET_IDX]], [[STEP]]
 ; I64-NEXT:    [[TMP17:%.*]] = mul i32 2, [[STEP]]
 ; I64-NEXT:    [[TMP18:%.*]] = add i32 [[OFFSET_IDX]], [[TMP17]]
 ; I64-NEXT:    [[TMP19:%.*]] = mul i32 3, [[STEP]]
@@ -1208,8 +1207,7 @@ define void @replicated_load_wide_store_derived_iv_zext_and2(ptr noalias %dst, p
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; I64-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
 ; I64-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[DOTCAST]], [[STEP]]
-; I64-NEXT:    [[TMP7:%.*]] = mul i32 1, [[STEP]]
-; I64-NEXT:    [[TMP8:%.*]] = add i32 [[OFFSET_IDX]], [[TMP7]]
+; I64-NEXT:    [[TMP8:%.*]] = add i32 [[OFFSET_IDX]], [[STEP]]
 ; I64-NEXT:    [[TMP9:%.*]] = mul i32 2, [[STEP]]
 ; I64-NEXT:    [[TMP10:%.*]] = add i32 [[OFFSET_IDX]], [[TMP9]]
 ; I64-NEXT:    [[TMP11:%.*]] = mul i32 3, [[STEP]]

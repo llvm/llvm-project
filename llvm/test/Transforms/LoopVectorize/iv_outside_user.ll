@@ -780,8 +780,7 @@ define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N,
 ; INTERLEAVE-NEXT:    [[DOTCAST1:%.*]] = sitofp i64 [[INDEX]] to float
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = fmul fast float [[FPINC]], [[DOTCAST1]]
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[INIT]], [[TMP4]]
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = fmul fast float 1.000000e+00, [[FPINC]]
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = fadd fast float [[OFFSET_IDX]], [[TMP7]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = fadd fast float [[OFFSET_IDX]], [[FPINC]]
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP3]]
 ; INTERLEAVE-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP6]], align 4
@@ -895,8 +894,7 @@ define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture
 ; INTERLEAVE-NEXT:    [[DOTCAST1:%.*]] = sitofp i64 [[INDEX]] to float
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = fmul fast float [[FPINC]], [[DOTCAST1]]
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[INIT]], [[TMP4]]
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = fmul fast float 1.000000e+00, [[FPINC]]
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = fadd fast float [[OFFSET_IDX]], [[TMP7]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = fadd fast float [[OFFSET_IDX]], [[FPINC]]
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP3]]
 ; INTERLEAVE-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP6]], align 4
@@ -1010,8 +1008,7 @@ define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N,
 ; INTERLEAVE-NEXT:    [[DOTCAST1:%.*]] = sitofp i64 [[INDEX]] to float
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = fmul fast float [[FPINC]], [[DOTCAST1]]
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = fsub fast float [[INIT]], [[TMP4]]
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = fmul fast float 1.000000e+00, [[FPINC]]
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = fsub fast float [[OFFSET_IDX]], [[TMP7]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = fsub fast float [[OFFSET_IDX]], [[FPINC]]
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP3]]
 ; INTERLEAVE-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP6]], align 4
