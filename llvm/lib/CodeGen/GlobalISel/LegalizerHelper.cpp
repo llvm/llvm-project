@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
@@ -4972,6 +4973,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_SMULFIX:
   case G_UMULFIX:
     return lowerMulfix(MI);
+  case G_TRUNC_SSAT_S:
+  case G_TRUNC_SSAT_U:
+  case G_TRUNC_USAT_U:
+    return lowerTruncSat(MI);
   }
 }
 
@@ -10692,6 +10697,51 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
     Shift = MIRBuilder.buildLShr(WideTy, Mul, ShiftAmt);
 
   MIRBuilder.buildTrunc(Dst, Shift);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerTruncSat(MachineInstr &MI) {
+  unsigned OpCode = MI.getOpcode();
+  assert((OpCode == TargetOpcode::G_TRUNC_SSAT_S ||
+          OpCode == TargetOpcode::G_TRUNC_SSAT_U ||
+          OpCode == TargetOpcode::G_TRUNC_USAT_U) &&
+         "Operator must be either G_TRUNC_SSAT_S or G_TRUNC_SSAT_U or "
+         "G_TRUNC_USAT_U!");
+
+  auto [NarrowTy, WideTy] = MI.getFirst2LLTs();
+  auto [Dst, Src] = MI.getFirst2Regs();
+
+  bool IsSignedInput = OpCode == TargetOpcode::G_TRUNC_SSAT_S ||
+                       OpCode == TargetOpcode::G_TRUNC_SSAT_U;
+  bool IsSignedOutput = OpCode == TargetOpcode::G_TRUNC_SSAT_S;
+
+  APInt MaxValue{}, MinValue{};
+  unsigned NarrowSize = NarrowTy.getScalarSizeInBits();
+  unsigned WideSize = WideTy.getScalarSizeInBits();
+  if (IsSignedOutput) {
+    MaxValue = APInt::getSignedMaxValue(NarrowSize).sext(WideSize);
+    MinValue = APInt::getSignedMinValue(NarrowSize).sext(WideSize);
+  } else {
+    MaxValue = APInt::getMaxValue(NarrowSize).zext(WideSize);
+    MinValue = APInt::getZero(WideSize);
+  }
+
+  MachineInstrBuilder LTmax{};
+  if (IsSignedInput) {
+    auto MaxValueConstant = MIRBuilder.buildConstant(WideTy, MaxValue);
+    auto MinValueConstant = MIRBuilder.buildConstant(WideTy, MinValue);
+
+    auto GTMin = MIRBuilder.buildSMax(WideTy, MinValueConstant, Src);
+    LTmax = MIRBuilder.buildSMin(WideTy, GTMin, MaxValueConstant);
+  } else {
+    auto MaxValueConstant = MIRBuilder.buildConstant(WideTy, MaxValue);
+    LTmax = MIRBuilder.buildUMin(WideTy, MaxValueConstant, Src);
+  }
+
+  MIRBuilder.buildTrunc(Dst, LTmax);
 
   MI.eraseFromParent();
   return Legalized;
