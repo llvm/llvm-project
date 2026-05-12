@@ -1000,9 +1000,9 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         RHSInfo, Operands, CtxI, &Ctx.TLI);
   }
   case Instruction::Freeze:
-    // This opcode is unknown. Assume that it is the same as 'mul'.
-    return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, ResultTy,
-                                          Ctx.CostKind);
+    // This will never lead to any real code being generated. It acts purely
+    // as a blocker for optimizations.
+    return 0;
   case Instruction::ExtractValue:
     return Ctx.TTI.getInsertExtractValueCost(Instruction::ExtractValue,
                                              Ctx.CostKind);
