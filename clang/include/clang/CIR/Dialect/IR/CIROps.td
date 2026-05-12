@@ -8200,7 +8200,7 @@ def CIR_LaunderOp : CIR_Op<"launder", [SameOperandsAndResultType]> {
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
-    `(` $arg `)` `:` qualified(type($result)) attr-dict
+    $arg `:` qualified(type($result)) attr-dict
   }];
 }
 

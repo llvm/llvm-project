@@ -51,7 +51,7 @@ auto use_derived(Derived *d) {
 // CIR-STRICT: %[[ARG_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["d", init]
 // CIR-STRICT: %[[RET_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["__retval"]
 // CIR-STRICT: %[[LOAD_ARG:.*]] = cir.load align(8) %[[ARG_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_Derived>>, !cir.ptr<!rec_Derived>
-// CIR-STRICT: %[[LAUNDER:.*]] = cir.launder(%[[LOAD_ARG]]) : !cir.ptr<!rec_Derived>
+// CIR-STRICT: %[[LAUNDER:.*]] = cir.launder %[[LOAD_ARG]]  : !cir.ptr<!rec_Derived>
 // CIR-STRICT: cir.store %[[LAUNDER]], %[[RET_ALLOCA]] : !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR-STRICT: %[[RET:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_Derived>>, !cir.ptr<!rec_Derived>
 // CIR-STRICT: cir.return %[[RET]] : !cir.ptr<!rec_Derived>
@@ -99,7 +99,7 @@ auto use_vm(VirtMem *vm) {
 // CIR-STRICT: %[[ARG_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_VirtMem>, !cir.ptr<!cir.ptr<!rec_VirtMem>>, ["vm", init]
 // CIR-STRICT: %[[RET_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_VirtMem>, !cir.ptr<!cir.ptr<!rec_VirtMem>>, ["__retval"]
 // CIR-STRICT: %[[LOAD_ARG:.*]] = cir.load align(8) %[[ARG_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VirtMem>>, !cir.ptr<!rec_VirtMem>
-// CIR-STRICT: %[[LAUNDER:.*]] = cir.launder(%[[LOAD_ARG]]) : !cir.ptr<!rec_VirtMem>
+// CIR-STRICT: %[[LAUNDER:.*]] = cir.launder %[[LOAD_ARG]] : !cir.ptr<!rec_VirtMem>
 // CIR-STRICT: cir.store %[[LAUNDER]], %[[RET_ALLOCA]] : !cir.ptr<!rec_VirtMem>, !cir.ptr<!cir.ptr<!rec_VirtMem>>
 // CIR-STRICT: %[[RET:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VirtMem>>, !cir.ptr<!rec_VirtMem>
 // CIR-STRICT: cir.return %[[RET]] : !cir.ptr<!rec_VirtMem>
