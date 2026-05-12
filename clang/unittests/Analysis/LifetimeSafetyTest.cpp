@@ -205,15 +205,18 @@ public:
     return Runner.getAnalysis().getFactManager().getBlockContaining(P);
   }
 
-  llvm::SmallVector<OriginID> buildOriginFlowChainInOneBlock(
-      llvm::StringRef StartOriginVar, llvm::StringRef EndLoanVar, llvm::StringRef Annotation) {
+  llvm::SmallVector<OriginID>
+  buildOriginFlowChainInOneBlock(llvm::StringRef StartOriginVar,
+                                 llvm::StringRef EndLoanVar,
+                                 llvm::StringRef Annotation) {
     std::optional<OriginID> StartOriginID = getOriginForDecl(StartOriginVar);
     std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
 
     for (const LoanID &LID : EndLoanIDs) {
-      const llvm::SmallVector<OriginID> OriginFlowChain = buildOriginFlowChain(Runner.getAnalysis().getFactManager(),
-                             Runner.getAnalysis().getLoanPropagation(),
-                             getProgramPoint(Annotation), *StartOriginID, LID);
+      const llvm::SmallVector<OriginID> OriginFlowChain = buildOriginFlowChain(
+          Runner.getAnalysis().getFactManager(),
+          Runner.getAnalysis().getLoanPropagation(),
+          getProgramPoint(Annotation), *StartOriginID, LID);
       if (!OriginFlowChain.empty())
         return OriginFlowChain;
     }
@@ -1990,7 +1993,8 @@ TEST_F(LifetimeAnalysisTest, BuildLinearOriginFlowChainInOneBlock) {
     }
   )");
 
-  const llvm::SmallVector<OriginID> OriginFlowChain = Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
+  const llvm::SmallVector<OriginID> OriginFlowChain =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
 
   // 8 == 2 * (e + b + a + tgt)
   EXPECT_EQ(8u, OriginFlowChain.size());

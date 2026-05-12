@@ -17,11 +17,13 @@ llvm::SmallVector<OriginID> buildOriginFlowChain(
     const FactManager &FactMgr, const LoanPropagationAnalysis &LoanPropagation,
     ProgramPoint StartPoint, const OriginID StartOID, const LoanID TargetLoan) {
 
-  const auto hasLoanAtOrigin = [&LoanPropagation](OriginID OID, LoanID LID, ProgramPoint CurrPoint) {
+  const auto hasLoanAtOrigin = [&LoanPropagation](OriginID OID, LoanID LID,
+                                                  ProgramPoint CurrPoint) {
     return LoanPropagation.getLoans(OID, CurrPoint).contains(LID);
   };
 
-  assert(hasLoanAtOrigin(StartOID, TargetLoan, StartPoint) && "TargetLoan must be present in the initial propagation point");
+  assert(hasLoanAtOrigin(StartOID, TargetLoan, StartPoint) &&
+         "TargetLoan must be present in the initial propagation point");
 
   OriginID CurrOID = StartOID;
   llvm::SmallVector<OriginID> AssignmentList;
@@ -30,7 +32,8 @@ llvm::SmallVector<OriginID> buildOriginFlowChain(
   for (const Fact *F : llvm::reverse(Facts)) {
     if (const auto *OFF = F->getAs<OriginFlowFact>()) {
       const OriginID SrcOriginID = OFF->getSrcOriginID();
-      if (OFF->getDestOriginID() != CurrOID) continue;
+      if (OFF->getDestOriginID() != CurrOID)
+        continue;
       if (!hasLoanAtOrigin(SrcOriginID, TargetLoan, OFF))
         continue;
       AssignmentList.push_back(SrcOriginID);

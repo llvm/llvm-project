@@ -27,8 +27,7 @@ namespace clang::lifetimes::internal {
 /// flow of the specified LoanID within the context of a given OriginID.
 llvm::SmallVector<OriginID> buildOriginFlowChain(
     const FactManager &FactMgr, const LoanPropagationAnalysis &LoanPropagation,
-    ProgramPoint StartPoint, const OriginID StartOID,
-    const LoanID TargetLoan);
+    ProgramPoint StartPoint, const OriginID StartOID, const LoanID TargetLoan);
 } // namespace clang::lifetimes::internal
 
 #endif
