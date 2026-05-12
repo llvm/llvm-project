@@ -11,9 +11,15 @@
 // RUN: %clangxx -### -fno-sycl %s 2>&1 | FileCheck %s --check-prefix=DISABLED
 // RUN: %clangxx -### -fsycl -fno-sycl %s 2>&1 | FileCheck %s --check-prefix=DISABLED
 // RUN: %clangxx -### %s 2>&1 | FileCheck %s --check-prefix=DISABLED
+// Test clang-cl mode (without device libraries to avoid sysroot issues)
 // RUN: %clang_cl -### -fsycl -sycl-std=2017 --no-offloadlib -- %s 2>&1 | FileCheck %s --check-prefix=ENABLED
 // RUN: %clang_cl -### -fsycl --no-offloadlib -- %s 2>&1 | FileCheck %s --check-prefix=ENABLED
 // RUN: %clang_cl -### -- %s 2>&1 | FileCheck %s --check-prefix=DISABLED
+
+// Test Windows target (with device libraries via --target and sysroot)
+// RUN: %clang --target=x86_64-pc-windows-msvc -### -fsycl %s --sysroot=%S/Inputs/SYCL 2>&1 | FileCheck %s --check-prefix=ENABLED-WIN
+// ENABLED-WIN: "-cc1"{{.*}} "-fsycl-is-device"
+// ENABLED-WIN-SAME: "-sycl-std={{[-.sycl0-9]+}}"
 
 // ENABLED: "-cc1"{{.*}} "-fsycl-is-device"
 // ENABLED-SAME: "-sycl-std={{[-.sycl0-9]+}}"

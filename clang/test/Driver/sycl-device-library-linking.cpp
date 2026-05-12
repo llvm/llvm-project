@@ -6,6 +6,14 @@
 // RUN: %clangxx -fsycl --no-offloadlib %s -### 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-NO-DEVICE-LIBS
 
+// Test Windows target includes libsycl-msvc-math.bc
+// RUN: %clangxx --target=x86_64-pc-windows-msvc -fsycl %s --sysroot=%S/Inputs/SYCL -### 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-DEVICE-LIBS-WIN
+
+// Test non-Windows target does not include libsycl-msvc-math.bc
+// RUN: %clangxx --target=x86_64-unknown-linux-gnu -fsycl %s --sysroot=%S/Inputs/SYCL -### 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-DEVICE-LIBS-LINUX
+
 // Test ITT instrumentation libraries (enabled by default)
 // RUN: %clangxx -fsycl %s --sysroot=%S/Inputs/SYCL -### 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-ITT-DEFAULT
@@ -57,5 +65,21 @@
 // CHECK-ITT-DISABLED-NOT: "libsycl-itt-user-wrappers.bc"
 // CHECK-ITT-DISABLED-NOT: "libsycl-itt-compiler-wrappers.bc"
 // CHECK-ITT-DISABLED-NOT: "libsycl-itt-stubs.bc"
+
+// Windows target should include libsycl-msvc-math.bc
+// CHECK-DEVICE-LIBS-WIN: "-cc1" "-triple" "spirv64-unknown-unknown"
+// CHECK-DEVICE-LIBS-WIN-SAME: "-aux-triple" "x86_64-pc-windows-msvc"
+// CHECK-DEVICE-LIBS-WIN-SAME: "-fsycl-is-device"
+// CHECK-DEVICE-LIBS-WIN-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-cmath-fp64.bc"
+// CHECK-DEVICE-LIBS-WIN-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-msvc-math.bc"
+// CHECK-DEVICE-LIBS-WIN-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-imf.bc"
+
+// Linux target should NOT include libsycl-msvc-math.bc
+// CHECK-DEVICE-LIBS-LINUX: "-cc1" "-triple" "spirv64-unknown-unknown"
+// CHECK-DEVICE-LIBS-LINUX-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
+// CHECK-DEVICE-LIBS-LINUX-SAME: "-fsycl-is-device"
+// CHECK-DEVICE-LIBS-LINUX-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-cmath-fp64.bc"
+// CHECK-DEVICE-LIBS-LINUX-NOT: "libsycl-msvc-math.bc"
+// CHECK-DEVICE-LIBS-LINUX-SAME: "-mlink-builtin-bitcode" "{{.*}}libsycl-imf.bc"
 
 void foo() {}

@@ -282,25 +282,29 @@ SYCLToolChain::getDeviceLibNames(const Driver &D,
   // For SPIR/SPIRV targets, add SYCL device libraries.
   if (TargetTriple.isSPIROrSPIRV()) {
     using SYCLDeviceLibsList = SmallVector<StringRef>;
-    const SYCLDeviceLibsList SYCLDeviceLibs = {"libsycl-crt",
-                                               "libsycl-complex",
-                                               "libsycl-complex-fp64",
-                                               "libsycl-cmath",
-                                               "libsycl-cmath-fp64",
-#if defined(_WIN32)
-                                               "libsycl-msvc-math",
-#endif
-                                               "libsycl-imf",
-                                               "libsycl-imf-fp64",
-                                               "libsycl-imf-bf16",
-                                               "libsycl-fallback-cstring",
-                                               "libsycl-fallback-complex",
-                                               "libsycl-fallback-complex-fp64",
-                                               "libsycl-fallback-cmath",
-                                               "libsycl-fallback-cmath-fp64",
-                                               "libsycl-fallback-imf",
-                                               "libsycl-fallback-imf-fp64",
-                                               "libsycl-fallback-imf-bf16"};
+    SYCLDeviceLibsList SYCLDeviceLibs = {"libsycl-crt",
+                                         "libsycl-complex",
+                                         "libsycl-complex-fp64",
+                                         "libsycl-cmath",
+                                         "libsycl-cmath-fp64"};
+
+    // Add Windows-specific math library when targeting Windows hosts
+    if (HostTC.getTriple().isOSWindows())
+      SYCLDeviceLibs.push_back("libsycl-msvc-math");
+
+    SYCLDeviceLibsList SYCLDeviceLibs2 = {"libsycl-imf",
+                                          "libsycl-imf-fp64",
+                                          "libsycl-imf-bf16",
+                                          "libsycl-fallback-cstring",
+                                          "libsycl-fallback-complex",
+                                          "libsycl-fallback-complex-fp64",
+                                          "libsycl-fallback-cmath",
+                                          "libsycl-fallback-cmath-fp64",
+                                          "libsycl-fallback-imf",
+                                          "libsycl-fallback-imf-fp64",
+                                          "libsycl-fallback-imf-bf16"};
+    SYCLDeviceLibs.append(SYCLDeviceLibs2.begin(), SYCLDeviceLibs2.end());
+
     auto addLibraries = [&](const SYCLDeviceLibsList &LibsList) {
       for (const StringRef &Lib : LibsList)
         addLibToList(Args.MakeArgString(Lib + ".bc"));
