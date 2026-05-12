@@ -91,6 +91,13 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                            << ", but target block has "
                            << destBB->getNumArguments();
 
+  // Check that no token type is used as a forwarded operand.
+  for (Value operand : operands.getForwardedOperands()) {
+    if (isa<TokenType>(operand.getType()))
+      return op->emitError()
+             << "token type is not allowed as a forwarded operand";
+  }
+
   // Check the types.
   LDBG() << "Checking type compatibility for "
          << (operandCount - operands.getProducedOperandCount())
@@ -201,6 +208,13 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
                << ": region branch point has " << succOperands.size()
                << " operands, but region successor needs " << succInputs.size()
                << " inputs";
+      }
+
+      // Verify that no token type is used as a forwarded operand.
+      for (Value operand : succOperands) {
+        if (isa<TokenType>(operand.getType()))
+          return emitRegionEdgeError()
+                 << ": token type is not allowed as a forwarded operand";
       }
 
       // Verify that the types are compatible.
