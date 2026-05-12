@@ -17,7 +17,7 @@
 ; RUN: diff %s %t4
 
 ; Test extracting all images without specifying --image filters.
-; RUN: rm -rf %.dir && mkdir %t.dir
+; RUN: rm -rf %t.dir && mkdir %t.dir
 ; RUN: cd %t.dir
 ; RUN: llvm-offload-binary %t | FileCheck --check-prefix=EXTRACT %s
 
