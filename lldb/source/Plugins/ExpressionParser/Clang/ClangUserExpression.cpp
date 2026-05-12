@@ -91,7 +91,8 @@ ClangUserExpression::ClangUserExpression(
 
 ClangUserExpression::~ClangUserExpression() = default;
 
-void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
+void ClangUserExpression::ScanContext(DiagnosticManager &diagnostic_manager,
+                                      ExecutionContext &exe_ctx) {
   Log *log = GetLog(LLDBLog::Expressions);
 
   LLDB_LOGF(log, "ClangUserExpression::ScanContext()");
@@ -159,12 +160,12 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
         lldb::VariableListSP variable_list_sp(
             function_block->GetBlockVariableList(true));
 
-        const char *thisErrorString = "Stopped in a C++ method, but 'this' "
-                                      "isn't available; pretending we are in a "
-                                      "generic context";
+        const char *msg = "Stopped in a C++ method, but 'this' isn't "
+                          "available; pretending we are in a generic context";
 
         if (!variable_list_sp) {
-          err = Status::FromErrorString(thisErrorString);
+          diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                           eDiagnosticOriginLLDB);
           return;
         }
 
@@ -173,7 +174,8 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
         if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
             !this_var_sp->LocationIsValidForFrame(frame)) {
-          err = Status::FromErrorString(thisErrorString);
+          diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                           eDiagnosticOriginLLDB);
           return;
         }
       }
@@ -189,12 +191,12 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
         lldb::VariableListSP variable_list_sp(
             function_block->GetBlockVariableList(true));
 
-        const char *selfErrorString = "Stopped in an Objective-C method, but "
-                                      "'self' isn't available; pretending we "
-                                      "are in a generic context";
+        const char *msg = "Stopped in an Objective-C method, but 'self' isn't "
+                          "available; pretending we are in a generic context";
 
         if (!variable_list_sp) {
-          err = Status::FromErrorString(selfErrorString);
+          diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                           eDiagnosticOriginLLDB);
           return;
         }
 
@@ -203,7 +205,8 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
         if (!self_variable_sp || !self_variable_sp->IsInScope(frame) ||
             !self_variable_sp->LocationIsValidForFrame(frame)) {
-          err = Status::FromErrorString(selfErrorString);
+          diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                           eDiagnosticOriginLLDB);
           return;
         }
       }
@@ -232,13 +235,13 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           lldb::VariableListSP variable_list_sp(
               function_block->GetBlockVariableList(true));
 
-          const char *thisErrorString = "Stopped in a context claiming to "
-                                        "capture a C++ object pointer, but "
-                                        "'this' isn't available; pretending we "
-                                        "are in a generic context";
+          const char *msg = "Stopped in a context claiming to capture a C++ "
+                            "object pointer, but 'this' isn't available; "
+                            "pretending we are in a generic context";
 
           if (!variable_list_sp) {
-            err = Status::FromErrorString(thisErrorString);
+            diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                             eDiagnosticOriginLLDB);
             return;
           }
 
@@ -247,7 +250,8 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
               !this_var_sp->LocationIsValidForFrame(frame)) {
-            err = Status::FromErrorString(thisErrorString);
+            diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                             eDiagnosticOriginLLDB);
             return;
           }
         }
@@ -259,13 +263,13 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           lldb::VariableListSP variable_list_sp(
               function_block->GetBlockVariableList(true));
 
-          const char *selfErrorString =
-              "Stopped in a context claiming to capture an Objective-C object "
-              "pointer, but 'self' isn't available; pretending we are in a "
-              "generic context";
+          const char *msg = "Stopped in a context claiming to capture an "
+                            "Objective-C object pointer, but 'self' isn't "
+                            "available; pretending we are in a generic context";
 
           if (!variable_list_sp) {
-            err = Status::FromErrorString(selfErrorString);
+            diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                             eDiagnosticOriginLLDB);
             return;
           }
 
@@ -274,21 +278,24 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           if (!self_variable_sp || !self_variable_sp->IsInScope(frame) ||
               !self_variable_sp->LocationIsValidForFrame(frame)) {
-            err = Status::FromErrorString(selfErrorString);
+            diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                             eDiagnosticOriginLLDB);
             return;
           }
 
           Type *self_type = self_variable_sp->GetType();
 
           if (!self_type) {
-            err = Status::FromErrorString(selfErrorString);
+            diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                             eDiagnosticOriginLLDB);
             return;
           }
 
           CompilerType self_clang_type = self_type->GetForwardCompilerType();
 
           if (!self_clang_type) {
-            err = Status::FromErrorString(selfErrorString);
+            diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                             eDiagnosticOriginLLDB);
             return;
           }
 
@@ -299,7 +306,8 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             m_in_objectivec_method = true;
             m_needs_object_ptr = true;
           } else {
-            err = Status::FromErrorString(selfErrorString);
+            diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                             eDiagnosticOriginLLDB);
             return;
           }
         } else {
@@ -525,7 +533,7 @@ bool ClangUserExpression::PrepareForParsing(
     return false;
 
   Status err;
-  ScanContext(exe_ctx, err);
+  ScanContext(diagnostic_manager, exe_ctx);
 
   if (!err.Success()) {
     diagnostic_manager.PutString(lldb::eSeverityWarning, err.AsCString());
