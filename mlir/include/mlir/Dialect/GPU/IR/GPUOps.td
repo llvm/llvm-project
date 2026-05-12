@@ -1499,8 +1499,10 @@ def GPU_BarrierOp : GPU_Op<"barrier">,
 
     Once one thread of execution in a given scope (say, thread in a workgroup)
     has executed a particular dynamic instance of `gpu.barrier`, all other threads
-    in that scope must execute the same dynamic instance of `gpu.barrier` before
-    executing any other instance of it.
+    in that scope are required to execute the same dynamic instance of `gpu.barrier`
+    before any thread executes any other instance of it. That is, you cannot, for
+    example, have the two subgroups of a workgroup arrive at `gpu.barrier` ops in
+    different branches of an if statement and have this work.
   }];
   let assemblyFormat = [{
     oilist(
