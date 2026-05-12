@@ -1843,7 +1843,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
 // Pattern class for GPRPair operations
 class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
-          (Inst GPR:$rs1, GPR:$rs2)>;
+          (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
