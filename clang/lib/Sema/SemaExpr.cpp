@@ -2814,12 +2814,12 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
       TemplateArgs);
 }
 
-ExprResult
-Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
-                        SourceLocation TemplateKWLoc, UnqualifiedId &Id,
-                        bool HasTrailingLParen, bool IsAddressOfOperand,
-                        CorrectionCandidateCallback *CCC,
-                        bool IsInlineAsmIdentifier, Token *KeywordReplacement) {
+ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
+                                   SourceLocation TemplateKWLoc,
+                                   UnqualifiedId &Id, bool HasTrailingLParen,
+                                   bool IsAddressOfOperand,
+                                   CorrectionCandidateCallback *CCC,
+                                   bool IsInlineAsmIdentifier) {
   assert(!(IsAddressOfOperand && HasTrailingLParen) &&
          "cannot be direct & operand and have a trailing lparen");
   if (SS.isInvalid())
@@ -6076,9 +6076,14 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
                               SourceLocation RParenLoc,
                               bool IsExecConfig) {
   // Bail out early if calling a builtin with custom typechecking.
+  // For HLSL builtin aliases, argument conversion is still needed because
+  // overload resolution may have selected a conversion sequence (e.g.,
+  // vector-to-scalar truncation) that must be applied before the custom
+  // type checker runs.
   if (FDecl)
     if (unsigned ID = FDecl->getBuiltinID())
-      if (Context.BuiltinInfo.hasCustomTypechecking(ID))
+      if (Context.BuiltinInfo.hasCustomTypechecking(ID) &&
+          !(Context.getLangOpts().HLSL && FDecl->hasAttr<BuiltinAliasAttr>()))
         return false;
 
   // C99 6.5.2.2p7 - the arguments are implicitly converted, as if by
@@ -7205,6 +7210,18 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
 
   // Bail out early if calling a builtin with custom type checking.
   if (BuiltinID && Context.BuiltinInfo.hasCustomTypechecking(BuiltinID)) {
+    // For HLSL builtin aliases, the call was resolved via overload resolution
+    // which may have selected a conversion sequence (e.g., vector-to-scalar
+    // truncation). Convert arguments to match the declared prototype before
+    // the custom type checker runs, otherwise the builtin will operate on
+    // the unconverted argument types.
+    if (getLangOpts().HLSL && FDecl && FDecl->hasAttr<BuiltinAliasAttr>()) {
+      if (const auto *P = FDecl->getType()->getAs<FunctionProtoType>()) {
+        if (ConvertArgumentsForCall(TheCall, Fn, FDecl, P, Args, RParenLoc,
+                                    IsExecConfig))
+          return ExprError();
+      }
+    }
     ExprResult E = CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);
     if (!E.isInvalid() && Context.BuiltinInfo.isImmediate(BuiltinID))
       E = CheckForImmediateInvocation(E, FDecl);
@@ -9152,7 +9169,7 @@ static QualType computeConditionalNullability(QualType ResTy, bool IsBin,
     return ResTy;
 
   auto GetNullability = [](QualType Ty) {
-    std::optional<NullabilityKind> Kind = Ty->getNullability();
+    NullabilityKindOrNone Kind = Ty->getNullability();
     if (Kind) {
       // For our purposes, treat _Nullable_result as _Nullable.
       if (*Kind == NullabilityKind::NullableResult)
@@ -17591,8 +17608,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     }
     break;
   case AssignConvertType::IncompatiblePointerDiscardsQualifiers: {
-    // Perform array-to-pointer decay if necessary.
-    if (SrcType->isArrayType()) SrcType = Context.getArrayDecayedType(SrcType);
+    // Perform decay if necessary.
+    if (SrcType->canDecayToPointerType())
+      SrcType = Context.getDecayedType(SrcType);
 
     isInvalid = true;
 
@@ -17705,6 +17723,11 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case AssignConvertType::CompatibleOBTDiscards:
     return false;
   case AssignConvertType::IncompatibleOBTKinds: {
+    assert(!SrcType->isFunctionType() &&
+           "Unexpected function type found in IncompatibleOBTKinds assignment");
+    if (SrcType->canDecayToPointerType())
+      SrcType = Context.getDecayedType(SrcType);
+
     auto getOBTKindName = [](QualType Ty) -> StringRef {
       if (Ty->isPointerType())
         Ty = Ty->getPointeeType();

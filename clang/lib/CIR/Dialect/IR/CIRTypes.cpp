@@ -26,6 +26,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/MathExtras.h"
 
 //===----------------------------------------------------------------------===//
 // CIR Helpers
@@ -335,14 +336,13 @@ Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   auto endIt = getPadded() ? std::prev(members.end()) : members.end();
   if (endIt == members.begin())
     return {};
-  return *std::max_element(
-      members.begin(), endIt, [&](Type lhs, Type rhs) {
-        return dataLayout.getTypeABIAlignment(lhs) <
-                   dataLayout.getTypeABIAlignment(rhs) ||
-               (dataLayout.getTypeABIAlignment(lhs) ==
-                    dataLayout.getTypeABIAlignment(rhs) &&
-                dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
-      });
+  return *std::max_element(members.begin(), endIt, [&](Type lhs, Type rhs) {
+    return dataLayout.getTypeABIAlignment(lhs) <
+               dataLayout.getTypeABIAlignment(rhs) ||
+           (dataLayout.getTypeABIAlignment(lhs) ==
+                dataLayout.getTypeABIAlignment(rhs) &&
+            dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
+  });
 }
 
 bool RecordType::isLayoutIdentical(const RecordType &other) {
@@ -378,8 +378,12 @@ PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 llvm::TypeSize
 RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                               mlir::DataLayoutEntryListRef params) const {
-  if (isUnion())
-    return dataLayout.getTypeSize(getLargestMember(dataLayout));
+  if (isUnion()) {
+    mlir::Type largest = getLargestMember(dataLayout);
+    if (!largest)
+      return llvm::TypeSize::getFixed(0);
+    return dataLayout.getTypeSizeInBits(largest);
+  }
 
   auto recordSize = static_cast<uint64_t>(computeStructSize(dataLayout));
   return llvm::TypeSize::getFixed(recordSize * 8);
@@ -424,6 +428,29 @@ RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
   // At the end, add padding to the struct to satisfy its own alignment
   // requirement. Otherwise structs inside of arrays would be misaligned.
   recordSize = llvm::alignTo(recordSize, recordAlignment);
+  return recordSize;
+}
+
+unsigned
+RecordType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
+  assert(isComplete() && "Cannot get layout of incomplete records");
+
+  // Compute the data size (excluding tail padding) for this record type. For
+  // padded records, the last member is the tail padding array added by
+  // CIRGenRecordLayoutBuilder::appendPaddingBytes, so we exclude it. For
+  // non-padded records, data size equals the full struct size without
+  // alignment.
+  auto members = getMembers();
+  unsigned numMembers =
+      getPadded() && members.size() > 1 ? members.size() - 1 : members.size();
+  unsigned recordSize = 0;
+  for (unsigned i = 0; i < numMembers; ++i) {
+    mlir::Type ty = members[i];
+    const uint64_t tyAlign =
+        (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+    recordSize = llvm::alignTo(recordSize, tyAlign);
+    recordSize += dataLayout.getTypeSize(ty);
+  }
   return recordSize;
 }
 
@@ -518,15 +545,28 @@ Type IntType::parse(mlir::AsmParser &parser) {
     return {};
   }
 
+  bool isBitInt = false;
+  if (succeeded(parser.parseOptionalComma())) {
+    llvm::StringRef kw;
+    if (parser.parseKeyword(&kw) || kw != "bitint") {
+      parser.emitError(loc, "expected 'bitint'");
+      return {};
+    }
+    isBitInt = true;
+  }
+
   if (parser.parseGreater())
     return {};
 
-  return IntType::get(context, width, isSigned);
+  return IntType::get(context, width, isSigned, isBitInt);
 }
 
 void IntType::print(mlir::AsmPrinter &printer) const {
   char sign = isSigned() ? 's' : 'u';
-  printer << '<' << sign << ", " << getWidth() << '>';
+  printer << '<' << sign << ", " << getWidth();
+  if (isBitInt())
+    printer << ", bitint";
+  printer << '>';
 }
 
 llvm::TypeSize
@@ -537,12 +577,20 @@ IntType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
 
 uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
-  return (uint64_t)(getWidth() / 8);
+  unsigned width = getWidth();
+  if (isBitInt()) {
+    // _BitInt alignment: min(PowerOf2Ceil(width), 64 bits) in bytes.
+    // Matches Clang's TargetInfo::getBitIntAlign with default max = 64.
+    uint64_t alignBits =
+        std::min(llvm::PowerOf2Ceil(width), static_cast<uint64_t>(64));
+    return std::max(alignBits / 8, static_cast<uint64_t>(1));
+  }
+  return (uint64_t)(width / 8);
 }
 
 mlir::LogicalResult
 IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                unsigned width, bool isSigned) {
+                unsigned width, bool isSigned, bool isBitInt) {
   if (width < IntType::minBitwidth() || width > IntType::maxBitwidth())
     return emitError() << "IntType only supports widths from "
                        << IntType::minBitwidth() << " up to "

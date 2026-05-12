@@ -2139,10 +2139,10 @@ def : GCNPat <
 def : GCNPat <
   (UniformUnaryFrag<fneg> (v2f32 SReg_64:$src)),
   (v2f32 (REG_SEQUENCE SReg_64,
-         (f32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
+         (f32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
                                            (i32 (S_MOV_B32 (i32 0x80000000)))),
                                  SReg_32)), sub0,
-         (f32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+         (f32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
                                            (i32 (S_MOV_B32 (i32 0x80000000)))),
                                  SReg_32)), sub1))
 >;
@@ -2150,21 +2150,32 @@ def : GCNPat <
 def : GCNPat <
   (UniformUnaryFrag<fabs> (v2f32 SReg_64:$src)),
   (v2f32 (REG_SEQUENCE SReg_64,
-         (f32 (COPY_TO_REGCLASS (S_AND_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
+         (f32 (COPY_TO_REGCLASS (S_AND_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
                                            (i32 (S_MOV_B32 (i32 0x7fffffff)))),
                                  SReg_32)), sub0,
-         (f32 (COPY_TO_REGCLASS (S_AND_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+         (f32 (COPY_TO_REGCLASS (S_AND_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
                                            (i32 (S_MOV_B32 (i32 0x7fffffff)))),
                                  SReg_32)), sub1))
 >;
 
 def : GCNPat <
+  (DivergentUnaryFrag<fabs> (v2f32 VReg_64:$src)),
+  (v2f32 (REG_SEQUENCE VReg_64,
+         (f32 (COPY_TO_REGCLASS (V_AND_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
+                                               (i32 (S_MOV_B32 (i32 0x7fffffff)))),
+                                 VGPR_32)), sub0,
+         (f32 (COPY_TO_REGCLASS (V_AND_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
+                                               (i32 (S_MOV_B32 (i32 0x7fffffff)))),
+                                 VGPR_32)), sub1))
+>;
+
+def : GCNPat <
   (UniformUnaryFrag<fneg> (fabs (v2f32 SReg_64:$src))),
   (v2f32 (REG_SEQUENCE SReg_64,
-         (f32 (COPY_TO_REGCLASS (S_OR_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
+         (f32 (COPY_TO_REGCLASS (S_OR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
                                            (i32 (S_MOV_B32 (i32 0x80000000)))),
                                  SReg_32)), sub0,
-         (f32 (COPY_TO_REGCLASS (S_OR_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+         (f32 (COPY_TO_REGCLASS (S_OR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
                                            (i32 (S_MOV_B32 (i32 0x80000000)))),
                                  SReg_32)), sub1))
 >;
@@ -2301,9 +2312,11 @@ def : GCNPat <
 
 def : GCNPat <
   (DivergentUnaryFrag<fneg> (v2f32 VReg_64:$src)),
-  (V_PK_ADD_F32 !or(SRCMODS.OP_SEL_1, SRCMODS.NEG, SRCMODS.NEG_HI), VReg_64:$src,
-                !or(SRCMODS.OP_SEL_1, SRCMODS.NEG, SRCMODS.NEG_HI), (i64 0),
-                0, 0, 0, 0, 0)
+  (REG_SEQUENCE VReg_64,
+      (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
+                     (i32 (S_MOV_B32 (i32 0x80000000)))), sub0,
+      (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
+                     (i32 (S_MOV_B32 (i32 0x80000000)))), sub1)
 > {
   let SubtargetPredicate = HasPackedFP32Ops;
 }
@@ -3655,7 +3668,12 @@ def : GCNPat<
   (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
   (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
 >;
-}
+
+def : GCNPat<
+  (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
+  (V_PK_MUL_F32 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
+>;
+} // End SubtargetPredicate = HasPackedFP32Ops
 
 // TODO: Handle fneg like other types.
 let SubtargetPredicate = isNotGFX12Plus in {
@@ -3813,6 +3831,23 @@ def : GCNPat <
 def : GCNPat <
   (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 fpimm_pos_zero))),
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
+>;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (v2i16 (DivergentBinFrag<build_vector> (i16 0), (i16 VGPR_16:$src1))),
+  (v2i16 (V_LSHLREV_B32_e64 (i16 16), VGPR_16:$src1))
+>;
+
+def : GCNPat <
+  (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_16:$src1), (i16 0))),
+  (v2i16 (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, VGPR_16:$src1))
+>;
+
+def : GCNPat <
+  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_16:$src1), (f16 fpimm_pos_zero))),
+  (v2f16 (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, VGPR_16:$src1))
 >;
 }
 

@@ -23,7 +23,6 @@ public:
       : DataExtractor(data, offset, length) {}
 
   llvm::DWARFDataExtractor GetAsLLVMDWARF() const;
-  llvm::DataExtractor GetAsLLVM() const;
 };
 } // namespace lldb_private
 

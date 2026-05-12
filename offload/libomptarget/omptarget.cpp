@@ -2350,7 +2350,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 #endif
 
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
-                              KernelArgs, AsyncInfo);
+                              KernelArgs, nullptr, AsyncInfo);
   }
 
   if (Ret != OFFLOAD_SUCCESS) {
@@ -2379,67 +2379,117 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 /// and informing the record-replayer of whether to store the output
 /// in some file.
 int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
-                       bool IsRecord, bool SaveOutput,
-                       uint64_t &ReqPtrArgOffset) {
-  return Device.RTL->initialize_record_replay(Device.DeviceID, MemorySize,
-                                              VAddr, IsRecord, SaveOutput,
-                                              ReqPtrArgOffset);
+                       bool IsRecord, bool SaveOutput, bool EmitReport,
+                       const char *OutputDirPath) {
+  return Device.RTL->initialize_record_replay(
+      Device.DeviceID, MemorySize, VAddr, IsRecord,
+      /*IsNative=*/true, SaveOutput, EmitReport, OutputDirPath);
 }
 
 /// Executes a kernel using pre-recorded information for loading to
 /// device memory to launch the target kernel with the pre-recorded
 /// configuration.
 int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-                  void *DeviceMemory, int64_t DeviceMemorySize, void **TgtArgs,
-                  ptrdiff_t *TgtOffsets, int32_t NumArgs, int32_t NumTeams,
-                  int32_t ThreadLimit, uint64_t LoopTripCount,
-                  AsyncInfoTy &AsyncInfo) {
+                  void *DeviceMemory, int64_t DeviceMemorySize,
+                  void *ReuseDeviceAlloc,
+                  const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
+                  void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
+                  int32_t NumTeams, int32_t ThreadLimit,
+                  uint32_t SharedMemorySize, uint64_t LoopTripCount,
+                  AsyncInfoTy &AsyncInfo,
+                  KernelReplayOutcomeTy *ReplayOutcome) {
   int32_t DeviceId = Device.DeviceID;
-  TableMap *TM = getTableMap(HostPtr);
-  // Fail if the table map fails to find the target kernel pointer for the
-  // provided host pointer.
-  if (!TM) {
-    REPORT() << "Host ptr " << HostPtr
-             << " does not have a matching target pointer.";
+  int32_t NumSymbols = NumGlobals + 1;
+
+  struct SymbolDataTy {
+    void *DevPtr = nullptr;
+    TableMap *TM = nullptr;
+    __tgt_target_table *TargetTable = nullptr;
+  };
+  SmallVector<SymbolDataTy> Symbols(NumSymbols);
+
+  for (int32_t I = 0; I < NumSymbols; ++I) {
+    // The first symbol is the kernel entry.
+    void *SymbolHostPtr = (I == 0) ? HostPtr : Globals[I - 1].Address;
+
+    // Get the table map for each symbol.
+    Symbols[I].TM = getTableMap(SymbolHostPtr);
+    if (!Symbols[I].TM) {
+      REPORT() << "Host pointer " << SymbolHostPtr
+               << " does not have a matching target pointer.";
+      return OFFLOAD_FAIL;
+    }
+  }
+
+  // Retrieve the target table for each symbol.
+  {
+    std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
+    for (auto &S : Symbols) {
+      assert(S.TM->Table->TargetsTable.size() > (size_t)DeviceId &&
+             "Not expecting a device ID outside the table's bounds!");
+      S.TargetTable = S.TM->Table->TargetsTable[DeviceId];
+      assert(S.TargetTable && "Global data has not been mapped\n");
+    }
+  }
+
+  // Retrieve the device pointers for each symbol.
+  for (auto &S : Symbols)
+    S.DevPtr = S.TargetTable->EntriesBegin[S.TM->Index].Address;
+
+  // Initialize the device memory of each global.
+  for (int32_t I = 0; I < NumGlobals; ++I) {
+    assert(Globals[I].AuxAddr && "Global has no AuxAddr.");
+
+    // Initialize the value of the global in the device.
+    int Ret = Device.submitData(Symbols[I + 1].DevPtr, Globals[I].AuxAddr,
+                                Globals[I].Size, AsyncInfo);
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT() << "Failed to submit data to a global.";
+      return OFFLOAD_FAIL;
+    }
+  }
+
+  // Reuse a previous device allocation or allocate a new device buffer.
+  void *&TgtPtr = ReuseDeviceAlloc;
+  if (!TgtPtr)
+    TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
+                              TARGET_ALLOC_DEFAULT);
+  if (!TgtPtr) {
+    REPORT() << "Failed to allocate device memory.";
     return OFFLOAD_FAIL;
   }
 
-  // Retrieve the target table of offloading entries.
-  __tgt_target_table *TargetTable = nullptr;
-  {
-    std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
-    assert(TM->Table->TargetsTable.size() > (size_t)DeviceId &&
-           "Not expecting a device ID outside the table's bounds!");
-    TargetTable = TM->Table->TargetsTable[DeviceId];
+  // Save the device allocation for future replays of the same kernel.
+  if (ReplayOutcome)
+    ReplayOutcome->ReplayDeviceAlloc = TgtPtr;
+
+  int Ret =
+      Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
+  if (Ret != OFFLOAD_SUCCESS) {
+    REPORT() << "Failed to submit data to a global.";
+    return OFFLOAD_FAIL;
   }
-  assert(TargetTable && "Global data has not been mapped\n");
-
-  // Retrieve the target kernel pointer, allocate and store the recorded device
-  // memory data, and launch device execution.
-  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].Address;
-  ODBG(ODT_Kernel) << "Launching target execution "
-                   << TargetTable->EntriesBegin[TM->Index].SymbolName
-                   << " with pointer " << TgtEntryPtr << " (index=" << TM->Index
-                   << ").";
-
-  void *TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
-                                  TARGET_ALLOC_DEFAULT);
-  Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
 
   KernelArgsTy KernelArgs{};
   KernelArgs.Version = OMP_KERNEL_ARG_VERSION;
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;
   KernelArgs.NumTeams[0] = NumTeams;
+  KernelArgs.NumTeams[1] = 1;
+  KernelArgs.NumTeams[2] = 1;
   KernelArgs.ThreadLimit[0] = ThreadLimit;
+  KernelArgs.ThreadLimit[1] = 1;
+  KernelArgs.ThreadLimit[2] = 1;
+  KernelArgs.DynCGroupMem = SharedMemorySize;
 
-  int Ret = Device.launchKernel(TgtEntryPtr, TgtArgs, TgtOffsets, KernelArgs,
-                                AsyncInfo);
+  KernelExtraArgsTy KernelExtraArgs{};
+  KernelExtraArgs.ReplayOutcome = ReplayOutcome;
 
+  Ret = Device.launchKernel(Symbols[0].DevPtr, TgtArgs, TgtOffsets, KernelArgs,
+                            &KernelExtraArgs, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
-    REPORT() << "Executing target region abort target.";
+    REPORT() << "Failed to launch kernel replay.";
     return OFFLOAD_FAIL;
   }
-
   return OFFLOAD_SUCCESS;
 }

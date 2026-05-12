@@ -27,6 +27,8 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
+#include "llvm/HTTP/HTTPClient.h"
+#include "llvm/HTTP/StreamedHTTPResponseHandler.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/CachePruning.h"
@@ -34,7 +36,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
@@ -172,53 +173,6 @@ Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
   return getCachedOrDownloadArtifact(UniqueKey, UrlPath, CacheDir,
                                      getDefaultDebuginfodUrls(),
                                      getDefaultDebuginfodTimeout());
-}
-
-namespace {
-
-/// A simple handler which streams the returned data to a cache file. The cache
-/// file is only created if a 200 OK status is observed.
-class StreamedHTTPResponseHandler : public HTTPResponseHandler {
-  using CreateStreamFn =
-      std::function<Expected<std::unique_ptr<CachedFileStream>>()>;
-  CreateStreamFn CreateStream;
-  HTTPClient &Client;
-  std::unique_ptr<CachedFileStream> FileStream;
-
-public:
-  StreamedHTTPResponseHandler(CreateStreamFn CreateStream, HTTPClient &Client)
-      : CreateStream(CreateStream), Client(Client) {}
-
-  /// Must be called exactly once after the writes have been completed
-  /// but before the StreamedHTTPResponseHandler object is destroyed.
-  Error commit();
-
-  virtual ~StreamedHTTPResponseHandler() = default;
-
-  Error handleBodyChunk(StringRef BodyChunk) override;
-};
-
-} // namespace
-
-Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
-  if (!FileStream) {
-    unsigned Code = Client.responseCode();
-    if (Code && Code != 200)
-      return Error::success();
-    Expected<std::unique_ptr<CachedFileStream>> FileStreamOrError =
-        CreateStream();
-    if (!FileStreamOrError)
-      return FileStreamOrError.takeError();
-    FileStream = std::move(*FileStreamOrError);
-  }
-  *FileStream->OS << BodyChunk;
-  return Error::success();
-}
-
-Error StreamedHTTPResponseHandler::commit() {
-  if (FileStream)
-    return FileStream->commit();
-  return Error::success();
 }
 
 // An over-accepting simplification of the HTTP RFC 7230 spec.

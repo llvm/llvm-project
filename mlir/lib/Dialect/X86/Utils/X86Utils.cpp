@@ -116,15 +116,20 @@ struct ShuffleMasks {
   llvm::ArrayRef<int64_t> maskHi;
 };
 
-inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc) {
+inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc, bool isInt8Avx2) {
   // We only support these two layouts for now.
   assert((nonUnitDimAcc == 8 || nonUnitDimAcc == 16) &&
          "Unsupported nonUnitDimAcc value");
+
   // Do interleaving between two <8xf32> targeting AVX2.
   static constexpr int64_t maskLo8[] = {0, 8, 1, 9, 2, 10, 3, 11};
   static constexpr int64_t maskHi8[] = {4, 12, 5, 13, 6, 14, 7, 15};
 
-  // Shuffle two <16xf32> as below targeting AVX512.
+  // Do interleaving between two <8xi32> targeting AVX2.
+  static constexpr int64_t maskLo8_avx2_int8[] = {0, 1, 2, 3, 8, 9, 10, 11};
+  static constexpr int64_t maskHi8_avx2_int8[] = {4, 5, 6, 7, 12, 13, 14, 15};
+
+  // Shuffle two <16xf32/i32> as below targeting AVX512.
   static constexpr int64_t maskLo16[] = {0, 1, 2, 3, 16, 17, 18, 19,
                                          4, 5, 6, 7, 20, 21, 22, 23};
   static constexpr int64_t maskHi16[] = {8,  9,  10, 11, 24, 25, 26, 27,
@@ -132,6 +137,9 @@ inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc) {
 
   if (nonUnitDimAcc == 16)
     return {maskLo16, maskHi16};
+
+  if (isInt8Avx2)
+    return {maskLo8_avx2_int8, maskHi8_avx2_int8};
 
   return {maskLo8, maskHi8};
 }
@@ -255,7 +263,8 @@ LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
   auto castB =
       vector::ShapeCastOp::create(rewriter, loc, flatTy, opB->getResult(0));
 
-  auto masks = getShuffleMasks(nonUnitDimAcc);
+  auto masks = getShuffleMasks(
+      nonUnitDimAcc, (elemTy.isSignlessInteger(32) && nonUnitDimAcc == 8));
 
   auto shuffleLo = vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
                                              castB, masks.maskLo);
@@ -313,7 +322,8 @@ LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
   auto castB = vector::ShapeCastOp::create(rewriter, loc, flatTy, vecB);
 
   // TODO: derive shuffle masks instead of hard-coding
-  auto masks = getShuffleMasks(nonUnitDimAcc);
+  auto masks = getShuffleMasks(
+      nonUnitDimAcc, (elemTy.isSignlessInteger(32) && nonUnitDimAcc == 8));
 
   auto shuffledLo = vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
                                               castB, masks.maskLo);

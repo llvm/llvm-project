@@ -1,7 +1,11 @@
 // UNSUPPORTED: system-windows
-// General tests that ld invocations on Linux targets sane. Note that we use
-// sysroot to make these tests independent of the host system.
-//
+/// Tests for Linux toolchain discovery and start/end-file selection in
+/// gnutools::Linker::ConstructJob: crt*.o selection, -L search paths, multilib,
+/// -m elf_* per triple, --hash-style per target, -lgcc chains, and per-triple
+/// --dynamic-linker. Every RUN uses a sysroot tree so results are host-
+/// independent. Pure driver->linker argument forwarding without sysroot
+/// dependencies lives in linux-ld-args.c.
+
 // RUN: %clang -### -Werror %s -no-pie 2>&1 \
 // RUN:     --target=i386-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -1820,7 +1824,3 @@
 // CHECK-OE-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtend.o"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crtn.o"
-
-/// -nopie is OpenBSD-specific.
-// RUN: not %clang -### --target=x86_64-unknown-linux-gnu %s -nopie 2>&1 | FileCheck %s --check-prefix=CHECK-NOPIE
-// CHECK-NOPIE: error: unsupported option '-nopie' for target 'x86_64-unknown-linux-gnu'

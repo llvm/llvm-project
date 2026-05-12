@@ -33,6 +33,8 @@ ENUM_CODEGENOPT(ProfileUse, llvm::driver::ProfileInstrKind, 2, llvm::driver::Pro
 CODEGENOPT(InstrumentFunctions, 1, 0) ///< Set when -finstrument_functions is
                                       ///< enabled on the compile step.
 
+CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
+
 CODEGENOPT(IsPIE, 1, 0) ///< PIE level is the same as PIC Level.
 CODEGENOPT(PICLevel, 2, 0) ///< PIC level of the LLVM module.
 CODEGENOPT(PrepareForFatLTO , 1, 0) ///<  Set when -ffat-lto-objects is enabled.
