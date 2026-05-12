@@ -52,9 +52,10 @@ function(libclc_set_source_options option)
   )
 endfunction()
 
-# Configures compile options, include directories, definitions, and
-# properties on an existing libclc builtin library target.
-function(libclc_configure_library target_name)
+# Creates a static library target for libclc builtins and configures its
+# compile options, include directories, and definitions. Subdirectories
+# populate sources via libclc_add_sources() after this call.
+function(libclc_add_builtin_library target_name)
   cmake_parse_arguments(ARG
     ""
     "FOLDER"
@@ -62,6 +63,7 @@ function(libclc_configure_library target_name)
     ${ARGN}
   )
 
+  add_library(${target_name} STATIC)
   target_compile_options(${target_name} PRIVATE ${ARG_COMPILE_OPTIONS})
   target_include_directories(${target_name} PRIVATE ${ARG_INCLUDE_DIRS})
   target_compile_definitions(${target_name} PRIVATE ${ARG_COMPILE_DEFINITIONS})

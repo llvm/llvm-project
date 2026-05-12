@@ -122,22 +122,6 @@ foreach( tool IN ITEMS opt llvm-link )
   endif()
 endforeach()
 
-# Create library targets before add_subdirectory calls so that
-# subdirectories can add sources via libclc_add_sources().
-set(LIBCLC_CLC_TARGET clc)
-add_library(${LIBCLC_CLC_TARGET} STATIC)
-
-set(LIBCLC_OPENCL_TARGET opencl)
-add_library(${LIBCLC_OPENCL_TARGET} STATIC)
-
-add_subdirectory(clc)
-add_subdirectory(opencl)
-
-add_custom_target( libclc ALL )
-
-add_custom_target( libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins" )
-add_dependencies( libclc libclc-opencl-builtins )
-
 # Determine the clang target triple. Vulkan and SPIR-V backend targets use the
 # triple directly; other SPIR-V targets fall back to the legacy SPIR target.
 set(clang_triple ${LIBCLC_TARGET})
@@ -203,15 +187,16 @@ set(common_defs
 )
 
 # Configure the CLC internal builtins library.
-libclc_configure_library(${LIBCLC_CLC_TARGET}
+set(LIBCLC_CLC_TARGET clc)
+libclc_add_builtin_library(${LIBCLC_CLC_TARGET}
   COMPILE_OPTIONS ${compile_flags}
   INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
   COMPILE_DEFINITIONS ${common_defs}
   FOLDER "libclc/Device IR/CLC"
 )
 
-# Configure the OpenCL builtins library.
-libclc_configure_library(${LIBCLC_OPENCL_TARGET}
+set(LIBCLC_OPENCL_TARGET opencl)
+libclc_add_builtin_library(${LIBCLC_OPENCL_TARGET}
   COMPILE_OPTIONS ${compile_flags} "SHELL:-Xclang -fdeclare-opencl-builtins"
   INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
@@ -219,6 +204,13 @@ libclc_configure_library(${LIBCLC_OPENCL_TARGET}
   COMPILE_DEFINITIONS ${common_defs}
   FOLDER "libclc/Device IR/Intermediate"
 )
+
+add_subdirectory(clc)
+add_subdirectory(opencl)
+
+add_custom_target(libclc ALL)
+add_custom_target(libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins")
+add_dependencies(libclc libclc-opencl-builtins)
 
 # Link and install the final OpenCL builtins library.
 libclc_add_library(libclc-${LIBCLC_TARGET}
