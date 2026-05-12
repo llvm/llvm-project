@@ -38,6 +38,7 @@ public:
     AGVK_TotalNumVGPRs,
     AGVK_AlignTo,
     AGVK_Occupancy,
+    AGVK_InstPrefSize,
     AGVK_Lit,
     AGVK_Lit64,
   };
@@ -69,6 +70,7 @@ private:
   bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateInstPrefSize(MCValue &Res, const MCAssembler *Asm) const;
 
 public:
   static const AMDGPUMCExpr *
@@ -97,11 +99,18 @@ public:
     return create(VariantKind::AGVK_AlignTo, {Value, Align}, Ctx);
   }
 
+  /// Create an expression for instruction prefetch size computation:
+  /// min(divideCeil(CodeSizeBytes, CacheLineSize), (1 << FieldWidth) - 1)
+  /// FieldWidth and CacheLineSize are derived from the subtarget.
+  static const AMDGPUMCExpr *createInstPrefSize(const MCExpr *CodeSizeBytes,
+                                                MCContext &Ctx);
+
   static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,
                                        MCContext &Ctx);
 
   ArrayRef<const MCExpr *> getArgs() const { return Args; }
   VariantKind getKind() const { return Kind; }
+  MCContext &getCtx() const { return Ctx; }
   const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;

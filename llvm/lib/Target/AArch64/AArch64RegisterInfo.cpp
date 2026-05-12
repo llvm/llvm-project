@@ -1157,9 +1157,13 @@ static bool HandleDestructivePredicateHint(
   }
 
   Hints.append(Order.begin(), Order.end());
+  auto CanUseReg = [&](Register R) {
+    return !CSRs.contains(R) || !MRI.def_empty(R) || Matrix->isPhysRegUsed(R);
+  };
   llvm::stable_sort(Hints, [&](Register A, Register B) {
-    return A != B && B == Op1Reg &&
-           (!CSRs.contains(A) || !MRI.def_empty(A) || Matrix->isPhysRegUsed(A));
+    bool PrefA = (A != Op1Reg) && CanUseReg(A);
+    bool PrefB = (B != Op1Reg) && CanUseReg(B);
+    return PrefA && !PrefB;
   });
   return true;
 }
@@ -1242,6 +1246,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
         case AArch64::DestructiveUnaryPassthru:
           AddHintIfSuitable(R, Def.getOperand(3));
           break;
+        case AArch64::DestructiveBinaryImmUnpred:
         case AArch64::DestructiveBinaryShImmUnpred:
           AddHintIfSuitable(R, Def.getOperand(1));
           break;

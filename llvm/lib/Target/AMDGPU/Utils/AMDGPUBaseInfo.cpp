@@ -588,6 +588,11 @@ bool getWMMAIsXDL(unsigned Opc) {
   return Info ? Info->is_wmma_xdl : false;
 }
 
+bool getHasMatrixScale(unsigned Opc) {
+  const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
+  return Info && Info->HasMatrixScale;
+}
+
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
   switch (EncodingVal) {
   case MFMAScaleFormats::FP6_E2M3:
@@ -1175,6 +1180,14 @@ std::string AMDGPUTargetID::toString() const {
   raw_string_ostream OS(Str);
   OS << *this;
   return Str;
+}
+
+unsigned getInstCacheLineSize(const MCSubtargetInfo *STI) {
+  if (STI->getFeatureBits().test(FeatureInstCacheLineSize128))
+    return 128;
+  if (STI->getFeatureBits().test(FeatureInstCacheLineSize64))
+    return 64;
+  return 64;
 }
 
 unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
@@ -2508,10 +2521,6 @@ unsigned getDynamicVGPRBlockSize(const Function &F) {
 
 bool hasXNACK(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureXNACK);
-}
-
-bool hasSRAMECC(const MCSubtargetInfo &STI) {
-  return STI.hasFeature(AMDGPU::FeatureSRAMECC);
 }
 
 bool hasMIMG_R128(const MCSubtargetInfo &STI) {

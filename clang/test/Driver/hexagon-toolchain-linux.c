@@ -213,3 +213,16 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-NOSAN %s
 // CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}msan"
 // CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}asan"
+// -----------------------------------------------------------------------------
+// ThinLTO passes LTO options to the linker
+// -----------------------------------------------------------------------------
+// RUN: touch %t.o
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -flto=thin -fenable-matrix \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LTO %s
+// CHECK-LTO: "-plugin-opt=thinlto"
+// CHECK-LTO: "-plugin-opt=-enable-matrix"

@@ -1861,9 +1861,8 @@ define <8 x float> @load_v8f32_i8(i8 %trigger, ptr %addr) {
 ;
 ; AVX512F-LABEL: load_v8f32_i8:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    kmovw %edi, %k0
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
+; AVX512F-NEXT:    movzbl %dil, %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vmovups (%rsi), %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq

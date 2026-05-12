@@ -142,13 +142,12 @@ public:
 };
 
 class CtxProfAnalysisPrinterPass
-    : public PassInfoMixin<CtxProfAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<CtxProfAnalysisPrinterPass> {
 public:
   enum class PrintMode { Everything, YAML };
   LLVM_ABI explicit CtxProfAnalysisPrinterPass(raw_ostream &OS);
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-  static bool isRequired() { return true; }
 
 private:
   raw_ostream &OS;
@@ -182,6 +181,7 @@ public:
                                          uint64_t &MaxCount) const;
   LLVM_ABI ~ProfileAnnotator();
 };
+
 
 } // namespace llvm
 #endif // LLVM_ANALYSIS_CTXPROFANALYSIS_H
