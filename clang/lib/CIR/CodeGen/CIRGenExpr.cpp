@@ -2257,18 +2257,14 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   // is the object expression even though the operator is static.  Emit the
   // object for its side effects and drop it before walking the parameter
   // arguments.
-  bool staticOperator = false;
+  auto arguments = e->arguments();
   if (const auto *oce = dyn_cast<CXXOperatorCallExpr>(e)) {
     if (const auto *md =
             dyn_cast_if_present<CXXMethodDecl>(oce->getCalleeDecl());
-        md && md->isStatic())
-      staticOperator = true;
-  }
-
-  auto arguments = e->arguments();
-  if (staticOperator) {
-    emitIgnoredExpr(e->getArg(0));
-    arguments = llvm::drop_begin(arguments, 1);
+        md && md->isStatic()) {
+      emitIgnoredExpr(e->getArg(0));
+      arguments = llvm::drop_begin(arguments, 1);
+    }
   }
 
   emitCallArgs(args, dyn_cast<FunctionProtoType>(fnType), arguments,
