@@ -13,8 +13,8 @@ define void @_Z1fv() {
   ; PEI-NEXT:   CFI_INSTRUCTION offset $xmm10, -48
   ; PEI-NEXT:   CFI_INSTRUCTION offset $xmm15, -32
   ; PEI-NEXT:   INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $xmm10, clobber, implicit-def dead early-clobber $xmm15, clobber, implicit-def dead early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def dead early-clobber $eflags
-  ; PEI-NEXT:   $xmm10 = MOVAPSrm $rsp, 1, $noreg, 0, $noreg :: (load (s128) from %fixed-stack.0)
-  ; PEI-NEXT:   $xmm15 = MOVAPSrm $rsp, 1, $noreg, 16, $noreg :: (load (s128) from %fixed-stack.1)
+  ; PEI-NEXT:   $xmm10 = frame-destroy MOVAPSrm $rsp, 1, $noreg, 0, $noreg :: (load (s128) from %fixed-stack.0)
+  ; PEI-NEXT:   $xmm15 = frame-destroy MOVAPSrm $rsp, 1, $noreg, 16, $noreg :: (load (s128) from %fixed-stack.1)
   ; PEI-NEXT:   $rsp = frame-destroy ADD64ri32 $rsp, 40, implicit-def dead $eflags
   ; PEI-NEXT:   RET 0
 entry:

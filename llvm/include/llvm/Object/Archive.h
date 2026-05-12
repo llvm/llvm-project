@@ -158,6 +158,46 @@ public:
   Expected<bool> isThin() const override { return false; }
 };
 
+// Define file member header of z/OS archive.
+// The fixed part of the member header (in EBCDIC) is:
+// struct ar_hdr {
+//   char ar_name[16]; /* space-padded member name */
+//   char ar_date[12]; /* date (decimal) */
+//   char ar_uid[6];   /* user id (decimal) */
+//   char ar_gid[6];   /* group id (decimal) */
+//   char ar_mode[8];  /* access mode (octal) */
+//   char ar_size[10]; /* length in bytes (decimal) */
+//   char ar_fmag[2];  /* contains backtick (X'79'), followed by new line
+//   (X'15') */
+// };
+class ZOSArchiveMemberHeader : public ArchiveMemberHeader {
+public:
+  ZOSArchiveMemberHeader(Archive const *Parent, const char *RawHeaderPtr,
+                         uint64_t Size, Error *Err);
+  std::unique_ptr<AbstractArchiveMemberHeader> clone() const override {
+    return std::make_unique<ZOSArchiveMemberHeader>(*this);
+  }
+
+  // Converted EBCDIC to ASCII header string fields.
+  std::string RawMemberName;
+  std::string MemberName;
+  std::string LastModified;
+  std::string UID;
+  std::string GID;
+  std::string AccessMode;
+
+  void setMemberHeaderStrings(Error *Err, uint64_t Size);
+
+  Expected<StringRef> getRawName() const override;
+  Expected<StringRef> getName(uint64_t Size) const override;
+  StringRef getRawAccessMode() const override;
+  StringRef getRawLastModified() const override;
+  StringRef getRawUID() const override;
+  StringRef getRawGID() const override;
+  Expected<uint64_t> getSize() const override;
+  Expected<bool> isThin() const override { return false; }
+};
+
 class LLVM_ABI Archive : public Binary {
   virtual void anchor();
 
@@ -343,7 +383,16 @@ public:
   /// Size field is 10 decimal digits long
   static const uint64_t MaxMemberSize = 9999999999;
 
-  enum Kind { K_GNU, K_GNU64, K_BSD, K_DARWIN, K_DARWIN64, K_COFF, K_AIXBIG };
+  enum Kind {
+    K_GNU,
+    K_GNU64,
+    K_BSD,
+    K_DARWIN,
+    K_DARWIN64,
+    K_COFF,
+    K_AIXBIG,
+    K_ZOS
+  };
 
   Kind kind() const { return (Kind)Format; }
   bool isThin() const { return IsThin; }
@@ -434,6 +483,18 @@ public:
   bool has64BitGlobalSymtab() { return Has64BitGlobalSymtab; }
 };
 
+class ZOSArchive : public Archive {
+public:
+  // Fixed-Length header.
+  struct FixLenHdr {
+    char Magic[sizeof(ZOSArchiveMagic) - 1]; ///< ZOS archive magic string.
+  };
+
+  ZOSArchive(MemoryBufferRef Source, Error &Err);
+
+private:
+  std::string SymbolTableBuf; // __.SYMDEF strings converted to ASCII.
+};
 } // end namespace object
 } // end namespace llvm
 

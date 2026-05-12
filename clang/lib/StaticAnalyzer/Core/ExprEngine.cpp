@@ -3713,52 +3713,38 @@ ExprEngine::notifyCheckersOfPointerEscape(ProgramStateRef State,
 }
 
 /// evalBind - Handle the semantics of binding a value to a specific location.
-///  This method is used by evalStore and (soon) VisitDeclStmt, and others.
+///  This method is used by evalStore, VisitDeclStmt, and others.
 void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
-                          ExplodedNode *Pred, SVal location, SVal Val,
+                          ExplodedNode *Pred, SVal Location, SVal Val,
                           bool AtDeclInit, const ProgramPoint *PP) {
+  // It may be a Loc, UnknownVal or perhaps UndefinedVal.
+  assert(!isa<NonLoc>(Location) && "evalBind location should not be NonLoc!");
+
   const LocationContext *LC = Pred->getLocationContext();
-  PostStmt PS(StoreE, LC);
+  PostStmt DefaultPP(StoreE, LC);
   if (!PP)
-    PP = &PS;
+    PP = &DefaultPP;
 
   // Do a previsit of the bind.
   ExplodedNodeSet CheckedSet;
-  getCheckerManager().runCheckersForBind(CheckedSet, Pred, location, Val,
+  getCheckerManager().runCheckersForBind(CheckedSet, Pred, Location, Val,
                                          StoreE, AtDeclInit, *this, *PP);
 
-  NodeBuilder Bldr(CheckedSet, Dst, *currBldrCtx);
+  for (ExplodedNode *PredI : CheckedSet) {
+    ProgramStateRef State = PredI->getState();
 
-  // If the location is not a 'Loc', it will already be handled by
-  // the checkers.  There is nothing left to do.
-  if (!isa<Loc>(location)) {
-    const ProgramPoint L = PostStore(StoreE, LC, /*Loc*/nullptr,
-                                     /*tag*/nullptr);
-    ProgramStateRef state = Pred->getState();
-    state = processPointerEscapedOnBind(state, location, Val, LC);
-    Bldr.generateNode(L, state, Pred);
-    return;
-  }
+    // Check and record that 'Val' may escape:
+    State = processPointerEscapedOnBind(State, Location, Val, LC);
 
-  for (const auto PredI : CheckedSet) {
-    ProgramStateRef state = PredI->getState();
-
-    state = processPointerEscapedOnBind(state, location, Val, LC);
-
-    // When binding the value, pass on the hint that this is a initialization.
-    // For initializations, we do not need to inform clients of region
-    // changes.
-    state = state->bindLoc(location.castAs<Loc>(), Val, LC,
-                           /* notifyChanges = */ !AtDeclInit);
-
-    const MemRegion *LocReg = nullptr;
-    if (std::optional<loc::MemRegionVal> LocRegVal =
-            location.getAs<loc::MemRegionVal>()) {
-      LocReg = LocRegVal->getRegion();
+    if (auto AsLoc = Location.getAs<Loc>()) {
+      // When binding the value, pass on the hint that this is a
+      // initialization. For initializations, we do not need to inform clients
+      // of region changes.
+      State = State->bindLoc(*AsLoc, Val, LC, /*notifyChanges=*/!AtDeclInit);
     }
 
-    const ProgramPoint L = PostStore(StoreE, LC, LocReg, nullptr);
-    Bldr.generateNode(L, state, PredI);
+    PostStore PS(StoreE, LC, Location.getAsRegion(), /*tag=*/nullptr);
+    Dst.insert(Engine.makeNode(PS, State, PredI));
   }
 }
 

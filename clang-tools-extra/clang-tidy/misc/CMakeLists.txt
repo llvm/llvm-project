@@ -39,6 +39,7 @@ add_clang_library(clangTidyMiscModule STATIC
   PredictableRandCheck.cpp
   RedundantExpressionCheck.cpp
   StaticAssertCheck.cpp
+  StaticInitializationCycleCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
   UnconventionalAssignOperatorCheck.cpp
   UniqueptrResetReleaseCheck.cpp

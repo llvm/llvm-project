@@ -2003,7 +2003,7 @@ let TargetPrefix = "riscv" in {
   // We use llvm_anyvector_ty and llvm_anyint_ty for future extensibility
   // purpose but only EEW=32 is defined for now
   // Input: (vector_in, vector_in, vector_in/scalar_in, vl, policy)
-  class RISCVVDOTA4UnMasked<bit HasVV>
+  class RISCVVDOT4AUnMasked<bit HasVV>
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                 [LLVMMatchType<0>, LLVMMatchType<0>,
                                  !if(HasVV, llvm_any_ty, llvm_anyint_ty),
@@ -2014,7 +2014,7 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 3;
   }
   // Input: (vector_in, vector_in, vector_in/scalar_in, mask, vl, policy)
-  class RISCVVDOTA4Masked<bit HasVV>
+  class RISCVVDOT4AMasked<bit HasVV>
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                 [LLVMMatchType<0>, LLVMMatchType<0>,
                                  !if(HasVV, llvm_any_ty, llvm_anyint_ty),
@@ -2026,15 +2026,15 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
 
-  multiclass RISCVVDOTA4<bit HasVV = 1> {
-    def "int_riscv_" # NAME : RISCVVDOTA4UnMasked<HasVV=HasVV>;
-    def "int_riscv_" # NAME # "_mask" : RISCVVDOTA4Masked<HasVV=HasVV>;
+  multiclass RISCVVDOT4A<bit HasVV = 1> {
+    def "int_riscv_" # NAME : RISCVVDOT4AUnMasked<HasVV=HasVV>;
+    def "int_riscv_" # NAME # "_mask" : RISCVVDOT4AMasked<HasVV=HasVV>;
   }
 
-  defm vdota4   : RISCVVDOTA4;
-  defm vdota4u  : RISCVVDOTA4;
-  defm vdota4su : RISCVVDOTA4;
-  defm vdota4us : RISCVVDOTA4<HasVV=0>;
+  defm vdot4a   : RISCVVDOT4A;
+  defm vdot4au  : RISCVVDOT4A;
+  defm vdot4asu : RISCVVDOT4A;
+  defm vdot4aus : RISCVVDOT4A<HasVV=0>;
 } // TargetPrefix = "riscv"
 
 

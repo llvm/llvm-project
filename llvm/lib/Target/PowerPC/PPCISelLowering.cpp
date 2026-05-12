@@ -9809,7 +9809,10 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         getCanonicalConstSplat(SextVal, UseSize, Op.getValueType(), DAG, dl);
     if (SplatSize != 8)
       return Res;
-    return BuildIntrinsicOp(Intrinsic::ppc_altivec_vupklsw, Res, DAG, dl);
+    SDValue IntrinsicOp =
+        BuildIntrinsicOp(Intrinsic::ppc_altivec_vupklsw,
+                         DAG.getBitcast(MVT::v4i32, Res), DAG, dl, MVT::v2i64);
+    return DAG.getBitcast(Op.getValueType(), IntrinsicOp);
   }
 
   // Two instruction sequences.

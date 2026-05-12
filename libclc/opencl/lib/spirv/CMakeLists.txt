@@ -1,9 +1,12 @@
-set(_gen ${CMAKE_CURRENT_SOURCE_DIR}/../generic)
+if(LIBCLC_TARGET_OS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBCLC_TARGET_OS})
+  add_subdirectory(${LIBCLC_TARGET_OS})
+  return()
+endif()
 
-# SPIR-V uses a curated subset of generic builtins, so this list is
-# self-contained rather than merged with the generic set.
-libclc_configure_source_list(OPENCL_SPIRV_SOURCES
-  ${_gen}
+# Non-Vulkan SPIR-V uses a curated subset of generic builtins.
+libclc_add_sources(${LIBCLC_OPENCL_TARGET}
+  BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../generic
+  FILES
   async/async_work_group_strided_copy.cl
   async/wait_group_events.cl
   common/degrees.cl

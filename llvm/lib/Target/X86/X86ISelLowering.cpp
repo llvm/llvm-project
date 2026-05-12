@@ -61204,8 +61204,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
 
     // See if were inserting into a zero vXi1 vector and the subvector was
     // bitcast from a gpr that could be zero-extended directly.
-    if (IsI1Vector && TLI.isTypeLegal(OpVT)) {
-      SDValue SubInt = peekThroughBitcasts(SubVec);
+    if (IsI1Vector && TLI.isTypeLegal(OpVT) && SubVec.hasOneUse()) {
+      SDValue SubInt = peekThroughOneUseBitcasts(SubVec);
       EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VecNumElts);
       if (TLI.isTypeLegal(IntVT) && SubInt.getValueType().isScalarInteger()) {
         SubInt = DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, SubInt);

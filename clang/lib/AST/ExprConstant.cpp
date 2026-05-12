@@ -16980,20 +16980,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BIstdc_bit_ceil_ui:
   case Builtin::BIstdc_bit_ceil_ul:
   case Builtin::BIstdc_bit_ceil_ull:
-  case Builtin::BIstdc_leading_zeros:
-  case Builtin::BIstdc_leading_ones:
-  case Builtin::BIstdc_trailing_zeros:
-  case Builtin::BIstdc_trailing_ones:
-  case Builtin::BIstdc_first_leading_zero:
-  case Builtin::BIstdc_first_leading_one:
-  case Builtin::BIstdc_first_trailing_zero:
-  case Builtin::BIstdc_first_trailing_one:
-  case Builtin::BIstdc_count_zeros:
-  case Builtin::BIstdc_count_ones:
-  case Builtin::BIstdc_has_single_bit:
-  case Builtin::BIstdc_bit_width:
-  case Builtin::BIstdc_bit_floor:
-  case Builtin::BIstdc_bit_ceil:
   case Builtin::BI__builtin_stdc_leading_zeros:
   case Builtin::BI__builtin_stdc_leading_ones:
   case Builtin::BI__builtin_stdc_trailing_zeros:
@@ -17021,7 +17007,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_leading_zeros_ui:
     case Builtin::BIstdc_leading_zeros_ul:
     case Builtin::BIstdc_leading_zeros_ull:
-    case Builtin::BIstdc_leading_zeros:
     case Builtin::BI__builtin_stdc_leading_zeros:
       return Success(APInt(ResBitWidth, Val.countl_zero()), E);
     case Builtin::BIstdc_leading_ones_uc:
@@ -17029,7 +17014,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_leading_ones_ui:
     case Builtin::BIstdc_leading_ones_ul:
     case Builtin::BIstdc_leading_ones_ull:
-    case Builtin::BIstdc_leading_ones:
     case Builtin::BI__builtin_stdc_leading_ones:
       return Success(APInt(ResBitWidth, Val.countl_one()), E);
     case Builtin::BIstdc_trailing_zeros_uc:
@@ -17037,7 +17021,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_trailing_zeros_ui:
     case Builtin::BIstdc_trailing_zeros_ul:
     case Builtin::BIstdc_trailing_zeros_ull:
-    case Builtin::BIstdc_trailing_zeros:
     case Builtin::BI__builtin_stdc_trailing_zeros:
       return Success(APInt(ResBitWidth, Val.countr_zero()), E);
     case Builtin::BIstdc_trailing_ones_uc:
@@ -17045,7 +17028,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_trailing_ones_ui:
     case Builtin::BIstdc_trailing_ones_ul:
     case Builtin::BIstdc_trailing_ones_ull:
-    case Builtin::BIstdc_trailing_ones:
     case Builtin::BI__builtin_stdc_trailing_ones:
       return Success(APInt(ResBitWidth, Val.countr_one()), E);
     case Builtin::BIstdc_first_leading_zero_uc:
@@ -17053,7 +17035,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_first_leading_zero_ui:
     case Builtin::BIstdc_first_leading_zero_ul:
     case Builtin::BIstdc_first_leading_zero_ull:
-    case Builtin::BIstdc_first_leading_zero:
     case Builtin::BI__builtin_stdc_first_leading_zero:
       return Success(
           APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countl_one() + 1), E);
@@ -17062,7 +17043,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_first_leading_one_ui:
     case Builtin::BIstdc_first_leading_one_ul:
     case Builtin::BIstdc_first_leading_one_ull:
-    case Builtin::BIstdc_first_leading_one:
     case Builtin::BI__builtin_stdc_first_leading_one:
       return Success(
           APInt(ResBitWidth, Val.isZero() ? 0 : Val.countl_zero() + 1), E);
@@ -17071,7 +17051,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_first_trailing_zero_ui:
     case Builtin::BIstdc_first_trailing_zero_ul:
     case Builtin::BIstdc_first_trailing_zero_ull:
-    case Builtin::BIstdc_first_trailing_zero:
     case Builtin::BI__builtin_stdc_first_trailing_zero:
       return Success(
           APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countr_one() + 1), E);
@@ -17080,7 +17059,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_first_trailing_one_ui:
     case Builtin::BIstdc_first_trailing_one_ul:
     case Builtin::BIstdc_first_trailing_one_ull:
-    case Builtin::BIstdc_first_trailing_one:
     case Builtin::BI__builtin_stdc_first_trailing_one:
       return Success(
           APInt(ResBitWidth, Val.isZero() ? 0 : Val.countr_zero() + 1), E);
@@ -17089,7 +17067,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_count_zeros_ui:
     case Builtin::BIstdc_count_zeros_ul:
     case Builtin::BIstdc_count_zeros_ull:
-    case Builtin::BIstdc_count_zeros:
     case Builtin::BI__builtin_stdc_count_zeros: {
       APInt Cnt(ResBitWidth, BitWidth - Val.popcount());
       return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
@@ -17099,7 +17076,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_count_ones_ui:
     case Builtin::BIstdc_count_ones_ul:
     case Builtin::BIstdc_count_ones_ull:
-    case Builtin::BIstdc_count_ones:
     case Builtin::BI__builtin_stdc_count_ones: {
       APInt Cnt(ResBitWidth, Val.popcount());
       return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
@@ -17109,7 +17085,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_has_single_bit_ui:
     case Builtin::BIstdc_has_single_bit_ul:
     case Builtin::BIstdc_has_single_bit_ull:
-    case Builtin::BIstdc_has_single_bit:
     case Builtin::BI__builtin_stdc_has_single_bit: {
       APInt Res(ResBitWidth, Val.popcount() == 1 ? 1 : 0);
       return Success(APSInt(Res, /*IsUnsigned*/ true), E);
@@ -17119,7 +17094,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_bit_width_ui:
     case Builtin::BIstdc_bit_width_ul:
     case Builtin::BIstdc_bit_width_ull:
-    case Builtin::BIstdc_bit_width:
     case Builtin::BI__builtin_stdc_bit_width:
       return Success(APInt(ResBitWidth, BitWidth - Val.countl_zero()), E);
     case Builtin::BIstdc_bit_floor_uc:
@@ -17127,7 +17101,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_bit_floor_ui:
     case Builtin::BIstdc_bit_floor_ul:
     case Builtin::BIstdc_bit_floor_ull:
-    case Builtin::BIstdc_bit_floor:
     case Builtin::BI__builtin_stdc_bit_floor: {
       if (Val.isZero())
         return Success(APInt(BitWidth, 0), E);
@@ -17140,7 +17113,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIstdc_bit_ceil_ui:
     case Builtin::BIstdc_bit_ceil_ul:
     case Builtin::BIstdc_bit_ceil_ull:
-    case Builtin::BIstdc_bit_ceil:
     case Builtin::BI__builtin_stdc_bit_ceil: {
       if (Val.ule(1))
         return Success(APSInt(APInt(BitWidth, 1), /*IsUnsigned*/ true), E);

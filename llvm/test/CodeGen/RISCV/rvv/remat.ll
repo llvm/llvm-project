@@ -314,13 +314,10 @@ define i64 @dual_remat(i64 %0, <vscale x 16 x i64> %1, <vscale x 16 x i64> %2, p
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a2, a2, a1
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    slli a2, a1, 4
+; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x19, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 25 * vlenb
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x11, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 17 * vlenb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
@@ -338,12 +335,6 @@ define i64 @dual_remat(i64 %0, <vscale x 16 x i64> %1, <vscale x 16 x i64> %2, p
 ; CHECK-NEXT:  .LBB8_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    csrr a4, vlenb
-; CHECK-NEXT:    slli a5, a4, 4
-; CHECK-NEXT:    add a4, a5, a4
-; CHECK-NEXT:    add a4, sp, a4
-; CHECK-NEXT:    addi a4, a4, 16
-; CHECK-NEXT:    vs8r.v v8, (a4) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vand.vv v16, v0, v8
 ; CHECK-NEXT:    vmv8r.v v8, v24
 ; CHECK-NEXT:    vmsne.vi v24, v16, 0
@@ -353,12 +344,7 @@ define i64 @dual_remat(i64 %0, <vscale x 16 x i64> %1, <vscale x 16 x i64> %2, p
 ; CHECK-NEXT:    addi a4, a4, 16
 ; CHECK-NEXT:    vs1r.v v24, (a4) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    vmv8r.v v24, v8
-; CHECK-NEXT:    csrr a4, vlenb
-; CHECK-NEXT:    slli a5, a4, 4
-; CHECK-NEXT:    add a4, a5, a4
-; CHECK-NEXT:    add a4, sp, a4
-; CHECK-NEXT:    addi a4, a4, 16
-; CHECK-NEXT:    vl8r.v v8, (a4) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vand.vv v16, v24, v8
 ; CHECK-NEXT:    vmsne.vi v8, v16, 0
 ; CHECK-NEXT:    csrr a4, vlenb
@@ -370,17 +356,12 @@ define i64 @dual_remat(i64 %0, <vscale x 16 x i64> %1, <vscale x 16 x i64> %2, p
 ; CHECK-NEXT:    vslideup.vx v9, v8, a1
 ; CHECK-NEXT:    vsetvli a4, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vcpop.m a4, v9
-; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    slli a6, a5, 4
-; CHECK-NEXT:    add a5, a6, a5
-; CHECK-NEXT:    add a5, sp, a5
-; CHECK-NEXT:    addi a5, a5, 16
-; CHECK-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli a5, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vs8r.v v8, (a3)
 ; CHECK-NEXT:    vs8r.v v8, (a2)
 ; CHECK-NEXT:    addi a5, sp, 16
 ; CHECK-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli a5, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vor.vv v0, v0, v8
 ; CHECK-NEXT:    csrr a5, vlenb
 ; CHECK-NEXT:    slli a5, a5, 3
@@ -392,11 +373,8 @@ define i64 @dual_remat(i64 %0, <vscale x 16 x i64> %1, <vscale x 16 x i64> %2, p
 ; CHECK-NEXT:  # %bb.2: # %middle.block
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a2, a2, a1
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    slli a2, a1, 4
+; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    add sp, sp, a1
 ; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16

@@ -237,242 +237,42 @@ define <vscale x 8 x i16> @clmul_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ;
 ; CHECK-SME-STREAMING-LABEL: clmul_nxv8i16:
 ; CHECK-SME-STREAMING:       // %bb.0:
-; CHECK-SME-STREAMING-NEXT:    movprfx z2, z1
-; CHECK-SME-STREAMING-NEXT:    and z2.h, z2.h, #0x2
-; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
-; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x1
-; CHECK-SME-STREAMING-NEXT:    movprfx z4, z1
-; CHECK-SME-STREAMING-NEXT:    and z4.h, z4.h, #0x8
-; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x10
-; CHECK-SME-STREAMING-NEXT:    mul z2.h, z0.h, z2.h
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SME-STREAMING-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
-; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x20
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x40
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x200
-; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x100
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x800
-; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x400
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x2000
-; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x1000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x8000
-; CHECK-SME-STREAMING-NEXT:    and z1.h, z1.h, #0x4000
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    mul z0.h, z0.h, z1.h
-; CHECK-SME-STREAMING-NEXT:    eor3 z2.d, z2.d, z0.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mov z0.d, z2.d
+; CHECK-SME-STREAMING-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SME-STREAMING-NEXT:    trn2 z3.b, z0.b, z1.b
+; CHECK-SME-STREAMING-NEXT:    pmullb z0.h, z0.b, z1.b
+; CHECK-SME-STREAMING-NEXT:    pmul z1.b, z3.b, z2.b
+; CHECK-SME-STREAMING-NEXT:    eorbt z1.b, z1.b, z1.b
+; CHECK-SME-STREAMING-NEXT:    eortb z0.b, z0.b, z1.b
 ; CHECK-SME-STREAMING-NEXT:    ret
 ;
 ; CHECK-SME-STREAMING-SSVE-AES-LABEL: clmul_nxv8i16:
 ; CHECK-SME-STREAMING-SSVE-AES:       // %bb.0:
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z2, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z2.h, z2.h, #0x2
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z3, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z4, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z4.h, z4.h, #0x8
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x10
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z2.h, z0.h, z2.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z3, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x20
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x40
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x200
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x100
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x800
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x400
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x2000
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x1000
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x8000
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z1.h, z1.h, #0x4000
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z0.h, z0.h, z1.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z2.d, z2.d, z0.d, z3.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mov z0.d, z2.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    trn2 z3.b, z0.b, z1.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmullb z0.h, z0.b, z1.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmul z1.b, z3.b, z2.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eorbt z1.b, z1.b, z1.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eortb z0.b, z0.b, z1.b
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    ret
 ;
 ; CHECK-SVE2-LABEL: clmul_nxv8i16:
 ; CHECK-SVE2:       // %bb.0:
-; CHECK-SVE2-NEXT:    movprfx z2, z1
-; CHECK-SVE2-NEXT:    and z2.h, z2.h, #0x2
-; CHECK-SVE2-NEXT:    movprfx z3, z1
-; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x1
-; CHECK-SVE2-NEXT:    movprfx z4, z1
-; CHECK-SVE2-NEXT:    and z4.h, z4.h, #0x8
-; CHECK-SVE2-NEXT:    movprfx z5, z1
-; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SVE2-NEXT:    movprfx z6, z1
-; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x10
-; CHECK-SVE2-NEXT:    mul z2.h, z0.h, z2.h
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SVE2-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE2-NEXT:    movprfx z3, z1
-; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x20
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-NEXT:    movprfx z5, z1
-; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SVE2-NEXT:    movprfx z6, z1
-; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x40
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-NEXT:    movprfx z5, z1
-; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x200
-; CHECK-SVE2-NEXT:    movprfx z6, z1
-; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x100
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-NEXT:    movprfx z5, z1
-; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x800
-; CHECK-SVE2-NEXT:    movprfx z6, z1
-; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x400
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-NEXT:    movprfx z5, z1
-; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x2000
-; CHECK-SVE2-NEXT:    movprfx z6, z1
-; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x1000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-NEXT:    movprfx z5, z1
-; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x8000
-; CHECK-SVE2-NEXT:    and z1.h, z1.h, #0x4000
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-NEXT:    mul z0.h, z0.h, z1.h
-; CHECK-SVE2-NEXT:    eor3 z2.d, z2.d, z0.d, z3.d
-; CHECK-SVE2-NEXT:    mov z0.d, z2.d
+; CHECK-SVE2-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SVE2-NEXT:    trn2 z3.b, z0.b, z1.b
+; CHECK-SVE2-NEXT:    pmullb z0.h, z0.b, z1.b
+; CHECK-SVE2-NEXT:    pmul z1.b, z3.b, z2.b
+; CHECK-SVE2-NEXT:    eorbt z1.b, z1.b, z1.b
+; CHECK-SVE2-NEXT:    eortb z0.b, z0.b, z1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-AES-LABEL: clmul_nxv8i16:
 ; CHECK-SVE2-AES:       // %bb.0:
-; CHECK-SVE2-AES-NEXT:    movprfx z2, z1
-; CHECK-SVE2-AES-NEXT:    and z2.h, z2.h, #0x2
-; CHECK-SVE2-AES-NEXT:    movprfx z3, z1
-; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x1
-; CHECK-SVE2-AES-NEXT:    movprfx z4, z1
-; CHECK-SVE2-AES-NEXT:    and z4.h, z4.h, #0x8
-; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
-; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
-; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x10
-; CHECK-SVE2-AES-NEXT:    mul z2.h, z0.h, z2.h
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z4.h
-; CHECK-SVE2-AES-NEXT:    mul z5.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    eor z2.d, z3.d, z2.d
-; CHECK-SVE2-AES-NEXT:    movprfx z3, z1
-; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x20
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z5.d, z4.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z3.h
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
-; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
-; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x40
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
-; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x200
-; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
-; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x100
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
-; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x800
-; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
-; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x400
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
-; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x2000
-; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
-; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x1000
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z0.h, z6.h
-; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
-; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x8000
-; CHECK-SVE2-AES-NEXT:    and z1.h, z1.h, #0x4000
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z4.d, z3.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z0.h, z5.h
-; CHECK-SVE2-AES-NEXT:    mul z0.h, z0.h, z1.h
-; CHECK-SVE2-AES-NEXT:    eor3 z2.d, z2.d, z0.d, z3.d
-; CHECK-SVE2-AES-NEXT:    mov z0.d, z2.d
+; CHECK-SVE2-AES-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SVE2-AES-NEXT:    trn2 z3.b, z0.b, z1.b
+; CHECK-SVE2-AES-NEXT:    pmullb z0.h, z0.b, z1.b
+; CHECK-SVE2-AES-NEXT:    pmul z1.b, z3.b, z2.b
+; CHECK-SVE2-AES-NEXT:    eorbt z1.b, z1.b, z1.b
+; CHECK-SVE2-AES-NEXT:    eortb z0.b, z0.b, z1.b
 ; CHECK-SVE2-AES-NEXT:    ret
   %a = call <vscale x 8 x i16> @llvm.clmul.nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16> %y)
   ret <vscale x 8 x i16> %a
@@ -1695,134 +1495,50 @@ define <vscale x 8 x i16> @clmul_nxv8i16_zext(<vscale x 8 x i8> %x, <vscale x 8 
 ;
 ; CHECK-SME-STREAMING-LABEL: clmul_nxv8i16_zext:
 ; CHECK-SME-STREAMING:       // %bb.0:
-; CHECK-SME-STREAMING-NEXT:    movprfx z2, z0
-; CHECK-SME-STREAMING-NEXT:    and z2.h, z2.h, #0xff
-; CHECK-SME-STREAMING-NEXT:    movprfx z0, z1
-; CHECK-SME-STREAMING-NEXT:    and z0.h, z0.h, #0x2
-; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
-; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x1
-; CHECK-SME-STREAMING-NEXT:    movprfx z4, z1
-; CHECK-SME-STREAMING-NEXT:    and z4.h, z4.h, #0x8
-; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SME-STREAMING-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-NEXT:    and z6.h, z6.h, #0x10
-; CHECK-SME-STREAMING-NEXT:    mul z0.h, z2.h, z0.h
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z2.h, z3.h
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z2.h, z4.h
-; CHECK-SME-STREAMING-NEXT:    mul z5.h, z2.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    eor z0.d, z3.d, z0.d
-; CHECK-SME-STREAMING-NEXT:    movprfx z3, z1
-; CHECK-SME-STREAMING-NEXT:    and z3.h, z3.h, #0x20
-; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z5.d, z4.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z2.h, z3.h
-; CHECK-SME-STREAMING-NEXT:    mul z4.h, z2.h, z6.h
-; CHECK-SME-STREAMING-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SME-STREAMING-NEXT:    and z1.h, z1.h, #0x40
-; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
-; CHECK-SME-STREAMING-NEXT:    mul z3.h, z2.h, z5.h
-; CHECK-SME-STREAMING-NEXT:    mul z1.h, z2.h, z1.h
-; CHECK-SME-STREAMING-NEXT:    eor3 z0.d, z0.d, z1.d, z3.d
+; CHECK-SME-STREAMING-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-SME-STREAMING-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-SME-STREAMING-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SME-STREAMING-NEXT:    trn2 z3.b, z0.b, z1.b
+; CHECK-SME-STREAMING-NEXT:    pmullb z0.h, z0.b, z1.b
+; CHECK-SME-STREAMING-NEXT:    pmul z1.b, z3.b, z2.b
+; CHECK-SME-STREAMING-NEXT:    eorbt z1.b, z1.b, z1.b
+; CHECK-SME-STREAMING-NEXT:    eortb z0.b, z0.b, z1.b
 ; CHECK-SME-STREAMING-NEXT:    ret
 ;
 ; CHECK-SME-STREAMING-SSVE-AES-LABEL: clmul_nxv8i16_zext:
 ; CHECK-SME-STREAMING-SSVE-AES:       // %bb.0:
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z2, z0
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z2.h, z2.h, #0xff
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z0, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z0.h, z0.h, #0x2
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z3, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z4, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z4.h, z4.h, #0x8
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z6, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z6.h, z6.h, #0x10
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z0.h, z2.h, z0.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z2.h, z3.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z2.h, z4.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z5.h, z2.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor z0.d, z3.d, z0.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z3, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z3.h, z3.h, #0x20
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z0.d, z0.d, z5.d, z4.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z2.h, z3.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z4.h, z2.h, z6.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    movprfx z5, z1
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z1.h, z1.h, #0x40
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z3.h, z2.h, z5.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    mul z1.h, z2.h, z1.h
-; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eor3 z0.d, z0.d, z1.d, z3.d
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    trn2 z3.b, z0.b, z1.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmullb z0.h, z0.b, z1.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    pmul z1.b, z3.b, z2.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eorbt z1.b, z1.b, z1.b
+; CHECK-SME-STREAMING-SSVE-AES-NEXT:    eortb z0.b, z0.b, z1.b
 ; CHECK-SME-STREAMING-SSVE-AES-NEXT:    ret
 ;
 ; CHECK-SVE2-LABEL: clmul_nxv8i16_zext:
 ; CHECK-SVE2:       // %bb.0:
-; CHECK-SVE2-NEXT:    movprfx z2, z0
-; CHECK-SVE2-NEXT:    and z2.h, z2.h, #0xff
-; CHECK-SVE2-NEXT:    movprfx z0, z1
-; CHECK-SVE2-NEXT:    and z0.h, z0.h, #0x2
-; CHECK-SVE2-NEXT:    movprfx z3, z1
-; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x1
-; CHECK-SVE2-NEXT:    movprfx z4, z1
-; CHECK-SVE2-NEXT:    and z4.h, z4.h, #0x8
-; CHECK-SVE2-NEXT:    movprfx z5, z1
-; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SVE2-NEXT:    movprfx z6, z1
-; CHECK-SVE2-NEXT:    and z6.h, z6.h, #0x10
-; CHECK-SVE2-NEXT:    mul z0.h, z2.h, z0.h
-; CHECK-SVE2-NEXT:    mul z3.h, z2.h, z3.h
-; CHECK-SVE2-NEXT:    mul z4.h, z2.h, z4.h
-; CHECK-SVE2-NEXT:    mul z5.h, z2.h, z5.h
-; CHECK-SVE2-NEXT:    eor z0.d, z3.d, z0.d
-; CHECK-SVE2-NEXT:    movprfx z3, z1
-; CHECK-SVE2-NEXT:    and z3.h, z3.h, #0x20
-; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z5.d, z4.d
-; CHECK-SVE2-NEXT:    mul z3.h, z2.h, z3.h
-; CHECK-SVE2-NEXT:    mul z4.h, z2.h, z6.h
-; CHECK-SVE2-NEXT:    movprfx z5, z1
-; CHECK-SVE2-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SVE2-NEXT:    and z1.h, z1.h, #0x40
-; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
-; CHECK-SVE2-NEXT:    mul z3.h, z2.h, z5.h
-; CHECK-SVE2-NEXT:    mul z1.h, z2.h, z1.h
-; CHECK-SVE2-NEXT:    eor3 z0.d, z0.d, z1.d, z3.d
+; CHECK-SVE2-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-SVE2-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-SVE2-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SVE2-NEXT:    trn2 z3.b, z0.b, z1.b
+; CHECK-SVE2-NEXT:    pmullb z0.h, z0.b, z1.b
+; CHECK-SVE2-NEXT:    pmul z1.b, z3.b, z2.b
+; CHECK-SVE2-NEXT:    eorbt z1.b, z1.b, z1.b
+; CHECK-SVE2-NEXT:    eortb z0.b, z0.b, z1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-AES-LABEL: clmul_nxv8i16_zext:
 ; CHECK-SVE2-AES:       // %bb.0:
-; CHECK-SVE2-AES-NEXT:    movprfx z2, z0
-; CHECK-SVE2-AES-NEXT:    and z2.h, z2.h, #0xff
-; CHECK-SVE2-AES-NEXT:    movprfx z0, z1
-; CHECK-SVE2-AES-NEXT:    and z0.h, z0.h, #0x2
-; CHECK-SVE2-AES-NEXT:    movprfx z3, z1
-; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x1
-; CHECK-SVE2-AES-NEXT:    movprfx z4, z1
-; CHECK-SVE2-AES-NEXT:    and z4.h, z4.h, #0x8
-; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
-; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x4
-; CHECK-SVE2-AES-NEXT:    movprfx z6, z1
-; CHECK-SVE2-AES-NEXT:    and z6.h, z6.h, #0x10
-; CHECK-SVE2-AES-NEXT:    mul z0.h, z2.h, z0.h
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z2.h, z3.h
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z2.h, z4.h
-; CHECK-SVE2-AES-NEXT:    mul z5.h, z2.h, z5.h
-; CHECK-SVE2-AES-NEXT:    eor z0.d, z3.d, z0.d
-; CHECK-SVE2-AES-NEXT:    movprfx z3, z1
-; CHECK-SVE2-AES-NEXT:    and z3.h, z3.h, #0x20
-; CHECK-SVE2-AES-NEXT:    eor3 z0.d, z0.d, z5.d, z4.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z2.h, z3.h
-; CHECK-SVE2-AES-NEXT:    mul z4.h, z2.h, z6.h
-; CHECK-SVE2-AES-NEXT:    movprfx z5, z1
-; CHECK-SVE2-AES-NEXT:    and z5.h, z5.h, #0x80
-; CHECK-SVE2-AES-NEXT:    and z1.h, z1.h, #0x40
-; CHECK-SVE2-AES-NEXT:    eor3 z0.d, z0.d, z4.d, z3.d
-; CHECK-SVE2-AES-NEXT:    mul z3.h, z2.h, z5.h
-; CHECK-SVE2-AES-NEXT:    mul z1.h, z2.h, z1.h
-; CHECK-SVE2-AES-NEXT:    eor3 z0.d, z0.d, z1.d, z3.d
+; CHECK-SVE2-AES-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-SVE2-AES-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-SVE2-AES-NEXT:    trn1 z2.b, z1.b, z0.b
+; CHECK-SVE2-AES-NEXT:    trn2 z3.b, z0.b, z1.b
+; CHECK-SVE2-AES-NEXT:    pmullb z0.h, z0.b, z1.b
+; CHECK-SVE2-AES-NEXT:    pmul z1.b, z3.b, z2.b
+; CHECK-SVE2-AES-NEXT:    eorbt z1.b, z1.b, z1.b
+; CHECK-SVE2-AES-NEXT:    eortb z0.b, z0.b, z1.b
 ; CHECK-SVE2-AES-NEXT:    ret
   %zextx = zext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %zexty = zext <vscale x 8 x i8> %y to <vscale x 8 x i16>

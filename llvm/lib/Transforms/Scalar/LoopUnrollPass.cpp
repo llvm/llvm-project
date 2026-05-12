@@ -780,7 +780,7 @@ static bool isSCEVUniform(const SCEV *S, UniformityInfo &UI) {
   if (isa<SCEVConstant>(S))
     return true;
   if (auto *U = dyn_cast<SCEVUnknown>(S))
-    return UI.isUniform(U->getValue());
+    return UI.isUniformAtDef(U->getValue());
   for (const SCEV *Op : S->operands()) {
     if (!isSCEVUniform(Op, UI))
       return false;

@@ -418,7 +418,7 @@ class VOP3a_BITOP3_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
   let Inst{14} = !if(p.HasOpSel, src0_modifiers{3}, 0);
 }
 
-class VOP3a_ScaleSel_gfx1250<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
+class VOP3a_ScaleSel_gfx1250_gfx13<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
   bits<4> scale_sel;
 
   let Inst{14-11} = scale_sel;
@@ -1821,7 +1821,7 @@ class VOP3b_DPP8_Base_t16<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
 }
 
 //===----------------------------------------------------------------------===//
-// VOP3 GFX11, GFX12
+// VOP3 GFX11, GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
 multiclass VOP3_Real_Base<GFXGen Gen, bits<10> op, string opName = NAME,
@@ -1900,6 +1900,11 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
     }
   }
 }
+
+multiclass VOP3_Real_with_name_gfx12_gfx13<
+    bits<10> op, string opName, string asmName, string pseudo_mnemonic = "", bit isSingle = 0> :
+  VOP3_Real_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Real_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
 multiclass VOP3_Real_with_name_gfx11_gfx12_gfx13<
     bits<10> op, string opName, string asmName, string pseudo_mnemonic = "", bit isSingle = 0> :
@@ -2012,10 +2017,19 @@ multiclass VOP3be_Real_dpp8<GFXGen Gen, bits<10> op, string opName,
 
 // VOP1 and VOP2 depend on these triple defs
 multiclass VOP3_Realtriple<GFXGen Gen, bits<10> op, bit isSingle = 0,
-                           string opName = NAME> :
-  VOP3_Real_Base<Gen, op, opName, isSingle>,
-  VOP3_Real_dpp_Base<Gen, op, opName>,
-  VOP3_Real_dpp8_Base<Gen, op, opName>;
+                           string opName = NAME> {
+  defm NAME : VOP3_Real_Base<Gen, op, opName, isSingle>,
+              VOP3_Real_dpp_Base<Gen, op, opName>;
+
+  defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
+  if !not(ps.Pfl.HasExt64BitDPP) then
+    defm NAME : VOP3_Real_dpp8_Base<Gen, op, opName>;
+}
+
+multiclass VOP3_Realtriple_DPP8<GFXGen Gen, bits<10> op> :
+  VOP3_Real_Base<Gen, op>,
+  VOP3_Real_dpp_Base<Gen, op>,
+  VOP3_Real_dpp8_Base<Gen, op>;
 
 multiclass VOP3Dot_Realtriple<GFXGen Gen, bits<10> op, string asmName, bit isSingle = 0,
                               string opName = NAME> :
@@ -2073,25 +2087,35 @@ multiclass VOP3Only_ScaleSel_Real_gfx1250<bits<10> op> {
   defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
   def _e64_gfx1250 :
     VOP3_Real_Gen<ps, GFX1250Gen>,
-    VOP3a_ScaleSel_gfx1250<op, ps.Pfl>;
+    VOP3a_ScaleSel_gfx1250_gfx13<op, ps.Pfl>;
 }
 
-multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250<bits<10> op, string asmName, string opName = NAME,
+multiclass VOP3Only_ScaleSel_Real_gfx1250_gfx13<bits<10> preGFX13, bits<10> op = preGFX13>
+  : VOP3Only_ScaleSel_Real_gfx1250<preGFX13> {
+  defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+  def _e64_gfx13 :
+    VOP3_Real_Gen<ps, GFX13Gen>,
+    VOP3a_ScaleSel_gfx1250_gfx13<op, ps.Pfl>;
+}
+
+multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string opName = NAME,
                                                        string pseudo_mnemonic = "", bit isSingle = 0> :
-  VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
-  VOP3_Realtriple_with_name<GFX12Not12_50Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+  VOP3_Realtriple_with_name<GFX11Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX12Not12_50Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
-multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_not_gfx1250<bits<10> op, string asmName,
+multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_not_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName,
                                                           string opName = NAME, string pseudo_mnemonic = ""> {
-  defm _t16 : VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250<op, asmName, opName#"_t16", pseudo_mnemonic, 1>;
-  defm _fake16 : VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250<op, asmName, opName#"_fake16", pseudo_mnemonic, 1>;
+  defm _t16 : VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250_gfx13<preGFX13Op, op, asmName, opName#"_t16", pseudo_mnemonic, 1>;
+  defm _fake16 : VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250_gfx13<preGFX13Op, op, asmName, opName#"_fake16", pseudo_mnemonic, 1>;
 }
 
-multiclass VOP3_Realtriple_with_name_gfx11_gfx12_not_gfx1250<bits<10> op, string opName,
+multiclass VOP3_Realtriple_with_name_gfx11_gfx12_not_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string opName,
                                                            string asmName, string pseudo_mnemonic = "",
                                                            bit isSingle = 0> :
-  VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
-  VOP3_Realtriple_with_name<GFX12Not12_50Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+  VOP3_Realtriple_with_name<GFX11Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX12Not12_50Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
 //===----------------------------------------------------------------------===//
 // VOP3 GFX11
@@ -2164,21 +2188,29 @@ multiclass VOP3Only_Real_Base_gfx11_gfx12<bits<10> op> :
   VOP3_Real_Base<GFX12Gen, op, NAME, 1/*IsSingle*/>;
 
 //===----------------------------------------------------------------------===//
-// VOP3 GFX12
+// VOP3 GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
-multiclass VOP3Only_Realtriple_gfx12<bits<10> op, bit isSingle = 0> :
-  VOP3_Realtriple<GFX12Gen, op, isSingle>;
+multiclass VOP3Only_Realtriple_gfx12_gfx13<bits<10> gfx12Op, bits<10> op = gfx12Op> :
+  VOP3_Realtriple<GFX12Gen, gfx12Op>,
+  VOP3_Realtriple<GFX13Gen, op>;
+
+multiclass VOP3Only_Realtriple_gfx11_gfx12_NO_DPP_gfx13<bits<10> gfx12Op, bits<10> op> :
+  VOP3_Realtriple<GFX11Gen, gfx12Op>,
+  VOP3_Realtriple<GFX12Gen, gfx12Op>,
+  VOP3_Real_Base<GFX13Gen, op>;
 
 // IsSingle is captured from the vopprofile for these instructions, but the
 // following alternative is more explicit
-multiclass VOP3Only_Real_Base_gfx12<bits<10> op> :
-  VOP3_Real_Base<GFX12Gen, op, NAME, 1/*IsSingle*/>;
+multiclass VOP3Only_Real_Base_gfx12_gfx13<bits<10> gfx12Op, bits<10> op = gfx12Op> :
+  VOP3_Real_Base<GFX12Gen, gfx12Op, NAME, 1/*IsSingle*/>,
+  VOP3_Real_Base<GFX13Gen, op, NAME, 1/*IsSingle*/>;
 
-multiclass VOP3Only_Realtriple_with_name_gfx12_not_gfx1250<bits<10> op, string opName,
-                                                           string asmName, string pseudo_mnemonic = "",
-                                                           bit isSingle = 0> :
-  VOP3_Realtriple_with_name<GFX12Not12_50Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+multiclass VOP3Only_Realtriple_with_name_gfx12_not_gfx1250_gfx13<bits<10> gfx12Op, bits<10> op, string opName,
+                                                                 string asmName, string pseudo_mnemonic = "",
+                                                                 bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX12Not12_50Gen, gfx12Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
 multiclass VOP3Only_Real_Base_gfx1250<bits<10> op> :
   VOP3_Real_Base<GFX1250Gen, op, NAME, 1/*IsSingle*/>;
@@ -2186,8 +2218,17 @@ multiclass VOP3Only_Real_Base_gfx1250<bits<10> op> :
 multiclass VOP3Only_Realtriple_gfx1250<bits<10> op, bit isSingle = 0> :
   VOP3_Realtriple<GFX1250Gen, op, isSingle>;
 
-multiclass VOP3Only_Realtriple_gfx12_not_gfx1250<bits<10> op, bit isSingle = 0> :
-  VOP3_Realtriple<GFX12Not12_50Gen, op, isSingle>;
+multiclass VOP3Only_Real_Base_gfx13<bits<10> op> :
+  VOP3_Real_Base<GFX13Gen, op, NAME, 1/*IsSingle*/>;
+
+multiclass VOP3Only_Real_Base_gfx1250_gfx13<bits<10> gfx1250Op, bits<10> op> :
+  VOP3Only_Real_Base_gfx1250<gfx1250Op>,
+  VOP3Only_Real_Base_gfx13<op>;
+
+multiclass VOP3Only_Realtriple_gfx11_gfx12_not_gfx1250_gfx13<bits<10> gfx12Op, bits<10> op, bit isSingle = 0> :
+  VOP3_Realtriple<GFX11Gen, gfx12Op, isSingle>,
+  VOP3_Realtriple<GFX12Not12_50Gen, gfx12Op, isSingle>,
+  VOP3_Realtriple<GFX13Gen, op, isSingle>;
 
 multiclass VOP3Only_Realtriple_with_name_gfx1250<bits<10> op, string opName,
                                                  string asmName, string pseudo_mnemonic = "",
@@ -2198,24 +2239,86 @@ multiclass VOP3Only_Realtriple_t16_gfx1250<bits<10> op, string asmName = !cast<V
                                            string opName = NAME, string pseudo_mnemonic = "", bit isSingle = 0> :
   VOP3Only_Realtriple_with_name_gfx1250<op, opName, asmName, pseudo_mnemonic, isSingle>;
 
+multiclass VOP3Only_Realtriple_with_name_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string opName,
+                                                       string asmName, string pseudo_mnemonic = "",
+                                                       bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX1250Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
+multiclass VOP3Only_Realtriple_t16_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
+                                           string opName = NAME, string pseudo_mnemonic = "", bit isSingle = 0> :
+  VOP3Only_Realtriple_with_name_gfx1250_gfx13<preGFX13Op, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
+multiclass VOP3Only_Realtriple_gfx1250_gfx13<
+    bits<10> gfx1250Op, bits<10> op = gfx1250Op> :
+  VOP3_Realtriple<GFX1250Gen, gfx1250Op>,
+  VOP3_Realtriple<GFX13Gen, op>;
+
+multiclass VOP3Only_Realtriple_gfx1250_DPP8_gfx13<bits<10> op> :
+  VOP3_Realtriple<GFX1250Gen, op>,
+  VOP3_Realtriple_DPP8<GFX13Gen, op>;
+
+multiclass VOP3Only_Realtriple_gfx1250_NO_DPP_gfx13<bits<10> op> :
+  VOP3_Realtriple<GFX1250Gen, op>,
+  VOP3_Real_Base<GFX13Gen, op>;
+
+multiclass VOP3be_Real_with_name_gfx12_NO_DPP_gfx13<
+    bits<10> gfx12Op, bits<10> op, string opName, string asmName, bit isSingle = 0> {
+  defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
+  defm NAME : VOP3be_Realtriple<GFX12Gen, gfx12Op, !or(isSingle, ps.Pfl.IsSingle),
+                                opName, asmName>;
+  defm NAME : VOP3be_Real<GFX13Gen, op, opName, asmName,
+                          !or(isSingle, ps.Pfl.IsSingle)>;
+  def : AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+    let AssemblerPredicate = isGFX12Plus;
+  }
+}
+
 multiclass VOP3_Realtriple_t16_gfx12<bits<10> op, string asmName, string opName = NAME,
                                      string pseudo_mnemonic = "", bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
-multiclass VOP3_Realtriple_t16_and_fake16_gfx12<bits<10> op, string asmName, string opName = NAME,
-                                                string pseudo_mnemonic = "", bit isSingle = 0> {
-  defm _t16:VOP3_Realtriple_t16_gfx12<op, asmName, opName#"_t16", pseudo_mnemonic, isSingle>;
-  defm _fake16:VOP3_Realtriple_t16_gfx12<op, asmName, opName#"_fake16", pseudo_mnemonic, isSingle>;
+multiclass VOP3_Realtriple_t16_gfx12_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string opName = NAME,
+                                            string pseudo_mnemonic = "", bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX12Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
+multiclass VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string opName = NAME,
+                                                      string pseudo_mnemonic = "", bit isSingle = 0> {
+  defm _t16:VOP3_Realtriple_t16_gfx12_gfx13<preGFX13Op, op, asmName, opName#"_t16", pseudo_mnemonic, isSingle>;
+  defm _fake16:VOP3_Realtriple_t16_gfx12_gfx13<preGFX13Op, op, asmName, opName#"_fake16", pseudo_mnemonic, isSingle>;
 }
 
-multiclass VOP3Only_Realtriple_t16_gfx12<bits<10> op, string asmName,
-                                     string opName = NAME, string pseudo_mnemonic = "">
-  : VOP3_Realtriple_t16_gfx12<op, asmName, opName, pseudo_mnemonic, 1>;
+multiclass VOP3_Realtriple_t16_gfx13<bits<10> op, string asmName, string opName = NAME,
+                                     string pseudo_mnemonic = "", bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
-multiclass VOP3Only_Realtriple_t16_and_fake16_gfx12<bits<10> op, string asmName,
-                                     string opName = NAME, string pseudo_mnemonic = ""> {
-  defm _t16 : VOP3Only_Realtriple_t16_gfx12<op, asmName, opName#"_t16", pseudo_mnemonic>;
-  defm _fake16 : VOP3Only_Realtriple_t16_gfx12<op, asmName, opName#"_fake16", pseudo_mnemonic>;
+multiclass VOP3_Realtriple_t16_and_fake16_gfx13<bits<10> op, string asmName, string opName = NAME,
+                                                 string pseudo_mnemonic = "", bit isSingle = 0> {
+  defm opName#"_t16":VOP3_Realtriple_t16_gfx13<op, asmName, opName#"_t16", pseudo_mnemonic, isSingle>;
+  defm opName#"_fake16":VOP3_Realtriple_t16_gfx13<op, asmName, opName#"_fake16", pseudo_mnemonic, isSingle>;
+}
+
+multiclass VOP3_Realtriple_with_name_gfx12_gfx13<
+    bits<10> gfx12Op, bits<10> op, string opName, string asmName, string pseudo_mnemonic = "", bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX12Gen, gfx12Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
+multiclass VOP3Only_Realtriple_t16_gfx12_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName,
+                                      string opName = NAME, string pseudo_mnemonic = "">
+  : VOP3_Realtriple_t16_gfx12_gfx13<preGFX13Op, op, asmName, opName, pseudo_mnemonic, 1>;
+
+multiclass VOP3Only_Realtriple_t16_and_fake16_gfx12_gfx13<bits<10> preGFX13Op, bits<10> op,
+                                     string asmName, string opName = NAME, string pseudo_mnemonic = ""> {
+  defm _t16 : VOP3Only_Realtriple_t16_gfx12_gfx13<preGFX13Op, op, asmName, opName#"_t16", pseudo_mnemonic>;
+  defm _fake16 : VOP3Only_Realtriple_t16_gfx12_gfx13<preGFX13Op, op, asmName, opName#"_fake16", pseudo_mnemonic>;
+}
+
+multiclass VOP3Only_Realtriple_t16_and_fake16_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op,
+                                                            string asmName = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
+                                                            string opName = NAME, string pseudo_mnemonic = ""> {
+  defm _t16 : VOP3Only_Realtriple_t16_gfx1250_gfx13<preGFX13Op, op, asmName, opName#"_t16", pseudo_mnemonic>;
+  defm _fake16 : VOP3Only_Realtriple_t16_gfx1250_gfx13<preGFX13Op, op, asmName, opName#"_fake16", pseudo_mnemonic>;
 }
 
 multiclass VOP3Only_Realtriple_t16_and_fake16_gfx1250<bits<10> op,
@@ -2235,23 +2338,28 @@ multiclass VOP3be_Real_with_name_gfx12<bits<10> op, string opName,
   }
 }
 
-multiclass VOP3_Realtriple_with_name_gfx12<bits<10> op, string opName,
-                                           string asmName, string pseudo_mnemonic = "", bit isSingle = 0> :
-  VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+multiclass VOP3Only_Realtriple_with_name_gfx11_gfx12_gfx13<
+    bits<10> preGFX13Op, bits<10> op, string opName, string asmName> :
+  VOP3Only_Realtriple_with_name<GFX11Gen, preGFX13Op, opName, asmName>,
+  VOP3Only_Realtriple_with_name<GFX12Gen, preGFX13Op, opName, asmName>,
+  VOP3Only_Realtriple_with_name<GFX13Gen, op, opName, asmName>;
 
-multiclass VOP3Only_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
-                                                     string asmName> :
-  VOP3Only_Realtriple_with_name<GFX11Gen, op, opName, asmName>,
-  VOP3Only_Realtriple_with_name<GFX12Gen, op, opName, asmName>;
+multiclass VOP3Only_Realtriple_with_name_t16_gfx12<bits<10> op, string asmName,
+                                     string opName = NAME>
+    : VOP3Only_Realtriple_with_name<GFX12Gen, op, opName, asmName>;
 
-multiclass VOP3_Real_BITOP3_gfx1250<bits<10> op, string asmName = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic> :
-  VOP3_BITOP3_Real_Base<GFX1250Gen, op, asmName>,
-  VOP3_BITOP3_Real_dpp_Base<GFX1250Gen, op, asmName>,
-  VOP3_BITOP3_Real_dpp8_Base<GFX1250Gen, op, asmName>;
+multiclass VOP3_Real_BITOP3<GFXGen gen, bits<10> op, string asmName> :
+  VOP3_BITOP3_Real_Base<gen, op, asmName>,
+  VOP3_BITOP3_Real_dpp_Base<gen, op, asmName>,
+  VOP3_BITOP3_Real_dpp8_Base<gen, op, asmName>;
 
-multiclass VOP3_Real_BITOP3_t16_and_fake16_gfx1250<bits<10> op, string asmName = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic> {
-  defm _t16 : VOP3_Real_BITOP3_gfx1250<op, asmName>;
-  defm _fake16: VOP3_Real_BITOP3_gfx1250<op, asmName>;
+multiclass VOP3_Real_BITOP3_gfx1250_gfx13<bits<10> op, string asmName = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic> :
+  VOP3_Real_BITOP3<GFX1250Gen, op, asmName>,
+  VOP3_Real_BITOP3<GFX13Gen, op, asmName>;
+
+multiclass VOP3_Real_BITOP3_t16_and_fake16_gfx1250_gfx13<bits<10> op, string asmName = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic> {
+  defm _t16 : VOP3_Real_BITOP3_gfx1250_gfx13<op, asmName>;
+  defm _fake16: VOP3_Real_BITOP3_gfx1250_gfx13<op, asmName>;
 }
 
 multiclass VOP3Dot_Realtriple_gfx11_gfx12<bits<10> op, string asmName, bit isSingle = 0,
@@ -2263,6 +2371,12 @@ multiclass VOP3_Real_with_name_gfx11_gfx12<bits<10> op, string opName,
                                            string asmName> :
   VOP3_Real_with_name<GFX11Gen, op, opName, asmName>,
   VOP3_Real_with_name<GFX12Gen, op, opName, asmName>;
+
+multiclass VOP3Only_Real_with_name_t16_and_fake16_gfx13<bits<10> op, string asmName=!tolower(NAME),
+                                     string opName=NAME, string pseudo_mnemonic = ""> {
+  defm _t16: VOP3_Real_with_name<GFX13Gen, op, opName#"_t16", asmName, pseudo_mnemonic, 1>;
+  defm _fake16: VOP3_Real_with_name<GFX13Gen, op, opName#"_fake16", asmName, pseudo_mnemonic, 1>;
+}
 
 //===----------------------------------------------------------------------===//
 

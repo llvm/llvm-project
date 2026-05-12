@@ -2678,7 +2678,7 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
 
   // Detach all unreachable blocks from their successors, removing their recipes
   // and incoming values from phi recipes.
-  VPSymbolicValue Tmp;
+  VPSymbolicValue Tmp(nullptr);
   for (VPBlockBase *B : AllBlocks) {
     if (Reachable.contains(B))
       continue;

@@ -9,8 +9,8 @@
 
 target triple = "riscv64-none-unknown-elf"
 
-define i32 @vdota4(ptr %a, ptr %b) #0 {
-; V-LABEL: define i32 @vdota4(
+define i32 @vdot4a(ptr %a, ptr %b) #0 {
+; V-LABEL: define i32 @vdot4a(
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; V-NEXT:  entry:
 ; V-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -43,7 +43,7 @@ define i32 @vdota4(ptr %a, ptr %b) #0 {
 ; V-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; V:       scalar.ph:
 ;
-; ZVDOT4A8I-LABEL: define i32 @vdota4(
+; ZVDOT4A8I-LABEL: define i32 @vdot4a(
 ; ZVDOT4A8I-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ZVDOT4A8I-NEXT:  entry:
 ; ZVDOT4A8I-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -76,7 +76,7 @@ define i32 @vdota4(ptr %a, ptr %b) #0 {
 ; ZVDOT4A8I-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; ZVDOT4A8I:       scalar.ph:
 ;
-; FIXED-V-LABEL: define i32 @vdota4(
+; FIXED-V-LABEL: define i32 @vdot4a(
 ; FIXED-V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FIXED-V-NEXT:  entry:
 ; FIXED-V-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -112,7 +112,7 @@ define i32 @vdota4(ptr %a, ptr %b) #0 {
 ; FIXED-V:       for.exit:
 ; FIXED-V-NEXT:    ret i32 [[TMP15]]
 ;
-; FIXED-ZVDOT4A8I-LABEL: define i32 @vdota4(
+; FIXED-ZVDOT4A8I-LABEL: define i32 @vdot4a(
 ; FIXED-ZVDOT4A8I-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FIXED-ZVDOT4A8I-NEXT:  entry:
 ; FIXED-ZVDOT4A8I-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -148,7 +148,7 @@ define i32 @vdota4(ptr %a, ptr %b) #0 {
 ; FIXED-ZVDOT4A8I:       for.exit:
 ; FIXED-ZVDOT4A8I-NEXT:    ret i32 [[TMP13]]
 ;
-; TAILFOLD-LABEL: define i32 @vdota4(
+; TAILFOLD-LABEL: define i32 @vdot4a(
 ; TAILFOLD-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TAILFOLD-NEXT:  entry:
 ; TAILFOLD-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -202,8 +202,8 @@ for.exit:
 }
 
 
-define i32 @vdota4u(ptr %a, ptr %b) #0 {
-; V-LABEL: define i32 @vdota4u(
+define i32 @vdot4au(ptr %a, ptr %b) #0 {
+; V-LABEL: define i32 @vdot4au(
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; V-NEXT:  entry:
 ; V-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -236,7 +236,7 @@ define i32 @vdota4u(ptr %a, ptr %b) #0 {
 ; V-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; V:       scalar.ph:
 ;
-; ZVDOT4A8I-LABEL: define i32 @vdota4u(
+; ZVDOT4A8I-LABEL: define i32 @vdot4au(
 ; ZVDOT4A8I-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; ZVDOT4A8I-NEXT:  entry:
 ; ZVDOT4A8I-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -269,7 +269,7 @@ define i32 @vdota4u(ptr %a, ptr %b) #0 {
 ; ZVDOT4A8I-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; ZVDOT4A8I:       scalar.ph:
 ;
-; FIXED-V-LABEL: define i32 @vdota4u(
+; FIXED-V-LABEL: define i32 @vdot4au(
 ; FIXED-V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-V-NEXT:  entry:
 ; FIXED-V-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -305,7 +305,7 @@ define i32 @vdota4u(ptr %a, ptr %b) #0 {
 ; FIXED-V:       for.exit:
 ; FIXED-V-NEXT:    ret i32 [[TMP15]]
 ;
-; FIXED-ZVDOT4A8I-LABEL: define i32 @vdota4u(
+; FIXED-ZVDOT4A8I-LABEL: define i32 @vdot4au(
 ; FIXED-ZVDOT4A8I-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-ZVDOT4A8I-NEXT:  entry:
 ; FIXED-ZVDOT4A8I-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -341,7 +341,7 @@ define i32 @vdota4u(ptr %a, ptr %b) #0 {
 ; FIXED-ZVDOT4A8I:       for.exit:
 ; FIXED-ZVDOT4A8I-NEXT:    ret i32 [[TMP13]]
 ;
-; TAILFOLD-LABEL: define i32 @vdota4u(
+; TAILFOLD-LABEL: define i32 @vdot4au(
 ; TAILFOLD-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; TAILFOLD-NEXT:  entry:
 ; TAILFOLD-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -395,8 +395,8 @@ for.exit:
 }
 
 
-define i32 @vdota4su(ptr %a, ptr %b) #0 {
-; V-LABEL: define i32 @vdota4su(
+define i32 @vdot4asu(ptr %a, ptr %b) #0 {
+; V-LABEL: define i32 @vdot4asu(
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; V-NEXT:  entry:
 ; V-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -429,7 +429,7 @@ define i32 @vdota4su(ptr %a, ptr %b) #0 {
 ; V-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; V:       scalar.ph:
 ;
-; ZVDOT4A8I-LABEL: define i32 @vdota4su(
+; ZVDOT4A8I-LABEL: define i32 @vdot4asu(
 ; ZVDOT4A8I-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; ZVDOT4A8I-NEXT:  entry:
 ; ZVDOT4A8I-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -462,7 +462,7 @@ define i32 @vdota4su(ptr %a, ptr %b) #0 {
 ; ZVDOT4A8I-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; ZVDOT4A8I:       scalar.ph:
 ;
-; FIXED-V-LABEL: define i32 @vdota4su(
+; FIXED-V-LABEL: define i32 @vdot4asu(
 ; FIXED-V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-V-NEXT:  entry:
 ; FIXED-V-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -498,7 +498,7 @@ define i32 @vdota4su(ptr %a, ptr %b) #0 {
 ; FIXED-V:       for.exit:
 ; FIXED-V-NEXT:    ret i32 [[TMP15]]
 ;
-; FIXED-ZVDOT4A8I-LABEL: define i32 @vdota4su(
+; FIXED-ZVDOT4A8I-LABEL: define i32 @vdot4asu(
 ; FIXED-ZVDOT4A8I-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-ZVDOT4A8I-NEXT:  entry:
 ; FIXED-ZVDOT4A8I-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -534,7 +534,7 @@ define i32 @vdota4su(ptr %a, ptr %b) #0 {
 ; FIXED-ZVDOT4A8I:       for.exit:
 ; FIXED-ZVDOT4A8I-NEXT:    ret i32 [[TMP13]]
 ;
-; TAILFOLD-LABEL: define i32 @vdota4su(
+; TAILFOLD-LABEL: define i32 @vdot4asu(
 ; TAILFOLD-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; TAILFOLD-NEXT:  entry:
 ; TAILFOLD-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -587,8 +587,8 @@ for.exit:
   ret i32 %add
 }
 
-define i32 @vdota4su2(ptr %a, ptr %b) #0 {
-; V-LABEL: define i32 @vdota4su2(
+define i32 @vdot4asu2(ptr %a, ptr %b) #0 {
+; V-LABEL: define i32 @vdot4asu2(
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; V-NEXT:  entry:
 ; V-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -621,7 +621,7 @@ define i32 @vdota4su2(ptr %a, ptr %b) #0 {
 ; V-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; V:       scalar.ph:
 ;
-; ZVDOT4A8I-LABEL: define i32 @vdota4su2(
+; ZVDOT4A8I-LABEL: define i32 @vdot4asu2(
 ; ZVDOT4A8I-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; ZVDOT4A8I-NEXT:  entry:
 ; ZVDOT4A8I-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -654,7 +654,7 @@ define i32 @vdota4su2(ptr %a, ptr %b) #0 {
 ; ZVDOT4A8I-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; ZVDOT4A8I:       scalar.ph:
 ;
-; FIXED-V-LABEL: define i32 @vdota4su2(
+; FIXED-V-LABEL: define i32 @vdot4asu2(
 ; FIXED-V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-V-NEXT:  entry:
 ; FIXED-V-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -690,7 +690,7 @@ define i32 @vdota4su2(ptr %a, ptr %b) #0 {
 ; FIXED-V:       for.exit:
 ; FIXED-V-NEXT:    ret i32 [[TMP15]]
 ;
-; FIXED-ZVDOT4A8I-LABEL: define i32 @vdota4su2(
+; FIXED-ZVDOT4A8I-LABEL: define i32 @vdot4asu2(
 ; FIXED-ZVDOT4A8I-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-ZVDOT4A8I-NEXT:  entry:
 ; FIXED-ZVDOT4A8I-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -726,7 +726,7 @@ define i32 @vdota4su2(ptr %a, ptr %b) #0 {
 ; FIXED-ZVDOT4A8I:       for.exit:
 ; FIXED-ZVDOT4A8I-NEXT:    ret i32 [[TMP13]]
 ;
-; TAILFOLD-LABEL: define i32 @vdota4su2(
+; TAILFOLD-LABEL: define i32 @vdot4asu2(
 ; TAILFOLD-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; TAILFOLD-NEXT:  entry:
 ; TAILFOLD-NEXT:    br label [[VECTOR_PH:%.*]]

@@ -368,9 +368,11 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               <clang-tidy/checks/performance/faster-string-operation>`.
               The `performance-faster-string-find` name is kept as an alias.
 
-            - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
-              to :doc:`portability-no-assembler
-              <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
+            - Renamed :doc:`google-explicit-constructor
+              <clang-tidy/checks/google/explicit-constructor>`
+              to :doc:`misc-explicit-constructor
+              <clang-tidy/checks/misc/explicit-constructor>`. The
+              `google-explicit-constructor`
               name is kept as an alias.
 
             """
@@ -383,9 +385,11 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             Changes in existing checks
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-            - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
-              to :doc:`portability-no-assembler
-              <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
+            - Renamed :doc:`google-explicit-constructor
+              <clang-tidy/checks/google/explicit-constructor>`
+              to :doc:`misc-explicit-constructor
+              <clang-tidy/checks/misc/explicit-constructor>`. The
+              `google-explicit-constructor`
               name is kept as an alias.
 
             - Renamed :doc:`performance-faster-string-find

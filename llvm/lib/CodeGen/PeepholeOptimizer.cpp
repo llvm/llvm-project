@@ -494,6 +494,13 @@ private:
   bool isLoadFoldable(MachineInstr &MI,
                       SmallSet<Register, 16> &FoldAsLoadDefCandidates);
 
+  /// Try to fold the load defined by \p FoldReg into \p MI using
+  /// TII->optimizeLoadInstr. On success, updates \p LocalMIs, erases the old
+  /// instructions, and returns the replacement; returns nullptr otherwise.
+  MachineInstr *foldLoadInto(MachineFunction &MF, MachineInstr &MI,
+                             Register FoldReg,
+                             SmallPtrSet<MachineInstr *, 16> &LocalMIs);
+
   /// Check whether \p MI is understood by the register coalescer
   /// but may require some rewriting.
   static bool isCoalescableCopy(const MachineInstr &MI) {
@@ -1392,6 +1399,31 @@ bool PeepholeOptimizer::isLoadFoldable(
   return false;
 }
 
+MachineInstr *
+PeepholeOptimizer::foldLoadInto(MachineFunction &MF, MachineInstr &MI,
+                                Register FoldReg,
+                                SmallPtrSet<MachineInstr *, 16> &LocalMIs) {
+  Register Reg = FoldReg;
+  MachineInstr *DefMI = nullptr;
+  MachineInstr *CopyMI = nullptr;
+  MachineInstr *FoldMI = TII->optimizeLoadInstr(MI, MRI, Reg, DefMI, CopyMI);
+  if (!FoldMI)
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "Replacing: " << MI << "     With: " << *FoldMI);
+  LocalMIs.erase(&MI);
+  LocalMIs.erase(DefMI);
+  LocalMIs.insert(FoldMI);
+  if (CopyMI)
+    LocalMIs.insert(CopyMI);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MF.moveAdditionalCallInfo(&MI, FoldMI);
+  MI.eraseFromParent();
+  DefMI->eraseFromParent();
+  MRI->markUsesInDebugValueAsUndef(FoldReg);
+  ++NumLoadFold;
+  return FoldMI;
+}
+
 bool PeepholeOptimizer::isMoveImmediate(
     MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
     DenseMap<Register, MachineInstr *> &ImmDefMIs) {
@@ -1862,31 +1894,10 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
           if (FoldAsLoadDefCandidates.count(FoldAsLoadDefReg)) {
             // We need to fold load after optimizeCmpInstr, since
             // optimizeCmpInstr can enable folding by converting SUB to CMP.
-            // Save FoldAsLoadDefReg because optimizeLoadInstr() resets it and
-            // we need it for markUsesInDebugValueAsUndef().
             Register FoldedReg = FoldAsLoadDefReg;
-            MachineInstr *DefMI = nullptr;
-            MachineInstr *CopyMI = nullptr;
-            if (MachineInstr *FoldMI = TII->optimizeLoadInstr(
-                    *MI, MRI, FoldAsLoadDefReg, DefMI, CopyMI)) {
-              // Update LocalMIs since we replaced MI with FoldMI and deleted
-              // DefMI.
-              LLVM_DEBUG(dbgs() << "Replacing: " << *MI);
-              LLVM_DEBUG(dbgs() << "     With: " << *FoldMI);
-              LocalMIs.erase(MI);
-              LocalMIs.erase(DefMI);
-              LocalMIs.insert(FoldMI);
-              if (CopyMI)
-                LocalMIs.insert(CopyMI);
-              // Update the call info.
-              if (MI->shouldUpdateAdditionalCallInfo())
-                MI->getMF()->moveAdditionalCallInfo(MI, FoldMI);
-              MI->eraseFromParent();
-              DefMI->eraseFromParent();
-              MRI->markUsesInDebugValueAsUndef(FoldedReg);
+            if (MachineInstr *FoldMI =
+                    foldLoadInto(MF, *MI, FoldAsLoadDefReg, LocalMIs)) {
               FoldAsLoadDefCandidates.erase(FoldedReg);
-              ++NumLoadFold;
-
               // MI is replaced with FoldMI so we can continue trying to fold
               Changed = true;
               MI = FoldMI;

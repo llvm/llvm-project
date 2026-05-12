@@ -233,9 +233,6 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-/// \returns Instruction cache line size in bytes for given subtarget \p STI.
-unsigned getInstCacheLineSize(const MCSubtargetInfo *STI);
-
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo *STI);
 

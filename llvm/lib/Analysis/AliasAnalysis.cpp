@@ -458,10 +458,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
 // Helper method implementation
 //===----------------------------------------------------------------------===//
 
-/// Get ModRefInfo for a synchronizing operation, such as a fence or stronger
-/// than monotonic atomic load/store.
-static ModRefInfo getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
-                                 AAQueryInfo &AAQI) {
+ModRefInfo llvm::getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
+                                AAQueryInfo &AAQI) {
   if (!Loc.Ptr)
     return ModRefInfo::ModRef;
 

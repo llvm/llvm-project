@@ -447,6 +447,66 @@ void ChangingRegionOwnedByContainerIsOk() {
 
 } // namespace ContainersAsFields
 
+namespace InvalidatedField {
+std::string StableString;
+
+struct S {
+  std::string_view FieldFromLocalVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromByValueParamVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromLocalString; // expected-note {{this field dangles}}
+  std::string_view FieldFromByValueParamString; // expected-note {{this field dangles}}
+  std::string_view FieldFromRefParamString; // expected-note {{this field dangles}}
+  int *FieldFromNew; // expected-note {{this field dangles}}
+  int *FieldFromPointerParam; // expected-note {{this field dangles}}
+  std::string_view FieldReassigned;
+
+  void InvalidatedFieldLocalVector() {
+    std::vector<std::string> strings;
+    FieldFromLocalVector = *strings.begin(); // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    strings.push_back("1"); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldByValueParamVector(std::vector<std::string> strings) {
+    FieldFromByValueParamVector = *strings.begin(); // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    strings.push_back("1"); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldLocalString() {
+    std::string s;
+    FieldFromLocalString = s; // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    s.clear(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldByValueParamString(std::string s) {
+    FieldFromByValueParamString = s; // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    s.clear(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldRefParamString(std::string &s) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    FieldFromRefParamString = s;
+    s.~basic_string(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldDelete() {
+    int *p = new int; // expected-warning {{object whose reference escapes to a field is later invalidated}}
+    FieldFromNew = p;
+    delete p; // expected-note {{freed here}}
+  }
+
+  void InvalidatedFieldDeleteParam(int *p) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    FieldFromPointerParam = p;
+    delete p; // expected-note {{freed here}}
+  }
+
+  void FieldReassignedBeforeInvalidation() {
+    std::vector<std::string> strings;
+    FieldReassigned = *strings.begin();
+    FieldReassigned = StableString;
+    strings.push_back("1");
+  }
+};
+} // namespace InvalidatedField
+
 namespace AssociativeContainers {
 void SetInsertDoesNotInvalidate() {
   std::set<int> s;

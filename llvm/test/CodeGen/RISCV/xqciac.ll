@@ -705,3 +705,23 @@ define i64 @select_int64_min(i1 zeroext %x) {
   %select = select i1 %x, i64 -9223372036854775808, i64 0
   ret i64 %select
 }
+
+define i32 @neg_coefficient(i1 zeroext %x) nounwind {
+; RV32IM-LABEL: neg_coefficient:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    neg a0, a0
+; RV32IM-NEXT:    andi a0, a0, -32
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: neg_coefficient:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    qc.muliadd a0, a0, -33
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: neg_coefficient:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    qc.muliadd a0, a0, -33
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %cond = select i1 %x, i32 -32, i32 0
+  ret i32 %cond
+}
