@@ -599,14 +599,12 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
       Attrs.hasStreamingCompatibleInterface())
     return true;
 
-  // Enable GlobalISel when feasible and when:
-  // * Forced by option to enable gisel
-  // * The current opt-level is supported by EnableGlobalISelAtO
-  // * The function is an optnone function.
   auto OptLevel = MF.getTarget().getOptLevel();
-  return !(getCGPassBuilderOption().EnableGlobalISelOption.value_or(false) ||
-           static_cast<unsigned>(OptLevel) <= TM.getEnableGlobalISelAtO() ||
-           F.hasOptNone());
+  bool IsGlobalISelPreferred =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false) ||
+      static_cast<unsigned>(OptLevel) <= TM.getEnableGlobalISelAtO() ||
+      F.hasOptNone();
+  return !IsGlobalISelPreferred;
 }
 
 void AArch64CallLowering::saveVarArgRegisters(
