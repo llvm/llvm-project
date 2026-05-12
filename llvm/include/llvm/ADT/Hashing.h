@@ -327,7 +327,7 @@ template <typename... Ts> hash_code hash_combine(const Ts &...args) {
   // Round up so `data()` is non-null when Total == 0; combine_bytes won't
   // read the buffer in that case (len=0 short-circuits in xxh3_64bits).
   std::array<char, std::max<size_t>(1, Total)> buf;
-  size_t off = 0;
+  [[maybe_unused]] size_t off = 0;
   (hashing::detail::store_hashable_data(buf.data(), off, args), ...);
   return hashing::detail::combine_bytes(buf.data(), Total);
 }
