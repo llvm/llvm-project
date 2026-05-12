@@ -3590,7 +3590,7 @@ InstructionCost VPReplicateRecipe::computeCallCost(
 
   if (IntrinID && VPCostContext::isFreeScalarIntrinsic(IntrinID)) {
     assert(GetIntrinsicCost() == 0 && "scalarizing intrinsic should be free");
-    return InstructionCost(0);
+    return 0;
   }
 
   InstructionCost ScalarCallCost =

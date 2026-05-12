@@ -6567,6 +6567,7 @@ struct CallWideningDecision {
   CallWideningDecision(KindTy Kind, Function *Variant = nullptr)
       : Kind(Kind), Variant(Variant) {}
   KindTy Kind;
+
   /// Set when Kind == VectorVariant.
   Function *Variant;
 
