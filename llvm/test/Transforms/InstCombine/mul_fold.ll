@@ -630,12 +630,7 @@ define i32 @mul32_low_knownbits_both_zext(i16 %a, i16 %b) {
 define i32 @mul32_low_knownbits_one_zext(i16 %a, i32 %in1) {
 ; CHECK-LABEL: @mul32_low_knownbits_one_zext(
 ; CHECK-NEXT:    [[IN0:%.*]] = zext i16 [[A:%.*]] to i32
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i32 [[IN1:%.*]], 65535
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
-; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i32 [[IN1LO]], [[IN0]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[M10]], 16
-; CHECK-NEXT:    [[RETLO:%.*]] = add i32 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN1:%.*]], [[IN0]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
   %in0 = zext i16 %a to i32
