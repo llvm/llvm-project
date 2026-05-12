@@ -70,7 +70,7 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   NumCachedScopes = 0;
   CurParsedObjCImpl = nullptr;
 
-  ParserConversionAction = CA_ToExecEncoding;
+  ParserConversionAction = CA_ToLiteralEncoding;
 
   // Add #pragma handlers. These are removed and destroyed in the
   // destructor.
