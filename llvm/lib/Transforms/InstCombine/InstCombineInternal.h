@@ -565,6 +565,8 @@ public:
   ///     -> (zext (udiv (add nuw X, Y-1), Y))
   Instruction *foldDivCeil(BinaryOperator &I);
 
+  Instruction *foldBoxMultiply(BinaryOperator &I);
+
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
   Value *tryFactorizationFolds(BinaryOperator &I);
