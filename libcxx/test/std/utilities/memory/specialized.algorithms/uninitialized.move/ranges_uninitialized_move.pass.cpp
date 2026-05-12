@@ -29,6 +29,7 @@
 #include "../counted.h"
 #include "../overload_compare_iterator.h"
 #include "MoveOnly.h"
+#include "copy_move_types.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -42,6 +43,57 @@ static_assert(std::is_invocable_v<decltype(std::ranges::uninitialized_move), int
 struct NotConvertibleFromInt {};
 static_assert(!std::is_invocable_v<decltype(std::ranges::uninitialized_move), int*, int*, NotConvertibleFromInt*,
                                    NotConvertibleFromInt*>);
+
+TEST_CONSTEXPR_CXX26 bool test() {
+  constexpr int n = 3;
+  std::allocator<MutableMove> alloc;
+
+  // (iter, sentinel) overload.
+  {
+    MutableMove in[n] = {MutableMove(1), MutableMove(2), MutableMove(3)};
+    MutableMove* out  = alloc.allocate(n);
+    auto result       = std::ranges::uninitialized_move(in, in + n, out, out + n);
+    assert(result.in == in + n);
+    assert(result.out == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i].val == i + 1);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  // (range) overload.
+  {
+    MutableMove in[n] = {MutableMove(1), MutableMove(2), MutableMove(3)};
+    MutableMove* out  = alloc.allocate(n);
+    auto out_range    = std::ranges::subrange(out, out + n);
+    auto result       = std::ranges::uninitialized_move(in, out_range);
+    assert(result.in == in + n);
+    assert(result.out == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i].val == i + 1);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  // Destination range is shorter than the source range.
+  {
+    constexpr int m   = 2;
+    MutableMove in[n] = {MutableMove(1), MutableMove(2), MutableMove(3)};
+    MutableMove* out  = alloc.allocate(m);
+    auto result       = std::ranges::uninitialized_move(in, in + n, out, out + m);
+    assert(result.in == in + m);
+    assert(result.out == out + m);
+    for (int i = 0; i != m; ++i)
+      assert(out[i].val == i + 1);
+
+    std::destroy(out, out + m);
+    alloc.deallocate(out, m);
+  }
+
+  return true;
+}
 
 int main(int, char**) {
   // An empty range -- no default constructors should be invoked.
@@ -433,6 +485,11 @@ int main(int, char**) {
       }
     }
   }
+
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

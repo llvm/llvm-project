@@ -16,6 +16,9 @@
 #include <cassert>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 26
+#  include "copy_move_types.h"
+#endif
 
 struct B
 {
@@ -45,6 +48,25 @@ struct Nasty
 };
 
 int Nasty::counter_ = 0;
+
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test() {
+  const int n = 3;
+  ConstCopy value(42);
+  std::allocator<ConstCopy> alloc;
+  ConstCopy* out = alloc.allocate(n);
+
+  ConstCopy* result = std::uninitialized_fill_n(out, n, value);
+  assert(result == out + n);
+  for (int i = 0; i != n; ++i)
+    assert(out[i].val == value.val);
+
+  std::destroy(out, out + n);
+  alloc.deallocate(out, n);
+
+  return true;
+}
+#endif // TEST_STD_VER >= 26
 
 int main(int, char**)
 {
@@ -84,6 +106,11 @@ int main(int, char**)
     }
 
     }
+
+#if TEST_STD_VER >= 26
+    test();
+    static_assert(test());
+#endif
 
   return 0;
 }

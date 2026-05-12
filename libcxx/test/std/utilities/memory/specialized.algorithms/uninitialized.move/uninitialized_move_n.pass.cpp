@@ -18,6 +18,9 @@
 #include <cassert>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 26
+#  include "copy_move_types.h"
+#endif
 #include "test_iterators.h"
 #include "../overload_compare_iterator.h"
 
@@ -54,6 +57,26 @@ struct ThrowsCounted {
 int ThrowsCounted::count = 0;
 int ThrowsCounted::constructed = 0;
 int ThrowsCounted::throw_after = 0;
+
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test() {
+  const int N       = 3;
+  MutableMove in[N] = {MutableMove(1), MutableMove(2), MutableMove(3)};
+  std::allocator<MutableMove> alloc;
+  MutableMove* out = alloc.allocate(N);
+
+  auto result = std::uninitialized_move_n(in, N, out);
+  assert(result.first == in + N);
+  assert(result.second == out + N);
+  for (int i = 0; i != N; ++i)
+    assert(out[i].val == i + 1);
+
+  std::destroy(out, out + N);
+  alloc.deallocate(out, N);
+
+  return true;
+}
+#endif // TEST_STD_VER >= 26
 
 void test_ctor_throws()
 {
@@ -143,6 +166,11 @@ int main(int, char**)
             }
         }
     }
+
+#if TEST_STD_VER >= 26
+    test();
+    static_assert(test());
+#endif
 
   return 0;
 }
