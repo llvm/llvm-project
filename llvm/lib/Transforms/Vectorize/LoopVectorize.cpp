@@ -994,16 +994,15 @@ public:
     InstWidening Kind;
     Function *Variant;
     Intrinsic::ID IID;
-    std::optional<unsigned> MaskPos;
+    bool RequiresMask;
     InstructionCost Cost;
   };
 
   void setCallWideningDecision(CallInst *CI, ElementCount VF, InstWidening Kind,
                                Function *Variant, Intrinsic::ID IID,
-                               std::optional<unsigned> MaskPos,
-                               InstructionCost Cost) {
+                               bool RequiresMask, InstructionCost Cost) {
     assert(!VF.isScalar() && "Expected vector VF");
-    CallWideningDecisions[{CI, VF}] = {Kind, Variant, IID, MaskPos, Cost};
+    CallWideningDecisions[{CI, VF}] = {Kind, Variant, IID, RequiresMask, Cost};
   }
 
   CallWideningDecision getCallWideningDecision(CallInst *CI,
@@ -1011,7 +1010,7 @@ public:
     assert(!VF.isScalar() && "Expected vector VF");
     auto I = CallWideningDecisions.find({CI, VF});
     if (I == CallWideningDecisions.end())
-      return {CM_Unknown, nullptr, Intrinsic::not_intrinsic, std::nullopt, 0};
+      return {CM_Unknown, nullptr, Intrinsic::not_intrinsic, false, 0};
     return I->second;
   }
 
@@ -4970,8 +4969,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
                              ForcedScalar->second.contains(CI)) ||
                             isUniformAfterVectorization(CI, VF))) {
         setCallWideningDecision(CI, VF, CM_Scalarize, nullptr,
-                                Intrinsic::not_intrinsic, std::nullopt,
-                                ScalarCost);
+                                Intrinsic::not_intrinsic, false, ScalarCost);
         continue;
       }
 
@@ -4986,8 +4984,8 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       if (RecurrenceDescriptor::isFMulAddIntrinsic(CI))
         if (auto RedCost = getReductionPatternCost(CI, VF, RetTy)) {
           setCallWideningDecision(CI, VF, CM_IntrinsicCall, nullptr,
-                                  getVectorIntrinsicIDForCall(CI, TLI),
-                                  std::nullopt, *RedCost);
+                                  getVectorIntrinsicIDForCall(CI, TLI), false,
+                                  *RedCost);
           continue;
         }
 
@@ -5073,7 +5071,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       }
 
       setCallWideningDecision(CI, VF, Decision, VecFunc, IID,
-                              FuncInfo.getParamIndexForOptionalMask(), Cost);
+                              FuncInfo.isMasked(), Cost);
     }
   }
 }
@@ -6464,7 +6462,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
                                       VPI->getDebugLoc());
 
   Function *Variant = nullptr;
-  std::optional<unsigned> MaskPos;
+  bool RequiresMask = false;
   // Is better to call a vectorized version of the function than to to scalarize
   // the call?
   auto ShouldUseVectorCall = LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -6487,7 +6485,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
             CM.getCallWideningDecision(CI, VF);
         if (Decision.Kind == LoopVectorizationCostModel::CM_VectorCall) {
           Variant = Decision.Variant;
-          MaskPos = Decision.MaskPos;
+          RequiresMask = Decision.RequiresMask;
           return true;
         }
 
@@ -6495,7 +6493,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
       },
       Range);
   if (ShouldUseVectorCall) {
-    if (MaskPos.has_value()) {
+    if (RequiresMask) {
       // We have 2 cases that would require a mask:
       //   1) The call needs to be predicated, either due to a conditional
       //      in the scalar loop or use of an active lane mask with
@@ -6505,7 +6503,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
       //      synthesize an all-true mask.
       VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
 
-      Ops.insert(Ops.begin() + *MaskPos, Mask);
+      Ops.push_back(Mask);
     }
 
     Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
