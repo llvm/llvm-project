@@ -11,8 +11,6 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Module.h"
 
-#include <map>
-
 #define DEBUG_TYPE "dx-debug-info"
 
 using namespace llvm;
