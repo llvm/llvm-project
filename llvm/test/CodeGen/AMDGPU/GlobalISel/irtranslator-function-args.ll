@@ -1690,14 +1690,16 @@ define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s32)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (volatile load (s32) from %ir.arg0 + 4, addrspace 5)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY1]](p5) :: (volatile load (s8) from %ir.arg1, align 4, addrspace 5)
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY1]], [[C1]](s32)
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (volatile load (s32) from %ir.arg1 + 4, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (volatile store (s8) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C1]](s64)
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C2]](s64)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[PTR_ADD2]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison` + 4, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](s8), [[DEF]](p1) :: (volatile store (s8) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C1]](s64)
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C3]](s64)
   ; CHECK-NEXT:   G_STORE [[LOAD3]](s32), [[PTR_ADD3]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison` + 4, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[COPY2]](s32), [[DEF1]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   SI_RETURN
@@ -1768,11 +1770,11 @@ define void @byval_a3i32_align128_byval_i16_align64(ptr addrspace(5) byval([3 x 
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (load (s16) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s32), [[C]](p1) :: (store (s32) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(p1) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[C4]](p1) :: (store (s32) into `ptr addrspace(1) null` + 4, addrspace 1)
-  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(p1) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   G_STORE [[LOAD2]](s32), [[C6]](p1) :: (store (s32) into `ptr addrspace(1) null` + 8, addrspace 1)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[C]], [[C3]](s64)
+  ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[PTR_ADD2]](p1) :: (store (s32) into `ptr addrspace(1) null` + 4, addrspace 1)
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[C]], [[C4]](s64)
+  ; CHECK-NEXT:   G_STORE [[LOAD2]](s32), [[PTR_ADD3]](p1) :: (store (s32) into `ptr addrspace(1) null` + 8, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD3]](s16), [[C]](p1) :: (store (s16) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %arg0.load = load [3 x i32], ptr addrspace(5) %arg0

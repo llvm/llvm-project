@@ -608,14 +608,16 @@ define void @test_abi_exts_call(ptr %addr) {
   ; X86-NEXT:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86-NEXT:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $esp
-  ; X86-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; X86-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; X86-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s32)
   ; X86-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD1]](s8)
   ; X86-NEXT:   G_STORE [[SEXT]](s32), [[PTR_ADD1]](p0) :: (store (s8) into stack)
   ; X86-NEXT:   CALLpcrel32 @take_char, csr_32, implicit $esp, implicit $ssp
   ; X86-NEXT:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86-NEXT:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $esp
-  ; X86-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY2]], [[C]](s32)
+  ; X86-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; X86-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY2]], [[C2]](s32)
   ; X86-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s8)
   ; X86-NEXT:   G_STORE [[ZEXT]](s32), [[PTR_ADD2]](p0) :: (store (s8) into stack)
   ; X86-NEXT:   CALLpcrel32 @take_char, csr_32, implicit $esp, implicit $ssp
