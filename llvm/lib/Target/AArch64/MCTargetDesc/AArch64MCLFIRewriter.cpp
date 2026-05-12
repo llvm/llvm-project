@@ -124,17 +124,9 @@ static bool isVASysOp(const MCInst &Inst) {
 
 static MCInst replaceRegAt(const MCInst &Inst, unsigned Idx,
                            MCRegister NewReg) {
-  MCInst New;
-  New.setOpcode(Inst.getOpcode());
-  New.setLoc(Inst.getLoc());
-  for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
-    if (I == Idx) {
-      assert(Inst.getOperand(I).isReg());
-      New.addOperand(MCOperand::createReg(NewReg));
-    } else {
-      New.addOperand(Inst.getOperand(I));
-    }
-  }
+  MCInst New = Inst;
+  assert(New.getOperand(Idx).isReg());
+  New.getOperand(Idx).setReg(NewReg);
   return New;
 }
 
