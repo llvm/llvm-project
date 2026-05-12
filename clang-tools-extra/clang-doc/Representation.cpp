@@ -112,9 +112,8 @@ static void reduceChildren(OwningVec<T> &Children,
     T *Ptr = ChildrenToMerge.front().Ptr;
     ChildrenToMerge.pop_front();
 
-    auto It = llvm::find_if(Children, [Ptr](const auto &C) {
-      return C.Ptr->USR == Ptr->USR;
-    });
+    auto It = llvm::find_if(
+        Children, [Ptr](const auto &C) { return C.Ptr->USR == Ptr->USR; });
 
     if (It == Children.end()) {
       Children.push_back(*allocateListNodeTransient<T>(Ptr));
