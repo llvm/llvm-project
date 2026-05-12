@@ -15664,8 +15664,13 @@ void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
     PFPFieldsWithEvaluatedOffset.insert(FD);
 }
 
-bool ASTContext::shouldIgnoreNotesForConstEval(
+bool ASTContext::maybeFoldMSConstexpr(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) {
-  return getLangOpts().MSVCCompat && Notes.size() == 1 &&
-         Notes[0].second.getDiagID() == diag::note_constexpr_invalid_cast;
+  bool Fold = getLangOpts().MSVCCompat && Notes.size() == 1 &&
+              Notes[0].second.getDiagID() == diag::note_constexpr_invalid_cast;
+  if (Fold) {
+    getDiagnostics().Report(Notes[0].first, diag::warn_relaxed_constant_fold);
+    Notes.clear();
+  }
+  return Fold;
 }

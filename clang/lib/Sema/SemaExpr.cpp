@@ -18062,9 +18062,8 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
 
   // For -fms-compatibility mode we relax some requirements
   // for constant folding in non-SFINAE contexts
-  if (!isSFINAEContext() &&
-      getASTContext().shouldIgnoreNotesForConstEval(Notes))
-    Notes.clear();
+  if (!isSFINAEContext())
+    getASTContext().maybeFoldMSConstexpr(Notes);
 
   // In C++11, we can rely on diagnostics being produced for any expression
   // which is not a constant expression. If no diagnostics were produced, then

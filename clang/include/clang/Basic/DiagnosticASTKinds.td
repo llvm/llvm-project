@@ -1030,6 +1030,10 @@ def warn_npot_ms_struct : Warning<
   "ms_struct may not produce Microsoft-compatible layouts with fundamental "
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
+def warn_relaxed_constant_fold : Warning<
+  "folding this constant expression is a Microsoft extension">,
+  InGroup<MicrosoftRelaxedConstantFold>, DefaultIgnore;
+
 
 def err_itanium_layout_unimplemented : Error<
   "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;
