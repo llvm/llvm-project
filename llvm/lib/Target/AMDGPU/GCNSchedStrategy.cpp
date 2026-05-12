@@ -1075,7 +1075,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
   auto *NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
   if (LiveInIt != MBBLiveIns.end()) {
     auto LiveIn = std::move(LiveInIt->second);
-    RPTracker.reset(*MBB->begin(), &LiveIn);
+    RPTracker.reset(*MBB->begin(), MBB->end(), &LiveIn);
     MBBLiveIns.erase(LiveInIt);
   } else {
     I = Rgn.first;
@@ -1083,7 +1083,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
 #ifdef EXPENSIVE_CHECKS
     assert(isEqual(getLiveRegsBefore(*NonDbgMI, *LIS), LRS));
 #endif
-    RPTracker.reset(*I, &LRS);
+    RPTracker.reset(*I, I->getParent()->end(), &LRS);
   }
 
   for (;;) {
@@ -1207,16 +1207,10 @@ void GCNScheduleDAGMILive::runSchedStages() {
       }
 
       if (S.useGCNTrackers()) {
-        GCNDownwardRPTracker *DownwardTracker = S.getDownwardTracker();
-        GCNUpwardRPTracker *UpwardTracker = S.getUpwardTracker();
-        GCNRPTracker::LiveRegSet *RegionLiveIns =
-            &LiveIns[Stage->getRegionIdx()];
-
-        reinterpret_cast<GCNRPTracker *>(DownwardTracker)
-            ->reset(MRI, *RegionLiveIns);
-        reinterpret_cast<GCNRPTracker *>(UpwardTracker)
-            ->reset(MRI, RegionLiveOuts.getLiveRegsForRegionIdx(
-                             Stage->getRegionIdx()));
+        const unsigned RegionIdx = Stage->getRegionIdx();
+        S.getDownwardTracker()->reset(MRI, LiveIns[RegionIdx]);
+        S.getUpwardTracker()->reset(
+            MRI, RegionLiveOuts.getLiveRegsForRegionIdx(RegionIdx));
       }
 
       ScheduleDAGMILive::schedule();

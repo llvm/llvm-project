@@ -320,6 +320,8 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  if (MI->isCall())
+    collectCallEdge(*MI);
   switch (MI->getOpcode()) {
   case TargetOpcode::DBG_VALUE:
     llvm_unreachable("Should be handled target independently");

@@ -34,6 +34,36 @@ on:
         required: true
 
 jobs:
+  # This job checks permissions and validates inputs to prevent potential
+  # malicious actions.  Since the release-doxygen job has contents: write
+  # permissions we need to be extra careful about who can run the job and
+  # what inputs can be provided.
+  release-doxygen-validate-input:
+    name: Release Doxygen Validate Input
+    runs-on: ubuntu-24.04
+    environment:
+      name: release
+      deployment: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/
+
+      - name: Check Permissions
+        uses: ./.github/workflows/require-release-manager
+        with:
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
+      - name: Validate Input
+        ./.github/workflows/validate-release-version
+        with:
+          release-version: ${{ inputs.release-version }}
+
   release-doxygen:
     name: Build and Upload Release Doxygen
     runs-on: ubuntu-24.04
@@ -42,6 +72,8 @@ jobs:
       deployment: false
     permissions:
       contents: write
+    needs:
+      - release-doxygen-validate-input
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
