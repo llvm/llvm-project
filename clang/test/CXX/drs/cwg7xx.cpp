@@ -342,6 +342,9 @@ struct S {
 };
 
 decltype(S())::T i;
+
+template <typename T>
+using foo = typename decltype(T())::I;
 #endif
 } // namespace cwg743
 
