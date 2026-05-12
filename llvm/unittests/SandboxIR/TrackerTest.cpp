@@ -2053,6 +2053,60 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
   EXPECT_EQ(Add1->getOperand(0), Arg0);
   Checker.expectNoDiff();
+
+  // Check revert(/*RevertAll=*/true)
+  Checker.save();
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  Add1->setOperand(0, Arg1);
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 2u);
+  Add1->setOperand(0, Arg0);
+  Ctx.revert(/*RevertAll=*/true);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
+  Checker.expectNoDiff();
+
+  // Check revert(/*RevertAll=*/false)
+  Checker.save();
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  Add1->setOperand(0, Arg1);
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 2u);
+  Add1->setOperand(0, Arg0);
+  Ctx.revert(/*RevertAll=*/false);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  EXPECT_EQ(Add1->getOperand(0), Arg1);
+  Ctx.revert(/*RevertAll=*/false);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
+  Checker.expectNoDiff();
+
+  // Check accept(/*AcceptAll=*/false)
+  auto *OrigOp = Add1->getOperand(0);
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  Add1->setOperand(0, Arg1);
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 2u);
+  Add1->setOperand(0, Arg0);
+  Ctx.accept(/*RevertAll=*/false);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  EXPECT_EQ(Add1->getOperand(0), Arg0);
+  Ctx.accept(/*RevertAll=*/false);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
+  EXPECT_EQ(Add1->getOperand(0), Arg0);
+  Add1->setOperand(0, OrigOp);
+
+  // Check accept(/*AcceptAll=*/true)
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  Add1->setOperand(0, Arg1);
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 2u);
+  Add1->setOperand(0, Arg0);
+  Ctx.accept(/*RevertAll=*/true);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
+  EXPECT_EQ(Add1->getOperand(0), Arg0);
 }
 
 #endif // NDEBUG
