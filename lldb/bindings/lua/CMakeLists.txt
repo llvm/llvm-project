@@ -65,7 +65,9 @@ function(finish_swig_lua swig_target lldb_lua_bindings_dir lldb_lua_target_dir)
                             COMPONENT ${lldb_lua_library_target}
                             DEPENDS ${lldb_lua_library_target})
     # Tools that link liblldb need the lua bindings installed alongside.
-    foreach(tool lldb lldb-dap)
+    # The list is populated by add_lldb_executable.
+    get_property(lldb_liblldb_tools GLOBAL PROPERTY LLDB_TOOLS_LINKING_LIBLLDB)
+    foreach(tool ${lldb_liblldb_tools})
       if(TARGET install-${tool})
         add_dependencies(install-${tool} ${lldb_lua_library_install_target})
       endif()

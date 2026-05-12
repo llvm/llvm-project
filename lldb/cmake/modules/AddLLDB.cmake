@@ -248,12 +248,17 @@ function(add_lldb_executable name)
                                DEPENDS ${name}
                                COMPONENT ${name})
       # An installed tool that links liblldb won't run without liblldb
-      # installed alongside it.
+      # installed alongside it. Record it on a global list so other
+      # runtime components (e.g. the Python/Lua script packages) can
+      # attach themselves to the same install targets.
       _lldb_links_liblldb_check(_links_liblldb "${ARG_LINK_LIBS}")
-      if(_links_liblldb AND TARGET install-liblldb)
-        add_dependencies(install-${name} install-liblldb)
-        if(TARGET install-${name}-stripped AND TARGET install-liblldb-stripped)
-          add_dependencies(install-${name}-stripped install-liblldb-stripped)
+      if(_links_liblldb)
+        set_property(GLOBAL APPEND PROPERTY LLDB_TOOLS_LINKING_LIBLLDB ${name})
+        if(TARGET install-liblldb)
+          add_dependencies(install-${name} install-liblldb)
+          if(TARGET install-${name}-stripped AND TARGET install-liblldb-stripped)
+            add_dependencies(install-${name}-stripped install-liblldb-stripped)
+          endif()
         endif()
       endif()
     endif()
