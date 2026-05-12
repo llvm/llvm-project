@@ -577,6 +577,7 @@ public:
                                             unsigned MaxLen = 0);
   LLVM_ABI LegalizeResult lowerVAArg(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerMulfix(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerTruncSat(MachineInstr &MI);
 };
 
 } // End namespace llvm.
