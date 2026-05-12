@@ -29,17 +29,6 @@ def tlscall : Operand<i64> {
 }
 
 //===----------------------------------------------------------------------===//
-// 64-bit output pattern fragments.
-//
-
-// Create an even/odd register pair.
-def PAIR8 : OutPatFrag<(ops node:$even, node:$odd),
-                       (REG_SEQUENCE G8pRC, $even, sub_gp8_x0, $odd, sub_gp8_x1)>;
-
-// Return the even part of an even/odd register pair.
-def EVEN8 : OutPatFrag<(ops node:$pair), (EXTRACT_SUBREG $pair, sub_gp8_x0)>;
-
-//===----------------------------------------------------------------------===//
 // 64-bit transformation functions.
 //
 

@@ -14814,59 +14814,6 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(Ptr);
     break;
   }
-  case PPC::LWAT_PSEUDO: {
-    DebugLoc DL = MI.getDebugLoc();
-    Register DstReg = MI.getOperand(0).getReg();
-    Register PtrReg = MI.getOperand(1).getReg();
-    Register ValReg = MI.getOperand(2).getReg();
-    unsigned FC = MI.getOperand(3).getImm();
-    Register Val64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), Val64)
-        .addReg(ValReg)
-        .addImm(PPC::sub_32);
-
-    Register G8rPair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    Register UndefG8r = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), UndefG8r);
-    BuildMI(*BB, MI, DL, TII->get(PPC::REG_SEQUENCE), G8rPair)
-        .addReg(UndefG8r)
-        .addImm(PPC::sub_gp8_x0)
-        .addReg(Val64)
-        .addImm(PPC::sub_gp8_x1);
-
-    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(PPC::LWAT), PairResult)
-        .addReg(G8rPair)
-        .addReg(PtrReg)
-        .addImm(FC);
-    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
-        .addReg(PairResult, {}, PPC::sub_gp8_x0);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-        .addReg(Result64, {}, PPC::sub_32);
-    break;
-  }
-  case PPC::LWAT_COND_PSEUDO: {
-    DebugLoc DL = MI.getDebugLoc();
-    Register DstReg = MI.getOperand(0).getReg();
-    Register PtrReg = MI.getOperand(1).getReg();
-    unsigned FC = MI.getOperand(2).getImm();
-
-    Register Pair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Pair);
-
-    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(PPC::LWAT), PairResult)
-        .addReg(Pair)
-        .addReg(PtrReg)
-        .addImm(FC);
-    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
-        .addReg(PairResult, {}, PPC::sub_gp8_x0);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-        .addReg(Result64, {}, PPC::sub_32);
-    break;
-  }
   default:
     llvm_unreachable("Unexpected instr type to insert");
   }
