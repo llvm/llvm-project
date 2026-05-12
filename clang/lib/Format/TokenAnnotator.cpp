@@ -4062,6 +4062,60 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
   return false;
 }
 
+bool TokenAnnotator::mustBreakBeforeReturnType(
+    const AnnotatedLine &Line) const {
+  assert(Line.MightBeFunctionDecl);
+
+  switch (Style.BreakBeforeReturnType) {
+  case FormatStyle::BBRTS_None:
+    return false;
+  case FormatStyle::BBRTS_All:
+    return true;
+  case FormatStyle::BBRTS_TopLevel:
+    return Line.Level == 0;
+  case FormatStyle::BBRTS_AllDefinitions:
+    return Line.mightBeFunctionDefinition();
+  case FormatStyle::BBRTS_TopLevelDefinitions:
+    return Line.Level == 0 && Line.mightBeFunctionDefinition();
+  }
+
+  return false;
+}
+
+static FormatToken *findReturnTypeStart(const AnnotatedLine &Line) {
+  auto *Tok = Line.getFirstNonComment();
+  if (!Tok)
+    return nullptr;
+
+  if (Tok->is(tok::kw_template)) {
+    auto *Opener = Tok->Next;
+    while (Opener && Opener->isNot(TT_TemplateOpener))
+      Opener = Opener->Next;
+    if (!Opener || !Opener->MatchingParen)
+      return nullptr;
+    Tok = Opener->MatchingParen->Next;
+  }
+
+  while (Tok) {
+    if (isReturnTypePrefixSpecifier(*Tok) ||
+        Tok->isOneOf(tok::kw___attribute, tok::kw___declspec) ||
+        Tok->is(TT_AttributeMacro)) {
+      auto *Next = Tok->Next;
+      if (Next && Next->is(tok::l_paren) && Next->MatchingParen)
+        Tok = Next->MatchingParen->Next;
+      else
+        Tok = Next;
+      continue;
+    }
+    if (Tok->is(TT_AttributeLSquare) && Tok->MatchingParen) {
+      Tok = Tok->MatchingParen->Next;
+      continue;
+    }
+    break;
+  }
+  return Tok;
+}
+
 void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   if (Line.Computed)
     return;
@@ -4177,6 +4231,18 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
         if (!Tok)
           break;
       }
+    }
+  }
+
+  if (Line.MightBeFunctionDecl && LineIsFunctionDeclaration &&
+      mustBreakBeforeReturnType(Line)) {
+    if (auto *ReturnTypeStart = findReturnTypeStart(Line);
+        ReturnTypeStart && ReturnTypeStart != FirstNonComment &&
+        ReturnTypeStart->isNot(TT_FunctionDeclarationName) &&
+        ReturnTypeStart->isNot(TT_CtorDtorDeclName) &&
+        ReturnTypeStart->isNot(tok::tilde)) {
+      ReturnTypeStart->MustBreakBefore = true;
+      Line.ReturnTypeWrapped = true;
     }
   }
 

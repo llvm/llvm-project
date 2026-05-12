@@ -10594,6 +10594,173 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   verifyFormat("void foo (int a, int b);", Style);
 }
 
+TEST_F(FormatTest, BreakBeforeReturnType) {
+  FormatStyle Style = getLLVMStyle();
+
+  EXPECT_EQ(Style.BreakBeforeReturnType, FormatStyle::BBRTS_None);
+  verifyFormat("static inline void myfun(void);", Style);
+
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_All;
+
+  verifyFormat("static inline\n"
+               "void myfun(void);",
+               Style);
+  verifyFormat("static\n"
+               "int x(void);",
+               Style);
+
+  verifyFormat("void f(void);", Style);
+  verifyFormat("int g(int a);", Style);
+
+  // Constructors and destructors are not affected.
+  verifyFormat("class C {\n"
+               "  explicit C(int);\n"
+               "  virtual ~C();\n"
+               "};",
+               Style);
+
+  verifyFormat("__attribute__((always_inline)) static inline\n"
+               "void f(void);",
+               Style);
+  verifyFormat("static __forceinline\n"
+               "void f(void);",
+               Style);
+  verifyFormat("export\n"
+               "int f();",
+               Style);
+  verifyFormat(
+      "__attribute__((section(\".init\"), always_inline)) static inline\n"
+      "int boot(void);",
+      Style);
+  verifyFormat("[[nodiscard]] static constexpr\n"
+               "int f();",
+               Style);
+  verifyFormat("static\n"
+               "const struct foo *g(void);",
+               Style);
+  verifyFormat("class A {\n"
+               "  friend\n"
+               "  int f();\n"
+               "};",
+               Style);
+
+  verifyFormat("static int x = 0;", Style);
+  verifyFormat("static const char *msg;", Style);
+
+  verifyFormat("static\n"
+               "auto f() -> int;",
+               Style);
+
+  Style.ColumnLimit = 50;
+  verifyFormat("__attribute__((always_inline)) static inline\n"
+               "int do_thing(int a, int b, int c);",
+               "__attribute__((always_inline)) static inline int "
+               "do_thing(int a, int b, int c);",
+               Style);
+  Style.ColumnLimit = 80;
+
+  verifyFormat("static inline\n"
+               "int compute(int x) {\n"
+               "  ++x;\n"
+               "  return x;\n"
+               "}",
+               Style);
+
+  Style.BreakAfterReturnType = FormatStyle::RTBS_All;
+  verifyFormat("static inline\n"
+               "void\n"
+               "f(void);",
+               Style);
+  Style.BreakAfterReturnType = FormatStyle::RTBS_None;
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Always;
+  verifyFormat("[[nodiscard]]\n"
+               "static\n"
+               "int f();",
+               Style);
+  Style.BreakAfterAttributes = FormatStyle::ABS_Leave;
+
+  Style.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  verifyFormat("template <typename T>\n"
+               "static inline\n"
+               "T f();",
+               Style);
+  Style.BreakTemplateDeclarations = FormatStyle::BTDS_Leave;
+
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_AllDefinitions;
+  verifyFormat("class A {\n"
+               "  static inline int member();\n"
+               "  static inline\n"
+               "  int member_def() {\n"
+               "    return 0;\n"
+               "  }\n"
+               "};\n"
+               "static inline int top_decl();\n"
+               "static inline\n"
+               "int top_defn() {\n"
+               "  ++x;\n"
+               "  return 0;\n"
+               "}",
+               Style);
+
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_TopLevel;
+  verifyFormat("class A {\n"
+               "  static inline int member();\n"
+               "  static inline int member_def() { return 0; }\n"
+               "};\n"
+               "static inline\n"
+               "int top_decl();\n"
+               "static inline\n"
+               "int top_defn() {\n"
+               "  ++x;\n"
+               "  return 0;\n"
+               "}",
+               Style);
+
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_TopLevelDefinitions;
+  verifyFormat("class A {\n"
+               "  static inline int member();\n"
+               "  static inline int member_def() { return 0; }\n"
+               "};\n"
+               "static inline int top_decl();\n"
+               "static inline\n"
+               "int top_defn() {\n"
+               "  ++x;\n"
+               "  return 0;\n"
+               "}",
+               Style);
+
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_All;
+
+  Style.AttributeMacros = {"__always_inline"};
+  verifyFormat("__always_inline\n"
+               "void f(void);",
+               Style);
+
+  Style.AttributeMacros = {"__always_inline", "LIBC_INLINE"};
+  verifyFormat("LIBC_INLINE static __always_inline\n"
+               "int compute(int x);",
+               Style);
+
+  Style.AttributeMacros = {"ATTRIBUTE_PRINTF"};
+  verifyFormat("ATTRIBUTE_PRINTF(1, 2) static\n"
+               "void log(const char *fmt, ...);",
+               Style);
+
+  // Same identifier: unconfigured -> not a specifier; configured -> specifier.
+  Style.AttributeMacros = {};
+  verifyFormat("FOO static void f(void);", Style);
+  Style.AttributeMacros = {"FOO"};
+  verifyFormat("FOO static\n"
+               "void f(void);",
+               Style);
+
+  Style.AttributeMacros = {"LIBC_INLINE"};
+  verifyFormat("[[nodiscard]] __attribute__((pure)) LIBC_INLINE static\n"
+               "int hash(int k);",
+               Style);
+}
+
 TEST_F(FormatTest, AlwaysBreakBeforeMultilineStrings) {
   FormatStyle NoBreak = getLLVMStyle();
   NoBreak.AlwaysBreakBeforeMultilineStrings = false;
