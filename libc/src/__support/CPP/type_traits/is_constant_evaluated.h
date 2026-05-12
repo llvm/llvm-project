@@ -16,7 +16,8 @@ namespace cpp {
 
 LIBC_INLINE constexpr bool is_constant_evaluated() {
 #if LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED ||                                  \
-    (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900))
+    (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||       \
+    (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 900)
   return __builtin_is_constant_evaluated();
 #else
   return false;
