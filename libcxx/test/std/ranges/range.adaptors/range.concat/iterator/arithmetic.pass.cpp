@@ -23,6 +23,7 @@
 #include <ranges>
 #include <span>
 #include <vector>
+#include <utility>
 
 #include "../../range_adaptor_types.h"
 

@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "../types.h"
 

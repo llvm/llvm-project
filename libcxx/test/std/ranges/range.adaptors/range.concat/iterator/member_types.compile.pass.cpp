@@ -15,6 +15,7 @@
 #include <list>
 #include <ranges>
 #include <tuple>
+#include <utility>
 
 #include "test_iterators.h"
 #include "../../range_adaptor_types.h"
