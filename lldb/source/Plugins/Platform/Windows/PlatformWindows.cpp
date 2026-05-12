@@ -710,7 +710,7 @@ void * __lldb_LoadLibraryHelper(const wchar_t *name, const wchar_t *paths,
       for (size_t i = 0; i < plen; ++i)
         *p++ = path[i];
       *p++ = L'\\';
-      for (size_t i = 0; i <= nlen; ++i) // copy name including trailing '\0'
+      for (size_t i = 0; i <= nlen; ++i) // Copy name including trailing '\0'.
         *p++ = name[i];
       result->ImageBase = LoadLibraryExW(full, nullptr,
                                          LOAD_WITH_ALTERED_SEARCH_PATH);
