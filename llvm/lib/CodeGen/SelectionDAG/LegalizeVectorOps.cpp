@@ -1406,13 +1406,16 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::FROUNDEVEN:
   case ISD::FTRUNC:
   case ISD::FSQRT:
-  case ISD::CONVERT_FROM_ARBITRARY_FP:
     if (SDValue Expanded = TLI.expandVectorNaryOpBySplitting(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::CONVERT_FROM_ARBITRARY_FP:
+    if (SDValue Expanded = TLI.expandVectorNaryOpBySplitting(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
     if (SDValue Expanded = TLI.expandCONVERT_FROM_ARBITRARY_FP(Node, DAG))
       Results.push_back(Expanded);
     else

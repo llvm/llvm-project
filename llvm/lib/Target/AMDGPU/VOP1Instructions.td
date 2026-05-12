@@ -832,14 +832,14 @@ let OtherPredicates = [HasFP8ConversionInsts] in {
 // llvm.convert.from.arbitrary.fp i8 -> f32 OCP scalar patterns for GFX11+.
 // GFX11+ doesn't have SDWA, so must use OP_SEL form.
 let OtherPredicates = [HasOCPFP8ConversionInsts, isGFX11Plus, isNotGFX1250Plus] in
-  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src0, Float8E4M3FN)),
-               (V_CVT_F32_FP8_OP_SEL_e64 $src0, 0)>;
+  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, Float8E4M3FN)),
+               (V_CVT_F32_FP8_OP_SEL_e64 $src, 0)>;
 let OtherPredicates = [HasOCPFP8ConversionInsts, isGFX1250Plus] in
-  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src0, Float8E4M3FN)),
-               (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.NONE, 0)>;
+  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, Float8E4M3FN)),
+               (V_CVT_F32_FP8_gfx1250_e64 $src, DSTCLAMP.NONE, 0)>;
 let OtherPredicates = [HasOCPFP8ConversionInsts, isGFX11Plus] in
-  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src0, Float8E5M2)),
-               (V_CVT_F32_BF8_OP_SEL_e64 $src0, 0)>;
+  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, Float8E5M2)),
+               (V_CVT_F32_BF8_OP_SEL_e64 $src, 0)>;
 
 class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
     VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
@@ -893,16 +893,16 @@ let SubtargetPredicate = HasFP8F16ConversionInsts in {
 // llvm.convert.from.arbitrary.fp i8 -> f16 OCP scalar patterns.
 let OtherPredicates = [HasOCPFP8ConversionInsts, HasFP8F16ConversionInsts] in {
   let True16Predicate = UseRealTrue16Insts in {
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, Float8E4M3FN)),
-                 (V_CVT_F16_FP8_t16_e64 0, $src0, 0)>;
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, Float8E5M2)),
-                 (V_CVT_F16_BF8_t16_e64 0, $src0, 0)>;
+    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src, Float8E4M3FN)),
+                 (V_CVT_F16_FP8_t16_e64 0, $src, 0)>;
+    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src, Float8E5M2)),
+                 (V_CVT_F16_BF8_t16_e64 0, $src, 0)>;
   }
   let True16Predicate = UseFakeTrue16Insts in {
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, Float8E4M3FN)),
-                 (V_CVT_F16_FP8_fake16_e64 0, $src0, 0)>;
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, Float8E5M2)),
-                 (V_CVT_F16_BF8_fake16_e64 0, $src0, 0)>;
+    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src, Float8E4M3FN)),
+                 (V_CVT_F16_FP8_fake16_e64 0, $src, 0)>;
+    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src, Float8E5M2)),
+                 (V_CVT_F16_BF8_fake16_e64 0, $src, 0)>;
   }
 }
 

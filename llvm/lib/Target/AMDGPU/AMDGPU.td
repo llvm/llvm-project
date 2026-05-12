@@ -807,7 +807,8 @@ defm FP8ConversionInsts : AMDGPUSubtargetFeature<"fp8-conversion-insts",
   "Has fp8 and bf8 conversion instructions"
 >;
 
-// Note: it doesn't include FNUZ dataformat, therefore gfx942 is excluded.
+// OCP fp8 semantics (E4M3FN, E5M2). Distinct from the FNUZ formats used by
+// gfx942.
 defm OCPFP8ConversionInsts : AMDGPUSubtargetFeature<"ocp-fp8-conversion-insts",
   "Has OCP fp8 (E4M3FN, E5M2) conversion instructions"
 >;
