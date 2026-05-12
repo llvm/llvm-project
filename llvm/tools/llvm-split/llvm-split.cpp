@@ -304,8 +304,7 @@ int main(int argc, char **argv) {
   if (SplitByCategory != SplitByCategoryType::SBCT_None) {
     auto E = runSplitModuleByCategory(std::move(M));
     if (E) {
-      errs() << E << "\n";
-      Err.print(argv[0], errs());
+      errs() << toString(std::move(E)) << "\n";
       return 1;
     }
 
