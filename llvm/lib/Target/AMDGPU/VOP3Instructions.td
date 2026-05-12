@@ -2024,13 +2024,13 @@ let SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1 in {
 class AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0>: GCNPat<
     (i32 (or (i32 (shl (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))), (i32 8))),
              (i32 (and (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))), (i32 255))))),
-    true16HelperReg32FromSrc16<(inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 ), true16>.ret
+    (true16HelperReg32FromSrc16<true16> (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 ))
 >;
 
 class AshrPkU8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0>: GCNPat<
     (i32 (or (i32 (shl (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))), (i32 8))),
              (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))),
-    true16HelperReg32FromSrc16<(inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 ), true16>.ret
+    (true16HelperReg32FromSrc16<true16> (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 ))
 >;
 
 let SubtargetPredicate = HasAshrPkInsts, True16Predicate = NotHasTrue16BitInsts in {

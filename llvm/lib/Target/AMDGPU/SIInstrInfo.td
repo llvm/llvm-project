@@ -3566,11 +3566,13 @@ def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Key = ["OpX", "OpY", "SubTgt", "VOPD3"];
 }
 
-class true16HelperReg32FromSrc16<dag op, bit true16, bit ishi16 = 0> {
-  dag ret = !if(true16,!if(ishi16, (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, op, hi16),
-                          (REG_SEQUENCE VGPR_32, op, lo16, (i16 (IMPLICIT_DEF)), hi16)),
-                op);
-}
+class true16HelperReg32FromSrc16<bit true16, bit ishi16 = 0> : OutPatFrag<
+  (ops node:$op),
+  !if(true16,
+      !if(ishi16,
+          (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16),
+          (REG_SEQUENCE VGPR_32, $op, lo16, (i16 (IMPLICIT_DEF)), hi16)),
+      (COPY_TO_REGCLASS $op, VGPR_32))>;
 
 include "SIInstructions.td"
 
