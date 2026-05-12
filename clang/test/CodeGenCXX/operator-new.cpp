@@ -22,8 +22,10 @@ void *f2(long N) {
   // ALL-NEXT: [[OVER:%.*]] = extractvalue {{.*}} [[UWO]], 1
   // ALL-NEXT: [[SUM:%.*]] = extractvalue {{.*}} [[UWO]], 0
   // ALL-NEXT: [[RESULT:%.*]] = select i1 [[OVER]], i32 -1, i32 [[SUM]]
-  // SANE-NEXT: call noalias noundef nonnull ptr @_Znaj(i32 noundef [[RESULT]])
-  // SANENOT-NEXT: call noundef nonnull ptr @_Znaj(i32 noundef [[RESULT]])
+  // SANE-NEXT: call noalias noundef nonnull ptr @_Znaj(i32 noundef [[RESULT]]) [[ATTR:#[0-9]+]]
+  // SANENOT-NEXT: call noundef nonnull ptr @_Znaj(i32 noundef [[RESULT]]) [[ATTR:#[0-9]+]]
 }
 
 // ALL: declare noundef nonnull ptr @_Znaj(
+// SANE: attributes [[ATTR]] = { builtin allocsize(0) memory(inaccessiblemem: readwrite) }
+// SANENOT: attributes [[ATTR]] = { builtin allocsize(0) }

@@ -124,7 +124,7 @@ void hot_cold_new_align_nothrow_array() {
 
 // CHECK-DAG: attributes [[ATTR_NOBUILTIN]] = { nobuiltin allocsize(0) {{.*}} }
 // CHECK-DAG: attributes [[ATTR_NOBUILTIN_NOTHROW]] = { nobuiltin nounwind allocsize(0) {{.*}} }
-// CHECK-DAG: attributes [[ATTR_NO_BUILTIN_CALL]] = { allocsize(0) }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_CALL]] = { builtin allocsize(0) }
-// CHECK-DAG: attributes [[ATTR_NO_BUILTIN_NOTHROW_CALL]] = { nounwind allocsize(0) }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_NOTHROW_CALL]] = { builtin nounwind allocsize(0) }
+// CHECK-DAG: attributes [[ATTR_NO_BUILTIN_CALL]] = { allocsize(0) memory(inaccessiblemem: readwrite) }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_CALL]] = { builtin allocsize(0) memory(inaccessiblemem: readwrite) }
+// CHECK-DAG: attributes [[ATTR_NO_BUILTIN_NOTHROW_CALL]] = { nounwind allocsize(0) memory(inaccessiblemem: readwrite) }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_NOTHROW_CALL]] = { builtin nounwind allocsize(0) memory(inaccessiblemem: readwrite) }
