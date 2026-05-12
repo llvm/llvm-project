@@ -6104,13 +6104,20 @@ getPartialReductionLinkCost(VPCostContext &CostCtx,
   if (RdxType->isFloatingPointTy())
     Flags = Link.ReductionBinOp->getFastMathFlags();
 
-  unsigned Opcode = Link.RK == RecurKind::Sub ? (unsigned)Instruction::Add
-                    : Link.RK == RecurKind::FSub
-                        ? (unsigned)Instruction::FAdd
-                        : Link.ReductionBinOp->getOpcode();
+  auto GetLinkOpcode = [&Link]() -> unsigned {
+    switch (Link.RK) {
+    case RecurKind::Sub:
+      return Instruction::Add;
+    case RecurKind::FSub:
+      return Instruction::FAdd;
+    default:
+      return Link.ReductionBinOp->getOpcode();
+    }
+  };
+
   return CostCtx.TTI.getPartialReductionCost(
-      Opcode, ExtendedOp.ExtendA.SrcType, ExtendedOp.ExtendB.SrcType, RdxType,
-      VF, ExtendedOp.ExtendA.Kind, ExtendedOp.ExtendB.Kind, BinOpc,
+      GetLinkOpcode(), ExtendedOp.ExtendA.SrcType, ExtendedOp.ExtendB.SrcType,
+      RdxType, VF, ExtendedOp.ExtendA.Kind, ExtendedOp.ExtendB.Kind, BinOpc,
       CostCtx.CostKind, Flags);
 }
 
