@@ -72,3 +72,114 @@ start:
   %4 = add nuw nsw <8 x i16> %2, %3
   ret <8 x i16> %4
 }
+
+define <8 x i16> @vpaddlq_v16i8_zext_shuffle(<16 x i8> %a) unnamed_addr {
+; CHECK-LABEL: vpaddlq_v16i8_zext_shuffle:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    uaddlp v0.8h, v0.16b
+; CHECK-NEXT:    ret
+start:
+  %0 = zext <16 x i8> %a to <16 x i16>
+  %1 = shufflevector <16 x i16> %0, <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %2 = shufflevector <16 x i16> %0, <16 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %3 = add nuw nsw <8 x i16> %1, %2
+  ret <8 x i16> %3
+}
+
+define <4 x i32> @vpaddlq_v8i16_zext_shuffle(<8 x i16> %a) unnamed_addr {
+; CHECK-LABEL: vpaddlq_v8i16_zext_shuffle:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    uaddlp v0.4s, v0.8h
+; CHECK-NEXT:    ret
+start:
+  %0 = zext <8 x i16> %a to <8 x i32>
+  %1 = shufflevector <8 x i32> %0, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %2 = shufflevector <8 x i32> %0, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %3 = add nuw nsw <4 x i32> %1, %2
+  ret <4 x i32> %3
+}
+
+define <2 x i64> @vpaddlq_v4i32_zext_shuffle(<4 x i32> %a) unnamed_addr {
+; CHECK-LABEL: vpaddlq_v4i32_zext_shuffle:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    uaddlp v0.2d, v0.4s
+; CHECK-NEXT:    ret
+start:
+  %0 = zext <4 x i32> %a to <4 x i64>
+  %1 = shufflevector <4 x i64> %0, <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+  %2 = shufflevector <4 x i64> %0, <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+  %3 = add nuw nsw <2 x i64> %1, %2
+  ret <2 x i64> %3
+}
+
+define <4 x i32> @vpaddlq_v8i16_zext_shuffle_neg(<8 x i16> %a) unnamed_addr {
+; CHECK-LABEL: vpaddlq_v8i16_zext_shuffle_neg:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp2 v3.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mov v2.s[2], v0.s[3]
+; CHECK-NEXT:    mov v3.s[1], v1.s[0]
+; CHECK-NEXT:    add v0.4s, v2.4s, v3.4s
+; CHECK-NEXT:    ret
+start:
+  %0 = zext <8 x i16> %a to <8 x i32>
+  %1 = shufflevector <8 x i32> %0, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 3, i32 6>
+  %2 = shufflevector <8 x i32> %0, <8 x i32> poison, <4 x i32> <i32 1, i32 4, i32 5, i32 7>
+  %3 = add nuw nsw <4 x i32> %1, %2
+  ret <4 x i32> %3
+}
+
+define <8 x i16> @vpaddlq_v16i8_sext_shuffle(<16 x i8> %a) unnamed_addr {
+; CHECK-LABEL: vpaddlq_v16i8_sext_shuffle:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    saddlp v0.8h, v0.16b
+; CHECK-NEXT:    ret
+start:
+  %0 = sext <16 x i8> %a to <16 x i16>
+  %1 = shufflevector <16 x i16> %0, <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %2 = shufflevector <16 x i16> %0, <16 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %3 = add nuw nsw <8 x i16> %1, %2
+  ret <8 x i16> %3
+}
+
+define <4 x i32> @vpaddlq_v8i16_sext_shuffle(<8 x i16> %a) unnamed_addr {
+; CHECK-LABEL: vpaddlq_v8i16_sext_shuffle:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    saddlp v0.4s, v0.8h
+; CHECK-NEXT:    ret
+start:
+  %0 = sext <8 x i16> %a to <8 x i32>
+  %1 = shufflevector <8 x i32> %0, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %2 = shufflevector <8 x i32> %0, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %3 = add nuw nsw <4 x i32> %1, %2
+  ret <4 x i32> %3
+}
+
+define <2 x i64> @vpaddlq_v4i32_sext_shuffle(<4 x i32> %a) unnamed_addr {
+; CHECK-LABEL: vpaddlq_v4i32_sext_shuffle:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    saddlp v0.2d, v0.4s
+; CHECK-NEXT:    ret
+start:
+  %0 = sext <4 x i32> %a to <4 x i64>
+  %1 = shufflevector <4 x i64> %0, <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+  %2 = shufflevector <4 x i64> %0, <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+  %3 = add nuw nsw <2 x i64> %1, %2
+  ret <2 x i64> %3
+}
+
+define <2 x i64> @vpaddlq_v4i32_sext_shuffle_neg(<4 x i32> %a) unnamed_addr {
+; CHECK-LABEL: vpaddlq_v4i32_sext_shuffle_neg:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    sshll v1.2d, v0.2s, #0
+; CHECK-NEXT:    saddw2 v0.2d, v1.2d, v0.4s
+; CHECK-NEXT:    ret
+start:
+  %0 = sext <4 x i32> %a to <4 x i64>
+  %1 = shufflevector <4 x i64> %0, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
+  %2 = shufflevector <4 x i64> %0, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+  %3 = add nuw nsw <2 x i64> %1, %2
+  ret <2 x i64> %3
+}

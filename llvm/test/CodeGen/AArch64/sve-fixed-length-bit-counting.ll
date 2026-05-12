@@ -740,9 +740,7 @@ define void @ctpop_v32i64(ptr %a) vscale_range(16,0) #0 {
 define <8 x i8> @cttz_v8i8(<8 x i8> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: cttz_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
+; CHECK-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-NEXT:    clz v0.8b, v0.8b
 ; CHECK-NEXT:    ret
   %res = call <8 x i8> @llvm.cttz.v8i8(<8 x i8> %op)
@@ -752,9 +750,7 @@ define <8 x i8> @cttz_v8i8(<8 x i8> %op) vscale_range(2,0) #0 {
 define <16 x i8> @cttz_v16i8(<16 x i8> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: cttz_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
 ; CHECK-NEXT:    clz v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> %op)
