@@ -9,4 +9,11 @@
 
 // CHECK: {{.*}}depfile.td.tmp.out: {{.*}}depfile.td
 
+// When the input is stdin (`-`), there is no input path to emit, so the
+// depfile lists only the output target with no dependencies.
+// RUN: llvm-tblgen -print-records - -o %t.stdin.out -d %t.stdin.d < %s
+// RUN: FileCheck %s --check-prefix=STDIN --input-file=%t.stdin.d
+
+// STDIN: {{.*}}depfile.td.tmp.stdin.out:{{$}}
+
 def Empty;
