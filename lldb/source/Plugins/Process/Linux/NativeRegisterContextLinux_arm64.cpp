@@ -1187,13 +1187,6 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
         // exiting streaming mode.
         error = WriteRegisterSet(&ioVec, sve_fpsimd_data.size(), NT_ARM_SVE);
 
-        // Wrote FPU, and SVE overlaps FPU.
-        m_validity.Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-                              RegisterSetType::SVE);
-
-        m_sve_state = SVEState::Unknown;
-        ConfigureRegisterContext();
-
         // Consume FP register set.
         src += GetFPRSize();
 
