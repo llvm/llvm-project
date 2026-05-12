@@ -3813,9 +3813,10 @@ Inference
 ^^^^^^^^^
 
 The definitions given above are permissive to facilitate frontend-driven
-annotations based on language semantics. It is useful to also consider in
-which cases we can infer lack of captures based on conservative function-local
-analysis. In that case, the following rules hold:
+annotations based on language semantics. As inference generally cannot know
+how pointers will be used after the function returns, it needs to make
+conservative assumptions. Here is an example set of rules that could be used
+to infer ``captures``:
 
  * Volatile memory accesses capture the address of the pointer.
  * getelementptr, bitcast, addrspacecast, select, phi: Do not capture anything.
