@@ -4972,6 +4972,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   }
   case G_SMULFIX:
   case G_UMULFIX:
+  case G_SMULFIXSAT:
+  case G_UMULFIXSAT:
     return lowerMulfix(MI);
   case G_TRUNC_SSAT_S:
   case G_TRUNC_SSAT_U:
@@ -10666,13 +10668,19 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
   assert(OpCode == TargetOpcode::G_SMULFIX ||
-         OpCode == TargetOpcode::G_UMULFIX &&
+         OpCode == TargetOpcode::G_UMULFIX ||
+         OpCode == TargetOpcode::G_SMULFIXSAT ||
+         OpCode == TargetOpcode::G_UMULFIXSAT &&
              "Operator must be either G_SMULFIX or G_UMULFIX!");
   auto [Dst, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
   unsigned Scale = MI.getOperand(3).getImm();
+  bool IsSigned =
+      OpCode == TargetOpcode::G_SMULFIX || OpCode == TargetOpcode::G_SMULFIXSAT;
+  bool IsSaturating = OpCode == TargetOpcode::G_SMULFIXSAT ||
+                      OpCode == TargetOpcode::G_UMULFIXSAT;
 
-  if (Scale == 0) {
+  if (Scale == 0 && !IsSaturating) {
     MIRBuilder.buildMul(Dst, LHS, RHS);
     MI.eraseFromParent();
     return Legalized;
@@ -10682,7 +10690,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
   LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
   MachineInstrBuilder ExtLHS{}, ExtRHS{}, Shift{};
-  if (MI.getOpcode() == TargetOpcode::G_SMULFIX) {
+  if (IsSigned) {
     ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
     ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
   } else {
@@ -10691,12 +10699,18 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
   }
 
   auto Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS);
-  if (MI.getOpcode() == TargetOpcode::G_SMULFIX)
+  if (IsSigned)
     Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
   else
     Shift = MIRBuilder.buildLShr(WideTy, Mul, ShiftAmt);
 
-  MIRBuilder.buildTrunc(Dst, Shift);
+  if (IsSaturating)
+    if (IsSigned)
+      MIRBuilder.buildTruncSSatS(Dst, Shift);
+    else
+      MIRBuilder.buildTruncUSatU(Dst, Shift);
+  else
+    MIRBuilder.buildTrunc(Dst, Shift);
 
   MI.eraseFromParent();
   return Legalized;
