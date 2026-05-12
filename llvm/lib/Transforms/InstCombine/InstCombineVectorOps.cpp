@@ -135,7 +135,7 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
       PHINode::Create(EI.getType(), PN->getNumIncomingValues(), ""), PN->getIterator()));
   // Scalarize each PHI operand. A switch may produce multiple edges from the
   // same predecessor; reuse the scalar instruction for duplicate edges.
-  DenseMap<BasicBlock *, Value *> ScalarizedValues;
+  SmallDenseMap<BasicBlock *, Value *, 4> ScalarizedValues;
   for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
     Value *PHIInVal = PN->getIncomingValue(i);
     BasicBlock *inBB = PN->getIncomingBlock(i);
