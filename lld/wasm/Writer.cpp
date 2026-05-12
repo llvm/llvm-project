@@ -1392,7 +1392,7 @@ void Writer::createInitMemoryFunction() {
         }
 
         // When we initialize the TLS segment we also set the TLS base.
-        // This allows the runtime to use this static copy of the TLS data 
+        // This allows the runtime to use this static copy of the TLS data
         // for the first/main thread.
         if (ctx.arg.sharedMemory && s->isTLS()) {
           if (ctx.isPic) {
