@@ -1206,7 +1206,6 @@ cir::FuncOp LoweringPreparePass::getTlsInitFn() {
   mlir::OpBuilder::InsertionGuard _{builder};
   builder.setInsertionPointToStart(mlirModule.getBody());
   mlir::Location loc = mlirModule.getLoc();
-  cir::VoidType voidTy = cir::VoidType::get(&getContext());
   auto fnType = builder.getVoidFnTy();
   return buildRuntimeFunction(builder, "__tls_init", loc, fnType,
                               cir::GlobalLinkageKind::InternalLinkage);
