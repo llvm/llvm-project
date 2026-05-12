@@ -7,15 +7,9 @@ Finds lambdas with an empty capture list (``[]``) that are not already marked
 ``static`` and suggests adding the ``static`` specifier (introduced in C++23).
 
 A non-capturing lambda does not depend on any enclosing state.  Marking it
-``static`` makes that property explicit in the source and allows the compiler
-to omit the implicit conversion-to-function-pointer member.
-
-This check requires C++23 or later because ``static`` as a lambda-specifier
-was introduced in C++23 (P2564R3).
-
-.. note::
-    The ``static`` and ``mutable`` lambda-specifiers are mutually exclusive.
-    Mutable lambdas are not diagnosed even when their capture list is empty.
+``static`` makes that property explicit in the source and enables the implicit
+conversion-to-function-pointer to return a direct pointer to ``operator()``
+rather than a trampoline wrapping a default-constructed closure object.
 
 Example
 -------
@@ -32,8 +26,9 @@ transforms to:
 
     auto square = [](int x) static { return x * x; };
 
-    auto answer = []() static { return 42; };
+    auto answer = [] static { return 42; };
 
-Note that when the original lambda has no explicit parameter list, ``()`` is
-inserted along with ``static``, because a parameter list is required whenever
-lambda-specifiers are present.
+When the original lambda has no explicit parameter list, ``static`` is inserted
+directly after the capture list (``[]``) without adding ``()``.  This is valid
+in C++23, where lambda-specifiers may appear without an explicit parameter list
+(grammar form 4: ``[captures] specs { body }``).

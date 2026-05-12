@@ -17,8 +17,8 @@ namespace clang::tidy::modernize {
 ///
 /// A lambda with an empty capture list (``[]``) has no dependency on any
 /// enclosing state. Marking it ``static`` communicates this clearly and
-/// may allow the compiler to skip generating an implicit conversion-to-
-/// function-pointer operator.
+/// enables the implicit conversion-to-function-pointer to return a direct
+/// pointer to ``operator()`` rather than a trampoline.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-static-lambda.html
@@ -26,11 +26,14 @@ class UseStaticLambdaCheck : public ClangTidyCheck {
 public:
   UseStaticLambdaCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
-  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
-  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus23;
   }
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
 } // namespace clang::tidy::modernize

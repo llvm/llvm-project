@@ -19,43 +19,41 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+namespace {
+AST_MATCHER(LambdaExpr, hasNoCaptureDefault) {
+  return Node.getCaptureDefault() == LCD_None;
+}
+AST_MATCHER(LambdaExpr, callOperatorIsStatic) {
+  return Node.getCallOperator()->isStatic();
+}
+AST_MATCHER(LambdaExpr, callOperatorIsConst) {
+  return Node.getCallOperator()->isConst();
+}
+} // namespace
+
 void UseStaticLambdaCheck::registerMatchers(MatchFinder *Finder) {
-  // Match lambdas that have no captures and no capture-default.
   Finder->addMatcher(
-      lambdaExpr(unless(hasAnyCapture(lambdaCapture()))).bind("lambda"), this);
+      lambdaExpr(hasNoCaptureDefault(), unless(hasAnyCapture(lambdaCapture())),
+                 unless(callOperatorIsStatic()), callOperatorIsConst())
+          .bind("lambda"),
+      this);
 }
 
 void UseStaticLambdaCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
-  if (!Lambda)
-    return;
-
-  // Reject lambdas with a capture-default (e.g. [=] or [&] with no actual
-  // captures): they are not truly capture-free.
-  if (Lambda->getCaptureDefault() != LCD_None)
-    return;
-
-  const CXXMethodDecl *CallOp = Lambda->getCallOperator();
-
-  // Already static
-  if (CallOp->isStatic())
-    return;
-
-  // `static` and `mutable` are mutually exclusive lambda-specifiers (C++23).
-  // A mutable lambda has a non-const call operator that is not already static.
-  if (!CallOp->isConst())
-    return;
+  assert(Lambda && "lambda should be bound by the matcher");
 
   const SourceLocation LambdaLoc = Lambda->getBeginLoc();
   if (LambdaLoc.isInvalid() || LambdaLoc.isMacroID())
     return;
 
+  const CXXMethodDecl *CallOp = Lambda->getCallOperator();
   const SourceManager &SM = *Result.SourceManager;
   const LangOptions &LangOpts = getLangOpts();
 
   if (Lambda->hasExplicitParameters()) {
     // Lambda has an explicit parameter list: [...](params) { ... }.
-    // Insert static right after the closing ).
+    // Insert 'static' right after the closing ')'.
     const TypeSourceInfo *TSI = CallOp->getTypeSourceInfo();
     if (!TSI)
       return;
@@ -71,14 +69,14 @@ void UseStaticLambdaCheck::check(const MatchFinder::MatchResult &Result) {
         << FixItHint::CreateInsertion(InsertLoc, " static");
   } else {
     // Lambda has no explicit parameter list: [...] { ... }.
-    // We must add () as well since specifiers require a parameter list.
+    // In C++23 (form 4), specs such as 'static' may appear without '()'.
     const SourceLocation IntroEnd = Lambda->getIntroducerRange().getEnd();
     if (IntroEnd.isInvalid())
       return;
     const SourceLocation InsertLoc =
         Lexer::getLocForEndOfToken(IntroEnd, 0, SM, LangOpts);
     diag(LambdaLoc, "lambda with empty capture list can be marked 'static'")
-        << FixItHint::CreateInsertion(InsertLoc, "() static");
+        << FixItHint::CreateInsertion(InsertLoc, " static");
   }
 }
 
