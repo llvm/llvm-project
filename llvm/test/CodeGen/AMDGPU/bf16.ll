@@ -14359,29 +14359,13 @@ define <3 x bfloat> @v_fsub_v3bf16(<3 x bfloat> %a, <3 x bfloat> %b) {
 ; GFX11FAKE16-NEXT:    v_alignbit_b32 v1, s0, v1, 16
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250TRUE16-LABEL: v_fsub_v3bf16:
-; GFX1250TRUE16:       ; %bb.0:
-; GFX1250TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250TRUE16-NEXT:    v_fma_mix_f32_bf16 v1, v3, -1.0, v1 op_sel:[0,1,0] op_sel_hi:[1,1,1]
-; GFX1250TRUE16-NEXT:    v_fma_mix_f32_bf16 v3, v2, -1.0, v0 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; GFX1250TRUE16-NEXT:    v_fma_mix_f32_bf16 v0, v2, -1.0, v0 op_sel:[0,1,0] op_sel_hi:[1,1,1]
-; GFX1250TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
-; GFX1250TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v3
-; GFX1250TRUE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250FAKE16-LABEL: v_fsub_v3bf16:
-; GFX1250FAKE16:       ; %bb.0:
-; GFX1250FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250FAKE16-NEXT:    v_fma_mix_f32_bf16 v4, v2, -1.0, v0 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; GFX1250FAKE16-NEXT:    v_fma_mix_f32_bf16 v0, v2, -1.0, v0 op_sel:[0,1,0] op_sel_hi:[1,1,1]
-; GFX1250FAKE16-NEXT:    v_fma_mix_f32_bf16 v1, v3, -1.0, v1 op_sel:[0,1,0] op_sel_hi:[1,1,1]
-; GFX1250FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v4
-; GFX1250FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
-; GFX1250FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: v_fsub_v3bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    v_pk_add_bf16 v1, v1, v3 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = fsub <3 x bfloat> %a, %b
   ret <3 x bfloat> %op
 }
@@ -14661,13 +14645,8 @@ define <4 x bfloat> @v_fsub_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mix_f32_bf16 v4, v3, -1.0, v1 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; GFX1250-NEXT:    v_fma_mix_f32_bf16 v5, v2, -1.0, v0 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, v2, -1.0, v0 op_sel:[0,1,0] op_sel_hi:[1,1,1]
-; GFX1250-NEXT:    v_fma_mix_f32_bf16 v1, v3, -1.0, v1 op_sel:[0,1,0] op_sel_hi:[1,1,1]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v5
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v4
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    v_pk_add_bf16 v1, v1, v3 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = fsub <4 x bfloat> %a, %b
   ret <4 x bfloat> %op
@@ -19697,6 +19676,9 @@ define <2 x bfloat> @v_minnum_v2bf16(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, v1
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
@@ -19938,6 +19920,11 @@ define <3 x bfloat> @v_minnum_v3bf16(<3 x bfloat> %a, <3 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, v2
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v1, v1, v3
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -20236,6 +20223,11 @@ define <4 x bfloat> @v_minnum_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, v2
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v1, v1, v3
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -20782,9 +20774,18 @@ define <8 x bfloat> @v_minnum_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v4
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v5
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v6
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
+; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v7
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, v4
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v1, v1, v5
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v2, v2, v6
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v3, v3, v7
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call <8 x bfloat> @llvm.minnum.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b)
@@ -21818,14 +21819,30 @@ define <16 x bfloat> @v_minnum_v16bf16(<16 x bfloat> %a, <16 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v8, v8, v8
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v9, v9, v9
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    v_pk_max_num_bf16 v10, v10, v10
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, v8
+; GFX1250-NEXT:    v_pk_max_num_bf16 v8, v11, v11
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v1, v1, v9
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v2, v2, v10
-; GFX1250-NEXT:    v_pk_min_num_bf16 v3, v3, v11
-; GFX1250-NEXT:    v_pk_min_num_bf16 v4, v4, v12
-; GFX1250-NEXT:    v_pk_min_num_bf16 v5, v5, v13
-; GFX1250-NEXT:    v_pk_min_num_bf16 v6, v6, v14
-; GFX1250-NEXT:    v_pk_min_num_bf16 v7, v7, v15
+; GFX1250-NEXT:    v_pk_max_num_bf16 v9, v12, v12
+; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v4
+; GFX1250-NEXT:    v_pk_max_num_bf16 v10, v13, v13
+; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v5
+; GFX1250-NEXT:    v_pk_max_num_bf16 v11, v14, v14
+; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v6
+; GFX1250-NEXT:    v_pk_max_num_bf16 v12, v15, v15
+; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v7
+; GFX1250-NEXT:    v_pk_min_num_bf16 v3, v3, v8
+; GFX1250-NEXT:    v_pk_min_num_bf16 v4, v4, v9
+; GFX1250-NEXT:    v_pk_min_num_bf16 v5, v5, v10
+; GFX1250-NEXT:    v_pk_min_num_bf16 v6, v6, v11
+; GFX1250-NEXT:    v_pk_min_num_bf16 v7, v7, v12
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call <16 x bfloat> @llvm.minnum.v16bf16(<16 x bfloat> %a, <16 x bfloat> %b)
   ret <16 x bfloat> %op
@@ -23797,6 +23814,37 @@ define <32 x bfloat> @v_minnum_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_load_b32 v31, off, s32
+; GFX1250-NEXT:    v_pk_max_num_bf16 v16, v16, v16
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v17, v17, v17
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    v_pk_max_num_bf16 v18, v18, v18
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
+; GFX1250-NEXT:    v_pk_max_num_bf16 v19, v19, v19
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
+; GFX1250-NEXT:    v_pk_max_num_bf16 v20, v20, v20
+; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v4
+; GFX1250-NEXT:    v_pk_max_num_bf16 v21, v21, v21
+; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v5
+; GFX1250-NEXT:    v_pk_max_num_bf16 v22, v22, v22
+; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v6
+; GFX1250-NEXT:    v_pk_max_num_bf16 v23, v23, v23
+; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v7
+; GFX1250-NEXT:    v_pk_max_num_bf16 v24, v24, v24
+; GFX1250-NEXT:    v_pk_max_num_bf16 v8, v8, v8
+; GFX1250-NEXT:    v_pk_max_num_bf16 v25, v25, v25
+; GFX1250-NEXT:    v_pk_max_num_bf16 v9, v9, v9
+; GFX1250-NEXT:    v_pk_max_num_bf16 v26, v26, v26
+; GFX1250-NEXT:    v_pk_max_num_bf16 v10, v10, v10
+; GFX1250-NEXT:    v_pk_max_num_bf16 v27, v27, v27
+; GFX1250-NEXT:    v_pk_max_num_bf16 v11, v11, v11
+; GFX1250-NEXT:    v_pk_max_num_bf16 v28, v28, v28
+; GFX1250-NEXT:    v_pk_max_num_bf16 v12, v12, v12
+; GFX1250-NEXT:    v_pk_max_num_bf16 v29, v29, v29
+; GFX1250-NEXT:    v_pk_max_num_bf16 v13, v13, v13
+; GFX1250-NEXT:    v_pk_max_num_bf16 v30, v30, v30
+; GFX1250-NEXT:    v_pk_max_num_bf16 v14, v14, v14
+; GFX1250-NEXT:    v_pk_max_num_bf16 v15, v15, v15
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, v16
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v1, v1, v17
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v2, v2, v18
@@ -23813,7 +23861,9 @@ define <32 x bfloat> @v_minnum_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b) {
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v13, v13, v29
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v14, v14, v30
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_pk_min_num_bf16 v15, v15, v31
+; GFX1250-NEXT:    v_pk_max_num_bf16 v16, v31, v31
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_pk_min_num_bf16 v15, v15, v16
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call <32 x bfloat> @llvm.minnum.v32bf16(<32 x bfloat> %a, <32 x bfloat> %b)
   ret <32 x bfloat> %op
@@ -24125,6 +24175,9 @@ define <2 x bfloat> @v_maxnum_v2bf16(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v1
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
@@ -24366,6 +24419,11 @@ define <3 x bfloat> @v_maxnum_v3bf16(<3 x bfloat> %a, <3 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v2
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v3
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -24664,6 +24722,11 @@ define <4 x bfloat> @v_maxnum_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v2
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v3
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -25210,9 +25273,18 @@ define <8 x bfloat> @v_maxnum_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v4
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v5
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v6
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
+; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v7
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v4
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v5
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v6
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v7
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call <8 x bfloat> @llvm.maxnum.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b)
@@ -26246,14 +26318,30 @@ define <16 x bfloat> @v_maxnum_v16bf16(<16 x bfloat> %a, <16 x bfloat> %b) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v8, v8, v8
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v9, v9, v9
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    v_pk_max_num_bf16 v10, v10, v10
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v8
+; GFX1250-NEXT:    v_pk_max_num_bf16 v8, v11, v11
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v9
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v10
-; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v11
-; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v12
-; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v13
-; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v14
-; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v15
+; GFX1250-NEXT:    v_pk_max_num_bf16 v9, v12, v12
+; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v4
+; GFX1250-NEXT:    v_pk_max_num_bf16 v10, v13, v13
+; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v5
+; GFX1250-NEXT:    v_pk_max_num_bf16 v11, v14, v14
+; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v6
+; GFX1250-NEXT:    v_pk_max_num_bf16 v12, v15, v15
+; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v7
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v8
+; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v9
+; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v10
+; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v11
+; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v12
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call <16 x bfloat> @llvm.maxnum.v16bf16(<16 x bfloat> %a, <16 x bfloat> %b)
   ret <16 x bfloat> %op
@@ -28225,6 +28313,37 @@ define <32 x bfloat> @v_maxnum_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_load_b32 v31, off, s32
+; GFX1250-NEXT:    v_pk_max_num_bf16 v16, v16, v16
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v17, v17, v17
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    v_pk_max_num_bf16 v18, v18, v18
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
+; GFX1250-NEXT:    v_pk_max_num_bf16 v19, v19, v19
+; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
+; GFX1250-NEXT:    v_pk_max_num_bf16 v20, v20, v20
+; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v4
+; GFX1250-NEXT:    v_pk_max_num_bf16 v21, v21, v21
+; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v5
+; GFX1250-NEXT:    v_pk_max_num_bf16 v22, v22, v22
+; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v6
+; GFX1250-NEXT:    v_pk_max_num_bf16 v23, v23, v23
+; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v7
+; GFX1250-NEXT:    v_pk_max_num_bf16 v24, v24, v24
+; GFX1250-NEXT:    v_pk_max_num_bf16 v8, v8, v8
+; GFX1250-NEXT:    v_pk_max_num_bf16 v25, v25, v25
+; GFX1250-NEXT:    v_pk_max_num_bf16 v9, v9, v9
+; GFX1250-NEXT:    v_pk_max_num_bf16 v26, v26, v26
+; GFX1250-NEXT:    v_pk_max_num_bf16 v10, v10, v10
+; GFX1250-NEXT:    v_pk_max_num_bf16 v27, v27, v27
+; GFX1250-NEXT:    v_pk_max_num_bf16 v11, v11, v11
+; GFX1250-NEXT:    v_pk_max_num_bf16 v28, v28, v28
+; GFX1250-NEXT:    v_pk_max_num_bf16 v12, v12, v12
+; GFX1250-NEXT:    v_pk_max_num_bf16 v29, v29, v29
+; GFX1250-NEXT:    v_pk_max_num_bf16 v13, v13, v13
+; GFX1250-NEXT:    v_pk_max_num_bf16 v30, v30, v30
+; GFX1250-NEXT:    v_pk_max_num_bf16 v14, v14, v14
+; GFX1250-NEXT:    v_pk_max_num_bf16 v15, v15, v15
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v16
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v17
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v18
@@ -28241,7 +28360,9 @@ define <32 x bfloat> @v_maxnum_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b) {
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v13, v13, v29
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v14, v14, v30
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v15, v15, v31
+; GFX1250-NEXT:    v_pk_max_num_bf16 v16, v31, v31
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_pk_max_num_bf16 v15, v15, v16
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call <32 x bfloat> @llvm.maxnum.v32bf16(<32 x bfloat> %a, <32 x bfloat> %b)
   ret <32 x bfloat> %op
