@@ -679,3 +679,73 @@ define i32 @test_bpermute_quad_xor1_w32(i32 %val) {
   %result = call i32 @llvm.amdgcn.ds.bpermute(i32 %addr, i32 %val)
   ret i32 %result
 }
+
+; XOR-by-5 within each 16-lane row. On GFX10+ this matches DPP row_xmask;
+; on GFX9 row_xmask is unavailable, so the generic ds_swizzle bitmask path
+; takes over: AND=0x1F, OR=0, XOR=5 -> 5151.
+define i32 @test_xor5_bitmask(i32 %val) {
+; GFX11-LABEL: @test_xor5_bitmask(
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 357, i32 15, i32 15, i1 true)
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_xor5_bitmask(
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 357, i32 15, i32 15, i1 true)
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_xor5_bitmask(
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[VAL:%.*]], i32 5151)
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %lane = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %idx = xor i32 %lane, 5
+  %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 %idx)
+  ret i32 %result
+}
+
+; XOR-by-16 (cross-row). On GFX11 this matches permlanex16; on GFX9 neither
+; permlanex16 nor row_xmask exist, so the bitmask path catches it:
+; AND=0x1F, OR=0, XOR=16 -> 16415.
+define i32 @test_xor16_bitmask(i32 %val) {
+; GFX11-LABEL: @test_xor16_bitmask(
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[VAL:%.*]], i32 1985229328, i32 -19088744, i1 false, i1 false)
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_xor16_bitmask(
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[VAL:%.*]], i32 1985229328, i32 -19088744, i1 false, i1 false)
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_xor16_bitmask(
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[VAL:%.*]], i32 16415)
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %lane = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %idx = xor i32 %lane, 16
+  %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 %idx)
+  ret i32 %result
+}
+
+; Broadcast lane 5 within each 16-lane row (lanes 0..15 read lane 5, lanes
+; 16..31 read lane 21, etc.). On GFX10+ row_share covers it; on GFX9 there
+; is no row_share, so the bitmask path emits AND=0x10, OR=5, XOR=0 -> 176.
+define i32 @test_broadcast_in_rows16_bitmask(i32 %val) {
+; GFX11-LABEL: @test_broadcast_in_rows16_bitmask(
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 341, i32 15, i32 15, i1 true)
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_broadcast_in_rows16_bitmask(
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 341, i32 15, i32 15, i1 true)
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_broadcast_in_rows16_bitmask(
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[VAL:%.*]], i32 176)
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %lane = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %hi = and i32 %lane, -16
+  %idx = or i32 %hi, 5
+  %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 %idx)
+  ret i32 %result
+}
