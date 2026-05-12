@@ -1584,9 +1584,9 @@ void BarrierOp::build(mlir::OpBuilder &odsBuilder,
   if (addressSpace)
     addressSpacesAttr = odsBuilder.getArrayAttr(
         AddressSpaceAttr::get(odsBuilder.getContext(), addressSpace.value()));
-  build(odsBuilder, odsState, addressSpacesAttr, /*named_barrier=*/Value{},
-        BarrierScopeAttr::get(odsBuilder.getContext(),
-                              BarrierScope::Workgroup));
+  build(
+      odsBuilder, odsState, addressSpacesAttr, /*named_barrier=*/Value{},
+      BarrierScopeAttr::get(odsBuilder.getContext(), BarrierScope::Workgroup));
 }
 
 /// Builds a barrier that causes memory operations affecting `memrefToFence` to
