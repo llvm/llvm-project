@@ -936,6 +936,7 @@ stacktrace cctype
 stacktrace cerrno
 stacktrace climits
 stacktrace clocale
+stacktrace cmath
 stacktrace compare
 stacktrace cstddef
 stacktrace cstdint
