@@ -127,8 +127,10 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
 
     // If setting the breakpoint fails because pc is out of the address
     // space, ignore it and let the debugee segfault.
-    if (error.GetError() == EIO || error.GetError() == EFAULT)
+    if (error.GetError() == EIO || error.GetError() == EFAULT) {
+      error.Clear();
       continue;
+    }
     if (error.Fail())
       return error;
 
