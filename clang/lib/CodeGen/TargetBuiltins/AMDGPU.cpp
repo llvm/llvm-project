@@ -383,6 +383,21 @@ static llvm::AtomicOrdering mapCABIAtomicOrdering(unsigned AO) {
   llvm_unreachable("Unknown AtomicOrderingCABI enum");
 }
 
+/// Convert a __MEMORY_SCOPE_* integer constant to a metadata node containing
+/// the target-specific sync scope string.
+static llvm::MetadataAsValue *emitScopeMD(
+    CodeGenFunction &CGF, unsigned ScopeInt,
+    llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent) {
+  AtomicScopeGenericModel ScopeModel;
+  clang::SyncScope Scope = ScopeModel.map(ScopeInt);
+  StringRef ScopeStr = CGF.CGM.getTargetCodeGenInfo().getLLVMSyncScopeStr(
+      CGF.CGM.getLangOpts(), Scope, AO);
+  llvm::LLVMContext &Ctx = CGF.CGM.getLLVMContext();
+  llvm::MDNode *MD =
+      llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, ScopeStr)});
+  return llvm::MetadataAsValue::get(Ctx, MD);
+}
+
 // For processing memory ordering and memory scope arguments of various
 // amdgcn builtins.
 // \p Order takes a C++11 compatible memory-ordering specifier and converts
@@ -927,22 +942,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     }
 
-    LLVMContext &Ctx = CGM.getLLVMContext();
     llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
 
     auto *AOExpr = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(1)));
     auto *ScopeExpr = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
-
-    auto Scope = static_cast<SyncScope>(ScopeExpr->getZExtValue());
     llvm::AtomicOrdering AO = mapCABIAtomicOrdering(AOExpr->getZExtValue());
 
-    StringRef ScopeStr = CGM.getTargetCodeGenInfo().getLLVMSyncScopeStr(
-        CGM.getLangOpts(), Scope, AO);
-
-    llvm::MDNode *MD =
-        llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, ScopeStr)});
-    llvm::Value *ScopeMD = llvm::MetadataAsValue::get(Ctx, MD);
+    llvm::Value *ScopeMD = emitScopeMD(*this, ScopeExpr->getZExtValue(), AO);
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr, AOExpr, ScopeMD});
   }
