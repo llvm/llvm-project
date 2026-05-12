@@ -239,31 +239,23 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
 
   Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
   Value c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
-
-  auto subview = matB.getDefiningOp<mlir::memref::SubViewOp>();
-  SmallVector<Value> subviewOffset(subview.getMixedOffsets().size(), c0);
+  SmallVector<Value> subviewOffset(
+      llvm::cast<MemRefType>(matB.getType()).getRank(), c0);
 
   Value cStep = arith::ConstantIndexOp::create(rewriter, loc, offset);
   Value cBound = arith::ConstantIndexOp::create(rewriter, loc, (16 * offset));
   Value offsetIndx =
       arith::ConstantIndexOp::create(rewriter, loc, (offset / 2));
 
-  // llvm::outs() << "check-a:" << matB << " subview:" << subview << "\n";
-  // llvm::outs() << "The size:" << subview.getMixedOffsets().size() << "\n";
-
   scf::ForOp::create(
       rewriter, loc, c0, cBound, cStep, ValueRange{},
       [&](OpBuilder &nestedBuilder, Location loc, Value iv,
           ValueRange iterArgs) {
-        // llvm::outs() << "check-a0" << subviewOffset.size() <<  "\n";
         subviewOffset[subviewOffset.size() - 2] = iv;
 
-        // llvm::outs() << "check-a1" << "\n";
         auto vec1 = vector::LoadOp::create(
             rewriter, loc, VectorType::get((16 * offset), ipType), matB,
             ValueRange(subviewOffset));
-
-        // llvm::outs() << "check-b" << "\n";
 
         // Increment the iv by 1 or 2 based on the type to load the next 32/64
         // elements
@@ -275,8 +267,6 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
 
         vector::ShuffleOp shuffle1;
         vector::ShuffleOp shuffle2;
-
-        // llvm::outs() << "check-c" << "\n";
 
         if (ipType.isBF16()) {
 
@@ -317,8 +307,6 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
                   86, 118, 23, 55,  87, 119, 28, 60,  92, 124, 29, 61,  93, 125,
                   30, 62,  94, 126, 31, 63,  95, 127});
         }
-
-        // llvm::outs() << "check-d" << "\n";
 
         // iv to store the shuffled elements
         Value ivShuff1 = arith::DivUIOp::create(rewriter, loc, iv, cStep);
@@ -829,6 +817,8 @@ struct VectorContractToAMXDotProduct
                                            "The ACC src is not a MemRef type.");
       auto [srcBuffAcc, indicesAcc] = *srcIndxAcc;
 
+      Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+
       // amx.tile_loads
       auto tileType = amx::TileType::get({16, (16 * blockingFactor)}, ipType);
       auto loadLhs = amx::TileLoadOp::create(rewriter, loc, tileType,
@@ -856,7 +846,6 @@ struct VectorContractToAMXDotProduct
         auto packedBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
 
         // create a loop that does online packing.
-        Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
         Value step =
             arith::ConstantIndexOp::create(rewriter, loc, blockingFactor);
         Value uBound = arith::ConstantIndexOp::create(rewriter, loc,
@@ -951,9 +940,32 @@ struct VectorContractToAMXDotProduct
         dp = amx::TileMulIOp::create(rewriter, loc, tileTypeAcc, loadLhs,
                                      loadRhs, loadAcc);
 
-      amx::TileStoreOp::create(rewriter, loc, srcBuffAcc, indicesAcc, dp);
+      auto bufferType = MemRefType::get({16, 16}, opType);
+      auto resultBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
 
-      rewriter.eraseOp(resultWriteOp);
+      amx::TileStoreOp::create(rewriter, loc, resultBuffer, ValueRange{c0, c0},
+                               dp);
+
+      auto flatTy = mlir::VectorType::get({16, 16}, opType);
+      int64_t srcRank =
+          (dyn_cast<ShapedType>(resultBuffer.getType())).getRank();
+      Value padding = ub::PoisonOp::create(rewriter, loc, opType);
+      auto map = AffineMap::getMinorIdentityMap(srcRank, flatTy.getRank(),
+                                                rewriter.getContext());
+      SmallVector<bool> inBounds(flatTy.getRank(), true);
+
+      Value vecRow = vector::TransferReadOp::create(
+          rewriter, loc, flatTy, resultBuffer, ValueRange{c0, c0}, padding, map,
+          inBounds);
+
+      Value resultOp =
+          traceToVectorWriteLikeUserOperationForAMX(contractOp.getResult());
+      if (auto vecType = llvm::dyn_cast<VectorType>(resultOp.getType())) {
+        vecRow =
+            mlir::vector::ShapeCastOp::create(rewriter, loc, vecType, vecRow);
+      }
+
+      resultOp.replaceAllUsesWith(vecRow);
       return success();
     }
 
@@ -1186,7 +1198,6 @@ struct VectorContractToAMXDotProduct
           rewriter, innerLoop.getLoc(), opType, innerLoop, ops.size());
 
       if (isVnni) {
-
         newLoop = createLoops(
             rewriter, innerLoop.getLoc(), innerLoop.getLowerBound(),
             innerLoop.getUpperBound(), innerLoop.getStep(), loopItrArgs, ipType,
