@@ -923,7 +923,7 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, {LHS->getType()});
   if (Value *V = Folder.FoldBinaryIntrinsic(ID, LHS, RHS, Fn->getReturnType(),
-                                            /*FMFSource=*/nullptr))
+                                            FMFSource.get(FMF)))
     return V;
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
