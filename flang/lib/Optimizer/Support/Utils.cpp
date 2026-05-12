@@ -65,7 +65,7 @@ mlir::LLVM::ConstantOp
 fir::genConstantIndex(mlir::Location loc, mlir::Type ity,
                       mlir::ConversionPatternRewriter &rewriter,
                       std::int64_t offset) {
-  auto cattr = rewriter.getI64IntegerAttr(offset);
+  auto cattr = rewriter.getIntegerAttr(ity, offset);
   return mlir::LLVM::ConstantOp::create(rewriter, loc, ity, cattr);
 }
 

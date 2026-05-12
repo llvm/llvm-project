@@ -858,8 +858,8 @@ void DWARFUnit::ParseProducerInfo() {
   if (producer.empty())
     return;
 
-  static const RegularExpression g_swiftlang_version_regex(
-      llvm::StringRef(R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
+  static const RegularExpression g_swiftlang_version_regex(llvm::StringRef(
+      R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(\.[0-9]+)?))"));
   static const RegularExpression g_clang_version_regex(
       llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
 

@@ -151,6 +151,37 @@ constexpr bool test_ref() {
     assert(*o2 == 1);
   }
 
+  {
+    const std::optional<int> o1{2};
+    std::optional<const int&> o2(o1);
+    assert(*o2 == 2);
+    assert(&(*o2) == &(*o1));
+  }
+
+  {
+    const std::optional<ReferenceConversion<int>> o1({1, 2});
+    std::optional<const int&> o2(o1);
+    assert(o2.has_value());
+    assert(&(*o2) == &o1->lvalue);
+    assert(*o2 == 1);
+  }
+
+  {
+    const std::optional<ReferenceConversion<int>> o1({1, 2});
+    std::optional<const int&> o2(std::move(o1));
+    assert(o2.has_value());
+    assert(&(*o2) == &o1->rvalue);
+    assert(*o2 == 2);
+  }
+
+  {
+    const std::optional<ReferenceConversionThrows<int>> o1({1, 2});
+    ASSERT_NOT_NOEXCEPT(std::optional<const int&>(o1));
+    ASSERT_NOT_NOEXCEPT(std::optional<const int&>(std::move(o1)));
+  }
+
+  static_assert(!std::is_constructible_v<std::optional<int>, const std::optional<ConstRValueOnly<int>>&&>);
+
   return true;
 }
 #endif

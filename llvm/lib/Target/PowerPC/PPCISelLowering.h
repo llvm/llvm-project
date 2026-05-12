@@ -373,13 +373,11 @@ namespace llvm {
                                 MachineBasicBlock *MBB) const override;
     MachineBasicBlock *EmitAtomicBinary(MachineInstr &MI,
                                         MachineBasicBlock *MBB,
-                                        unsigned AtomicSize,
                                         unsigned BinOpcode,
                                         unsigned CmpOpcode = 0,
                                         unsigned CmpPred = 0) const;
     MachineBasicBlock *EmitPartwordAtomicBinary(MachineInstr &MI,
                                                 MachineBasicBlock *MBB,
-                                                bool is8bit,
                                                 unsigned Opcode,
                                                 unsigned CmpOpcode = 0,
                                                 unsigned CmpPred = 0) const;
@@ -873,6 +871,7 @@ namespace llvm {
     SDValue combineADD(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineFMALike(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineTRUNCATE(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue combineSignExtendSetCC(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSetCC(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineVectorShuffle(ShuffleVectorSDNode *SVN,
                                  SelectionDAG &DAG) const;

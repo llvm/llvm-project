@@ -648,7 +648,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(MemoryAccess *MA) {
 /// lookupOrAdd - Returns the value number for the specified value, assigning
 /// it a new number if it did not have one before.
 uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
-  DenseMap<Value *, uint32_t>::iterator VI = ValueNumbering.find(V);
+  auto VI = ValueNumbering.find(V);
   if (VI != ValueNumbering.end())
     return VI->second;
 
@@ -733,7 +733,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
 /// Returns the value number of the specified value. Fails if
 /// the value has not yet been numbered.
 uint32_t GVNPass::ValueTable::lookup(Value *V, bool Verify) const {
-  DenseMap<Value *, uint32_t>::const_iterator VI = ValueNumbering.find(V);
+  auto VI = ValueNumbering.find(V);
   if (Verify) {
     assert(VI != ValueNumbering.end() && "Value not numbered?");
     return VI->second;
@@ -2805,7 +2805,10 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   ICF = &ImplicitCFT;
   this->LI = &LI;
   VN.setMemDep(MD);
-  VN.setMemorySSA(MSSA);
+  // Propagate the MSSA-enabled flag so the value-numbering paths in
+  // lookupOrAddCall() and computeLoadStoreVN(), which depends on whether
+  // IsMSSAEnabled is turned on.
+  VN.setMemorySSA(MSSA, isMemorySSAEnabled());
   ORE = RunORE;
   InvalidBlockRPONumbers = true;
   MemorySSAUpdater Updater(MSSA);

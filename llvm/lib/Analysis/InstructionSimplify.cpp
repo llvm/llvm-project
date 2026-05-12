@@ -1708,8 +1708,7 @@ static Value *simplifyAndOrOfICmpsWithCtpop(ICmpInst *Cmp0, ICmpInst *Cmp1,
   CmpPredicate Pred0, Pred1;
   Value *X;
   const APInt *C;
-  if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
-                          m_APInt(C))) ||
+  if (!match(Cmp0, m_ICmp(Pred0, m_Ctpop(m_Value(X)), m_APInt(C))) ||
       !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())) || C->isZero())
     return nullptr;
 
@@ -3109,8 +3108,7 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
   if (RHS_CR.isFullSet())
     return ConstantInt::getTrue(ITy);
 
-  ConstantRange LHS_CR =
-      computeConstantRange(LHS, CmpInst::isSigned(Pred), Q.IIQ.UseInstrInfo);
+  ConstantRange LHS_CR = computeConstantRange(LHS, CmpInst::isSigned(Pred), Q);
   if (!LHS_CR.isFullSet()) {
     if (RHS_CR.contains(LHS_CR))
       return ConstantInt::getTrue(ITy);
@@ -3786,7 +3784,7 @@ static Value *simplifyICmpWithDominatingAssume(CmpPredicate Predicate,
       CallInst *Assume = cast<CallInst>(AssumeVH);
       if (std::optional<bool> Imp = isImpliedCondition(
               Assume->getArgOperand(0), Predicate, LHS, RHS, Q.DL))
-        if (isValidAssumeForContext(Assume, Q.CxtI, Q.DT))
+        if (isValidAssumeForContext(Assume, Q))
           return ConstantInt::get(getCompareTy(LHS), *Imp);
     }
   }
@@ -6724,7 +6722,7 @@ enum class MinMaxOptResult {
 // quieted), or to choose either option in the case of undef/poison.
 static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
                                            const Intrinsic::ID IID,
-                                           const CallBase *Call,
+                                           FastMathFlags FMF,
                                            Constant **OutNewConstVal) {
   assert(OutNewConstVal != nullptr);
 
@@ -6760,15 +6758,14 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
     return MinMaxOptResult::UseOtherVal;
   }
 
-  if (CAPF.isInfinity() || (Call && Call->hasNoInfs() && CAPF.isLargest())) {
+  if (CAPF.isInfinity() || (FMF.noInfs() && CAPF.isLargest())) {
     // minnum(X, -inf) -> -inf (ignoring sNaN -> qNaN propagation)
     // maxnum(X, +inf) -> +inf (ignoring sNaN -> qNaN propagation)
     // minimum(X, -inf) -> -inf if nnan
     // maximum(X, +inf) -> +inf if nnan
     // minimumnum(X, -inf) -> -inf
     // maximumnum(X, +inf) -> +inf
-    if (CAPF.isNegative() == IsMin &&
-        (!PropagateNaN || (Call && Call->hasNoNaNs()))) {
+    if (CAPF.isNegative() == IsMin && (!PropagateNaN || FMF.noNaNs())) {
       *OutNewConstVal = const_cast<Constant *>(RHSConst);
       return MinMaxOptResult::UseNewConstVal;
     }
@@ -6779,8 +6776,7 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
     // maximum(X, -inf) -> X (ignoring quieting of sNaNs)
     // minimumnum(X, +inf) -> X if nnan
     // maximumnum(X, -inf) -> X if nnan
-    if (CAPF.isNegative() != IsMin &&
-        (PropagateNaN || (Call && Call->hasNoNaNs())))
+    if (CAPF.isNegative() != IsMin && (PropagateNaN || FMF.noNaNs()))
       return MinMaxOptResult::UseOtherVal;
   }
   return MinMaxOptResult::CannotOptimize;
@@ -6843,16 +6839,18 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
 }
 
 Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
-                                     Value *Op0, Value *Op1,
-                                     const SimplifyQuery &Q,
-                                     const CallBase *Call) {
+                                     Value *Op0, Value *Op1, FastMathFlags FMF,
+                                     const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
   case Intrinsic::get_active_lane_mask: {
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
 
-    const Function *F = Call->getFunction();
+    if (!Q.CxtI)
+      break;
+
+    const Function *F = Q.CxtI->getFunction();
     auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
     Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
     if (ScalableTy && Attr.isValid()) {
@@ -7137,7 +7135,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
         if (Constant *SplatVal = C->getSplatValue()) {
           // Handle splat vectors (including scalable vectors)
-          OptResult = OptimizeConstMinMax(SplatVal, IID, Call, &NewConst);
+          OptResult = OptimizeConstMinMax(SplatVal, IID, FMF, &NewConst);
           if (OptResult == MinMaxOptResult::UseNewConstVal)
             NewConst = ConstantVector::getSplat(ElemCount, NewConst);
 
@@ -7156,7 +7154,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
               OptResult = MinMaxOptResult::CannotOptimize;
               break;
             }
-            auto ElemResult = OptimizeConstMinMax(Elt, IID, Call, &NewConst);
+            auto ElemResult = OptimizeConstMinMax(Elt, IID, FMF, &NewConst);
             if (ElemResult == MinMaxOptResult::CannotOptimize ||
                 (ElemResult != OptResult &&
                  OptResult != MinMaxOptResult::UseEither &&
@@ -7173,7 +7171,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
         }
       } else {
         // Handle scalar inputs
-        OptResult = OptimizeConstMinMax(C, IID, Call, &NewConst);
+        OptResult = OptimizeConstMinMax(C, IID, FMF, &NewConst);
       }
 
       if (OptResult == MinMaxOptResult::UseOtherVal ||
@@ -7252,9 +7250,13 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   if (NumOperands == 1)
     return simplifyUnaryIntrinsic(F, Args[0], Q, Call);
 
-  if (NumOperands == 2)
-    return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1], Q,
-                                   Call);
+  if (NumOperands == 2) {
+    FastMathFlags FMF;
+    if (auto *FPMO = dyn_cast<FPMathOperator>(Call))
+      FMF = FPMO->getFastMathFlags();
+    return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1],
+                                   FMF, Q.getWithInstruction(Call));
+  }
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {

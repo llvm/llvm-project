@@ -147,3 +147,19 @@ func.func @concats_of_empty(
 //   CHECK-DAG:   %[[SUM:.+]] = affine.apply #[[MAP]]()[%[[D0_1]], %[[D1_1]]]
 //       CHECK:   %[[NEW_EMPTY:.+]] = tensor.empty(%[[SUM]], %[[D2]])
 //       CHECK:   return %[[NEW_EMPTY]]
+
+#encoding = #test.tensor_encoding<"encoding">
+
+func.func @concats_of_empty_encoding(
+    %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index)
+    -> tensor<5x?x?xf32, #encoding>
+{
+  %0 = tensor.empty(%arg0, %arg1) : tensor<5x?x?xf32, #encoding>
+  %1 = tensor.empty(%arg2, %arg3) : tensor<5x?x?xf32, #encoding>
+  %2 = tensor.concat dim(1) %0, %1
+      : (tensor<5x?x?xf32, #encoding>, tensor<5x?x?xf32, #encoding>)
+      -> tensor<5x?x?xf32, #encoding>
+  return %2 : tensor<5x?x?xf32, #encoding>
+}
+// CHECK-LABEL: func @concats_of_empty_encoding(
+//       CHECK:   return %{{.+}} : tensor<5x?x?xf32, #test.tensor_encoding<"encoding">>
