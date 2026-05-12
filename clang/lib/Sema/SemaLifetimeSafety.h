@@ -151,10 +151,9 @@ public:
   void reportInvalidatedField(const Expr *IssueExpr,
                               const FieldDecl *DanglingField,
                               const Expr *InvalidationExpr) override {
-    const Expr *WarningExpr = IssueExpr ? IssueExpr : InvalidationExpr;
-    S.Diag(WarningExpr->getExprLoc(),
+    S.Diag(IssueExpr->getExprLoc(),
            diag::warn_lifetime_safety_invalidated_field)
-        << WarningExpr->getSourceRange();
+        << false << IssueExpr->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(),
            diag::note_lifetime_safety_invalidated_here)
         << InvalidationExpr->getSourceRange();
@@ -163,24 +162,18 @@ public:
         << DanglingField->getEndLoc();
   }
 
-  void reportInvalidatedGlobal(const Expr *IssueExpr,
-                               const VarDecl *DanglingGlobal,
-                               const Expr *InvalidationExpr) override {
-    const Expr *WarningExpr = IssueExpr ? IssueExpr : InvalidationExpr;
-    S.Diag(WarningExpr->getExprLoc(),
-           diag::warn_lifetime_safety_invalidated_global)
-        << WarningExpr->getSourceRange();
+  void reportInvalidatedField(const ParmVarDecl *PVD,
+                              const FieldDecl *DanglingField,
+                              const Expr *InvalidationExpr) override {
+    S.Diag(PVD->getSourceRange().getBegin(),
+           diag::warn_lifetime_safety_invalidated_field)
+        << true << PVD->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(),
            diag::note_lifetime_safety_invalidated_here)
         << InvalidationExpr->getSourceRange();
-    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
-      S.Diag(DanglingGlobal->getLocation(),
-             diag::note_lifetime_safety_dangling_static_here)
-          << DanglingGlobal->getEndLoc();
-    else
-      S.Diag(DanglingGlobal->getLocation(),
-             diag::note_lifetime_safety_dangling_global_here)
-          << DanglingGlobal->getEndLoc();
+    S.Diag(DanglingField->getLocation(),
+           diag::note_lifetime_safety_dangling_field_here)
+        << DanglingField->getEndLoc();
   }
 
   void suggestLifetimeboundToParmVar(SuggestionScope Scope,

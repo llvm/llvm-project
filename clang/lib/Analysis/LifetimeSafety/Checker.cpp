@@ -265,22 +265,23 @@ public:
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (Warning.InvalidatedByExpr) {
-          if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
-            // Field escape later invalidated.
-            SemaHelper->reportInvalidatedField(IssueExpr,
-                                               FieldEscape->getFieldDecl(),
-                                               Warning.InvalidatedByExpr);
-          else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
-            // Global escape later invalidated.
-            SemaHelper->reportInvalidatedGlobal(IssueExpr,
-                                                GlobalEscape->getGlobal(),
-                                                Warning.InvalidatedByExpr);
-          else if (isa<ReturnEscapeFact>(OEF))
-            // Return escape.
-            SemaHelper->reportUseAfterReturn(
-                IssueExpr, cast<ReturnEscapeFact>(OEF)->getReturnExpr(),
-                MovedExpr, ExpiryLoc);
-          else
+          if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
+            // Invalidated object escapes to a field.
+            if (IssueExpr)
+              // Invalidated object on stack escapes to a field.
+              SemaHelper->reportInvalidatedField(IssueExpr,
+                                                 FieldEscape->getFieldDecl(),
+                                                 Warning.InvalidatedByExpr);
+            else if (InvalidatedPVD)
+              // Invalidated parameter escapes to a field.
+              SemaHelper->reportInvalidatedField(InvalidatedPVD,
+                                                 FieldEscape->getFieldDecl(),
+                                                 Warning.InvalidatedByExpr);
+          } else if (isa<GlobalEscapeFact>(OEF)) {
+            // FIXME: Diagnose invalidated global escapes separately.
+          } else if (isa<ReturnEscapeFact>(OEF)) {
+            // FIXME: Diagnose invalidated return escapes separately.
+          } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
           // Return stack address.

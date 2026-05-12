@@ -448,39 +448,52 @@ void ChangingRegionOwnedByContainerIsOk() {
 
 } // namespace ContainersAsFields
 
-namespace InvalidatedGlobalAndField {
-std::string_view GlobalViewFromLocal; // expected-note {{this global dangles}}
-
-void InvalidatedGlobalLocalContainer() {
-  std::vector<std::string> strings;
-  GlobalViewFromLocal = *strings.begin(); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
-  strings.push_back("1"); // expected-note {{invalidated here}}
-}
-
-void InvalidatedStaticLocal() {
-  static std::string_view StaticView; // expected-note {{this static storage dangles}}
-  std::vector<std::string> strings;
-  StaticView = *strings.begin(); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
-  strings.push_back("1"); // expected-note {{invalidated here}}
-}
+namespace InvalidatedField {
+std::string StableString;
 
 struct S {
-  std::string_view FieldFromLocal; // expected-note {{this field dangles}}
-  static std::string_view StaticField; // expected-note {{this static storage dangles}}
+  std::string_view FieldFromLocalVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromParamVector; // expected-note {{this field dangles}}
+  std::string_view FieldFromLocalString; // expected-note {{this field dangles}}
+  std::string_view FieldFromParamString; // expected-note {{this field dangles}}
+  std::string_view FieldFromRefParamString; // expected-note {{this field dangles}}
+  std::string_view FieldReassigned;
 
-  void InvalidatedFieldLocalContainer() {
+  void InvalidatedFieldLocalVector() {
     std::vector<std::string> strings;
-    FieldFromLocal = *strings.begin(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
+    FieldFromLocalVector = *strings.begin(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
     strings.push_back("1"); // expected-note {{invalidated here}}
   }
-};
 
-void InvalidatedStaticDataMember() {
-  std::vector<std::string> strings;
-  S::StaticField = *strings.begin(); // expected-warning {{object whose reference is stored in global or static storage is later invalidated}}
-  strings.push_back("1"); // expected-note {{invalidated here}}
-}
-} // namespace InvalidatedGlobalAndField
+  void InvalidatedFieldParamVector(std::vector<std::string> strings) {
+    FieldFromParamVector = *strings.begin(); // expected-warning {{object whose reference is stored in a field is later invalidated}}
+    strings.push_back("1"); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldLocalString() {
+    std::string s;
+    FieldFromLocalString = s; // expected-warning {{object whose reference is stored in a field is later invalidated}}
+    s.clear(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldParamString(std::string s) {
+    FieldFromParamString = s; // expected-warning {{object whose reference is stored in a field is later invalidated}}
+    s.clear(); // expected-note {{invalidated here}}
+  }
+
+  void InvalidatedFieldRefParamString(std::string &s) { // expected-warning {{parameter whose reference is stored in a field is later invalidated}}
+    FieldFromRefParamString = s;
+    s.~basic_string(); // expected-note {{invalidated here}}
+  }
+
+  void FieldReassignedBeforeInvalidation() {
+    std::vector<std::string> strings;
+    FieldReassigned = *strings.begin();
+    FieldReassigned = StableString;
+    strings.push_back("1");
+  }
+};
+} // namespace InvalidatedField
 
 namespace AssociativeContainers {
 void SetInsertDoesNotInvalidate() {

@@ -10986,11 +10986,7 @@ def warn_lifetime_safety_invalidation
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 def warn_lifetime_safety_invalidated_field
-    : Warning<"object whose reference is stored in a field is later invalidated">,
-      InGroup<LifetimeSafetyInvalidation>,
-      DefaultIgnore;
-def warn_lifetime_safety_invalidated_global
-    : Warning<"object whose reference is stored in global or static storage is later invalidated">,
+    : Warning<"%select{object|parameter}0 whose reference is stored in a field is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 
