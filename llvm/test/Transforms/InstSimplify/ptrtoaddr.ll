@@ -10,6 +10,12 @@ target datalayout = "pe1:64:64:64:32"
 @g.as1 = external addrspace(1) global i8
 @g2.as1 = external addrspace(1) global i8
 
+@v = global i8 1
+@v2 = global i8 1
+
+@v.as1 = addrspace(1) global i8 1
+@v2.as1 = addrspace(1) global i8 1
+
 define i64 @ptrtoaddr_inttoptr_arg(i64 %a) {
 ; CHECK-LABEL: define i64 @ptrtoaddr_inttoptr_arg(
 ; CHECK-SAME: i64 [[A:%.*]]) {
@@ -349,7 +355,7 @@ define i1 @icmp_ptrtoaddr_ptrtoaddr() {
 ; CHECK-LABEL: define i1 @icmp_ptrtoaddr_ptrtoaddr() {
 ; CHECK-NEXT:    ret i1 true
 ;
-  %cmp = icmp ne i64 ptrtoaddr (ptr @g to i64), ptrtoaddr (ptr @g2 to i64)
+  %cmp = icmp ne i64 ptrtoaddr (ptr @v to i64), ptrtoaddr (ptr @v2 to i64)
   ret i1 %cmp
 }
 
@@ -357,7 +363,7 @@ define i1 @icmp_ptrtoaddr_ptrtoaddr_addrsize() {
 ; CHECK-LABEL: define i1 @icmp_ptrtoaddr_ptrtoaddr_addrsize() {
 ; CHECK-NEXT:    ret i1 true
 ;
-  %cmp = icmp ne i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), ptrtoaddr (ptr addrspace(1) @g2.as1 to i32)
+  %cmp = icmp ne i32 ptrtoaddr (ptr addrspace(1) @v.as1 to i32), ptrtoaddr (ptr addrspace(1) @v2.as1 to i32)
   ret i1 %cmp
 }
 
