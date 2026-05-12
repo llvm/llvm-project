@@ -1203,11 +1203,11 @@ LoweringPreparePass::getGuardReleaseFn(cir::PointerType guardPtrTy) {
 cir::FuncOp LoweringPreparePass::getTlsInitFn() {
   // void __tls_init(void);
   CIRBaseBuilderTy builder(getContext());
-  mlir::OpBuilder::InsertionGuard ipGuard{builder};
+  mlir::OpBuilder::InsertionGuard _{builder};
   builder.setInsertionPointToStart(mlirModule.getBody());
   mlir::Location loc = mlirModule.getLoc();
   cir::VoidType voidTy = cir::VoidType::get(&getContext());
-  auto fnType = cir::FuncType::get({}, voidTy);
+  auto fnType = builder.getVoidFnTy();
   return buildRuntimeFunction(builder, "__tls_init", loc, fnType,
                               cir::GlobalLinkageKind::InternalLinkage);
 }
@@ -1468,29 +1468,28 @@ void LoweringPreparePass::defineGlobalThreadLocalWrapper(cir::GlobalOp op,
   // If we are a situation where we have/need one, emit a call to the init
   // function.
   if (initAlias) {
+    mlir::Location aliasLoc = initAlias.getLoc();
     if (!isVarDefinition) {
       // If this isn't a definition, we have to check that the alias exists.
       mlir::Value funcLoad = cir::GetGlobalOp::create(
-          builder, initAlias.getLoc(),
-          cir::PointerType::get(initAlias.getFunctionType()),
+          builder, aliasLoc, cir::PointerType::get(initAlias.getFunctionType()),
           initAlias.getSymName());
       mlir::Value nullCheck =
-          builder.getNullValue(funcLoad.getType(), initAlias.getLoc());
+          builder.getNullValue(funcLoad.getType(), aliasLoc);
       mlir::Value cmp = cir::CmpOp::create(
-          builder, initAlias.getLoc(), cir::CmpOpKind::ne, funcLoad, nullCheck);
-      cir::IfOp::create(
-          builder, initAlias.getLoc(), cmp, /*withElseRegion=*/false,
-          [&](mlir::OpBuilder &, mlir::Location loc) {
-            builder.createCallOp(initAlias.getLoc(), initAlias, {});
-            cir::YieldOp::create(builder, initAlias.getLoc());
-          });
+          builder, aliasLoc, cir::CmpOpKind::ne, funcLoad, nullCheck);
+      cir::IfOp::create(builder, aliasLoc, cmp, /*withElseRegion=*/false,
+                        [&](mlir::OpBuilder &, mlir::Location loc) {
+                          builder.createCallOp(aliasLoc, initAlias, {});
+                          cir::YieldOp::create(builder, aliasLoc);
+                        });
     } else {
       // If this IS a definition, we know the alias exists, so we can just emit
       // a call to it.
-      builder.createCallOp(initAlias.getLoc(), initAlias, {});
+      builder.createCallOp(aliasLoc, initAlias, {});
     }
   }
-  auto get = builder.createGetGlobal(op, /*tls=*/true);
+  cir::GetGlobalOp get = builder.createGetGlobal(op, /*tls=*/true);
   cir::ReturnOp::create(builder, op.getLoc(), {get});
 }
 
@@ -1506,10 +1505,10 @@ LoweringPreparePass::defineGlobalThreadLocalInitAlias(cir::GlobalOp op,
   if (existingAliasIter != threadLocalInitAliases.end())
     return existingAliasIter->second;
 
-  auto funcType = cir::FuncType::get({}, builder.getVoidTy());
+  auto funcType = builder.getVoidFnTy();
   cir::FuncOp alias =
       cir::FuncOp::create(builder, op.getLoc(), aliasName, funcType);
-  alias.setLinkageAttr(op.getLinkageAttr());
+  alias.setLinkage(op.getLinkage());
 
   if (aliasee) {
     alias.setAliasee(aliasee.getSymName());
