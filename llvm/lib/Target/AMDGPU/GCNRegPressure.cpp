@@ -674,6 +674,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
     if (Reg.isVirtual()) {
       LaneBitmask DefMask = getDefRegMask(MO, *MRI);
 
+      // Treat a def as fully live at the moment of definition: keep a record.
       if (MO.isEarlyClobber()) {
         ECDefPressure.inc(Reg, LaneBitmask::getNone(), DefMask, *MRI);
         HasECDefs = true;
@@ -737,6 +738,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   MaxPressure = HasECDefs ? max(CurPressure + ECDefPressure, MaxPressure)
                           : max(CurPressure, MaxPressure);
 
+#ifndef NDEBUG
   auto VirtPressure = getVirtRegPressure(*MRI, VirtLiveRegs);
   auto PhysPressure = constructPhysRegPressure();
   assert(CurPressure == VirtPressure + PhysPressure ||
@@ -745,6 +747,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
                  << print(VirtPressure + PhysPressure) << "Virt: "
                  << print(VirtPressure) << "Phys: " << print(PhysPressure),
           false));
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
