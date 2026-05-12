@@ -10,9 +10,22 @@ add_public_tablegen_target(PluginErrcodes)
 if(OFFLOAD_ENABLE_EMISSARY_APIS)
   set(emissary_sources
     src/Emissary.cpp
-    src/EmissaryFortrt.cpp
     src/EmissaryPrint.cpp
   )
+  # EmissaryFortrt requires flang_rt; only include when available.
+  if(TARGET flang_rt.runtime.static)
+    set(OFFLOAD_HAS_EMISSARY_FORTRT TRUE)
+  else()
+    get_clang_resource_dir(CLANG_RESOURCE_LIBDIR PREFIX ${LLVM_BINARY_DIR} SUBDIR "lib/${LLVM_DEFAULT_TARGET_TRIPLE}")
+    string(REPLACE "${LLVM_LIBDIR_SUFFIX}" "" CLANG_RESOURCE_LIBDIR_NORMALIZED "${CLANG_RESOURCE_LIBDIR}")
+    find_library(LIBFLANG_RT flang_rt.runtime PATHS "${CLANG_RESOURCE_LIBDIR_NORMALIZED}")
+    if(LIBFLANG_RT)
+      set(OFFLOAD_HAS_EMISSARY_FORTRT TRUE)
+    endif()
+  endif()
+  if(OFFLOAD_HAS_EMISSARY_FORTRT)
+    list(APPEND emissary_sources src/EmissaryFortrt.cpp)
+  endif()
 endif()
 
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
@@ -45,18 +58,14 @@ endif()
 # Include the RPC server from the `libc` project.
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
-if(OFFLOAD_ENABLE_EMISSARY_APIS AND TARGET flang_rt.runtime.static)
-  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime.static
-    -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
-else()
-  # This applies to runtimes standalone offload build.
-  # When we set LLVM_LIBDIR_SUFFIX for asan and perf builds, clang resource dir will
-  # use this suffix and it will not be a valid location for the flang_rt library. Replace
-  # the suffix with empty string to look in 'lib'.
-  get_clang_resource_dir(CLANG_RESOURCE_LIBDIR PREFIX ${LLVM_BINARY_DIR} SUBDIR "lib/${LLVM_DEFAULT_TARGET_TRIPLE}")
-  string(REPLACE ${LLVM_LIBDIR_SUFFIX} "" CLANG_RESOURCE_LIBDIR_NORMALIZED ${CLANG_RESOURCE_LIBDIR})
-  find_library(LIBFLANG_RT flang_rt.runtime PATHS "${CLANG_RESOURCE_LIBDIR_NORMALIZED}" REQUIRED)
-  target_link_libraries(PluginCommon PRIVATE ${LIBFLANG_RT})
+if(OFFLOAD_ENABLE_EMISSARY_APIS AND OFFLOAD_HAS_EMISSARY_FORTRT)
+  if(TARGET flang_rt.runtime.static)
+    target_link_libraries(PluginCommon PRIVATE flang_rt.runtime.static
+      -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
+  else()
+    target_link_libraries(PluginCommon PRIVATE ${LIBFLANG_RT})
+  endif()
+  target_compile_definitions(PluginCommon PRIVATE OFFLOAD_HAS_EMISSARY_FORTRT)
 endif()
 
 if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)

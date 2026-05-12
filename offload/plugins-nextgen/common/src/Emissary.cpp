@@ -31,7 +31,9 @@ extern "C" emis_return_t Emissary(char *data) {
     break;
   }
   case EMIS_ID_FORTRT: {
+#ifdef OFFLOAD_HAS_EMISSARY_FORTRT
     result = EmissaryFortrt(data, &ab);
+#endif
     break;
   }
   case EMIS_ID_PRINT: {
