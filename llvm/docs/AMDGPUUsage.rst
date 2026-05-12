@@ -1779,7 +1779,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    * Flat pointer.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
-                                                     Note that the scope used must ensure that the L2 cache will be hit.
+
+                                                   [Implementation note --- The scope of the instruction is *internally* clamped to a minimum of
+                                                   ``SCOPE_SE`` to ensure that the L2 cache will be hit. Users should not rely on this behaviour.]
 
   llvm.amdgcn.global.load.monitor                  Available on GFX12.5 only.
                                                    Corresponds to ``global_load_monitor_b32/64/128`` (``.b32/64/128`` suffixes)
@@ -1789,10 +1791,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    This intrinsic has 3 operands:
 
-                                                   * Flat pointer.
+                                                   * Global pointer.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
-                                                     Note that the scope used must ensure that the L2 cache will be hit.
+
+                                                   [Implementation note --- The scope of the instruction is *internally* clamped to a minimum of
+                                                   ``SCOPE_SE`` to ensure that the L2 cache will be hit. Users should not rely on this behaviour.]
 
   llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64     Available starting GFX12.5.
                                                    Corresponds to ``ds_atomic_barrier_arrive_rtn_b64``.
@@ -17326,9 +17330,8 @@ For GFX125x:
   data and request that the wave is notified (see ``s_monitor_sleep``) if
   the L2 cache line that holds the data is evicted, or written to.
 
-  * In order to monitor a cache line in the L2 cache, these instructions must
-    ensure that the L2 cache is always hit by setting the ``SCOPE`` of the instruction
-    appropriately.
+  * In order to monitor a cache line in the L2 cache, the compiler clamps
+    the ``SCOPE`` of these instructions to a minimum of ``SCOPE_SE``.
   * For non-atomic and atomic code sequences, it is valid to replace
     ``global_load_b32/64/128`` with a ``global_load_monitor_b32/64/128`` and a
     ``flat_load_b32/64/128`` with a ``flat_load_monitor_b32/64/128``.
