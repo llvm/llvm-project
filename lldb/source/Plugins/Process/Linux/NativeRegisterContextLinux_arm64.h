@@ -79,21 +79,66 @@ protected:
   lldb::addr_t FixWatchpointHitAddress(lldb::addr_t hit_addr) override;
 
 private:
-  bool m_gpr_is_valid;
-  bool m_fpu_is_valid;
-  bool m_sve_buffer_is_valid;
-  bool m_mte_ctrl_is_valid;
-  bool m_zt_buffer_is_valid;
-  bool m_fpmr_is_valid;
+  // Bit mask enum used to refer to the types of registers we support. Currently
+  // used for tracking cache validity and ReadAll/WriteAllRegister data. Will
+  // be used for much more in future.
+  enum RegisterSetType : uint32_t {
+    GPR = 1 << 0, // General purpose registers.
+    FPR = 1 << 1, // When there is no SVE, or SVE in FPSIMD mode, or streaming
+                  // only SVE that is in non-streaming mode.
+    SVE = 1 << 2, // Used for SVE registers in streaming or non-streaming mode.
+    SVE_HEADER = 1 << 3, // Only the ptrace header for SVE.
+    PAC = 1 << 4,        // Pointer authentication mask registers.
+    MTE = 1 << 5,        // Memory tagging control registers.
+    TLS = 1 << 6,        // Thread local storage registers.
+    ZA = 1 << 7,         // ZA only, because SVCR and SVG are pseudo registers.
+    ZA_HEADER = 1 << 8,  // Only the ptrace header for ZA.
+    ZT = 1 << 9,         // ZT only.
+    FPMR = 1 << 10,      // Floating point mode control registers.
+    GCS = 1 << 11,       // Guarded Control Stack registers.
+    POE = 1 << 12,       // Permission Overlay registers.
+  };
 
-  bool m_sve_header_is_valid;
-  bool m_za_buffer_is_valid;
-  bool m_za_header_is_valid;
-  bool m_pac_mask_is_valid;
-  bool m_tls_is_valid;
-  size_t m_tls_size;
-  bool m_gcs_is_valid;
-  bool m_poe_is_valid;
+  // This single object manages all tracking of whether register value caches
+  // are valid. Having a single object makes it easy to reset without missing
+  // anything.
+  class CacheValidity {
+  private:
+    using Storage = std::underlying_type_t<RegisterSetType>;
+    Storage m_valid_flags = 0;
+
+  public:
+    void Invalidate(RegisterSetType set) {
+      m_valid_flags &= ~static_cast<Storage>(set);
+    }
+
+    template <typename... Ts>
+    void Invalidate(RegisterSetType first, Ts... rest) {
+      static_assert((std::is_same_v<Ts, RegisterSetType> && ...));
+      Invalidate(first);
+      (Invalidate(rest), ...);
+    }
+
+    void MakeValid(RegisterSetType set) {
+      m_valid_flags |= static_cast<Storage>(set);
+    }
+    bool IsValid(RegisterSetType set) {
+      return (m_valid_flags & static_cast<Storage>(set)) != 0;
+    }
+  } m_validity;
+
+  static uint8_t *AddRegisterSetType(uint8_t *dst,
+                                     RegisterSetType register_set_type);
+
+  static uint8_t *AddSavedRegisters(uint8_t *dst,
+                                    RegisterSetType register_set_type,
+                                    void *src, size_t size);
+
+  Status RestoreRegisters(void *buffer, const uint8_t **src, size_t len,
+                          const RegisterSetType set,
+                          std::function<Status()> writer);
+
+  size_t m_tls_size = 0;
 
   struct user_pt_regs m_gpr_arm64; // 64-bit general purpose registers.
 
