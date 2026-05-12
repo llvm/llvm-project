@@ -1434,8 +1434,7 @@ TYPED_TEST(BitVectorTest, DenseSet) {
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   TypeParam D;
-  EXPECT_DEATH(Set.insert(D),
-               "Empty/Tombstone value shouldn't be inserted into map!");
+  EXPECT_DEATH(Set.insert(D), "Empty value shouldn't be inserted into map!");
 #endif
 
   EXPECT_EQ(3U, Set.size());
