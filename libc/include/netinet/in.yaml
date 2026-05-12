@@ -14,7 +14,10 @@ macros:
     macro_header: netinet-in-macros.h
   - macro_name: IPPROTO_RAW
     macro_header: netinet-in-macros.h
-types: []
+types:
+  - type_name: in_port_t
+  - type_name: in_addr_t
+  - type_name: sa_family_t
 enums: []
 objects: []
 functions: []
