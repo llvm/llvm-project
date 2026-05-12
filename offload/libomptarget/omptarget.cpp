@@ -1029,6 +1029,8 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     const bool HasFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
     if (HasFrom) {
       Entry->foreachShadowPointerInfo([&](const ShadowPtrInfoTy &ShadowPtr) {
+        if (*ShadowPtr.HstPtrAddr == nullptr)
+          return OFFLOAD_SUCCESS;
         constexpr int64_t VoidPtrSize = sizeof(void *);
         if (ShadowPtr.PtrSize > VoidPtrSize) {
           ODBG(ODT_Mapping)
@@ -1465,6 +1467,8 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
       AsyncInfo.addPostProcessingFunction([=]() -> int {
         int Ret = Entry->foreachShadowPointerInfo(
             [&](const ShadowPtrInfoTy &ShadowPtr) {
+              if (*ShadowPtr.HstPtrAddr == nullptr)
+                return OFFLOAD_SUCCESS;
               constexpr int64_t VoidPtrSize = sizeof(void *);
               if (ShadowPtr.PtrSize > VoidPtrSize) {
                 ODBG(ODT_Mapping)
