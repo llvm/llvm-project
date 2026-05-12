@@ -10271,6 +10271,8 @@ def warn_cxx17_compat_capture_binding : Warning<
   "captured structured bindings are incompatible with "
   "C++ standards before C++20">,
   InGroup<CXXPre20Compat>, DefaultIgnore;
+def err_capture_tuple_binding_openmp : Error<
+  "capturing tuple-like structured binding %0 is not yet supported in OpenMP">;
 
 def err_static_data_member_not_allowed_in_local_class : Error<
   "static data member %0 not allowed in local %sub{select_tag_type_kind}2 %1">;

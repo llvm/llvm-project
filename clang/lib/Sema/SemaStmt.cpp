@@ -4681,9 +4681,16 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
     if (Cap.isVariableCapture()) {
       CapVar = Cap.getVariable();
       if (auto *BD = dyn_cast<BindingDecl>(CapVar)) {
+        if (RSI->CapRegionKind == CR_OpenMP && BD->getHoldingVar()) {
+          S.Diag(Cap.getLocation(), diag::err_capture_tuple_binding_openmp)
+              << CapVar;
+          S.Diag(CapVar->getLocation(), diag::note_entity_declared_at)
+              << CapVar;
+          return true;
+        }
         VarDecl *DD = cast<VarDecl>(BD->getDecomposedDecl());
         if (!CapturedDecomposed.insert(DD).second) {
-          continue; // Skip duplicate.
+          continue; // Skip duplicate.  
         }
         CapVar = DD;
       }

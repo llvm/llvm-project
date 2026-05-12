@@ -3593,43 +3593,30 @@ static bool canEmitSpuriousReferenceToVariable(CodeGenFunction &CGF,
 /// Handles extracting individual bindings from the captured decomposed
 /// declaration (struct fields, array elements, etc.).
 LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
-  assert(CapturedStmtInfo &&
-         CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
-         CGM.getLangOpts().OpenMP);
+  assert(CapturedStmtInfo && "Expected to be inside a captured region");
+  assert(CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
+         "Expected OpenMP captured region");
+  assert(CGM.getLangOpts().OpenMP && "Expected OpenMP to be enabled");
+
   auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
-  QualType AggregType = DD->getType();
-  if (AggregType->isReferenceType())
-    AggregType = AggregType->getPointeeType();
+
+  QualType DREType = DD->getType().getNonReferenceType();
   DeclarationNameInfo NameInfo(DD->getDeclName(), SourceLocation());
   DeclRefExpr *DRE = DeclRefExpr::Create(
       getContext(), NestedNameSpecifierLoc(), SourceLocation(), DD,
-      /*RefersToEnclosingVariableOrCapture=*/true, NameInfo, AggregType,
+      /*RefersToEnclosingVariableOrCapture=*/true, NameInfo, DREType,
       VK_LValue);
-  LValue CapLVal = EmitLValue(DRE);
-  QualType CanonType = AggregType.getCanonicalType();
-  llvm::Type *StructTy = CGM.getTypes().ConvertTypeForMem(CanonType);
-  Address Addr = CapLVal.getAddress();
-  if (Addr.getElementType() != StructTy) {
-    Addr = Addr.withElementType(StructTy);
-    CapLVal = MakeAddrLValue(Addr, CanonType, CapLVal.getBaseInfo(),
-                             CapLVal.getTBAAInfo());
-  }
+  LValue CapLVal = EmitDeclRefLValue(DRE);
+
   // Extract the specific binding from the decomposed object.
   Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
-  if (auto *ME = dyn_cast<MemberExpr>(BindingExpr)) {
-    // Struct/union: access field.
-    FieldDecl *Field = cast<FieldDecl>(ME->getMemberDecl());
-    return EmitLValueForField(CapLVal, Field);
-  }
-  if (dyn_cast<ArraySubscriptExpr>(BindingExpr)) {
-    // Array binding - access element.
+  if (auto *ME = dyn_cast<MemberExpr>(BindingExpr))
+    return EmitLValueForField(CapLVal, cast<FieldDecl>(ME->getMemberDecl()));
+  if (isa<ArraySubscriptExpr>(BindingExpr))
     return EmitLValue(BD->getBinding(), NotKnownNonNull);
-  }
 
-  // TODO: Tuple bindings (std::tuple, std::pair via tuple protocol)
-  // use hidden temporary variables that aren't captured in OpenMP
-  // regions. Need to re-emit the get<N>() call on the captured tuple
-  // base object.
+  // Sema ensures tuple-like bindings are rejected earlier, so this path should
+  // never be reached.
   llvm_unreachable("Unexpected structured binding type in OpenMP");
 }
 
