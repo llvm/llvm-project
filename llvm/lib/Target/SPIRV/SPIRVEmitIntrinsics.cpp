@@ -2566,9 +2566,7 @@ static bool isArtificialGlobal(StringRef Name) {
   return isUseListGlobal(Name) || Name == "llvm.global.annotations";
 }
 
-// Returns true if every use of GV traces back to llvm.compiler.used or
-// llvm.used. Such uses are not real function uses. They protect the variable
-// from GlobalDCE without participating in code generation.
+// Returns true if every use of GV traces back to llvm.compiler.used or llvm.used.
 static bool hasOnlyArtificialUses(const GlobalVariable &GV) {
   SmallPtrSet<const Value *, 8> Visited;
   SmallVector<const Value *> Stack(GV.users());
@@ -2581,8 +2579,6 @@ static bool hasOnlyArtificialUses(const GlobalVariable &GV) {
         return false;
       continue;
     }
-    if (isa<Instruction>(V))
-      return false;
     if (const auto *C = dyn_cast<Constant>(V)) {
       Stack.append(C->user_begin(), C->user_end());
       continue;
@@ -2680,7 +2676,9 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, InitOp);
   }
-  if (!Init && (GV.use_empty() || hasOnlyArtificialUses(GV)))
+  // Globals with only use-list references have no real function uses. Emit
+  // spv_unref_global so buildGlobalVariable is called for them.
+  if (!Init && hasOnlyArtificialUses(GV))
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 

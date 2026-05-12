@@ -606,10 +606,13 @@ void CGHLSLRuntime::finishCodeGen() {
 
   if (LangOpts.HLSLSpvPreserveInterface && T.isSPIRV()) {
     // Runs before optimization. Keeps Input/Output globals from GlobalDCE.
+    const ASTContext &Ctx = CGM.getContext();
+    unsigned InputAS = Ctx.getTargetAddressSpace(LangAS::hlsl_input);
+    unsigned OutputAS = Ctx.getTargetAddressSpace(LangAS::hlsl_output);
     SmallVector<GlobalValue *, 8> InterfaceVars;
     for (GlobalVariable &GV : M.globals()) {
       unsigned AS = GV.getAddressSpace();
-      if (AS == 7 || AS == 8) // addrspace 7 = Input, addrspace 8 = Output
+      if (AS == InputAS || AS == OutputAS)
         InterfaceVars.push_back(&GV);
     }
     if (!InterfaceVars.empty())
