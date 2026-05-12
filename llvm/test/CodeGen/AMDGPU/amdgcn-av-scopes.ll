@@ -2,15 +2,19 @@
 
 ; Check the cache policy bits produced by scope metadata on av operations.
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942  < %s | FileCheck -check-prefixes=GFX942-SDAG  %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1012 < %s | FileCheck -check-prefixes=GFX1012-SDAG %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX1100-SDAG %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942  < %s | FileCheck -check-prefix=GFX942-SDAG  %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1012 < %s | FileCheck -check-prefix=GFX1012-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX1100-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1012 -mattr=-cumode < %s | FileCheck -check-prefix=GFX1012-WGP-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-cumode < %s | FileCheck -check-prefix=GFX1100-WGP-SDAG %s
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942  < %s | FileCheck -check-prefixes=GFX942-ISEL  %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1012 < %s | FileCheck -check-prefixes=GFX1012-ISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX1100-ISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250-ISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942  < %s | FileCheck -check-prefix=GFX942-ISEL  %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1012 < %s | FileCheck -check-prefix=GFX1012-ISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX1100-ISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-ISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1012 -mattr=-cumode < %s | FileCheck -check-prefix=GFX1012-WGP-ISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-cumode < %s | FileCheck -check-prefix=GFX1100-WGP-ISEL %s
 
 ; scope: wavefront
 define <4 x i32> @global_load_wavefront(ptr addrspace(1) %p) {
@@ -43,6 +47,20 @@ define <4 x i32> @global_load_wavefront(ptr addrspace(1) %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_load_wavefront:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_load_wavefront:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_load_wavefront:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -71,6 +89,20 @@ define <4 x i32> @global_load_wavefront(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_load_wavefront:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_load_wavefront:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !0)
   ret <4 x i32> %v
 }
@@ -106,6 +138,20 @@ define <4 x i32> @global_load_workgroup(ptr addrspace(1) %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_load_workgroup:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_load_workgroup:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_load_workgroup:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -134,6 +180,20 @@ define <4 x i32> @global_load_workgroup(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_load_workgroup:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_load_workgroup:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !1)
   ret <4 x i32> %v
 }
@@ -169,6 +229,20 @@ define <4 x i32> @global_load_agent(ptr addrspace(1) %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_load_agent:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_load_agent:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_load_agent:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -197,6 +271,20 @@ define <4 x i32> @global_load_agent(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_load_agent:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_load_agent:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !2)
   ret <4 x i32> %v
 }
@@ -232,6 +320,20 @@ define <4 x i32> @global_load_system(ptr addrspace(1) %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_load_system:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_load_system:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_load_system:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -260,6 +362,20 @@ define <4 x i32> @global_load_system(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_load_system:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_load_system:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !3)
   ret <4 x i32> %v
 }
@@ -295,6 +411,20 @@ define <4 x i32> @global_load_singlethread(ptr addrspace(1) %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_load_singlethread:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_load_singlethread:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_load_singlethread:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -323,6 +453,20 @@ define <4 x i32> @global_load_singlethread(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_load_singlethread:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_load_singlethread:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !4)
   ret <4 x i32> %v
 }
@@ -358,6 +502,20 @@ define <4 x i32> @global_load_cluster(ptr addrspace(1) %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_load_cluster:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_load_cluster:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_load_cluster:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -386,6 +544,20 @@ define <4 x i32> @global_load_cluster(ptr addrspace(1) %p) {
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_load_cluster:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_load_cluster:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p1(ptr addrspace(1) %p, metadata !5)
   ret <4 x i32> %v
 }
@@ -418,6 +590,18 @@ define void @global_store_wavefront(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_store_wavefront:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_store_wavefront:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_store_wavefront:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -443,6 +627,18 @@ define void @global_store_wavefront(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_store_wavefront:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_store_wavefront:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !0)
   ret void
 }
@@ -475,6 +671,18 @@ define void @global_store_workgroup(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_store_workgroup:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_store_workgroup:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_store_workgroup:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -500,6 +708,18 @@ define void @global_store_workgroup(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_store_workgroup:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_store_workgroup:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !1)
   ret void
 }
@@ -532,6 +752,18 @@ define void @global_store_agent(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_DEV
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_store_agent:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_store_agent:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_store_agent:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -557,6 +789,18 @@ define void @global_store_agent(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_store_agent:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_store_agent:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !2)
   ret void
 }
@@ -589,6 +833,18 @@ define void @global_store_system(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_store_system:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_store_system:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_store_system:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -614,6 +870,18 @@ define void @global_store_system(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_store_system:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_store_system:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !3)
   ret void
 }
@@ -646,6 +914,18 @@ define void @global_store_singlethread(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_store_singlethread:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_store_singlethread:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_store_singlethread:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -671,6 +951,18 @@ define void @global_store_singlethread(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_store_singlethread:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_store_singlethread:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !4)
   ret void
 }
@@ -703,6 +995,18 @@ define void @global_store_cluster(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: global_store_cluster:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: global_store_cluster:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: global_store_cluster:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -728,6 +1032,18 @@ define void @global_store_cluster(ptr addrspace(1) %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: global_store_cluster:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: global_store_cluster:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p1(ptr addrspace(1) %p, <4 x i32> %v, metadata !5)
   ret void
 }
@@ -763,6 +1079,20 @@ define <4 x i32> @flat_load_wavefront(ptr %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_load_wavefront:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_load_wavefront:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_load_b128 v[0:3], v[0:1]
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_load_wavefront:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -791,6 +1121,20 @@ define <4 x i32> @flat_load_wavefront(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1]
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_load_wavefront:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_load_wavefront:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1]
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !0)
   ret <4 x i32> %v
 }
@@ -826,6 +1170,20 @@ define <4 x i32> @flat_load_workgroup(ptr %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_load_workgroup:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_load_workgroup:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_load_b128 v[0:3], v[0:1] glc
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_load_workgroup:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -854,6 +1212,20 @@ define <4 x i32> @flat_load_workgroup(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1]
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_load_workgroup:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_load_workgroup:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1] glc
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !1)
   ret <4 x i32> %v
 }
@@ -889,6 +1261,20 @@ define <4 x i32> @flat_load_agent(ptr %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_load_agent:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc dlc
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_load_agent:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_load_b128 v[0:3], v[0:1] glc
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_load_agent:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -917,6 +1303,20 @@ define <4 x i32> @flat_load_agent(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_load_agent:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc dlc
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_load_agent:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1] glc
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !2)
   ret <4 x i32> %v
 }
@@ -952,6 +1352,20 @@ define <4 x i32> @flat_load_system(ptr %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_load_system:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc dlc
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_load_system:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_load_b128 v[0:3], v[0:1] glc
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_load_system:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -980,6 +1394,20 @@ define <4 x i32> @flat_load_system(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_load_system:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc dlc
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_load_system:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1] glc
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !3)
   ret <4 x i32> %v
 }
@@ -1015,6 +1443,20 @@ define <4 x i32> @flat_load_singlethread(ptr %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_load_singlethread:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_load_singlethread:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_load_b128 v[0:3], v[0:1]
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_load_singlethread:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1043,6 +1485,20 @@ define <4 x i32> @flat_load_singlethread(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1]
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_load_singlethread:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_load_singlethread:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1]
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !4)
   ret <4 x i32> %v
 }
@@ -1078,6 +1534,20 @@ define <4 x i32> @flat_load_cluster(ptr %p) {
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_load_cluster:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc dlc
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_load_cluster:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_load_b128 v[0:3], v[0:1] glc
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_load_cluster:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1106,6 +1576,20 @@ define <4 x i32> @flat_load_cluster(ptr %p) {
 ; GFX1250-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_load_cluster:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc dlc
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_load_cluster:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_load_b128 v[0:3], v[0:1] glc
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <4 x i32> @llvm.amdgcn.av.load.b128.p0(ptr %p, metadata !5)
   ret <4 x i32> %v
 }
@@ -1141,6 +1625,20 @@ define void @flat_store_wavefront(ptr %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_store_wavefront:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_store_wavefront:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_store_wavefront:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1169,6 +1667,20 @@ define void @flat_store_wavefront(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_store_wavefront:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_store_wavefront:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !0)
   ret void
 }
@@ -1204,6 +1716,20 @@ define void @flat_store_workgroup(ptr %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_store_workgroup:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_store_workgroup:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_store_workgroup:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1232,6 +1758,20 @@ define void @flat_store_workgroup(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_store_workgroup:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_store_workgroup:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !1)
   ret void
 }
@@ -1267,6 +1807,20 @@ define void @flat_store_agent(ptr %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_store_agent:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_store_agent:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_store_agent:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1295,6 +1849,20 @@ define void @flat_store_agent(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_store_agent:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_store_agent:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !2)
   ret void
 }
@@ -1330,6 +1898,20 @@ define void @flat_store_system(ptr %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_store_system:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_store_system:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_store_system:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1358,6 +1940,20 @@ define void @flat_store_system(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_store_system:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_store_system:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !3)
   ret void
 }
@@ -1393,6 +1989,20 @@ define void @flat_store_singlethread(ptr %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_store_singlethread:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_store_singlethread:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_store_singlethread:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1421,6 +2031,20 @@ define void @flat_store_singlethread(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_store_singlethread:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_store_singlethread:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !4)
   ret void
 }
@@ -1456,6 +2080,20 @@ define void @flat_store_cluster(ptr %p, <4 x i32> %v) {
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1012-WGP-SDAG-LABEL: flat_store_cluster:
+; GFX1012-WGP-SDAG:       ; %bb.0:
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-SDAG-LABEL: flat_store_cluster:
+; GFX1100-WGP-SDAG:       ; %bb.0:
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX942-ISEL-LABEL: flat_store_cluster:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1484,6 +2122,20 @@ define void @flat_store_cluster(ptr %p, <4 x i32> %v) {
 ; GFX1250-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1012-WGP-ISEL-LABEL: flat_store_cluster:
+; GFX1012-WGP-ISEL:       ; %bb.0:
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GFX1012-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1012-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-WGP-ISEL-LABEL: flat_store_cluster:
+; GFX1100-WGP-ISEL:       ; %bb.0:
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    flat_store_b128 v[0:1], v[2:5]
+; GFX1100-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.av.store.b128.p0(ptr %p, <4 x i32> %v, metadata !5)
   ret void
 }

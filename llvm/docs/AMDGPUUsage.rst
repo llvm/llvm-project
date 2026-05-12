@@ -1872,29 +1872,32 @@ The tables below show the cache policy bits for global pointer variants.
 Flat pointer variants use the corresponding ``flat_load``/``flat_store``
 instructions with the same cache policy bits.
 
-**FIXME:** On gfx12+, ``"workgroup"`` scope currently maps to CU scope (no
-bits), but in WGP mode a workgroup spans two CUs, so it should map to
-``scope:SCOPE_SE``. This needs to be fixed once the memory consistency model is
-finalized.
+**TODO:** Currently the compiler does not support WGP mode on gfx12+. Hence,
+``"workgroup"`` scope currently maps to CU scope (no bits). When WGP mode is
+enabled this should map to ``scope:SCOPE_SE``.
 
 .. table:: AMDGPU Load-Visible Implementation
    :class: longtable
 
-   +--------+-------------------------+---------------+---------------+---------------+---------------+---------------+
-   | target | instruction             | wavefront     | workgroup     | cluster       | agent         | system        |
-   +========+=========================+===============+===============+===============+===============+===============+
-   | gfx90* | ``global_load_dwordx4`` |               |               | ``glc``       | ``glc``       | ``glc``       |
-   +--------+-------------------------+---------------+---------------+---------------+---------------+---------------+
-   | gfx942 | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
-   +--------+-------------------------+---------------+---------------+---------------+---------------+---------------+
-   | gfx950 | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
-   +--------+-------------------------+---------------+---------------+---------------+---------------+---------------+
-   | gfx10* | ``global_load_dwordx4`` |               | ``glc``       | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
-   +--------+-------------------------+---------------+---------------+---------------+---------------+---------------+
-   | gfx11* | ``global_load_b128``    |               | ``glc``       | ``glc``       | ``glc``       | ``glc``       |
-   +--------+-------------------------+---------------+---------------+---------------+---------------+---------------+
-   | gfx12+ | ``global_load_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
-   +--------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | target       | instruction             | wavefront     | workgroup     | cluster       | agent         | system        |
+   +==============+=========================+===============+===============+===============+===============+===============+
+   | gfx90*       | ``global_load_dwordx4`` |               |               | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx942       | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx950       | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10*       | ``global_load_dwordx4`` |               |               | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10* (WGP) | ``global_load_dwordx4`` |               | ``glc``       | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11*       | ``global_load_b128``    |               |               | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11* (WGP) | ``global_load_b128``    |               | ``glc``       | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx12+       | ``global_load_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
 
 .. table:: AMDGPU Store-Available Implementation
    :class: longtable
@@ -1914,6 +1917,8 @@ finalized.
    +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
    | gfx12+ | ``global_store_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
    +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+
+**Note:** Cache control bits for Store are not affected by WGP mode.
 
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2414,7 +2419,7 @@ The AMDGPU backend supports the following calling conventions:
                                      Arguments are passed in SGPRs, starting at s0, if they have the ``inreg``
                                      attribute, and in VGPRs otherwise, starting at v8. Using more SGPRs or VGPRs
                                      than available in the subtarget is not allowed.  On subtargets that use
-                                     a scratch buffer descriptor (as opposed to ``scratch_{load,store}_*`` instructions),
+                                     a scratch buffer descriptor (as opposed to ``scratch_{load,store}_**`` instructions),
                                      the scratch buffer descriptor is passed in s[48:51]. This limits the
                                      SGPR / ``inreg`` arguments to the equivalent of 48 dwords; using more
                                      than that is not allowed.
