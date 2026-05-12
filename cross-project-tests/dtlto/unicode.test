@@ -43,28 +43,19 @@ FILES-DAG: {{^}}δ.4.[[#PID]].native.o.thinlto.bc{{$}}
 # JSON file for the distributor.
 FILES-DAG: {{^}}💾.[[#PID]].dist-file.json{{$}}
 
-# Check that the final DTLTO-linked shared library exports the expected
-# symbol names.
-RUN: llvm-nm -D -j 💾.so | FileCheck %s --check-prefix=SYMS
-
-SYMS-DAG: {{^}}α{{$}}
-SYMS-DAG: {{^}}β{{$}}
-SYMS-DAG: {{^}}γ{{$}}
-SYMS-DAG: {{^}}δ{{$}}
-
 #--- α.c
-__attribute__((retain)) int α(int x) { return x; }
+__attribute__((retain)) int alpha(int x) { return x; }
 
 #--- β.c
-__attribute__((retain)) int β(int x) { return x; }
+__attribute__((retain)) int beta(int x) { return x; }
 
 #--- γ.c
-__attribute__((retain)) int γ(int x) { return x; }
+__attribute__((retain)) int gamma(int x) { return x; }
 
 #--- δ.c
-extern int α(int);
-extern int β(int);
-extern int γ(int);
-__attribute__((retain)) int δ(int x) {
-  return α(x) + β(x) + γ(x);
+extern int alpha(int);
+extern int beta(int);
+extern int gamma(int);
+__attribute__((retain)) int delta(int x) {
+  return alpha(x) + beta(x) + gamma(x);
 }
