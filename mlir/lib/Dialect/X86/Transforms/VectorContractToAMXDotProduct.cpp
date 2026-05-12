@@ -285,7 +285,8 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
                                 23, 55, 28, 60, 29, 61, 30, 62, 31, 63});
         }
 
-        if (ipType.isSignlessInteger(8)) {
+        if (ipType.isSignlessInteger(8) || ipType.isF8E5M2() ||
+            ipType.isF8E4M3FN()) {
 
           shuffle1 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
@@ -419,7 +420,7 @@ createTiledDp(OpBuilder &rewriter, Location loc,
     auto accTileType = amx::TileType::get({16, 16}, opType);
 
     Value dp;
-    if (ipType.isBF16())
+    if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN())
       dp = amx::TileMulFOp::create(rewriter, loc, accTileType, tilesLhs,
                                    tilesRhs, accIterArgs[i]);
 
@@ -725,15 +726,20 @@ struct VectorContractToAMXDotProduct
 
     VectorType lhsTy = contractOp.getLhsType();
     if (!lhsTy.getElementType().isBF16() &&
-        !lhsTy.getElementType().isSignlessInteger(8))
+        !lhsTy.getElementType().isSignlessInteger(8) &&
+        !lhsTy.getElementType().isF8E4M3FN() &&
+        !lhsTy.getElementType().isF8E5M2())
       return rewriter.notifyMatchFailure(
-          contractOp, "Only BF16/Int8 lowering is supported.");
+          contractOp, "Only BF16/Int8/F8 lowering is supported.");
 
     VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
     if (!accTy)
       return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");
 
-    if ((lhsTy.getElementType().isBF16() && !accTy.getElementType().isF32()) ||
+    if (((lhsTy.getElementType().isBF16() ||
+          lhsTy.getElementType().isF8E4M3FN() ||
+          lhsTy.getElementType().isF8E5M2()) &&
+         !accTy.getElementType().isF32()) ||
         (lhsTy.getElementType().isSignlessInteger(8) &&
          !accTy.getElementType().isSignlessInteger(32)))
       return rewriter.notifyMatchFailure(contractOp,
@@ -759,6 +765,12 @@ struct VectorContractToAMXDotProduct
       ipType = rewriter.getIntegerType(8);
       opType = rewriter.getIntegerType(32);
     }
+
+    if (lhsTy.getElementType().isF8E4M3FN())
+      ipType = rewriter.getF8E4M3FNType();
+
+    if (lhsTy.getElementType().isF8E5M2())
+      ipType = rewriter.getF8E5M2Type();
 
     if (accReadOp->getBlock() == contractOp->getBlock() &&
         resultWriteOp->getBlock() != contractOp->getBlock())
@@ -932,7 +944,7 @@ struct VectorContractToAMXDotProduct
 
       // Tiled dot-product.
       Value dp;
-      if (ipType.isBF16())
+      if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN())
         dp = amx::TileMulFOp::create(rewriter, loc, tileTypeAcc, loadLhs,
                                      loadRhs, loadAcc);
 
@@ -1359,7 +1371,7 @@ struct VectorContractToAMXDotProduct
           Value addOp;
           Value addOp2;
 
-          if (ipType.isBF16()) {
+          if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN()) {
             addOp = arith::AddFOp::create(rewriter, loc, shuffle1, valueCRow1);
 
             addOp2 = arith::AddFOp::create(rewriter, loc, shuffle2, valueCRow2);
