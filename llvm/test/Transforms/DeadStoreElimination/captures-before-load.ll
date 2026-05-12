@@ -184,6 +184,7 @@ define i32 @test_captured_before_load_same_bb_2(ptr %in.ptr) {
 define i32 @test_not_captured_before_load_same_bb_clobber(ptr %in.ptr) {
 ; CHECK-LABEL: @test_not_captured_before_load_same_bb_clobber(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    [[IN_LV_1:%.*]] = load ptr, ptr [[IN_PTR:%.*]], align 2
 ; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, ptr [[IN_LV_1]], align 2
@@ -271,6 +272,7 @@ define i32 @test_only_captured_sibling_path_with_ret_to_load_other_blocks(ptr %i
 ; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, ptr [[IN_LV_1]], align 2
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
+; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    ret i32 [[IN_LV_2]]
 ;
