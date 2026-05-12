@@ -316,7 +316,8 @@ private:
             result.AppendMessage(plugin_namespace.name);
             for (auto &plugin : plugins) {
               auto enabled = PluginManager::IsPluginEnabled(
-                  plugin_namespace, plugin, requesting_debugger, domain);
+                  plugin_namespace, plugin,
+                  requesting_debugger.shared_from_this(), domain);
               if (llvm::Error E = enabled.takeError()) {
                 result.AppendErrorWithFormatv("{}",
                                               llvm::toString(std::move(E)));

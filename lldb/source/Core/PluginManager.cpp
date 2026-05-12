@@ -445,7 +445,6 @@ llvm::json::Object PluginManager::GetJSON(llvm::StringRef pattern,
 
   auto ErrorJSON = [&plugin_stats](llvm::Error error) -> llvm::json::Object & {
     plugin_stats.clear();
-    // Try to put a diagnostic in JSON when a error occurs
     plugin_stats.try_emplace("error", llvm::toString(std::move(error)));
     return plugin_stats;
   };
@@ -453,62 +452,19 @@ llvm::json::Object PluginManager::GetJSON(llvm::StringRef pattern,
   for (const PluginNamespace &plugin_ns : GetPluginNamespaces()) {
     llvm::json::Array namespace_stats;
 
-    switch (domain) {
-    case lldb::ePluginDomainKindGlobal: {
-      for (const RegisteredPluginInfo &plugin : plugin_ns.get_info()) {
-        if (MatchPluginName(pattern, plugin_ns, plugin)) {
-          llvm::json::Object plugin_json;
+    for (const RegisteredPluginInfo &plugin : plugin_ns.get_info()) {
+      if (!MatchPluginName(pattern, plugin_ns, plugin))
+        continue;
 
-          plugin_json.try_emplace("name", plugin.name);
-          plugin_json.try_emplace("enabled", plugin.enabled);
-          namespace_stats.emplace_back(std::move(plugin_json));
-        }
-      }
-      break;
-    }
-    case lldb::ePluginDomainKindDebugger:
-      // Not supported currently by any plugin when checking for enablement.
-      for (const RegisteredPluginInfo &plugin : plugin_ns.get_info()) {
-        if (MatchPluginName(pattern, plugin_ns, plugin)) {
-          return ErrorJSON(llvm::createStringErrorV(
-              "plugin namespace {} does not support querying enablement "
-              "in the debugger domain",
-              plugin_ns.name));
-        }
-      }
-      break;
-    case lldb::ePluginDomainKindTarget: {
+      llvm::Expected<bool> enabled =
+          IsPluginEnabled(plugin_ns, plugin, requesting_debugger, domain);
+      if (auto E = enabled.takeError())
+        return ErrorJSON(std::move(E));
 
-      if (!requesting_debugger)
-        return ErrorJSON(llvm::createStringError("no debugger available"));
-
-      auto target = requesting_debugger->GetSelectedTarget();
-      for (const RegisteredPluginInfo &plugin : plugin_ns.get_info()) {
-        if (MatchPluginName(pattern, plugin_ns, plugin)) {
-          if (!plugin_ns.SupportsDomain(ePluginDomainKindTarget)) {
-            return ErrorJSON(llvm::createStringErrorV(
-                "plugin namespace {} does not support querying enablement "
-                "in the target domain",
-                plugin_ns.name));
-          }
-
-          llvm::json::Object plugin_json;
-
-          // Only instrumentation-runtime plugins support the target domain
-          // currently so we can assume that's the case when querying
-          // enablement.
-          assert(plugin_ns.name == "instrumentation-runtime");
-          auto enabled = PluginManager::IsInstrumentationRuntimePluginEnabled(
-              plugin.name, target, domain);
-          if (auto E = enabled.takeError()) {
-            return ErrorJSON(std::move(E));
-          }
-          plugin_json.try_emplace("name", plugin.name);
-          plugin_json.try_emplace("enabled", *enabled);
-          namespace_stats.emplace_back(std::move(plugin_json));
-        }
-      }
-    }
+      llvm::json::Object plugin_json;
+      plugin_json.try_emplace("name", plugin.name);
+      plugin_json.try_emplace("enabled", *enabled);
+      namespace_stats.emplace_back(std::move(plugin_json));
     }
 
     if (!namespace_stats.empty())
@@ -536,7 +492,7 @@ bool PluginManager::MatchPluginName(llvm::StringRef pattern,
 
 llvm::Expected<bool> PluginManager::IsPluginEnabled(
     const PluginNamespace &plugin_ns, const RegisteredPluginInfo &plugin,
-    Debugger &requesting_debugger, lldb::PluginDomainKind domain) {
+    lldb::DebuggerSP requesting_debugger, lldb::PluginDomainKind domain) {
   switch (domain) {
   case lldb::ePluginDomainKindGlobal:
     return plugin.enabled;
@@ -551,8 +507,10 @@ llvm::Expected<bool> PluginManager::IsPluginEnabled(
           "plugin namespace {0} does not support querying "
           "enablement in the target domain",
           plugin_ns.name);
+    if (!requesting_debugger)
+      return llvm::createStringError("no debugger available");
     {
-      auto target = requesting_debugger.GetSelectedTarget();
+      auto target = requesting_debugger->GetSelectedTarget();
       return IsInstrumentationRuntimePluginEnabled(plugin.name, target, domain);
     }
   }

@@ -217,10 +217,9 @@ public:
                               const PluginNamespace &plugin_ns,
                               const RegisteredPluginInfo &plugin);
 
-  static llvm::Expected<bool>
-  IsPluginEnabled(const PluginNamespace &plugin_ns,
-                  const RegisteredPluginInfo &plugin,
-                  Debugger &requesting_debugger, lldb::PluginDomainKind domain);
+  static llvm::Expected<bool> IsPluginEnabled(
+      const PluginNamespace &plugin_ns, const RegisteredPluginInfo &plugin,
+      lldb::DebuggerSP requesting_debugger, lldb::PluginDomainKind domain);
 
   // ABI
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
