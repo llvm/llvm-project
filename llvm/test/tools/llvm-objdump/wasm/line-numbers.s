@@ -2,7 +2,7 @@
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj %s -o %t.o -g
 # RUN: llvm-objdump -d --line-numbers %t.o | FileCheck --check-prefix=OBJ %s
 
-# The pre-compiled line-numbers.wasm test was created by linking this object file:
+# line-numbers.yaml was created by linking this object and converting to YAML:
 #  wasm-ld %t.o -o %t.wasm --no-entry --export=foo --export=bar
 # RUN: yaml2obj %S/Inputs/line-numbers.yaml -o %t.wasm
 # RUN: llvm-objdump -d --line-numbers %t.wasm | FileCheck --check-prefix=LINKED %s
