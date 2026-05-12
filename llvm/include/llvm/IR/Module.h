@@ -288,6 +288,12 @@ public:
   /// @returns a string containing the module-scope inline assembly blocks.
   const std::string &getModuleInlineAsm() const { return GlobalScopeAsm; }
 
+  /// Get module name hash.
+  std::string getModuleNameHash() const;
+
+  /// Set module name hash.
+  void setModuleNameHash(std::string Hash);
+
   /// Get a RandomNumberGenerator salted for use with this module. The
   /// RNG can be seeded via -rng-seed=<uint64> and is salted with the
   /// ModuleID and the provided pass salt. The returned RNG should not

@@ -88,6 +88,16 @@ TEST(ModuleTest, setModuleFlag) {
   EXPECT_EQ(Val2, M.getModuleFlag(Key));
 }
 
+TEST(ModuleTest, ModuleNameHash) {
+  LLVMContext Context;
+  Module M("M", Context);
+  EXPECT_EQ("", M.getModuleNameHash());
+  M.setModuleNameHash("1234567890");
+  EXPECT_EQ("1234567890", M.getModuleNameHash());
+  M.setModuleNameHash("abcde");
+  EXPECT_EQ("abcde", M.getModuleNameHash());
+}
+
 TEST(ModuleTest, setModuleFlagInt) {
   LLVMContext Context;
   Module M("M", Context);

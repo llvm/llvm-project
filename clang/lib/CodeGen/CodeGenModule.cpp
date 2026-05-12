@@ -47,6 +47,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -67,6 +68,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/Hash.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -84,6 +86,28 @@ using namespace CodeGen;
 static llvm::cl::opt<bool> LimitedCoverage(
     "limited-coverage-experimental", llvm::cl::Hidden,
     llvm::cl::desc("Emit limited coverage mapping information (experimental)"));
+
+namespace {
+// Computes an MD5 hash for the given module path.
+// The hash is appended to the internal linakge symbol names after a ".__uniq."
+// suffix when -funique-internal-linkage-names is specified. This helps tools
+// like profilers to understand and distinguish profiles associated with
+// such symbols even when these symbols are defined multiple times in the
+// binary.
+static std::string computeModuleNameHash(
+    StringRef Path) {
+  llvm::MD5 Md5;
+  Md5.update(Path);
+  llvm::MD5::MD5Result R;
+  Md5.final(R);
+  llvm::SmallString<32> Str;
+  llvm::MD5::stringifyResult(R, Str);
+  // Convert MD5hash to Decimal. Demangler suffixes can either contain
+  // numbers or characters but not both.
+  llvm::APInt IntHash(128, Str.str(), 16);
+  return toString(IntHash, /* Radix = */ 10, /* Signed = */ false);
+}
+} // namespace
 
 static const char AnnotationSection[] = "llvm.metadata";
 static constexpr auto ErrnoTBAAMDName = "llvm.errno.tbaa";
@@ -530,7 +554,7 @@ CodeGenModule::CodeGenModule(ASTContext &C,
         Path = Entry.second + Path.substr(Entry.first.size());
         break;
       }
-    ModuleNameHash = llvm::getUniqueInternalLinkagePostfix(Path);
+    getModule().setModuleNameHash(computeModuleNameHash(Path));
   }
 
   // Record mregparm value now so it is visible through all of codegen.
@@ -2163,7 +2187,7 @@ static void AppendCPUSpecificCPUDispatchMangling(const CodeGenModule &CGM,
 static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
                                         CodeGenModule &CGM) {
   const Decl *D = GD.getDecl();
-  return !CGM.getModuleNameHash().empty() && isa<FunctionDecl>(D) &&
+  return !CGM.getModule().getModuleNameHash().empty() && isa<FunctionDecl>(D) &&
          (CGM.getFunctionLinkage(GD) == llvm::GlobalValue::InternalLinkage);
 }
 
@@ -2173,7 +2197,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
   MangleContext &MC = CGM.getCXXABI().getMangleContext();
-  if (!CGM.getModuleNameHash().empty())
+  if (!CGM.getModule().getModuleNameHash().empty())
     MC.needsUniqueInternalLinkageNames();
   bool ShouldMangle = MC.shouldMangleDeclName(ND);
   if (ShouldMangle)
@@ -2213,7 +2237,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
   if (ShouldMangle && isUniqueInternalLinkageDecl(GD, CGM)) {
     assert(CGM.getCodeGenOpts().UniqueInternalLinkageNames &&
            "Hash computed when not explicitly requested");
-    Out << CGM.getModuleNameHash();
+    Out << ".__uniq." << CGM.getModule().getModuleNameHash();
   }
 
   if (const auto *FD = dyn_cast<FunctionDecl>(ND))

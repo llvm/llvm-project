@@ -357,7 +357,6 @@ private:
   const TargetInfo &Target;
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
-  std::string ModuleNameHash;
   bool CXX20ModuleInits = false;
   std::unique_ptr<CodeGenTBAA> TBAA;
 
@@ -754,8 +753,6 @@ public:
     return OMD && OMD->isDirectMethod() && OMD->isVariadic() &&
            isObjCDirectPreconditionThunkEnabled();
   }
-
-  const std::string &getModuleNameHash() const { return ModuleNameHash; }
 
   /// Return a reference to the configured OpenCL runtime.
   CGOpenCLRuntime &getOpenCLRuntime() {

@@ -947,3 +947,15 @@ ControlFlowGuardMode Module::getControlFlowGuardMode() const {
     return static_cast<ControlFlowGuardMode>(CI->getZExtValue());
   return ControlFlowGuardMode::Disabled;
 }
+
+std::string Module::getModuleNameHash() const {
+  Metadata *MD = getModuleFlag("ModuleNameHash");
+  if (auto *MDS = dyn_cast_or_null<MDString>(MD))
+    return MDS->getString().str();
+  return {};
+}
+
+void Module::setModuleNameHash(std::string Hash) {
+  MDString *ID = MDString::get(getContext(), Hash);
+  setModuleFlag(ModFlagBehavior::Override, "ModuleNameHash", ID);
+}

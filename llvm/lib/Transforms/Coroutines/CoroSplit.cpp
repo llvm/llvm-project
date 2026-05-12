@@ -451,9 +451,21 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
                    ? Shape.getResumeFunctionType()
                    : getFunctionTypeFromAsyncSuspend(ActiveSuspend);
 
+  std::string Name = OrigF.getName().str();
+  std::string Hash = M->getModuleNameHash();
+  if (!Hash.empty()) {
+    std::string UniqSuffix = ".__uniq." + Hash;
+    size_t Pos = Name.rfind(UniqSuffix);
+    if (Pos != std::string::npos)
+      Name.erase(Pos);
+    Name = Name + Suffix.str() + UniqSuffix;
+  } else {
+    Name = Name + Suffix.str();
+  }
+
   Function *NewF =
       Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
-                       OrigF.getAddressSpace(), OrigF.getName() + Suffix);
+                       OrigF.getAddressSpace(), Name);
 
   M->getFunctionList().insert(InsertBefore, NewF);
 
