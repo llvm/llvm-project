@@ -4162,8 +4162,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     if (!ExpectedTy->isFloatingPointTy())
       return error(ID.Loc, "floating-point constant invalid for type");
     ID.APFloatVal = APFloat(ExpectedTy->getFltSemantics());
-    // The lexer is responsible for rejecting malformed floating-point
-    // literals, so any conversion failure here is a programmer bug.
     APFloat::opStatus Except =
         cantFail(ID.APFloatVal.convertFromString(
                      Lex.getStrVal(), RoundingMode::NearestTiesToEven),
