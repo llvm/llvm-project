@@ -590,9 +590,6 @@ define <2 x i8> @fshr_no_shift_modulo_bitwidth_splat(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %z
 }
 
-declare i32 @llvm.fshl.i32(i32, i32, i32)
-declare i32 @llvm.fshr.i32(i32, i32, i32)
-
 define i32 @fshl_identity(i32 %x) {
 ; CHECK-LABEL: @fshl_identity(
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
