@@ -5659,6 +5659,9 @@ struct FoldTransferReadAfterTransferWrite
     if (!readOp.hasPureTensorSemantics())
       return failure();
 
+    if (readOp->getParentOfType<MaskOp>())
+      return failure();
+
     auto writeOp =
         dyn_cast_if_present<TransferWriteOp>(readOp.getBase().getDefiningOp());
     if (!writeOp || !writeOp.hasPureTensorSemantics())

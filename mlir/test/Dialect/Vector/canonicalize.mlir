@@ -2397,6 +2397,28 @@ func.func @fold_transfer_raw_oob_write_only_write_masked(
 
 // -----
 
+// Negative test: transfer_read is inside a vector.mask — the pattern must not
+// fold because the external mask is not visible through getMask().
+// CHECK-LABEL: func @negative_fold_transfer_raw_vector_mask
+// CHECK:         vector.transfer_write
+// CHECK:         vector.mask
+// CHECK:         vector.transfer_read
+func.func @negative_fold_transfer_raw_vector_mask(
+    %t: tensor<128xf16>, %val: vector<128xf16>,
+    %wmask: vector<128xi1>, %rmask: vector<128xi1>) -> vector<128xf16> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %w = vector.transfer_write %val, %t[%c0], %wmask {in_bounds = [true]}
+     : vector<128xf16>, tensor<128xf16>
+  %r = vector.mask %rmask {
+    vector.transfer_read %w[%c0], %cst {in_bounds = [true]}
+       : tensor<128xf16>, vector<128xf16>
+  } : vector<128xi1> -> vector<128xf16>
+  return %r : vector<128xf16>
+}
+
+// -----
+
 
 // CHECK-LABEL: func @dead_store_tensor
 //   CHECK-DAG:      %[[C0:.*]] = arith.constant 0 : index
