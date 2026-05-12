@@ -1,5 +1,6 @@
 // RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-nullptr %t -- -- -D UNSPECIFIED_TYPE=_CmpUnspecifiedParam
 // RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-nullptr %t -- -- -D UNSPECIFIED_TYPE=__cmp_cat::__unspec
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-nullptr %t -- -- -D UNSPECIFIED_TYPE=__cmp_cat::__literal_zero
 
 namespace std {
 class strong_ordering;
@@ -13,6 +14,9 @@ struct _CmpUnspecifiedParam {
 namespace __cmp_cat {
   struct __unspec {
     constexpr __unspec(__unspec*) noexcept { }
+  };
+  struct __literal_zero {
+    constexpr __literal_zero(__literal_zero*) noexcept { }
   };
 }
 

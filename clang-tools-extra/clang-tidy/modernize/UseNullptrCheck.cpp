@@ -490,8 +490,10 @@ private:
   bool PruneSubtree = false;
 };
 
-static constexpr char DefaultIgnoredTypes[] = "_CmpUnspecifiedParam;"
-                                              "^std::__cmp_cat::__unspec;";
+static constexpr char DefaultIgnoredTypes[] =
+    "_CmpUnspecifiedParam;"
+    "^std::__cmp_cat::__unspec;"
+    "^std::__cmp_cat::__literal_zero;";
 
 } // namespace
 
