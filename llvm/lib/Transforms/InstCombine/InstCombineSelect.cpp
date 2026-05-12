@@ -2126,13 +2126,8 @@ static Value *foldSelectInstWithICmpOr(SelectInst &SI, ICmpInst *ICI,
     return nullptr;
   }
 
-  ConstantRange CR = computeConstantRange(ConstVal, true, SQ);
-
-  APInt Min = CR.getSignedMin();
-  APInt Max = CR.getSignedMax();
-
-  if (Min.slt(APInt(Min.getBitWidth(), -1)) ||
-      Max.sgt(APInt(Max.getBitWidth(), 1)))
+  if (!match(ConstVal, m_AllOnes()) && !match(ConstVal, m_Zero()) &&
+      !match(ConstVal, m_One()))
     return nullptr;
 
   if (!match(OrVal, m_c_Or(m_Specific(A), m_Value(Mask))))
