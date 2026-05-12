@@ -24,8 +24,8 @@ option(
 
 # List of all supported architectures.
 set( LIBCLC_ARCHS_ALL amdgpu amdgcn nvptx64 )
-set( LIBCLC_ARCHS_SPIRV spirv spirv32 spirv64)
-list( APPEND LIBCLC_ARCHS_ALL ${LIBCLC_ARCHS_SPIRV})
+set( LIBCLC_ARCHS_SPIRV spirv spirv32 spirv64 )
+list( APPEND LIBCLC_ARCHS_ALL ${LIBCLC_ARCHS_SPIRV} )
 
 set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
@@ -33,10 +33,13 @@ if(NOT LIBCLC_TARGET)
   message(FATAL_ERROR "libclc target is empty\n")
 endif()
 
-string( REPLACE "-" ";" _target_components ${LIBCLC_TARGET} )
-list(GET _target_components 0 _target_arch)
-if(NOT "${_target_arch}" IN_LIST LIBCLC_ARCHS_ALL)
-  message(FATAL_ERROR "Unknown libclc target architecture: ${_target_arch}\n"
+# Parse the target triple into arch and OS components.
+string(REPLACE "-" ";" triple_components ${LIBCLC_TARGET})
+list(GET triple_components 0 LIBCLC_TARGET_ARCH)
+list(GET triple_components 2 LIBCLC_TARGET_OS)
+
+if(NOT "${LIBCLC_TARGET_ARCH}" IN_LIST LIBCLC_ARCHS_ALL)
+  message(FATAL_ERROR "Unknown libclc target architecture: ${LIBCLC_TARGET_ARCH}\n"
     "Target was: ${LIBCLC_TARGET}\n"
     "Valid architectures are: ${LIBCLC_ARCHS_ALL}\n")
 endif()
@@ -98,12 +101,17 @@ endif()
 
 message(STATUS "libclc target '${LIBCLC_TARGET}' is enabled")
 
-string( REPLACE "-" ";" TRIPLE  ${LIBCLC_TARGET} )
-list(GET TRIPLE 0 ARCH)
-list(GET TRIPLE 2 OS)
+# Map the LLVM target architecture to the standard directory name.
+if(LIBCLC_TARGET_ARCH STREQUAL amdgcn OR LIBCLC_TARGET_ARCH STREQUAL amdgpu)
+  set(LIBCLC_ARCH_DIR amdgpu)
+elseif(LIBCLC_TARGET_ARCH STREQUAL nvptx64)
+  set(LIBCLC_ARCH_DIR nvptx)
+elseif(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
+  set(LIBCLC_ARCH_DIR spirv)
+endif()
 
-if(ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
-  if(NOT OS STREQUAL vulkan AND NOT LIBCLC_USE_SPIRV_BACKEND AND NOT llvm-spirv_exe)
+if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
+  if(NOT LIBCLC_TARGET_OS STREQUAL vulkan AND NOT LIBCLC_USE_SPIRV_BACKEND AND NOT llvm-spirv_exe)
     message(FATAL_ERROR "SPIR-V backend or llvm-spirv is required for libclc ${LIBCLC_TARGET}")
   endif()
 endif()
@@ -114,35 +122,12 @@ foreach( tool IN ITEMS opt llvm-link )
   endif()
 endforeach()
 
-add_subdirectory(clc/lib/generic)
-add_subdirectory(opencl/lib/generic)
-
-if(ARCH STREQUAL amdgcn)
-  add_subdirectory(clc/lib/amdgpu)
-  add_subdirectory(opencl/lib/amdgpu)
-elseif(ARCH STREQUAL nvptx64)
-  add_subdirectory(clc/lib/ptx-nvidiacl)
-elseif(ARCH STREQUAL spirv OR ARCH STREQUAL spirv32 OR ARCH STREQUAL spirv64)
-  if(OS STREQUAL vulkan)
-    add_subdirectory(clc/lib/vulkan)
-    add_subdirectory(opencl/lib/vulkan)
-  else()
-    add_subdirectory(clc/lib/spirv)
-    add_subdirectory(opencl/lib/spirv)
-  endif()
-endif()
-
-add_custom_target( libclc ALL )
-
-add_custom_target( libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins" )
-add_dependencies( libclc libclc-opencl-builtins )
-
 # Determine the clang target triple. Vulkan and SPIR-V backend targets use the
 # triple directly; other SPIR-V targets fall back to the legacy SPIR target.
 set(clang_triple ${LIBCLC_TARGET})
-if(ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
-  if(NOT OS STREQUAL vulkan AND NOT LIBCLC_USE_SPIRV_BACKEND)
-    if(ARCH STREQUAL spirv)
+if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
+  if(NOT LIBCLC_TARGET_OS STREQUAL vulkan AND NOT LIBCLC_USE_SPIRV_BACKEND)
+    if(LIBCLC_TARGET_ARCH STREQUAL spirv)
       set(clang_triple spir--)
     else()
       set(clang_triple spir64--)
@@ -153,10 +138,10 @@ endif()
 # Address space values.
 set(private_addrspace_val 0)
 set(generic_addrspace_val 0)
-if(ARCH STREQUAL amdgcn)
+if(LIBCLC_TARGET_ARCH STREQUAL amdgcn)
   set(private_addrspace_val 5)
 endif()
-if(ARCH IN_LIST LIBCLC_ARCHS_SPIRV AND NOT OS STREQUAL vulkan)
+if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV AND NOT LIBCLC_TARGET_OS STREQUAL vulkan)
   set(generic_addrspace_val 4)
 endif()
 
@@ -165,48 +150,16 @@ set(target_compile_flags)
 set(target_extra_defines)
 set(opt_flags -O3)
 
-if(ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
-  if(OS STREQUAL vulkan)
+if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
+  if(LIBCLC_TARGET_OS STREQUAL vulkan)
     list(APPEND target_compile_flags -Wno-unknown-assumption -U__opencl_c_int64)
   else()
     list(APPEND target_compile_flags -O0 -finline-hint-functions)
     list(APPEND target_extra_defines CLC_SPIRV)
     set(opt_flags)
   endif()
-elseif(ARCH STREQUAL amdgcn)
+elseif(LIBCLC_TARGET_ARCH STREQUAL amdgcn)
   list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")
-endif()
-
-# Collect CLC sources; target-specific sources override generic ones by basename.
-set(_clc_overrides)
-if(ARCH STREQUAL amdgcn)
-  list(APPEND _clc_overrides ${CLC_AMDGPU_SOURCES})
-elseif(ARCH STREQUAL nvptx64 AND (OS STREQUAL nvidiacl OR OS STREQUAL cuda))
-  list(APPEND _clc_overrides ${CLC_PTX_NVIDIACL_SOURCES})
-elseif(ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
-  if(OS STREQUAL vulkan)
-    list(APPEND _clc_overrides ${CLC_VULKAN_SOURCES})
-  else()
-    list(APPEND _clc_overrides ${CLC_SPIRV_SOURCES})
-  endif()
-endif()
-libclc_merge_sources(clc_sources ${CLC_GENERIC_SOURCES} ${_clc_overrides})
-
-# Collect OpenCL sources. SPIR-V and Vulkan targets use self-contained
-# subsets while others merge with target-specific overrides.
-if(ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
-  if(OS STREQUAL vulkan)
-    set(opencl_sources ${OPENCL_VULKAN_SOURCES})
-  else()
-    set(opencl_sources ${OPENCL_SPIRV_SOURCES})
-  endif()
-else()
-  set(_opencl_overrides)
-  if(ARCH STREQUAL amdgcn)
-    list(APPEND _opencl_overrides ${OPENCL_AMDGCN_SOURCES})
-  endif()
-  libclc_merge_sources(opencl_sources
-    ${OPENCL_GENERIC_SOURCES} ${_opencl_overrides})
 endif()
 
 # Common compile options shared by CLC and OpenCL libraries.
@@ -227,35 +180,45 @@ set(compile_flags
   ${target_compile_flags}
 )
 
-set(_common_defs
+set(common_defs
   ${target_extra_defines}
   __CLC_PRIVATE_ADDRSPACE_VAL=${private_addrspace_val}
   __CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
 )
 
-# Build the CLC internal builtins library.
-string(REPLACE "-" "_" lib_suffix ${LIBCLC_TARGET})
-set(clc_lib clc_builtins_${lib_suffix})
-add_libclc_builtin_library(${clc_lib}
-  SOURCES ${clc_sources}
+add_custom_target(libclc ALL)
+add_custom_target(libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins")
+add_dependencies(libclc libclc-opencl-builtins)
+
+# Configure the CLC internal builtins library.
+set(LIBCLC_CLC_TARGET clc)
+libclc_add_builtin_library(${LIBCLC_CLC_TARGET}
   COMPILE_OPTIONS ${compile_flags}
   INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
-  COMPILE_DEFINITIONS ${_common_defs}
+  COMPILE_DEFINITIONS ${common_defs}
   FOLDER "libclc/Device IR/CLC"
 )
 
-# Build, link, and install the final OpenCL builtins library.
-add_libclc_library(libclc-${LIBCLC_TARGET}
-  ARCH ${ARCH}
-  TRIPLE ${clang_triple}
-  TARGET_TRIPLE ${LIBCLC_TARGET}
-  SOURCES ${opencl_sources}
+set(LIBCLC_OPENCL_TARGET opencl)
+libclc_add_builtin_library(${LIBCLC_OPENCL_TARGET}
   COMPILE_OPTIONS ${compile_flags} "SHELL:-Xclang -fdeclare-opencl-builtins"
   INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
     ${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
-  COMPILE_DEFINITIONS ${_common_defs}
-  INTERNALIZE_LIBRARIES ${clc_lib}
+  COMPILE_DEFINITIONS ${common_defs}
+  FOLDER "libclc/Device IR/Intermediate"
+)
+
+add_subdirectory(clc)
+add_subdirectory(opencl)
+
+# Link and install the final OpenCL builtins library.
+libclc_add_library(libclc-${LIBCLC_TARGET}
+  ARCH ${LIBCLC_TARGET_ARCH}
+  TRIPLE ${clang_triple}
+  TARGET_TRIPLE ${LIBCLC_TARGET}
+  LIBRARIES ${LIBCLC_OPENCL_TARGET}
+  INTERNALIZE_LIBRARIES ${LIBCLC_CLC_TARGET}
   OPT_FLAGS ${opt_flags}
   OUTPUT_FILENAME libclc
   PARENT_TARGET libclc-opencl-builtins

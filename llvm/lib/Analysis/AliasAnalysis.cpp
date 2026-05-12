@@ -928,7 +928,8 @@ bool llvm::isBaseOfObject(const Value *V) {
 
 bool llvm::isEscapeSource(const Value *V) {
   if (auto *CB = dyn_cast<CallBase>(V)) {
-    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB, true))
+    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+            CB, /*MustPreserveOffset=*/true))
       return false;
 
     // The return value of a function with a captures(ret: address, provenance)
