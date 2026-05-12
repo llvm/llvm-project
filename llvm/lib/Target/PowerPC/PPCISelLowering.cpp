@@ -11641,7 +11641,8 @@ SDValue PPCTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
       SDValue Rot = DAG.getNode(ISD::ROTL, dl, MVT::i32, Val32,
                                 DAG.getConstant(8, dl, MVT::i32));
       // Insert bits [24:31] from Val32 into Rot at position [0:7]
-      SDValue Swap =          CreateRotateInsert(PPC::RLWIMI, MVT::i32, Rot, Val32, 24, 0, 7);
+      SDValue Swap =
+          CreateRotateInsert(PPC::RLWIMI, MVT::i32, Rot, Val32, 24, 0, 7);
       // Insert bits [16:23] from Val32 into Swap at position [16:23]
       return CreateRotateInsert(PPC::RLWIMI, MVT::i32, Swap, Val32, 24, 16, 23);
     };
