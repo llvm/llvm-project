@@ -24,8 +24,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-LIBC_INLINE LIBC_CONSTEXPR long double nextafter(long double from,
-                                                 long double to) {
+LIBC_INLINE constexpr long double nextafter(long double from, long double to) {
   using FPBits = FPBits<long double>;
   FPBits from_bits(from);
   if (from_bits.is_nan())
