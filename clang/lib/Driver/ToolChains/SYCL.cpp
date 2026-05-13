@@ -282,11 +282,9 @@ SYCLToolChain::getDeviceLibNames(const Driver &D,
   // For SPIR/SPIRV targets, add SYCL device libraries.
   if (TargetTriple.isSPIROrSPIRV()) {
     using SYCLDeviceLibsList = SmallVector<StringRef>;
-    SYCLDeviceLibsList SYCLDeviceLibs = {"libsycl-crt",
-                                         "libsycl-complex",
+    SYCLDeviceLibsList SYCLDeviceLibs = {"libsycl-crt", "libsycl-complex",
                                          "libsycl-complex-fp64",
-                                         "libsycl-cmath",
-                                         "libsycl-cmath-fp64"};
+                                         "libsycl-cmath", "libsycl-cmath-fp64"};
 
     // Add Windows-specific math library when targeting Windows hosts
     if (HostTC.getTriple().isOSWindows())
