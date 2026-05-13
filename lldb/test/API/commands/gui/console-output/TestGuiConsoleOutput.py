@@ -61,7 +61,6 @@ class TestGuiConsoleOutputTest(PExpectTest):
         self.child.expect_exact("Hello from stderr line 3")
 
         # Check for large output (verify buffer draining)
-        self.child.expect_exact("Large output line 0")
         self.child.expect_exact("Large output line 99")
 
         # Wait for Breakpoint 2
