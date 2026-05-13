@@ -7,38 +7,27 @@ defvar EmptyInts = []<int>;
 defvar Creatures = ["cephalopod", "axolotl", "dragonfly", "barracuda"];
 defvar Nums = [5, 2, 8, 1, 3];
 
-// Stable sort: equal keys preserve original relative order.
-// CHECK-LABEL: def duplicates
-// CHECK:   stable = ["a", "a", "b", "b", "c"];
-
-defvar DuplicateWords = ["b", "a", "b", "c", "a"];
-def duplicates {
-  list<string> stable = !sort(item, DuplicateWords, item);
-}
-
 // Sort an already-sorted list — should be a no-op.
 // CHECK-LABEL: def idempotent
 // CHECK:   already = ["a", "b", "c"];
-
 def idempotent {
   list<string> already = !sort(item, ["a", "b", "c"], item);
 }
 
 // Sort records by a string field or an int field.
+// CHECK-LABEL: def key_expr
+// CHECK:   by_name  = [thing_a20, thing_a10, thing_b20, thing_c30];
+// CHECK:   by_value = [thing_a10, thing_a20, thing_b20, thing_c30];
 class Thing<string N, int V> {
   string Name = N;
   int Value = V;
 }
-def thing_c : Thing<"charlie", 30>;
-def thing_a : Thing<"alpha",   10>;
-def thing_b : Thing<"beta",    20>;
-
-defvar Things = [thing_c, thing_a, thing_b];
-
-// CHECK-LABEL: def key_expr
-// CHECK:   by_name  = [thing_a, thing_b, thing_c];
-// CHECK:   by_value = [thing_a, thing_b, thing_c];
-
+def thing_a10 : Thing<"alpha",   10>;
+def thing_a20 : Thing<"alpha",   20>;
+def thing_b20 : Thing<"beta",    20>;
+def thing_c30 : Thing<"charlie", 30>;
+def thing_d10 : Thing<"delta",   10>;
+defvar Things = [thing_c30, thing_a20, thing_a10, thing_b20];
 def key_expr {
   list<Thing> by_name  = !sort(t, Things, t.Name);
   list<Thing> by_value = !sort(t, Things, t.Value);
@@ -47,7 +36,6 @@ def key_expr {
 // Sort a single-element list.
 // CHECK-LABEL: def single
 // CHECK:   one = ["only"];
-
 def single {
   list<string> one = !sort(item, ["only"], item);
 }
@@ -57,7 +45,6 @@ def single {
 // CHECK:   sorted_ints = [1, 2, 3, 5, 8];
 // CHECK:   sorted_empty_strings = [];
 // CHECK:   sorted_empty_ints = [];
-
 def sorted {
   list<string> sorted_strings = !sort(item, Creatures, item);
   list<int> sorted_ints = !sort(n, Nums, n);
