@@ -541,7 +541,7 @@ std::error_code DataAggregator::parsePerfTextFileHeader() {
 }
 
 void DataAggregator::parsePerfTextData(BinaryContext &BC) {
-  outs() << "PERF2BOLT: parsing a hybrid perf-script events...\n";
+  outs() << "PERF2BOLT: parsing a textual perf-script events...\n";
   NamedRegionTimer T("parsePerfTextData", "Parsing perf-script events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
   if (!Filename.empty()) {
