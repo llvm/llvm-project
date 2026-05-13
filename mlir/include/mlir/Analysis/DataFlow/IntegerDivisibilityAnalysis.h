@@ -18,25 +18,32 @@
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Interfaces/InferIntDivisibilityOpInterface.h"
 
-#include <optional>
-
 namespace mlir::dataflow {
 
+/// This lattice element represents the integer divisibility of an SSA value.
 class IntegerDivisibilityLattice : public Lattice<IntegerDivisibility> {
 public:
   using Lattice::Lattice;
 };
 
+/// Integer divisibility analysis determines, for each integer-typed SSA
+/// value, a divisor that the value is guaranteed to be a multiple of. It
+/// uses operations that implement `InferIntDivisibilityOpInterface` and
+/// also sets the divisibility of induction variables of loops with known
+/// lower bounds and steps.
+///
+/// This analysis depends on DeadCodeAnalysis, and will be a silent no-op
+/// if DeadCodeAnalysis is not loaded in the same solver context.
 class IntegerDivisibilityAnalysis
     : public SparseForwardDataFlowAnalysis<IntegerDivisibilityLattice> {
 public:
   using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
 
-  // At an entry point, set the lattice to the most pessimistic state,
-  // indicating that no further reasoning can be done.
+  /// At an entry point, set the lattice to the most pessimistic state,
+  /// indicating that no further reasoning can be done.
   void setToEntryState(IntegerDivisibilityLattice *lattice) override;
 
-  // Visit an operation, invoking the transfer function.
+  /// Visit an operation, invoking the transfer function.
   LogicalResult
   visitOperation(Operation *op,
                  ArrayRef<const IntegerDivisibilityLattice *> operands,

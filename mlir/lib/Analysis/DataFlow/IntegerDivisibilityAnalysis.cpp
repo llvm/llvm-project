@@ -57,10 +57,10 @@ LogicalResult IntegerDivisibilityAnalysis::visitOperation(
 
     ChangeResult changed = lattice->join(newDiv);
 
-    // Catch loop results with loop variant bounds and conservatively make
-    // them [-inf, inf] so we don't circle around infinitely often (because
-    // the dataflow analysis in MLIR doesn't attempt to work out trip counts
-    // and often can't).
+    // Catch loop results with loop-variant divisibility and conservatively
+    // set them to divisibility 1 (no information) so we don't ratchet
+    // indefinitely (the dataflow analysis in MLIR doesn't attempt to work
+    // out trip counts and often can't).
     bool isYieldedResult = llvm::any_of(v.getUsers(), [](Operation *op) {
       return op->hasTrait<OpTrait::IsTerminator>();
     });
