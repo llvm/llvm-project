@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation header for the getwc function.
+/// This file contains the prototype function for the getwc function, which
+/// reads a single character from the provided stream.
 ///
 //===----------------------------------------------------------------------===//
 

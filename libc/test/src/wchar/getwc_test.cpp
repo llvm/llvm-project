@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/wchar_macros.h" // For WEOF
 #include "src/stdio/fclose.h"
 #include "src/stdio/feof.h"
@@ -66,8 +67,10 @@ TEST_F(LlvmLibcGetwcTest, ReadUtf8) {
 
   EXPECT_EQ(LIBC_NAMESPACE::getwc(file), static_cast<wint_t>(L'a'));
   EXPECT_EQ(LIBC_NAMESPACE::getwc(file), static_cast<wint_t>(L'¢'));
+#if WINT_MAX > 0xFFFF
   EXPECT_EQ(LIBC_NAMESPACE::getwc(file), static_cast<wint_t>(L'€'));
   EXPECT_EQ(LIBC_NAMESPACE::getwc(file), static_cast<wint_t>(L'𐍈'));
+#endif
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
