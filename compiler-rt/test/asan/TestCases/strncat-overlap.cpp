@@ -28,6 +28,9 @@
 
 // UNSUPPORTED: android
 
+// AIX does not intercept strncat.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include "defines.h"
 #include <string.h>
 

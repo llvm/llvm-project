@@ -19,15 +19,15 @@ int main() {
   FooBarBaz();
   return 0;
 }
-// CHECK: {{    #0 0x.* in __sanitizer_print_stack_trace}}
-// CHECK: {{    #1 0x.* in FooBarBaz(\(\))? .*}}print-stack-trace.cpp:[[@LINE-8]]
-// CHECK: {{    #2 0x.* in main.*}}print-stack-trace.cpp:[[@LINE-5]]
+// CHECK: {{    #0 0x.* in \.?__sanitizer_print_stack_trace}}
+// CHECK: {{    #1 0x.* in \.?FooBarBaz(\(\))? .*}}print-stack-trace.cpp:[[@LINE-8]]
+// CHECK: {{    #2 0x.* in \.?main.*}}print-stack-trace.cpp:[[@LINE-5]]
 
 // CUSTOM: frame1_lineno[[@LINE-11]]
 // CUSTOM: frame2_lineno[[@LINE-8]]
 
-// NOINLINE: #0 0x{{.*}} in __sanitizer_print_stack_trace
-// NOINLINE: #1 0x{{.*}} in main{{.*}}print-stack-trace.cpp:[[@LINE-15]]
+// NOINLINE: #0 0x{{.*}} in {{\.?__sanitizer_print_stack_trace}}
+// NOINLINE: #1 0x{{.*}} in {{\.?main}}{{.*}}print-stack-trace.cpp:[[@LINE-15]]
 
 // NOSYMBOLIZE: frame:0 address:{{0x.*}}
 // NOSYMBOLIZE: frame:1 address:{{0x.*}}

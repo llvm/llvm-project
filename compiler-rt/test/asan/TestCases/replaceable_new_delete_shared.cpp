@@ -3,7 +3,8 @@
 // FIXME: Weak symbols aren't supported on Windows, although some code in
 // compiler-rt already exists to solve this problem. We should probably define
 // the new/delete interceptors as "weak" using those workarounds as well.
-// UNSUPPORTED: target={{.*windows.*}}
+// AIX does not support shared sanitizer libraries.
+// UNSUPPORTED: target={{.*(windows|aix).*}}
 
 // RUN: %clangxx %s -o %t -fsanitize=address -shared-libsan && not %run %t 2>&1 | FileCheck %s
 

@@ -7,6 +7,9 @@
 // RUN: %env_asan_opts=strict_string_checks=false not  %run %t test2 2>&1 | FileCheck %s --check-prefix=CHECK2-NONSTRICT --check-prefix=CHECK2
 // RUN: %env_asan_opts=strict_string_checks=true not %run %t test2 2>&1 | FileCheck %s --check-prefix=CHECK2-STRICT --check-prefix=CHECK2
 
+// aix does not intercept strncat.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>

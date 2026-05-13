@@ -24,6 +24,6 @@ int main() {
   wcsncat(badDst, append, 3); // Boom!
   // CHECK-DAG: ERROR: AddressSanitizer: stack-buffer-overflow on address [[ADDR:0x[0-9a-f]+]] at pc {{0x[0-9a-f]+}} bp {{0x[0-9a-f]+}} sp {{0x[0-9a-f]+}}
   // CHECK-DAG: WRITE of size {{[0-9]+}} at [[ADDR]] thread T0
-  // CHECK-DAG: #0 {{0x[0-9a-f]+}} in wcsncat
+  // CHECK-DAG: #0 {{0x[0-9a-f]+}} in {{\.?wcsncat}}
   printf("Should have failed with ASAN error.\n");
 }

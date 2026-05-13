@@ -5,6 +5,8 @@
 //
 // UNSUPPORTED: ios
 
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <stdio.h>
 
 #include <sanitizer/coverage_interface.h>

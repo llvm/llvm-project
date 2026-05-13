@@ -61,6 +61,9 @@ int main() {
   assert(region_address == heap_ptr);
   assert(10 == region_size);
 
+// AIX 64-bit has a highly customized memory layout, it has no shadow gap and
+// 3 mid memory regions.
+#if !defined(__LP64__) || !defined(_AIX)
   size_t shadow_scale;
   size_t shadow_offset;
   __asan_get_shadow_mapping(&shadow_scale, &shadow_offset);
@@ -73,6 +76,7 @@ int main() {
   uintptr_t shadow_gap = (shadow_ptr >> shadow_scale) + shadow_offset;
   type = __asan_locate_address((void *)shadow_gap, NULL, 0, NULL, NULL);
   assert(0 == strcmp(type, "shadow gap"));
+#endif
 
   free(heap_ptr);
 

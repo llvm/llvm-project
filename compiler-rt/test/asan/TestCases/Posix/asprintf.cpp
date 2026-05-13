@@ -1,6 +1,9 @@
 // RUN: %clangxx_asan -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
 
+// AIX libc does not define asprintf.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif

@@ -1,6 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 //
-// UNSUPPORTED: target={{.*(linux|solaris).*}}, darwin
+// AIX does not have err.h
+// UNSUPPORTED: target={{.*(linux|solaris|aix).*}}, darwin
 
 #include <ctype.h>
 #include <err.h>

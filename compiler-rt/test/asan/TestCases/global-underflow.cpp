@@ -4,6 +4,11 @@
 // RUN: %clangxx_asan -O2 %s %p/Helpers/underflow.cpp -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s %p/Helpers/underflow.cpp -o %t && not %run %t 2>&1 | FileCheck %s
 
+// aix puts XXX and YYY at very different addresses. For example YYY is 0x20004340, XXX is 0x20000c20
+// This address allocation does not match the assumption in https://reviews.llvm.org/D38056.
+// It was awared that this case may be not reliable on other OS.
+// UNSUPPORTED: target={{.*aix.*}}
+
 int XXX[2] = {2, 3};
 extern int YYY[];
 #include <string.h>

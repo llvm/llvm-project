@@ -17,4 +17,4 @@ int main(int argc, char **argv) {
   __sanitizer_print_stack_trace();
   return 0;
 }
-// CHECK: #{{.*}} main
+// CHECK: #{{.*}} {{\.?main}}

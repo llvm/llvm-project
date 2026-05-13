@@ -19,6 +19,9 @@
 // XFAIL: android
 // UNSUPPORTED: darwin-remote
 
+// FIXME: support -fsanitize-coverage on AIX.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

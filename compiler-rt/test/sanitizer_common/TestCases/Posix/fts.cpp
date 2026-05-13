@@ -1,6 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 //
-// UNSUPPORTED: darwin, target={{.*(linux|solaris).*}}
+// Header fts.h is not available on AIX.
+// UNSUPPORTED: darwin, target={{.*(linux|solaris|aix).*}}
 
 #include <sys/param.h>
 #include <sys/types.h>

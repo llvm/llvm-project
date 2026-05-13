@@ -2,6 +2,10 @@
 // Main executable is uninstrumented, but linked to ASan runtime. The shared
 // library is instrumented. Memory errors before dlopen are not detected.
 
+// For this case, do_another_bad_thing(which calls malloc) is compiled to a shared library,
+// and intercepting symbols in a shared library is still unsupported.
+// UNSUPPORTED: target={{.*aix.*}}
+
 // RUN: %clangxx_asan -O0 -DSHARED_LIB %s -std=c++11 -fPIC -shared -o %t-so.so
 // RUN: %clangxx -O0 %s -std=c++11 -c -o %t.o
 // RUN: %clangxx_asan -O0 %t.o %libdl -o %t

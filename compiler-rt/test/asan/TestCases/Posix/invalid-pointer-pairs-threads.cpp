@@ -1,6 +1,14 @@
+// On AIX, for 32 bit, the stack of main thread contains all other thread's stack.
+// So we should be able to check invalid pointer based on the main thread stack, because
+// all the stack address are in main thread's stack.
+// However this is not true for 64 bit, for 64 bit, main thread stack does not overlap with
+// other thread stack. This is same with other targets.
+// See GetStackVariableShadowStart() for details.
+
 // RUN: %clangxx_asan -O0 %s -pthread -o %t -mllvm -asan-detect-invalid-pointer-pair
 
-// RUN: %env_asan_opts=detect_invalid_pointer_pairs=2 %run %t a 2>&1 | FileCheck %s -check-prefix=OK -allow-empty
+// RUN: %if target={{.*aix.*}} && asan-32-bits %{ %env_asan_opts=detect_invalid_pointer_pairs=2 not %run %t a 2>&1 | FileCheck %s -check-prefix=AIX %} %else \
+// RUN:   %{ %env_asan_opts=detect_invalid_pointer_pairs=2 %run %t a 2>&1 | FileCheck %s -check-prefix=OK -allow-empty %}
 // RUN: %env_asan_opts=detect_invalid_pointer_pairs=2 not %run %t b 2>&1 | FileCheck %s -check-prefix=B
 
 // pthread barriers are not available on OS X
@@ -38,13 +46,15 @@ int main(int argc, char **argv) {
 
   if (t == 'a') {
     // OK-NOT: not handled yet
+    // AIX: ERROR: AddressSanitizer: invalid-pointer-pair
+    // AIX: #{{[0-9]+ .*}} in .main {{.*}}invalid-pointer-pairs-threads.cpp:[[@LINE+1]]
     unsigned r = pointers[0] - pointers[1];
   } else {
     char local;
     char *parent_pointer = &local;
 
     // B: ERROR: AddressSanitizer: invalid-pointer-pair
-    // B: #{{[0-9]+ .*}} in main {{.*}}invalid-pointer-pairs-threads.cpp:[[@LINE+1]]
+    // B: #{{[0-9]+ .*}} in {{\.?main}} {{.*}}invalid-pointer-pairs-threads.cpp:[[@LINE+1]]
     unsigned r = parent_pointer - pointers[0];
   }
 

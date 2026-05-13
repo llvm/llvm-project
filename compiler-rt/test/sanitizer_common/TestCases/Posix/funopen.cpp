@@ -11,7 +11,8 @@
 // CHECK-NEXT: READ CALLED; len={{[0-9]*}}
 // CHECK-NEXT: READ: test
 //
-// UNSUPPORTED: darwin, target={{.*(linux|solaris).*}}
+// AIX does not define strlcpy.
+// UNSUPPORTED: darwin, target={{.*(linux|solaris|aix).*}}
 
 #include <assert.h>
 #include <stdio.h>

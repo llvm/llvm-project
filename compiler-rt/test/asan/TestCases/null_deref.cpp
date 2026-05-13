@@ -21,6 +21,6 @@ void NullDeref(int *ptr) {
 }
 int main() {
   NullDeref((int*)0);
-  // CHECK: {{    #1 0x.* in main.*null_deref.cpp}}
+  // CHECK: {{    #1 0x.* in \.?main.*null_deref.cpp}}
   // CHECK: AddressSanitizer can not provide additional info.
 }

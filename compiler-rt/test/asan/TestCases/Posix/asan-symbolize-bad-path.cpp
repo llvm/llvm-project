@@ -11,6 +11,10 @@
 // CHECK-BAD-ADDR: #0 0xabcdabcd
 // CHECK-BAD-ADDR-EMPTY:
 
+// AIX does not have a system symbolizer which will return result like expected.
+// llvm-symbolizer will not generate expected result either, an error will be emitted indicating "No such file or directory".
+// UNSUPPORTED: target={{.*aix.*}}
+
 int main() {
   return 0;
 }

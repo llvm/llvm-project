@@ -48,7 +48,7 @@ config.substitutions.append(
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
 
-if config.target_os not in ["FreeBSD", "NetBSD"]:
+if config.target_os not in ["FreeBSD", "NetBSD", "AIX"]:
     libdl_flag = "-ldl"
 else:
     libdl_flag = ""
@@ -326,7 +326,15 @@ else:
     config.substitutions.append(("%pie", "-pie"))
 
 # Only run the tests on supported OSs.
-if config.target_os not in ["Linux", "Darwin", "FreeBSD", "SunOS", "Windows", "NetBSD"]:
+if config.target_os not in [
+    "Linux",
+    "Darwin",
+    "FreeBSD",
+    "SunOS",
+    "Windows",
+    "NetBSD",
+    "AIX",
+]:
     config.unsupported = True
 
 if not config.parallelism_group:

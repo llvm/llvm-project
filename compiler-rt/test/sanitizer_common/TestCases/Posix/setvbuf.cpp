@@ -2,6 +2,9 @@
 
 // UNSUPPORTED: target={{.*solaris.*}}
 
+// AIX can get "setvbuf" printed but after `FileCheck` can not find it after "2>&1 |"
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <stdio.h>
 
 void print_something() {
