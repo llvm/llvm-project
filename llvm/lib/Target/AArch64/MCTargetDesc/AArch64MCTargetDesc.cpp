@@ -349,13 +349,14 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
                                          const MCTargetOptions &Options) {
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO())
-    MAI = new AArch64MCAsmInfoDarwin(TheTriple.getArch() == Triple::aarch64_32);
+    MAI = new AArch64MCAsmInfoDarwin(TheTriple.getArch() == Triple::aarch64_32,
+                                     Options);
   else if (TheTriple.isOSBinFormatELF())
-    MAI = new AArch64MCAsmInfoELF(TheTriple);
+    MAI = new AArch64MCAsmInfoELF(TheTriple, Options);
   else if (TheTriple.isWindowsMSVCEnvironment())
-    MAI = new AArch64MCAsmInfoMicrosoftCOFF();
+    MAI = new AArch64MCAsmInfoMicrosoftCOFF(Options);
   else if (TheTriple.isOSBinFormatCOFF())
-    MAI = new AArch64MCAsmInfoGNUCOFF();
+    MAI = new AArch64MCAsmInfoGNUCOFF(Options);
   else
     reportFatalUsageError("unsupported object format");
 

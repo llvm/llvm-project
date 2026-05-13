@@ -138,6 +138,18 @@ const FileAction *ProcessLaunchInfo::GetFileActionForFD(int fd) const {
   return nullptr;
 }
 
+bool ProcessLaunchInfo::IsFDRedirected(int fd) const {
+  if (GetFileActionForFD(fd))
+    return true;
+  for (size_t i = 0; i < GetNumFileActions(); ++i) {
+    const FileAction *act = GetFileActionAtIndex(i);
+    if (act->GetAction() == FileAction::eFileActionDuplicate &&
+        act->GetActionArgument() == fd)
+      return true;
+  }
+  return false;
+}
+
 const FileSpec &ProcessLaunchInfo::GetWorkingDirectory() const {
   return m_working_dir;
 }
