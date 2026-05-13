@@ -4724,7 +4724,7 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPGroupprivate &directive) {
+                   const parser::OmpGroupprivateDirective &directive) {
   // The omp.groupprivate operation itself is created lazily when the symbol
   // is referenced inside a teams region (see groupprivatizeVars). Here we
   // only extract the device_type clause (if any) and record it per-symbol so
@@ -5499,14 +5499,40 @@ void Fortran::lower::genOpenMPSymbolProperties(
   assert(var.hasSymbol() && "Expecting Symbol");
   const semantics::Symbol &sym = var.getSymbol();
 
+  if (sym.test(semantics::Symbol::Flag::OmpGroupPrivate))
+    lower::genGroupprivateOp(converter, var);
+
   if (sym.test(semantics::Symbol::Flag::OmpThreadprivate))
     lower::genThreadprivateOp(converter, var);
 
   if (sym.test(semantics::Symbol::Flag::OmpDeclareTarget))
     lower::genDeclareTargetIntGlobal(converter, var);
+}
 
-  if (sym.test(semantics::Symbol::Flag::OmpGroupPrivate))
-    lower::genGroupprivateOp(converter, var);
+void Fortran::lower::genGroupprivateOp(lower::AbstractConverter &converter,
+                                       const lower::pft::Variable &var) {
+  const semantics::Symbol &sym = var.getSymbol();
+
+  // For common block members, the groupprivate op is generated for the entire
+  // common block in groupprivatizeVars, not for individual members here.
+  // The common block already has a global, so nothing to do here.
+  if (semantics::FindCommonBlockContaining(sym.GetUltimate()))
+    return;
+
+  // Handle non-global variables: local variables with the SAVE attribute can
+  // appear in a groupprivate directive. Promote them to fir.global so that
+  // omp.groupprivate can reference them by symbol name.
+  if (!var.isGlobal()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::Location currentLocation = converter.getCurrentLocation();
+    auto module = converter.getModuleOp();
+    std::string globalName = converter.mangleName(sym);
+    if (!module.lookupSymbol<fir::GlobalOp>(globalName))
+      globalInitialization(converter, firOpBuilder, sym, var, currentLocation);
+  }
+
+  // The actual omp.groupprivate operation is created by groupprivatizeVars
+  // when entering a teams region.
 }
 
 void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
@@ -5573,32 +5599,6 @@ void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
   fir::ExtendedValue symThreadprivateExv =
       getExtendedValue(sexv, symThreadprivateValue);
   converter.bindSymbol(sym, symThreadprivateExv);
-}
-
-void Fortran::lower::genGroupprivateOp(lower::AbstractConverter &converter,
-                                       const lower::pft::Variable &var) {
-  const semantics::Symbol &sym = var.getSymbol();
-
-  // For common block members, the groupprivate op is generated for the entire
-  // common block in groupprivatizeVars, not for individual members here.
-  // The common block already has a global, so nothing to do here.
-  if (semantics::FindCommonBlockContaining(sym.GetUltimate()))
-    return;
-
-  // Handle non-global variables: local variables with the SAVE attribute can
-  // appear in a groupprivate directive. Promote them to fir.global so that
-  // omp.groupprivate can reference them by symbol name.
-  if (!var.isGlobal()) {
-    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    mlir::Location currentLocation = converter.getCurrentLocation();
-    auto module = converter.getModuleOp();
-    std::string globalName = converter.mangleName(sym);
-    if (!module.lookupSymbol<fir::GlobalOp>(globalName))
-      globalInitialization(converter, firOpBuilder, sym, var, currentLocation);
-  }
-
-  // The actual omp.groupprivate operation is created by groupprivatizeVars
-  // when entering a teams region.
 }
 
 // This function replicates threadprivate's behaviour of generating
