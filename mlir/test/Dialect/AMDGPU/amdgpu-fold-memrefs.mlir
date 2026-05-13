@@ -82,8 +82,8 @@ func.func @test_collapse_shape(%offset_i: index, %offset_j: index) {
   // CHECK: %[[LOCAL:.*]] = memref.alloc() : memref<64x64xf16, #gpu.address_space<workgroup>>
   // CHECK: %[[MEM:.*]] = memref.alloc() : memref<64x128xf16>
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK: %[[INDICES_MEM:.*]]:2 = affine.delinearize_index %[[ARG0]] into (64, 128) : index, index
-  // CHECK: %[[INDICES_LDS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (64, 64) : index, index
+  // CHECK: %[[INDICES_MEM:.*]]:2 = affine.delinearize_index %[[ARG0]] into (128) : index, index
+  // CHECK: %[[INDICES_LDS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (64) : index, index
   // CHECK: amdgpu.gather_to_lds %[[MEM]][%[[INDICES_MEM]]#0, %[[INDICES_MEM]]#1], %[[LOCAL]][%[[INDICES_LDS]]#0, %[[INDICES_LDS]]#1]
   // CHECK-SAME: vector<8xf16>, memref<64x128xf16>, memref<64x64xf16, #gpu.address_space<workgroup>>
 
@@ -256,7 +256,7 @@ func.func @test_transpose_load_expand_shape(%offset_i: index, %offset_j: index) 
 // CHECK-SAME: %[[ARG0:.*]]: index
 func.func @test_transpose_load_collapse_shape(%offset_i: index) -> vector<4xf16> {
   // CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<32x128xf16, #gpu.address_space<workgroup>>
-  // CHECK: %[[INDICES:.*]]:2 = affine.delinearize_index %[[ARG0]] into (32, 128) : index, index
+  // CHECK: %[[INDICES:.*]]:2 = affine.delinearize_index %[[ARG0]] into (128) : index, index
   // CHECK: amdgpu.transpose_load %[[ALLOC]][%[[INDICES]]#0, %[[INDICES]]#1]
   // CHECK-SAME: memref<32x128xf16, #gpu.address_space<workgroup>> -> vector<4xf16>
 
@@ -347,7 +347,7 @@ func.func @test_make_gather_dma_base_subview(%mem: memref<64x128xf16, #gpu_globa
 // CHECK: func @test_make_gather_dma_base_collapse_shape
 // CHECK-SAME: %[[MEM:.*]]: memref<64x128xf16, #gpu.address_space<global>>, %[[LDS:.*]]: memref<64x64xf16, #gpu.address_space<workgroup>>, %[[GLOBAL_I:.*]]: index, %[[GLOBAL_J:.*]]: index, %[[LDS_IDX:.*]]: index
 func.func @test_make_gather_dma_base_collapse_shape(%mem: memref<64x128xf16, #gpu_global_addrspace>, %lds: memref<64x64xf16, #gpu_lds_addrspace>, %global_i: index, %global_j: index, %lds_idx: index) {
-  // CHECK: %[[INDICES:.*]]:2 = affine.delinearize_index %[[LDS_IDX]] into (64, 64) : index, index
+  // CHECK: %[[INDICES:.*]]:2 = affine.delinearize_index %[[LDS_IDX]] into (64) : index, index
   // CHECK: amdgpu.make_gather_dma_base %[[MEM]][%[[GLOBAL_I]], %[[GLOBAL_J]]], %[[LDS]][%[[INDICES]]#0, %[[INDICES]]#1]
   // CHECK-SAME: memref<64x128xf16, #gpu.address_space<global>>, memref<64x64xf16, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<f16, i16>
 
@@ -416,5 +416,55 @@ func.func @test_make_gather_dma_base_nop(%mem: memref<64x128xf16, #gpu_global_ad
 
   %base = amdgpu.make_gather_dma_base %mem[%global_i, %global_j], %lds[%lds_i, %lds_j]
     : memref<64x128xf16, #gpu_global_addrspace>, memref<64x64xf16, #gpu_lds_addrspace> -> !amdgpu.tdm_gather_base<f16, i16>
+  func.return
+}
+
+// -----
+
+#gpu_lds_addrspace = #gpu.address_space<workgroup>
+#gpu_global_addrspace = #gpu.address_space<global>
+
+// CHECK: #[[GLOBAL_ASYNC_MAP:.*]] = affine_map<()[s0] -> (s0 + 32)>
+// CHECK: #[[GLOBAL_ASYNC_MAP1:.*]] = affine_map<()[s0] -> (s0 + 64)>
+
+// CHECK: func @test_global_load_async_to_lds_both_fold_masked
+// CHECK-SAME: %[[SRC:.*]]: memref<64x128xf32, #gpu.address_space<global>>, %[[LDS:.*]]: memref<4096xf32, #gpu.address_space<workgroup>>, %[[GLOBAL_I:.*]]: index, %[[GLOBAL_J:.*]]: index, %[[LDS_I:.*]]: index, %[[LDS_J:.*]]: index, %[[MASK:.*]]: i1
+func.func @test_global_load_async_to_lds_both_fold_masked(%src: memref<64x128xf32, #gpu_global_addrspace>, %lds: memref<4096xf32, #gpu_lds_addrspace>, %global_i: index, %global_j: index, %lds_i: index, %lds_j: index, %mask: i1) {
+  // CHECK: %[[GI:.*]] = affine.apply #[[GLOBAL_ASYNC_MAP]]()[%[[GLOBAL_I]]]
+  // CHECK: %[[GJ:.*]] = affine.apply #[[GLOBAL_ASYNC_MAP1]]()[%[[GLOBAL_J]]]
+  // CHECK: %[[LDS_IDX:.*]] = affine.linearize_index [%[[LDS_I]], %[[LDS_J]]] by (64, 64) : index
+  // CHECK: amdgpu.global_load_async_to_lds %[[SRC]][%[[GI]], %[[GJ]]], %[[LDS]][%[[LDS_IDX]]], %[[MASK]]
+  // CHECK-SAME: vector<4xf32>, memref<64x128xf32, #gpu.address_space<global>>, memref<4096xf32, #gpu.address_space<workgroup>>
+
+  %subview = memref.subview %src[32, 64][32, 64][1, 1]
+    : memref<64x128xf32, #gpu_global_addrspace>
+    to memref<32x64xf32, strided<[128, 1], offset: 4160>, #gpu_global_addrspace>
+  %expand_lds = memref.expand_shape %lds [[0, 1]] output_shape [64, 64]
+    : memref<4096xf32, #gpu_lds_addrspace>
+    into memref<64x64xf32, #gpu_lds_addrspace>
+  amdgpu.global_load_async_to_lds %subview[%global_i, %global_j], %expand_lds[%lds_i, %lds_j], %mask
+    : vector<4xf32>, memref<32x64xf32, strided<[128, 1], offset: 4160>, #gpu_global_addrspace>,
+      memref<64x64xf32, #gpu_lds_addrspace>
+  func.return
+}
+
+// -----
+
+#gpu_lds_addrspace = #gpu.address_space<workgroup>
+#gpu_global_addrspace = #gpu.address_space<global>
+
+// CHECK: func @test_global_load_async_to_lds_no_mask_dst_collapse
+// CHECK-SAME: %[[SRC:.*]]: memref<8192xi32, #gpu.address_space<global>>, %[[LDS:.*]]: memref<64x64xi32, #gpu.address_space<workgroup>>, %[[SRC_IDX:.*]]: index, %[[DST_IDX:.*]]: index
+func.func @test_global_load_async_to_lds_no_mask_dst_collapse(%src: memref<8192xi32, #gpu_global_addrspace>, %lds: memref<64x64xi32, #gpu_lds_addrspace>, %src_idx: index, %dst_idx: index) {
+  // CHECK: %[[INDICES:.*]]:2 = affine.delinearize_index %[[DST_IDX]] into (64) : index, index
+  // CHECK: amdgpu.global_load_async_to_lds %[[SRC]][%[[SRC_IDX]]], %[[LDS]][%[[INDICES]]#0, %[[INDICES]]#1] :
+  // CHECK-SAME: i32, memref<8192xi32, #gpu.address_space<global>>, memref<64x64xi32, #gpu.address_space<workgroup>>
+
+  %collapse_lds = memref.collapse_shape %lds [[0, 1]]
+    : memref<64x64xi32, #gpu_lds_addrspace>
+    into memref<4096xi32, #gpu_lds_addrspace>
+  amdgpu.global_load_async_to_lds %src[%src_idx], %collapse_lds[%dst_idx]
+    : i32, memref<8192xi32, #gpu_global_addrspace>,
+      memref<4096xi32, #gpu_lds_addrspace>
   func.return
 }

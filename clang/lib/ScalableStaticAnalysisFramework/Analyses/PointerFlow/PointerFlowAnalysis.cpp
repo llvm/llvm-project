@@ -60,9 +60,8 @@ Expected<std::unique_ptr<AnalysisResult>> deserializePointerFlowAnalysisResult(
                                    PointerFlowAnalysisResultName.data());
 
   if (Content->size() % 2 != 0)
-    return makeSawButExpectedError(*Content,
-                                   "an even number of elements, got %lu",
-                                   static_cast<size_t>(Content->size()));
+    return makeSawButExpectedError(
+        *Content, "an even number of elements, got %lu", Content->size());
 
   std::map<EntityId, EdgeSet> Edges;
 
@@ -179,10 +178,11 @@ class UnsafeBufferReachableAnalysis
                                      std::vector<EPLPtr> &WorkList) {
     for (auto &[Id, SubGraph] : *Graph) {
       auto I = SubGraph.find(*EPL);
+      EntityPointerLevelSet &ReachablesOfId = getResult().Reachables[Id];
 
       if (I != SubGraph.end()) {
         for (const auto &EPL : I->second) {
-          auto [Ignored, Inserted] = getResult().Reachables[Id].insert(EPL);
+          auto [Ignored, Inserted] = ReachablesOfId.insert(EPL);
           if (Inserted)
             WorkList.push_back(&EPL);
         }

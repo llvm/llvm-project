@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
@@ -172,6 +173,21 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       }
       break;
     }
+    case dxbc::PartType::ILDN: {
+      if (!P.DebugName)
+        continue;
+
+      mcdxbc::DebugName DebugName;
+      DebugName.setFileName(P.DebugName->DebugName);
+      // Override default flags with value from YAML.
+      if (P.DebugName->Flags)
+        DebugName.BaseData.first.Flags = *P.DebugName->Flags;
+      // Override computed filename length with value from YAML.
+      if (P.DebugName->NameLength)
+        DebugName.BaseData.first.NameLength = *P.DebugName->NameLength;
+      DebugName.write(OS);
+      break;
+    }
     case dxbc::PartType::SFI0: {
       // If we don't have any flags we can continue here and the data will be
       // zeroed out.
@@ -242,7 +258,8 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
                                 P.Info->PatchOutputMap.end());
 
       PSV.finalize(static_cast<Triple::EnvironmentType>(
-          Triple::Pixel + P.Info->Info.ShaderStage));
+                       Triple::Pixel + P.Info->Info.ShaderStage),
+                   P.Info->Version);
       PSV.write(OS, P.Info->Version);
       break;
     }

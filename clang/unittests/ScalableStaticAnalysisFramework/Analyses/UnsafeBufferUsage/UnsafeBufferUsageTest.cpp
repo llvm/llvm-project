@@ -9,10 +9,8 @@
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "FindDecl.h"
 #include "TestFixture.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityIdTable.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
@@ -22,8 +20,6 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
@@ -39,7 +35,7 @@ class UnsafeBufferUsageTest : public TestFixture {
 protected:
   TUSummary TUSum;
   TUSummaryBuilder Builder;
-  std::unique_ptr<ASTConsumer> Extractor;
+  std::unique_ptr<TUSummaryExtractor> Extractor;
   std::unique_ptr<ASTUnit> AST;
 
   UnsafeBufferUsageTest()
@@ -73,15 +69,14 @@ protected:
       return nullptr;
     }
 
-    std::optional<EntityName> EN = getEntityName(ContributorDefn);
-
-    if (!EN) {
+    std::optional<EntityId> ContributorEntityId =
+        Extractor->addEntity(ContributorDefn);
+    if (!ContributorEntityId) {
       ADD_FAILURE() << "failed to get EntityName for contributor \""
                     << ContributorEntityName << "\"";
       return nullptr;
     }
 
-    EntityId ContributorEntityId = Builder.addEntity(*EN);
     auto &TUSumData = getData(TUSum);
     auto EntitiesSumIter =
         TUSumData.find(UnsafeBufferUsageEntitySummary::summaryName());
@@ -91,7 +86,7 @@ protected:
     if (EntitiesSumIter == TUSumData.end())
       return nullptr;
 
-    auto EntitySumIter = EntitiesSumIter->second.find(ContributorEntityId);
+    auto EntitySumIter = EntitiesSumIter->second.find(*ContributorEntityId);
 
     // If entity summary is empty, it may not exist:
     if (EntitySumIter == EntitiesSumIter->second.end())
@@ -102,15 +97,13 @@ protected:
 
   std::optional<EntityId> getEntityId(StringRef Name) {
     if (const auto *D = findDeclByName(Name, AST->getASTContext()))
-      if (auto EntityName = getEntityName(D))
-        return Builder.addEntity(*EntityName);
+      return Extractor->addEntity(D);
     return std::nullopt;
   }
 
   std::optional<EntityId> getEntityIdForReturn(StringRef FunName) {
     if (const auto *D = findFnByName(FunName, AST->getASTContext()))
-      if (auto EntityName = getEntityNameForReturn(D))
-        return Builder.addEntity(*EntityName);
+      return Extractor->addEntityForReturn(D);
     return std::nullopt;
   }
 
@@ -150,8 +143,9 @@ getSubsetOf(const EntityPointerLevelSet &Set, EntityId Entity) {
 }
 
 TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
-  EntityId E1 = Builder.addEntity({"c:@F@foo", "", {}});
-  EntityId E2 = Builder.addEntity({"c:@F@bar", "", {}});
+  EntityIdTable Table;
+  EntityId E1 = Table.getId({"c:@F@foo", "", {}});
+  EntityId E2 = Table.getId({"c:@F@bar", "", {}});
 
   auto P1 = buildEntityPointerLevel(E1, 2);
   auto P2 = buildEntityPointerLevel(E1, 2);
@@ -169,9 +163,10 @@ TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
 }
 
 TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntityPointerLevelSetTest) {
-  EntityId E1 = Builder.addEntity({"c:@F@foo", "", {}});
-  EntityId E2 = Builder.addEntity({"c:@F@bar", "", {}});
-  EntityId E3 = Builder.addEntity({"c:@F@baz", "", {}});
+  EntityIdTable Table;
+  EntityId E1 = Table.getId({"c:@F@foo", "", {}});
+  EntityId E2 = Table.getId({"c:@F@bar", "", {}});
+  EntityId E3 = Table.getId({"c:@F@baz", "", {}});
 
   auto P1 = buildEntityPointerLevel(E1, 1);
   auto P2 = buildEntityPointerLevel(E1, 2);

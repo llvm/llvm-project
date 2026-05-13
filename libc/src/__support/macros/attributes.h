@@ -30,8 +30,14 @@
 #define LIBC_UNUSED __attribute__((unused))
 
 #ifndef LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+#if (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||       \
+    (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 900)
+#define LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED 1
+#else
 #define LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED                                 \
   (__has_builtin(__builtin_is_constant_evaluated))
+#endif // (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||
+       // (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG
 #endif // LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 
 // TODO: Remove the macro once Clang/LLVM bump their minimum compilers' version.
@@ -42,7 +48,7 @@
 #if LIBC_ENABLE_CONSTEXPR &&                                                   \
     (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED ||                                 \
      (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||      \
-     (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 1100))
+     (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 900))
 #define LIBC_HAS_CONSTANT_EVALUATION
 #define LIBC_CONSTEXPR constexpr
 #else

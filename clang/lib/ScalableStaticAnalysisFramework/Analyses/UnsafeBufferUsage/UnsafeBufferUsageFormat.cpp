@@ -13,7 +13,6 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
-#include <cstdint>
 
 using namespace clang;
 using namespace ssaf;

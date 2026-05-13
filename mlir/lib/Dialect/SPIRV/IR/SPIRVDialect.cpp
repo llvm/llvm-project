@@ -863,6 +863,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseSampledImageType(*this, parser);
   if (keyword == "sampler")
     return SamplerType::get(getContext());
+  if (keyword == "named_barrier")
+    return NamedBarrierType::get(getContext());
   if (keyword == "struct")
     return parseStructType(*this, parser);
   if (keyword == "matrix")
@@ -910,6 +912,10 @@ static void print(SampledImageType type, DialectAsmPrinter &os) {
 }
 
 static void print(SamplerType type, DialectAsmPrinter &os) { os << "sampler"; }
+
+static void print(NamedBarrierType type, DialectAsmPrinter &os) {
+  os << "named_barrier";
+}
 
 static void print(StructType type, DialectAsmPrinter &os) {
   FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint;
@@ -1005,8 +1011,9 @@ static void print(TensorArmType type, DialectAsmPrinter &os) {
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
-            ImageType, SampledImageType, SamplerType, StructType, MatrixType,
-            TensorArmType>([&](auto type) { print(type, os); })
+            ImageType, SampledImageType, SamplerType, NamedBarrierType,
+            StructType, MatrixType, TensorArmType>(
+          [&](auto type) { print(type, os); })
       .DefaultUnreachable("Unhandled SPIR-V type");
 }
 
@@ -1047,6 +1054,10 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
     if (!isa<spirv::LoopControlAttr>(attr))
       return op->emitError("'")
              << symbol << "' must be a spirv::LoopControlAttr";
+  } else if (symbol == spirv::getSelectionControlAttrName()) {
+    if (!isa<spirv::SelectionControlAttr>(attr))
+      return op->emitError("'")
+             << symbol << "' must be a spirv::SelectionControlAttr";
   } else {
     return op->emitError("found unsupported '")
            << symbol << "' attribute on operation";
