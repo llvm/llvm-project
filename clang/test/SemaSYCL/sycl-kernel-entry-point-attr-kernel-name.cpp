@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-host -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
 
 // These tests validate that the kernel name type argument provided to the
 // sycl_kernel_entry_point attribute meets the requirements of a SYCL kernel

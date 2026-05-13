@@ -258,7 +258,8 @@ void resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
 void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
                                        memref::CollapseShapeOp collapseShapeOp,
                                        ValueRange indices,
-                                       SmallVectorImpl<Value> &sourceIndices) {
+                                       SmallVectorImpl<Value> &sourceIndices,
+                                       bool startsInbounds) {
   // Note: collapse_shape requires a strided memref, we can do this.
   auto metadata = memref::ExtractStridedMetadataOp::create(
       rewriter, loc, collapseShapeOp.getSrc());
@@ -273,10 +274,15 @@ void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
       continue;
     }
 
-    SmallVector<OpFoldResult> basis =
-        llvm::map_to_vector(group, [&](int64_t d) { return sourceSizes[d]; });
+    // If we don't know that this value is in-bounds, the largest return value
+    // of the delinearization may exceed `sourceSizes[d]`, so we drop that first
+    // group entry in order to maintain soundness.
+    auto trimmedGroup =
+        ArrayRef<int64_t>(group).drop_front(startsInbounds ? 0 : 1);
+    SmallVector<OpFoldResult> basis = llvm::map_to_vector(
+        trimmedGroup, [&](int64_t d) { return sourceSizes[d]; });
     auto delinearize = affine::AffineDelinearizeIndexOp::create(
-        rewriter, loc, index, basis, /*hasOuterBound=*/true);
+        rewriter, loc, index, basis, /*hasOuterBound=*/startsInbounds);
     llvm::append_range(sourceIndices, delinearize.getResults());
   }
   if (collapseShapeOp.getReassociationIndices().empty()) {
