@@ -207,10 +207,10 @@ enum EnumKindAttribute {
 };
 
 enum LanguageDialectAttribute {
-  DW_LANG_DIALECT_invalid = 0x00,
-#define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME) DW_LANG_DIALECT_##NAME = ID,
+  DW_LLVM_LANG_DIALECT_invalid = 0x00,
+#define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME) DW_LLVM_LANG_DIALECT_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
-  DW_LANG_DIALECT_max = 0x02
+  DW_LLVM_LANG_DIALECT_max = 0x02
 };
 
 enum DefaultedMemberAttribute {

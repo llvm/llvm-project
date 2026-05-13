@@ -5,7 +5,7 @@
 ; RUN: not llvm-as < %t/overflow.ll -disable-output 2>&1 | FileCheck %s --check-prefix=OVERFLOW
 
 ; STRING_LITERAL: expected DWARF language dialect
-; INVALID_ENUM: invalid DWARF language dialect 'DW_LANG_DIALECT_bogus'
+; INVALID_ENUM: invalid DWARF language dialect 'DW_LLVM_LANG_DIALECT_bogus'
 ; WRONG_ENUM: expected DWARF language dialect
 ; OVERFLOW: value for 'dialect' too large, limit is 65535
 
@@ -15,7 +15,7 @@
 
 ;--- invalid_enum.ll
 !0 = distinct !DICompileUnit(language: DW_LANG_C99,
-                             dialect: DW_LANG_DIALECT_bogus,
+                             dialect: DW_LLVM_LANG_DIALECT_bogus,
                              file: !DIFile(filename: "a", directory: "b"))
 
 ;--- wrong_enum_family.ll

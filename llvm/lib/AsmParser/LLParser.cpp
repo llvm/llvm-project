@@ -5302,7 +5302,7 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name,
 
   StringRef DialectString = Lex.getStrVal();
   unsigned Dialect = dwarf::getLanguageDialect(DialectString);
-  if (Dialect == dwarf::DW_LANG_DIALECT_invalid)
+  if (Dialect == dwarf::DW_LLVM_LANG_DIALECT_invalid)
     return tokError("invalid DWARF language dialect" + Twine(" '") +
                     DialectString + "'");
   assert(Dialect <= Result.Max && "Expected DWARF language dialect");
@@ -6153,7 +6153,7 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
 ///                      emissionKind: FullDebug, enums: !1, retainedTypes: !2,
 ///                      globals: !4, imports: !5, macros: !6, dwoId: 0x0abcd,
 ///                      sysroot: "/", sdk: "MacOSX.sdk",
-///                      dialect: DW_LANG_DIALECT_simt)
+///                      dialect: DW_LLVM_LANG_DIALECT_simt)
 bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
     return tokError("missing 'distinct', required for !DICompileUnit");

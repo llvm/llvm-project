@@ -609,8 +609,8 @@ StringRef llvm::dwarf::LanguageDialectString(unsigned LanguageDialect) {
   default:
     return StringRef();
 #define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME)                                  \
-  case DW_LANG_DIALECT_##NAME:                                                 \
-    return "DW_LANG_DIALECT_" #NAME;
+  case DW_LLVM_LANG_DIALECT_##NAME:                                            \
+    return "DW_LLVM_LANG_DIALECT_" #NAME;
 #include "llvm/BinaryFormat/Dwarf.def"
   }
 }
@@ -618,9 +618,9 @@ StringRef llvm::dwarf::LanguageDialectString(unsigned LanguageDialect) {
 unsigned llvm::dwarf::getLanguageDialect(StringRef LanguageDialectString) {
   return StringSwitch<unsigned>(LanguageDialectString)
 #define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME)                                  \
-  .Case("DW_LANG_DIALECT_" #NAME, DW_LANG_DIALECT_##NAME)
+  .Case("DW_LLVM_LANG_DIALECT_" #NAME, DW_LLVM_LANG_DIALECT_##NAME)
 #include "llvm/BinaryFormat/Dwarf.def"
-      .Default(DW_LANG_DIALECT_invalid);
+      .Default(DW_LLVM_LANG_DIALECT_invalid);
 }
 
 StringRef llvm::dwarf::CaseString(unsigned Case) {

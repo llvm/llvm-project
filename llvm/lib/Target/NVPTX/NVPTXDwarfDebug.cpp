@@ -29,8 +29,8 @@
 
 using namespace llvm;
 
-static constexpr uint16_t SimtDialect = dwarf::DW_LANG_DIALECT_simt;
-static constexpr uint16_t TileDialect = dwarf::DW_LANG_DIALECT_tile;
+static constexpr uint16_t SimtDialect = dwarf::DW_LLVM_LANG_DIALECT_simt;
+static constexpr uint16_t TileDialect = dwarf::DW_LLVM_LANG_DIALECT_tile;
 
 // Command line option to control inlined_at enhancement to lineinfo support.
 // Valid only when debuginfo emissionkind is DebugDirectivesOnly or
@@ -287,7 +287,7 @@ void NVPTXDwarfDebug::addTargetVariableAttributes(
 void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
                                                  DwarfCompileUnit &NewCU) {
   uint16_t Dialect = DIUnit.getSourceLanguage().getDialect();
-  if (Dialect != dwarf::DW_LANG_DIALECT_invalid) {
+  if (Dialect != dwarf::DW_LLVM_LANG_DIALECT_invalid) {
     if (Dialect != SimtDialect && Dialect != TileDialect &&
         WarnedDialectCUs.insert(&DIUnit).second) {
       std::string DialectString =

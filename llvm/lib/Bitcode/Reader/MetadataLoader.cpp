@@ -1950,7 +1950,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     const uint16_t Dialect =
         Record.size() > 23
             ? static_cast<uint16_t>(Record[23])
-            : static_cast<uint16_t>(dwarf::DW_LANG_DIALECT_invalid);
+            : static_cast<uint16_t>(dwarf::DW_LLVM_LANG_DIALECT_invalid);
 
     auto *CU = DICompileUnit::getDistinct(
         Context,
