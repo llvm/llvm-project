@@ -14,13 +14,11 @@ define dso_local i1 @test1(ptr readonly %0) {
 ;
 ; COUNTER2-LABEL: @test1(
 ; COUNTER2-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP0:%.*]]) ]
-; COUNTER2-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
-; COUNTER2-NEXT:    ret i1 [[TMP2]]
+; COUNTER2-NEXT:    ret i1 false
 ;
 ; COUNTER3-LABEL: @test1(
 ; COUNTER3-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP0:%.*]]) ]
-; COUNTER3-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
-; COUNTER3-NEXT:    ret i1 [[TMP2]]
+; COUNTER3-NEXT:    ret i1 false
 ;
   call void @llvm.assume(i1 true) ["nonnull"(ptr %0)]
   %2 = icmp eq ptr %0, null
@@ -29,18 +27,16 @@ define dso_local i1 @test1(ptr readonly %0) {
 
 define dso_local i1 @test2(ptr readonly %0) {
 ; COUNTER1-LABEL: @test2(
-; COUNTER1-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0:%.*]], null
-; COUNTER1-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP0]]) ]
-; COUNTER1-NEXT:    ret i1 [[TMP2]]
+; COUNTER1-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP0:%.*]]) ]
+; COUNTER1-NEXT:    ret i1 false
 ;
 ; COUNTER2-LABEL: @test2(
 ; COUNTER2-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP0:%.*]]) ]
 ; COUNTER2-NEXT:    ret i1 false
 ;
 ; COUNTER3-LABEL: @test2(
-; COUNTER3-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0:%.*]], null
-; COUNTER3-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP0]]) ]
-; COUNTER3-NEXT:    ret i1 [[TMP2]]
+; COUNTER3-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP0:%.*]]) ]
+; COUNTER3-NEXT:    ret i1 false
 ;
   %2 = icmp eq ptr %0, null
   call void @llvm.assume(i1 true) ["nonnull"(ptr %0)]
@@ -54,13 +50,12 @@ define dso_local i32 @test4(ptr readonly %0, i1 %cond) nofree nosync {
 ; COUNTER1:       B:
 ; COUNTER1-NEXT:    br label [[A]]
 ; COUNTER1:       A:
-; COUNTER1-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
-; COUNTER1-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
-; COUNTER1:       3:
+; COUNTER1-NEXT:    br i1 false, label [[TMP5:%.*]], label [[TMP2:%.*]]
+; COUNTER1:       2:
 ; COUNTER1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP0]], align 4
 ; COUNTER1-NEXT:    br label [[TMP5]]
-; COUNTER1:       5:
-; COUNTER1-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP4]], [[TMP3]] ], [ 0, [[A]] ]
+; COUNTER1:       4:
+; COUNTER1-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP4]], [[TMP2]] ], [ poison, [[A]] ]
 ; COUNTER1-NEXT:    ret i32 [[TMP6]]
 ;
 ; COUNTER2-LABEL: @test4(
@@ -69,13 +64,12 @@ define dso_local i32 @test4(ptr readonly %0, i1 %cond) nofree nosync {
 ; COUNTER2:       B:
 ; COUNTER2-NEXT:    br label [[A]]
 ; COUNTER2:       A:
-; COUNTER2-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
-; COUNTER2-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
-; COUNTER2:       3:
+; COUNTER2-NEXT:    br i1 false, label [[TMP5:%.*]], label [[TMP2:%.*]]
+; COUNTER2:       2:
 ; COUNTER2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP0]], align 4
 ; COUNTER2-NEXT:    br label [[TMP5]]
-; COUNTER2:       5:
-; COUNTER2-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP4]], [[TMP3]] ], [ 0, [[A]] ]
+; COUNTER2:       4:
+; COUNTER2-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP4]], [[TMP2]] ], [ poison, [[A]] ]
 ; COUNTER2-NEXT:    ret i32 [[TMP6]]
 ;
 ; COUNTER3-LABEL: @test4(
