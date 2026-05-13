@@ -104,9 +104,8 @@ struct KernelArgsTy {
     uint64_t NoWait : 1; // Was this kernel spawned with a `nowait` clause.
     uint64_t IsCUDA : 1; // Was this kernel spawned via CUDA.
     uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
-    uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
-    uint64_t Unused : 59;
-  } Flags = {0, 0, 0, 0, 0};
+    uint64_t Unused : 60;
+  } Flags = {0, 0, 0, 0};
   // The number of teams (for x,y,z dimension).
   uint32_t NumTeams[3] = {0, 0, 0};
   // The number of threads (for x,y,z dimension).

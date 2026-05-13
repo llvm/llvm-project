@@ -296,7 +296,7 @@ void DeviceContext::launchKernelImpl(
   LaunchSizeArgs.DynSharedMemory = 0;
 
   OL_CHECK(olLaunchKernel(nullptr, DeviceHandle, KernelHandle, KernelArgs,
-                          KernelArgsSize, &LaunchSizeArgs, nullptr));
+                          KernelArgsSize, &LaunchSizeArgs));
 }
 
 [[nodiscard]] llvm::StringRef DeviceContext::getName() const noexcept {

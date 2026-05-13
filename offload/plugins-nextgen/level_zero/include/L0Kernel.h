@@ -83,7 +83,6 @@ struct KernelPropertiesTy {
 
 struct L0LaunchEnvTy {
   bool IsAsync;
-  bool IsCooperative = false;
   AsyncQueueTy *AsyncQueue;
   ze_group_count_t GroupCounts = {0, 0, 0};
   KernelPropertiesTy &KernelPR;
@@ -91,10 +90,10 @@ struct L0LaunchEnvTy {
   bool IsTeamsNDRange = false;
   std::unique_lock<std::mutex> Lock;
 
-  L0LaunchEnvTy(bool IsAsync, bool IsCooperative, AsyncQueueTy *AsyncQueue,
+  L0LaunchEnvTy(bool IsAsync, AsyncQueueTy *AsyncQueue,
                 KernelPropertiesTy &KernelPR)
-      : IsAsync(IsAsync), IsCooperative(IsCooperative), AsyncQueue(AsyncQueue),
-        KernelPR(KernelPR), Lock(KernelPR.Mtx, std::defer_lock) {}
+      : IsAsync(IsAsync), AsyncQueue(AsyncQueue), KernelPR(KernelPR),
+        Lock(KernelPR.Mtx, std::defer_lock) {}
 };
 
 class L0KernelTy : public GenericKernelTy {
@@ -142,11 +141,6 @@ public:
     return Plugin::error(ErrorCode::UNIMPLEMENTED,
                          "maxGroupSize not implemented yet");
   }
-
-  Expected<uint32_t>
-  getMaxCooperativeGroupCount(GenericDeviceTy &GenericDevice,
-                              const uint32_t NumThreads[3],
-                              uint32_t DynBlockMemSize) const override;
 
   ze_kernel_handle_t getZeKernel() const { return zeKernel; }
 

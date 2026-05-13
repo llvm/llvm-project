@@ -434,15 +434,6 @@ struct GenericKernelTy {
   virtual Expected<uint64_t> maxGroupSize(GenericDeviceTy &GenericDevice,
                                           uint64_t DynamicMemSize) const = 0;
 
-  /// Get the maximum number of work groups that can be launched cooperatively.
-  virtual Expected<uint32_t>
-  getMaxCooperativeGroupCount(GenericDeviceTy &GenericDevice,
-                              const uint32_t NumThreads[3],
-                              uint32_t DynBlockMemSize) const {
-    return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                         "cooperative launch not supported");
-  }
-
   /// Get the kernel name.
   const char *getName() const { return Name.c_str(); }
 
