@@ -73,7 +73,7 @@ __device__ void test_ds_swizzle(int* out, int a) {
 }
 
 // CIR-LABEL: @_Z13test_sqrt_f32Pff
-// CIR: cir.llvm.intrinsic "amdgcn.sqrt" {{.*}} : (!cir.float) -> !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.sqrt" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z13test_sqrt_f32Pff
 // LLVM: call{{.*}} float @llvm.amdgcn.sqrt.f32(float %{{.*}})
 __device__ void test_sqrt_f32(float* out, float a) {
@@ -81,7 +81,7 @@ __device__ void test_sqrt_f32(float* out, float a) {
 }
 
 // CIR-LABEL: @_Z13test_sqrt_f64Pdd
-// CIR: cir.llvm.intrinsic "amdgcn.sqrt" {{.*}} : (!cir.double) -> !cir.double
+// CIR: cir.call_llvm_intrinsic "amdgcn.sqrt" {{.*}} : (!cir.double) -> !cir.double
 // LLVM: define{{.*}} void @_Z13test_sqrt_f64Pdd
 // LLVM: call{{.*}} double @llvm.amdgcn.sqrt.f64(double %{{.*}})
 __device__ void test_sqrt_f64(double* out, double a) {
