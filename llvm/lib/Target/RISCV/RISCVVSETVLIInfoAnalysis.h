@@ -416,9 +416,9 @@ public:
            "Can't compare VTYPE in unknown state");
     if (getTWiden() != Other.getTWiden())
       return false;
-    if (getTWiden() == 0)
-      return getSEWLMULRatio() == Other.getSEWLMULRatio();
-    return getSEW() == Other.getSEW();
+    if (getTWiden())
+      return getSEW() == Other.getSEW();
+    return getSEWLMULRatio() == Other.getSEWLMULRatio();
   }
 
   bool hasCompatibleVTYPE(const DemandedFields &Used,
