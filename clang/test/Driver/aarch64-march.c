@@ -36,3 +36,16 @@
 // INVALID-EXT: error: unsupported argument '+badfeature' to option '-march='
 // INVALID-EXT-NOT: armv9.6-a+sme2+sme2p1+sve2+sve2p1+badfeature+aes+sha2+memtag+bf16
 // INVALID-ARCH: error: unsupported argument 'notanarch' to option '-march='
+
+// ================== Check whether -mcpu diagnoses the first invalid argument.
+// RUN: not %clang --target=aarch64 -mcpu=generic+sme2+badfeature+aes %s -### -c 2>&1 | FileCheck -check-prefix=INVALID-MCPU-EXT %s
+// RUN: not %clang --target=aarch64 -mcpu=notacpu+sme2 %s -### -c 2>&1 | FileCheck -check-prefix=INVALID-MCPU %s
+// INVALID-MCPU-EXT: error: unsupported argument '+badfeature' to option '-mcpu='
+// INVALID-MCPU-EXT-NOT: generic+sme2+badfeature+aes
+// INVALID-MCPU: error: unsupported argument 'notacpu' to option '-mcpu='
+
+// ================== Check whether -mtune diagnoses the first invalid argument.
+// RUN: not %clang --target=aarch64 -mtune=generic+sme2+badfeature+aes %s -### -c 2>&1 | FileCheck -check-prefix=INVALID-MTUNE-EXT %s
+// RUN: not %clang --target=aarch64 -mtune=notacpu+sme2 %s -### -c 2>&1 | FileCheck -check-prefix=INVALID-MTUNE %s
+// INVALID-MTUNE-EXT: error: unsupported argument '+badfeature' to option '-mtune='
+// INVALID-MTUNE: error: unsupported argument 'notacpu' to option '-mtune='
