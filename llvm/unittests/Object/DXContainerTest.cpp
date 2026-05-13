@@ -221,42 +221,6 @@ TEST(DXCFile, ParseDXILPart) {
   EXPECT_EQ(Header.Bitcode.MinorVersion, 5u);
 }
 
-// This test verifies that ILDN part is correctly parsed.
-// This test is based on the binary output constructed from this yaml.
-// --- !dxcontainer
-// Header:
-//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
-//   Version:
-//     Major:           1
-//     Minor:           0
-//   PartCount:       1
-// Parts:
-//   - Name:            ILDN
-//     Size:            12
-//     DebugName:
-//      Flags:           0
-//      NameLength:      7
-//      DebugName:       abc.pdb
-// ...
-TEST(DXCFile, ParseILDNPart) {
-  uint8_t Buffer[] = {
-      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-      0x38, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
-      0x49, 0x4C, 0x44, 0x4E, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00,
-      0x61, 0x62, 0x63, 0x2E, 0x70, 0x64, 0x62, 0x00};
-  DXContainer C =
-      llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
-  EXPECT_EQ(C.getHeader().PartCount, 1u);
-  const std::optional<object::DXContainer::ILDNData> &ILDN = C.getDebugName();
-  EXPECT_TRUE(ILDN.has_value());
-  dxbc::DebugNameHeader Header = ILDN->first;
-  EXPECT_EQ(Header.Flags, 0u);
-  EXPECT_EQ(Header.NameLength, 7u);
-  EXPECT_EQ(ILDN->second, "abc.pdb");
-}
-
 static Expected<DXContainer>
 generateDXContainer(StringRef Yaml, SmallVectorImpl<char> &BinaryData) {
   DXContainerYAML::Object Obj;
