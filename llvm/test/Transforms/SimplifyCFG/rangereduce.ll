@@ -286,12 +286,12 @@ three:
 
 define i32 @test9(i32 %a) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 6
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 31)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1:%.*]], i32 [[TMP1]], i32 31)
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 8
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[SWITCH_TABLEIDX]] to i64
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], ptr @switch.table.test9, i64 0, i64 [[TMP4]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -321,13 +321,12 @@ three:
 ; dense range without subtracting the local minimum first.
 define void @test10(i32 %a) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 27)
-; CHECK-NEXT:    switch i32 [[TMP2]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:      i32 0, label [[ONE:%.*]]
-; CHECK-NEXT:      i32 1, label [[TWO:%.*]]
-; CHECK-NEXT:      i32 2, label [[THREE:%.*]]
-; CHECK-NEXT:      i32 3, label [[FOUR:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[A]], i32 27)
+; CHECK-NEXT:    switch i32 [[TMP1]], label [[COMMON_RET:%.*]] [
+; CHECK-NEXT:      i32 1, label [[ONE:%.*]]
+; CHECK-NEXT:      i32 2, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 3, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 4, label [[FOUR:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void

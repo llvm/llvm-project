@@ -7582,31 +7582,35 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   if (isSwitchDense(Values))
     return false;
 
-  // First, transform the values such that they start at zero and ascend.
+  auto TryBase = [&](int64_t CandidateBase, unsigned &CandidateShift) {
+    SmallVector<int64_t, 4> ReducedValues;
+    ReducedValues.reserve(Values.size());
+    uint64_t ReducedBits = 0;
+    for (int64_t V : Values) {
+      uint64_t Reduced = (uint64_t)V - (uint64_t)CandidateBase;
+      ReducedBits |= Reduced;
+      ReducedValues.push_back((int64_t)Reduced);
+    }
+
+    CandidateShift = llvm::countr_zero(ReducedBits);
+    if (CandidateShift >= 64)
+      return false;
+    if (CandidateShift > 0)
+      for (auto &V : ReducedValues)
+        V = (int64_t)((uint64_t)V >> CandidateShift);
+
+    return isSwitchDense(ReducedValues);
+  };
+
+  // Choose the base to subtract from the switch condition. The default is the
+  // local minimum, but prefer Base=0 when the case values are still dense
+  // after shifting out their common low zero bits without subtracting a base.
+  // This avoids creating an unnecessary `(condition - local_min)` expression.
   int64_t Base = Values[0];
-  for (auto &V : Values)
-    V -= (uint64_t)(Base);
-
-  // Now we have signed numbers that have been shifted so that, given enough
-  // precision, there are no negative values. Since the rest of the transform
-  // is bitwise only, we switch now to an unsigned representation.
-
-  // This transform can be done speculatively because it is so cheap - it
-  // results in a single rotate operation being inserted.
-
-  // countTrailingZeros(0) returns 64. As Values is guaranteed to have more than
-  // one element and LLVM disallows duplicate cases, Shift is guaranteed to be
-  // less than 64.
-  unsigned Shift = 64;
-  for (auto &V : Values)
-    Shift = std::min(Shift, (unsigned)llvm::countr_zero((uint64_t)V));
-  assert(Shift < 64);
-  if (Shift > 0)
-    for (auto &V : Values)
-      V = (int64_t)((uint64_t)V >> Shift);
-
-  if (!isSwitchDense(Values))
-    // Transform didn't create a dense switch.
+  unsigned Shift = 0;
+  if (Base >= 0 && TryBase(0, Shift))
+    Base = 0;
+  else if (!TryBase(Base, Shift))
     return false;
 
   // The obvious transform is to shift the switch condition right and emit a
@@ -7621,8 +7625,9 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
-  Value *Sub =
-      Builder.CreateSub(SI->getCondition(), ConstantInt::getSigned(Ty, Base));
+  Value *Sub = SI->getCondition();
+  if (Base != 0)
+    Sub = Builder.CreateSub(Sub, ConstantInt::getSigned(Ty, Base));
   Value *Rot = Builder.CreateIntrinsic(
       Ty, Intrinsic::fshl,
       {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});
