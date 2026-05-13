@@ -643,18 +643,16 @@ public:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
+    case VPRecipeBase::VPWidenLoadEVLSC:
+    case VPRecipeBase::VPWidenLoadSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveEVLSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
-    case VPRecipeBase::VPWidenLoadEVLSC:
-    case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
     case VPRecipeBase::VPWidenStoreSC:
     case VPRecipeBase::VPHistogramSC:
-      // TODO: Widened stores don't define a value, but widened loads do. Split
-      // the recipes to be able to make widened loads VPSingleDefRecipes.
       return false;
     }
     llvm_unreachable("Unhandled VPRecipeID");
@@ -3487,10 +3485,9 @@ protected:
 #endif
 };
 
-/// A common base class for widening memory operations. An optional mask can be
+/// A common mixin class for widening memory operations. An optional mask can be
 /// provided as the last operand.
-class LLVM_ABI_FOR_TEST VPWidenMemoryRecipe : public VPRecipeBase,
-                                              public VPIRMetadata {
+class LLVM_ABI_FOR_TEST VPWidenMemoryRecipe : public VPIRMetadata {
 protected:
   Instruction &Ingredient;
 
@@ -3507,39 +3504,27 @@ protected:
     assert(!IsMasked && "cannot re-set mask");
     if (!Mask)
       return;
-    addOperand(Mask);
+    getAsRecipe()->addOperand(Mask);
     IsMasked = true;
   }
 
-  VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
-                      std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, const VPIRMetadata &Metadata,
-                      DebugLoc DL)
-      : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
+  VPWidenMemoryRecipe(Instruction &I, bool Consecutive,
+                      const VPIRMetadata &Metadata)
+      : VPIRMetadata(Metadata), Ingredient(I),
         Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive) {}
 
 public:
-  VPWidenMemoryRecipe *clone() override {
-    llvm_unreachable("cloning not supported");
-  }
+  virtual ~VPWidenMemoryRecipe() = default;
 
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPRecipeID() == VPRecipeBase::VPWidenLoadSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPWidenStoreSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPWidenLoadEVLSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPWidenStoreEVLSC;
-  }
-
-  static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPRecipeBase>(U);
-    return R && classof(R);
-  }
+  /// Return a VPRecipeBase* to the current object.
+  virtual VPRecipeBase *getAsRecipe() = 0;
+  virtual const VPRecipeBase *getAsRecipe() const = 0;
 
   /// Return whether the loaded-from / stored-to addresses are consecutive.
   bool isConsecutive() const { return Consecutive; }
 
   /// Return the address accessed by this recipe.
-  VPValue *getAddr() const { return getOperand(0); }
+  VPValue *getAddr() const { return getAsRecipe()->getOperand(0); }
 
   /// Returns true if the recipe is masked.
   bool isMasked() const { return IsMasked; }
@@ -3548,33 +3533,27 @@ public:
   /// by a nullptr.
   VPValue *getMask() const {
     // Mask is optional and therefore the last operand.
-    return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
+    const VPRecipeBase *R = getAsRecipe();
+    return isMasked() ? R->getOperand(R->getNumOperands() - 1) : nullptr;
   }
 
   /// Returns the alignment of the memory access.
   Align getAlign() const { return Alignment; }
 
-  /// Generate the wide load/store.
-  void execute(VPTransformState &State) override {
-    llvm_unreachable("VPWidenMemoryRecipe should not be instantiated.");
-  }
-
   /// Return the cost of this VPWidenMemoryRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
+  InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
 
   Instruction &getIngredient() const { return Ingredient; }
 };
 
 /// A recipe for widening load operations, using the address to load from and an
 /// optional mask.
-struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
-                                                   public VPRecipeValue {
+struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
+                                                   public VPWidenMemoryRecipe {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
                     bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL)
-      : VPWidenMemoryRecipe(VPRecipeBase::VPWidenLoadSC, Load, {Addr},
-                            Consecutive, Metadata, DL),
-        VPRecipeValue(this, &Load) {
+      : VPSingleDefRecipe(VPRecipeBase::VPWidenLoadSC, {Addr}, &Load, DL),
+        VPWidenMemoryRecipe(Load, Consecutive, Metadata) {
     setMask(Mask);
   }
 
@@ -3588,6 +3567,12 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
   /// Generate a wide load or gather.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenLoadRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    return VPWidenMemoryRecipe::computeCost(VF, Ctx);
+  }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -3598,6 +3583,9 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
   }
 
 protected:
+  VPRecipeBase *getAsRecipe() override { return this; }
+  const VPRecipeBase *getAsRecipe() const override { return this; }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void printRecipe(raw_ostream &O, const Twine &Indent,
@@ -3608,15 +3596,18 @@ protected:
 /// A recipe for widening load operations with vector-predication intrinsics,
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
-struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe,
-                                    public VPRecipeValue {
+struct VPWidenLoadEVLRecipe final : public VPSingleDefRecipe,
+                                    public VPWidenMemoryRecipe {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
                        VPValue *Mask)
-      : VPWidenMemoryRecipe(VPRecipeBase::VPWidenLoadEVLSC, L.getIngredient(),
-                            {Addr, &EVL}, L.isConsecutive(), L,
-                            L.getDebugLoc()),
-        VPRecipeValue(this, &getIngredient()) {
+      : VPSingleDefRecipe(VPRecipeBase::VPWidenLoadEVLSC, {Addr, &EVL},
+                          &L.getIngredient(), L.getDebugLoc()),
+        VPWidenMemoryRecipe(L.getIngredient(), L.isConsecutive(), L) {
     setMask(Mask);
+  }
+
+  VPWidenLoadEVLRecipe *clone() override {
+    llvm_unreachable("cloning not supported");
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadEVLSC)
@@ -3641,6 +3632,9 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe,
   }
 
 protected:
+  VPRecipeBase *getAsRecipe() override { return this; }
+  const VPRecipeBase *getAsRecipe() const override { return this; }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
@@ -3650,12 +3644,13 @@ protected:
 
 /// A recipe for widening store operations, using the stored value, the address
 /// to store to and an optional mask.
-struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
+struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
+                                                    public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
                      VPValue *Mask, bool Consecutive,
                      const VPIRMetadata &Metadata, DebugLoc DL)
-      : VPWidenMemoryRecipe(VPRecipeBase::VPWidenStoreSC, Store,
-                            {Addr, StoredVal}, Consecutive, Metadata, DL) {
+      : VPRecipeBase(VPRecipeBase::VPWidenStoreSC, {Addr, StoredVal}, DL),
+        VPWidenMemoryRecipe(Store, Consecutive, Metadata) {
     setMask(Mask);
   }
 
@@ -3673,6 +3668,12 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   /// Generate a wide store or scatter.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenStoreRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    return VPWidenMemoryRecipe::computeCost(VF, Ctx);
+  }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -3683,6 +3684,9 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   }
 
 protected:
+  VPRecipeBase *getAsRecipe() override { return this; }
+  const VPRecipeBase *getAsRecipe() const override { return this; }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void printRecipe(raw_ostream &O, const Twine &Indent,
@@ -3693,13 +3697,18 @@ protected:
 /// A recipe for widening store operations with vector-predication intrinsics,
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
-struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
+struct VPWidenStoreEVLRecipe final : public VPRecipeBase,
+                                     public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr,
                         VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
-      : VPWidenMemoryRecipe(VPRecipeBase::VPWidenStoreEVLSC, S.getIngredient(),
-                            {Addr, StoredVal, &EVL}, S.isConsecutive(), S,
-                            S.getDebugLoc()) {
+      : VPRecipeBase(VPRecipeBase::VPWidenStoreEVLSC, {Addr, StoredVal, &EVL},
+                     S.getDebugLoc()),
+        VPWidenMemoryRecipe(S.getIngredient(), S.isConsecutive(), S) {
     setMask(Mask);
+  }
+
+  VPWidenStoreEVLRecipe *clone() override {
+    llvm_unreachable("cloning not supported");
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenStoreEVLSC)
@@ -3732,6 +3741,9 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   }
 
 protected:
+  VPRecipeBase *getAsRecipe() override { return this; }
+  const VPRecipeBase *getAsRecipe() const override { return this; }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
@@ -4084,6 +4096,18 @@ template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase>
     : public ForwardToPointerCast<VPPhiAccessors, VPRecipeBase *,
                                   CastInfo<VPPhiAccessors, VPRecipeBase *>> {};
+
+/// Support casting from VPRecipeBase / VPUser -> VPWidenMemoryRecipe.
+template <>
+struct CastInfo<VPWidenMemoryRecipe, VPRecipeBase *>
+    : vpdetail::CastInfoMixinImpl<VPWidenMemoryRecipe, VPWidenLoadRecipe,
+                                  VPWidenLoadEVLRecipe, VPWidenStoreRecipe,
+                                  VPWidenStoreEVLRecipe> {};
+template <>
+struct CastInfo<VPWidenMemoryRecipe, const VPRecipeBase *>
+    : public ConstStrippingForwardingCast<
+          VPWidenMemoryRecipe, const VPRecipeBase *,
+          CastInfo<VPWidenMemoryRecipe, VPRecipeBase *>> {};
 
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>

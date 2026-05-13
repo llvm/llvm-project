@@ -3624,10 +3624,11 @@ void VPPredInstPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
+  const VPRecipeBase *R = getAsRecipe();
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  unsigned Opcode = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this)
+  unsigned Opcode = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R)
                         ? Instruction::Load
                         : Instruction::Store;
 
@@ -3635,12 +3636,12 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // TODO: Using the original IR may not be accurate.
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
-    [[maybe_unused]] auto IsReverseMask = [this]() {
+    [[maybe_unused]] auto IsReverseMask = [this, R]() {
       VPValue *Mask = getMask();
       if (!Mask)
         return false;
 
-      if (isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(this))
+      if (isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(R))
         return match(Mask, m_Intrinsic<Intrinsic::experimental_vp_reverse>());
 
       return match(Mask, m_Reverse(m_VPValue()));
@@ -3655,10 +3656,10 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     if (!vputils::isSingleScalar(getAddr()))
       PtrTy = toVectorTy(PtrTy, VF);
 
-    unsigned IID = isa<VPWidenLoadRecipe>(this)      ? Intrinsic::masked_gather
-                   : isa<VPWidenStoreRecipe>(this)   ? Intrinsic::masked_scatter
-                   : isa<VPWidenLoadEVLRecipe>(this) ? Intrinsic::vp_gather
-                                                     : Intrinsic::vp_scatter;
+    unsigned IID = isa<VPWidenLoadRecipe>(R)      ? Intrinsic::masked_gather
+                   : isa<VPWidenStoreRecipe>(R)   ? Intrinsic::masked_scatter
+                   : isa<VPWidenLoadEVLRecipe>(R) ? Intrinsic::vp_gather
+                                                  : Intrinsic::vp_scatter;
     return Ctx.TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
                                              Ctx.CostKind) +
            Ctx.TTI.getMemIntrinsicInstrCost(
@@ -3669,14 +3670,14 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
   InstructionCost Cost = 0;
   if (IsMasked) {
-    unsigned IID = isa<VPWidenLoadRecipe>(this) ? Intrinsic::masked_load
-                                                : Intrinsic::masked_store;
+    unsigned IID = isa<VPWidenLoadRecipe>(R) ? Intrinsic::masked_load
+                                             : Intrinsic::masked_store;
     Cost += Ctx.TTI.getMemIntrinsicInstrCost(
         MemIntrinsicCostAttributes(IID, Ty, Alignment, AS), Ctx.CostKind);
   } else {
     TTI::OperandValueInfo OpInfo = Ctx.getOperandInfo(
-        isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this) ? getOperand(0)
-                                                           : getOperand(1));
+        isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R) ? R->getOperand(0)
+                                                        : R->getOperand(1));
     Cost += Ctx.TTI.getMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind,
                                     OpInfo, &Ingredient);
   }
