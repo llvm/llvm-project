@@ -424,6 +424,7 @@ Bug Fixes in This Version
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
+- Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -467,6 +468,7 @@ Bug Fixes to C++ Support
 - We no longer consider conversion operators when copy-initializing from the same type. This was non
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 - Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
+- Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
