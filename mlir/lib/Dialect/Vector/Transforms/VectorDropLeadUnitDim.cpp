@@ -56,7 +56,7 @@ static bool isNonScalableUnitDim(VectorType type, int64_t dim) {
 
 /// Returns true if the first `k` dimensions of `type` are non-scalable unit
 /// dimensions.
-static bool leadingDimsAreUnit(VectorType type, int64_t k) {
+static bool areLeadingDimsUnit(VectorType type, int64_t k) {
   assert(k >= 0 && k <= type.getRank() &&
          "expected a valid leading dimension count");
   return llvm::all_of(llvm::seq<int64_t>(0, k), [&](int64_t dim) {
@@ -64,7 +64,7 @@ static bool leadingDimsAreUnit(VectorType type, int64_t k) {
   });
 }
 
-static bool leadingDimsAreUnitAfterPermutation(VectorType type,
+static bool areLeadingDimsUnitAfterPermutation(VectorType type,
                                                ArrayRef<int64_t> permutation,
                                                int64_t k) {
   assert(k >= 0 && k <= static_cast<int64_t>(permutation.size()) &&
@@ -77,9 +77,9 @@ static bool leadingDimsAreUnitAfterPermutation(VectorType type,
 /// Shape-casts `operand` to the vector type obtained by dropping dimension
 /// `dim`, which must be non-scalable and unit-sized.
 static Value dropUnitDim(OpBuilder &b, Location loc, Value operand,
-                         int64_t dim) {
+                         int64_t dimToDrop) {
   auto oldType = cast<VectorType>(operand.getType());
-  assert(isNonScalableUnitDim(oldType, dim) &&
+  assert(isNonScalableUnitDim(oldType, dimToDrop) &&
          "expected a non-scalable unit dim to drop");
   int64_t rank = oldType.getRank();
   assert(rank > 1 && "cannot shape_cast to a 0-D vector");
@@ -90,7 +90,7 @@ static Value dropUnitDim(OpBuilder &b, Location loc, Value operand,
   newScalableDims.reserve(rank - 1);
   for (auto [i, size, scalable] :
        llvm::enumerate(oldType.getShape(), oldType.getScalableDims())) {
-    if (static_cast<int64_t>(i) == dim)
+    if (static_cast<int64_t>(i) == dimToDrop)
       continue;
     newShape.push_back(size);
     newScalableDims.push_back(scalable);
@@ -107,7 +107,7 @@ static Value dropUnitDim(OpBuilder &b, Location loc, Value operand,
 static Value dropLeadingUnitDims(OpBuilder &b, Location loc, Value operand,
                                  int64_t k) {
   auto oldType = cast<VectorType>(operand.getType());
-  assert(leadingDimsAreUnit(oldType, k) &&
+  assert(areLeadingDimsUnit(oldType, k) &&
          "expected non-scalable leading unit dims to drop");
   assert(k < oldType.getRank() &&
          "shape_cast cannot drop all vector dimensions");
@@ -135,7 +135,7 @@ static VectorType permuteVectorType(VectorType type,
 static Value dropLeadingUnitDims0DIsScalar(OpBuilder &b, Location loc,
                                            Value operand, int64_t k) {
   auto oldType = cast<VectorType>(operand.getType());
-  assert(leadingDimsAreUnit(oldType, k) &&
+  assert(areLeadingDimsUnit(oldType, k) &&
          "expected non-scalable leading unit dims to drop");
 
   if (k == oldType.getRank()) {
@@ -146,7 +146,7 @@ static Value dropLeadingUnitDims0DIsScalar(OpBuilder &b, Location loc,
   VectorType newType = VectorType::get(oldType.getShape().drop_front(k),
                                        oldType.getElementType(),
                                        oldType.getScalableDims().drop_front(k));
-  return vector::ShapeCastOp::create(b, loc, newType, operand);
+  return b.createOrFold<vector::ShapeCastOp>(loc, newType, operand);
 }
 
 namespace {
@@ -506,7 +506,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
                                   contractOp.getContext());
         if (plan.map.getDimPosition(0) == dimToDrop) {
           auto operandType = cast<VectorType>(operands[it.index()].getType());
-          if (!leadingDimsAreUnitAfterPermutation(operandType, plan.permutation,
+          if (!areLeadingDimsUnitAfterPermutation(operandType, plan.permutation,
                                                   dropDim))
             return failure();
         }
@@ -518,7 +518,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     if (plan.map.getDimPosition(0) == dimToDrop)
       plan.dropLeadingUnitDim = true;
     if (plan.dropLeadingUnitDim && originalZeroDim == dimToDrop &&
-        !leadingDimsAreUnit(cast<VectorType>(operands[it.index()].getType()),
+        !areLeadingDimsUnit(cast<VectorType>(operands[it.index()].getType()),
                             dropDim))
       return failure();
 
