@@ -109,7 +109,6 @@ convertCastingOp(ConversionPatternRewriter &rewriter,
   OpFoldResult newOffset;
   OpFoldResult intraOffset;
   if (mixedSizes.empty()) {
-    int64_t elementsPerByte = dstBits / srcBits;
     AffineExpr s0;
     bindSymbols(rewriter.getContext(), s0);
     newOffset = affine::makeComposedFoldedAffineApply(
