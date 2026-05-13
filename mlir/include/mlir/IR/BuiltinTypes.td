@@ -1253,7 +1253,9 @@ def Builtin_Token : Builtin_Type<"Token", "token"> {
     A use of a token SSA value is a pointer to an operation (in case of an
     OpResult) or a pointer to a region (in case of an entry block argument).
     A token carries no runtime data and cannot be forwarded. Tokens are
-    excluded from the `AnyType` type constraint.
+    excluded from the `AnyType` type constraint. Operations must define
+    `TokenProducerTrait` to produce token results or token region entry block
+    arguments, and must define `TokenConsumerTrait` to consume token operands.
   }];
 }
 

@@ -1,7 +1,8 @@
 // RUN: mlir-opt %s -verify-diagnostics -split-input-file | FileCheck %s
 
-// Tests for the builtin `token` type and the `Token`, `AnyType` ODS predicates.
-// The default `AnyType` predicate excludes tokens.
+// Tests for the builtin `token` type, the token producer/consumer operation
+// traits, and the `Token`, `AnyType` ODS predicates. The default `AnyType`
+// predicate excludes tokens.
 
 // CHECK-LABEL: @token_produce_consume
 func.func @token_produce_consume() {
@@ -9,6 +10,21 @@ func.func @token_produce_consume() {
   %t = test.token.produce
   // CHECK: test.token.consume %[[T]]
   test.token.consume %t
+  return
+}
+
+// -----
+
+// Region entry block arguments may produce tokens when the parent op opts in.
+// CHECK-LABEL: @token_region_entry_block_arg
+func.func @token_region_entry_block_arg() {
+  // CHECK: "test.token.region"
+  "test.token.region"() ({
+  ^bb0(%arg0: token):
+    // CHECK: test.token.consume
+    test.token.consume %arg0
+    "test.finish"() : () -> ()
+  }) : () -> ()
   return
 }
 
@@ -29,6 +45,88 @@ func.func @any_type_rejects_token() {
   %t = test.token.produce
   // expected-error @below {{operand #0 must be any non-token type}}
   test.token.any_type %t : token
+  return
+}
+
+// -----
+
+// Token-producing ops must explicitly define the TokenProducerTrait.
+func.func @token_result_requires_producer_trait() {
+  // expected-error @below {{'test.token.produce_without_trait' op produces token result #0 but does not define the TokenProducerTrait}}
+  %t = test.token.produce_without_trait
+  return
+}
+
+// -----
+
+// Token-consuming ops must explicitly define the TokenConsumerTrait.
+func.func @token_operand_requires_consumer_trait() {
+  %t = test.token.produce
+  // expected-error @below {{'test.token.consume_without_trait' op consumes token operand #0 but does not define the TokenConsumerTrait}}
+  test.token.consume_without_trait %t
+  return
+}
+
+// -----
+
+// Token entry block arguments require the parent op to define the
+// TokenProducerTrait.
+func.func @token_entry_block_arg_requires_parent_producer_trait() {
+  "test.token.region_without_trait"() ({
+  // expected-error @below {{token entry block argument #0 requires the parent operation to define the TokenProducerTrait}}
+  ^bb0(%arg0: token):
+    test.token.consume %arg0
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// A region with a parent op still cannot have token entry block arguments unless
+// the parent op defines the TokenProducerTrait.
+func.func @token_entry_block_arg_requires_parent_producer_trait_without_uses() {
+  "test.token.region_without_trait"() ({
+  // expected-error @below {{token entry block argument #0 requires the parent operation to define the TokenProducerTrait}}
+  ^bb0(%arg0: token):
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// Token entry block arguments still require consumers to define the
+// TokenConsumerTrait.
+func.func @token_entry_block_arg_use_requires_consumer_trait() {
+  "test.token.region"() ({
+  ^bb0(%arg0: token):
+    // expected-error @below {{'test.token.consume_without_trait' op consumes token operand #0 but does not define the TokenConsumerTrait}}
+    test.token.consume_without_trait %arg0
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// Tokens cannot be non-entry block arguments.
+func.func @token_non_entry_block_arg_is_rejected() {
+  "test.token.region"() ({
+    "test.finish"() : () -> ()
+  // expected-error @below {{token block argument #0 is only allowed in a region entry block}}
+  ^bb1(%arg0: token):
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// Function entry blocks do not opt in to producing builtin tokens.
+// expected-error @below {{token entry block argument #0 requires the parent operation to define the TokenProducerTrait}}
+func.func @token_region_arg(%arg0: token) {
+  test.token.consume %arg0
   return
 }
 

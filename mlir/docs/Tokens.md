@@ -30,14 +30,13 @@ inspect the definition of the token.
 
 A token use cannot be substituted with another token value: the use of a token
 points directly to a specific producer. Generic transformations must not alter
-or break this link. New uses of a token can be introduced safely. As a
-consequence:
+or break this link. New uses of a token can be introduced safely. Operations
+must opt in to producing or consuming tokens with `TokenProducerTrait` and
+`TokenConsumerTrait`. As a consequence:
 
 1. A token must not appear as a forwarded value, e.g.:
     * a forwarded result/operand of a `CallOpInterface` op,
-    * an argument or result type of a `FunctionOpInterface` op (a token
-      block argument *inside* a function body is fine — what is disallowed
-      is forwarding tokens across the call/return boundary),
+    * an argument or result type of a `FunctionOpInterface` op,
     * a successor operand or successor block argument of a
       `BranchOpInterface` op,
     * a forwarded operand to/from any region of a `RegionBranchOpInterface`
@@ -62,7 +61,7 @@ not opted in cannot accept a token as an arbitrary operand or result. This
 restriction prevents tokens from being accidentally passed as operands with
 forwarding semantics.
 
-Three predicates are provided in `CommonTypeConstraints.td`:
+Two predicates are provided in `CommonTypeConstraints.td`:
 
 | Predicate          | Accepts                              | Use when …                                                            |
 | ------------------ | ------------------------------------ | ----------------------------------------------------------------------|
@@ -72,10 +71,18 @@ Three predicates are provided in `CommonTypeConstraints.td`:
 Example:
 
 ```tablegen
-def MyConsumeOp : MyDialect_Op<"consume"> {
+def MyProduceOp : MyDialect_Op<"produce", [TokenProducerTrait]> {
+  let results = (outs Token:$token);
+}
+
+def MyConsumeOp : MyDialect_Op<"consume", [TokenConsumerTrait]> {
   let arguments = (ins Token:$scope, AnyType:$value);
 }
 ```
+
+Region entry block arguments of `token` type are also token producers and
+require the parent operation to define `TokenProducerTrait`. Token block
+arguments in non-entry blocks are rejected.
 
 ## Examples
 

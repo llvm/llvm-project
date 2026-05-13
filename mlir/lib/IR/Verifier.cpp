@@ -26,6 +26,7 @@
 
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
@@ -42,8 +43,8 @@ class OperationVerifier {
 public:
   /// If `verifyRecursively` is true, then this will also recursively verify
   /// nested operations.
-  explicit OperationVerifier(bool verifyRecursively)
-      : verifyRecursively(verifyRecursively) {}
+  OperationVerifier(MLIRContext *ctx, bool verifyRecursively)
+      : tokenType(TokenType::get(ctx)), verifyRecursively(verifyRecursively) {}
 
   /// Verify the given operation.
   LogicalResult verifyOpAndDominance(Operation &op);
@@ -58,6 +59,12 @@ private:
   /// upon exit from the subtree, i.e. when we visit a node for the second time.
   LogicalResult verifyOnEntrance(Block &block);
   LogicalResult verifyOnEntrance(Operation &op);
+  LogicalResult
+  verifyTokenValue(Operation &producer, Value value,
+                   function_ref<InFlightDiagnostic()> emitProducerError);
+  LogicalResult verifyTokenValues(Operation &op);
+  LogicalResult verifyTokenBlockArgument(Block &block, BlockArgument arg,
+                                         unsigned idx);
 
   LogicalResult verifyOnExit(Block &block);
   LogicalResult verifyOnExit(Operation &op);
@@ -69,6 +76,9 @@ private:
   /// Operation.
   LogicalResult verifyDominanceOfContainedRegions(Operation &op,
                                                   DominanceInfo &domInfo);
+
+  /// The cached instance of the builtin token type.
+  TokenType tokenType;
 
   /// A flag indicating if this verifier should recursively verify nested
   /// operations.
@@ -109,6 +119,81 @@ static bool mayBeValidWithoutTerminator(Block *block) {
   return !op || op->mightHaveTrait<OpTrait::NoTerminator>();
 }
 
+LogicalResult OperationVerifier::verifyTokenValue(
+    Operation &producer, Value value,
+    function_ref<InFlightDiagnostic()> emitProducerError) {
+  if (value.getType() != tokenType)
+    return success();
+
+  if (!producer.hasTrait<OpTrait::TokenProducerTrait>())
+    return emitProducerError();
+
+  for (OpOperand &use : value.getUses()) {
+    Operation *user = use.getOwner();
+    if (user->hasTrait<OpTrait::TokenConsumerTrait>())
+      continue;
+
+    return user->emitOpError()
+           << "consumes token operand #" << use.getOperandNumber()
+           << " but does not define the TokenConsumerTrait";
+  }
+
+  return success();
+}
+
+LogicalResult OperationVerifier::verifyTokenValues(Operation &op) {
+  for (auto resultIt : llvm::enumerate(op.getResults())) {
+    unsigned idx = resultIt.index();
+    OpResult result = resultIt.value();
+    if (failed(verifyTokenValue(op, result, [&]() {
+          return op.emitOpError()
+                 << "produces token result #" << idx
+                 << " but does not define the TokenProducerTrait";
+        })))
+      return failure();
+  }
+
+  for (Region &region : op.getRegions()) {
+    if (region.empty())
+      continue;
+
+    Block &entryBlock = region.front();
+    for (auto argIt : llvm::enumerate(entryBlock.getArguments())) {
+      unsigned idx = argIt.index();
+      BlockArgument arg = argIt.value();
+      if (failed(verifyTokenValue(op, arg, [&]() {
+            return emitError(arg.getLoc(), "token entry block argument #")
+                   << idx << " requires the parent operation to define the "
+                   << "TokenProducerTrait";
+          })))
+        return failure();
+    }
+  }
+
+  return success();
+}
+
+LogicalResult OperationVerifier::verifyTokenBlockArgument(Block &block,
+                                                          BlockArgument arg,
+                                                          unsigned idx) {
+  if (arg.getType() != tokenType)
+    return success();
+
+  Region *parentRegion = block.getParent();
+  if (!parentRegion || !block.isEntryBlock())
+    return emitError(arg.getLoc(), "token block argument #")
+           << idx << " is only allowed in a region entry block";
+
+  Operation *parentOp = parentRegion->getParentOp();
+  if (!parentOp || !parentOp->hasTrait<OpTrait::TokenProducerTrait>())
+    return emitError(arg.getLoc(), "token entry block argument #")
+           << idx
+           << " requires the parent operation to define the "
+              "TokenProducerTrait";
+
+  return success();
+}
+
 LogicalResult OperationVerifier::verifyOnEntrance(Block &block) {
   // Get the parent op and context for cross-context checks. Both are available
   // whenever the block lives inside a region that has a parent operation.
@@ -133,6 +218,8 @@ LogicalResult OperationVerifier::verifyOnEntrance(Block &block) {
                << " type from a different MLIRContext than its "
                   "parent operation";
     }
+    if (failed(verifyTokenBlockArgument(block, arg, idx)))
+      return failure();
   }
 
   // Verify that this block has a terminator.
@@ -230,6 +317,9 @@ LogicalResult OperationVerifier::verifyOnEntrance(Operation &op) {
   std::optional<RegisteredOperationName> registeredInfo =
       opName.getRegisteredInfo();
   if (registeredInfo && failed(registeredInfo->verifyInvariants(&op)))
+    return failure();
+
+  if (failed(verifyTokenValues(op)))
     return failure();
 
   unsigned numRegions = op.getNumRegions();
@@ -478,6 +568,6 @@ OperationVerifier::verifyDominanceOfContainedRegions(Operation &op,
 //===----------------------------------------------------------------------===//
 
 LogicalResult mlir::verify(Operation *op, bool verifyRecursively) {
-  OperationVerifier verifier(verifyRecursively);
+  OperationVerifier verifier(op->getContext(), verifyRecursively);
   return verifier.verifyOpAndDominance(*op);
 }
