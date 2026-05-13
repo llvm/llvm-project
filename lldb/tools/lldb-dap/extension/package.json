@@ -837,7 +837,10 @@
                     "description": "ID of an existing debugger instance to use."
                   },
                   "additionalProperties": false,
-                  "required": ["targetId", "debuggerId"]
+                  "required": [
+                    "targetId",
+                    "debuggerId"
+                  ]
                 },
                 "description": "This property is Experimental.\nAttach to an existing debugging session.\nAdded in version 22.0."
               },

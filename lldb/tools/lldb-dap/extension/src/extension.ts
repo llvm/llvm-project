@@ -60,13 +60,11 @@ export class LLDBDapExtension extends DisposableContext {
         "lldb-dap.modules.copyProperty",
         (node: ModuleProperty) => vscode.env.clipboard.writeText(node.value),
       ),
-      vscode.commands.registerCommand(
-        "lldb-dap.pickProcess",
-        () => pickProcess(logger, logFilePath),
+      vscode.commands.registerCommand("lldb-dap.pickProcess", () =>
+        pickProcess(logger, logFilePath),
       ),
-      vscode.commands.registerCommand(
-        "lldb-dap.attachToProcess",
-        () => attachToProcess(logger, logFilePath),
+      vscode.commands.registerCommand("lldb-dap.attachToProcess", () =>
+        attachToProcess(logger, logFilePath),
       ),
     );
 

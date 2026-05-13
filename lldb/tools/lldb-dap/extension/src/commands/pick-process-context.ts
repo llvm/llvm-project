@@ -36,3 +36,12 @@ export function takePickProcessContext(): PickProcessContext | undefined {
   pending = undefined;
   return ctx;
 }
+
+/**
+ * Discards any stashed context. Called at the start of each configuration
+ * resolution so that a cancelled prior session cannot leak stale context
+ * into the next one.
+ */
+export function clearPickProcessContext(): void {
+  pending = undefined;
+}

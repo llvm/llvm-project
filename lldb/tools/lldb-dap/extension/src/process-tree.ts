@@ -31,7 +31,10 @@ export interface LldbDapProcessTreeOptions {
  * Runs a command and captures its stdout. Abstracted so tests can inject a
  * stub without spawning a real process.
  */
-export type ExecFn = (exe: string, args: string[]) => Promise<{ stdout: string }>;
+export type ExecFn = (
+  exe: string,
+  args: string[],
+) => Promise<{ stdout: string }>;
 
 const defaultExec: ExecFn = (() => {
   const promisified = promisify(execFile);
@@ -41,7 +44,7 @@ const defaultExec: ExecFn = (() => {
     const { stdout } = await promisified(exe, args, {
       maxBuffer: 32 * 1024 * 1024,
     });
-    return { stdout: stdout.toString() };
+    return { stdout };
   };
 })();
 
@@ -93,9 +96,16 @@ export function parseListProcessesOutput(stdout: string): Process[] {
     );
   }
 
-  return parsed.map((entry: LldbDapProcessEntry) => ({
-    id: entry.pid,
-    command: entry.executable ?? entry.name ?? "",
-    arguments: entry.name ?? entry.executable ?? "",
-  }));
+  return parsed.map((entry: LldbDapProcessEntry) => {
+    if (typeof entry?.pid !== "number") {
+      throw new Error(
+        "Unexpected output from lldb-dap --list-processes (entry missing numeric pid)",
+      );
+    }
+    return {
+      id: entry.pid,
+      command: entry.executable ?? entry.name ?? "",
+      arguments: entry.name ?? entry.executable ?? "",
+    };
+  });
 }

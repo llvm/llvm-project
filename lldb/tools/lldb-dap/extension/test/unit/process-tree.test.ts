@@ -152,6 +152,13 @@ suite("parseListProcessesOutput", function () {
     );
   });
 
+  test("rejects entry without numeric pid", function () {
+    assert.throws(
+      () => parseListProcessesOutput(JSON.stringify([{ name: "orphan" }])),
+      /missing numeric pid/,
+    );
+  });
+
   test("rejects malformed JSON", function () {
     assert.throws(() => parseListProcessesOutput("not json"));
   });

@@ -1,8 +1,12 @@
 import * as child_process from "child_process";
+import * as os from "os";
 import * as util from "util";
 import * as vscode from "vscode";
-import * as os from "os";
-import { setPickProcessContext } from "./commands/pick-process-context";
+import {
+  clearPickProcessContext,
+  setPickProcessContext,
+} from "./commands/pick-process-context";
+import { convertToInteger, pidMayInvokePicker } from "./commands/pid-helpers";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { LogFilePathProvider } from "./logging";
@@ -21,34 +25,6 @@ const exec = util.promisify(child_process.execFile);
 async function isServerModeSupported(exe: string): Promise<boolean> {
   const { stdout } = await exec(exe, ["--help"]);
   return /--connection/.test(stdout);
-}
-
-/**
- * Converts the given value to an integer if it isn't already. Returns
- * `undefined` if the value is not an integer or a string that parses as one.
- */
-function convertToInteger(value: unknown): number | undefined {
-  let result: number | undefined;
-  switch (typeof value) {
-    case "number":
-      result = value;
-      break;
-    case "string":
-      result = Number(value);
-      break;
-    default:
-      return undefined;
-  }
-  return Number.isInteger(result) ? result : undefined;
-}
-
-/**
- * Heuristic: does this `pid` value look like it will trigger our process
- * picker command? We stash the debug configuration context only when the
- * picker might actually run.
- */
-function pidMayInvokePicker(pid: unknown): boolean {
-  return typeof pid === "string" && pid.includes("${command:PickProcess}");
 }
 
 interface BoolConfig {
@@ -106,7 +82,8 @@ export function getDefaultConfigKey(
 }
 
 export class LLDBDapConfigurationProvider
-  implements vscode.DebugConfigurationProvider {
+  implements vscode.DebugConfigurationProvider
+{
   constructor(
     private readonly server: LLDBDapServer,
     private readonly logger: vscode.LogOutputChannel,
@@ -140,12 +117,15 @@ export class LLDBDapConfigurationProvider
     debugConfiguration: vscode.DebugConfiguration,
     token?: vscode.CancellationToken,
   ): Promise<vscode.DebugConfiguration> {
+    // Drop any context left over from a cancelled prior session before we
+    // consider stashing fresh context below.
+    clearPickProcessContext();
     this.logger.info(
       `Resolving debug configuration for "${debugConfiguration.name}"`,
     );
     this.logger.debug(
       "Initial debug configuration:\n" +
-      JSON.stringify(debugConfiguration, undefined, 2),
+        JSON.stringify(debugConfiguration, undefined, 2),
     );
     let config = vscode.workspace.getConfiguration("lldb-dap");
     for (const [key, cfg] of Object.entries(configurations)) {
@@ -251,9 +231,10 @@ export class LLDBDapConfigurationProvider
         }
 
         if (os.platform() === "win32") {
-          const pythonCheckProcess = child_process.spawnSync(executable.command, [
-            "--check-python",
-          ]);
+          const pythonCheckProcess = child_process.spawnSync(
+            executable.command,
+            ["--check-python"],
+          );
           if (pythonCheckProcess.status !== 0) {
             await vscode.window.showErrorMessage(
               "Python is not installed correctly. Please install it to use lldb-dap.",
@@ -298,7 +279,7 @@ export class LLDBDapConfigurationProvider
 
       this.logger.info(
         "Resolved debug configuration:\n" +
-        JSON.stringify(debugConfiguration, undefined, 2),
+          JSON.stringify(debugConfiguration, undefined, 2),
       );
 
       return debugConfiguration;

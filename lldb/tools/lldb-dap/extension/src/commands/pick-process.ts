@@ -13,7 +13,10 @@ const exec = promisify(execFile);
 
 /**
  * Cache of which lldb-dap binaries have been observed to support the
- * `--list-processes` flag, keyed by executable path. We probe once per path.
+ * `--list-processes` flag, keyed by executable path. We probe once per path,
+ * but only remember successful probes — a transient failure (binary still
+ * building, EBUSY, etc.) should not poison the cache for the rest of the
+ * session.
  */
 const listProcessesSupportCache = new Map<string, Promise<boolean>>();
 
@@ -23,11 +26,17 @@ function isListProcessesSupported(exe: string): Promise<boolean> {
   if (cached) {
     return cached;
   }
-  const probe = exec(exe, ["--help"])
-    .then(({ stdout }) => /--list-processes/.test(stdout))
-    .catch(() => false);
+  const probe = exec(exe, ["--help"]).then(({ stdout }) =>
+    /--list-processes/.test(stdout),
+  );
   listProcessesSupportCache.set(exe, probe);
-  return probe;
+  // Drop failed probes so the next attempt can retry.
+  probe.catch(() => {
+    if (listProcessesSupportCache.get(exe) === probe) {
+      listProcessesSupportCache.delete(exe);
+    }
+  });
+  return probe.catch(() => false);
 }
 
 interface ProcessQuickPick extends vscode.QuickPickItem {
@@ -56,7 +65,11 @@ export async function pickProcess(
     logger,
     logFilePath,
     ctx?.folder,
-    ctx?.debugConfiguration ?? { type: "lldb-dap", request: "attach", name: "Attach" },
+    ctx?.debugConfiguration ?? {
+      type: "lldb-dap",
+      request: "attach",
+      name: "Attach",
+    },
   );
 
   if (!(await isListProcessesSupported(executable.command))) {
