@@ -2582,7 +2582,34 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     llvm::SmallVector<mlir::Value> fmaOps = {multiplicand, laneSource, addend};
     return emitCallMaybeConstrainedBuiltin(builder, loc, "fma", ty, fmaOps);
   }
-  case NEON::BI__builtin_neon_vfma_laneq_v:
+  case NEON::BI__builtin_neon_vfma_laneq_v: {
+    if (ty.getElementType() == cgm.doubleTy) {
+      mlir::Value addend = builder.createBitcast(ops[0], cgm.doubleTy);
+      mlir::Value multiplicand = builder.createBitcast(ops[1], cgm.doubleTy);
+      cir::VectorType sourceTy = cir::VectorType::get(cgm.doubleTy, 2);
+      mlir::Value laneSource = builder.createBitcast(ops[2], sourceTy);
+      laneSource = builder.createExtractElement(
+          loc, laneSource,
+          static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
+
+      llvm::SmallVector<mlir::Value> fmaOps = {multiplicand, laneSource,
+                                               addend};
+      return builder.createBitcast(
+          emitCallMaybeConstrainedBuiltin(builder, loc, "fma", cgm.doubleTy,
+                                          fmaOps),
+          ty);
+    }
+
+    mlir::Value addend = builder.createBitcast(ops[0], ty);
+    mlir::Value multiplicand = builder.createBitcast(ops[1], ty);
+    cir::VectorType sourceTy =
+        cir::VectorType::get(ty.getElementType(), ty.getSize() * 2);
+    mlir::Value laneSource = builder.createBitcast(ops[2], sourceTy);
+    laneSource = emitNeonSplat(builder, loc, laneSource, ops[3], ty.getSize());
+
+    llvm::SmallVector<mlir::Value> fmaOps = {laneSource, multiplicand, addend};
+    return emitCallMaybeConstrainedBuiltin(builder, loc, "fma", ty, fmaOps);
+  }
   case NEON::BI__builtin_neon_vfmaq_laneq_v:
   case NEON::BI__builtin_neon_vfmah_lane_f16:
   case NEON::BI__builtin_neon_vfmas_lane_f32:
