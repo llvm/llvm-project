@@ -631,15 +631,11 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       }
     }
 
-    // In the aligned case, isDivisibleInSize alone is sufficient — the
-    // offset is guaranteed (by solver or by contract) to be aligned to
-    // container element boundaries.
-    if (fastPathOffsetAligned) {
-      if (!isDivisibleInSize)
-        return rewriter.notifyMatchFailure(
-            op, "the source vector does not fill whole container elements "
-                "(not divisible in size)");
-
+    // Take the aligned fast path only when both the offset is aligned to
+    // container element boundaries AND the source vector exactly fills
+    // whole container elements. Otherwise fall through to the partial-store
+    // path below, which is sound for any offset and any size.
+    if (fastPathOffsetAligned && isDivisibleInSize) {
       auto stridedMetadata =
           memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getBase());
       OpFoldResult linearizedIndices;
