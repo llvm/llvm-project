@@ -3,8 +3,8 @@ standards:
   - posix
 macros: []
 types:
-  - type_name: in_addr
   - type_name: in_addr_t
+  - type_name: struct_in_addr
 enums: []
 objects: []
 functions:
@@ -32,7 +32,7 @@ functions:
     return_type: int
     arguments:
       - type: const char *
-      - type: in_addr *
+      - type: struct in_addr *
   - name: ntohl
     standards:
       - POSIX
