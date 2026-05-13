@@ -1353,11 +1353,25 @@ void Preprocessor::HandleDirective(Token &Result) {
   // not support this for #include-like directives, since that can result in
   // terrible diagnostics, and does not work in GCC.
   if (InMacroArgs) {
+    enum IntroduceKind {
+      IK_HASH = 0,
+      IK_AT = 1,
+      IK_KEYWORD = 2,
+    };
+
+    IntroduceKind IK = IK_HASH;
+    switch (Introducer.getKind()) {
+    case tok::hash:
+      IK = IK_HASH;
+      break;
+    case tok::at:
+      IK = IK_AT;
+      break;
+    default:
+      IK = IK_KEYWORD;
+      break;
+    }
     SmallString<16> DirectiveSpelling;
-    if (Introducer.is(tok::hash))
-      DirectiveSpelling.push_back('#');
-    else if (Introducer.is(tok::at))
-      DirectiveSpelling.push_back('@');
     if (IdentifierInfo *II = Result.getIdentifierInfo()) {
       DirectiveSpelling.append(II->getName());
       switch (II->getPPKeywordID()) {
@@ -1370,7 +1384,7 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp_module:
       case tok::pp___preprocessed_module:
       case tok::pp___preprocessed_import: {
-        Diag(Result, diag::err_embedded_directive) << DirectiveSpelling;
+        Diag(Result, diag::err_embedded_directive)<< IK << DirectiveSpelling;
         Diag(*ArgMacro, diag::note_macro_expansion_here)
             << ArgMacro->getIdentifierInfo();
         DiscardUntilEndOfDirective();
@@ -1380,9 +1394,9 @@ void Preprocessor::HandleDirective(Token &Result) {
         break;
       }
     }
-    bool IsKnownDirective = DirectiveSpelling.size() > 1;
+
     Diag(Result, diag::warn_embedded_directive)
-        << IsKnownDirective << DirectiveSpelling;
+        << IK << DirectiveSpelling;
   }
 
   // Temporarily enable macro expansion if set so

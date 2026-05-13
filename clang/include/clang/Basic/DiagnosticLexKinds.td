@@ -421,9 +421,9 @@ def note_pp_ambiguous_macro_chosen : Note<
   "expanding this definition of %0">;
 def note_pp_ambiguous_macro_other : Note<
   "other definition of %0">;
-def warn_pp_macro_hides_keyword : Warning<
+def warn_pp_macro_hides_keyword : ExtWarn<
   "keyword is hidden by macro definition">, InGroup<KeywordAsMacro>;
-def warn_pp_macro_name_is_keyword : Warning<
+def warn_pp_macro_name_is_keyword : ExtWarn<
   "keyword or identifier with special meaning is used as a macro name">,
   InGroup<KeywordAsMacro>;
 def warn_pp_macro_is_reserved_id : Warning<
@@ -509,10 +509,10 @@ def warn_cxx98_compat_variadic_macro : Warning<
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def ext_named_variadic_macro : Extension<
   "named variadic macros are a GNU extension">, InGroup<VariadicMacros>;
-def err_embedded_directive : Error<"embedding a %0 directive "
+def err_embedded_directive : Error<"embedding a%select{ #| @|}0%1 directive "
                                    "within macro arguments is not supported">;
-def warn_embedded_directive : Warning<
-  "embedding a%select{| }0%1 directive within macro arguments has undefined behavior">,
+def warn_embedded_directive : ExtWarn<
+  "embedding a%select{ #| @|}0%1 directive within macro arguments has undefined behavior">,
   InGroup<DiagGroup<"embedded-directive">>;
 def ext_c_missing_varargs_arg : Extension<
   "passing no argument for the '...' parameter of a variadic macro is "
@@ -802,7 +802,7 @@ def err_pp_illegal_floating_literal : Error<
   "floating point literal in preprocessor expression">;
 def err_pp_line_requires_integer : Error<
   "#line directive requires a positive integer argument">;
-def warn_pp_line_zero : Warning<
+def warn_pp_line_zero : ExtWarn<
   "#line directive with zero argument is a GNU extension">,
   InGroup<GNUZeroLineDirective>;
 def err_pp_line_invalid_filename : Error<
@@ -819,7 +819,7 @@ def err_pp_linemarker_invalid_flag : Error<
   "invalid flag line marker directive">;
 def err_pp_linemarker_invalid_pop : Error<
   "invalid line marker flag '2': cannot pop empty include stack">;
-def warn_pp_line_too_big : Warning<
+def warn_pp_line_too_big : ExtWarn<
   "C requires #line number to be less than %0, allowed as extension">,
   InGroup<GNUZeroLineDirective>;
 def warn_cxx98_compat_pp_line_too_big : Warning<
