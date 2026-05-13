@@ -79,12 +79,13 @@ for.end:
   ret i32 0
 }
 
-; If trip-count is equal to 12, the function is vectorised when predicated tail
-; folding is chosen.
+; If trip-count is equal to 12, the function is vectorised, as the cost
+; model decides whether the required runtime check is worthwhile, instead
+; of unconditionally rejecting low trip-count loops that need one.
 define i32 @foo_mid_trip_count_12(ptr %a, ptr %b, ptr %c, i32 %bound) {
 ; CHECK-LABEL: @foo_mid_trip_count_12(
 ; PREDICATED: vector.body
-; SCALAR-NOT: vector.body
+; SCALAR: vector.body
 entry:
   br label %for.body
 
