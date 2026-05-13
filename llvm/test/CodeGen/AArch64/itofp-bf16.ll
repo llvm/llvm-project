@@ -127,9 +127,8 @@ define bfloat @stofp_i64_bf16(i64 %a) {
 ; CHECK-NOFP16-NEXT:    and x11, x0, #0x8000000000000000
 ; CHECK-NOFP16-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-NOFP16-NEXT:    cneg x9, x0, mi
-; CHECK-NOFP16-NEXT:    lsr x10, x9, #53
-; CHECK-NOFP16-NEXT:    cmp x10, #0
 ; CHECK-NOFP16-NEXT:    and x10, x9, #0xfffffffffffff000
+; CHECK-NOFP16-NEXT:    cmp xzr, x9, lsr #53
 ; CHECK-NOFP16-NEXT:    csel x10, x10, x9, ne
 ; CHECK-NOFP16-NEXT:    scvtf d0, x10
 ; CHECK-NOFP16-NEXT:    cset w10, ne
@@ -152,18 +151,17 @@ define bfloat @stofp_i64_bf16(i64 %a) {
 ; CHECK-FP16-LABEL: stofp_i64_bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    cmp x0, #0
-; CHECK-FP16-NEXT:    cneg x8, x0, mi
-; CHECK-FP16-NEXT:    lsr x9, x8, #53
-; CHECK-FP16-NEXT:    and x10, x8, #0xfffffffffffff000
-; CHECK-FP16-NEXT:    cmp x9, #0
-; CHECK-FP16-NEXT:    csel x9, x10, x8, ne
 ; CHECK-FP16-NEXT:    and x10, x0, #0x8000000000000000
-; CHECK-FP16-NEXT:    cset w11, ne
+; CHECK-FP16-NEXT:    cneg x8, x0, mi
+; CHECK-FP16-NEXT:    and x9, x8, #0xfffffffffffff000
+; CHECK-FP16-NEXT:    cmp xzr, x8, lsr #53
+; CHECK-FP16-NEXT:    csel x9, x9, x8, ne
 ; CHECK-FP16-NEXT:    scvtf d0, x9
+; CHECK-FP16-NEXT:    cset w9, ne
 ; CHECK-FP16-NEXT:    tst x8, #0xfff
-; CHECK-FP16-NEXT:    fmov x9, d0
-; CHECK-FP16-NEXT:    orr x8, x9, x10
-; CHECK-FP16-NEXT:    csel w9, wzr, w11, eq
+; CHECK-FP16-NEXT:    csel w9, wzr, w9, eq
+; CHECK-FP16-NEXT:    fmov x8, d0
+; CHECK-FP16-NEXT:    orr x8, x8, x10
 ; CHECK-FP16-NEXT:    orr x8, x8, x9
 ; CHECK-FP16-NEXT:    fmov d0, x8
 ; CHECK-FP16-NEXT:    fcvtxn s0, d0
@@ -177,10 +175,9 @@ entry:
 define bfloat @utofp_i64_bf16(i64 %a) {
 ; CHECK-NOFP16-LABEL: utofp_i64_bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    lsr x9, x0, #53
-; CHECK-NOFP16-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NOFP16-NEXT:    cmp x9, #0
 ; CHECK-NOFP16-NEXT:    and x9, x0, #0xfffffffffffff000
+; CHECK-NOFP16-NEXT:    cmp xzr, x0, lsr #53
+; CHECK-NOFP16-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-NOFP16-NEXT:    csel x9, x9, x0, ne
 ; CHECK-NOFP16-NEXT:    ucvtf d0, x9
 ; CHECK-NOFP16-NEXT:    cset w9, ne
@@ -201,10 +198,9 @@ define bfloat @utofp_i64_bf16(i64 %a) {
 ;
 ; CHECK-FP16-LABEL: utofp_i64_bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    lsr x8, x0, #53
-; CHECK-FP16-NEXT:    and x9, x0, #0xfffffffffffff000
-; CHECK-FP16-NEXT:    cmp x8, #0
-; CHECK-FP16-NEXT:    csel x8, x9, x0, ne
+; CHECK-FP16-NEXT:    and x8, x0, #0xfffffffffffff000
+; CHECK-FP16-NEXT:    cmp xzr, x0, lsr #53
+; CHECK-FP16-NEXT:    csel x8, x8, x0, ne
 ; CHECK-FP16-NEXT:    ucvtf d0, x8
 ; CHECK-FP16-NEXT:    cset w8, ne
 ; CHECK-FP16-NEXT:    tst x0, #0xfff
@@ -384,10 +380,9 @@ define <2 x bfloat> @stofp_v2i64_v2bf16(<2 x i64> %a) {
 ; CHECK-NOFP16-NEXT:    cmp x9, #0
 ; CHECK-NOFP16-NEXT:    cneg x10, x9, mi
 ; CHECK-NOFP16-NEXT:    and x9, x9, #0x8000000000000000
-; CHECK-NOFP16-NEXT:    lsr x11, x10, #53
-; CHECK-NOFP16-NEXT:    and x12, x10, #0xfffffffffffff000
-; CHECK-NOFP16-NEXT:    cmp x11, #0
-; CHECK-NOFP16-NEXT:    csel x11, x12, x10, ne
+; CHECK-NOFP16-NEXT:    and x11, x10, #0xfffffffffffff000
+; CHECK-NOFP16-NEXT:    cmp xzr, x10, lsr #53
+; CHECK-NOFP16-NEXT:    csel x11, x11, x10, ne
 ; CHECK-NOFP16-NEXT:    cset w12, ne
 ; CHECK-NOFP16-NEXT:    tst x10, #0xfff
 ; CHECK-NOFP16-NEXT:    fmov x10, d0
@@ -396,9 +391,8 @@ define <2 x bfloat> @stofp_v2i64_v2bf16(<2 x i64> %a) {
 ; CHECK-NOFP16-NEXT:    cmp x10, #0
 ; CHECK-NOFP16-NEXT:    cneg x13, x10, mi
 ; CHECK-NOFP16-NEXT:    and x10, x10, #0x8000000000000000
-; CHECK-NOFP16-NEXT:    lsr x14, x13, #53
-; CHECK-NOFP16-NEXT:    cmp x14, #0
 ; CHECK-NOFP16-NEXT:    and x14, x13, #0xfffffffffffff000
+; CHECK-NOFP16-NEXT:    cmp xzr, x13, lsr #53
 ; CHECK-NOFP16-NEXT:    csel x11, x14, x13, ne
 ; CHECK-NOFP16-NEXT:    cset w14, ne
 ; CHECK-NOFP16-NEXT:    tst x13, #0xfff
@@ -436,10 +430,9 @@ define <2 x bfloat> @stofp_v2i64_v2bf16(<2 x i64> %a) {
 ; CHECK-FP16-NEXT:    cmp x8, #0
 ; CHECK-FP16-NEXT:    cneg x9, x8, mi
 ; CHECK-FP16-NEXT:    and x8, x8, #0x8000000000000000
-; CHECK-FP16-NEXT:    lsr x10, x9, #53
-; CHECK-FP16-NEXT:    and x11, x9, #0xfffffffffffff000
-; CHECK-FP16-NEXT:    cmp x10, #0
-; CHECK-FP16-NEXT:    csel x10, x11, x9, ne
+; CHECK-FP16-NEXT:    and x10, x9, #0xfffffffffffff000
+; CHECK-FP16-NEXT:    cmp xzr, x9, lsr #53
+; CHECK-FP16-NEXT:    csel x10, x10, x9, ne
 ; CHECK-FP16-NEXT:    cset w11, ne
 ; CHECK-FP16-NEXT:    tst x9, #0xfff
 ; CHECK-FP16-NEXT:    fmov x9, d0
@@ -448,9 +441,8 @@ define <2 x bfloat> @stofp_v2i64_v2bf16(<2 x i64> %a) {
 ; CHECK-FP16-NEXT:    cmp x9, #0
 ; CHECK-FP16-NEXT:    cneg x12, x9, mi
 ; CHECK-FP16-NEXT:    and x9, x9, #0x8000000000000000
-; CHECK-FP16-NEXT:    lsr x13, x12, #53
-; CHECK-FP16-NEXT:    cmp x13, #0
 ; CHECK-FP16-NEXT:    and x13, x12, #0xfffffffffffff000
+; CHECK-FP16-NEXT:    cmp xzr, x12, lsr #53
 ; CHECK-FP16-NEXT:    csel x10, x13, x12, ne
 ; CHECK-FP16-NEXT:    cset w13, ne
 ; CHECK-FP16-NEXT:    tst x12, #0xfff
@@ -480,43 +472,41 @@ define <2 x bfloat> @utofp_v2i64_v2bf16(<2 x i64> %a) {
 ; CHECK-NOFP16-LABEL: utofp_v2i64_v2bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
 ; CHECK-NOFP16-NEXT:    mov x9, v0.d[1]
-; CHECK-NOFP16-NEXT:    fmov x11, d0
 ; CHECK-NOFP16-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NOFP16-NEXT:    lsr x10, x9, #53
-; CHECK-NOFP16-NEXT:    and x12, x9, #0xfffffffffffff000
-; CHECK-NOFP16-NEXT:    cmp x10, #0
-; CHECK-NOFP16-NEXT:    lsr x10, x11, #53
-; CHECK-NOFP16-NEXT:    csel x12, x12, x9, ne
-; CHECK-NOFP16-NEXT:    cset w13, ne
+; CHECK-NOFP16-NEXT:    and x10, x9, #0xfffffffffffff000
+; CHECK-NOFP16-NEXT:    cmp xzr, x9, lsr #53
+; CHECK-NOFP16-NEXT:    csel x10, x10, x9, ne
+; CHECK-NOFP16-NEXT:    cset w11, ne
 ; CHECK-NOFP16-NEXT:    tst x9, #0xfff
-; CHECK-NOFP16-NEXT:    csel w9, wzr, w13, eq
-; CHECK-NOFP16-NEXT:    cmp x10, #0
-; CHECK-NOFP16-NEXT:    and x10, x11, #0xfffffffffffff000
-; CHECK-NOFP16-NEXT:    csel x10, x10, x11, ne
-; CHECK-NOFP16-NEXT:    ucvtf d0, x12
-; CHECK-NOFP16-NEXT:    ucvtf d1, x10
+; CHECK-NOFP16-NEXT:    fmov x9, d0
+; CHECK-NOFP16-NEXT:    csel w11, wzr, w11, eq
+; CHECK-NOFP16-NEXT:    ucvtf d0, x10
+; CHECK-NOFP16-NEXT:    and x12, x9, #0xfffffffffffff000
+; CHECK-NOFP16-NEXT:    cmp xzr, x9, lsr #53
+; CHECK-NOFP16-NEXT:    csel x12, x12, x9, ne
 ; CHECK-NOFP16-NEXT:    cset w10, ne
-; CHECK-NOFP16-NEXT:    tst x11, #0xfff
+; CHECK-NOFP16-NEXT:    tst x9, #0xfff
+; CHECK-NOFP16-NEXT:    ucvtf d1, x12
+; CHECK-NOFP16-NEXT:    fmov x9, d0
 ; CHECK-NOFP16-NEXT:    csel w10, wzr, w10, eq
-; CHECK-NOFP16-NEXT:    fmov x11, d0
+; CHECK-NOFP16-NEXT:    orr x9, x9, x11
 ; CHECK-NOFP16-NEXT:    fmov x12, d1
-; CHECK-NOFP16-NEXT:    orr x9, x11, x9
-; CHECK-NOFP16-NEXT:    orr x10, x12, x10
 ; CHECK-NOFP16-NEXT:    fmov d0, x9
-; CHECK-NOFP16-NEXT:    fmov d1, x10
+; CHECK-NOFP16-NEXT:    orr x10, x12, x10
 ; CHECK-NOFP16-NEXT:    fcvtxn s0, d0
+; CHECK-NOFP16-NEXT:    fmov d1, x10
 ; CHECK-NOFP16-NEXT:    fcvtxn s1, d1
 ; CHECK-NOFP16-NEXT:    fmov w9, s0
-; CHECK-NOFP16-NEXT:    fmov w10, s1
 ; CHECK-NOFP16-NEXT:    ubfx w11, w9, #16, #1
 ; CHECK-NOFP16-NEXT:    add w9, w9, w8
+; CHECK-NOFP16-NEXT:    fmov w10, s1
+; CHECK-NOFP16-NEXT:    add w9, w11, w9
+; CHECK-NOFP16-NEXT:    lsr w9, w9, #16
 ; CHECK-NOFP16-NEXT:    ubfx w12, w10, #16, #1
 ; CHECK-NOFP16-NEXT:    add w8, w10, w8
-; CHECK-NOFP16-NEXT:    add w9, w11, w9
-; CHECK-NOFP16-NEXT:    add w8, w12, w8
-; CHECK-NOFP16-NEXT:    lsr w9, w9, #16
-; CHECK-NOFP16-NEXT:    lsr w8, w8, #16
 ; CHECK-NOFP16-NEXT:    fmov s1, w9
+; CHECK-NOFP16-NEXT:    add w8, w12, w8
+; CHECK-NOFP16-NEXT:    lsr w8, w8, #16
 ; CHECK-NOFP16-NEXT:    fmov s0, w8
 ; CHECK-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -525,30 +515,28 @@ define <2 x bfloat> @utofp_v2i64_v2bf16(<2 x i64> %a) {
 ; CHECK-FP16-LABEL: utofp_v2i64_v2bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    mov x8, v0.d[1]
-; CHECK-FP16-NEXT:    fmov x10, d0
-; CHECK-FP16-NEXT:    lsr x9, x8, #53
-; CHECK-FP16-NEXT:    and x11, x8, #0xfffffffffffff000
-; CHECK-FP16-NEXT:    cmp x9, #0
-; CHECK-FP16-NEXT:    lsr x9, x10, #53
-; CHECK-FP16-NEXT:    csel x11, x11, x8, ne
-; CHECK-FP16-NEXT:    cset w12, ne
+; CHECK-FP16-NEXT:    and x9, x8, #0xfffffffffffff000
+; CHECK-FP16-NEXT:    cmp xzr, x8, lsr #53
+; CHECK-FP16-NEXT:    csel x9, x9, x8, ne
+; CHECK-FP16-NEXT:    cset w10, ne
 ; CHECK-FP16-NEXT:    tst x8, #0xfff
-; CHECK-FP16-NEXT:    csel w8, wzr, w12, eq
-; CHECK-FP16-NEXT:    cmp x9, #0
-; CHECK-FP16-NEXT:    and x9, x10, #0xfffffffffffff000
-; CHECK-FP16-NEXT:    csel x9, x9, x10, ne
-; CHECK-FP16-NEXT:    ucvtf d0, x11
-; CHECK-FP16-NEXT:    ucvtf d1, x9
+; CHECK-FP16-NEXT:    fmov x8, d0
+; CHECK-FP16-NEXT:    csel w10, wzr, w10, eq
+; CHECK-FP16-NEXT:    ucvtf d0, x9
+; CHECK-FP16-NEXT:    and x11, x8, #0xfffffffffffff000
+; CHECK-FP16-NEXT:    cmp xzr, x8, lsr #53
+; CHECK-FP16-NEXT:    csel x11, x11, x8, ne
 ; CHECK-FP16-NEXT:    cset w9, ne
-; CHECK-FP16-NEXT:    tst x10, #0xfff
+; CHECK-FP16-NEXT:    tst x8, #0xfff
+; CHECK-FP16-NEXT:    ucvtf d1, x11
+; CHECK-FP16-NEXT:    fmov x8, d0
 ; CHECK-FP16-NEXT:    csel w9, wzr, w9, eq
-; CHECK-FP16-NEXT:    fmov x10, d0
+; CHECK-FP16-NEXT:    orr x8, x8, x10
 ; CHECK-FP16-NEXT:    fmov x11, d1
-; CHECK-FP16-NEXT:    orr x8, x10, x8
-; CHECK-FP16-NEXT:    orr x9, x11, x9
 ; CHECK-FP16-NEXT:    fmov d0, x8
-; CHECK-FP16-NEXT:    fmov d1, x9
+; CHECK-FP16-NEXT:    orr x9, x11, x9
 ; CHECK-FP16-NEXT:    fcvtxn s0, d0
+; CHECK-FP16-NEXT:    fmov d1, x9
 ; CHECK-FP16-NEXT:    fcvtxn s1, d1
 ; CHECK-FP16-NEXT:    bfcvt h2, s0
 ; CHECK-FP16-NEXT:    bfcvt h0, s1

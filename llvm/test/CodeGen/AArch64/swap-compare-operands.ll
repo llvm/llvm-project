@@ -763,9 +763,8 @@ end:
 define i1 @testSwapCmpWithLSL32_20(i32 %a) {
 ; CHECK-LABEL: testSwapCmpWithLSL32_20:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #20
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    cmp wzr, w0, lsl #20
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
   %shl = shl i32 %a, 20
   %cmp = icmp sgt i32 %shl, 0
@@ -775,8 +774,7 @@ define i1 @testSwapCmpWithLSL32_20(i32 %a) {
 define i1 @testSwapCmpWithLSR64_40(i64 %a) {
 ; CHECK-LABEL: testSwapCmpWithLSR64_40:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #40
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cmp xzr, x0, lsr #40
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i64 %a, 1099511627776
@@ -792,8 +790,8 @@ define i1 @testSwapCmpWithLSL32_12_multiuse(i32 %a) nounwind {
 ; CHECK-NEXT:    lsl w19, w0, #12
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    cmp w19, #0
-; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    cmp wzr, w19
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %shl = shl i32 %a, 12

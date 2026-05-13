@@ -4248,7 +4248,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         }
         break;
       case ISD::SETULE:
-      case ISD::SETUGT: {
+      case ISD::SETUGT:
         if (!C.isAllOnes()) {
           APInt CPlusOne = C + 1;
           if (isLegalCmpImmed(CPlusOne) ||
@@ -4259,6 +4259,18 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         }
         break;
       }
+    } else if (C.isZero()) {
+      // Fold into CMP WZR, reg, shift #amount
+      unsigned Opc = LHS.getOpcode();
+      if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA) {
+        if (ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(LHS.getOperand(1))) {
+          uint64_t Shift = ShiftCst->getZExtValue();
+          EVT VT = LHS.getValueType();
+          if ((VT == MVT::i32 && Shift <= 31) || (VT == MVT::i64 && Shift <= 63)) {
+            std::swap(LHS, RHS);
+            CC = ISD::getSetCCSwappedOperands(CC);
+          }
+        }
       }
     }
   }

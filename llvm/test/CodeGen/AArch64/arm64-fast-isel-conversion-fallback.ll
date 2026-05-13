@@ -266,8 +266,8 @@ define bfloat @sitofp_bf_i164(i64 %a) nounwind ssp {
 ; CHECK-NEXT:    subs x8, x0, #0
 ; CHECK-NEXT:    cneg x10, x0, mi
 ; CHECK-NEXT:    and x8, x10, #0xfffffffffffff000
-; CHECK-NEXT:    lsr x9, x10, #53
-; CHECK-NEXT:    subs x9, x9, #0
+; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    subs x9, x9, x10, lsr #53
 ; CHECK-NEXT:    csel x8, x8, x10, ne
 ; CHECK-NEXT:    scvtf d0, x8
 ; CHECK-NEXT:    fmov x8, d0
@@ -380,8 +380,8 @@ define bfloat @uitofp_bf_i64(i64 %a) nounwind ssp {
 ; CHECK-LABEL: uitofp_bf_i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and x8, x0, #0xfffffffffffff000
-; CHECK-NEXT:    lsr x9, x0, #53
-; CHECK-NEXT:    subs x9, x9, #0
+; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    subs x9, x9, x0, lsr #53
 ; CHECK-NEXT:    csel x8, x8, x0, ne
 ; CHECK-NEXT:    ucvtf d0, x8
 ; CHECK-NEXT:    fmov x8, d0
