@@ -103,12 +103,26 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/cppcoreguidelines/special-member-functions>`
   ``hicpp-static-assert``            :doc:`misc-static-assert
                                      <clang-tidy/checks/misc/static-assert>`
+  ``hicpp-uppercase-literal-suffix`` :doc:`readability-uppercase-literal-suffix
+                                     <clang-tidy/checks/readability/uppercase-literal-suffix>`
   ``hicpp-undelegated-constructor``  :doc:`bugprone-undelegated-constructor
                                      <clang-tidy/checks/bugprone/undelegated-constructor>`
   ``hicpp-use-auto``                 :doc:`modernize-use-auto
                                      <clang-tidy/checks/modernize/use-auto>`
   ``hicpp-use-emplace``              :doc:`modernize-use-emplace
                                      <clang-tidy/checks/modernize/use-emplace>`
+  ``hicpp-use-equals-default``       :doc:`modernize-use-equals-default
+                                     <clang-tidy/checks/modernize/use-equals-default>`
+  ``hicpp-use-equals-delete``        :doc:`modernize-use-equals-delete
+                                     <clang-tidy/checks/modernize/use-equals-delete>`
+  ``hicpp-use-noexcept``             :doc:`modernize-use-noexcept
+                                     <clang-tidy/checks/modernize/use-noexcept>`
+  ``hicpp-use-nullptr``              :doc:`modernize-use-nullptr
+                                     <clang-tidy/checks/modernize/use-nullptr>`
+  ``hicpp-use-override``             :doc:`modernize-use-override
+                                     <clang-tidy/checks/modernize/use-override>`
+  ``hicpp-vararg``                   :doc:`cppcoreguidelines-pro-type-vararg
+                                     <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>`
   ================================== ========================================================================
 
 Improvements to clangd
@@ -369,6 +383,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check
   by fixing a false positive when ``operator[]`` is used in a dependent context.
+
+- Improved :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>` check by adding
+  a new note at the location of the field if the generator is implicitly
+  initialized with a default seed value.
 
 - Improved :doc:`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
@@ -668,7 +687,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/non-const-parameter>` check:
 
   - Avoid false positives on parameters used in dependent expressions
-    (e.g. inside generic lambdas).
+    (e.g. inside generic lambdas), including constructor-style dependent initializers.
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.

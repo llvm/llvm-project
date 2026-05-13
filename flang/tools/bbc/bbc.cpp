@@ -242,7 +242,8 @@ static llvm::cl::opt<bool>
                             llvm::cl::init(false));
 
 static llvm::cl::opt<std::string>
-    enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
+    enableGPUMode("gpu",
+                  llvm::cl::desc("Enable GPU Mode managed|unified|pinned"),
                   llvm::cl::init(""));
 
 static llvm::cl::opt<std::string>
@@ -678,6 +679,8 @@ int main(int argc, char **argv) {
     options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
   else if (enableGPUMode == "unified")
     options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
+  else if (enableGPUMode == "pinned")
+    options.features.Enable(Fortran::common::LanguageFeature::CudaPinned);
 
   if (fixedForm) {
     options.isFixedForm = fixedForm;
