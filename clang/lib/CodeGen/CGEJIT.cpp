@@ -13,6 +13,7 @@
 #include "CodeGenModule.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/AttrKinds.h"
 #include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
 #include "llvm/IR/Constants.h"
@@ -63,12 +64,29 @@ void clang::CodeGen::emitEjitFunctionMetadata(CodeGenModule &CGM,
   }
 }
 
+/// Recursively collect byte offsets of ejit_may_const fields in a record type.
+static void collectMayConstFieldOffsets(ASTContext &Ctx, const RecordDecl *RD,
+                                        uint64_t BaseOffset,
+                                        SmallVectorImpl<uint64_t> &Offsets) {
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->isBitField())
+      continue;
+    uint64_t FieldOff = BaseOffset + Layout.getFieldOffset(FD->getFieldIndex()) / 8;
+    if (FD->hasAttr<EjitMayConstAttr>())
+      Offsets.push_back(FieldOff);
+    // Recurse into nested structs
+    if (const auto *InnerRD = FD->getType()->getAsRecordDecl())
+      collectMayConstFieldOffsets(Ctx, InnerRD, FieldOff, Offsets);
+  }
+}
+
 /// Emit !ejit.metadata for an ejit_period or ejit_period_arr global variable.
 void clang::CodeGen::emitEjitGlobalMetadata(CodeGenModule &CGM,
                                             const VarDecl *VD,
                                             llvm::GlobalVariable *GV) {
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-  SmallVector<llvm::Metadata *, 2> Entries;
+  SmallVector<llvm::Metadata *, 4> Entries;
 
   // ejit_period
   if (const auto *PA = VD->getAttr<EjitPeriodAttr>()) {
@@ -91,6 +109,26 @@ void clang::CodeGen::emitEjitGlobalMetadata(CodeGenModule &CGM,
         llvm::ConstantAsMetadata::get(
             llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), Size))
     }));
+  }
+
+  // ejit_may_const_field: encode byte offsets for PASS6 fallback
+  QualType VT = VD->getType();
+  if (const auto *AT = CGM.getContext().getAsArrayType(VT))
+    VT = AT->getElementType();
+  if (VT->isPointerType())
+    VT = VT->getPointeeType();
+  if (const auto *RD = VT->getAsRecordDecl()) {
+    if (RD->isCompleteDefinition()) {
+      SmallVector<uint64_t, 4> Offsets;
+      collectMayConstFieldOffsets(CGM.getContext(), RD, 0, Offsets);
+      for (uint64_t Off : Offsets) {
+        Entries.push_back(llvm::MDNode::get(Ctx, {
+            llvm::MDString::get(Ctx, TAG_EJIT_MAY_CONST_FIELD),
+            llvm::ConstantAsMetadata::get(
+                llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), Off))
+        }));
+      }
+    }
   }
 
   if (!Entries.empty()) {

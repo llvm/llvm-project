@@ -10,6 +10,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -18,6 +20,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -64,6 +72,58 @@ static void computeTransitiveClosure(
   }
 }
 
+/// Run a lightweight optimization pipeline on the extracted bitcode module
+/// to reduce JIT compilation pressure. InstCombine folds constant chains,
+/// Mem2Reg promotes allocas, and SimplifyCFG cleans up dead branches.
+static void preOptimizeBitcode(Module &M) {
+  // Analysis managers registered once per module
+  PassBuilder PB;
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  // Step 1: AlwaysInline — expand alwaysinline callees so PASS6 can trace
+  // GEP chains through them at JIT time.
+  {
+    ModulePassManager MPM;
+    MPM.addPass(AlwaysInlinerPass());
+    MPM.run(M, MAM);
+  }
+
+  // Step 2: Mem2Reg — promote allocas to SSA for cleaner IR.
+  {
+    FunctionPassManager FPM;
+    FPM.addPass(PromotePass());
+    for (Function &F : M.functions())
+      if (!F.isDeclaration())
+        FPM.run(F, FAM);
+  }
+
+  // Step 3: InstCombine — fold zext/GEP/bitcast chains from inlined code.
+  {
+    FunctionPassManager FPM;
+    FPM.addPass(InstCombinePass());
+    for (Function &F : M.functions())
+      if (!F.isDeclaration())
+        FPM.run(F, FAM);
+  }
+
+  // Step 4: SimplifyCFG — clean up dead branches after inlining.
+  {
+    FunctionPassManager FPM;
+    FPM.addPass(SimplifyCFGPass());
+    for (Function &F : M.functions())
+      if (!F.isDeclaration())
+        FPM.run(F, FAM);
+  }
+}
+
 static std::string extractAndSerialize(Module &M,
     const SetVector<Function *> &Funcs,
     const SetVector<GlobalVariable *> &Globals) {
@@ -100,6 +160,11 @@ static std::string extractAndSerialize(Module &M,
     GV->replaceAllUsesWith(UndefValue::get(GV->getType()));
     GV->eraseFromParent();
   }
+
+  // Pre-optimize the extracted bitcode to reduce JIT compilation pressure.
+  // InstCombine + Mem2Reg + SimplifyCFG folds constant chains, promotes
+  // allocas, and cleans up dead branches before serialization.
+  preOptimizeBitcode(*Extracted);
 
   // Convert kept non-constant global definitions to external declarations
   // so the JIT linker resolves them from the host process. Constants (e.g.

@@ -153,13 +153,51 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
   DenseMap<const GlobalVariable *, GVPeriodInfo> gvPeriodMap;
   buildGVPeriodMap(*M, gvPeriodMap);
 
+  // Build GV-level may_const field offset map (v1.7 fallback for when
+  // optimization passes drop per-load !ejit.may_const metadata).
+  DenseMap<const GlobalVariable *, SmallVector<uint64_t, 4>> mayConstFieldMap;
+  for (GlobalVariable &GV : M->globals()) {
+    MDNode *MD = GV.getMetadata(MD_EJIT_METADATA);
+    if (!MD)
+      continue;
+    SmallVector<uint64_t, 4> offsets;
+    for (const MDOperand &Op : MD->operands()) {
+      auto *Sub = dyn_cast<MDNode>(Op.get());
+      if (!Sub || Sub->getNumOperands() < 2)
+        continue;
+      auto *Tag = dyn_cast<MDString>(Sub->getOperand(0));
+      if (!Tag || Tag->getString() != TAG_EJIT_MAY_CONST_FIELD)
+        continue;
+      if (auto *CI = mdconst::dyn_extract<ConstantInt>(Sub->getOperand(1)))
+        offsets.push_back(CI->getZExtValue());
+    }
+    if (!offsets.empty())
+      mayConstFieldMap[&GV] = std::move(offsets);
+  }
+
   struct Replacement { LoadInst *LI; Constant *ConstVal; };
   SmallVector<Replacement, 16> replacements;
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       auto *LI = dyn_cast<LoadInst>(&I);
-      if (!LI || !LI->hasMetadata(MD_EJIT_MAY_CONST))
+      if (!LI)
+        continue;
+      bool isMayConst = LI->hasMetadata(MD_EJIT_MAY_CONST);
+
+      if (!isMayConst) {
+        // v1.7 fallback: check GV-level may_const field offsets
+        Value *Ptr = LI->getPointerOperand();
+        if (auto *RootGV = findRootGV(Ptr)) {
+          auto It = mayConstFieldMap.find(RootGV);
+          if (It != mayConstFieldMap.end()) {
+            auto Off = accumulateFullOffset(DL, Ptr);
+            if (Off && is_contained(It->second, *Off))
+              isMayConst = true;
+          }
+        }
+      }
+      if (!isMayConst)
         continue;
 
       Value *PtrOp = LI->getPointerOperand();
