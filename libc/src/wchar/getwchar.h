@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation header for the getwchar function.
+/// This file contains the prototype for the getwchar function, which reads a
+/// single character from the provided stream.
 ///
 //===----------------------------------------------------------------------===//
 

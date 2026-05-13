@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/wchar_macros.h" // For WEOF
 #include "src/stdio/fclose.h"
 #include "src/stdio/feof.h"
@@ -21,9 +22,6 @@
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcGetwcharTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
-
-// TODO: Analyze if redirecting stdin here works, and also if it's the right way
-// to approach this.
 
 TEST_F(LlvmLibcGetwcharTest, ReadValidWideCharacters) {
   auto FILENAME =
@@ -77,8 +75,10 @@ TEST_F(LlvmLibcGetwcharTest, ReadUtf8) {
 
   EXPECT_EQ(LIBC_NAMESPACE::getwchar(), static_cast<wint_t>(L'a'));
   EXPECT_EQ(LIBC_NAMESPACE::getwchar(), static_cast<wint_t>(L'¢'));
+#if WINT_MAX > 0xFFFF
   EXPECT_EQ(LIBC_NAMESPACE::getwchar(), static_cast<wint_t>(L'€'));
   EXPECT_EQ(LIBC_NAMESPACE::getwchar(), static_cast<wint_t>(L'𐍈'));
+#endif
 
   // Restore stdin
   ASSERT_EQ(LIBC_NAMESPACE::fclose(LIBC_NAMESPACE::stdin), 0);
