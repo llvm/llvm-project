@@ -25,27 +25,27 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 ARCH_TO_TRIPLE = {
-    "amdgpu":   "amdgcn-amd-amdhsa-llvm",
-    "amdgcn":   "amdgcn-amd-amdhsa-llvm",
-    "nvptx64":  "nvptx64-nvidia-cuda",
-    "spirv":    "spirv-unknown-mesa3d",
-    "spirv64":  "spirv64-unknown-mesa3d",
+    "amdgpu": "amdgcn-amd-amdhsa-llvm",
+    "amdgcn": "amdgcn-amd-amdhsa-llvm",
+    "nvptx64": "nvptx64-nvidia-cuda",
+    "spirv": "spirv-unknown-mesa3d",
+    "spirv64": "spirv64-unknown-mesa3d",
 }
 
 ARCH_TO_CPU = {
-    "amdgpu":   "gfx900",
-    "amdgcn":   "gfx900",
-    "nvptx64":  "",
-    "spirv":    "",
-    "spirv64":  "",
+    "amdgpu": "gfx900",
+    "amdgcn": "gfx900",
+    "nvptx64": "",
+    "spirv": "",
+    "spirv64": "",
 }
 
 ARCH_TO_REQUIRES = {
-    "amdgpu":   "amdgpu-registered-target",
-    "amdgcn":   "amdgpu-registered-target",
-    "nvptx64":  "nvptx-registered-target",
-    "spirv":    "spirv-registered-target",
-    "spirv64":  "spirv-registered-target",
+    "amdgpu": "amdgpu-registered-target",
+    "amdgcn": "amdgpu-registered-target",
+    "nvptx64": "nvptx-registered-target",
+    "spirv": "spirv-registered-target",
+    "spirv64": "spirv-registered-target",
 }
 
 SCRIPT_DIR = Path(__file__).parent
@@ -70,13 +70,9 @@ def replace_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
 def revert_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
     # Only revert in the RUN line context, not in generated CHECK lines.
     content = path.read_bytes()
-    content = content.replace(
-        f"-target {triple}".encode(), b"-target %target"
-    )
+    content = content.replace(f"-target {triple}".encode(), b"-target %target")
     if cpu:
-        content = content.replace(
-            f"-mcpu={cpu}".encode(), b"-mcpu=%cpu"
-        )
+        content = content.replace(f"-mcpu={cpu}".encode(), b"-mcpu=%cpu")
     content = content.replace(
         f"--check-prefix={check_prefix}".encode(), b"--check-prefix=%check_prefix"
     )
@@ -91,7 +87,7 @@ def file_requires_feature(path: Path, feature: str) -> bool:
     for line in text.splitlines():
         stripped = line.strip().lstrip("//").strip()
         if stripped.startswith("REQUIRES:"):
-            rest = stripped[len("REQUIRES:"):]
+            rest = stripped[len("REQUIRES:") :]
             features = [f.strip() for f in re.split(r",|\|\|", rest)]
             if feature in features:
                 return True
@@ -103,7 +99,8 @@ def process_file(cl_file: Path, triple: str, cpu: str, check_prefix: str) -> boo
     cmd = [
         sys.executable,
         str(UPDATE_SCRIPT),
-        "--clang", str(CLANG),
+        "--clang",
+        str(CLANG),
         str(cl_file),
     ]
     print(f"  update: {cl_file.relative_to(REPO_ROOT)}")
@@ -144,7 +141,9 @@ def main():
         print(f"No .cl files found with REQUIRES: {requires_feature}")
         return
 
-    print(f"arch={arch}  triple={triple}  cpu={cpu}  check_prefix={check_prefix}  requires={requires_feature}")
+    print(
+        f"arch={arch}  triple={triple}  cpu={cpu}  check_prefix={check_prefix}  requires={requires_feature}"
+    )
     print(f"Processing {len(target_files)} file(s)...")
 
     failed = []
