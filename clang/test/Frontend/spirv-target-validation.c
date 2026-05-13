@@ -5,6 +5,6 @@
 // RUN: %clang_cc1 -triple spirv-mesa-mesa3d %s -fsyntax-only 2>&1
 
 // CHECK-VULKAN: error: SPIR-V target requires a Vulkan environment
-// CHECK-SHADER: error: SPIR-V target requires a valid shader stage environment
+// CHECK-SHADER: error: SPIR-V target requires a valid shader stage or no environment
 
 int main() { return 0; }

@@ -664,17 +664,16 @@ define amdgpu_kernel void @s_test_umax_uge_v3i32(ptr addrspace(1) %out, <3 x i32
 ;
 ; EG-LABEL: s_test_umax_uge_v3i32:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 7, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 6, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T3.X, T2.X, 0
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    ALU clause starting at 4:
 ; EG-NEXT:     MAX_UINT * T0.Y, KC0[3].Z, KC0[4].Z,
 ; EG-NEXT:     MAX_UINT * T0.X, KC0[3].Y, KC0[4].Y,
-; EG-NEXT:     LSHR T1.X, KC0[2].Y, literal.x,
-; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.y,
-; EG-NEXT:    2(2.802597e-45), 8(1.121039e-44)
-; EG-NEXT:     LSHR T2.X, PV.W, literal.x,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT T2.X, PV.X, literal.x,
 ; EG-NEXT:     MAX_UINT * T3.X, KC0[3].W, KC0[4].W,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %cmp = icmp uge <3 x i32> %a, %b
