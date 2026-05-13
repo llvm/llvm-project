@@ -2997,7 +2997,7 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
   if (SubReg) {
     Reg = TRI->getSubReg(Reg, SubReg);
 
-    if(!Reg)
+    if (!Reg)
       Error(Loc, "invalid subregister");
   }
 
