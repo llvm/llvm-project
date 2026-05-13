@@ -401,8 +401,8 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     // to be uniform so the offset computation stays in scalar registers.
     // This only helps when the base is already divergent — if the base is
     // uniform, the default order naturally reuses the uniform dominating GEP.
-    if (UI->isDivergentUse(GEP->getOperandUse(0)) &&
-        !UI->isDivergentUse(LHSUse) && UI->isDivergentUse(RHSUse)) {
+    if (UI->isDivergentAtUse(GEP->getOperandUse(0)) &&
+        !UI->isDivergentAtUse(LHSUse) && UI->isDivergentAtUse(RHSUse)) {
       LLVM_DEBUG(
           dbgs() << "NARY: Preferring uniform remainder for GEP index\n");
       if (GetElementPtrInst *NewGEP =
@@ -529,9 +529,9 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(const Use &LHSUse,
     // divergent. The symmetric case (A and RHS uniform, B divergent) is already
     // handled by the default order which tries (A op RHS) op B first.
     User *LHSOp = cast<User>(LHS);
-    if (!UI->isDivergentUse(LHSOp->getOperandUse(1)) &&
-        !UI->isDivergentUse(RHSUse) &&
-        UI->isDivergentUse(LHSOp->getOperandUse(0))) {
+    if (!UI->isDivergentAtUse(LHSOp->getOperandUse(1)) &&
+        !UI->isDivergentAtUse(RHSUse) &&
+        UI->isDivergentAtUse(LHSOp->getOperandUse(0))) {
       LLVM_DEBUG(dbgs() << "NARY: Preferring uniform grouping for " << *I
                         << "\n");
       if (AExpr != RHSExpr) {
@@ -722,9 +722,9 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   User *LHSOp = cast<User>(LHS);
   unsigned AIdx = (LHSOp->getOperand(0) == A) ? 0 : 1;
   unsigned RHSIdx = (I->getOperand(0) == RHS) ? 0 : 1;
-  if (!UI->isDivergentUse(LHSOp->getOperandUse(1 - AIdx)) &&
-      !UI->isDivergentUse(I->getOperandUse(RHSIdx)) &&
-      UI->isDivergentUse(LHSOp->getOperandUse(AIdx))) {
+  if (!UI->isDivergentAtUse(LHSOp->getOperandUse(1 - AIdx)) &&
+      !UI->isDivergentAtUse(I->getOperandUse(RHSIdx)) &&
+      UI->isDivergentAtUse(LHSOp->getOperandUse(AIdx))) {
     LLVM_DEBUG(dbgs() << "NARY: Preferring uniform grouping for minmax " << *I
                       << "\n");
     // Try (B op RHS) op A first - groups uniform B with uniform RHS
