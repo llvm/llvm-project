@@ -4862,6 +4862,13 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
     return nullptr;
 
   Expr *InstRequiresClause = L->getRequiresClause();
+  if (InstRequiresClause && EvaluateConstraints) {
+    ExprResult E =
+        SemaRef.SubstConstraintExpr(InstRequiresClause, TemplateArgs);
+    if (E.isInvalid())
+      return nullptr;
+    InstRequiresClause = E.get();
+  }
 
   TemplateParameterList *InstL
     = TemplateParameterList::Create(SemaRef.Context, L->getTemplateLoc(),

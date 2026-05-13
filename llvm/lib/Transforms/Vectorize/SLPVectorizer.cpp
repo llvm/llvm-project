@@ -19371,7 +19371,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       if (User && User->hasOneUse() &&
           isa<LoadInst, StoreInst>(User->user_back())) {
         Type *LocalTy = getValueType(User->user_back());
-        if (!UserScalarTy) {
+        if (!UserScalarTy && !isa<ScalableVectorType>(LocalTy)) {
           UserScalarTy = LocalTy;
         } else if (UserScalarTy != LocalTy) {
           AllUsersGEPSWithStoresLoads = false;
@@ -28926,7 +28926,8 @@ public:
       // original scalar identity operations on matched horizontal reductions).
       IsSupportedHorRdxIdentityOp =
           RK == ReductionOrdering::Unordered && RdxKind != RecurKind::Mul &&
-          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd;
+          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd &&
+          (!SLPReVec || !Candidates.front()->getType()->isVectorTy());
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
@@ -29809,6 +29810,8 @@ private:
           // res = vv
           break;
         case RecurKind::Sub:
+        case RecurKind::FSub:
+        case RecurKind::FAddChainWithSubs:
         case RecurKind::AddChainWithSubs:
         case RecurKind::Mul:
         case RecurKind::FMul:
@@ -29960,6 +29963,8 @@ private:
       // res = vv
       return VectorizedValue;
     case RecurKind::Sub:
+    case RecurKind::FSub:
+    case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
@@ -30063,6 +30068,8 @@ private:
       return Builder.CreateFMul(VectorizedValue, Scale);
     }
     case RecurKind::Sub:
+    case RecurKind::FSub:
+    case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:

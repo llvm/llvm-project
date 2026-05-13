@@ -5663,13 +5663,13 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTPOP(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand CTLZ/CTLZ_ZERO_UNDEF nodes. Expands vector/scalar CTLZ nodes,
+  /// Expand CTLZ/CTLZ_ZERO_POISON nodes. Expands vector/scalar CTLZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTLZ/VP_CTLZ_ZERO_UNDEF nodes.
+  /// Expand VP_CTLZ/VP_CTLZ_ZERO_POISON nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTLZ(SDNode *N, SelectionDAG &DAG) const;
@@ -5686,18 +5686,18 @@ public:
   SDValue CTTZTableLookup(SDNode *N, SelectionDAG &DAG, const SDLoc &DL, EVT VT,
                           SDValue Op, unsigned NumBitsPerElt) const;
 
-  /// Expand CTTZ/CTTZ_ZERO_UNDEF nodes. Expands vector/scalar CTTZ nodes,
+  /// Expand CTTZ/CTTZ_ZERO_POISON nodes. Expands vector/scalar CTTZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTTZ/VP_CTTZ_ZERO_UNDEF nodes.
+  /// Expand VP_CTTZ/VP_CTTZ_ZERO_POISON nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_UNDEF nodes.
+  /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_POISON nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZElements(SDNode *N, SelectionDAG &DAG) const;
