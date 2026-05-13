@@ -62,6 +62,7 @@ add_subdirectory(custom)
 add_subdirectory(darwin)
 add_subdirectory(fuchsia)
 add_subdirectory(google)
+add_subdirectory(hicpp)
 add_subdirectory(linuxkernel)
 add_subdirectory(llvm)
 add_subdirectory(llvmlibc)
@@ -88,6 +89,7 @@ set(ALL_CLANG_TIDY_CHECKS
   clangTidyDarwinModule
   clangTidyFuchsiaModule
   clangTidyGoogleModule
+  clangTidyHICPPModule
   clangTidyLinuxKernelModule
   clangTidyLLVMModule
   clangTidyLLVMLibcModule
