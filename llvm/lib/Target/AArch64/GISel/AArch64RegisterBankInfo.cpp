@@ -972,7 +972,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_CONSTANT: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     TypeSize Size = DstTy.getSizeInBits();
-    if (!(DstTy.isPointer() || (DstTy.isScalar() && Size >= 32 && Size <= 64)))
+    if (!DstTy.isPointer() && (!DstTy.isScalar() || Size < 32 || Size > 64))
       break;
     // Scalar constants materialize in GPRs.
     [[fallthrough]];
