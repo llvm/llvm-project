@@ -1674,10 +1674,11 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
       if (isa<ConstantByte>(V))
         return ConstantByte::get(V->getContext(), EC,
                                  cast<ConstantByte>(V)->getValue());
-      if (UseConstantFPForFixedLengthSplat && isa<ConstantFP>(V))
-        return ConstantFP::get(V->getContext(), EC,
-                               cast<ConstantFP>(V)->getValue());
     }
+
+    if (UseConstantFPForFixedLengthSplat && isa<ConstantFP>(V))
+      return ConstantFP::get(V->getContext(), EC,
+                             cast<ConstantFP>(V)->getValue());
 
     // If this splat is compatible with ConstantDataVector, use it instead of
     // ConstantVector.
@@ -1697,10 +1698,11 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
     if (isa<ConstantByte>(V))
       return ConstantByte::get(V->getContext(), EC,
                                cast<ConstantByte>(V)->getValue());
-    if (UseConstantFPForScalableSplat && isa<ConstantFP>(V))
-      return ConstantFP::get(V->getContext(), EC,
-                             cast<ConstantFP>(V)->getValue());
   }
+
+  if (UseConstantFPForScalableSplat && isa<ConstantFP>(V))
+    return ConstantFP::get(V->getContext(), EC,
+                           cast<ConstantFP>(V)->getValue());
 
   Type *VTy = VectorType::get(V->getType(), EC);
 
@@ -2028,7 +2030,7 @@ ConstantRange Constant::toConstantRange() const {
       auto *CB = dyn_cast<ConstantByte>(Elem);
       if (!CI && !CB)
         return ConstantRange::getFull(BitWidth);
-      CR = CR.unionWith(CI->getValue());
+      CR = CR.unionWith(CI ? CI->getValue() : CB->getValue());
     }
     return CR;
   }
@@ -2208,7 +2210,7 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
 
   // If the argument is replaced with a null value, just replace this constant
   // with a null value.
-  if (cast<Constant>(To)->isNullValue())
+  if (isa<ConstantPointerNull>(To))
     return To;
 
   // The replacement could be a bitcast or an alias to another function. We can
@@ -2352,7 +2354,7 @@ bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
                                             const DataLayout &DL) const {
   // This function may only be validly called to analyze a ptrauth operation
   // with no deactivation symbol, so if we have one it isn't compatible.
-  if (!getDeactivationSymbol()->isNullValue())
+  if (!isa<ConstantPointerNull>(getDeactivationSymbol()))
     return false;
 
   // If the keys are different, there's no chance for this to be compatible.
