@@ -1619,7 +1619,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPInstructionWithType::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
   if (isScalarCast()) {
     Value *Op = State.get(getOperand(0), VPLane(0));
     Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
@@ -1677,7 +1676,6 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPPhi::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
   PHINode *NewPhi = State.Builder.CreatePHI(
       State.TypeAnalysis.inferScalarType(this), 2, getName());
   unsigned NumIncoming = getNumIncoming();
