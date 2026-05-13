@@ -277,15 +277,18 @@ Status ProcessElfCore::DoLoadCore() {
             llvm::consumeError(module_sp_or_err.takeError());
         }
         // Create a placeholder module for the main executable if we failed to
-        //create an ELF module from memory.
+        // create an ELF module from memory.
         if (!exe_module_sp) {
-          lldb::addr_t load_addr = exe_header ? exe_header->start : LLDB_INVALID_ADDRESS;
-          lldb::addr_t size = exe_header ? (exe_header->end - exe_header->start) : 0;
+          lldb::addr_t load_addr =
+              exe_header ? exe_header->start : LLDB_INVALID_ADDRESS;
+          lldb::addr_t size =
+              exe_header ? (exe_header->end - exe_header->start) : 0;
           exe_module_sp =
               Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
                   exe_module_spec, load_addr, size);
           if (exe_module_spec.GetPlatformFileSpec())
-            exe_module_sp->SetPlatformFileSpec(exe_module_spec.GetPlatformFileSpec());
+            exe_module_sp->SetPlatformFileSpec(
+                exe_module_spec.GetPlatformFileSpec());
         }
       }
       if (exe_module_sp)
