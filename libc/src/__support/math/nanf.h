@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float nanf(const char *arg) {
+LIBC_INLINE LIBC_CONSTEXPR float nanf(const char *arg) {
   auto result = internal::strtonan<float>(arg);
   if (result.has_error())
     libc_errno = result.error;

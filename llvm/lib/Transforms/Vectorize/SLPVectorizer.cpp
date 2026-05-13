@@ -241,6 +241,9 @@ static cl::opt<bool> NonVectReductions(
     cl::desc(
         "Use  non-vectorizable instructions as potential reduction roots."));
 
+static constexpr unsigned SmallProfitableNonPowerOf2 = 5;
+static constexpr unsigned SmallestNonPowerOf2 = 3;
+
 /// True when \p slp-vectorize-non-power-of-2 is enabled and \p NumElts is a
 /// supported non-power-of-2 width. The width is supported if \p NumElts is not
 /// a power of two and either it is small (<= 5, e.g. 3 or 5 lanes), or
@@ -248,7 +251,8 @@ static cl::opt<bool> NonVectReductions(
 /// the elements being vectorized are themselves vectors (REVEC).
 static bool isAllowedNonPowerOf2VF(unsigned NumElts, bool IsVectorElement) {
   return VectorizeNonPowerOf2 && !has_single_bit(NumElts) &&
-         ((SLPReVec && IsVectorElement) || NumElts <= 5 ||
+         ((SLPReVec && IsVectorElement) ||
+          NumElts <= SmallProfitableNonPowerOf2 ||
           !has_single_bit(NumElts - 1));
 }
 
@@ -9999,7 +10003,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
             MaxVF, isa<FixedVectorType>(Loads.front()->getType()))) {
       const unsigned FullVectorNumElements = getFullVectorNumberOfElements(
           *TTI, Loads.front()->getType(), MaxVF - 1);
-      if (MaxVF >= 3 && FullVectorNumElements != MaxVF - 1)
+      if (MaxVF >= SmallestNonPowerOf2 && FullVectorNumElements != MaxVF - 1)
         CandidateVFs.push_back(MaxVF);
     }
     for (int NumElts = getFloorFullVectorNumberOfElements(
@@ -19230,7 +19234,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       if (User && User->hasOneUse() &&
           isa<LoadInst, StoreInst>(User->user_back())) {
         Type *LocalTy = getValueType(User->user_back());
-        if (!UserScalarTy) {
+        if (!UserScalarTy && !isa<ScalableVectorType>(LocalTy)) {
           UserScalarTy = LocalTy;
         } else if (UserScalarTy != LocalTy) {
           AllUsersGEPSWithStoresLoads = false;
@@ -27022,7 +27026,7 @@ bool StoreChainContext::initializeContext(
       NonPowerOf2VF = 0;
     } else {
       VectorType *VecTy = ::getWidenedType(StoreTy, NonPowerOf2VF);
-      if (!SingleContext && CandVF == 3 &&
+      if (!SingleContext && CandVF == SmallestNonPowerOf2 &&
           TTI.getMemoryOpCost(Instruction::Store, VecTy, Store->getAlign(),
                               Store->getPointerAddressSpace()) >=
               CandVF * TTI.getMemoryOpCost(Instruction::Store, StoreTy,
@@ -28452,10 +28456,13 @@ public:
     }
     // Skip 3-element reductions with m_zex/sext(load) patterns, as they are
     // unlikely to be vectorized and may cause compile time regressions.
-    if (VectorizeNonPowerOf2 && NumReducedVals == 3 &&
-        any_of(ReducedVals, [](ArrayRef<Value *> Vals) {
-          return Vals.size() > 2 && all_of(Vals, [](Value *V) {
-                   return match(V, m_ZExt(m_Load(m_Value())));
+    if (VectorizeNonPowerOf2 && NumReducedVals == SmallestNonPowerOf2 &&
+        any_of(ReducedVals, [TTI = TTI](ArrayRef<Value *> Vals) {
+          return Vals.size() > 2 && all_of(Vals, [TTI = TTI](Value *V) {
+                   Value *L;
+                   return match(V, m_ZExt(m_Load(m_Value(L)))) &&
+                          TTI->getInstructionCost(
+                              cast<User>(V), TTI::TCK_RecipThroughput) == 0;
                  });
         }))
       return nullptr;
@@ -28705,7 +28712,8 @@ public:
       // original scalar identity operations on matched horizontal reductions).
       IsSupportedHorRdxIdentityOp =
           RK == ReductionOrdering::Unordered && RdxKind != RecurKind::Mul &&
-          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd;
+          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd &&
+          (!SLPReVec || !Candidates.front()->getType()->isVectorTy());
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
@@ -28793,7 +28801,6 @@ public:
         // of-2 width when the lone trailing value does not fit the main-op
         // operand pattern. Such a mismatch makes a 5-wide vector wasteful
         // compared to a 4-wide + scalar tail.
-        const unsigned SmallReductionNonPowerOf2 = 5;
         auto LoneValueMismatchesMainOpOperands = [&]() {
           Value *LastVal = ReducedVals.back().back();
           if (!isa<Instruction>(LastVal))
@@ -28807,7 +28814,7 @@ public:
         };
         if (ReduxWidth == ReductionLimit) {
           AllowNoPowerOf2 = true;
-        } else if (ReduxWidth == SmallReductionNonPowerOf2 && TwoGroupsOnly &&
+        } else if (ReduxWidth == SmallProfitableNonPowerOf2 && TwoGroupsOnly &&
                    LastOfTwoGroupsIsSingle && S &&
                    S.areInstructionsWithCopyableElements() &&
                    LoneValueMismatchesMainOpOperands()) {
@@ -29622,6 +29629,8 @@ private:
           // res = vv
           break;
         case RecurKind::Sub:
+        case RecurKind::FSub:
+        case RecurKind::FAddChainWithSubs:
         case RecurKind::AddChainWithSubs:
         case RecurKind::Mul:
         case RecurKind::FMul:
@@ -29773,6 +29782,8 @@ private:
       // res = vv
       return VectorizedValue;
     case RecurKind::Sub:
+    case RecurKind::FSub:
+    case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
@@ -29876,6 +29887,8 @@ private:
       return Builder.CreateFMul(VectorizedValue, Scale);
     }
     case RecurKind::Sub:
+    case RecurKind::FSub:
+    case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:

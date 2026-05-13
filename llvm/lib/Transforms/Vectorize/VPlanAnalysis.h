@@ -47,6 +47,7 @@ struct VPCostContext;
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
   LLVMContext &Ctx;
+  const DataLayout &DL;
 
   Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
   Type *inferScalarTypeForRecipe(const VPInstruction *R);
@@ -56,7 +57,8 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
-  VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {}
+  VPTypeAnalysis(const VPlan &Plan)
+      : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {}
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);

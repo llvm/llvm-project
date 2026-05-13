@@ -56,7 +56,8 @@ public:
   virtual Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                          GEPNoWrapFlags NW) const = 0;
 
-  virtual Value *FoldSelect(Value *C, Value *True, Value *False) const = 0;
+  virtual Value *FoldSelect(Value *C, Value *True, Value *False,
+                            FastMathFlags FMF = FastMathFlags()) const = 0;
 
   virtual Value *FoldExtractValue(Value *Agg,
                                   ArrayRef<unsigned> IdxList) const = 0;

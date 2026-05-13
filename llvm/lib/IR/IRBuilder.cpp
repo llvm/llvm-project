@@ -1112,7 +1112,7 @@ Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
 Value *IRBuilderBase::CreateSelectFMF(Value *C, Value *True, Value *False,
                                       FMFSource FMFSource, const Twine &Name,
                                       Instruction *MDFrom) {
-  if (auto *V = Folder.FoldSelect(C, True, False))
+  if (auto *V = Folder.FoldSelect(C, True, False, FMFSource.get(FMF)))
     return V;
 
   SelectInst *Sel = SelectInst::Create(C, True, False);

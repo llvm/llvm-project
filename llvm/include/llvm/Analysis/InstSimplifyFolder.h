@@ -83,8 +83,9 @@ public:
     return simplifyGEPInst(Ty, Ptr, IdxList, NW, SQ);
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
-    return simplifySelectInst(C, True, False, SQ);
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF = FastMathFlags()) const override {
+    return simplifySelectInst(C, True, False, FMF, SQ);
   }
 
   Value *FoldExtractValue(Value *Agg,
