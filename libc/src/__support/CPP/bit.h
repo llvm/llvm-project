@@ -27,10 +27,14 @@ namespace cpp {
 #endif
 
 template <unsigned N>
-LIBC_INLINE LIBC_CONSTEXPR void inline_copy(const char *from, char *to) {
+LIBC_INLINE constexpr void inline_copy(const char *from, char *to) {
 #if __has_builtin(__builtin_memcpy_inline) &&                                  \
-    !defined(LIBC_HAS_CONSTANT_EVALUATION)
-  __builtin_memcpy_inline(to, from, N);
+    defined(LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+  if (cpp::is_constant_evaluated())
+    for (unsigned i = 0; i < N; ++i)
+      to[i] = from[i];
+  else
+    __builtin_memcpy_inline(to, from, N);
 #else
   for (unsigned i = 0; i < N; ++i)
     to[i] = from[i];
@@ -40,7 +44,7 @@ LIBC_INLINE LIBC_CONSTEXPR void inline_copy(const char *from, char *to) {
 // This implementation of bit_cast requires trivially-constructible To, to avoid
 // UB in the implementation.
 template <typename To, typename From>
-LIBC_INLINE LIBC_CONSTEXPR static cpp::enable_if_t<
+LIBC_INLINE static constexpr cpp::enable_if_t<
     (sizeof(To) == sizeof(From)) &&
         cpp::is_trivially_constructible<To>::value &&
         cpp::is_trivially_copyable<To>::value &&
