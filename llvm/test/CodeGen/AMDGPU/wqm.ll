@@ -3320,9 +3320,9 @@ define amdgpu_ps float @test_wqm_strict_wqm_wqm(i32 inreg %idx0, i32 inreg %idx1
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v0
-; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-W32-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX10-W32-NEXT:    image_sample v0, v0, s[8:15], s[16:19] dmask:0x1 dim:SQ_RSRC_IMG_1D
+; GFX10-W32-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-W32-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v0
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v3

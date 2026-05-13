@@ -38,6 +38,7 @@
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
+#include "AMDGPUVMemUseOrdering.h"
 #include "AMDGPUWaitSGPRHazards.h"
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
@@ -519,6 +520,13 @@ static cl::opt<bool>
     EnableVOPD("amdgpu-enable-vopd",
                cl::desc("Enable VOPD, dual issue of VALU in wave32"),
                cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnableVMemUseOrdering(
+    "amdgpu-vmem-use-ordering",
+    cl::desc("Add ordering edges so post-RA scheduling does not move "
+             "consumers of VMEM-pending live-ins ahead of in-region VMEM "
+             "loads"),
+    cl::init(true), cl::Hidden);
 
 // Option is used in lit tests to prevent deadcoding of patterns inspected.
 static cl::opt<bool>
@@ -1332,6 +1340,12 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
   DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));
+  // Post-RA only: uses physreg live-ins and physreg defs; not applicable to
+  // pre-RA iterative schedulers.
+  if ((EnableVMemUseOrdering.getNumOccurrences() ||
+       getOptLevel() >= CodeGenOptLevel::Less) &&
+      EnableVMemUseOrdering)
+    DAG->addMutation(createAMDGPUVMemUseOrderingDAGMutation(C->MF));
   return DAG;
 }
 //===----------------------------------------------------------------------===//
