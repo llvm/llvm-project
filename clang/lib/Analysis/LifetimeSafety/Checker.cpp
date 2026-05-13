@@ -281,7 +281,8 @@ public:
                          dyn_cast<GlobalEscapeFact>(OEF)) {
             // Invalidated object escapes to global or static storage.
             if (IssueExpr)
-              // Invalidated object escapes to global or static storage.
+              // Invalidated object on stack escapes to global or static
+              // storage.
               SemaHelper->reportInvalidatedGlobal(IssueExpr,
                                                   GlobalEscape->getGlobal(),
                                                   Warning.InvalidatedByExpr);
