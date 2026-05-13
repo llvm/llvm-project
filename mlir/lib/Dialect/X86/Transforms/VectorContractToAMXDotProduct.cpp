@@ -27,23 +27,20 @@ using namespace mlir::x86;
 
 namespace {
 
-static Value traceToVectorWriteLikeUserOperationForAMX(Value v) {
+static Value contractionUsersAfterYield(Value v) {
   if (v.getNumUses() > 1)
     return nullptr;
 
   for (OpOperand &use : v.getUses()) {
     Operation *user = use.getOwner();
 
-    if (!isa<scf::YieldOp>(user)) {
+    if (!isa<scf::YieldOp>(user))
       return v;
-    }
 
-    // --- SCF YIELD ---
     if (auto yield = dyn_cast<scf::YieldOp>(user)) {
       Operation *parent = yield->getParentOp();
       unsigned idx = use.getOperandNumber();
-      if (auto res =
-              traceToVectorWriteLikeUserOperationForAMX(parent->getResult(idx)))
+      if (auto res = contractionUsersAfterYield(parent->getResult(idx)))
         return res;
       continue;
     }
@@ -494,7 +491,9 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
   Value c1 = arith::ConstantIndexOp::create(rewriter, loc, 1);
   Value c2 = arith::ConstantIndexOp::create(rewriter, loc, 2);
 
-  int64_t offset = step.getDefiningOp<arith::ConstantIndexOp>().value();
+  int64_t offset = 16 * blockingFactor;
+  if (auto cst = step.getDefiningOp<arith::ConstantIndexOp>())
+    offset = cst.value();
 
   auto newLoop = scf::ForOp::create(
       rewriter, loc, lowerBound, upperBound, step, loopItrArgs,
@@ -970,8 +969,7 @@ struct VectorContractToAMXDotProduct
           rewriter, loc, flatTy, resultBuffer, ValueRange{c0, c0}, padding, map,
           inBounds);
 
-      Value resultOp =
-          traceToVectorWriteLikeUserOperationForAMX(contractOp.getResult());
+      Value resultOp = contractionUsersAfterYield(contractOp.getResult());
       if (auto vecType = llvm::dyn_cast<VectorType>(resultOp.getType())) {
         vecRow =
             mlir::vector::ShapeCastOp::create(rewriter, loc, vecType, vecRow);
@@ -1236,15 +1234,16 @@ struct VectorContractToAMXDotProduct
             (((ubVal / (16 * blockingFactor)) % 2) == 1) && isInnerLoopUBLarger;
 
         rewriter.setInsertionPoint(innerLoop);
+
         auto c0 =
             arith::ConstantIndexOp::create(rewriter, innerLoop.getLoc(), 0);
-
-        int64_t stepVal =
-            innerLoop.getStep().getDefiningOp<arith::ConstantIndexOp>().value();
+        int64_t offset = 16 * blockingFactor;
+        if (auto cst =
+                innerLoop.getStep().getDefiningOp<arith::ConstantIndexOp>())
+          offset = cst.value();
 
         auto spillLoopBound = arith::ConstantIndexOp::create(
-            rewriter, innerLoop.getLoc(), stepVal);
-
+            rewriter, innerLoop.getLoc(), offset);
         Value spillInnerLoop =
             arith::SubIOp::create(rewriter, innerLoop.getLoc(),
                                   innerLoop.getUpperBound(), spillLoopBound);
@@ -1417,12 +1416,11 @@ struct VectorContractToAMXDotProduct
       vector::ContractionOp contOp = ops[i];
       Value vecRoc = writeResults[i];
 
-      Value resultWriteOp =
-          traceToVectorWriteLikeUserOperationForAMX(contOp.getResult());
-      if (auto vecType = llvm::dyn_cast<VectorType>(resultWriteOp.getType())) {
+      Value resultWriteOp = contractionUsersAfterYield(contOp.getResult());
+      if (auto vecType = llvm::dyn_cast<VectorType>(resultWriteOp.getType()))
         vecRoc = mlir::vector::ShapeCastOp::create(rewriter, loc, vecType,
                                                    writeResults[i]);
-      }
+
       resultWriteOp.replaceAllUsesWith(vecRoc);
     }
 

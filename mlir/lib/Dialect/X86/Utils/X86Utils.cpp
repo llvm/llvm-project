@@ -203,7 +203,7 @@ Operation *traceToVectorWriteLikeUserOperation(Value v) {
     if (isa<vector::TransferWriteOp>(user) || isa<vector::StoreOp>(user))
       return user;
 
-    if (isa<vector::ShapeCastOp, vector::ShuffleOp>(user))
+    if (isa<vector::ShuffleOp>(user))
       return nullptr;
 
     // --- SCF YIELD ---
