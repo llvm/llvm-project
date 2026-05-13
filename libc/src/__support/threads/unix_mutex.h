@@ -47,8 +47,7 @@ class Mutex final : private RawMutex {
         return MutexError::OVERFLOW;
       lock_count++;
       return MutexError::NONE;
-    }
-    else if (is_error_checking() && owner == internal::gettid())
+    } else if (is_error_checking() && owner == internal::gettid())
       return MutexError::DEADLOCK;
 
     MutexError res = do_lock();
