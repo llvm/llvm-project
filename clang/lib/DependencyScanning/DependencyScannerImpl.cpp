@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/DependencyScanning/DependencyActionController.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"

@@ -76,19 +76,6 @@ private:
   std::set<StringRef> ModuleFileDependents;
 };
 
-/// An output from a module compilation, such as the path of the module file.
-enum class ModuleOutputKind {
-  /// The module file (.pcm). Required.
-  ModuleFile,
-  /// The path of the dependency file (.d), if any.
-  DependencyFile,
-  /// The null-separated list of names to use as the targets in the dependency
-  /// file, if any. Defaults to the value of \c ModuleFile, as in the driver.
-  DependencyTargets,
-  /// The path of the serialized diagnostic file (.dia), if any.
-  DiagnosticSerializationFile,
-};
-
 class ModuleDepCollector;
 
 /// Callback that records textual includes and direct modular includes/imports
