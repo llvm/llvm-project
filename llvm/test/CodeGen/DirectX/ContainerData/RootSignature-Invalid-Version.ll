@@ -3,7 +3,7 @@
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
 
-; CHECK: error: Invalid Root Signature Version: 4. Metadata will not be processed.
+; CHECK: error: Invalid Root Signature Version: 4
 
 define void @main() #0 {
 entry:

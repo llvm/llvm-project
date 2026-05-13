@@ -129,9 +129,9 @@ analyzeModule(Module &M) {
       reportError(Ctx, "Invalid RSDefNode value, expected constant int");
       continue;
     }
-    
-    if(hlsl::rootsig::verifyVersion(*V) == false) {
-      reportError(Ctx, "Invalid Root Signature Version: " + Twine(*V) + ". Metadata will not be processed.");
+
+    if (!hlsl::rootsig::verifyVersion(*V)) {
+      reportError(Ctx, "Invalid Root Signature Version: " + Twine(*V));
       continue;
     }
 
