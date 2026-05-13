@@ -699,8 +699,9 @@ body:             |
     ; MIPS32-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[SUB1]](s32)
     ; MIPS32-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[COPY2]](s32)
     ; MIPS32-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[LSHR]], [[SHL1]]
+    ; MIPS32-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[SUB]](s32)
-    ; MIPS32-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SHL]], [[C1]]
+    ; MIPS32-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SHL]], [[C2]]
     ; MIPS32-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[OR]], [[SHL2]]
     ; MIPS32-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s32), [[COPY1]], [[SELECT1]]
     ; MIPS32-NEXT: $v0 = COPY [[SELECT]](s32)
@@ -789,10 +790,11 @@ body:             |
     ; MIPS32-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[COPY2]](s32)
     ; MIPS32-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[SUB1]](s32)
     ; MIPS32-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[LSHR1]], [[SHL]]
+    ; MIPS32-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[SUB]](s32)
     ; MIPS32-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[OR]], [[LSHR2]]
     ; MIPS32-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s32), [[COPY]], [[SELECT]]
-    ; MIPS32-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[LSHR]], [[C1]]
+    ; MIPS32-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[LSHR]], [[C2]]
     ; MIPS32-NEXT: $v0 = COPY [[SELECT1]](s32)
     ; MIPS32-NEXT: $v1 = COPY [[SELECT2]](s32)
     ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1

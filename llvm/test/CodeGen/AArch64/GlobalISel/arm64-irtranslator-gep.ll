@@ -17,10 +17,11 @@ define i32 @cse_gep(ptr %ptr, i32 %idx) {
   ; O0-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[COPY]], [[MUL]](i64)
   ; O0-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; O0-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY2]](p0) :: (load (i32) from %ir.gep1)
-  ; O0-NEXT:   [[MUL1:%[0-9]+]]:_(i64) = nsw G_MUL [[SEXT]], [[C]]
+  ; O0-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+  ; O0-NEXT:   [[MUL1:%[0-9]+]]:_(i64) = nsw G_MUL [[SEXT]], [[C1]]
   ; O0-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[COPY]], [[MUL1]](i64)
-  ; O0-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
-  ; O0-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[PTR_ADD1]], [[C1]](i64)
+  ; O0-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
+  ; O0-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[PTR_ADD1]], [[C2]](i64)
   ; O0-NEXT:   [[LOAD1:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD2]](p0) :: (load (i32) from %ir.gep2)
   ; O0-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[LOAD]], [[LOAD1]]
   ; O0-NEXT:   $w0 = COPY [[ADD]](i32)

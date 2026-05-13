@@ -38,8 +38,9 @@ body: |
 
     ; CHECK-LABEL: name: test_implicit_def_v4s32
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $x0 = COPY [[DEF]](<2 x s32>)
-    ; CHECK-NEXT: $x1 = COPY [[DEF]](<2 x s32>)
+    ; CHECK-NEXT: $x1 = COPY [[DEF1]](<2 x s32>)
     %0:_(<4 x s32>) = G_IMPLICIT_DEF
     %1:_(<2 x s32> ), %2:_(<2 x s32>) = G_UNMERGE_VALUES %0
     $x0 = COPY %1
@@ -53,8 +54,9 @@ body: |
 
     ; CHECK-LABEL: name: test_implicit_def_v4s64
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $q0 = COPY [[DEF]](<2 x s64>)
-    ; CHECK-NEXT: $q1 = COPY [[DEF]](<2 x s64>)
+    ; CHECK-NEXT: $q1 = COPY [[DEF1]](<2 x s64>)
     %0:_(<4 x s64>) = G_IMPLICIT_DEF
     %1:_(<2 x s64> ), %2:_(<2 x s64>) = G_UNMERGE_VALUES %0
     $q0 = COPY %1
@@ -67,8 +69,9 @@ body: |
 
     ; CHECK-LABEL: name: test_implicit_def_v2s32
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[DEF1]](s32)
     %0:_(<2 x s32>) = G_IMPLICIT_DEF
     %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0
     $w0 = COPY %1

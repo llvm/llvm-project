@@ -119,8 +119,9 @@ body:             |
     ; CHECK: [[R32:%[0-9]+]]:_(s32) = nuw G_SUB [[COUNT]], [[BITDIFF]]
     %2(s16) = G_CTLZ %1
 
-    ; LIBCALLS: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[R32]], [[BITDIFF]]
-    ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
+    ; LIBCALLS: [[BITDIFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; LIBCALLS: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[R32]], [[BITDIFF1]]
+    ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF1]]
     ; LIBCALLS: $r0 = COPY [[R]]
     ; CLZ: $r0 = COPY [[R32]]
     %3(s32) = G_SEXT %2(s16)
@@ -162,8 +163,9 @@ body:             |
     ; CLZ-NOT: G_CTLZ_ZERO_POISON
     %2(s8) = G_CTLZ_ZERO_POISON %1
 
-    ; LIBCALLS: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[COUNT]], [[BITDIFF]]
-    ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
+    ; LIBCALLS: [[BITDIFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; LIBCALLS: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[COUNT]], [[BITDIFF1]]
+    ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF1]]
     ; CLZ: $r0 = COPY [[COUNT]]
     ; LIBCALLS: $r0 = COPY [[R]]
     %3(s32) = G_SEXT %2(s8)

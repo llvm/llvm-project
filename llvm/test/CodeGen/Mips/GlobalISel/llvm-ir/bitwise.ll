@@ -343,15 +343,15 @@ define i64 @shl_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: shl_i64:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    move $3, $4
-; MIPS32-NEXT:    ori $4, $zero, 32
-; MIPS32-NEXT:    subu $8, $6, $4
-; MIPS32-NEXT:    subu $1, $4, $6
-; MIPS32-NEXT:    ori $2, $zero, 0
-; MIPS32-NEXT:    sltu $4, $6, $4
+; MIPS32-NEXT:    ori $2, $zero, 32
+; MIPS32-NEXT:    subu $8, $6, $2
+; MIPS32-NEXT:    subu $1, $2, $6
+; MIPS32-NEXT:    sltu $4, $6, $2
 ; MIPS32-NEXT:    sllv $7, $3, $6
 ; MIPS32-NEXT:    srlv $1, $3, $1
-; MIPS32-NEXT:    sllv $9, $5, $6
-; MIPS32-NEXT:    or $1, $1, $9
+; MIPS32-NEXT:    sllv $2, $5, $6
+; MIPS32-NEXT:    or $1, $1, $2
+; MIPS32-NEXT:    ori $2, $zero, 0
 ; MIPS32-NEXT:    sllv $3, $3, $8
 ; MIPS32-NEXT:    movn $2, $7, $4
 ; MIPS32-NEXT:    movn $3, $1, $4
@@ -402,13 +402,13 @@ define i64 @lshr_i64(i64 %a, i64 %b) {
 ; MIPS32-NEXT:    lw $5, 4($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    ori $1, $zero, 32
 ; MIPS32-NEXT:    subu $8, $6, $1
-; MIPS32-NEXT:    subu $9, $1, $6
-; MIPS32-NEXT:    ori $3, $zero, 0
+; MIPS32-NEXT:    subu $7, $1, $6
 ; MIPS32-NEXT:    sltu $4, $6, $1
 ; MIPS32-NEXT:    srlv $1, $2, $6
-; MIPS32-NEXT:    srlv $7, $5, $6
-; MIPS32-NEXT:    sllv $9, $2, $9
-; MIPS32-NEXT:    or $7, $7, $9
+; MIPS32-NEXT:    srlv $3, $5, $6
+; MIPS32-NEXT:    sllv $7, $2, $7
+; MIPS32-NEXT:    or $7, $3, $7
+; MIPS32-NEXT:    ori $3, $zero, 0
 ; MIPS32-NEXT:    srlv $2, $2, $8
 ; MIPS32-NEXT:    movn $2, $7, $4
 ; MIPS32-NEXT:    movz $2, $5, $6

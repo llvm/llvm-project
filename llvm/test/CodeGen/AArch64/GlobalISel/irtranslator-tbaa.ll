@@ -8,9 +8,9 @@ define void @snork() {
   ; CHECK: bb.1.bb:
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(p0) = G_CONSTANT i64 4
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[C]], [[C1]](i64)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i16) = G_LOAD [[C]](p0) :: (load (i16) from `ptr null`, !tbaa !0)
-  ; CHECK-NEXT:   G_STORE [[LOAD]](i16), [[C2]](p0) :: (store (i16) into %ir.tmp5, !tbaa !0)
+  ; CHECK-NEXT:   G_STORE [[LOAD]](i16), [[PTR_ADD]](p0) :: (store (i16) into %ir.tmp5, !tbaa !0)
   ; CHECK-NEXT:   RET_ReallyLR
 bb:
   %tmp5 = getelementptr i16, ptr null, i64 2

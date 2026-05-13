@@ -125,8 +125,9 @@ body:             |
     ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[R0]], [[BITS]]
     ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS]]
-    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK-DAG: [[BITS1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS1]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS1]]
     %0(s32) = COPY $r0
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1
@@ -176,7 +177,8 @@ body:             |
     ; leading to the following complicated sequences.
     ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[R0]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS]]
+    ; CHECK: [[BITS1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS1]]
     %0(s32) = COPY $r0
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1
@@ -227,8 +229,9 @@ body:             |
     ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[R0]], [[BITS]]
     ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS]]
-    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK-DAG: [[BITS1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS1]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS1]]
     %0(s32) = COPY $r0
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1
@@ -278,7 +281,8 @@ body:             |
     ; leading to the following complicated sequences.
     ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[R0]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS]]
+    ; CHECK: [[BITS1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS1]]
     %0(s32) = COPY $r0
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1
@@ -409,8 +413,9 @@ body:             |
     ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[R0]], [[BITS]]
     ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS]]
-    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK-DAG: [[BITS1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS1]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS1]]
     %0(s32) = COPY $r0
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1
@@ -463,7 +468,8 @@ body:             |
     ; leading to the following complicated sequences.
     ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[R0]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS]]
+    ; CHECK: [[BITS1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS1]]
     %0(s32) = COPY $r0
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1
@@ -517,8 +523,9 @@ body:             |
     ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[R0]], [[BITS]]
     ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS]]
-    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK-DAG: [[BITS1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS1]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS1]]
     %0(s32) = COPY $r0
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1
@@ -571,7 +578,8 @@ body:             |
     ; leading to the following complicated sequences.
     ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[R0]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS]]
+    ; CHECK: [[BITS1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS1]]
     %0(s32) = COPY $r0
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = COPY $r1

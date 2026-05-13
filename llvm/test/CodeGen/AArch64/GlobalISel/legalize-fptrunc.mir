@@ -101,8 +101,9 @@ body:             |
 
     ; CHECK-LABEL: name: fptrunc_v4s32_v4s64
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x f64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<2 x f64>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<2 x f32>) = G_FPTRUNC [[DEF]](<2 x f64>)
-    ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(<2 x f32>) = G_FPTRUNC [[DEF]](<2 x f64>)
+    ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(<2 x f32>) = G_FPTRUNC [[DEF1]](<2 x f64>)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x f32>) = G_CONCAT_VECTORS [[FPTRUNC]](<2 x f32>), [[FPTRUNC1]](<2 x f32>)
     ; CHECK-NEXT: $q0 = COPY [[CONCAT_VECTORS]](<4 x f32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0

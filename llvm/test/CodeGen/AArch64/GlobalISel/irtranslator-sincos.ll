@@ -27,7 +27,8 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(f16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x f16>) = G_BUILD_VECTOR [[UV2]](f16), [[UV3]](f16), [[DEF]](f16), [[DEF]](f16)
   ; CHECK-NEXT:   [[UV4:%[0-9]+]]:_(f16), [[UV5:%[0-9]+]]:_(f16) = G_UNMERGE_VALUES [[FSINCOS1]](<2 x f16>)
-  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x f16>) = G_BUILD_VECTOR [[UV4]](f16), [[UV5]](f16), [[DEF]](f16), [[DEF]](f16)
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(f16) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x f16>) = G_BUILD_VECTOR [[UV4]](f16), [[UV5]](f16), [[DEF1]](f16), [[DEF1]](f16)
   ; CHECK-NEXT:   $d0 = COPY [[BUILD_VECTOR]](<4 x f16>)
   ; CHECK-NEXT:   $d1 = COPY [[BUILD_VECTOR1]](<4 x f16>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0, implicit $d1

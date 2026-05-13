@@ -70,8 +70,9 @@ define void @take_128bit_struct(ptr %ptr, [2 x i64] %in) {
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFF]](i64)
 ; CHECK: G_STORE [[LD1]](i64), [[ADDR]](p0) :: (store (i64) into stack, align 1)
 
-; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST]]
-; CHECK: G_STORE [[LD2]](i64), [[ADDR]](p0) :: (store (i64) into stack + 8, align 1)
+; CHECK: [[CST2:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+; CHECK: [[ADDR2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST2]](i64)
+; CHECK: G_STORE [[LD2]](i64), [[ADDR2]](p0) :: (store (i64) into stack + 8, align 1)
 define void @test_split_struct(ptr %ptr) {
   %struct = load [2 x i64], ptr %ptr
   call void @take_split_struct(ptr null, i64 1, i64 2, i64 3,

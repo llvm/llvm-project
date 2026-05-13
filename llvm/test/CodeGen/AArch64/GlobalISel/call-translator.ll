@@ -293,7 +293,8 @@ define void @take_128bit_struct(ptr %ptr, [2 x i64] %in) {
 ; CHECK: [[CST2:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
 ; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST2]](i64)
 ; CHECK: G_STORE [[LO]](i64), [[GEP2]](p0) :: (store (i64) into stack, align 1)
-; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST]](i64)
+; CHECK: [[CST3:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST3]](i64)
 ; CHECK: G_STORE [[HI]](i64), [[GEP3]](p0) :: (store (i64) into stack + 8, align 1)
 define void @test_split_struct(ptr %ptr) {
   %struct = load [2 x i64], ptr %ptr

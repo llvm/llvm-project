@@ -41,8 +41,9 @@ body:             |
     ; MIPS32-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTLZ]], [[C1]]
     ; MIPS32-NEXT: [[CTLZ1:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
     ; MIPS32-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[ADD]], [[CTLZ1]]
+    ; MIPS32-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32-NEXT: $v0 = COPY [[SELECT]](s32)
-    ; MIPS32-NEXT: $v1 = COPY [[C]](s32)
+    ; MIPS32-NEXT: $v1 = COPY [[C2]](s32)
     ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1

@@ -11,21 +11,31 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 define i8 @fshl_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: fshl_i8:
 ; CHECK:         .functype fshl_i8 (i32, i32) -> (i32)
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push5=, 5
-; CHECK-NEXT:    local.set 2, $pop5
-; CHECK-NEXT:    i32.const $push6=, 3
-; CHECK-NEXT:    local.set 3, $pop6
-; CHECK-NEXT:    local.get $push8=, 0
-; CHECK-NEXT:    local.get $push7=, 2
-; CHECK-NEXT:    i32.shl $push3=, $pop8, $pop7
-; CHECK-NEXT:    local.get $push9=, 1
-; CHECK-NEXT:    i32.const $push4=, 255
-; CHECK-NEXT:    i32.and $push1=, $pop9, $pop4
+; CHECK-NEXT:    i32.const $push7=, 5
+; CHECK-NEXT:    local.set 2, $pop7
+; CHECK-NEXT:    i32.const $push8=, 8
+; CHECK-NEXT:    local.set 3, $pop8
+; CHECK-NEXT:    local.get $push11=, 2
 ; CHECK-NEXT:    local.get $push10=, 3
-; CHECK-NEXT:    i32.shr_u $push2=, $pop1, $pop10
-; CHECK-NEXT:    i32.or $push0=, $pop3, $pop2
+; CHECK-NEXT:    i32.rem_u $push9=, $pop11, $pop10
+; CHECK-NEXT:    local.set 4, $pop9
+; CHECK-NEXT:    local.get $push14=, 3
+; CHECK-NEXT:    local.get $push13=, 4
+; CHECK-NEXT:    i32.sub $push12=, $pop14, $pop13
+; CHECK-NEXT:    local.set 5, $pop12
+; CHECK-NEXT:    local.get $push16=, 0
+; CHECK-NEXT:    local.get $push15=, 4
+; CHECK-NEXT:    i32.shl $push4=, $pop16, $pop15
+; CHECK-NEXT:    local.get $push17=, 1
+; CHECK-NEXT:    i32.const $push6=, 255
+; CHECK-NEXT:    i32.and $push1=, $pop17, $pop6
+; CHECK-NEXT:    local.get $push18=, 5
+; CHECK-NEXT:    i32.const $push5=, 255
+; CHECK-NEXT:    i32.and $push3=, $pop18, $pop5
+; CHECK-NEXT:    i32.shr_u $push2=, $pop1, $pop3
+; CHECK-NEXT:    i32.or $push0=, $pop4, $pop2
 ; CHECK-NEXT:    return $pop0
   %a = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 5)
   ret i8 %a
@@ -71,21 +81,31 @@ define i8 @fshlv_i8(i8 %x, i8 %y, i8 %z) {
 define i16 @fshl_i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: fshl_i16:
 ; CHECK:         .functype fshl_i16 (i32, i32) -> (i32)
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push5=, 13
-; CHECK-NEXT:    local.set 2, $pop5
-; CHECK-NEXT:    i32.const $push6=, 3
-; CHECK-NEXT:    local.set 3, $pop6
-; CHECK-NEXT:    local.get $push8=, 0
-; CHECK-NEXT:    local.get $push7=, 2
-; CHECK-NEXT:    i32.shl $push3=, $pop8, $pop7
-; CHECK-NEXT:    local.get $push9=, 1
-; CHECK-NEXT:    i32.const $push4=, 65535
-; CHECK-NEXT:    i32.and $push1=, $pop9, $pop4
+; CHECK-NEXT:    i32.const $push7=, 13
+; CHECK-NEXT:    local.set 2, $pop7
+; CHECK-NEXT:    i32.const $push8=, 16
+; CHECK-NEXT:    local.set 3, $pop8
+; CHECK-NEXT:    local.get $push11=, 2
 ; CHECK-NEXT:    local.get $push10=, 3
-; CHECK-NEXT:    i32.shr_u $push2=, $pop1, $pop10
-; CHECK-NEXT:    i32.or $push0=, $pop3, $pop2
+; CHECK-NEXT:    i32.rem_u $push9=, $pop11, $pop10
+; CHECK-NEXT:    local.set 4, $pop9
+; CHECK-NEXT:    local.get $push14=, 3
+; CHECK-NEXT:    local.get $push13=, 4
+; CHECK-NEXT:    i32.sub $push12=, $pop14, $pop13
+; CHECK-NEXT:    local.set 5, $pop12
+; CHECK-NEXT:    local.get $push16=, 0
+; CHECK-NEXT:    local.get $push15=, 4
+; CHECK-NEXT:    i32.shl $push4=, $pop16, $pop15
+; CHECK-NEXT:    local.get $push17=, 1
+; CHECK-NEXT:    i32.const $push6=, 65535
+; CHECK-NEXT:    i32.and $push1=, $pop17, $pop6
+; CHECK-NEXT:    local.get $push18=, 5
+; CHECK-NEXT:    i32.const $push5=, 65535
+; CHECK-NEXT:    i32.and $push3=, $pop18, $pop5
+; CHECK-NEXT:    i32.shr_u $push2=, $pop1, $pop3
+; CHECK-NEXT:    i32.or $push0=, $pop4, $pop2
 ; CHECK-NEXT:    return $pop0
   %a = call i16 @llvm.fshl.i16(i16 %x, i16 %y, i16 13)
   ret i16 %a
@@ -131,18 +151,26 @@ define i16 @fshlv_i16(i16 %x, i16 %y, i16 %z) {
 define i32 @fshl_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: fshl_i32:
 ; CHECK:         .functype fshl_i32 (i32, i32) -> (i32)
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    i32.const $push3=, 21
 ; CHECK-NEXT:    local.set 2, $pop3
-; CHECK-NEXT:    i32.const $push4=, 11
+; CHECK-NEXT:    i32.const $push4=, 32
 ; CHECK-NEXT:    local.set 3, $pop4
-; CHECK-NEXT:    local.get $push6=, 0
-; CHECK-NEXT:    local.get $push5=, 2
-; CHECK-NEXT:    i32.shl $push1=, $pop6, $pop5
-; CHECK-NEXT:    local.get $push8=, 1
-; CHECK-NEXT:    local.get $push7=, 3
-; CHECK-NEXT:    i32.shr_u $push2=, $pop8, $pop7
+; CHECK-NEXT:    local.get $push7=, 2
+; CHECK-NEXT:    local.get $push6=, 3
+; CHECK-NEXT:    i32.rem_u $push5=, $pop7, $pop6
+; CHECK-NEXT:    local.set 4, $pop5
+; CHECK-NEXT:    local.get $push10=, 3
+; CHECK-NEXT:    local.get $push9=, 4
+; CHECK-NEXT:    i32.sub $push8=, $pop10, $pop9
+; CHECK-NEXT:    local.set 5, $pop8
+; CHECK-NEXT:    local.get $push12=, 0
+; CHECK-NEXT:    local.get $push11=, 4
+; CHECK-NEXT:    i32.shl $push1=, $pop12, $pop11
+; CHECK-NEXT:    local.get $push14=, 1
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i32.shr_u $push2=, $pop14, $pop13
 ; CHECK-NEXT:    i32.or $push0=, $pop1, $pop2
 ; CHECK-NEXT:    return $pop0
   %a = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 21)
@@ -177,18 +205,26 @@ define i32 @fshlv_i32(i32 %x, i32 %y, i32 %z) {
 define i64 @fshl_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: fshl_i64:
 ; CHECK:         .functype fshl_i64 (i64, i64) -> (i64)
-; CHECK-NEXT:    .local i64, i64
+; CHECK-NEXT:    .local i64, i64, i64, i64
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    i64.const $push3=, 37
 ; CHECK-NEXT:    local.set 2, $pop3
-; CHECK-NEXT:    i64.const $push4=, 27
+; CHECK-NEXT:    i64.const $push4=, 64
 ; CHECK-NEXT:    local.set 3, $pop4
-; CHECK-NEXT:    local.get $push6=, 0
-; CHECK-NEXT:    local.get $push5=, 2
-; CHECK-NEXT:    i64.shl $push1=, $pop6, $pop5
-; CHECK-NEXT:    local.get $push8=, 1
-; CHECK-NEXT:    local.get $push7=, 3
-; CHECK-NEXT:    i64.shr_u $push2=, $pop8, $pop7
+; CHECK-NEXT:    local.get $push7=, 2
+; CHECK-NEXT:    local.get $push6=, 3
+; CHECK-NEXT:    i64.rem_u $push5=, $pop7, $pop6
+; CHECK-NEXT:    local.set 4, $pop5
+; CHECK-NEXT:    local.get $push10=, 3
+; CHECK-NEXT:    local.get $push9=, 4
+; CHECK-NEXT:    i64.sub $push8=, $pop10, $pop9
+; CHECK-NEXT:    local.set 5, $pop8
+; CHECK-NEXT:    local.get $push12=, 0
+; CHECK-NEXT:    local.get $push11=, 4
+; CHECK-NEXT:    i64.shl $push1=, $pop12, $pop11
+; CHECK-NEXT:    local.get $push14=, 1
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i64.shr_u $push2=, $pop14, $pop13
 ; CHECK-NEXT:    i64.or $push0=, $pop1, $pop2
 ; CHECK-NEXT:    return $pop0
   %a = call i64 @llvm.fshl.i64(i64 %x, i64 %y, i64 37)

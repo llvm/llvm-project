@@ -17,11 +17,11 @@ declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 define i64 @ctlz_i64(i64 %a) {
 ; MIPS32-LABEL: ctlz_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ori $3, $zero, 0
 ; MIPS32-NEXT:    clz $1, $4
 ; MIPS32-NEXT:    addiu $1, $1, 32
 ; MIPS32-NEXT:    clz $2, $5
 ; MIPS32-NEXT:    movz $2, $1, $5
+; MIPS32-NEXT:    ori $3, $zero, 0
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

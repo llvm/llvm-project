@@ -112,15 +112,16 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ; CHECKO0-NEXT:    // kill: def $q1 killed $h1
 ; CHECKO0-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECKO0-NEXT:    fmov w0, s1
-; CHECKO0-NEXT:    mov w10, wzr
+; CHECKO0-NEXT:    mov w8, wzr
 ; CHECKO0-NEXT:    mov w9, w0
-; CHECKO0-NEXT:    mov w8, w10
+; CHECKO0-NEXT:    // kill: def $x8 killed $w8
 ; CHECKO0-NEXT:    bfi x9, x8, #32, #32
 ; CHECKO0-NEXT:    cnt v0.16b, v0.16b
 ; CHECKO0-NEXT:    uaddlv h0, v0.16b
 ; CHECKO0-NEXT:    // kill: def $q0 killed $h0
 ; CHECKO0-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECKO0-NEXT:    fmov w0, s0
+; CHECKO0-NEXT:    mov w10, wzr
 ; CHECKO0-NEXT:    mov w8, w0
 ; CHECKO0-NEXT:    // kill: def $x10 killed $w10
 ; CHECKO0-NEXT:    bfi x8, x10, #32, #32
@@ -234,15 +235,16 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ; GISELO0-NEXT:    // kill: def $q1 killed $h1
 ; GISELO0-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; GISELO0-NEXT:    fmov w0, s1
-; GISELO0-NEXT:    mov w10, wzr
+; GISELO0-NEXT:    mov w8, wzr
 ; GISELO0-NEXT:    mov w9, w0
-; GISELO0-NEXT:    mov w8, w10
+; GISELO0-NEXT:    // kill: def $x8 killed $w8
 ; GISELO0-NEXT:    bfi x9, x8, #32, #32
 ; GISELO0-NEXT:    cnt v0.16b, v0.16b
 ; GISELO0-NEXT:    uaddlv h0, v0.16b
 ; GISELO0-NEXT:    // kill: def $q0 killed $h0
 ; GISELO0-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; GISELO0-NEXT:    fmov w0, s0
+; GISELO0-NEXT:    mov w10, wzr
 ; GISELO0-NEXT:    mov w8, w0
 ; GISELO0-NEXT:    // kill: def $x10 killed $w10
 ; GISELO0-NEXT:    bfi x8, x10, #32, #32
@@ -268,13 +270,13 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; CHECKO0-NEXT:    cnt v0.16b, v0.16b
 ; CHECKO0-NEXT:    uaddlv h0, v0.16b
 ; CHECKO0-NEXT:    // kill: def $q0 killed $h0
-; CHECKO0-NEXT:    mov x1, xzr
 ; CHECKO0-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECKO0-NEXT:    fmov w0, s0
 ; CHECKO0-NEXT:    mov w8, wzr
 ; CHECKO0-NEXT:    // kill: def $x0 killed $w0
 ; CHECKO0-NEXT:    // kill: def $x8 killed $w8
 ; CHECKO0-NEXT:    bfi x0, x8, #32, #32
+; CHECKO0-NEXT:    mov x1, xzr
 ; CHECKO0-NEXT:    ret
 ;
 ; NEON-LABEL: popcount1x128:
@@ -337,13 +339,13 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; GISELO0-NEXT:    cnt v0.16b, v0.16b
 ; GISELO0-NEXT:    uaddlv h0, v0.16b
 ; GISELO0-NEXT:    // kill: def $q0 killed $h0
-; GISELO0-NEXT:    mov x1, xzr
 ; GISELO0-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; GISELO0-NEXT:    fmov w0, s0
 ; GISELO0-NEXT:    mov w8, wzr
 ; GISELO0-NEXT:    // kill: def $x0 killed $w0
 ; GISELO0-NEXT:    // kill: def $x8 killed $w8
 ; GISELO0-NEXT:    bfi x0, x8, #32, #32
+; GISELO0-NEXT:    mov x1, xzr
 ; GISELO0-NEXT:    ret
 Entry:
   %1 = tail call <1 x i128> @llvm.ctpop.v1i128(<1 x i128> %0)

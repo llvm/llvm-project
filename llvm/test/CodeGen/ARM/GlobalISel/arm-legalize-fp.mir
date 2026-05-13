@@ -1722,7 +1722,8 @@ body:             |
     ; SOFT-DEFAULT: BL{{.*}} &__ltsf2, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[RET2]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[ZERO1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[RET2]](s32), [[ZERO1]]
     ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R1]]
     ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R2]]
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = G_OR [[RET1]], [[RET2]]
@@ -1779,7 +1780,8 @@ body:             |
     ; SOFT-DEFAULT: BL{{.*}} &__unordsf2, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[RET2]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[ZERO1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[RET2]](s32), [[ZERO1]]
     ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R1]]
     ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R2]]
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = G_OR [[RET1]], [[RET2]]
@@ -2627,7 +2629,8 @@ body:             |
     ; SOFT-DEFAULT: BL{{.*}} &__ltdf2, {{.*}}, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
     ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[RET2]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[ZERO1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[RET2]](s32), [[ZERO1]]
     ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R1]]
     ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R2]]
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = G_OR [[RET1]], [[RET2]]
@@ -2700,7 +2703,8 @@ body:             |
     ; SOFT-DEFAULT: BL{{.*}} &__unorddf2, {{.*}}, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
     ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[RET2]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[ZERO1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[RET2]](s32), [[ZERO1]]
     ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R1]]
     ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R2]]
     ; SOFT-AEABI:[[R:%[0-9]+]]:_(s32) = G_OR [[RET1]], [[RET2]]
