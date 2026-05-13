@@ -13,6 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang::lifetimes {
@@ -139,9 +140,19 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
   if (RunningUnderLifetimeSafety &&
       isGslPointerType(Callee->getFunctionObjectParameterType()) &&
       isReferenceOrPointerLikeType(Callee->getReturnType())) {
-    if (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star ||
-        Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Arrow)
+    // Propagate origins through GSL pointer arithmetic and dereference
+    // operators.
+    switch (Callee->getOverloadedOperator()) {
+    case OO_Arrow:
+    case OO_Star:
+    case OO_Plus:
+    case OO_Minus:
+    case OO_PlusPlus:
+    case OO_MinusMinus:
       return true;
+    default:
+      break;
+    }
     if (Callee->getIdentifier() &&
         (IteratorMembers.contains(Callee->getName()) ||
          InnerPointerGetters.contains(Callee->getName())))
@@ -230,6 +241,22 @@ bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   return false;
 }
 
+bool shouldTrackSecondArgument(const FunctionDecl *FD) {
+  if (FD->getNumParams() < 2)
+    return false;
+  const auto *RD = FD->getParamDecl(1)->getType()->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  // For free-standing `+`/`-` operators annotated with `gsl::Pointer`, track
+  // the second parameter when its type matches the return type.
+  return RD->hasAttr<PointerAttr>() &&
+         (FD->getOverloadedOperator() == OO_Plus ||
+          FD->getOverloadedOperator() == OO_Minus) &&
+         ASTContext::hasSameUnqualifiedType(FD->getParamDecl(1)->getType(),
+                                            FD->getReturnType()) &&
+         !isa<CXXMethodDecl>(FD);
+}
+
 template <typename T> static bool isRecordWithAttr(QualType Type) {
   auto *RD = Type->getAsCXXRecordDecl();
   if (!RD)
@@ -265,6 +292,12 @@ static StringRef getName(const CXXRecordDecl &RD) {
     return CTSD->getSpecializedTemplate()->getName();
   if (RD.getIdentifier())
     return RD.getName();
+  return "";
+}
+
+static StringRef getName(const FunctionDecl &FD) {
+  if (FD.getIdentifier())
+    return FD.getName();
   return "";
 }
 
@@ -385,6 +418,12 @@ bool isInvalidationMethod(const CXXMethodDecl &MD) {
     return false;
 
   return InvalidatingMethods->contains(MD.getName());
+}
+
+bool destructsFirstArg(const FunctionDecl &FD) {
+  if (isa<CXXDestructorDecl>(FD))
+    return true;
+  return isInStlNamespace(&FD) && getName(FD) == "destroy_at";
 }
 
 bool isStdCallableWrapperType(const CXXRecordDecl *RD) {

@@ -1548,6 +1548,42 @@ private:
       builder->genIfThen(loc, isAllocated)
           .genThen([&]() { copyData(lhs, rhs); })
           .end();
+    } else if (!isAllocatable &&
+               flags.test(Fortran::semantics::Symbol::Flag::OmpCopyIn) &&
+               hlfir::mayHaveAllocatableComponent(lhs.getType())) {
+      // For copyin of derived types with allocatable components where the
+      // variable itself is not allocatable: the threadprivate copy's
+      // allocatable component descriptors may be uninitialized (e.g.,
+      // zero-filled by the OpenMP runtime). Use temporary_lhs semantics
+      // which routes through AssignTemporary at runtime. AssignTemporary
+      // first initializes the LHS descriptor metadata (setting
+      // attribute=CFI_attribute_allocatable, base_addr=nullptr for
+      // allocatable components via the Initialize runtime call), then
+      // performs the assignment with MaybeReallocate semantics for proper
+      // deep copy of allocatable components.
+      //
+      // On the master thread, the LHS and RHS resolve to the same
+      // threadprivate storage, so we must skip the temporary_lhs path
+      // (which would destroy the source data via Initialize before the
+      // copy). Use a runtime address comparison to distinguish threads.
+      mlir::Value lhsAddr =
+          fir::ConvertOp::create(*builder, loc, builder->getIndexType(), lhs);
+      mlir::Value rhsAddr =
+          fir::ConvertOp::create(*builder, loc, builder->getIndexType(), rhs);
+      mlir::Value sameAddr = mlir::arith::CmpIOp::create(
+          *builder, loc, mlir::arith::CmpIPredicate::eq, lhsAddr, rhsAddr);
+      builder->genIfThenElse(loc, sameAddr)
+          .genThen([&]() {
+            // Master thread: lhs and rhs are the same, nothing to do.
+          })
+          .genElse([&]() {
+            hlfir::Entity r = hlfir::loadTrivialScalar(loc, *builder, rhs);
+            hlfir::AssignOp::create(*builder, loc, r, lhs,
+                                    /*realloc=*/false,
+                                    /*keep_lhs_length_if_realloc=*/false,
+                                    /*temporary_lhs=*/true);
+          })
+          .end();
     } else {
       copyData(lhs, rhs);
     }
