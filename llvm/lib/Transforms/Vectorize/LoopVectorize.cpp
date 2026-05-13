@@ -994,16 +994,14 @@ public:
     InstWidening Kind;
     Function *Variant;
     Intrinsic::ID IID;
-    std::optional<unsigned> MaskPos;
     InstructionCost Cost;
   };
 
   void setCallWideningDecision(CallInst *CI, ElementCount VF, InstWidening Kind,
                                Function *Variant, Intrinsic::ID IID,
-                               std::optional<unsigned> MaskPos,
                                InstructionCost Cost) {
     assert(!VF.isScalar() && "Expected vector VF");
-    CallWideningDecisions[{CI, VF}] = {Kind, Variant, IID, MaskPos, Cost};
+    CallWideningDecisions[{CI, VF}] = {Kind, Variant, IID, Cost};
   }
 
   CallWideningDecision getCallWideningDecision(CallInst *CI,
@@ -1011,7 +1009,7 @@ public:
     assert(!VF.isScalar() && "Expected vector VF");
     auto I = CallWideningDecisions.find({CI, VF});
     if (I == CallWideningDecisions.end())
-      return {CM_Unknown, nullptr, Intrinsic::not_intrinsic, std::nullopt, 0};
+      return {CM_Unknown, nullptr, Intrinsic::not_intrinsic, 0};
     return I->second;
   }
 
@@ -4970,8 +4968,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
                              ForcedScalar->second.contains(CI)) ||
                             isUniformAfterVectorization(CI, VF))) {
         setCallWideningDecision(CI, VF, CM_Scalarize, nullptr,
-                                Intrinsic::not_intrinsic, std::nullopt,
-                                ScalarCost);
+                                Intrinsic::not_intrinsic, ScalarCost);
         continue;
       }
 
@@ -4987,7 +4984,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         if (auto RedCost = getReductionPatternCost(CI, VF, RetTy)) {
           setCallWideningDecision(CI, VF, CM_IntrinsicCall, nullptr,
                                   getVectorIntrinsicIDForCall(CI, TLI),
-                                  std::nullopt, *RedCost);
+                                  *RedCost);
           continue;
         }
 
@@ -5072,8 +5069,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         Decision = CM_IntrinsicCall;
       }
 
-      setCallWideningDecision(CI, VF, Decision, VecFunc, IID,
-                              FuncInfo.getParamIndexForOptionalMask(), Cost);
+      setCallWideningDecision(CI, VF, Decision, VecFunc, IID, Cost);
     }
   }
 }
@@ -6464,7 +6460,6 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
                                       VPI->getDebugLoc());
 
   Function *Variant = nullptr;
-  std::optional<unsigned> MaskPos;
   // Is better to call a vectorized version of the function than to to scalarize
   // the call?
   auto ShouldUseVectorCall = LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -6487,7 +6482,6 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
             CM.getCallWideningDecision(CI, VF);
         if (Decision.Kind == LoopVectorizationCostModel::CM_VectorCall) {
           Variant = Decision.Variant;
-          MaskPos = Decision.MaskPos;
           return true;
         }
 
@@ -6495,7 +6489,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
       },
       Range);
   if (ShouldUseVectorCall) {
-    if (MaskPos.has_value()) {
+    if (Variant->getFunctionType()->getNumParams() > Ops.size()) {
       // We have 2 cases that would require a mask:
       //   1) The call needs to be predicated, either due to a conditional
       //      in the scalar loop or use of an active lane mask with
@@ -6505,7 +6499,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
       //      synthesize an all-true mask.
       VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
 
-      Ops.insert(Ops.begin() + *MaskPos, Mask);
+      Ops.push_back(Mask);
     }
 
     Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
@@ -7781,16 +7775,28 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
           // reduction start value in a final subtraction. Update it to use the
           // resume value from the main vector loop.
           if (PhiR->getVFScaleFactor() > 1 &&
-              PhiR->getRecurrenceKind() == RecurKind::Sub) {
+              RecurrenceDescriptor::isSubRecurrenceKind(
+                  PhiR->getRecurrenceKind())) {
             auto *Sub = cast<VPInstruction>(RdxResult->getSingleUser());
-            assert(Sub->getOpcode() == Instruction::Sub && "Unexpected opcode");
+            assert((Sub->getOpcode() == Instruction::Sub ||
+                    Sub->getOpcode() == Instruction::FSub) &&
+                   "Unexpected opcode");
             assert(isa<VPIRValue>(Sub->getOperand(0)) &&
                    "Expected operand to match the original start value of the "
                    "reduction");
-            assert(VPlanPatternMatch::match(VPI->getOperand(0),
-                                            VPlanPatternMatch::m_ZeroInt()) &&
-                   "Expected start value for partial sub-reduction to start at "
-                   "zero");
+            // For integer sub-reductions, verify start value is zero.
+            // For FP sub-reductions, verify start value is negative zero.
+            [[maybe_unused]] auto StartValueIsIdentity = [&] {
+              Value *IdentityValue = getRecurrenceIdentity(
+                  PhiR->getRecurrenceKind(), ResumeV->getType(),
+                  PhiR->getFastMathFlags());
+              auto *StartValue = dyn_cast<VPIRValue>(VPI->getOperand(0));
+              return StartValue && StartValue->getValue() == IdentityValue;
+            };
+            assert(StartValueIsIdentity() &&
+                   "Expected start value for partial sub-reduction to be zero "
+                   "(or negative zero)");
+
             Sub->setOperand(0, StartVal);
           } else
             VPI->setOperand(0, StartVal);
