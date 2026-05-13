@@ -19,7 +19,6 @@
 
 namespace llvm::omp::target::plugin {
 
-
 Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   const auto &l0Device = L0DeviceTy::makeL0Device(Program.getDevice());
   auto &KernelPR = getProperties();
@@ -85,7 +84,6 @@ Error L0KernelTy::initImpl(GenericDeviceTy &GenericDevice,
 
   return Plugin::success();
 }
-
 
 static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
                                         ze_kernel_handle_t zeKernel,
@@ -222,7 +220,6 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
 
   CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), GroupSizes[0],
                     GroupSizes[1], GroupSizes[2]);
-
 
   return Plugin::success();
 }
