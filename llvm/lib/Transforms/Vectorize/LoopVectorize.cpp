@@ -5014,7 +5014,8 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
           case VFParamKind::OMP_Uniform: {
             Value *ScalarParam = CI->getArgOperand(Param.ParamPos);
             // Make sure the scalar parameter in the loop is invariant.
-            if (!PSE.getSE()->isLoopInvariant(PSE.getSCEV(ScalarParam),
+            if (!PSE.getSE()->isSCEVable(ScalarParam->getType()) ||
+                !PSE.getSE()->isLoopInvariant(PSE.getSCEV(ScalarParam),
                                               TheLoop))
               ParamsOk = false;
             break;
@@ -5026,7 +5027,8 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
             // TODO: do we need to figure out the cost of an extract to get the
             // first lane? Or do we hope that it will be folded away?
             ScalarEvolution *SE = PSE.getSE();
-            if (!match(SE->getSCEV(ScalarParam),
+            if (!SE->isSCEVable(ScalarParam->getType()) ||
+                !match(SE->getSCEV(ScalarParam),
                        m_scev_AffineAddRec(
                            m_SCEV(), m_scev_SpecificSInt(Param.LinearStepOrPos),
                            m_SpecificLoop(TheLoop))))
