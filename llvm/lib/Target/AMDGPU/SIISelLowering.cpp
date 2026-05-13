@@ -10689,10 +10689,10 @@ SDValue SITargetLowering::packBytesToI32(SelectionDAG &DAG, const SDLoc &SL,
                                          SDValue Src) {
   assert(Src.getValueType() == MVT::v2i8 &&
          "packBytesToI32 expects a v2i8 source");
-  // Widen v2i8 to v4i8 with the high half undef, then bitcast to i32. This
+  // Widen v2i8 to v4i8 with the high half poison, then bitcast to i32. This
   // selects to v_perm_b32, packing two i8 values into low 16 bits of an i32.
   SDValue Wide = DAG.getNode(ISD::CONCAT_VECTORS, SL, MVT::v4i8, Src,
-                             DAG.getUNDEF(MVT::v2i8));
+                             DAG.getPOISON(MVT::v2i8));
   return DAG.getNode(ISD::BITCAST, SL, MVT::i32, Wide);
 }
 
@@ -10730,9 +10730,8 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
   APFloatBase::Semantics FPSemantic =
       static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
   if (FPSemantic != APFloatBase::S_Float8E4M3FN &&
-      FPSemantic != APFloatBase::S_Float8E5M2) {
+      FPSemantic != APFloatBase::S_Float8E5M2)
     return SDValue();
-  }
   const bool IsBF8 = FPSemantic == APFloatBase::S_Float8E5M2;
 
   // Defer constant inputs to generic bit-twiddling expansion.

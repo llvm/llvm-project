@@ -711,6 +711,11 @@ class Cvt_F32_F8_Pat<SDPatternOperator node, int index,
     (inst_sdwa 0, $src, 0, 0, index)
 >;
 
+def cvt_from_fp8 : PatFrag<(ops node:$src),
+                           (convert_from_arbitrary_fp node:$src, Float8E4M3FN)>;
+def cvt_from_bf8 : PatFrag<(ops node:$src),
+                           (convert_from_arbitrary_fp node:$src, Float8E5M2)>;
+
 let SubtargetPredicate = HasFP8ConversionInsts in {
 let OtherPredicates = [HasCvtFP8VOP1Bug] in {
   def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
@@ -733,13 +738,9 @@ foreach Index = [1, 2, 3] in {
 }
 } // End OtherPredicates = [HasSDWA]
 
-// llvm.convert.from.arbitrary.fp i8 -> f32 scalar patterns.
-// gfx950 has SDWA and uses the e32 form.
 let OtherPredicates = [HasOCPFP8ConversionInsts, HasSDWA] in {
-  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, Float8E4M3FN)),
-               (V_CVT_F32_FP8_e32 $src)>;
-  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, Float8E5M2)),
-               (V_CVT_F32_BF8_e32 $src)>;
+  def : GCNPat<(f32 (cvt_from_fp8 i32:$src)), (V_CVT_F32_FP8_e32 $src)>;
+  def : GCNPat<(f32 (cvt_from_bf8 i32:$src)), (V_CVT_F32_BF8_e32 $src)>;
 }
 
 } // End SubtargetPredicate = HasFP8ConversionInsts
@@ -794,11 +795,11 @@ def V_CVT_F16_F8_Fake16_Profile : VOP3_Profile_Fake16<V_CVT_F16_F8_Profile>;
 let SubtargetPredicate = isGFX11Plus, OtherPredicates = [HasFP8ConversionInsts],
     mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
   let SubtargetPredicate = isGFX11PlusNot12_50 in
-    defm V_CVT_F32_FP8_OP_SEL    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>>;
+    defm V_CVT_F32_FP8_OP_SEL    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>, cvt_from_fp8>;
   let SubtargetPredicate = isGFX125xOnly in
-    defm V_CVT_F32_FP8_gfx1250   : VOP1Inst<"v_cvt_f32_fp8_gfx1250", VOPProfile_Base_CVT_F_F8_ByteSel<f32, 1>>;
+    defm V_CVT_F32_FP8_gfx1250   : VOP1Inst<"v_cvt_f32_fp8_gfx1250", VOPProfile_Base_CVT_F_F8_ByteSel<f32, 1>, cvt_from_fp8>;
 
-  defm V_CVT_F32_BF8_OP_SEL    : VOP1Inst<"v_cvt_f32_bf8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>>;
+  defm V_CVT_F32_BF8_OP_SEL    : VOP1Inst<"v_cvt_f32_bf8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>, cvt_from_bf8>;
 
   let True16Predicate = UseFakeTrue16Insts in {
     defm V_CVT_PK_F32_FP8_fake16 : VOP1Inst<"v_cvt_pk_f32_fp8_fake16", VOPProfile_Base_CVT_PK_F32_F8_fake16>;
@@ -829,18 +830,6 @@ let OtherPredicates = [HasFP8ConversionInsts] in {
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_bf8, V_CVT_F32_BF8_OP_SEL_e64>;
 }
 
-// llvm.convert.from.arbitrary.fp i8 -> f32 OCP scalar patterns for GFX11+.
-// GFX11+ doesn't have SDWA, so must use OP_SEL form.
-let OtherPredicates = [HasOCPFP8ConversionInsts, isGFX11Plus, isNotGFX1250Plus] in
-  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, Float8E4M3FN)),
-               (V_CVT_F32_FP8_OP_SEL_e64 $src, 0)>;
-let OtherPredicates = [HasOCPFP8ConversionInsts, isGFX1250Plus] in
-  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, Float8E4M3FN)),
-               (V_CVT_F32_FP8_gfx1250_e64 $src, DSTCLAMP.NONE, 0)>;
-let OtherPredicates = [HasOCPFP8ConversionInsts, isGFX11Plus] in
-  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, Float8E5M2)),
-               (V_CVT_F32_BF8_OP_SEL_e64 $src, 0)>;
-
 class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
     VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
     (v2f32 (node i32:$src, index)),
@@ -868,9 +857,11 @@ def VOPProfile_CVT_PK_F16_F8_fake16 : VOP3_Profile_Fake16<VOPProfile_CVT_PK_F16_
 let SubtargetPredicate = HasFP8F16ConversionInsts in {
   let mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
     defm V_CVT_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_f16_fp8",
-      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile>;
+      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile,
+      cvt_from_fp8>;
     defm V_CVT_F16_BF8 : VOP1Inst_t16_with_profiles<"v_cvt_f16_bf8",
-      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile>;
+      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile,
+      cvt_from_bf8>;
     defm V_CVT_PK_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_fp8",
       VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
       int_amdgcn_cvt_pk_f16_fp8>;
@@ -889,22 +880,6 @@ let SubtargetPredicate = HasFP8F16ConversionInsts in {
   }
 
 } // End SubtargetPredicate = HasFP8F16ConversionInsts
-
-// llvm.convert.from.arbitrary.fp i8 -> f16 OCP scalar patterns.
-let OtherPredicates = [HasOCPFP8ConversionInsts, HasFP8F16ConversionInsts] in {
-  let True16Predicate = UseRealTrue16Insts in {
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src, Float8E4M3FN)),
-                 (V_CVT_F16_FP8_t16_e64 0, $src, 0)>;
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src, Float8E5M2)),
-                 (V_CVT_F16_BF8_t16_e64 0, $src, 0)>;
-  }
-  let True16Predicate = UseFakeTrue16Insts in {
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src, Float8E4M3FN)),
-                 (V_CVT_F16_FP8_fake16_e64 0, $src, 0)>;
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src, Float8E5M2)),
-                 (V_CVT_F16_BF8_fake16_e64 0, $src, 0)>;
-  }
-}
 
 let SubtargetPredicate = isGFX1250Plus in {
   defm V_SAT_PK4_I4_I8 : VOP1Inst_t16<"v_sat_pk4_i4_i8", VOP1_I16_I32, int_amdgcn_sat_pk4_i4_i8>;
