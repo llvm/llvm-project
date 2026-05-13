@@ -4436,11 +4436,14 @@ func.func @negative_read_not_empty_tensor(%t: tensor<128xf16>) -> vector<128xf16
 
 // -----
 
-// transfer_read from tensor.empty wrapped in vector.mask: pattern must not fire.
-// CHECK-LABEL: func.func @negative_read_empty_vector_mask
-// CHECK:         tensor.empty
-// CHECK:         vector.mask
-func.func @negative_read_empty_vector_mask(%mask: vector<128xi1>) -> vector<128xf16> {
+// transfer_read from tensor.empty wrapped in vector.mask -> broadcast(pad).
+// CHECK-LABEL: func.func @fold_read_empty_vector_mask
+// CHECK-NOT:     tensor.empty
+// CHECK-NOT:     vector.transfer_read
+// CHECK-NOT:     vector.mask
+// CHECK:         %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<128xf16>
+// CHECK:         return %[[CST]]
+func.func @fold_read_empty_vector_mask(%mask: vector<128xi1>) -> vector<128xf16> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f16
   %e = tensor.empty() : tensor<128xf16>
@@ -4483,13 +4486,11 @@ func.func @fold_read_empty_unmasked_inbounds() -> vector<128xf16> {
 
 // -----
 
-// Unmasked, out-of-bounds read from tensor.empty -> broadcast(pad).
-// CHECK-LABEL: func.func @fold_read_empty_unmasked_outofbounds
-// CHECK-NOT:     tensor.empty
-// CHECK-NOT:     vector.transfer_read
-// CHECK:         %[[PAD:.+]] = arith.constant dense<0.000000e+00> : vector<256xf16>
-// CHECK:         return %[[PAD]]
-func.func @fold_read_empty_unmasked_outofbounds() -> vector<256xf16> {
+// Out-of-bounds read from tensor.empty: pattern must not fire.
+// CHECK-LABEL: func.func @negative_read_empty_outofbounds
+// CHECK:         tensor.empty
+// CHECK:         vector.transfer_read
+func.func @negative_read_empty_outofbounds() -> vector<256xf16> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f16
   %e = tensor.empty() : tensor<128xf16>

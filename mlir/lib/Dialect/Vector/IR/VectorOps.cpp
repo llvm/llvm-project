@@ -25,6 +25,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -5530,7 +5531,7 @@ static AffineMap inverseWithUnusedDims(AffineMap map) {
 
 namespace {
 
-/// Folds transfer_read(tensor.empty).
+/// Folds transfer_read(tensor.empty) when fully in-bounds.
 ///
 /// Since tensor.empty has unspecified contents, reading from it produces
 /// an unspecified value, which is exactly the semantics of ub.poison.
@@ -5541,19 +5542,23 @@ namespace {
 ///   ->
 ///     %r = ub.poison : vector<128xf16>
 ///
-///   Case 2 — has mask, or not fully in-bounds (or both):
-///     In-bounds lanes read unspecified (poison-refinable) contents from
-///     tensor.empty, so we may replace them with pad. Out-of-bounds lanes
-///     already produce pad. For masked in-bounds reads, a
-///     select(mask, poison, pad) is also equivalent to pad because poison
-///     can be refined to any value.
+///   Case 2 — fully in-bounds, masked:
+///     %e = tensor.empty() : tensor<128xf16>
+///     %r = vector.transfer_read %e[%c0], %pad, %mask {in_bounds = [true]}
 ///   ->
 ///     %r = vector.broadcast %pad : f16 to vector<128xf16>
-struct FoldTransferReadOfEmptyTensor : public OpRewritePattern<TransferReadOp> {
-  using Base::Base;
+///
+///     In-bounds lanes read unspecified (poison-refinable) contents from
+///     tensor.empty, so we may replace them with pad. For masked in-bounds
+///     reads, a select(mask, poison, pad) is also equivalent to pad because
+///     poison can be refined to any value.
+struct FoldTransferReadOfEmptyTensor
+    : public vector::MaskableOpRewritePattern<TransferReadOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(TransferReadOp op,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(TransferReadOp op, MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
     if (!op.hasPureTensorSemantics())
       return failure();
 
@@ -5563,22 +5568,18 @@ struct FoldTransferReadOfEmptyTensor : public OpRewritePattern<TransferReadOp> {
     if (!op.getPermutationMap().isMinorIdentity())
       return failure();
 
-    if (op.isMasked())
+    if (op.hasOutOfBoundsDim())
       return failure();
 
-    bool fullyInBounds =
-        llvm::all_of(op.getInBoundsValues(), [](bool v) { return v; });
-
-    if (!op.getMask() && fullyInBounds) {
-      rewriter.replaceOp(
-          op, ub::PoisonOp::create(rewriter, op.getLoc(), op.getType()));
-      return success();
+    if (!maskingOp && !op.getMask()) {
+      return ub::PoisonOp::create(rewriter, op.getLoc(), op.getType())
+          ->getResult(0);
     }
 
-    Value rPad = op.getPadding();
-    rewriter.replaceOp(op, vector::BroadcastOp::create(rewriter, rPad.getLoc(),
-                                                       op.getType(), rPad));
-    return success();
+    Value pad = op.getPadding();
+    return vector::BroadcastOp::create(rewriter, pad.getLoc(), op.getType(),
+                                       pad)
+        ->getResult(0);
   }
 };
 
