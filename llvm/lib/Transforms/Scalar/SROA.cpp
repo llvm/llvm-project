@@ -5094,9 +5094,18 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 /// packed. This can sometimes eliminate allocas because structs cannot get
 /// promoted to LLVM values, but vectors can.
 ///
-/// We only want to do this if this eliminates an alloca that wouldn't have been
-/// eliminated by memcpyopt, so this transformation only applies on the SROA
-/// pass in the pipeline after memcpyopt. We gate this transformation by the
+/// We only apply this transformation when all users of the alloca are memory intrinsics.
+/// Otherwise, if there is a load or store of some other type to the partition, SROA
+/// would select that type.
+///
+/// Applying this transformation too early may hinder memcpyopt, which may generate
+/// better code when eliminating allocas. For example, see `struct-to-vector-fp-store-only-tail.ll`, which
+/// demonstrates that applying this before memcpyopt can initialize previously uninitialized memory when the
+/// alloca gets promoted to an SSA value. For another example, see `struct-to-vector-before-memcpyopt.ll`, which  
+/// demonstrates that applying this before memcpyopt can result in promoting an alloca so that we load a tempory
+/// value instead of copying the tempory value into memory, whereas memcpyopt eliminates the tempory altogether.
+///
+/// As such, we only apply this transformation after memcpyopt has run. We gate this transformation by the
 /// "CanonicalizeStructToVector" pass option.
 static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
                                                       Partition &P,
