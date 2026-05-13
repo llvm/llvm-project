@@ -1,9 +1,6 @@
-; RUN: opt -passes=sroa -S %s | FileCheck %s
+; RUN: opt -passes='sroa<canonicalize-struct-to-vector>' -S %s | FileCheck %s
 ; NOTE: Do not autogenerate. This test intentionally uses targeted CHECK
 ; patterns for clarity.
-
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 ; When SROA splits { ptr, i64, i64, i64 } into [0,8), [8,16), [16,32),
 ; the [16,32) partition type from getTypePartition is { i64, i64 }.
@@ -11,8 +8,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; because its remaining users are all mem intrinsics.
 
 ; CHECK-LABEL: define void @test_subpartition_type(
-; CHECK: %a.sroa.6.sroa.0.0.copyload = load <2 x i64>, ptr %a.sroa.6.0.src.sroa_idx, align 8
-; CHECK: store <2 x i64> %a.sroa.6.sroa.0.0.copyload, ptr %a.sroa.6.0.dst.sroa_idx, align 8
+; CHECK: %a.sroa.6.0.copyload = load <2 x i64>, ptr %a.sroa.6.0.src.sroa_idx, align 8
+; CHECK: store <2 x i64> %a.sroa.6.0.copyload, ptr %a.sroa.6.0.dst.sroa_idx, align 8
 define void @test_subpartition_type(ptr %src, ptr %dst) {
 entry:
   %a = alloca { ptr, i64, i64, i64 }, align 8
