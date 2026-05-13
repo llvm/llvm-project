@@ -10734,10 +10734,6 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
     return SDValue();
   const bool IsBF8 = FPSemantic == APFloatBase::S_Float8E5M2;
 
-  // Defer constant inputs to generic bit-twiddling expansion.
-  if (DAG.isConstantIntBuildVectorOrConstantInt(Op.getOperand(0)))
-    return SDValue();
-
   EVT DstVT = Op.getValueType();
   if (!DstVT.isVector()) {
     SDValue Src = Op.getOperand(0);

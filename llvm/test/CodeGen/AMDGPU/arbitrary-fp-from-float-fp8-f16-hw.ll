@@ -120,15 +120,3 @@ define <4 x half> @from_bf8_v4f16(<4 x i8> %x) {
   %r = call <4 x half> @llvm.convert.from.arbitrary.fp.v4f16.v4i8(<4 x i8> %x, metadata !"Float8E5M2")
   ret <4 x half> %r
 }
-
-; Constant input bypasses HW-specific path.
-define half @from_fp8_f16_const() {
-; CHECK-LABEL: from_fp8_f16_const:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_mov_b16_e32 v0.l, 0x3c00
-; CHECK-NEXT:    s_set_pc_i64 s[30:31]
-  %r = call half @llvm.convert.from.arbitrary.fp.f16.i8(i8 56, metadata !"Float8E4M3FN")
-  ret half %r
-}
