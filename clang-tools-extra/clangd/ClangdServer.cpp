@@ -936,12 +936,27 @@ void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
 }
 
 void ClangdServer::outgoingCalls(
-    const CallHierarchyItem &Item,
+    PathRef File, const CallHierarchyItem &Item, bool ComputeReferenceTags,
     Callback<std::vector<CallHierarchyOutgoingCall>> CB) {
-  WorkScheduler->run("Outgoing Calls", "",
-                     [CB = std::move(CB), Item, this]() mutable {
-                       CB(clangd::outgoingCalls(Item, Index));
-                     });
+  if (!ComputeReferenceTags) {
+    // Fast path: reference tags are not requested, so no AST is needed.
+    // Dispatch as an index-only task to avoid unnecessary parse latency.
+    WorkScheduler->run("Outgoing Calls", "",
+                       [Item, CB = std::move(CB), this]() mutable {
+                         CB(clangd::outgoingCalls(Item, Index,
+                                                  /*AST=*/nullptr,
+                                                  /*ComputeReferenceTags=*/false));
+                       });
+    return;
+  }
+  auto Action = [Item, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::outgoingCalls(Item, Index, &InpAST->AST,
+                             /*ComputeReferenceTags=*/true));
+  };
+  WorkScheduler->runWithAST("Outgoing Calls", File, std::move(Action));
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

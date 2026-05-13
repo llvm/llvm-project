@@ -327,9 +327,9 @@ TEST_F(LSPTest, IncomingCallsWithReferenceTagsSupport) {
   Client.didOpen("foo.cpp", Code.code());
   auto Items = Client
                    .call("textDocument/prepareCallHierarchy",
-                         llvm::json::Object{{
-                             "textDocument", Client.documentID("foo.cpp")},
-                                            {"position", Code.point()}})
+                         llvm::json::Object{
+                             {"textDocument", Client.documentID("foo.cpp")},
+                             {"position", Code.point()}})
                    .takeValue();
   auto FirstItem = (*Items.getAsArray())[0];
   auto Calls = Client
@@ -370,6 +370,58 @@ TEST_F(LSPTest, IncomingCallsWithoutReferenceTagsSupport) {
 
   EXPECT_EQ(From["name"], "caller");
   EXPECT_FALSE(From.get("referenceTags"));
+}
+
+TEST_F(LSPTest, OutgoingVarCallsWithReferenceTagsSupport) {
+  Annotations Code(R"cpp(
+    int var = 1;
+    void callee();
+    void ca^ller() {
+      var = 2;
+      callee();
+    }
+  )cpp");
+  auto &Client = start(llvm::json::Object{{
+      "capabilities",
+      llvm::json::Object{{
+          "textDocument",
+          llvm::json::Object{{
+              "callHierarchy",
+              llvm::json::Object{{"referenceTagsSupport", true}},
+          }},
+      }},
+  }});
+  Client.didOpen("foo.cpp", Code.code());
+  auto Items = Client
+                   .call("textDocument/prepareCallHierarchy",
+                         llvm::json::Object{
+                             {"textDocument", Client.documentID("foo.cpp")},
+                             {"position", Code.point()}})
+                   .takeValue();
+  auto FirstItem = (*Items.getAsArray())[0];
+  auto Calls = Client
+                   .call("callHierarchy/outgoingCalls",
+                         llvm::json::Object{{"item", FirstItem}})
+                   .takeValue();
+  auto CallArray = Calls.getAsArray();
+  ASSERT_EQ(CallArray->size(), 2u);
+
+  {
+    auto FirstCall = *(*CallArray)[0].getAsObject();
+    auto To = *FirstCall["to"].getAsObject();
+
+    EXPECT_EQ(To["name"], "var");
+    EXPECT_EQ(To["referenceTags"], llvm::json::Value(llvm::json::Array{
+                                       static_cast<int>(ReferenceTag::Write)}));
+  }
+  {
+    auto SecondCall = *(*CallArray)[1].getAsObject();
+    auto To = *SecondCall["to"].getAsObject();
+
+    EXPECT_EQ(To["name"], "callee");
+    // Function calls are neither Read nor Write accesses, so no referenceTags.
+    EXPECT_FALSE(To.get("referenceTags"));
+  }
 }
 
 TEST_F(LSPTest, CDBConfigIntegration) {

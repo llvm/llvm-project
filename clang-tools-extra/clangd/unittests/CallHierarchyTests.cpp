@@ -302,7 +302,7 @@ TEST(CallHierarchy, OutgoingOneFile) {
   std::vector<CallHierarchyItem> Items =
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
   ASSERT_THAT(Items, ElementsAre(withName("caller3")));
-  auto OugoingLevel1 = outgoingCalls(Items[0], Index.get());
+  auto OugoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST);
   ASSERT_THAT(
       OugoingLevel1,
       ElementsAre(
@@ -311,21 +311,71 @@ TEST(CallHierarchy, OutgoingOneFile) {
           AllOf(to(AllOf(withName("caller2"), withDetail("caller2"))),
                 oFromRanges(Source.range("Caller2")))));
 
-  auto OutgoingLevel2 = outgoingCalls(OugoingLevel1[1].to, Index.get());
+  auto OutgoingLevel2 = outgoingCalls(OugoingLevel1[1].to, Index.get(), &AST);
   ASSERT_THAT(
       OutgoingLevel2,
       ElementsAre(AllOf(
           to(AllOf(withName("caller1"), withDetail("ns::Foo::caller1"))),
           oFromRanges(Source.range("Caller1A"), Source.range("Caller1B")))));
 
-  auto OutgoingLevel3 = outgoingCalls(OutgoingLevel2[0].to, Index.get());
+  auto OutgoingLevel3 = outgoingCalls(OutgoingLevel2[0].to, Index.get(), &AST);
   ASSERT_THAT(
       OutgoingLevel3,
       ElementsAre(AllOf(to(AllOf(withName("callee"), withDetail("callee"))),
                         oFromRanges(Source.range("Callee")))));
 
-  auto OutgoingLevel4 = outgoingCalls(OutgoingLevel3[0].to, Index.get());
+  auto OutgoingLevel4 = outgoingCalls(OutgoingLevel3[0].to, Index.get(), &AST);
   EXPECT_THAT(OutgoingLevel4, IsEmpty());
+}
+
+TEST(CallHierarchy, OutgoingWithReferenceTagsSupport) {
+  Annotations Source(R"cpp(
+    void callee();
+    void ca^ller() {
+      $Callee[[callee]]();
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(
+      OutgoingLevel1,
+      ElementsAre(
+          AllOf(to(AllOf(withName("callee"),
+                         Field(&CallHierarchyItem::referenceTags, IsEmpty()))),
+                oFromRanges(Source.range("Callee")))));
+}
+
+TEST(CallHierarchy, OutgoingWithoutReferenceTagsSupport) {
+  Annotations Source(R"cpp(
+    void callee();
+    void ca^ller() {
+      $Callee[[callee]]();
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/false);
+  ASSERT_THAT(
+      OutgoingLevel1,
+      ElementsAre(
+          AllOf(to(AllOf(withName("callee"),
+                         Field(&CallHierarchyItem::referenceTags, IsEmpty()))),
+                oFromRanges(Source.range("Callee")))));
 }
 
 TEST(CallHierarchy, MultiFileCpp) {
@@ -439,7 +489,7 @@ TEST(CallHierarchy, MultiFileCpp) {
         ElementsAre(AllOf(
             withName("caller3"),
             withFile(testPath(IsDeclaration ? "caller3.hh" : "caller3.cc")))));
-    auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get());
+    auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST);
     ASSERT_THAT(
         OutgoingLevel1,
         // fromRanges are interpreted in the context of Items[0]'s file.
@@ -453,19 +503,19 @@ TEST(CallHierarchy, MultiFileCpp) {
                   IsDeclaration ? oFromRanges()
                                 : oFromRanges(Caller3C.range("Caller2")))));
 
-    auto OutgoingLevel2 = outgoingCalls(OutgoingLevel1[1].to, Index.get());
+    auto OutgoingLevel2 = outgoingCalls(OutgoingLevel1[1].to, Index.get(), &AST);
     ASSERT_THAT(OutgoingLevel2,
                 ElementsAre(AllOf(
                     to(AllOf(withName("caller1"), withDetail("nsa::caller1"))),
                     oFromRanges(Caller2C.range("A"), Caller2C.range("B")))));
 
-    auto OutgoingLevel3 = outgoingCalls(OutgoingLevel2[0].to, Index.get());
+    auto OutgoingLevel3 = outgoingCalls(OutgoingLevel2[0].to, Index.get(), &AST);
     ASSERT_THAT(
         OutgoingLevel3,
         ElementsAre(AllOf(to(AllOf(withName("callee"), withDetail("callee"))),
                           oFromRanges(Caller1C.range()))));
 
-    auto OutgoingLevel4 = outgoingCalls(OutgoingLevel3[0].to, Index.get());
+    auto OutgoingLevel4 = outgoingCalls(OutgoingLevel3[0].to, Index.get(), &AST);
     EXPECT_THAT(OutgoingLevel4, IsEmpty());
   };
 
@@ -875,6 +925,309 @@ TEST(CallHierarchy, HierarchyOnHeaderVarWithWriteReference) {
               ElementsAre(AllOf(from(AllOf(
                   withName("caller"),
                   withReferenceTags(ReferenceTag::Write))))));
+
+TEST(CallHierarchy, OutgoingFieldWithReadReference) {
+  Annotations Source(R"cpp(
+    struct Vars {
+      int var1 = 1;
+    };
+    void ca^ller() {
+      Vars values;
+      int foo = values.var1;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(OutgoingLevel1,
+              ElementsAre(AllOf(to(AllOf(
+                  withName("var1"), withReferenceTags(ReferenceTag::Read))))));
+}
+
+TEST(CallHierarchy, OutgoingVarWithReadReference) {
+  Annotations Source(R"cpp(
+    int var = 1;
+    void ca^ller() {
+      int x = 0;
+      x = var;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(OutgoingLevel1,
+              ElementsAre(AllOf(to(AllOf(
+                  withName("var"), withReferenceTags(ReferenceTag::Read))))));
+}
+
+TEST(CallHierarchy, OutgoingVarWithWriteReference) {
+  Annotations Source(R"cpp(
+    int var = 1;
+    void ca^ller() {
+      var = 2;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(OutgoingLevel1,
+              ElementsAre(AllOf(to(AllOf(
+                  withName("var"), withReferenceTags(ReferenceTag::Write))))));
+}
+
+TEST(CallHierarchy, OutgoingVarWithoutReferenceTagsSupport) {
+  Annotations Source(R"cpp(
+    int var = 1;
+    void ca^ller() {
+      var = 2;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/false);
+  EXPECT_THAT(OutgoingLevel1, IsEmpty());
+}
+
+TEST(CallHierarchy, OutgoingClassMemberWithWriteReference) {
+  Annotations Source(R"cpp(
+      class MyClass {
+      public:
+        void ca^ller() {
+          $Write[[var]] = 2;
+        }
+      int var = 1;
+      };
+    )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(
+      OutgoingLevel1,
+      ElementsAre(AllOf(
+          to(AllOf(withName("var"), withReferenceTags(ReferenceTag::Write))),
+          oFromRanges(Source.range("Write")))));
+}
+
+TEST(CallHierarchy, OutgoingClassMemberWithWriteReferenceInCtorInitList) {
+  Annotations Source(R"cpp(
+      class MyClass {
+        int var;
+      public:
+        MyCl^ass() : $Write[[var]](1) {}
+      };
+    )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("MyClass")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(
+      OutgoingLevel1,
+      ElementsAre(AllOf(
+          to(AllOf(withName("var"), withReferenceTags(ReferenceTag::Write))),
+          oFromRanges(Source.range("Write")))));
+}
+
+TEST(CallHierarchy, OutgoingVarWithUnaryReadWriteReference) {
+  Annotations Source(R"cpp(
+    int var = 1;
+    void ca^ller() {
+      $ReadWrite[[var]]++;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(
+      OutgoingLevel1,
+      ElementsAre(AllOf(
+          to(AllOf(withName("var"),
+                   withReferenceTags(ReferenceTag::Write, ReferenceTag::Read))),
+          oFromRanges(Source.range("ReadWrite")))));
+}
+
+TEST(CallHierarchy, OutgoingVarWithCompoundAssignmentReference) {
+  // Compound assignment (e.g. +=) is both a read and a write.
+  Annotations Source(R"cpp(
+    int var = 1;
+    void ca^ller() {
+      $ReadWrite[[var]] += 2;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(
+      OutgoingLevel1,
+      ElementsAre(AllOf(
+          to(AllOf(withName("var"),
+                   withReferenceTags(ReferenceTag::Write, ReferenceTag::Read))),
+          oFromRanges(Source.range("ReadWrite")))));
+}
+
+TEST(CallHierarchy, OutgoingHeaderVarWithWriteReference) {
+  // Verifies that reference tags are computed even when the referenced symbol
+  // lives in a header file.
+  Annotations Header(R"cpp(
+    int var = 1;
+  )cpp");
+  Annotations Source(R"cpp(
+    #include "HeaderSymbol.h"
+    void ca^ller() {
+      $Write[[var]] = 2;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  TU.HeaderFilename = "HeaderSymbol.h";
+  TU.HeaderCode = Header.code();
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(
+      OutgoingLevel1,
+      ElementsAre(AllOf(
+          to(AllOf(withName("var"), withReferenceTags(ReferenceTag::Write))),
+          oFromRanges(Source.range("Write")))));
+}
+
+TEST(CallHierarchy, OutgoingMixedVarAndFunctionKeepsFunctionUntagged) {
+  Annotations Source(R"cpp(    int var = 0;
+    void callee();
+    void ca^ller() {
+      $Write[[var]] = 1;
+      $Call[[callee]]();
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(
+      OutgoingLevel1,
+      UnorderedElementsAre(
+          AllOf(to(AllOf(withName("var"),
+                         withReferenceTags(ReferenceTag::Write))),
+                oFromRanges(Source.range("Write"))),
+          AllOf(to(AllOf(withName("callee"),
+                         Field(&CallHierarchyItem::referenceTags, IsEmpty()))),
+                oFromRanges(Source.range("Call")))));
+}
+
+TEST(CallHierarchy, OutgoingVarAggregatesReadAndWriteAcrossStatements) {
+  Annotations Source(R"cpp(    int var = 0;
+    void ca^ller() {
+      int x = $Read[[var]];
+      $Write[[var]] = x;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(
+      OutgoingLevel1,
+      ElementsAre(AllOf(
+          to(AllOf(withName("var"),
+                   withReferenceTags(ReferenceTag::Read, ReferenceTag::Write))),
+          oFromRanges(Source.range("Read"), Source.range("Write")))));
+}
+
+TEST(CallHierarchy, OutgoingVarRepeatedReadsProduceSingleItem) {
+  Annotations Source(R"cpp(    int var = 0;
+    void ca^ller() {
+      int a = $Read1[[var]];
+      int b = $Read2[[var]];
+      (void)a;
+      (void)b;
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("caller")));
+
+  auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get(), &AST,
+                                      /*ComputeReferenceTags=*/true);
+  ASSERT_THAT(
+      OutgoingLevel1,
+      ElementsAre(AllOf(
+          to(AllOf(withName("var"), withReferenceTags(ReferenceTag::Read))),
+          oFromRanges(Source.range("Read1"), Source.range("Read2")))));
 }
 
 TEST(CallHierarchy, HierarchyOnEnumConstant) {

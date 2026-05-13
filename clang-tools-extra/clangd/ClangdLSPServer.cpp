@@ -1436,7 +1436,8 @@ void ClangdLSPServer::onInlayHint(const InlayHintsParams &Params,
 void ClangdLSPServer::onCallHierarchyOutgoingCalls(
     const CallHierarchyOutgoingCallsParams &Params,
     Callback<std::vector<CallHierarchyOutgoingCall>> Reply) {
-  Server->outgoingCalls(Params.item, std::move(Reply));
+  Server->outgoingCalls(Params.item.uri.file(), Params.item,
+                        SupportsReferenceTags, std::move(Reply));
 }
 
 void ClangdLSPServer::applyConfiguration(

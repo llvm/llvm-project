@@ -1925,6 +1925,136 @@ static std::vector<ReferenceTag> analyseParameterUsage(const FunctionDecl *FD,
   return Result;
 }
 
+/// Visitor that determines read/write access patterns for a set of variables
+/// in a single traversal of a function body.  This avoids the O(N * body_size)
+/// cost of calling analyseParameterUsage once per variable.
+class BulkVarUsageVisitor
+    : public RecursiveASTVisitor<BulkVarUsageVisitor> {
+public:
+  /// Per-symbol result: (hasRead, hasWrite).
+  llvm::DenseMap<SymbolID, std::pair<bool, bool>> Usage;
+
+  BulkVarUsageVisitor(llvm::ArrayRef<std::pair<SymbolID, const ValueDecl *>>
+                          Targets) {
+    for (const auto &[ID, VD] : Targets)
+      Usage.try_emplace(ID, false, false);
+  }
+
+  // Identifies write-only LHS expressions before visiting children.
+  bool TraverseBinaryOperator(BinaryOperator *BO) {
+    if (BO->isAssignmentOp())
+      markLHSWrite(BO->getLHS(), BO->getOpcode());
+    return RecursiveASTVisitor::TraverseBinaryOperator(BO);
+  }
+
+  bool TraverseCompoundAssignOperator(CompoundAssignOperator *CAO) {
+    markLHSWrite(CAO->getLHS(), CAO->getOpcode());
+    return RecursiveASTVisitor::TraverseCompoundAssignOperator(CAO);
+  }
+
+  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+    if (Init) {
+      if (const FieldDecl *FD = Init->getMember()) {
+        if (auto ID = getSymbolID(FD)) {
+          if (auto Entry = Usage.find(ID); Entry != Usage.end())
+            Entry->second.second = true; // hasWrite
+        }
+      }
+    }
+    return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
+  }
+
+  bool TraverseUnaryOperator(UnaryOperator *UO) {
+    if (UO->isIncrementDecrementOp()) {
+      const Expr *Sub = UO->getSubExpr()->IgnoreParenImpCasts();
+      if (const ValueDecl *VD = getDeclFromExpr(Sub)) {
+        if (auto ID = getSymbolID(VD)) {
+          if (auto Entry = Usage.find(ID); Entry != Usage.end())
+            Entry->second.second = true; // hasWrite (also hasRead via Visit*)
+        }
+      }
+    }
+    return RecursiveASTVisitor::TraverseUnaryOperator(UO);
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    if (auto ID = getSymbolID(DRE->getDecl())) {
+      if (auto Entry = Usage.find(ID); Entry != Usage.end()) {
+        if (!WriteOnlyExprs.count(DRE))
+          Entry->second.first = true; // hasRead
+      }
+    }
+    return true;
+  }
+
+  bool VisitMemberExpr(MemberExpr *ME) {
+    if (auto ID = getSymbolID(ME->getMemberDecl())) {
+      if (auto Entry = Usage.find(ID); Entry != Usage.end()) {
+        if (!WriteOnlyExprs.count(ME))
+          Entry->second.first = true; // hasRead
+      }
+    }
+    return true;
+  }
+
+private:
+  llvm::SmallDenseSet<const Expr *, 8> WriteOnlyExprs;
+
+  static const ValueDecl *getDeclFromExpr(const Expr *E) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+      return DRE->getDecl();
+    if (const auto *ME = dyn_cast<MemberExpr>(E))
+      return ME->getMemberDecl();
+    return nullptr;
+  }
+
+  void markLHSWrite(const Expr *LHS, BinaryOperatorKind Opcode) {
+    const Expr *Base = LHS ? LHS->IgnoreParenImpCasts() : nullptr;
+    if (!Base)
+      return;
+    const ValueDecl *VD = getDeclFromExpr(Base);
+    if (!VD)
+      return;
+    if (auto ID = getSymbolID(VD)) {
+      if (auto Entry = Usage.find(ID); Entry != Usage.end()) {
+        Entry->second.second = true; // hasWrite
+        // Pure assignment: the LHS itself is write-only (no prior read).
+        if (Opcode == BO_Assign)
+          WriteOnlyExprs.insert(Base);
+      }
+    }
+  }
+};
+
+/// Analyses read/write usage of \p Decls within \p FD in a single traversal.
+/// Returns a map from SymbolID to the corresponding reference tags.
+static llvm::DenseMap<SymbolID, std::vector<ReferenceTag>>
+analyseAllVarUsages(const FunctionDecl *FD,
+                    const llvm::DenseMap<SymbolID, const NamedDecl *> &Decls) {
+  llvm::SmallVector<std::pair<SymbolID, const ValueDecl *>> Targets;
+  for (const auto &[ID, ND] : Decls) {
+    if (const auto *VD = llvm::dyn_cast<ValueDecl>(ND))
+      Targets.emplace_back(ID, VD);
+  }
+
+  BulkVarUsageVisitor Visitor(Targets);
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD))
+    Visitor.TraverseDecl(const_cast<CXXConstructorDecl *>(Ctor));
+  else if (const Stmt *Body = FD->getBody())
+    Visitor.TraverseStmt(const_cast<Stmt *>(Body));
+
+  llvm::DenseMap<SymbolID, std::vector<ReferenceTag>> Result;
+  for (auto &[ID, RW] : Visitor.Usage) {
+    std::vector<ReferenceTag> Tags;
+    if (RW.second) // hasWrite
+      Tags.push_back(ReferenceTag::Write);
+    if (RW.first) // hasRead
+      Tags.push_back(ReferenceTag::Read);
+    Result.try_emplace(ID, std::move(Tags));
+  }
+  return Result;
+}
+
 template <typename HierarchyItem>
 static std::optional<HierarchyItem>
 declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
@@ -2727,7 +2857,8 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
 }
 
 std::vector<CallHierarchyOutgoingCall>
-outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
+outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              ParsedAST *AST, bool ComputeReferenceTags) {
   std::vector<CallHierarchyOutgoingCall> Results;
   if (!Index || Item.data.empty())
     return Results;
@@ -2736,15 +2867,48 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
     elog("outgoingCalls failed to find symbol: {0}", ID.takeError());
     return Results;
   }
-  // In this function, we find outgoing calls based on the index only.
+
+  // Resolve the caller's FunctionDecl from the AST so that variable/field
+  // reference tags can be computed.  Only attempted when the client opted in
+  // via ComputeReferenceTags and an AST for the caller's file is available.
+  const FunctionDecl *CallerFunc = nullptr;
+  if (ComputeReferenceTags && AST) {
+    LookupRequest CallerLookup;
+    CallerLookup.IDs.insert(*ID);
+    Index->lookup(CallerLookup, [&](const Symbol &Caller) {
+      if (Caller.ID != *ID || CallerFunc)
+        return;
+      if (const auto *ND = getNamedDeclFromSymbol(Caller, *AST))
+        CallerFunc = llvm::dyn_cast<FunctionDecl>(ND);
+    });
+
+    // If index-based lookup did not resolve the declaration, fall back to the
+    // request item's selection range in the current AST.
+    if (!CallerFunc && Item.uri.file() == AST->tuPath()) {
+      auto CurLoc = sourceLocationInMainFile(AST->getSourceManager(),
+                                             Item.selectionRange.start);
+      if (CurLoc) {
+        for (const NamedDecl *AtPos : getDeclAtPosition(*AST, *CurLoc, {})) {
+          if (const auto *FD = llvm::dyn_cast<FunctionDecl>(AtPos)) {
+            CallerFunc = FD;
+            break;
+          }
+        }
+      } else {
+        llvm::consumeError(CurLoc.takeError());
+      }
+    }
+
+    if (CallerFunc) {
+      if (const auto *Def = CallerFunc->getDefinition())
+        CallerFunc = Def;
+    }
+  }
+
+  // Outgoing call edges for functions are collected from the index.
   ContainedRefsRequest Request;
   Request.ID = *ID;
-  // Initially store the ranges in a map keyed by SymbolID of the callee.
-  // This allows us to group different calls to the same function
-  // into the same CallHierarchyOutgoingCall.
   llvm::DenseMap<SymbolID, std::vector<Location>> CallsOut;
-  // We can populate the ranges based on a refs request only. As we do so, we
-  // also accumulate the callee IDs into a lookup request.
   LookupRequest CallsOutLookup;
   Index->containedRefs(Request, [&](const auto &R) {
     auto Loc = indexToLSPLocation(R.Location, Item.uri.file());
@@ -2754,47 +2918,122 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
     }
     auto It = CallsOut.try_emplace(R.Symbol, std::vector<Location>{}).first;
     It->second.push_back(*Loc);
-
     CallsOutLookup.IDs.insert(R.Symbol);
   });
-  // Perform the lookup request and combine its results with CallsOut to
-  // get complete CallHierarchyOutgoingCall objects.
-  Index->lookup(CallsOutLookup, [&](const Symbol &Callee) {
-    // The containedRefs request should only return symbols which are
-    // function-like, i.e. symbols for which references to them can be "calls".
-    using SK = index::SymbolKind;
-    auto Kind = Callee.SymInfo.Kind;
-    assert(Kind == SK::Function || Kind == SK::InstanceMethod ||
-           Kind == SK::ClassMethod || Kind == SK::StaticMethod ||
-           Kind == SK::Constructor || Kind == SK::Destructor ||
-           Kind == SK::ConversionFunction);
-    (void)Kind;
-    (void)SK::Function;
 
+  Index->lookup(CallsOutLookup, [&](const Symbol &Callee) {
     auto It = CallsOut.find(Callee.ID);
     assert(It != CallsOut.end());
     if (auto CHI = symbolToCallHierarchyItem(Callee, Item.uri.file())) {
+      if (CHI->kind != SymbolKind::Function &&
+          CHI->kind != SymbolKind::Method &&
+          CHI->kind != SymbolKind::Constructor)
+        return;
       std::vector<Range> FromRanges;
       for (const Location &L : It->second) {
-        if (L.uri != Item.uri) {
-          // Call location not in same file as the item that outgoingCalls was
-          // requested for. This can happen when Item is a declaration separate
-          // from the implementation. There's not much we can do, since the
-          // protocol only allows returning ranges interpreted as being in
-          // Item's file.
+        if (L.uri != Item.uri)
           continue;
-        }
         FromRanges.push_back(L.range);
       }
       Results.push_back(
           CallHierarchyOutgoingCall{std::move(*CHI), std::move(FromRanges)});
     }
   });
-  // Sort results by name of the callee.
+
+  // When the client supports reference tags, also include variable/field
+  // references from the current function body and classify them as
+  // reads/writes.  Function callees are still modeled as plain outgoing calls
+  // and do not receive reference tags.
+  // A single bulk traversal (BulkVarUsageVisitor / analyseAllVarUsages) is
+  // used to avoid O(N * body_size) cost when many variables are referenced.
+  if (ComputeReferenceTags && AST && CallerFunc &&
+      Item.uri.file() == AST->tuPath()) {
+    llvm::DenseMap<SymbolID, std::vector<Range>> NonCallRefs;
+    llvm::DenseMap<SymbolID, const NamedDecl *> NonCallDecls;
+    using SK = index::SymbolKind;
+
+    findExplicitReferences(
+        CallerFunc,
+        [&](ReferenceLoc Ref) {
+          if (Ref.IsDecl)
+            return;
+          auto Loc = makeLocation(AST->getASTContext(), Ref.NameLoc,
+                                  Item.uri.file());
+          if (!Loc)
+            return;
+          for (const Decl *D : Ref.Targets) {
+            if (index::isFunctionLocalSymbol(D) || D->isTemplateParameter())
+              continue;
+            const auto *VD = llvm::dyn_cast<ValueDecl>(D);
+            if (!VD)
+              continue;
+            auto Kind = index::getSymbolInfo(D).Kind;
+            if (Kind != SK::Variable && Kind != SK::Field)
+              continue;
+            SymbolID DeclID = getSymbolID(D);
+            if (!DeclID)
+              continue;
+            NonCallDecls.try_emplace(DeclID, llvm::cast<NamedDecl>(D));
+            NonCallRefs[DeclID].push_back(Loc->range);
+          }
+        },
+        AST->getHeuristicResolver());
+
+    // Collect IDs already covered by index-based function call results so we
+    // don't emit a duplicate entry for a symbol that is both called and
+    // referenced as a variable.
+    llvm::DenseSet<SymbolID> ProcessedIDs;
+    for (const auto &Call : Results) {
+      if (!Call.to.data.empty()) {
+        if (auto SID = SymbolID::fromStr(Call.to.data))
+          ProcessedIDs.insert(*SID);
+      }
+    }
+
+    // Single-pass bulk analysis of all referenced variables/fields.
+    auto TagMap = analyseAllVarUsages(CallerFunc, NonCallDecls);
+
+    for (auto &Entry : NonCallRefs) {
+      const SymbolID &DeclID = Entry.first;
+      if (ProcessedIDs.count(DeclID))
+        continue;
+      const auto *ND = NonCallDecls.lookup(DeclID);
+      if (!ND)
+        continue;
+      auto CHI = declToCallHierarchyItem(*ND, Item.uri.file());
+      if (!CHI)
+        continue;
+      if (auto TagIt = TagMap.find(DeclID); TagIt != TagMap.end())
+        CHI->referenceTags = TagIt->second;
+      CHI->data = DeclID.str();
+      Results.push_back(
+          CallHierarchyOutgoingCall{std::move(*CHI), std::move(Entry.second)});
+    }
+  }
+
+  // Sort results by first source position so the order is deterministic and
+  // matches reading order.  Entries without any fromRanges (e.g. cross-file
+  // callees) sort after all positioned entries, then alphabetically.
   llvm::sort(Results, [](const CallHierarchyOutgoingCall &A,
                          const CallHierarchyOutgoingCall &B) {
+    auto FirstPos = [](const std::vector<Range> &Ranges) -> Position {
+      Position Best{INT_MAX, INT_MAX};
+      for (const auto &R : Ranges)
+        if (R.start.line < Best.line ||
+            (R.start.line == Best.line &&
+             R.start.character < Best.character))
+          Best = R.start;
+      return Best;
+    };
+    Position APos = FirstPos(A.fromRanges);
+    Position BPos = FirstPos(B.fromRanges);
+    if (APos.line != BPos.line)
+      return APos.line < BPos.line;
+    if (APos.character != BPos.character)
+      return APos.character < BPos.character;
     return A.to.name < B.to.name;
   });
+
   return Results;
 }
 
