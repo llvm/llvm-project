@@ -529,6 +529,9 @@ ENUM_CODEGENOPT(WinControlFlowGuardMechanism, ControlFlowGuardMechanism,
 /// Adds attributes that prevent outlining (`-mno-outline`)
 CODEGENOPT(DisableOutlining, 1, 0, Benign)
 
+/// Forces backend to emit trap instruction for LLVM IR unreachable
+CODEGENOPT(ForceTrapUnreachable, 1, 0, Benign)
+
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
 

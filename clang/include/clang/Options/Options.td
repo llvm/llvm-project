@@ -4804,6 +4804,11 @@ defm virtual_function_elimination : BoolFOption<"virtual-function-elimination",
           "Enables dead virtual function elimination optimization. Requires -flto=full">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
 
+def ftrap_unreachable : Flag<["-"], "ftrap-unreachable">,
+  Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Force emission of a trap instruction at the end of noreturn functions">,
+  MarshallingInfoFlag<CodeGenOpts<"ForceTrapUnreachable">>;
 def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Treat signed integer overflow as two's complement">;

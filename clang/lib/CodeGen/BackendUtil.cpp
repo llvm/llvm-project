@@ -477,7 +477,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.VecLib =
       convertDriverVectorLibraryToVectorLibrary(CodeGenOpts.getVecLib());
 
-  if (LangOpts.Kernel)
+  if (CodeGenOpts.ForceTrapUnreachable)
     Options.TrapUnreachable = true;
 
   switch (CodeGenOpts.getSwiftAsyncFramePointer()) {
