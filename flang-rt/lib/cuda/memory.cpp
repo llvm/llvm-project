@@ -18,7 +18,104 @@
 
 #include "cuda_runtime.h"
 
+#include <cstddef>
+#include <optional>
+
 namespace Fortran::runtime::cuda {
+
+struct Memcpy2DLayout {
+  void *base;
+  std::size_t widthBytes;
+  std::size_t height;
+  std::size_t pitchBytes;
+};
+
+// Get cudaMemcpy2D layout information if both descriptors have equal element
+// counts and regular positive-stride layouts. Returns a nullopt otherwise to
+// fallback on the runtime assignment.
+static std::optional<Memcpy2DLayout> GetMemcpy2DLayout(
+    const Descriptor &desc, std::size_t widthBytes) {
+  if (desc.rank() == 0 || desc.Elements() == 0) {
+    return std::nullopt;
+  }
+  const auto elemBytes = desc.ElementBytes();
+  if (elemBytes == 0 || widthBytes == 0 || widthBytes % elemBytes != 0) {
+    return std::nullopt;
+  }
+  std::size_t contiguousBytes = elemBytes;
+  int rowDim = 0;
+  while (rowDim < desc.rank()) {
+    const auto &dim = desc.GetDimension(rowDim);
+    if (dim.Extent() != 1 &&
+        (dim.ByteStride() < 0 ||
+            static_cast<std::size_t>(dim.ByteStride()) != contiguousBytes)) {
+      break;
+    }
+    contiguousBytes *= dim.Extent();
+    ++rowDim;
+    if (contiguousBytes == widthBytes) {
+      break;
+    }
+  }
+  if (contiguousBytes != widthBytes) {
+    return std::nullopt;
+  }
+  Memcpy2DLayout layout;
+  layout.base = desc.raw().base_addr;
+  layout.widthBytes = widthBytes;
+  layout.height = desc.Elements() * elemBytes / widthBytes;
+  if (rowDim == desc.rank()) {
+    layout.pitchBytes = widthBytes;
+    return layout;
+  }
+  auto pitch = desc.GetDimension(rowDim).ByteStride();
+  if (pitch <= 0 || static_cast<std::size_t>(pitch) < widthBytes) {
+    return std::nullopt;
+  }
+  SubscriptValue expected = pitch;
+  for (int j = rowDim; j < desc.rank(); ++j) {
+    const auto &dim = desc.GetDimension(j);
+    if (dim.Extent() != 1 && dim.ByteStride() != expected) {
+      return std::nullopt;
+    }
+    expected *= dim.Extent();
+  }
+  layout.pitchBytes = static_cast<std::size_t>(pitch);
+  return layout;
+}
+
+static bool DoMemcpy2D(const Descriptor &dst, const Descriptor &src,
+    cudaMemcpyKind kind, const char *sourceFile, int sourceLine) {
+  if (dst.ElementBytes() != src.ElementBytes() ||
+      dst.Elements() != src.Elements())
+    return false;
+
+  std::size_t widthBytes = dst.ElementBytes();
+  auto dstLayout = GetMemcpy2DLayout(dst, widthBytes);
+  auto srcLayout = GetMemcpy2DLayout(src, widthBytes);
+  if (!dstLayout || !srcLayout) {
+    return false;
+  }
+
+  CUDA_REPORT_IF_ERROR_LOC(
+      cudaMemcpy2D(dstLayout->base, dstLayout->pitchBytes, srcLayout->base,
+          srcLayout->pitchBytes, widthBytes, dstLayout->height, kind),
+      sourceFile, sourceLine);
+  return true;
+}
+
+static cudaMemcpyKind GetMemcpyKind(
+    unsigned mode, const char *sourceFile, int sourceLine) {
+  if (mode == kHostToDevice) {
+    return cudaMemcpyHostToDevice;
+  } else if (mode == kDeviceToHost) {
+    return cudaMemcpyDeviceToHost;
+  } else if (mode == kDeviceToDevice) {
+    return cudaMemcpyDeviceToDevice;
+  }
+  Terminator terminator{sourceFile, sourceLine};
+  terminator.Crash("host to host copy not supported");
+}
 
 extern "C" {
 
@@ -124,6 +221,12 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
         srcDesc->raw().base_addr, dstDesc->Elements() * dstDesc->ElementBytes(),
         mode, sourceFile, sourceLine);
   } else {
+    cudaMemcpyKind kind = GetMemcpyKind(mode, sourceFile, sourceLine);
+    // Try to use cudaMemcpy2D first, if it fails, fall back to
+    // Fortran::runtime::Assign.
+    if (DoMemcpy2D(*dstDesc, *srcDesc, kind, sourceFile, sourceLine)) {
+      return;
+    }
     Fortran::runtime::Assign(
         *dstDesc, *srcDesc, terminator, MaybeReallocate, memmoveFct);
   }

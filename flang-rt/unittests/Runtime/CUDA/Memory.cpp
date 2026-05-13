@@ -102,3 +102,61 @@ TEST(MemoryCUFTest, CUFDataTransferDescDescDstNotAllocated) {
     EXPECT_EQ(*host->ZeroBasedIndexedElement<std::int32_t>(i), (std::int32_t)i);
   }
 }
+
+TEST(MemoryCUFTest, CUFDataTransferDescDescStrided) {
+  using Fortran::common::TypeCategory;
+  static constexpr int elements{10};
+  static constexpr int stride{2};
+  SubscriptValue extent[]{elements};
+
+  std::int32_t hostStorage[elements * stride]{};
+  for (int i{0}; i < elements; ++i) {
+    hostStorage[i * stride] = i;
+    hostStorage[i * stride + 1] = -1;
+  }
+
+  std::int32_t *devStorage{static_cast<std::int32_t *>(RTNAME(CUFMemAlloc)(
+      sizeof(hostStorage), kMemTypeDevice, __FILE__, __LINE__))};
+  ASSERT_NE(devStorage, nullptr);
+  cudaMemset(devStorage, 0xff, sizeof(hostStorage));
+
+  StaticDescriptor<1> hostStaticDesc;
+  Descriptor &hostDesc{hostStaticDesc.descriptor()};
+  hostDesc.Establish(TypeCode{TypeCategory::Integer, 4}, sizeof(std::int32_t),
+      hostStorage, 1, extent);
+  hostDesc.GetDimension(0).SetByteStride(stride * sizeof(std::int32_t));
+
+  StaticDescriptor<1> devStaticDesc;
+  Descriptor &devDesc{devStaticDesc.descriptor()};
+  devDesc.Establish(TypeCode{TypeCategory::Integer, 4}, sizeof(std::int32_t),
+      devStorage, 1, extent);
+  devDesc.GetDimension(0).SetByteStride(stride * sizeof(std::int32_t));
+
+  RTNAME(CUFDataTransferDescDesc)
+  (&devDesc, &hostDesc, kHostToDevice, __FILE__, __LINE__);
+
+  std::int32_t result[elements * stride]{};
+  RTNAME(CUFDataTransferPtrPtr)
+  (result, devStorage, sizeof(result), kDeviceToHost, __FILE__, __LINE__);
+
+  std::int32_t recvStorage[elements * stride]{};
+  for (int i{0}; i < elements * stride; ++i) {
+    recvStorage[i] = -2;
+  }
+  StaticDescriptor<1> recvStaticDesc;
+  Descriptor &recvDesc{recvStaticDesc.descriptor()};
+  recvDesc.Establish(TypeCode{TypeCategory::Integer, 4}, sizeof(std::int32_t),
+      recvStorage, 1, extent);
+  recvDesc.GetDimension(0).SetByteStride(stride * sizeof(std::int32_t));
+  RTNAME(CUFDataTransferDescDesc)
+  (&recvDesc, &devDesc, kDeviceToHost, __FILE__, __LINE__);
+
+  RTNAME(CUFMemFree)(devStorage, kMemTypeDevice, __FILE__, __LINE__);
+
+  for (int i{0}; i < elements; ++i) {
+    EXPECT_EQ(result[i * stride], i);
+    EXPECT_EQ(result[i * stride + 1], -1);
+    EXPECT_EQ(recvStorage[i * stride], i);
+    EXPECT_EQ(recvStorage[i * stride + 1], -2);
+  }
+}
