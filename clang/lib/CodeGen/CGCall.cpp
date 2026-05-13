@@ -5240,20 +5240,25 @@ llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
   return call;
 }
 
-llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::FunctionCallee Callee,
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                                    const llvm::Twine &Name) {
-  return EmitIntrinsicCall(Callee, {}, Name);
+  return EmitIntrinsicCall(ID, {}, {}, Name);
 }
 
-llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::FunctionCallee Callee,
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                                    ArrayRef<llvm::Value *> Args,
                                                    const llvm::Twine &Name) {
-  assert(dyn_cast<llvm::Function>(Callee.getCallee()) &&
-         cast<llvm::Function>(Callee.getCallee())->isIntrinsic() &&
-         "EmitIntrinsicCall called with non-intrinsic callee");
-  llvm::CallInst *Call = Builder.CreateCall(
-      Callee, Args, getBundlesForFunclet(Callee.getCallee()), Name);
+  return EmitIntrinsicCall(ID, {}, Args, Name);
+}
 
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                                   ArrayRef<llvm::Type *> Types,
+                                                   ArrayRef<llvm::Value *> Args,
+                                                   const llvm::Twine &Name) {
+  llvm::Function *F =
+      llvm::Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID, Types);
+  llvm::CallInst *Call =
+      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
   if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
     return cast<llvm::CallInst>(addConvergenceControlToken(Call));
   return Call;
