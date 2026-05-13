@@ -1293,10 +1293,10 @@ gpu.module @xevm_module {
 // CHECK-DAG: %[[CST_0:.*]] = arith.constant dense<3.000000e+00> : vector<16x1xf8E4M3FN>
 // CHECK-DAG: %[[CST_1:.*]] = arith.constant dense<1.000000e+00> : vector<8x1xf8E8M0FNU>
 // CHECK-DAG: %[[CST_2:.*]] = arith.constant dense<5.000000e-01> : vector<2x1xf8E8M0FNU>
-// CHECK: %[[SCALE_B:.*]] = vector.shape_cast %[[CST_2]] : vector<2x1xf8E8M0FNU> to vector<2xf8E8M0FNU>
-// CHECK: %[[SCALE_A:.*]] = vector.shape_cast %[[CST_1]] : vector<8x1xf8E8M0FNU> to vector<8xf8E8M0FNU>
-// CHECK: %[[B:.*]] = vector.shape_cast %[[CST_0]] : vector<16x1xf8E4M3FN> to vector<16xf8E4M3FN>
-// CHECK: %[[A:.*]] = vector.shape_cast %[[CST]] : vector<8x1xf8E4M3FN> to vector<8xf8E4M3FN>
+// CHECK-DAG: %[[SCALE_B:.*]] = vector.shape_cast %[[CST_2]] : vector<2x1xf8E8M0FNU> to vector<2xf8E8M0FNU>
+// CHECK-DAG: %[[SCALE_A:.*]] = vector.shape_cast %[[CST_1]] : vector<8x1xf8E8M0FNU> to vector<8xf8E8M0FNU>
+// CHECK-DAG: %[[B:.*]] = vector.shape_cast %[[CST_0]] : vector<16x1xf8E4M3FN> to vector<16xf8E4M3FN>
+// CHECK-DAG: %[[A:.*]] = vector.shape_cast %[[CST]] : vector<8x1xf8E4M3FN> to vector<8xf8E4M3FN>
 // CHECK: %[[RESULT:.*]] = xegpu.dpas_mx %[[A]], %[[B]] scale_a = %[[SCALE_A]] scale_b = %[[SCALE_B]] : (vector<8xf8E4M3FN>, vector<16xf8E4M3FN>, vector<8xf8E8M0FNU>, vector<2xf8E8M0FNU>) -> vector<8xf32>
 gpu.func @xegpu_dpas_mx(%arg0: !xegpu.mem_desc<8x8xf16>, %arg1: !xegpu.mem_desc<8x8xf16>) {
   %A = arith.constant dense<3.> : vector<8x16xf8E4M3FN>
