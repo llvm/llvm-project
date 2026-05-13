@@ -517,17 +517,20 @@ private:
               KernelLaunchEnvironmentTy *KernelLaunchEnvironment,
               uint32_t Version) const;
 
-  /// Get the number of threads and blocks for the kernel based on the
-  /// user-defined threads and block clauses.
-  uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
-                         uint32_t ThreadLimitClause[3]) const;
+  /// Get the effective number of threads for the kernel based on the
+  /// user-defined number of threads.
+  uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
+                                  uint32_t ThreadLimitClause[3]) const;
 
+  /// Get the effective number of blocks for the kernel based on the
+  /// user-defined number of blocks and the loop trip count.
   /// The number of threads \p NumThreads can be adjusted by this method.
   /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
   /// thread_limit clause.
-  uint32_t getNumBlocks(GenericDeviceTy &GenericDevice,
-                        uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
-                        uint32_t &NumThreads, bool IsNumThreadsFromUser) const;
+  uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
+                                 uint32_t UserNumBlocks[3],
+                                 uint64_t LoopTripCount, uint32_t &NumThreads,
+                                 bool IsNumThreadsFromUser) const;
 
   /// Indicate if the kernel works in Generic SPMD, Generic, No-Loop
   /// or SPMD mode.
