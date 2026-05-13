@@ -1090,8 +1090,6 @@ static bool isSignatureValid(FunctionType *FTy,
                              SmallVectorImpl<Type *> &OverloadTys,
                              raw_ostream &OS,
                              SignatureMatchFailInfo *FailInfo) {
-  bool IsVarArg = isIntrinsicVarArg(Infos, /*Consume=*/true);
-
   SmallVector<DeferredIntrinsicMatchPair, 2> DeferredChecks;
   if (matchIntrinsicType(FTy->getReturnType(), Infos, OverloadTys,
                          DeferredChecks, false)) {
@@ -1185,9 +1183,10 @@ bool Intrinsic::isSignatureValid(Function *F,
 /// by getType().
 static unsigned getRequiredOverloadCount(Intrinsic::ID ID) {
   SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  Intrinsic::getIntrinsicInfoTableEntries(ID, Table);
+  auto [TableRef, NumArgs, IsVarArg] =
+      Intrinsic::getIntrinsicInfoTableEntries(ID, Table);
   unsigned Count = 0;
-  for (const auto &D : Table)
+  for (const auto &D : TableRef)
     if (D.Kind == Intrinsic::IITDescriptor::Overloaded ||
         D.Kind == Intrinsic::IITDescriptor::VecOfAnyPtrsToElt)
       Count = std::max(Count, D.getOverloadIndex() + 1u);
@@ -1198,8 +1197,7 @@ void Intrinsic::printIntrinsicSignatureMismatch(raw_ostream &OS,
                                                 Intrinsic::ID ID,
                                                 FunctionType *FT) {
   SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(ID, Table);
-  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
+  auto [TableRef, NumArgs, IsVarArg] = getIntrinsicInfoTableEntries(ID, Table);
 
   FunctionType *CanonFT =
       isOverloaded(ID) ? nullptr : getType(FT->getContext(), ID);
@@ -1216,17 +1214,18 @@ void Intrinsic::printIntrinsicSignatureMismatch(raw_ostream &OS,
 
   // Determine whether the return type or an argument type mismatches.
   // For non-overloaded intrinsics we can compare return types directly.
-  // For overloaded intrinsics we run the matching and inspect the message.
+  // For overloaded intrinsics we run the matching and capture the message.
   bool IsRetMismatch;
+  std::string KindMsg;
   SmallVector<Type *, 4> OverloadTys;
   SignatureMatchFailInfo FailInfo;
 
   if (CanonFT) {
     IsRetMismatch = FT->getReturnType() != CanonFT->getReturnType();
   } else {
-    std::string KindMsg;
     raw_string_ostream KindOS(KindMsg);
-    ::isSignatureValid(FT, TableRef, OverloadTys, KindOS, &FailInfo);
+    ::isSignatureValid(FT, TableRef, NumArgs, IsVarArg, OverloadTys, KindOS,
+                       &FailInfo);
     IsRetMismatch = StringRef(KindMsg).contains("return type");
   }
 
@@ -1296,9 +1295,15 @@ void Intrinsic::printIntrinsicSignatureMismatch(raw_ostream &OS,
     }
   }
 
-  FormatMismatch(
-      "intrinsic has incorrect argument type! declared signature is '",
-      [&] { FT->print(OS); });
+  if (!CanonFT) {
+    // For overloaded intrinsics pass through the raw message from
+    // isSignatureValid (e.g. wrong argument count).
+    OS << KindMsg;
+  } else {
+    FormatMismatch(
+        "intrinsic has incorrect argument type! declared signature is '",
+        [&] { FT->print(OS); });
+  }
 }
 
 std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
