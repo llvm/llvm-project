@@ -779,12 +779,14 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 
 /// Returns true if \p R is dead and can be removed.
 static bool isDeadRecipe(VPRecipeBase &R) {
-  // Do remove conditional assume instructions as their conditions may be
-  // flattened.
+  // 1. Do remove conditional assume instructions as their conditions may be
+  //    flattened.
+  // 2. Remove conditional pseudoprobe intrinsics; otherwise the predicated
+  //    block would still contribute samples as if the branch were always taken.
   auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-  bool IsConditionalAssume = RepR && RepR->isPredicated() &&
-                             match(RepR, m_Intrinsic<Intrinsic::assume>());
-  if (IsConditionalAssume)
+  if (RepR && RepR->isPredicated() &&
+      (match(RepR, m_Intrinsic<Intrinsic::assume>()) ||
+       match(RepR, m_Intrinsic<Intrinsic::pseudoprobe>())))
     return true;
 
   if (R.mayHaveSideEffects())
