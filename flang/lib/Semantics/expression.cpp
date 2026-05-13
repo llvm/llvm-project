@@ -2852,7 +2852,7 @@ static int CompareCudaMatchingDistance(
 //                 None                              ACC      gpu=    gpu=
 //   Dummy attr   (Host)  Device  Managed Unified  use_dev  unified  managed
 //   ----------+--------+-------+--------+-------+--------+--------+--------+
-//   None(host)|    0   |  INF  |   3    |   3   |   1    |   3    |   3    |
+//   None(host)|    0   |  INF  |   3    |   3   |   3    |   3    |   3    |
 //   Device    |   INF  |   0   |   2    |   2   |   0    |   2    |   2    |
 //   Managed   |   INF  |  INF  |   0    |   1   |  INF   |   1    |   0    |
 //   Unified   |   INF  |  INF  |   1    |   0   |  INF   |   0    |   1    |
