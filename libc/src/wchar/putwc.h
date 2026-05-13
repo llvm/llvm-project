@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation header for the putwc function.
+/// This file contains the prototype for the putwc function, which writes a
+/// single character to the provided stream.
 ///
 //===----------------------------------------------------------------------===//
 

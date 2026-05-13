@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/wchar_macros.h" // For WEOF
 #include "src/stdio/fclose.h"
 #include "src/stdio/ferror.h"
@@ -61,8 +62,13 @@ TEST_F(LlvmLibcPutwcTest, WriteUtf8) {
   // 𐍈   -> L'𐍈' (4-byte)
   EXPECT_EQ(LIBC_NAMESPACE::putwc(L'a', file), static_cast<wint_t>(L'a'));
   EXPECT_EQ(LIBC_NAMESPACE::putwc(L'¢', file), static_cast<wint_t>(L'¢'));
+#if WINT_MAX > 0xFFFF
   EXPECT_EQ(LIBC_NAMESPACE::putwc(L'€', file), static_cast<wint_t>(L'€'));
   EXPECT_EQ(LIBC_NAMESPACE::putwc(L'𐍈', file), static_cast<wint_t>(L'𐍈'));
+  constexpr size_t EXPECTED_BYTES = 10;
+#else
+  constexpr size_t EXPECTED_BYTES = 6;
+#endif
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 
@@ -71,8 +77,8 @@ TEST_F(LlvmLibcPutwcTest, WriteUtf8) {
   ASSERT_FALSE(file == nullptr);
 
   unsigned char buffer[20] = {0};
-  // Expecting 1 + 2 + 3 + 4 = 10 bytes
-  ASSERT_EQ(LIBC_NAMESPACE::fread(buffer, 1, 10, file), size_t(10));
+  ASSERT_EQ(LIBC_NAMESPACE::fread(buffer, 1, EXPECTED_BYTES, file),
+            EXPECTED_BYTES);
 
   // a
   EXPECT_EQ(buffer[0], static_cast<unsigned char>(0x61));
@@ -81,6 +87,7 @@ TEST_F(LlvmLibcPutwcTest, WriteUtf8) {
   EXPECT_EQ(buffer[1], static_cast<unsigned char>(0xC2));
   EXPECT_EQ(buffer[2], static_cast<unsigned char>(0xA2));
 
+#if WINT_MAX > 0xFFFF
   // €
   EXPECT_EQ(buffer[3], static_cast<unsigned char>(0xE2));
   EXPECT_EQ(buffer[4], static_cast<unsigned char>(0x82));
@@ -91,6 +98,7 @@ TEST_F(LlvmLibcPutwcTest, WriteUtf8) {
   EXPECT_EQ(buffer[7], static_cast<unsigned char>(0x90));
   EXPECT_EQ(buffer[8], static_cast<unsigned char>(0x8D));
   EXPECT_EQ(buffer[9], static_cast<unsigned char>(0x88));
+#endif
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
