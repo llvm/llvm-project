@@ -96,10 +96,23 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
-    if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
-        RecipeI->getIterator() != VPBB->begin()) {
-      errs() << "CurrentIteration PHI is not the first recipe\n";
-      return false;
+    if (isa<VPCurrentIterationPHIRecipe>(RecipeI)) {
+      if (RecipeI->getIterator() != VPBB->begin()) {
+        errs() << "CurrentIteration PHI is not the first recipe\n";
+        return false;
+      }
+      if (const VPValue *CanIV =
+              VPBB->getEnclosingLoopRegion()->getCanonicalIV()) {
+        if (!all_of(
+                CanIV->users(),
+                match_fn(m_Add(m_Specific(CanIV),
+                               m_Specific(&VPBB->getPlan()->getVFxUF()))))) {
+          errs()
+              << "There should be no users of the canonical IV other than the "
+                 "increment after a VPCurrentIterationPHI is added\n";
+          return false;
+        }
+      }
     }
 
     // Check if the recipe operands match the number of predecessors.
