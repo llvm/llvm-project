@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr int totalordermagf(const float *x, const float *y) {
+LIBC_INLINE LIBC_CONSTEXPR int totalordermagf(const float *x, const float *y) {
   return static_cast<int>(fputil::totalordermag(*x, *y));
 }
 

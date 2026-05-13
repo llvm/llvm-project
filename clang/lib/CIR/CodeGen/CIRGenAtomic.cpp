@@ -225,10 +225,13 @@ RValue AtomicInfo::emitAtomicLoad(AggValueSlot resultSlot, SourceLocation loc,
 }
 
 Address AtomicInfo::createTempAlloca() const {
-  Address tempAlloca = cgf.createMemTemp(
-      (lvalue.isBitField() && valueSizeInBits > atomicSizeInBits) ? valueTy
-                                                                  : atomicTy,
-      getAtomicAlignment(), loc, "atomic-temp");
+  // Remove addrspace info from the atomic pointer element when making the
+  // alloca pointer element.
+  QualType tmpTy = (lvalue.isBitField() && valueSizeInBits > atomicSizeInBits)
+                       ? valueTy
+                       : atomicTy.getUnqualifiedType();
+  Address tempAlloca =
+      cgf.createMemTemp(tmpTy, getAtomicAlignment(), loc, "atomic-temp");
 
   // Cast to pointer to value type for bitfields.
   if (lvalue.isBitField()) {

@@ -257,7 +257,7 @@ struct LargeRangeReduction {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   LIBC_INLINE Float128 accurate() const {
-    constexpr Float128 PI_OVER_128_F128 = {
+    LIBC_CONSTEXPR Float128 PI_OVER_128_F128 = {
         Sign::POS, -133, 0xc90f'daa2'2168'c234'c4c6'628b'80dc'1cd1_u128};
 
     // y_lo = x * c_lo + pm.lo
@@ -285,7 +285,7 @@ private:
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 LIBC_INLINE Float128 range_reduction_small_f128(double x) {
-  constexpr Float128 PI_OVER_128_F128 = {
+  LIBC_CONSTEXPR Float128 PI_OVER_128_F128 = {
       Sign::POS, -133, 0xc90f'daa2'2168'c234'c4c6'628b'80dc'1cd1_u128};
   constexpr double ONE_TWENTY_EIGHT_OVER_PI_D = 0x1.45f306dc9c883p5;
   double prod_hi = x * ONE_TWENTY_EIGHT_OVER_PI_D;
@@ -306,7 +306,7 @@ LIBC_INLINE Float128 range_reduction_small_f128(double x) {
   return fputil::quick_mul(y, PI_OVER_128_F128);
 }
 
-LIBC_INLINE_VAR constexpr Float128 SIN_K_PI_OVER_128_F128[65] = {
+LIBC_INLINE_VAR LIBC_CONSTEXPR Float128 SIN_K_PI_OVER_128_F128[65] = {
     {Sign::POS, 0, 0},
     {Sign::POS, -133, 0xc90a'afbd'1b33'efc9'c539'edcb'fda0'cf2c_u128},
     {Sign::POS, -132, 0xc8fb'2f88'6ec0'9f37'6a17'954b'2b7c'5171_u128},

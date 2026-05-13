@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr long double fmaxl(long double x, long double y) {
+LIBC_INLINE LIBC_CONSTEXPR long double fmaxl(long double x, long double y) {
   return fputil::fmax(x, y);
 }
 

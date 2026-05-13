@@ -1067,12 +1067,12 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
   KernelArgsTy LaunchArgs{};
-  LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroups.x;
-  LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroups.y;
-  LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumGroups.z;
-  LaunchArgs.ThreadLimit[0] = LaunchSizeArgs->GroupSize.x;
-  LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
-  LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
+  LaunchArgs.UserNumBlocks[0] = LaunchSizeArgs->NumGroups.x;
+  LaunchArgs.UserNumBlocks[1] = LaunchSizeArgs->NumGroups.y;
+  LaunchArgs.UserNumBlocks[2] = LaunchSizeArgs->NumGroups.z;
+  LaunchArgs.UserThreadLimit[0] = LaunchSizeArgs->GroupSize.x;
+  LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
+  LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
 
   KernelLaunchParamsTy Params;

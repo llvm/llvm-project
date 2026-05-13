@@ -169,10 +169,15 @@ void resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
 ///
 /// %2 = load %0[%i1 / 6, %i1 % 6, %i2] :
 ///          memref<2x6x42xf32>
+///
+/// If `startsInbounds` is true, optimizations that rely on all indices being
+/// non-negative and less than the corresponding memref dimension may be
+/// performed.
 void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
                                        memref::CollapseShapeOp collapseShapeOp,
                                        ValueRange indices,
-                                       SmallVectorImpl<Value> &sourceIndices);
+                                       SmallVectorImpl<Value> &sourceIndices,
+                                       bool startsInbounds);
 
 /// Given the 'indices' of a load/store operation where the memref is a result
 /// of a rank-reducing full subview op, returns the indices w.r.t to the source

@@ -413,15 +413,26 @@ const LiveInterval::SubRange &getSubRangeForMaskExact(LaneBitmask LM,
 }
 
 /// Find a subrange corresponding to the lane mask @p LM, or a superset of it,
-/// in the live interval @p LI. The interval @p LI is assumed to contain such
-/// a subrange.  This function is used to find corresponding subranges between
-/// the original interval and the new intervals.
-const LiveInterval::SubRange &getSubRangeForMask(LaneBitmask LM,
-                                                 const LiveInterval &LI) {
+/// in the live interval @p LI.
+/// \return nullptr is such subrange is not found.
+const LiveInterval::SubRange *findSubRangeForMask(LaneBitmask LM,
+                                                  const LiveInterval &LI) {
   for (const LiveInterval::SubRange &S : LI.subranges())
     if ((S.LaneMask & LM) == LM)
-      return S;
-  llvm_unreachable("SubRange for this mask not found");
+      return &S;
+  return nullptr;
+}
+
+LaneBitmask getLiveLaneMaskAt(const LiveInterval &LI, SlotIndex Idx,
+                              const MachineRegisterInfo &MRI) {
+  if (!LI.hasSubRanges())
+    return MRI.getMaxLaneMaskForVReg(LI.reg());
+
+  LaneBitmask LaneMask;
+  for (const LiveInterval::SubRange &S : LI.subranges())
+    if (S.liveAt(Idx))
+      LaneMask |= S.LaneMask;
+  return LaneMask;
 }
 
 void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
@@ -436,8 +447,11 @@ void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
     // to only update the subranges for which the original subranges had
     // a def at this location.
     for (LiveInterval::SubRange &S : LI.subranges()) {
-      auto &PS = getSubRangeForMask(S.LaneMask, Edit->getParent());
-      VNInfo *PV = PS.getVNInfoAt(Def);
+      const LiveInterval::SubRange *PS =
+          findSubRangeForMask(S.LaneMask, Edit->getParent());
+      if (PS == nullptr)
+        continue;
+      VNInfo *PV = PS->getVNInfoAt(Def);
       if (PV != nullptr && PV->def == Def)
         S.createDeadDef(Def, LIS.getVNInfoAllocator());
     }
@@ -637,21 +651,15 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
   VNInfo *OrigVNI = OrigLI.getVNInfoAt(UseIdx);
 
   Register Reg = LI->reg();
-  if (OrigVNI) {
+  LaneBitmask LaneMask = getLiveLaneMaskAt(Edit->getParent(), UseIdx, MRI);
+  if (OrigVNI && LaneMask.any()) {
     LiveRangeEdit::Remat RM(ParentVNI);
     RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
     if (RM.OrigMI && TII.isAsCheapAsAMove(*RM.OrigMI) &&
         Edit->canRematerializeAt(RM, UseIdx)) {
       if (!rematWillIncreaseRestriction(RM.OrigMI, MBB, UseIdx)) {
-        LaneBitmask UsedLanes = LaneBitmask::getAll();
-        if (OrigLI.hasSubRanges()) {
-          UsedLanes = LaneBitmask::getNone();
-          for (const LiveInterval::SubRange &SR : OrigLI.subranges())
-            if (SR.liveAt(UseIdx))
-              UsedLanes |= SR.LaneMask;
-        }
         SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late, 0,
-                                              nullptr, UsedLanes);
+                                              nullptr, LaneMask);
         ++NumRemats;
         // Define the value in Reg.
         return defValue(RegIdx, ParentVNI, Def, false);
@@ -661,17 +669,6 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
                  << UseIdx
                  << " since it will increase register class restrictions\n");
     }
-  }
-
-  LaneBitmask LaneMask;
-  if (OrigLI.hasSubRanges()) {
-    LaneMask = LaneBitmask::getNone();
-    for (LiveInterval::SubRange &S : OrigLI.subranges()) {
-      if (S.liveAt(UseIdx))
-        LaneMask |= S.LaneMask;
-    }
-  } else {
-    LaneMask = LaneBitmask::getAll();
   }
 
   SlotIndex Def;

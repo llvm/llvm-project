@@ -1038,6 +1038,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_getthreadid_np
+    libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_key_create
     libc.src.pthread.pthread_key_delete

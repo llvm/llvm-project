@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr int totalorder(const double *x, const double *y) {
+LIBC_INLINE LIBC_CONSTEXPR int totalorder(const double *x, const double *y) {
   return static_cast<int>(fputil::totalorder(*x, *y));
 }
 

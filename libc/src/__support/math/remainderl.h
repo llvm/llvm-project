@@ -15,7 +15,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr long double remainderl(long double x, long double y) {
+LIBC_INLINE LIBC_CONSTEXPR long double remainderl(long double x,
+                                                  long double y) {
   int quotient{};
   return fputil::remquo(x, y, quotient);
 }

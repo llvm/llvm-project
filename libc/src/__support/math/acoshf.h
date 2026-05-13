@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr float acoshf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float acoshf(float x) {
   using namespace acoshf_internal;
   using FPBits_t = typename fputil::FPBits<float>;
   FPBits_t xbits(x);

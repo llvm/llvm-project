@@ -19,7 +19,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float128 fabsf128(float128 x) { return fputil::abs(x); }
+LIBC_INLINE LIBC_CONSTEXPR float128 fabsf128(float128 x) {
+  return fputil::abs(x);
+}
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

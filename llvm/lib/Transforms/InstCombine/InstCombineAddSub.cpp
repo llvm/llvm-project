@@ -2508,16 +2508,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return Sub;
   }
 
+  // (X + C0) - (Y + C1) --> (X - Y) + (C0 - C1)
   {
-    // (X + Z) - (Y + Z) --> (X - Y)
-    // This is done in other passes, but we want to be able to consume this
-    // pattern in InstCombine so we can generate it without creating infinite
-    // loops.
-    if (match(Op0, m_Add(m_Value(X), m_Value(Z))) &&
-        match(Op1, m_c_Add(m_Value(Y), m_Specific(Z))))
-      return BinaryOperator::CreateSub(X, Y);
-
-    // (X + C0) - (Y + C1) --> (X - Y) + (C0 - C1)
     Constant *CX, *CY;
     if (match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(CX)))) &&
         match(Op1, m_OneUse(m_Add(m_Value(Y), m_ImmConstant(CY))))) {
@@ -2527,6 +2519,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
+  // (X + Z) - (Y + Z) --> (X - Y)
   {
     Value *W, *Z;
     if (match(Op0, m_AddLike(m_Value(W), m_Value(X))) &&

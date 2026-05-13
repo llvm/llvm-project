@@ -1624,6 +1624,7 @@ void AMDGPULibCalls::replaceLibCallWithSimpleIntrinsic(IRBuilder<> &B,
 
   CI->setCalledFunction(Intrinsic::getOrInsertDeclaration(
       CI->getModule(), IntrID, {CI->getType()}));
+  CI->setCallingConv(CallingConv::C);
 }
 
 bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(

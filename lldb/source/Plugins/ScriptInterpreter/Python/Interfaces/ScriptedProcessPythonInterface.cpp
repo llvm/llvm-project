@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// clang-format off
-// LLDB Python header must be included first
 #include "../lldb-python.h"
-//clang-format on
 
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
@@ -20,10 +18,6 @@
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedThreadPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
-
-// Included in this position to prevent redefinition of pid_t on Windows.
-#include "lldb/Target/Process.h"
-//clang-format off
 
 #include <optional>
 

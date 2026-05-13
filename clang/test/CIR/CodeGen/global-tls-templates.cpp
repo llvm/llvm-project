@@ -30,53 +30,77 @@ thread_local T tls_templ = {get_i()};
 
 // Wrapper: Ctor/Dtor
 // CIR-LABEL: cir.func comdat weak_odr private hidden @_ZTW9tls_templI8CtorDtorE() -> !cir.ptr<!rec_CtorDtor> {
-// CIR-NOT:  cir.call @_ZTH9tls_templI8CtorDtorE() : () -> ()
+// CIR:  cir.call @_ZTH9tls_templI8CtorDtorE() : () -> ()
 // CIR:  %[[GET_GLOB:.*]] = cir.get_global thread_local @_Z9tls_templI8CtorDtorE : !cir.ptr<!rec_CtorDtor>
 // CIR:  cir.return %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor>
 // CIR:}
 
+// Alias: Ctor/Dtor: 
+// CIR: cir.func linkonce_odr @_ZTH9tls_templI8CtorDtorE() alias(@[[CTOR_DTOR_INIT:[^)]*]])
+// TLS Guard: Ctor/Dtor:
+
 // Wrapper: int
 // CIR-LABEL: cir.func comdat weak_odr private hidden @_ZTW9tls_templIiE() -> !cir.ptr<!s32i>
-// CIR-NOT:   cir.call @_ZTH9tls_templIiE() : () -> () 
+// CIR:   cir.call @_ZTH9tls_templIiE() : () -> () 
 // CIR:   %[[GET_GLOB:.*]] = cir.get_global thread_local @_Z9tls_templIiE : !cir.ptr<!s32i>
 // CIR:   cir.return %[[GET_GLOB]] : !cir.ptr<!s32i>
 // CIR: }
 
+// Alias: int
+// CIR: cir.func linkonce_odr @_ZTH9tls_templIiE() alias(@[[INT_INIT:[^)]*]])
+
 // Global: int
 // CIR: cir.global linkonce_odr comdat tls_dyn dyn_tls_refs = <"_ZTW9tls_templIiE", "_ZTH9tls_templIiE", "_ZGV9tls_templIiE"> @_Z9tls_templIiE = #cir.int<0> : !s32i
+
+// Init Func: int
+// CIR:  cir.func internal private @[[INT_INIT]]() {
+// CIR:      %[[GET_GLOB:.*]] = cir.get_global thread_local @_Z9tls_templIiE : !cir.ptr<!s32i>
+// CIR:      %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
+// CIR:      cir.store {{.*}}%[[CALL]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>
+
+
 // Global: Ctor/Dotr:
 // CIR: cir.global linkonce_odr comdat tls_dyn dyn_tls_refs = <"_ZTW9tls_templI8CtorDtorE", "_ZTH9tls_templI8CtorDtorE", "_ZGV9tls_templI8CtorDtorE"> @_Z9tls_templI8CtorDtorE = #cir.zero : !rec_CtorDtor
 
+// Init Func: Ctor/Dtor:
+// CIR: cir.func internal private @[[CTOR_DTOR_INIT]]() {
+// CIR:     %[[GET_GLOB:.*]] = cir.get_global thread_local @_Z9tls_templI8CtorDtorE : !cir.ptr<!rec_CtorDtor>
+// CIR:     %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
+// CIR:     cir.call @_ZN8CtorDtorC1Ei(%[[GET_GLOB]], %[[CALL]]) : (!cir.ptr<!rec_CtorDtor> {{.*}}, !s32i {llvm.noundef}) -> ()
+// CIR:     %[[GET_GLOB:.*]] = cir.get_global thread_local @_Z9tls_templI8CtorDtorE : !cir.ptr<!rec_CtorDtor>
+// CIR:     %[[GET_DTOR:.*]] = cir.get_global @_ZN8CtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>>
+// CIR:     %[[DTOR_FPTR:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
+// CIR:     %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB:.*]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
+// CIR:     %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
+// CIR:     cir.call @__cxa_thread_atexit(%[[DTOR_FPTR]], %[[GLOB_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+
+// FIXME: These have inconsistent COMDAT with classic codegen, but we don't
+// currently specify 'comdat' with a name.
 // Globals:
 // LLVM-BOTH-DAG: @_Z9tls_templIiE = linkonce_odr thread_local global i32 0, comdat, align 4
 // LLVM-BOTH-DAG: @_Z9tls_templI8CtorDtorE = linkonce_odr thread_local global %struct.CtorDtor zeroinitializer, comdat, align 4
+
+// Aliases:
+// LLVM-BOTH-DAG: @_ZTH9tls_templI8CtorDtorE = linkonce_odr alias void (), ptr @[[CTOR_DTOR_INIT:.*]]
+// LLVM-BOTH-DAG: @_ZTH9tls_templIiE = linkonce_odr alias void (), ptr @[[INT_INIT:.*]]
+
+// OGCG Has this first, same check lines as LLVM.
+// OGCG-LABEL: define dso_local void @_Z4usesv()
+// OGCG: call ptr @_ZTW9tls_templIiE()
+// OGCG: call ptr @_ZTW9tls_templI8CtorDtorE()
 
 // Wrappers: Just opposite ordering, same check lines as LLVM.
 // FIXME: OGCG has these set as 'comdat'. However, CIR doesn't lower comdat to
 // LLVM, so it doesn't show up in the IR here.
 // LLVM-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templI8CtorDtorE() {
-// LLVM-NOT:   call void @_ZTH9tls_templI8CtorDtorE()
+// LLVM:   call void @_ZTH9tls_templI8CtorDtorE()
 // LLVM:   call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templI8CtorDtorE)
 // LLVM: }
 
 // LLVM-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templIiE() {
-// LLVM-NOT:   call void @_ZTH9tls_templIiE()
+// LLVM:   call void @_ZTH9tls_templIiE()
 // LLVM:   call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templIiE)
 // LLVM: }
-
-// CIR-BEFORE-LPP-LABEL: cir.func{{.*}}@_Z4usesv
-// CIR-LABEL: cir.func{{.*}}@_Z4usesv
-// LLVM-BOTH-LABEL: define dso_local void @_Z4usesv()
-void uses() {
-  auto x = tls_templ<int>;
-// CIR-BEFORE-LPP: cir.get_global thread_local @_Z9tls_templIiE : !cir.ptr<!s32i>
-// CIR: cir.call @_ZTW9tls_templIiE() : () -> !cir.ptr<!s32i>
-// LLVM-BOTH: call ptr @_ZTW9tls_templIiE()
-  auto y = tls_templ<CtorDtor>;
-// CIR-BEFORE-LPP: cir.get_global thread_local @_Z9tls_templI8CtorDtorE : !cir.ptr<!rec_CtorDtor>
-// CIR: cir.call @_ZTW9tls_templI8CtorDtorE() : () -> !cir.ptr<!rec_CtorDtor>
-// LLVM-BOTH: call ptr @_ZTW9tls_templI8CtorDtorE()
-}
 
 // OGCG-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templIiE() {{.*}} comdat {
 // OGCG:   call void @_ZTH9tls_templIiE()
@@ -87,3 +111,53 @@ void uses() {
 // OGCG:   call void @_ZTH9tls_templI8CtorDtorE()
 // OGCG:   call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templI8CtorDtorE)
 // OGCG: }
+
+
+// Inits: 
+// Note: the differences here are mostly ordering, however there are a few diferences:
+// 1- OGCG skipps the llvm.threadlocal call.  We've seen this elsewhere with thread local,
+//    so I don't think it is problematic, as it just seems like an early opt.
+// 2- For some reason OGCG generates guards as i64/i8 depending on platform (like with static-local),
+//    but ALWAYS treats the load/stores as i8.  This is likely a 'bug' in OGCG, but one that
+//    doesn't really matter at all.
+// LLVM-BOTH: define internal void @[[INT_INIT]]()
+// OGCG:   %[[LOAD_GUARD:.*]] = load i8, ptr @_ZGV9tls_templIiE, align 8
+// OGCG:   %[[ISUNINIT:.*]] = icmp eq i{{.*}} %[[LOAD_GUARD]], 0
+// OGCG:   br i1 %[[ISUNINIT]]
+//
+// OGCG:   store i8 1, ptr @_ZGV9tls_templIiE, align 8
+// LLVM:   %[[GET_GLOB:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templIiE)
+// LLVM:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()
+// OGCG:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()
+// OGCG:   %[[GET_GLOB:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templIiE)
+// LLVM-BOTH:   store i32 %[[CALL]], ptr %[[GET_GLOB]]
+
+// LLVM-BOTH: define internal void @[[CTOR_DTOR_INIT]]()
+// OGCG:   %[[LOAD_GUARD:.*]] = load i8, ptr @_ZGV9tls_templI8CtorDtorE, align 8
+// OGCG:   %[[ISUNINIT:.*]] = icmp eq i{{.*}} %[[LOAD_GUARD]], 0
+// OGCG:   br i1 %[[ISUNINIT]]
+//
+// OGCG:  store i8 1, ptr @_ZGV9tls_templI8CtorDtorE, align 8
+//
+// LLVM:   %[[GET_GLOB:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templI8CtorDtorE)
+// LLVM-BOTH:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()
+// LLVM:   call void @_ZN8CtorDtorC1Ei(ptr {{.*}}%[[GET_GLOB]], i32 {{.*}}%[[CALL]])
+// OGCG:   call void @_ZN8CtorDtorC1Ei(ptr {{.*}}@_Z9tls_templI8CtorDtorE, i32 {{.*}}%[[CALL]])
+//
+// LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @_Z9tls_templI8CtorDtorE)
+// LLVM:   call void @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
+// OGCG:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr @_Z9tls_templI8CtorDtorE, ptr @__dso_handle)
+
+// CIR-BEFORE-LPP-LABEL: cir.func{{.*}}@_Z4usesv
+// CIR-LABEL: cir.func{{.*}}@_Z4usesv
+// LLVM-LABEL: define dso_local void @_Z4usesv()
+void uses() {
+  auto x = tls_templ<int>;
+// CIR-BEFORE-LPP: cir.get_global thread_local @_Z9tls_templIiE : !cir.ptr<!s32i>
+// CIR: cir.call @_ZTW9tls_templIiE() : () -> !cir.ptr<!s32i>
+// LLVM: call ptr @_ZTW9tls_templIiE()
+  auto y = tls_templ<CtorDtor>;
+// CIR-BEFORE-LPP: cir.get_global thread_local @_Z9tls_templI8CtorDtorE : !cir.ptr<!rec_CtorDtor>
+// CIR: cir.call @_ZTW9tls_templI8CtorDtorE() : () -> !cir.ptr<!rec_CtorDtor>
+// LLVM: call ptr @_ZTW9tls_templI8CtorDtorE()
+}

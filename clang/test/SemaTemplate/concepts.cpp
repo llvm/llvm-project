@@ -1241,7 +1241,7 @@ struct SVGPropertyOwnerRegistry {
   }
 };
 
-class SVGCircleElement {
+struct SVGCircleElement {
   friend SVGPropertyOwnerRegistry<SVGCircleElement>;
   void propertyForAttribute(int);
 };
@@ -1880,3 +1880,70 @@ void g() { static_assert(f<1>() == 42); }
 } // namespace VAR
 
 } // namespace GH188640
+
+namespace GH194803 {
+
+struct B {
+    void f();
+};
+template <typename Base>
+concept C = requires() { Base::f(); }; // expected-note {{because 'Base::f()' would be invalid: call to non-static member function without an object argument}}
+
+template <typename> struct S : B {
+    void g()
+        requires C<B>; // expected-note {{because 'B' does not satisfy 'C'}}
+    void h()
+        requires requires() { B::f(); }; // #2
+};
+void f() {
+    S<int>{}.g(); // expected-error {{invalid reference to function 'g': constraints not satisfied}}
+    S<int>{}.h();
+}
+
+}
+
+namespace GH115838 {
+
+template <typename T>
+concept has_x = requires(T t) {
+    { t.x };
+};
+
+class Publ {
+  public:
+    int x = 0;
+};
+class Priv {
+  private:
+    int x = 0;
+};
+class Prot {
+  protected:
+    int x = 0;
+};
+class Same {
+  protected:
+    int x = 0;
+};
+
+template <typename T> class D;
+template <typename T>
+requires(has_x<T>)
+class D<T> : public T {
+  public:
+    static constexpr bool has = 1;
+};
+template <typename T>
+requires(!has_x<T>)
+class D<T> : public T {
+  public:
+    static constexpr bool has = 0;
+};
+
+static_assert(!has_x<Same>, "Protected should be invisible.");
+static_assert(!D<Same>::has, "Protected should be invisible.");
+
+static_assert(D<Publ>::has, "Public should be visible.");
+static_assert(!D<Priv>::has, "Private should be invisible.");
+static_assert(!D<Prot>::has, "Protected should be invisible.");
+}

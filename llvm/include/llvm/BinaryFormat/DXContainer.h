@@ -258,6 +258,10 @@ LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 
 LLVM_ABI PartType parsePartType(StringRef S);
 
+bool isDebugProgramPart(PartType PT);
+
+const char *getProgramPartName(bool IsDebug);
+
 struct VertexPSVInfo {
   uint8_t OutputPositionPresent;
   uint8_t Unused[3];

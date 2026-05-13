@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double modf(double x, double *iptr) {
+LIBC_INLINE LIBC_CONSTEXPR double modf(double x, double *iptr) {
   return fputil::modf(x, *iptr);
 }
 

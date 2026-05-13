@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double fmaximum_mag(double x, double y) {
+LIBC_INLINE LIBC_CONSTEXPR double fmaximum_mag(double x, double y) {
   return fputil::fmaximum_mag(x, y);
 }
 

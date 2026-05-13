@@ -46,6 +46,21 @@ build --incompatible_no_implicit_file_export
 # eventually become the default
 common --incompatible_disallow_empty_glob
 
+# Ensure config settings appropriately set visibility
+common --incompatible_config_setting_private_default_visibility
+
+# Avoid the legacy use of `cfg = "host"`. `cfg = "exec"` should be used in all
+# of these cases.
+common --incompatible_disable_starlark_host_transitions
+
+# Avoid the use of native Bazel rules that are planned to be exported into
+# independent repositories.
+common --incompatible_disable_native_repo_rules
+common --incompatible_autoload_externally=
+
+# Disable network access in sandboxes by default.
+build --sandbox_default_allow_network=false
+
 # Disabling runfiles links drastically increases performance in slow disk IO
 # situations Do not build runfile trees by default. If an execution strategy
 # relies on runfile symlink tree, the tree is created on-demand. See:

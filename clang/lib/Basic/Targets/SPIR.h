@@ -360,9 +360,10 @@ public:
       Diags.Report(diag::err_target_spirv_requires_vulkan);
       return false;
     }
-    if (getTriple().getEnvironment() < llvm::Triple::Pixel ||
-        getTriple().getEnvironment() > llvm::Triple::Amplification) {
-      Diags.Report(diag::err_target_spirv_requires_shader_stage);
+    if (getTriple().getEnvironment() != llvm::Triple::UnknownEnvironment &&
+        (getTriple().getEnvironment() < llvm::Triple::Pixel ||
+         getTriple().getEnvironment() > llvm::Triple::Amplification)) {
+      Diags.Report(diag::err_target_spirv_invalid_shader_stage);
       return false;
     }
     return true;

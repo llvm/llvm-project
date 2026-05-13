@@ -83,7 +83,7 @@ LIBC_INLINE double tan_eval(const DoubleDouble &u, DoubleDouble &result) {
   //          + x^11 * 1382/155925 + x^13 * 21844/6081075 +
   //          + x^15 * 929569/638512875 + x^17 * 6404582/10854718875
   // Relative errors < 2^-127 for |u| < pi/256.
-  constexpr Float128 TAN_COEFFS[] = {
+  LIBC_CONSTEXPR Float128 TAN_COEFFS[] = {
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1
       {Sign::POS, -129, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1
       {Sign::POS, -130, 0x88888888'88888888'88888888'88888889_u128}, // 2/15
@@ -111,7 +111,7 @@ LIBC_INLINE double tan_eval(const DoubleDouble &u, DoubleDouble &result) {
 [[maybe_unused]] Float128 newton_raphson_div(const Float128 &a, Float128 b,
                                              double q) {
   Float128 q0(q);
-  constexpr Float128 TWO(2.0);
+  LIBC_CONSTEXPR Float128 TWO(2.0);
   b.sign = (b.sign == Sign::POS) ? Sign::NEG : Sign::POS;
   Float128 q1 =
       fputil::quick_mul(q0, fputil::quick_add(TWO, fputil::quick_mul(b, q0)));

@@ -6,10 +6,47 @@
     "runtime_stubs_file.description": "The file into which runtime stubs should be written.",
     "target_regex": "",
     "target_regex.description": "Regular expression to be matched against the module target. Only targets that match this regex will be instrumented",
+    "demangle_function_names": true,
+    "demangle_function_names.description": "Demangle functions names passed to the runtime.",
     "host_enabled": true,
     "host_enabled.description": "Instrument non-GPU targets",
     "gpu_enabled": true,
     "gpu_enabled.description": "Instrument GPU targets"
+  },
+  "function_pre": {
+    "function": {
+      "enabled": true,
+      "address": true,
+      "address.description": "The function address.",
+      "name": true,
+      "name.description": "The function name.",
+      "num_arguments": true,
+      "num_arguments.description": "Number of function arguments (without varargs).",
+      "arguments": true,
+      "arguments.replace": true,
+      "arguments.description": "Description of the arguments.",
+      "is_main": true,
+      "is_main.description": "Flag to indicate it is the main function.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "function_post": {
+    "function": {
+      "enabled": true,
+      "address": true,
+      "address.description": "The function address.",
+      "name": true,
+      "name.description": "The function name.",
+      "num_arguments": true,
+      "num_arguments.description": "Number of function arguments (without varargs).",
+      "arguments": true,
+      "arguments.description": "Description of the arguments.",
+      "is_main": true,
+      "is_main.description": "Flag to indicate it is the main function.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
   },
   "instruction_pre": {
     "load": {
@@ -31,6 +68,16 @@
       "sync_scope_id.description": "The sync scope id of the load.",
       "is_volatile": true,
       "is_volatile.description": "Flag indicating a volatile load.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
+    "alloca": {
+      "enabled": true,
+      "size": true,
+      "size.replace": true,
+      "size.description": "The allocation size.",
+      "alignment": true,
+      "alignment.description": "The allocation alignment.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     },
@@ -81,6 +128,18 @@
       "sync_scope_id.description": "The sync scope id of the load.",
       "is_volatile": true,
       "is_volatile.description": "Flag indicating a volatile load.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
+    "alloca": {
+      "enabled": true,
+      "address": true,
+      "address.replace": true,
+      "address.description": "The allocated memory address.",
+      "size": true,
+      "size.description": "The allocation size.",
+      "alignment": true,
+      "alignment.description": "The allocation alignment.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     },

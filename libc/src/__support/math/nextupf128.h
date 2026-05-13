@@ -20,7 +20,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr float128 nextupf128(float128 x) {
+LIBC_INLINE LIBC_CONSTEXPR float128 nextupf128(float128 x) {
   return fputil::nextupdown</*IsDown=*/false>(x);
 }
 

@@ -128,7 +128,8 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
 
     uint64_t DataStart = OS.tell();
     switch (PT) {
-    case dxbc::PartType::DXIL: {
+    case dxbc::PartType::DXIL:
+    case dxbc::PartType::ILDB: {
       if (!P.Program)
         continue;
       dxbc::ProgramHeader Header;

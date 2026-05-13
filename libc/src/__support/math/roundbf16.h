@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr bfloat16 roundbf16(bfloat16 x) {
+LIBC_INLINE LIBC_CONSTEXPR bfloat16 roundbf16(bfloat16 x) {
   return fputil::round(x);
 }
 

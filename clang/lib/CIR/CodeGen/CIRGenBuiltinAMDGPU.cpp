@@ -184,8 +184,19 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
-  case AMDGPU::BI__builtin_amdgcn_readlane:
-  case AMDGPU::BI__builtin_amdgcn_readfirstlane:
+  case AMDGPU::BI__builtin_amdgcn_readlane: {
+    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
+    mlir::Value src1 = emitScalarExpr(expr->getArg(1));
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
+                                       "amdgcn.readlane", src0.getType(),
+                                       mlir::ValueRange{src0, src1});
+  }
+  case AMDGPU::BI__builtin_amdgcn_readfirstlane: {
+    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
+                                       "amdgcn.readfirstlane", src0.getType(),
+                                       mlir::ValueRange{src0});
+  }
   case AMDGPU::BI__builtin_amdgcn_wave_shuffle: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +

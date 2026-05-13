@@ -2,8 +2,8 @@
 
 ; RUN: opt -passes=instcombine < %s | llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200  | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
 ; RUN: opt -passes=instcombine < %s | llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250  | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG %s
-; RUN: opt -passes=instcombine < %s | llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
-; RUN: opt -passes=instcombine < %s | llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: opt -passes=instcombine < %s | llc -global-isel -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
+; RUN: opt -passes=instcombine < %s | llc -global-isel -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
 
 ; The address calculation can be simplified and folded because of known bits of mbcnt.
 define amdgpu_ps <2 x float> @global_load_scale_add_foldable_knownbits(ptr addrspace(1) inreg %sbase) {

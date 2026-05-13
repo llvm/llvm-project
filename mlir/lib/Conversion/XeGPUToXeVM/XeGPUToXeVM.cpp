@@ -763,10 +763,11 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
 
     if (valOrResVecTy.getNumElements() >= 1) {
       auto chipOpt = xegpu::getChipStr(op);
-      if (!chipOpt || (*chipOpt != "pvc" && *chipOpt != "bmg")) {
-        // the lowering for chunk load only works for pvc and bmg
+      if (!chipOpt ||
+          (*chipOpt != "pvc" && *chipOpt != "bmg" && *chipOpt != "cri")) {
+        // the lowering for chunk load only works for pvc, bmg or cri
         return rewriter.notifyMatchFailure(
-            op, "The lowering is specific to pvc or bmg.");
+            op, "The lowering is specific to pvc, bmg or cri.");
       }
     }
 

@@ -5117,6 +5117,13 @@ bool CompilerInvocation::CreateFromArgsImpl(
   if (LangOpts.OpenMPIsTargetDevice)
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
 
+  // Set the default and host triples for SYCL device compilation.
+  if (LangOpts.SYCLIsDevice) {
+    if (!Args.hasArg(options::OPT_triple))
+      Res.getTargetOpts().Triple = "spirv64-unknown-unknown";
+    Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
+  }
+
   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
                    Res.getFrontendOpts().OutputFile, LangOpts);
 

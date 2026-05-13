@@ -57,7 +57,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_EXP10F16_EXCEPTS>
     }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-LIBC_INLINE constexpr float16 exp10f16(float16 x) {
+LIBC_INLINE LIBC_CONSTEXPR float16 exp10f16(float16 x) {
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
 

@@ -280,7 +280,7 @@ LIBC_INLINE DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
 //               + (676039 x^24)/104857600 + (1300075 x^26)/226492416 +
 //               + (5014575 x^28)/973078528 + (9694845 x^30)/2080374784.
 
-LIBC_INLINE_VAR constexpr Float128 ASIN_COEFFS_F128[17][16] = {
+LIBC_INLINE_VAR LIBC_CONSTEXPR Float128 ASIN_COEFFS_F128[17][16] = {
     {
         {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128},
         {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128},
@@ -589,13 +589,13 @@ LIBC_INLINE_VAR constexpr Float128 ASIN_COEFFS_F128[17][16] = {
     },
 };
 
-LIBC_INLINE_VAR constexpr Float128 PI_OVER_TWO_F128 = {
+LIBC_INLINE_VAR LIBC_CONSTEXPR Float128 PI_OVER_TWO_F128 = {
     Sign::POS, -127, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
 
-LIBC_INLINE_VAR constexpr Float128 PI_F128 = {
+LIBC_INLINE_VAR LIBC_CONSTEXPR Float128 PI_F128 = {
     Sign::POS, -126, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
 
-LIBC_INLINE constexpr Float128 asin_eval(const Float128 &u, unsigned idx) {
+LIBC_INLINE LIBC_CONSTEXPR Float128 asin_eval(const Float128 &u, unsigned idx) {
   return fputil::polyeval(u, ASIN_COEFFS_F128[idx][0], ASIN_COEFFS_F128[idx][1],
                           ASIN_COEFFS_F128[idx][2], ASIN_COEFFS_F128[idx][3],
                           ASIN_COEFFS_F128[idx][4], ASIN_COEFFS_F128[idx][5],
@@ -611,11 +611,11 @@ LIBC_INLINE_VAR constexpr DoubleDouble ONE_OVER_PI_DD = {-0x1.6b01ec5417056p-56,
                                                          0x1.45f306dc9c883p-2};
 
 // 1/pi as Float128 (~128 bits of precision).
-LIBC_INLINE_VAR constexpr Float128 ONE_OVER_PI_F128 = {
+LIBC_INLINE_VAR LIBC_CONSTEXPR Float128 ONE_OVER_PI_F128 = {
     Sign::POS, -129, 0xa2f9836e'4e441529'fc2757d1'f534ddc0_u128};
 
 // 0.5 as Float128 (exact).
-LIBC_INLINE_VAR constexpr Float128 HALF_F128 = {
+LIBC_INLINE_VAR LIBC_CONSTEXPR Float128 HALF_F128 = {
     Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128};
 
 // Compute asin(sqrt(u))/(pi*sqrt(u)) in DoubleDouble precision by wrapping
@@ -630,7 +630,8 @@ LIBC_INLINE DoubleDouble asinpi_eval(const DoubleDouble &u, unsigned &idx,
 }
 
 // Compute asin(sqrt(u))/(pi*sqrt(u)) in Float128 precision.
-LIBC_INLINE constexpr Float128 asinpi_eval(const Float128 &u, unsigned idx) {
+LIBC_INLINE LIBC_CONSTEXPR Float128 asinpi_eval(const Float128 &u,
+                                                unsigned idx) {
   Float128 p = asin_eval(u, idx);
   return fputil::quick_mul(p, ONE_OVER_PI_F128);
 }

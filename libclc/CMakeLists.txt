@@ -162,6 +162,10 @@ if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
 elseif(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_AMDGPU)
   list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")
 endif()
+if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_AMDGPU OR LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_NVPTX)
+  list(APPEND target_compile_flags -fvisibility=hidden)
+  list(APPEND target_compile_flags "SHELL:-Xclang -fapply-global-visibility-to-externs")
+endif()
 
 # Common compile options shared by CLC and OpenCL libraries.
 set(compile_flags
@@ -224,8 +228,6 @@ libclc_add_library(libclc-${LIBCLC_TARGET}
   OUTPUT_FILENAME libclc
   PARENT_TARGET libclc-opencl-builtins
 )
-
-set(LIBCLC_UNRESOLVED_SYMBOL_TEST_TARGETS libclc-${LIBCLC_TARGET})
 
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)

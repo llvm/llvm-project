@@ -922,7 +922,8 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
   if (uArch->getName().equals_insensitive("pvc") &&
-      uArch->getName().equals_insensitive("bmg"))
+      uArch->getName().equals_insensitive("bmg") &&
+      uArch->getName().equals_insensitive("cri"))
     return false;
   if (!layout)
     return false;

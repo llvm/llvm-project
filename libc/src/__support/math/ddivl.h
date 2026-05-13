@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double ddivl(long double x, long double y) {
+LIBC_INLINE LIBC_CONSTEXPR double ddivl(long double x, long double y) {
   return fputil::generic::div<double>(x, y);
 }
 

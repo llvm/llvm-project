@@ -2853,6 +2853,436 @@ func.func @byref_in_private(%arg0: index) {
 }
 
 // -----
+func.func @loop_undefined_privatizer(%lb : index, %ub : index, %step : index,
+                                     %arg0 : index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.privatizer'}}
+  omp.loop private(@missing.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+// -----
+omp.private {type = private} @target.var1.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @target_private_type_mismatch(%arg0: index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.target private(@target.var1.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @wsloop_private_count_mismatch(%lb : index, %ub : index, %step : index,
+                                         %arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.wsloop"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 1, 0, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+
+  return
+}
+
+// -----
+omp.private {type = private} @teams.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @teams.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @teams_private_type_mismatch(%arg0: index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.teams private(@teams.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+  return
+}
+
+func.func @teams_firstprivate_type_mismatch(%arg0: index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.teams private(@teams.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+  return
+}
+
+func.func @teams_undefined_privatizer(%arg0: index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.teams.privatizer'}}
+  omp.teams private(@missing.teams.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+  return
+}
+
+func.func @teams_private_count_mismatch(%arg0: !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.teams"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.terminator
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 1, 0, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+  return
+}
+
+// -----
+omp.private {type = private} @loop.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @loop.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @loop_private_type_mismatch(%lb : index, %ub : index, %step : index,
+                                      %arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.loop private(@loop.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @loop_firstprivate_type_mismatch(%lb : index, %ub : index, %step : index,
+                                           %arg0 : index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.loop private(@loop.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @loop_private_count_mismatch(%lb : index, %ub : index, %step : index,
+                                       %arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.loop"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {operandSegmentSizes = array<i32: 1, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+
+  return
+}
+
+// -----
+omp.private {type = firstprivate} @target.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @target_firstprivate_type_mismatch(%arg0: index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.target private(@target.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @target_undefined_privatizer(%arg0: index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.target.privatizer'}}
+  omp.target private(@missing.target.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @target_private_count_mismatch(%arg0: !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.target"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.terminator
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+  return
+}
+
+// -----
+omp.private {type = private} @wsloop.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @wsloop.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @wsloop_private_type_mismatch(%lb : index, %ub : index, %step : index,
+                                        %arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.wsloop private(@wsloop.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @wsloop_firstprivate_type_mismatch(%lb : index, %ub : index, %step : index,
+                                             %arg0 : index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.wsloop private(@wsloop.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @wsloop_undefined_privatizer(%lb : index, %ub : index, %step : index,
+                                       %arg0 : index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.wsloop.privatizer'}}
+  omp.wsloop private(@missing.wsloop.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+// -----
+omp.private {type = private} @simd.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = private} @simd.count_mismatch.x.privatizer : !llvm.ptr
+omp.private {type = private} @simd.count_mismatch.y.privatizer : !llvm.ptr
+
+func.func @simd_private_type_mismatch(%lb : index, %ub : index, %step : index,
+                                      %arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.simd private(@simd.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @simd_private_count_mismatch(%lb : index, %ub : index, %step : index,
+                                       %arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.simd"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1, 0>,
+       private_syms = [@simd.count_mismatch.x.privatizer, @simd.count_mismatch.y.privatizer]} : (!llvm.ptr) -> ()
+
+  return
+}
+
+// -----
+omp.private {type = private} @distribute.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @distribute.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @distribute_private_type_mismatch(%lb : index, %ub : index, %step : index,
+                                            %arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.distribute private(@distribute.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @distribute_firstprivate_type_mismatch(%lb : index, %ub : index, %step : index,
+                                                 %arg0 : index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.distribute private(@distribute.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @distribute_undefined_privatizer(%lb : index, %ub : index, %step : index,
+                                           %arg0 : index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.distribute.privatizer'}}
+  omp.distribute private(@missing.distribute.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @distribute_private_count_mismatch(%lb : index, %ub : index, %step : index,
+                                             %arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.distribute"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 1>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+
+  return
+}
+
+// -----
+omp.private {type = private} @task.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @task.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @task_private_type_mismatch(%arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.task private(@task.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @task_firstprivate_type_mismatch(%arg0 : index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.task private(@task.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @task_undefined_privatizer(%arg0 : index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.task.privatizer'}}
+  omp.task private(@missing.task.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @task_private_count_mismatch(%arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.task"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.terminator
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+  return
+}
+
+// -----
+omp.private {type = private} @taskloop.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @taskloop.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @taskloop_private_type_mismatch(%lb : index, %ub : index, %step : index,
+                                          %arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.taskloop.context private(@taskloop.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+func.func @taskloop_firstprivate_type_mismatch(%lb : index, %ub : index, %step : index,
+                                               %arg0 : index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.taskloop.context private(@taskloop.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+func.func @taskloop_undefined_privatizer(%lb : index, %ub : index, %step : index,
+                                         %arg0 : index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.taskloop.privatizer'}}
+  omp.taskloop.context private(@missing.taskloop.privatizer %arg0 -> %arg1 : index) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+func.func @taskloop_private_count_mismatch(%lb : index, %ub : index, %step : index,
+                                           %arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.taskloop.context"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+  return
+}
+
+// -----
 func.func @masked_arg_type_mismatch(%arg0: f32) {
   // expected-error @below {{'omp.masked' op operand #0 must be integer or index, but got 'f32'}}
   "omp.masked"(%arg0) ({
@@ -3102,10 +3532,15 @@ omp.private {type = private} @taskloop.bound.privatizer : index init {
 }
 
 // -----
+omp.private {type = private} @taskloop.bound.local.privatizer : index init {
+^bb0(%arg0: index, %arg1: index):
+  omp.yield(%arg0 : index)
+}
+
 func.func @omp_taskloop_local_loop_bounds_from_block_arg(%arg0: index) {
   %c1 = arith.constant 1 : index
   // expected-error @below {{'omp.taskloop.context' op expects loop bounds and steps to be defined outside of the taskloop.context region or by pure, regionless operations that do not depend on block arguments}}
-  omp.taskloop.context private(@taskloop.bound.privatizer %arg0 -> %arg1 : index) {
+  omp.taskloop.context private(@taskloop.bound.local.privatizer %arg0 -> %arg1 : index) {
     %lb = arith.addi %arg1, %c1 : index
     %ub = arith.constant 10 : index
     %step = arith.constant 1 : index

@@ -36,6 +36,30 @@ function(lldb_tablegen)
   endif()
 endfunction(lldb_tablegen)
 
+# Returns TRUE in `out_var` if any of `libs` is `liblldb` or already carries
+# the LLDB_LINKS_LIBLLDB property.
+function(_lldb_links_liblldb_check out_var libs)
+  set(${out_var} FALSE PARENT_SCOPE)
+  foreach(lib ${libs})
+    if("${lib}" STREQUAL "liblldb")
+      set(${out_var} TRUE PARENT_SCOPE)
+      return()
+    endif()
+    if(TARGET "${lib}")
+      get_target_property(_p "${lib}" LLDB_LINKS_LIBLLDB)
+      if(_p)
+        set(${out_var} TRUE PARENT_SCOPE)
+        return()
+      endif()
+    endif()
+  endforeach()
+endfunction()
+
+function(_lldb_propagate_links_liblldb name libs)
+  _lldb_links_liblldb_check(_links_liblldb "${libs}")
+  set_target_properties(${name} PROPERTIES LLDB_LINKS_LIBLLDB ${_links_liblldb})
+endfunction()
+
 function(add_lldb_library name)
   include_directories(BEFORE
     ${CMAKE_CURRENT_BINARY_DIR}
@@ -98,6 +122,9 @@ function(add_lldb_library name)
     LINK_LIBS ${PARAM_LINK_LIBS}
     ${pass_NO_INSTALL_RPATH}
   )
+
+  # Mark whether this library transitively pulls in liblldb.
+  _lldb_propagate_links_liblldb(${name} "${PARAM_LINK_LIBS}")
 
   if(CLANG_LINK_CLANG_DYLIB)
     target_link_libraries(${name} PRIVATE clang-cpp)
@@ -224,6 +251,20 @@ function(add_lldb_executable name)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}
                                COMPONENT ${name})
+      # An installed tool that links liblldb won't run without liblldb
+      # installed alongside it. Record it on a global list so other
+      # runtime components (e.g. the Python/Lua script packages) can
+      # attach themselves to the same install targets.
+      _lldb_links_liblldb_check(_links_liblldb "${ARG_LINK_LIBS}")
+      if(_links_liblldb)
+        set_property(GLOBAL APPEND PROPERTY LLDB_TOOLS_LINKING_LIBLLDB ${name})
+        if(TARGET install-liblldb)
+          add_dependencies(install-${name} install-liblldb)
+          if(TARGET install-${name}-stripped AND TARGET install-liblldb-stripped)
+            add_dependencies(install-${name}-stripped install-liblldb-stripped)
+          endif()
+        endif()
+      endif()
     endif()
     if(APPLE AND ARG_INSTALL_PREFIX)
       lldb_add_post_install_steps_darwin(${name} ${ARG_INSTALL_PREFIX})

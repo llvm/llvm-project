@@ -264,10 +264,10 @@ TEST(DiagnosticsTest, DeduplicatedClangTidyDiagnostics) {
     float foo = [[0.1f]];
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  // Enable alias clang-tidy checks, these check emits the same diagnostics
+  // Enable alias clang-tidy checks, these checks emit the same diagnostics
   // (except the check name).
   TU.ClangTidyProvider = addTidyChecks("readability-uppercase-literal-suffix,"
-                                       "hicpp-uppercase-literal-suffix");
+                                       "cert-dcl16-c");
   // Verify that we filter out the duplicated diagnostic message.
   EXPECT_THAT(
       TU.build().getDiagnostics(),

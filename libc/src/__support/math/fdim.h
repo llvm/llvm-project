@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double fdim(double x, double y) {
+LIBC_INLINE LIBC_CONSTEXPR double fdim(double x, double y) {
   return fputil::fdim(x, y);
 }
 

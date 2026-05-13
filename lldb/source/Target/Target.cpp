@@ -982,7 +982,7 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
   bool empty = idxs.empty();
   bool print_first = true;
   for (auto const &elem : m_breakpoint_overrides) {
-    auto idx_pos = std::find(begin, end, elem.first);
+    auto idx_pos = empty ? end : std::find(begin, end, elem.first);
     if (empty || idx_pos != end) {
       if (print_first) {
         // FIXME: Is there some good way to flow the description?

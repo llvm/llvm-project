@@ -45,8 +45,8 @@ def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 
 def err_target_spirv_requires_vulkan : Error<
     "SPIR-V target requires a Vulkan environment">;
-def err_target_spirv_requires_shader_stage : Error<
-    "SPIR-V target requires a valid shader stage environment">;
+def err_target_spirv_invalid_shader_stage : Error<
+    "SPIR-V target requires a valid shader stage or no environment">;
 
 def warn_fe_override_module : Warning<
     "overriding the module target triple with %0">,
@@ -359,6 +359,12 @@ def err_non_default_visibility_dllimport : Error<
   "non-default visibility cannot be applied to 'dllimport' declaration">;
 def err_ifunc_resolver_return : Error<
   "ifunc resolver function must return a pointer">;
+def err_alias_between_function_and_variable : Error<
+  "cannot alias a %select{function|variable}0 with a %select{variable|function}0">;
+def note_aliasee_declaration: Note<"aliasee is declared here">;
+def warn_alias_type_mismatch : Warning<
+  "alias and aliasee have different types %0 and %1">,
+  InGroup<DiagGroup<"attribute-alias">>;
 
 def warn_atomic_op_misaligned : Warning<
   "misaligned atomic operation may incur "

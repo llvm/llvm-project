@@ -3678,6 +3678,8 @@ public:
 
   ~CommandObjectBreakpointOverrideDelete() override = default;
 
+  Options *GetOptions() override { return &m_all_options; }
+
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target =
@@ -3729,6 +3731,8 @@ public:
   }
 
   ~CommandObjectBreakpointOverrideList() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {

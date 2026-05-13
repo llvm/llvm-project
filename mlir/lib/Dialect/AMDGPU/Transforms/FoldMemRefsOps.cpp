@@ -46,14 +46,17 @@ static LogicalResult foldMemrefViewOp(PatternRewriter &rewriter, Location loc,
         return success();
       })
       .Case([&](memref::ExpandShapeOp expandShapeOp) {
+        // The lack of inbounds is conservative and will be fixed.
         mlir::memref::resolveSourceIndicesExpandShape(
             loc, rewriter, expandShapeOp, indices, resolvedIndices, false);
         memrefBase = expandShapeOp.getViewSource();
         return success();
       })
       .Case([&](memref::CollapseShapeOp collapseShapeOp) {
+        // The collapse shape in-bounds-ness is defaulted to false
+        // conservatively.
         mlir::memref::resolveSourceIndicesCollapseShape(
-            loc, rewriter, collapseShapeOp, indices, resolvedIndices);
+            loc, rewriter, collapseShapeOp, indices, resolvedIndices, false);
         memrefBase = collapseShapeOp.getViewSource();
         return success();
       })

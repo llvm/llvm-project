@@ -578,6 +578,14 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   }
 }
 
+static Instruction::BinaryOps getSubRecurOpcode(RecurKind Kind) {
+  if (Kind == RecurKind::Sub)
+    return Instruction::Add;
+  if (Kind == RecurKind::FSub)
+    return Instruction::FAdd;
+  llvm_unreachable("RecurKind should be Sub/FSub.");
+}
+
 Value *VPInstruction::generate(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
 
@@ -791,8 +799,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
           // For sub-recurrences, each part's reduction variable is already
           // negative, we need to do: reduce.add(-acc_uf0 + -acc_uf1)
           Instruction::BinaryOps Opcode =
-              RK == RecurKind::Sub
-                  ? Instruction::Add
+              RecurrenceDescriptor::isSubRecurrenceKind(RK)
+                  ? getSubRecurOpcode(RK)
                   : (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK);
           ReducedPartRdx =
               Builder.CreateBinOp(Opcode, RdxPart, ReducedPartRdx, "bin.rdx");
@@ -2517,11 +2525,6 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
-  // TODO: In some cases, VPWidenCastRecipes are created but not considered in
-  // the legacy cost model, including truncates/extends when evaluating a
-  // reduction in a smaller type.
-  if (!getUnderlyingValue())
-    return 0;
   return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
 }
 

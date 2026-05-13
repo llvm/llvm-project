@@ -214,8 +214,8 @@ class CmdPythonTestCase(TestBase):
         # valid.
         self.expect("script str(persistence.debugger_copy)", substrs=[str(self.dbg)])
         # The result object will be replaced by an empty result object (in the
-        # default "Invalid" state).
-        self.expect("script str(persistence.result_copy)", substrs=["Invalid"])
+        # "Started" state).
+        self.expect("script str(persistence.result_copy)", substrs=["Started"])
 
     def test_interactive(self):
         """

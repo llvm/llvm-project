@@ -78,7 +78,7 @@ static cl::opt<std::string>
          cl::value_desc("cpu"), cl::cat(SplitCategory));
 
 enum class SplitByCategoryType {
-  SBCT_ByModuleId,
+  SBCT_ByAttribute,
   SBCT_ByKernel,
   SBCT_None,
 };
@@ -88,12 +88,18 @@ static cl::opt<SplitByCategoryType> SplitByCategory(
     cl::desc("Split by category. If present, splitting by category is used "
              "with the specified categorization type."),
     cl::Optional, cl::init(SplitByCategoryType::SBCT_None),
-    cl::values(clEnumValN(SplitByCategoryType::SBCT_ByModuleId, "module-id",
-                          "one output module per translation unit marked with "
-                          "\"module-id\" attribute"),
+    cl::values(clEnumValN(SplitByCategoryType::SBCT_ByAttribute, "attribute",
+                          "one output module per unique value of the function "
+                          "attribute named by --category-attribute"),
                clEnumValN(SplitByCategoryType::SBCT_ByKernel, "kernel",
                           "one output module per kernel")),
     cl::cat(SplitCategory));
+
+static cl::opt<std::string>
+    CategoryAttribute("category-attribute",
+                      cl::desc("Function attribute name to use when splitting "
+                               "with -split-by-category=attribute"),
+                      cl::value_desc("name"), cl::cat(SplitCategory));
 
 static cl::opt<bool> OutputAssembly{
     "S", cl::desc("Write output as LLVM assembly"), cl::cat(SplitCategory)};
@@ -125,15 +131,16 @@ void writeModuleToFile(const Module &M, StringRef Path, bool OutputAssembly) {
     WriteBitcodeToFile(M, OS);
 }
 
-/// EntryPointCategorizer is used for splitting by category either by module-id
-/// or by kernels. It doesn't provide categories for functions other than
-/// kernels. Categorizer computes a string key for the given Function and
-/// records the association between the string key and an integer category. If a
-/// string key is already belongs to some category than the corresponding
-/// integer category is returned.
+/// EntryPointCategorizer is used for splitting by category either by a named
+/// function attribute or by kernels. It doesn't provide categories for
+/// functions other than kernels. Categorizer computes a string key for the
+/// given Function and records the association between the string key and an
+/// integer category. If a string key already belongs to some category then the
+/// corresponding integer category is returned.
 class EntryPointCategorizer {
 public:
-  EntryPointCategorizer(SplitByCategoryType Type) : Type(Type) {}
+  EntryPointCategorizer(SplitByCategoryType Type, StringRef AttributeName)
+      : Type(Type), AttributeName(AttributeName) {}
 
   EntryPointCategorizer() = delete;
   EntryPointCategorizer(EntryPointCategorizer &) = delete;
@@ -163,16 +170,15 @@ private:
     return F.hasKernelCallingConv();
   }
 
-  static SmallString<0> computeFunctionCategory(SplitByCategoryType Type,
-                                                const Function &F) {
-    static constexpr char ATTR_MODULE_ID[] = "module-id";
+  SmallString<0> computeFunctionCategory(SplitByCategoryType Type,
+                                         const Function &F) {
     SmallString<0> Key;
     switch (Type) {
     case SplitByCategoryType::SBCT_ByKernel:
       Key = F.getName().str();
       break;
-    case SplitByCategoryType::SBCT_ByModuleId:
-      Key = F.getFnAttribute(ATTR_MODULE_ID).getValueAsString().str();
+    case SplitByCategoryType::SBCT_ByAttribute:
+      Key = F.getFnAttribute(AttributeName).getValueAsString().str();
       break;
     default:
       llvm_unreachable("unexpected mode.");
@@ -197,6 +203,7 @@ private:
   };
 
   SplitByCategoryType Type;
+  std::string AttributeName;
   DenseMap<SmallString<0>, int, KeyInfo> StrKeyToID;
 };
 
@@ -209,6 +216,11 @@ void cleanupModule(Module &M) {
 }
 
 Error runSplitModuleByCategory(std::unique_ptr<Module> M) {
+  if (SplitByCategory == SplitByCategoryType::SBCT_ByAttribute &&
+      CategoryAttribute.empty())
+    return createStringError(
+        "-split-by-category=attribute requires --category-attribute=<name>");
+
   size_t OutputID = 0;
   auto PostSplitCallback = [&](std::unique_ptr<Module> MPart) -> Error {
     if (verifyModule(*MPart)) {
@@ -228,7 +240,7 @@ Error runSplitModuleByCategory(std::unique_ptr<Module> M) {
     return Error::success();
   };
 
-  auto Categorizer = EntryPointCategorizer(SplitByCategory);
+  auto Categorizer = EntryPointCategorizer(SplitByCategory, CategoryAttribute);
   return splitModuleTransitiveFromEntryPoints(std::move(M), Categorizer,
                                               PostSplitCallback);
 }
@@ -291,8 +303,7 @@ int main(int argc, char **argv) {
   if (SplitByCategory != SplitByCategoryType::SBCT_None) {
     auto E = runSplitModuleByCategory(std::move(M));
     if (E) {
-      errs() << E << "\n";
-      Err.print(argv[0], errs());
+      errs() << "error: " << toString(std::move(E)) << "\n";
       return 1;
     }
 

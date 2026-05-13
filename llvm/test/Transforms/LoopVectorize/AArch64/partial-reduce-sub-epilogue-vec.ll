@@ -185,4 +185,322 @@ exit:
   ret i32 %sub
 }
 
+define float @fsub_reduction(float %startval, ptr %src1, ptr %src2) #1 {
+; CHECK-EPI-LABEL: define float @fsub_reduction(
+; CHECK-EPI-SAME: float [[STARTVAL:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-EPI-NEXT:  [[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]:
+; CHECK-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_VECTOR_BODY:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK1:.*]]
+; CHECK-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK1]]:
+; CHECK-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH1:.*]]
+; CHECK-EPI:       [[VECTOR_PH1]]:
+; CHECK-EPI-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-EPI:       [[VECTOR_PH]]:
+; CHECK-EPI-NEXT:    [[INDEX1:%.*]] = phi i32 [ 0, %[[VECTOR_PH1]] ], [ [[INDEX_NEXT1:%.*]], %[[VECTOR_PH]] ]
+; CHECK-EPI-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH1]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_PH]] ]
+; CHECK-EPI-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[SRC1]], i32 [[INDEX1]]
+; CHECK-EPI-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x half>, ptr [[TMP0]], align 4
+; CHECK-EPI-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[SRC2]], i32 [[INDEX1]]
+; CHECK-EPI-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x half>, ptr [[TMP1]], align 4
+; CHECK-EPI-NEXT:    [[TMP5:%.*]] = fpext <16 x half> [[WIDE_LOAD]] to <16 x float>
+; CHECK-EPI-NEXT:    [[TMP10:%.*]] = fpext <16 x half> [[WIDE_LOAD1]] to <16 x float>
+; CHECK-EPI-NEXT:    [[TMP11:%.*]] = fmul reassoc contract <16 x float> [[TMP5]], [[TMP10]]
+; CHECK-EPI-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <8 x float> @llvm.vector.partial.reduce.fadd.v8f32.v16f32(<8 x float> [[VEC_PHI]], <16 x float> [[TMP11]])
+; CHECK-EPI-NEXT:    [[INDEX_NEXT1]] = add nuw i32 [[INDEX1]], 16
+; CHECK-EPI-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT1]], 32
+; CHECK-EPI-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_PH]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-EPI:       [[MIDDLE_BLOCK1]]:
+; CHECK-EPI-NEXT:    [[TMP6:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[PARTIAL_REDUCE]])
+; CHECK-EPI-NEXT:    [[TMP7:%.*]] = fsub float [[STARTVAL]], [[TMP6]]
+; CHECK-EPI-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK-EPI:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_VECTOR_BODY]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; CHECK-EPI:       [[VEC_EPILOG_PH]]:
+; CHECK-EPI-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 32, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK1]] ]
+; CHECK-EPI-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP7]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[VECTOR_MAIN_LOOP_ITER_CHECK1]] ]
+; CHECK-EPI-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-EPI:       [[VECTOR_BODY]]:
+; CHECK-EPI-NEXT:    [[INDEX:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-EPI-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x float> [ splat (float -0.000000e+00), %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-EPI-NEXT:    [[TMP8:%.*]] = getelementptr half, ptr [[SRC1]], i32 [[INDEX]]
+; CHECK-EPI-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x half>, ptr [[TMP8]], align 4
+; CHECK-EPI-NEXT:    [[TMP9:%.*]] = getelementptr half, ptr [[SRC2]], i32 [[INDEX]]
+; CHECK-EPI-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x half>, ptr [[TMP9]], align 4
+; CHECK-EPI-NEXT:    [[TMP2:%.*]] = fpext <4 x half> [[WIDE_LOAD4]] to <4 x float>
+; CHECK-EPI-NEXT:    [[TMP3:%.*]] = fpext <4 x half> [[WIDE_LOAD5]] to <4 x float>
+; CHECK-EPI-NEXT:    [[TMP4:%.*]] = fmul reassoc contract <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-EPI-NEXT:    [[PARTIAL_REDUCE6]] = call reassoc contract <2 x float> @llvm.vector.partial.reduce.fadd.v2f32.v4f32(<2 x float> [[VEC_PHI3]], <4 x float> [[TMP4]])
+; CHECK-EPI-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-EPI-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], 40
+; CHECK-EPI-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-EPI:       [[MIDDLE_BLOCK]]:
+; CHECK-EPI-NEXT:    [[TMP14:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v2f32(float -0.000000e+00, <2 x float> [[PARTIAL_REDUCE6]])
+; CHECK-EPI-NEXT:    [[TMP15:%.*]] = fsub float [[BC_MERGE_RDX]], [[TMP14]]
+; CHECK-EPI-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_VECTOR_BODY]]
+; CHECK-EPI:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-EPI-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 40, %[[MIDDLE_BLOCK]] ], [ 32, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-EPI-NEXT:    [[BC_MERGE_RDX8:%.*]] = phi float [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ [[TMP7]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-EPI-NEXT:    br label %[[LOOP:.*]]
+; CHECK-EPI:       [[LOOP]]:
+; CHECK-EPI-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_VECTOR_BODY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-EPI-NEXT:    [[ACCUM:%.*]] = phi float [ [[BC_MERGE_RDX8]], %[[VEC_EPILOG_VECTOR_BODY]] ], [ [[SUB:%.*]], %[[LOOP]] ]
+; CHECK-EPI-NEXT:    [[SRC1_GEP:%.*]] = getelementptr half, ptr [[SRC1]], i32 [[IV]]
+; CHECK-EPI-NEXT:    [[SRC1_LOAD:%.*]] = load half, ptr [[SRC1_GEP]], align 4
+; CHECK-EPI-NEXT:    [[SRC1_LOAD_EXT:%.*]] = fpext half [[SRC1_LOAD]] to float
+; CHECK-EPI-NEXT:    [[SRC2_GEP:%.*]] = getelementptr half, ptr [[SRC2]], i32 [[IV]]
+; CHECK-EPI-NEXT:    [[SRC2_LOAD:%.*]] = load half, ptr [[SRC2_GEP]], align 4
+; CHECK-EPI-NEXT:    [[SRC2_LOAD_EXT:%.*]] = fpext half [[SRC2_LOAD]] to float
+; CHECK-EPI-NEXT:    [[MUL:%.*]] = fmul reassoc contract float [[SRC1_LOAD_EXT]], [[SRC2_LOAD_EXT]]
+; CHECK-EPI-NEXT:    [[SUB]] = fsub reassoc contract float [[ACCUM]], [[MUL]]
+; CHECK-EPI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-EPI-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IV]], 40
+; CHECK-EPI-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-EPI:       [[EXIT]]:
+; CHECK-EPI-NEXT:    [[SUB_LCSSA:%.*]] = phi float [ [[SUB]], %[[LOOP]] ], [ [[TMP7]], %[[MIDDLE_BLOCK1]] ], [ [[TMP15]], %[[MIDDLE_BLOCK]] ]
+; CHECK-EPI-NEXT:    ret float [[SUB_LCSSA]]
+;
+; CHECK-PARTIAL-RED-EPI-LABEL: define float @fsub_reduction(
+; CHECK-PARTIAL-RED-EPI-SAME: float [[STARTVAL:%.*]], ptr [[SRC1:%.*]], ptr [[SRC2:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-PARTIAL-RED-EPI-NEXT:  [[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_VECTOR_BODY:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK1:.*]]
+; CHECK-PARTIAL-RED-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK1]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH1:.*]]
+; CHECK-PARTIAL-RED-EPI:       [[VECTOR_PH1]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-PARTIAL-RED-EPI:       [[VECTOR_PH]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX1:%.*]] = phi i32 [ 0, %[[VECTOR_PH1]] ], [ [[INDEX_NEXT1:%.*]], %[[VECTOR_PH]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH1]] ], [ [[PARTIAL_REDUCE1:%.*]], %[[VECTOR_PH]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP8:%.*]] = getelementptr half, ptr [[SRC1]], i32 [[INDEX1]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x half>, ptr [[TMP8]], align 4
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP9:%.*]] = getelementptr half, ptr [[SRC2]], i32 [[INDEX1]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x half>, ptr [[TMP9]], align 4
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP10:%.*]] = fpext <16 x half> [[WIDE_LOAD2]] to <16 x float>
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP11:%.*]] = fpext <16 x half> [[WIDE_LOAD3]] to <16 x float>
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP12:%.*]] = fmul reassoc contract <16 x float> [[TMP10]], [[TMP11]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[PARTIAL_REDUCE1]] = call reassoc contract <8 x float> @llvm.vector.partial.reduce.fadd.v8f32.v16f32(<8 x float> [[VEC_PHI1]], <16 x float> [[TMP12]])
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX_NEXT1]] = add nuw i32 [[INDEX1]], 16
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT1]], 32
+; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_PH]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-PARTIAL-RED-EPI:       [[MIDDLE_BLOCK1]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP14:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[PARTIAL_REDUCE1]])
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP7:%.*]] = fsub float [[STARTVAL]], [[TMP14]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK-PARTIAL-RED-EPI:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_VECTOR_BODY]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; CHECK-PARTIAL-RED-EPI:       [[VEC_EPILOG_PH]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 32, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK1]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP7]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[VECTOR_MAIN_LOOP_ITER_CHECK1]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-PARTIAL-RED-EPI:       [[VECTOR_BODY]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[SRC1]], i32 [[INDEX]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP0]], align 4
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[SRC2]], i32 [[INDEX]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x half>, ptr [[TMP1]], align 4
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP2:%.*]] = fpext <8 x half> [[WIDE_LOAD]] to <8 x float>
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP3:%.*]] = fpext <8 x half> [[WIDE_LOAD1]] to <8 x float>
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP4:%.*]] = fmul reassoc contract <8 x float> [[TMP2]], [[TMP3]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP4]])
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], 40
+; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-PARTIAL-RED-EPI:       [[MIDDLE_BLOCK]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP6:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[PARTIAL_REDUCE]])
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP15:%.*]] = fsub float [[BC_MERGE_RDX]], [[TMP6]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_VECTOR_BODY]]
+; CHECK-PARTIAL-RED-EPI:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 40, %[[MIDDLE_BLOCK]] ], [ 32, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[BC_MERGE_RDX8:%.*]] = phi float [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ [[TMP7]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[LOOP:.*]]
+; CHECK-PARTIAL-RED-EPI:       [[LOOP]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_VECTOR_BODY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[ACCUM:%.*]] = phi float [ [[BC_MERGE_RDX8]], %[[VEC_EPILOG_VECTOR_BODY]] ], [ [[SUB:%.*]], %[[LOOP]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[SRC1_GEP:%.*]] = getelementptr half, ptr [[SRC1]], i32 [[IV]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[SRC1_LOAD:%.*]] = load half, ptr [[SRC1_GEP]], align 4
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[SRC1_LOAD_EXT:%.*]] = fpext half [[SRC1_LOAD]] to float
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[SRC2_GEP:%.*]] = getelementptr half, ptr [[SRC2]], i32 [[IV]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[SRC2_LOAD:%.*]] = load half, ptr [[SRC2_GEP]], align 4
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[SRC2_LOAD_EXT:%.*]] = fpext half [[SRC2_LOAD]] to float
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[MUL:%.*]] = fmul reassoc contract float [[SRC1_LOAD_EXT]], [[SRC2_LOAD_EXT]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[SUB]] = fsub reassoc contract float [[ACCUM]], [[MUL]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IV]], 40
+; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-PARTIAL-RED-EPI:       [[EXIT]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[SUB_LCSSA:%.*]] = phi float [ [[SUB]], %[[LOOP]] ], [ [[TMP7]], %[[MIDDLE_BLOCK1]] ], [ [[TMP15]], %[[MIDDLE_BLOCK]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    ret float [[SUB_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %accum = phi float [ %startval, %entry ], [ %sub, %loop ]
+  %src1.gep = getelementptr half, ptr %src1, i32 %iv
+  %src1.load = load half, ptr %src1.gep, align 4
+  %src1.load.ext = fpext half %src1.load to float
+  %src2.gep = getelementptr half, ptr %src2, i32 %iv
+  %src2.load = load half, ptr %src2.gep, align 4
+  %src2.load.ext = fpext half %src2.load to float
+  %mul = fmul reassoc contract float %src1.load.ext, %src2.load.ext
+  %sub = fsub reassoc contract float %accum, %mul
+  %iv.next = add i32 %iv, 1
+  %exitcond.not = icmp eq i32 %iv, 40
+  br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0
+
+exit:
+  ret float %sub
+}
+
+define float @fsub_reduction_nsz(ptr %a, ptr %b, ptr %c, i64 %n) #1{
+; CHECK-EPI-LABEL: define float @fsub_reduction_nsz(
+; CHECK-EPI-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-EPI-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-EPI:       [[VECTOR_PH]]:
+; CHECK-EPI-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-EPI:       [[VECTOR_BODY]]:
+; CHECK-EPI-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-EPI-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-EPI-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
+; CHECK-EPI-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP0]], align 2
+; CHECK-EPI-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
+; CHECK-EPI-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x half>, ptr [[TMP1]], align 2
+; CHECK-EPI-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr [[C]], i64 [[INDEX]]
+; CHECK-EPI-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x half>, ptr [[TMP2]], align 2
+; CHECK-EPI-NEXT:    [[TMP3:%.*]] = fpext <8 x half> [[WIDE_LOAD1]] to <8 x float>
+; CHECK-EPI-NEXT:    [[TMP4:%.*]] = fpext <8 x half> [[WIDE_LOAD]] to <8 x float>
+; CHECK-EPI-NEXT:    [[TMP5:%.*]] = fmul reassoc nsz contract <8 x float> [[TMP3]], [[TMP4]]
+; CHECK-EPI-NEXT:    [[PARTIAL_REDUCE:%.*]] = call reassoc nsz contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP5]])
+; CHECK-EPI-NEXT:    [[TMP6:%.*]] = fpext <8 x half> [[WIDE_LOAD2]] to <8 x float>
+; CHECK-EPI-NEXT:    [[TMP7:%.*]] = fmul reassoc nsz contract <8 x float> [[TMP6]], [[TMP4]]
+; CHECK-EPI-NEXT:    [[PARTIAL_REDUCE3]] = call reassoc nsz contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[PARTIAL_REDUCE]], <8 x float> [[TMP7]])
+; CHECK-EPI-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-EPI-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-EPI-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-EPI:       [[MIDDLE_BLOCK]]:
+; CHECK-EPI-NEXT:    [[TMP9:%.*]] = call reassoc nsz contract float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[PARTIAL_REDUCE3]])
+; CHECK-EPI-NEXT:    [[TMP10:%.*]] = fsub float 0.000000e+00, [[TMP9]]
+; CHECK-EPI-NEXT:    br i1 true, label %[[FOR_EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK-EPI:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-EPI-NEXT:    br i1 true, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF10:![0-9]+]]
+; CHECK-EPI:       [[VEC_EPILOG_PH]]:
+; CHECK-EPI-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-EPI-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-EPI-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; CHECK-EPI:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-EPI-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-EPI-NEXT:    [[VEC_PHI5:%.*]] = phi <2 x float> [ zeroinitializer, %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE10:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-EPI-NEXT:    [[TMP11:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX4]]
+; CHECK-EPI-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x half>, ptr [[TMP11]], align 2
+; CHECK-EPI-NEXT:    [[TMP12:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX4]]
+; CHECK-EPI-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x half>, ptr [[TMP12]], align 2
+; CHECK-EPI-NEXT:    [[TMP13:%.*]] = getelementptr half, ptr [[C]], i64 [[INDEX4]]
+; CHECK-EPI-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x half>, ptr [[TMP13]], align 2
+; CHECK-EPI-NEXT:    [[TMP14:%.*]] = fpext <4 x half> [[WIDE_LOAD7]] to <4 x float>
+; CHECK-EPI-NEXT:    [[TMP15:%.*]] = fpext <4 x half> [[WIDE_LOAD6]] to <4 x float>
+; CHECK-EPI-NEXT:    [[TMP16:%.*]] = fmul reassoc nsz contract <4 x float> [[TMP14]], [[TMP15]]
+; CHECK-EPI-NEXT:    [[PARTIAL_REDUCE9:%.*]] = call reassoc nsz contract <2 x float> @llvm.vector.partial.reduce.fadd.v2f32.v4f32(<2 x float> [[VEC_PHI5]], <4 x float> [[TMP16]])
+; CHECK-EPI-NEXT:    [[TMP17:%.*]] = fpext <4 x half> [[WIDE_LOAD8]] to <4 x float>
+; CHECK-EPI-NEXT:    [[TMP18:%.*]] = fmul reassoc nsz contract <4 x float> [[TMP17]], [[TMP15]]
+; CHECK-EPI-NEXT:    [[PARTIAL_REDUCE10]] = call reassoc nsz contract <2 x float> @llvm.vector.partial.reduce.fadd.v2f32.v4f32(<2 x float> [[PARTIAL_REDUCE9]], <4 x float> [[TMP18]])
+; CHECK-EPI-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX4]], 4
+; CHECK-EPI-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT11]], 1024
+; CHECK-EPI-NEXT:    br i1 [[TMP19]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-EPI:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-EPI-NEXT:    [[TMP20:%.*]] = call reassoc nsz contract float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[PARTIAL_REDUCE10]])
+; CHECK-EPI-NEXT:    [[TMP21:%.*]] = fsub float [[BC_MERGE_RDX]], [[TMP20]]
+; CHECK-EPI-NEXT:    br i1 true, label %[[FOR_EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-EPI:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-EPI-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 1024, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-EPI-NEXT:    [[BC_MERGE_RDX12:%.*]] = phi float [ [[TMP21]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ITER_CHECK]] ]
+; CHECK-EPI-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK-EPI:       [[FOR_BODY]]:
+; CHECK-EPI-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-EPI-NEXT:    [[ACCUM:%.*]] = phi float [ [[BC_MERGE_RDX12]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
+; CHECK-EPI-NEXT:    [[GEP_A:%.*]] = getelementptr half, ptr [[A]], i64 [[IV]]
+; CHECK-EPI-NEXT:    [[LOAD_A:%.*]] = load half, ptr [[GEP_A]], align 2
+; CHECK-EPI-NEXT:    [[EXT_A:%.*]] = fpext half [[LOAD_A]] to float
+; CHECK-EPI-NEXT:    [[GEP_B:%.*]] = getelementptr half, ptr [[B]], i64 [[IV]]
+; CHECK-EPI-NEXT:    [[LOAD_B:%.*]] = load half, ptr [[GEP_B]], align 2
+; CHECK-EPI-NEXT:    [[EXT_B:%.*]] = fpext half [[LOAD_B]] to float
+; CHECK-EPI-NEXT:    [[GEP_C:%.*]] = getelementptr half, ptr [[C]], i64 [[IV]]
+; CHECK-EPI-NEXT:    [[LOAD_C:%.*]] = load half, ptr [[GEP_C]], align 2
+; CHECK-EPI-NEXT:    [[EXT_C:%.*]] = fpext half [[LOAD_C]] to float
+; CHECK-EPI-NEXT:    [[MUL_AB:%.*]] = fmul reassoc nsz contract float [[EXT_B]], [[EXT_A]]
+; CHECK-EPI-NEXT:    [[MUL_AC:%.*]] = fmul reassoc nsz contract float [[EXT_C]], [[EXT_A]]
+; CHECK-EPI-NEXT:    [[SUB_AB:%.*]] = fsub reassoc nsz contract float [[ACCUM]], [[MUL_AB]]
+; CHECK-EPI-NEXT:    [[SUB]] = fsub reassoc nsz contract float [[SUB_AB]], [[MUL_AC]]
+; CHECK-EPI-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-EPI-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; CHECK-EPI-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-EPI:       [[FOR_EXIT]]:
+; CHECK-EPI-NEXT:    [[SUB_LCSSA:%.*]] = phi float [ [[SUB]], %[[FOR_BODY]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ [[TMP21]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-EPI-NEXT:    ret float [[SUB_LCSSA]]
+;
+; CHECK-PARTIAL-RED-EPI-LABEL: define float @fsub_reduction_nsz(
+; CHECK-PARTIAL-RED-EPI-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-PARTIAL-RED-EPI-NEXT:  [[ENTRY:.*:]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-PARTIAL-RED-EPI:       [[VECTOR_PH]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-PARTIAL-RED-EPI:       [[VECTOR_BODY]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x half>, ptr [[TMP0]], align 2
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x half>, ptr [[TMP1]], align 2
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr [[C]], i64 [[INDEX]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x half>, ptr [[TMP2]], align 2
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP3:%.*]] = fpext <8 x half> [[WIDE_LOAD1]] to <8 x float>
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP4:%.*]] = fpext <8 x half> [[WIDE_LOAD]] to <8 x float>
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP5:%.*]] = fmul reassoc nsz contract <8 x float> [[TMP3]], [[TMP4]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[PARTIAL_REDUCE:%.*]] = call reassoc nsz contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP5]])
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP6:%.*]] = fpext <8 x half> [[WIDE_LOAD2]] to <8 x float>
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP7:%.*]] = fmul reassoc nsz contract <8 x float> [[TMP6]], [[TMP4]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[PARTIAL_REDUCE3]] = call reassoc nsz contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[PARTIAL_REDUCE]], <8 x float> [[TMP7]])
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-PARTIAL-RED-EPI:       [[MIDDLE_BLOCK]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP9:%.*]] = call reassoc nsz contract float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[PARTIAL_REDUCE3]])
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP10:%.*]] = fsub float 0.000000e+00, [[TMP9]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[FOR_EXIT:.*]]
+; CHECK-PARTIAL-RED-EPI:       [[FOR_EXIT]]:
+; CHECK-PARTIAL-RED-EPI-NEXT:    ret float [[TMP10]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi float [ 0.0, %entry ], [ %sub, %for.body ]
+  %gep.a = getelementptr half, ptr %a, i64 %iv
+  %load.a = load half, ptr %gep.a, align 2
+  %ext.a = fpext half %load.a to float
+  %gep.b = getelementptr half, ptr %b, i64 %iv
+  %load.b = load half, ptr %gep.b, align 2
+  %ext.b = fpext half %load.b to float
+  %gep.c = getelementptr half, ptr %c, i64 %iv
+  %load.c = load half, ptr %gep.c, align 2
+  %ext.c = fpext half %load.c to float
+  %mul.ab = fmul nsz reassoc contract float %ext.b, %ext.a
+  %mul.ac = fmul nsz reassoc contract float %ext.c, %ext.a
+  %sub.ab = fsub nsz reassoc contract float %accum, %mul.ab
+  %sub = fsub nsz reassoc contract float %sub.ab, %mul.ac
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:
+  ret float %sub
+}
+
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
+attributes #1 = { vscale_range(1,16) "target-features"="+sve2" }
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.vectorize.width", i32 16}

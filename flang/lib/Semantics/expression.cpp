@@ -2965,6 +2965,10 @@ static CudaMatchingDistance ComputeCudaMatchingDistance(
   for (std::size_t i{0}; i < dummies.size(); ++i) {
     const characteristics::DummyArgument &dummy{dummies[i]};
     const std::optional<ActualArgument> &actual{actuals[i]};
+    if (!actual) {
+      // Omitted optional arguments do not affect CUDA matching distances.
+      continue;
+    }
     int d{GetMatchingDistance(features, dummy, actual)};
     if (d == cudaInfMatchingValue) {
       distance.isInfinite = true;

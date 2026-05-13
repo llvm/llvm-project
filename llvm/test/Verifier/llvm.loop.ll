@@ -18,11 +18,13 @@ entry:
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "dwarf-test.c", directory: "test")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "foo", scope: !0, isDefinition: true, unit: !0)
-!5 = distinct !DISubprogram(name: "bar", scope: !0, isDefinition: true, unit: !0)
+!4 = distinct !DISubprogram(name: "foo", scope: !0, isDefinition: true, unit: !0, type: !13)
+!5 = distinct !DISubprogram(name: "bar", scope: !0, isDefinition: true, unit: !0, type: !13)
 !6 = !DILocation(line: 7, scope: !4)
 !7 = !{i32 2, !"Dwarf Version", i32 3}
 !8 = !{i32 1, !"Debug Info Version", i32 3}
 !9 = !{!9, !10, !11}
 !10 = !DILocation(line: 1, scope: !5)
 !11 = !DILocation(line: 1, scope: !4)
+!12 = !{null}
+!13 = !DISubroutineType(types: !12)

@@ -94,6 +94,12 @@ public:
   virtual void reportInvalidatedField(const ParmVarDecl *PVD,
                                       const FieldDecl *Field,
                                       const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const Expr *IssueExpr,
+                                       const VarDecl *Global,
+                                       const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const ParmVarDecl *PVD,
+                                       const VarDecl *Global,
+                                       const Expr *InvalidationExpr) {}
 
   using EscapingTarget =
       llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;

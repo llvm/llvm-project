@@ -20,9 +20,9 @@ atomic {
   omp.yield
 }
 omp.private {type = private} @privatizer_i32 : i32
-omp.private {type = firstprivate} @firstprivatizer_f32 : f32 copy {
-^bb0(%arg0: f32, %arg1: f32):
-  omp.yield(%arg0 : f32)
+omp.private {type = firstprivate} @firstprivatizer_f32 : !llvm.ptr copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
 }
 
 llvm.func @foo(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>}

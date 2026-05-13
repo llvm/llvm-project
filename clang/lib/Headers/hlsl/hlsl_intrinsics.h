@@ -24,6 +24,11 @@ namespace hlsl {
 /// \brief Interprets the bit pattern of x as float point number.
 /// \param Val The input value.
 
+template <typename T, int R, int C>
+constexpr matrix<float, R, C> asfloat(matrix<T, R, C> V) {
+  return __detail::bit_cast<float, T, R, C>(V);
+}
+
 template <typename T, int N>
 constexpr vector<float, N> asfloat(vector<T, N> V) {
   return __detail::bit_cast<float, T, N>(V);
@@ -40,6 +45,11 @@ template <typename T> constexpr float asfloat(T F) {
 /// \fn int asint(T Val)
 /// \brief Interprets the bit pattern of x as an integer.
 /// \param Val The input value.
+
+template <typename T, int R, int C>
+constexpr matrix<int, R, C> asint(matrix<T, R, C> V) {
+  return __detail::bit_cast<int, T, R, C>(V);
+}
 
 template <typename T, int N> constexpr vector<int, N> asint(vector<T, N> V) {
   return __detail::bit_cast<int, T, N>(V);
@@ -85,6 +95,11 @@ constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
 /// \fn uint asuint(T Val)
 /// \brief Interprets the bit pattern of x as an unsigned integer.
 /// \param Val The input value.
+
+template <typename T, int R, int C>
+constexpr matrix<uint, R, C> asuint(matrix<T, R, C> V) {
+  return __detail::bit_cast<uint, T, R, C>(V);
+}
 
 template <typename T, int N> constexpr vector<uint, N> asuint(vector<T, N> V) {
   return __detail::bit_cast<uint, T, N>(V);

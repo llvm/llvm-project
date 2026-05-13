@@ -305,6 +305,12 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-Wthread-safety")
       list(APPEND compile_options "-Wglobal-constructors")
     endif()
+
+    # Older Clang versions emit false positive shadow warnings for lambda captures
+    # inside static member functions (fixed in Clang 22, see PR #157667 and #165919).
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "22.0.0")
+      list(APPEND compile_options "-Wshadow")
+    endif()
   elseif(MSVC)
     list(APPEND compile_options "/EHs-c-")
     list(APPEND compile_options "/GR-")

@@ -539,9 +539,11 @@ public:
   /// Check if operand \p OpIdx is undef.
   bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
-  /// Check if operand \p OpIdx is known to be a power of 2.
-  bool matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,
-                                          unsigned OpIdx) const;
+  /// Check if operand \p MO is known to be a power of 2. When \p OrNegative
+  /// is true, also match operands whose negation is a power of 2 (i.e. whose
+  /// absolute value is a power of 2).
+  bool matchOperandIsKnownToBeAPowerOfTwo(const MachineOperand &MO,
+                                          bool OrNegative = false) const;
 
   /// Erase \p MI
   void eraseInst(MachineInstr &MI) const;
@@ -759,6 +761,9 @@ public:
   /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
   /// return expressions that implements it by shifting.
   void applyUDivByPow2(MachineInstr &MI) const;
+
+  /// Combine G_SREM x, (+/-2^k) to a bias-and-mask sequence.
+  void applySimplifySRemByPow2(MachineInstr &MI) const;
 
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI) const;

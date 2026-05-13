@@ -44,8 +44,10 @@
 
 #if __x86_64__
 #define __LPTRINT_TYPE__ __int64
+#define __IPTRINT_TYPE__ __int64
 #else
 #define __LPTRINT_TYPE__ long
+#define __IPTRINT_TYPE__ int
 #endif
 
 #ifdef __cplusplus
@@ -95,12 +97,12 @@ void __outdword(unsigned short, unsigned long);
 void __outdwordstring(unsigned short, unsigned long *, unsigned long);
 void __outword(unsigned short, unsigned short);
 void __outwordstring(unsigned short, unsigned short *, unsigned long);
-unsigned long __readcr0(void);
-unsigned long __readcr2(void);
+unsigned __LPTRINT_TYPE__ __readcr0(void);
+unsigned __LPTRINT_TYPE__ __readcr2(void);
 unsigned __LPTRINT_TYPE__ __readcr3(void);
 unsigned __LPTRINT_TYPE__ __readcr4(void);
-unsigned __int64 __readcr8(void);
-unsigned int __readdr(unsigned int);
+unsigned __LPTRINT_TYPE__ __readcr8(void);
+unsigned __IPTRINT_TYPE__ __readdr(unsigned int);
 #ifdef __i386__
 unsigned char __readfsbyte(unsigned long);
 unsigned short __readfsword(unsigned long);
@@ -126,11 +128,12 @@ unsigned __int64 __ull_rshift(unsigned __int64, int);
 void __vmx_off(void);
 void __vmx_vmptrst(unsigned __int64 *);
 void __wbinvd(void);
-void __writecr0(unsigned int);
-void __writecr3(unsigned __INTPTR_TYPE__);
-void __writecr4(unsigned __INTPTR_TYPE__);
-void __writecr8(unsigned __int64);
-void __writedr(unsigned int, unsigned int);
+void __writecr0(unsigned __IPTRINT_TYPE__);
+void __writecr2(unsigned __IPTRINT_TYPE__);
+void __writecr3(unsigned __IPTRINT_TYPE__);
+void __writecr4(unsigned __IPTRINT_TYPE__);
+void __writecr8(unsigned __IPTRINT_TYPE__);
+void __writedr(unsigned int, unsigned __IPTRINT_TYPE__);
 void __writefsbyte(unsigned long, unsigned char);
 void __writefsdword(unsigned long, unsigned long);
 void __writefsqword(unsigned long, unsigned __int64);
@@ -474,7 +477,7 @@ static __inline__ unsigned __LPTRINT_TYPE__ __DEFAULT_FN_ATTRS __readcr3(void) {
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
-__writecr3(unsigned __INTPTR_TYPE__ __cr3_val) {
+__writecr3(unsigned __IPTRINT_TYPE__ __cr3_val) {
   __asm__ ("mov {%0, %%cr3|cr3, %0}" : : "r"(__cr3_val) : "memory");
 }
 #endif
@@ -484,6 +487,7 @@ __writecr3(unsigned __INTPTR_TYPE__ __cr3_val) {
 #endif
 
 #undef __LPTRINT_TYPE__
+#undef __IPTRINT_TYPE__
 
 #undef __DEFAULT_FN_ATTRS
 

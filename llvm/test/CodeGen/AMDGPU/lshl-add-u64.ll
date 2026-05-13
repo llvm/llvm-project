@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck -check-prefixes=GCN,GFX942 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GCN,GFX1250 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck -check-prefixes=GISEL,GFX942-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GISEL,GFX1250-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck -check-prefixes=GISEL,GFX942-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GISEL,GFX1250-GISEL %s
 
 define i64 @lshl_add_u64_v1v(i64 %v, i64 %a) {
 ; GCN-LABEL: lshl_add_u64_v1v:

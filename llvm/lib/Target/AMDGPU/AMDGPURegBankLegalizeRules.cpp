@@ -1537,6 +1537,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{UniInVgprS64}, {Vgpr64}})
       .Div(S64, {{Vgpr64}, {Vgpr64}});
 
+  addRulesForGOpcs({G_AMDGPU_GLOBAL_LOAD_MONITOR, G_AMDGPU_FLAT_LOAD_MONITOR},
+                   StandardB)
+      .Uni(B32, {{UniInVgprB32}, {SgprPtr64}})
+      .Div(B32, {{VgprB32}, {VgprPtr64}})
+      .Uni(B64, {{UniInVgprB64}, {SgprPtr64}})
+      .Div(B64, {{VgprB64}, {VgprPtr64}})
+      .Uni(B128, {{UniInVgprB128}, {SgprPtr64}})
+      .Div(B128, {{VgprB128}, {VgprPtr64}});
+
   using namespace Intrinsic;
 
   addRulesForIOpcs({returnaddress}).Any({{UniP0}, {{SgprP0}, {}}});

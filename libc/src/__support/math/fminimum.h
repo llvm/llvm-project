@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double fminimum(double x, double y) {
+LIBC_INLINE LIBC_CONSTEXPR double fminimum(double x, double y) {
   return fputil::fminimum(x, y);
 }
 

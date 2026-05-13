@@ -19,8 +19,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float128 ufromfpf128(float128 x, int rnd,
-                                           unsigned int width) {
+LIBC_INLINE LIBC_CONSTEXPR float128 ufromfpf128(float128 x, int rnd,
+                                                unsigned int width) {
   return fputil::fromfp</*IsSigned=*/false>(x, rnd, width);
 }
 

@@ -967,6 +967,17 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       thread_data.name.assign (prpsinfo.pr_fname, strnlen (prpsinfo.pr_fname, sizeof (prpsinfo.pr_fname)));
       SetID(prpsinfo.pr_pid);
       m_executable_name = thread_data.name;
+      auto core_arg = llvm::StringRef(prpsinfo.pr_psargs,
+                                      strnlen(prpsinfo.pr_psargs,
+                                              sizeof(prpsinfo.pr_psargs)))
+                          .str();
+      // pr_psargs's char array used to represent arguments is only 80 character
+      // long (\0 included), for a total of 79.
+      // We set core_arg's m_might_be_truncated = true if its size
+      // is the maximum (79).
+      m_process_args =
+          CoreArgs(core_arg, /*might_be_truncated=*/core_arg.size() ==
+                                 sizeof(prpsinfo.pr_psargs) - 1);
       break;
     }
     case ELF::NT_SIGINFO: {
@@ -1137,6 +1148,11 @@ DataExtractor ProcessElfCore::GetAuxvData() {
           m_auxv.GetAddressByteSize() == GetAddressByteSize()));
   return DataExtractor(m_auxv);
 }
+std::optional<Process::CoreArgs> ProcessElfCore::GetCoreFileArgs() {
+  if (m_process_args.empty())
+    return std::nullopt;
+  return m_process_args;
+}
 
 bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
   info.Clear();
@@ -1148,5 +1164,6 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
     info.SetExecutableFile(GetTarget().GetExecutableModule()->GetFileSpec(),
                            add_exe_file_as_first_arg);
   }
+  info.SetArguments(m_process_args.as_args(), /*first_arg_is_executable=*/true);
   return true;
 }

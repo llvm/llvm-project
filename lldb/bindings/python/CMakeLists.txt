@@ -195,6 +195,17 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     add_llvm_install_targets(${python_scripts_install_target}
                              COMPONENT ${python_scripts_target}
                              DEPENDS ${python_scripts_target})
+    # Tools that link liblldb need the python scripts installed alongside.
+    # The list is populated by add_lldb_executable.
+    get_property(lldb_liblldb_tools GLOBAL PROPERTY LLDB_TOOLS_LINKING_LIBLLDB)
+    foreach(tool ${lldb_liblldb_tools})
+      if(TARGET install-${tool})
+        add_dependencies(install-${tool} ${python_scripts_install_target})
+      endif()
+      if(TARGET install-${tool}-stripped AND TARGET ${python_scripts_install_target}-stripped)
+        add_dependencies(install-${tool}-stripped ${python_scripts_install_target}-stripped)
+      endif()
+    endforeach()
   endif()
 
   # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching

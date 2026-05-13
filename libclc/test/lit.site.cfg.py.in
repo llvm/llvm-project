@@ -2,8 +2,13 @@
 
 import sys
 
-config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.libclc_obj_root = "@LIBCLC_TARGET_TEST_DIR@"
+config.host_triple = "@LLVM_HOST_TRIPLE@"
+config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
+config.libclc_library_dir = lit_config.substitute(path(r"@LIBCLC_OUTPUT_LIBRARY_DIR@"))
+config.libclc_obj_root = lit_config.substitute(path(r"@CMAKE_CURRENT_BINARY_DIR@"))
+config.libclc_target = "@LIBCLC_TARGET@"
+config.libclc_target_arch = "@LIBCLC_TARGET_ARCH@"
+config.libclc_target_cpu = "@LIBCLC_TARGET_CPU@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

@@ -46,7 +46,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%add> = add ir<%conv>, ir<%conv4>
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%add5> = add ir<%add>, ir<%conv3>
 ; CHECK: Cost of 0 for VF 2: WIDEN-CAST vp<[[TRUNC:%.+]]> = trunc ir<%add5> to i8
-; CHECK: Cost of 0 for VF 2: WIDEN-CAST vp<[[EXT]]> = zext vp<[[TRUNC]]> to i32
+; CHECK: Cost of 1 for VF 2: WIDEN-CAST vp<[[EXT]]> = zext vp<[[TRUNC]]> to i32
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<{{.+}}>
 ; CHECK: Cost of 0 for VF 2: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ;

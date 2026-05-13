@@ -1,0 +1,1 @@
+; RUN: llvm-nm -u "%library_dir/%target/libclc.bc" | FileCheck %s --allow-empty --implicit-check-not=" U "

@@ -275,9 +275,9 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
-  static cir::GlobalOp
-  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, llvm::StringRef name,
-                 mlir::Type t, bool isConstant = false,
+  cir::GlobalOp
+  createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,
+                 bool isConstant = false,
                  mlir::ptr::MemorySpaceAttrInterface addrSpace = {},
                  mlir::Operation *insertPoint = nullptr);
 
