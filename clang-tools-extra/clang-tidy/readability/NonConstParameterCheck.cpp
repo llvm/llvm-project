@@ -109,8 +109,8 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
           U && U->getOpcode() == UO_Deref) {
         markCanNotBeConst(U->getSubExpr(), true);
       } else if (const auto *PLE = dyn_cast<ParenListExpr>(Init)) {
-        for (unsigned I = 0; I < PLE->getNumExprs(); ++I) {
-          const Expr *E = PLE->getExpr(I)->IgnoreParenCasts();
+        for (const Expr *E : PLE->exprs()) {
+          E = E->IgnoreParenCasts();
           if (const auto *U = dyn_cast<UnaryOperator>(E);
               U && U->getOpcode() == UO_Deref)
             markCanNotBeConst(U->getSubExpr(), true);

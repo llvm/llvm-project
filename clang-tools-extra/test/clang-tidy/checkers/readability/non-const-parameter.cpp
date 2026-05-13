@@ -387,6 +387,8 @@ void useDependentArray() {
   double ToFill[2] = {};
   dependentArray1(ToFill, 0, 1.0);
   dependentArray2(ToFill, 0, 1.0);
+}
+
 void testGenericLambdaIssue177354EqualsInit() {
   // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
   auto genericLambda = []<typename T>(int *p) {
