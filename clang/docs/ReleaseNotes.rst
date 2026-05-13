@@ -716,7 +716,8 @@ AIX Support
   would otherwise be referenced.
   (See https://www.ibm.com/docs/en/aix/7.2.0?topic=l-ld-command for details).
 - The driver now uses ``-lcompiler_rt`` instead of ``-latomic`` to avoid conflicts
-  with the GNU libatomic library in the AIX toolbox.
+  between the LLVM libatomic and the GNU libatomic from the AIX toolbox as they share
+  the same library name.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
