@@ -22,9 +22,20 @@ void cir::collectUnreachable(mlir::Operation *parent,
     // entry, which is trivially reachable. Either way, nothing to collect.
     if (region->empty() || region->hasOneBlock())
       return;
+
+    // We clear this for each region as we walk the parent because each block
+    // is only in one region, so the reachable blocks from previously visited
+    // regions aren't needed.
     reachable.clear();
+
+    // The depth_first_ext range iterator internally adds each block to the
+    // reachable set as it visits it, so while this loop looks like it doesn't
+    // do anything, it's actually populating the set of reachable blocks in
+    // this region.
     for (mlir::Block *blk : llvm::depth_first_ext(&region->front(), reachable))
       (void)blk;
+
+    // Collect the unreachable blocks.
     for (mlir::Block &blk : *region) {
       if (reachable.contains(&blk))
         continue;
