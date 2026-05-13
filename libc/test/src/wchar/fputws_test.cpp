@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/ferror.h"
 #include "src/stdio/fopen.h"
@@ -24,10 +25,17 @@ TEST_F(LlvmLibcFputwsTest, WriteWideString) {
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
-  // String with 1, 2, 3, and 4-byte UTF-8 characters
-  // Hello, ¢€𐍈 world!\n
-  constexpr wchar_t STR[] = L"Hello, ¢€𐍈 world!\n";
+  constexpr wchar_t STR[] = L"Hello, ¢ world!\n";
+#if WCHAR_MAX > 0xFFFF
+  // if they're available, try 3 and 4 byte wchars.
+  constexpr wchar_t STR2[] = L"€𐍈";
+  constexpr size_t EXPECTED_BYTES = 24;
+#else
+  constexpr wchar_t STR2[] = L"";
+  constexpr size_t EXPECTED_BYTES = 17;
+#endif
   EXPECT_GE(LIBC_NAMESPACE::fputws(STR, file), 0);
+  EXPECT_GE(LIBC_NAMESPACE::fputws(STR2, file), 0);
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 
@@ -36,8 +44,8 @@ TEST_F(LlvmLibcFputwsTest, WriteWideString) {
   ASSERT_FALSE(file == nullptr);
 
   unsigned char buffer[50] = {0};
-  // Expecting 7 (Hello, ) + 2 (¢) + 3 (€) + 4 (𐍈) + 8 ( world!\n) = 24 bytes
-  ASSERT_EQ(LIBC_NAMESPACE::fread(buffer, 1, 24, file), size_t(24));
+  ASSERT_EQ(LIBC_NAMESPACE::fread(buffer, 1, EXPECTED_BYTES, file),
+            EXPECTED_BYTES);
 
   // "Hello, "
   EXPECT_EQ(buffer[0], static_cast<unsigned char>('H'));
@@ -52,26 +60,28 @@ TEST_F(LlvmLibcFputwsTest, WriteWideString) {
   EXPECT_EQ(buffer[7], static_cast<unsigned char>(0xC2));
   EXPECT_EQ(buffer[8], static_cast<unsigned char>(0xA2));
 
+  // " world!\n"
+  EXPECT_EQ(buffer[9], static_cast<unsigned char>(' '));
+  EXPECT_EQ(buffer[10], static_cast<unsigned char>('w'));
+  EXPECT_EQ(buffer[11], static_cast<unsigned char>('o'));
+  EXPECT_EQ(buffer[12], static_cast<unsigned char>('r'));
+  EXPECT_EQ(buffer[13], static_cast<unsigned char>('l'));
+  EXPECT_EQ(buffer[14], static_cast<unsigned char>('d'));
+  EXPECT_EQ(buffer[15], static_cast<unsigned char>('!'));
+  EXPECT_EQ(buffer[16], static_cast<unsigned char>('\n'));
+
+#if WCHAR_MAX > 0xFFFF
   // "€"
-  EXPECT_EQ(buffer[9], static_cast<unsigned char>(0xE2));
-  EXPECT_EQ(buffer[10], static_cast<unsigned char>(0x82));
-  EXPECT_EQ(buffer[11], static_cast<unsigned char>(0xAC));
+  EXPECT_EQ(buffer[17], static_cast<unsigned char>(0xE2));
+  EXPECT_EQ(buffer[18], static_cast<unsigned char>(0x82));
+  EXPECT_EQ(buffer[19], static_cast<unsigned char>(0xAC));
 
   // "𐍈"
-  EXPECT_EQ(buffer[12], static_cast<unsigned char>(0xF0));
-  EXPECT_EQ(buffer[13], static_cast<unsigned char>(0x90));
-  EXPECT_EQ(buffer[14], static_cast<unsigned char>(0x8D));
-  EXPECT_EQ(buffer[15], static_cast<unsigned char>(0x88));
-
-  // " world!\n"
-  EXPECT_EQ(buffer[16], static_cast<unsigned char>(' '));
-  EXPECT_EQ(buffer[17], static_cast<unsigned char>('w'));
-  EXPECT_EQ(buffer[18], static_cast<unsigned char>('o'));
-  EXPECT_EQ(buffer[19], static_cast<unsigned char>('r'));
-  EXPECT_EQ(buffer[20], static_cast<unsigned char>('l'));
-  EXPECT_EQ(buffer[21], static_cast<unsigned char>('d'));
-  EXPECT_EQ(buffer[22], static_cast<unsigned char>('!'));
-  EXPECT_EQ(buffer[23], static_cast<unsigned char>('\n'));
+  EXPECT_EQ(buffer[20], static_cast<unsigned char>(0xF0));
+  EXPECT_EQ(buffer[21], static_cast<unsigned char>(0x90));
+  EXPECT_EQ(buffer[22], static_cast<unsigned char>(0x8D));
+  EXPECT_EQ(buffer[23], static_cast<unsigned char>(0x88));
+#endif
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
@@ -117,6 +127,7 @@ TEST_F(LlvmLibcFputwsTest, InvalidStream) {
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
+#if WCHAR_MAX > 0xFFFF
 TEST_F(LlvmLibcFputwsTest, EncodingErrorEILSEQ) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputws_eilseq.test"));
@@ -133,6 +144,7 @@ TEST_F(LlvmLibcFputwsTest, EncodingErrorEILSEQ) {
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
+#endif
 
 TEST_F(LlvmLibcFputwsTest, ByteModeFailure) {
   auto FILENAME =

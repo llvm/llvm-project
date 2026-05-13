@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation header for the fputws function, which
+/// This file contains the prototype for the fputws function, which
 /// writes a wide-character string to a file.
 ///
 //===----------------------------------------------------------------------===//
