@@ -219,7 +219,6 @@ Error runSplitModuleByCategory(std::unique_ptr<Module> M) {
   if (SplitByCategory == SplitByCategoryType::SBCT_ByAttribute &&
       CategoryAttribute.empty())
     return createStringError(
-        inconvertibleErrorCode(),
         "-split-by-category=attribute requires --category-attribute=<name>");
 
   size_t OutputID = 0;
@@ -304,7 +303,7 @@ int main(int argc, char **argv) {
   if (SplitByCategory != SplitByCategoryType::SBCT_None) {
     auto E = runSplitModuleByCategory(std::move(M));
     if (E) {
-      errs() << toString(std::move(E)) << "\n";
+      errs() << "error: " << toString(std::move(E)) << "\n";
       return 1;
     }
 

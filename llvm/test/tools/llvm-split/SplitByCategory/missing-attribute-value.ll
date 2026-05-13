@@ -3,4 +3,4 @@
 ; RUN: not llvm-split -split-by-category=attribute -S < %s -o %t 2>&1 \
 ; RUN:   | FileCheck %s
 
-; CHECK: -split-by-category=attribute requires --category-attribute=<name>
+; CHECK: error: -split-by-category=attribute requires --category-attribute=<name>
