@@ -376,7 +376,7 @@ lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
     // FIXME: Change this to a structured binding for lambda capturing
     // once we have C++20.
     std::tie(enum_typename, enumerator_name) = name_ref.rsplit("::");
-    auto enum_type = ResolveTypeByName(enum_typename.str(), ctx_scope);
+    CompilerType enum_type = ResolveTypeByName(enum_typename.str(), ctx_scope);
     lldb::ValueObjectSP result;
     enum_type.ForEachEnumerator([&](const CompilerType &integer_type,
                                     ConstString name,
