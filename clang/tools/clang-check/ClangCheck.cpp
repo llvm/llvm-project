@@ -203,7 +203,7 @@ int main(int argc, const char **argv) {
   auto ExpectedParser =
       CommonOptionsParser::create(argc, argv, ClangCheckCategory);
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::errs() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
   CommonOptionsParser &OptionsParser = ExpectedParser.get();

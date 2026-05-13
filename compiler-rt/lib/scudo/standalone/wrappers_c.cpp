@@ -425,6 +425,7 @@ SCUDO_PREFIX(malloc_set_add_large_allocation_slack)(int add_slack) {
 // Extra Internal functions.
 INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
 
+#if !SCUDO_FUCHSIA
 INTERFACE void __scudo_get_error_info(
     struct scudo_error_info *error_info, uintptr_t fault_addr,
     const char *stack_depot, size_t stack_depot_size, const char *region_info,
@@ -458,5 +459,6 @@ INTERFACE const char *__scudo_get_ring_buffer_addr() {
 INTERFACE size_t __scudo_get_ring_buffer_size() {
   return Allocator.getRingBufferSize();
 }
+#endif
 
 } // extern "C"

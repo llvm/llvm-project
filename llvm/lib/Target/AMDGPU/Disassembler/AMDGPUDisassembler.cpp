@@ -57,7 +57,7 @@ static int64_t getInlineImmVal64(unsigned Imm);
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
                                        MCContext &Ctx, MCInstrInfo const *MCII)
     : MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
-      MAI(*Ctx.getAsmInfo()),
+      MAI(Ctx.getAsmInfo()),
       HwModeRegClass(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
       TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
@@ -1332,7 +1332,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     // VIMAGE insts other than BVH never use vaddr4.
     IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
             Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA ||
-            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12;
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12 ||
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx13;
     if (!IsNSA) {
       if (!IsVSample && AddrSize > 12)
         AddrSize = 16;
@@ -2681,7 +2682,7 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   StringRef Indent = "\t";
 
   assert(Bytes.size() == 64);
-  DataExtractor DE(Bytes, /*IsLittleEndian=*/true, /*AddressSize=*/8);
+  DataExtractor DE(Bytes, /*IsLittleEndian=*/true);
 
   switch (Cursor.tell()) {
   case amdhsa::GROUP_SEGMENT_FIXED_SIZE_OFFSET:

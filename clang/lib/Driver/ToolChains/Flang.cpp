@@ -252,8 +252,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
   Args.addAllArgs(
       CmdArgs,
       {options::OPT_fdo_concurrent_to_openmp_EQ,
-       options::OPT_flang_experimental_hlfir,
-       options::OPT_flang_deprecated_no_hlfir,
        options::OPT_fno_ppc_native_vec_elem_order,
        options::OPT_fppc_native_vec_elem_order, options::OPT_finit_global_zero,
        options::OPT_fno_init_global_zero, options::OPT_frepack_arrays,
@@ -1106,6 +1104,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs);
+
+  if (!TC.useIntegratedAs())
+    CmdArgs.push_back("-no-integrated-as");
 
   llvm::Reloc::Model RelocationModel =
       std::get<0>(ParsePICArgs(getToolChain(), Args));

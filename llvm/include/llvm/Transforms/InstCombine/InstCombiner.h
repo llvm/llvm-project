@@ -146,9 +146,9 @@ public:
     if (isa<Constant>(V))
       return isa<UndefValue>(V) ? 0 : 1;
 
-    if (isa<CastInst>(V) || match(V, m_Neg(PatternMatch::m_Value())) ||
-        match(V, m_Not(PatternMatch::m_Value())) ||
-        match(V, m_FNeg(PatternMatch::m_Value())))
+    using namespace llvm::PatternMatch;
+    if (isa<CastInst>(V) || match(V, m_Neg(m_Value())) ||
+        match(V, m_Not(m_Value())) || match(V, m_FNeg(m_Value())))
       return 2;
 
     return 3;
@@ -262,7 +262,7 @@ public:
         break; // Free to invert by swapping true/false values/destinations.
       case Instruction::Xor: // Can invert 'xor' if it's a 'not', by ignoring
                              // it.
-        if (!match(I, m_Not(PatternMatch::m_Value())))
+        if (!match(I, PatternMatch::m_Not(PatternMatch::m_Value())))
           return false; // Not a 'not'.
         break;
       default:

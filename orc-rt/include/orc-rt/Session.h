@@ -31,6 +31,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <type_traits>
 #include <vector>
 
@@ -273,6 +274,18 @@ public:
   /// If detach or shutdown have already been called then this method will not
   /// take ownership of CA or call its connect method.
   void attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI);
+
+  /// Construct a ControllerAccessT with the given args, then immediately
+  /// attach using the given BootstrapInfo.
+  ///
+  /// This enables one-line attach operations in the common case where the
+  /// ControllerAccess implementation does not require any further
+  /// configuration after construction.
+  template <typename ControllerAccessT, typename... ArgTs>
+  void attach(BootstrapInfo BI, ArgTs &&...Args) {
+    attach(std::make_shared<ControllerAccessT>(std::forward<ArgTs>(Args)...),
+           std::move(BI));
+  }
 
   /// Initiate detach from the controller.
   ///

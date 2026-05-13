@@ -1253,6 +1253,53 @@ TEST_F(FormatTestVerilog, Primitive) {
                "endprimitive");
 }
 
+TEST_F(FormatTestVerilog, Protected) {
+  // The mess-up function does not know that the pragma needs to be on its own
+  // line. So the 1-argument version of `verifyFormat` is avoided here.
+
+  // Stuff inside the block should not change.
+  verifyNoChange("`pragma protect data_block\n"
+                 " 0+\n"
+                 "0=\n"
+                 "`pragma protect end_protected");
+  verifyNoChange("`pragma protect data_block\n"
+                 "`pragma protect end_protected");
+  verifyNoChange("`pragma protect data_block\n"
+                 " 0+0=\n"
+                 "`pragma protect end_protected");
+  verifyNoChange("`pragma protect data_block\n"
+                 "0+0=\n"
+                 "`pragma protect end_protected");
+
+  // Stuff around the block should be formatted.
+  verifyFormat("x = 0;\n"
+               "`pragma protect data_block\n"
+               "0+0=\n"
+               "`pragma protect end_protected\n"
+               "x = 0;",
+               "x=0;\n"
+               "`pragma protect data_block\n"
+               "0+0=\n"
+               "`pragma protect end_protected\n"
+               "x=0;");
+  verifyFormat("x = 0;\n"
+               "`pragma protect data_block\n"
+               "`pragma protect end_protected\n"
+               "x = 0;",
+               "x=0;\n"
+               "`pragma protect data_block\n"
+               "`pragma protect end_protected\n"
+               "x=0;");
+
+  // Stuff between `begin` and `end` is ordinary code. It should be formatted.
+  verifyFormat("`pragma protect begin\n"
+               "x = 0;\n"
+               "`pragma protect end",
+               "`pragma protect begin\n"
+               "x=0;\n"
+               "`pragma protect end");
+}
+
 TEST_F(FormatTestVerilog, Streaming) {
   verifyFormat("x = {>>{j}};");
   verifyFormat("x = {>>byte{j}};");
@@ -1340,6 +1387,21 @@ TEST_F(FormatTestVerilog, StringLiteral) {
                 getStyleWithColumns(getDefaultStyle(), 23));
   verifyNoCrash(R"(x(_T("xxxxxxxxxxxxxxxx xxxx"));)",
                 getStyleWithColumns(getDefaultStyle(), 23));
+
+  // The protected block is internally a string literal. But the program should
+  // not try to break it into multiple lines.
+  verifyNoChange("`pragma protect data_block\n"
+                 "'00000000000000000000000000000000000000000+0='\n"
+                 "`pragma protect end_protected",
+                 getStyleWithColumns(getDefaultStyle(), 29));
+  verifyNoChange("`pragma protect data_block\n"
+                 "\"00000000000000000000000000000000000000000+0=\"\n"
+                 "`pragma protect end_protected",
+                 getStyleWithColumns(getDefaultStyle(), 29));
+  verifyNoChange("`pragma protect data_block\n"
+                 "00000000000000000000000000000000000000000+0=\n"
+                 "`pragma protect end_protected",
+                 getStyleWithColumns(getDefaultStyle(), 29));
 }
 
 TEST_F(FormatTestVerilog, StructLiteral) {

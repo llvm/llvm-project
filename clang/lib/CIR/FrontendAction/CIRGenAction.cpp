@@ -48,9 +48,10 @@ getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
 
 static std::unique_ptr<llvm::Module>
 lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
-                     llvm::StringRef mlirSaveTempsOutFile = {}) {
+                     llvm::StringRef mlirSaveTempsOutFile = {},
+                     llvm::vfs::FileSystem *fs = nullptr) {
   return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx,
-                                              mlirSaveTempsOutFile);
+                                              mlirSaveTempsOutFile, fs);
 }
 
 class CIRGenConsumer : public clang::ASTConsumer {
@@ -160,7 +161,8 @@ public:
 
       llvm::LLVMContext LLVMCtx;
       std::unique_ptr<llvm::Module> LLVMModule =
-          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, mlirSaveTempsOutFile);
+          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, mlirSaveTempsOutFile,
+                               &CI.getVirtualFileSystem());
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
       emitBackendOutput(

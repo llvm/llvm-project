@@ -69,6 +69,26 @@ extern "C" void mgpuLaunchKernel(hipFunction_t function, intptr_t gridX,
                                             stream, params, extra));
 }
 
+// Cooperative launch entry point. The cluster dimensions are accepted to
+// match the CUDA wrapper signature, but HIP does not support thread block
+// clusters; passing nonzero cluster dimensions is a usage error.
+extern "C" void mgpuLaunchKernelCooperative(
+    hipFunction_t function, intptr_t gridX, intptr_t gridY, intptr_t gridZ,
+    intptr_t clusterX, intptr_t clusterY, intptr_t clusterZ, intptr_t blockX,
+    intptr_t blockY, intptr_t blockZ, int32_t smem, hipStream_t stream,
+    void **params, void ** /*extra*/) {
+  if (clusterX != 0 || clusterY != 0 || clusterZ != 0) {
+    fprintf(stderr,
+            "mgpuLaunchKernelCooperative: HIP does not support thread block "
+            "clusters (got cluster=%ld,%ld,%ld)\n",
+            clusterX, clusterY, clusterZ);
+    abort();
+  }
+  HIP_REPORT_IF_ERROR(
+      hipModuleLaunchCooperativeKernel(function, gridX, gridY, gridZ, blockX,
+                                       blockY, blockZ, smem, stream, params));
+}
+
 extern "C" hipStream_t mgpuStreamCreate() {
   hipStream_t stream = nullptr;
   HIP_REPORT_IF_ERROR(hipStreamCreate(&stream));

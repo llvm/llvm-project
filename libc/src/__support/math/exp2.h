@@ -77,7 +77,7 @@ LIBC_INLINE double poly_approx_d(double dx) {
 // > P = fpminimax((2^x - 1)/x, 5, [|DD...|], [-2^-13 - 2^-30, 2^-13 + 2^-30]);
 // Error bounds:
 //   | output - 2^(dx) | < 2^-101
-LIBC_INLINE constexpr DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
+LIBC_INLINE LIBC_CONSTEXPR DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
   // Taylor polynomial.
   constexpr DoubleDouble COEFFS[] = {
       {0, 0x1p0},
@@ -98,8 +98,8 @@ LIBC_INLINE constexpr DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // Return exp(dx) ~ 1 + a0 * dx + a1 * dx^2 + ... + a6 * dx^7
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
-LIBC_INLINE constexpr Float128 poly_approx_f128(const Float128 &dx) {
-  constexpr Float128 COEFFS_128[]{
+LIBC_INLINE LIBC_CONSTEXPR Float128 poly_approx_f128(const Float128 &dx) {
+  LIBC_CONSTEXPR Float128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -128, 0xb17217f7'd1cf79ab'c9e3b398'03f2f6af_u128},
       {Sign::POS, -128, 0x3d7f7bff'058b1d50'de2d60dd'9c9a1d9f_u128},
@@ -119,7 +119,8 @@ LIBC_INLINE constexpr Float128 poly_approx_f128(const Float128 &dx) {
 // Compute 2^(x) using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-LIBC_INLINE constexpr Float128 exp2_f128(double x, int hi, int idx1, int idx2) {
+LIBC_INLINE LIBC_CONSTEXPR Float128 exp2_f128(double x, int hi, int idx1,
+                                              int idx2) {
   Float128 dx = Float128(x);
 
   // TODO: Skip recalculating exp_mid1 and exp_mid2.
@@ -213,7 +214,7 @@ LIBC_INLINE double exp2_denorm(double x) {
 //  * x >= 1024
 //  * x <= -1022
 //  * x is inf or nan
-LIBC_INLINE constexpr double set_exceptional(double x) {
+LIBC_INLINE LIBC_CONSTEXPR double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -264,7 +265,7 @@ LIBC_INLINE constexpr double set_exceptional(double x) {
 
 } // namespace exp2_internal
 
-LIBC_INLINE constexpr double exp2(double x) {
+LIBC_INLINE LIBC_CONSTEXPR double exp2(double x) {
   using namespace exp2_internal;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);

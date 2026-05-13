@@ -26,7 +26,7 @@ define void @test(double %0) {
 ; CHECK:       [[BB14]]:
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <6 x double> [[TMP12]], <6 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x double> [[TMP14]], <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <6 x double> [[TMP15]], <6 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000, double undef, double undef, double undef, double undef>, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <6 x double> [[TMP15]], <6 x double> <double +qnan, double +qnan, double undef, double undef, double undef, double undef>, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
 ; CHECK-NEXT:    br i1 false, label %[[BB18:.*]], [[DOT_CRIT_EDGE]]
 ; CHECK:       [[BB18]]:
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <6 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison, double 0.000000e+00, double 0.000000e+00>, double [[TMP0]], i32 3

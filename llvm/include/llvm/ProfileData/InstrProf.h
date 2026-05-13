@@ -119,6 +119,9 @@ inline StringRef getInstrProfValueProfMemOpFuncName() {
   return INSTR_PROF_VALUE_PROF_MEMOP_FUNC_STR;
 }
 
+/// Return the prefix of the name of the variables to function as a filter.
+inline StringRef getInstrProfVarPrefix() { return "__prof"; }
+
 /// Return the name prefix of variables containing instrumented function names.
 inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }
 

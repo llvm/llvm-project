@@ -1033,6 +1033,11 @@ def CC_Intel_OCL_BI : CallingConv<[
 ]>;
 
 def CC_X86_64_Preserve_None : CallingConv<[
+  // Byval arguments must be passed on the stack as required by the x86-64 ABI. 
+  // This must come before the register assignment rules to prevent byval arguments 
+  // from being incorrectly assigned to registers, which would cause the required 
+  // caller-side copy to not be emitted.
+  CCIfByVal<CCPassByVal<8, 8>>,
   // We don't preserve general registers, so all of them can be used to pass
   // arguments except
   //   - RBP        frame pointer
@@ -1217,8 +1222,10 @@ def CSR_Win32_CFGuard_Check_NoSSE : CalleeSavedRegs<(add CSR_32_RegCall_NoSSE, E
 def CSR_Win32_CFGuard_Check       : CalleeSavedRegs<(add CSR_32_RegCall, ECX)>;
 def CSR_Win64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                               (sequence "R%u", 10, 15))>;
-def CSR_Win64_RegCall       : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,                                  
+def CSR_Win64_RegCall       : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,
                                               (sequence "XMM%u", 8, 15))>;
+def CSR_Win64_CFGuard_Check_NoSSE : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE, RCX)>;
+def CSR_Win64_CFGuard_Check       : CalleeSavedRegs<(add CSR_Win64_RegCall, RCX)>;
 def CSR_SysV64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                                (sequence "R%u", 12, 15))>;
 def CSR_SysV64_RegCall       : CalleeSavedRegs<(add CSR_SysV64_RegCall_NoSSE,               

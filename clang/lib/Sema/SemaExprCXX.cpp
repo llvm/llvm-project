@@ -1485,11 +1485,6 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
 }
 
 bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {
-  // If we're outside the body of a member function, then we'll have a specified
-  // type for 'this'.
-  if (CXXThisTypeOverride.isNull())
-    return false;
-
   // Determine whether we're looking into a class that's currently being
   // defined.
   CXXRecordDecl *Class = BaseType->getAsCXXRecordDecl();
@@ -1674,7 +1669,15 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     // CXXTemporaryObjectExpr. It's also weird that the functional cast
     // is sometimes handled by initialization and sometimes not.
     QualType ResultType = Result.get()->getType();
-    SourceRange Locs = ListInitialization
+    // In HLSL, vector/matrix constructors have their arguments wrapped into an
+    // InitListExpr during initialization sequencing. Mark the resulting
+    // CXXFunctionalCastExpr as list-initialization so that during template
+    // re-instantiation, TreeTransform correctly passes the InitListExpr back
+    // through BuildCXXTypeConstructExpr with ListInitialization=true as opposed
+    // to false.
+    bool IsListInit = ListInitialization ||
+                      (getLangOpts().HLSL && isa<InitListExpr>(Result.get()));
+    SourceRange Locs = IsListInit
                            ? SourceRange()
                            : SourceRange(LParenOrBraceLoc, RParenOrBraceLoc);
     Result = CXXFunctionalCastExpr::Create(

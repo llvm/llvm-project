@@ -1763,7 +1763,22 @@ namespace {
           if (TA.isDependent())
             return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
       }
+      if (auto *CD = dyn_cast_if_present<ImplicitConceptSpecializationDecl>(
+              LSI->Lambda->getLambdaContextDecl())) {
+        if (llvm::any_of(CD->getTemplateArguments(),
+                         [](const auto &TA) { return TA.isDependent(); }))
+          return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
+      }
       return inherited::ComputeLambdaDependency(LSI);
+    }
+
+    ExprResult TransformConstraint(Expr *AC) {
+      // We don't want the template argument substitution into parameter
+      // mappings to preserve the outer depths.
+      if (AC && SemaRef.inConstraintSubstitution())
+        return TransformExpr(const_cast<Expr *>(AC));
+
+      return AC;
     }
 
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
@@ -1876,11 +1891,24 @@ namespace {
                               TemplateParameterList *OrigTPL)  {
       if (!OrigTPL || !OrigTPL->size()) return OrigTPL;
 
+      std::optional<MultiLevelTemplateArgumentList> OldMLTAL;
+      // We need to preserve the lambda depth in parameter mapping.
+      // Otherwise the template argument deduction would fail, if we reduced the
+      // depth too early.
+      if (SemaRef.inParameterMappingSubstitution() &&
+          OrigTPL->getDepth() >= TemplateArgs.getNumSubstitutedLevels())
+        OldMLTAL = ForgetSubstitution();
+
       DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
-      TemplateDeclInstantiator  DeclInstantiator(getSema(),
-                        /* DeclContext *Owner */ Owner, TemplateArgs);
-      DeclInstantiator.setEvaluateConstraints(EvaluateConstraints);
-      return DeclInstantiator.SubstTemplateParams(OrigTPL);
+      TemplateDeclInstantiator DeclInstantiator(getSema(), Owner, TemplateArgs);
+      // We don't want the template argument substitution into parameter
+      // mappings to preserve the outer depths.
+      DeclInstantiator.setEvaluateConstraints(
+          SemaRef.inConstraintSubstitution() || EvaluateConstraints);
+      auto *Transformed = DeclInstantiator.SubstTemplateParams(OrigTPL);
+      if (OldMLTAL)
+        RememberSubstitution(std::move(*OldMLTAL));
+      return Transformed;
     }
 
     concepts::TypeRequirement *
@@ -2810,8 +2838,8 @@ TemplateInstantiator::TransformNestedRequirement(
       return nullptr;
 
     Success = !SemaRef.CheckConstraintSatisfaction(
-        Req, AssociatedConstraint(Constraint, SemaRef.ArgPackSubstIndex),
-        TemplateArgs, Constraint->getSourceRange(), Satisfaction,
+        Req, AssociatedConstraint(Constraint), TemplateArgs,
+        Constraint->getSourceRange(), Satisfaction,
         /*TopLevelConceptId=*/nullptr, &NewConstraint);
   }
 
@@ -3085,7 +3113,13 @@ bool Sema::SubstTypeConstraint(
 
   if (!EvaluateConstraints && !inParameterMappingSubstitution()) {
     UnsignedOrNone Index = TC->getArgPackSubstIndex();
-    if (!Index)
+    bool ContainsUnexpandedPack =
+        TemplArgInfo &&
+        llvm::any_of(
+            TemplArgInfo->arguments(), [](const TemplateArgumentLoc &TA) {
+              return TA.getArgument().containsUnexpandedParameterPack();
+            });
+    if (!Index && ContainsUnexpandedPack)
       Index = SemaRef.ArgPackSubstIndex;
     Inst->setTypeConstraint(TC->getConceptReference(),
                             TC->getImmediatelyDeclaredConstraint(), Index);
@@ -3227,6 +3261,8 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
                         OldParm->getFunctionScopeIndex() + indexAdjustment);
 
   InstantiateAttrs(TemplateArgs, OldParm, NewParm);
+
+  NewParm->deduceParmAddressSpace(Context);
 
   return NewParm;
 }
@@ -3405,7 +3441,7 @@ Sema::SubstBaseSpecifiers(CXXRecordDecl *Instantiation,
   bool Invalid = false;
   SmallVector<CXXBaseSpecifier*, 4> InstantiatedBases;
   for (const auto &Base : Pattern->bases()) {
-    if (!Base.getType()->isDependentType()) {
+    if (!Base.getType()->isInstantiationDependentType()) {
       if (const CXXRecordDecl *RD = Base.getType()->getAsCXXRecordDecl()) {
         if (RD->isInvalidDecl())
           Instantiation->setInvalidDecl();
@@ -3695,7 +3731,7 @@ bool Sema::InstantiateClassImpl(
 
     Attr *NewAttr =
       instantiateTemplateAttribute(I->TmplAttr, Context, *this, TemplateArgs);
-    if (NewAttr)
+    if (NewAttr && checkInstantiatedThreadSafetyAttrs(I->NewDecl, NewAttr))
       I->NewDecl->addAttr(NewAttr);
     LocalInstantiationScope::deleteScopes(I->Scope,
                                           Instantiator.getStartingScope());
@@ -3865,7 +3901,8 @@ bool Sema::InstantiateInClassInitializer(
   // we don't have a scope.
   ContextRAII SavedContext(*this, Instantiation->getParent());
   EnterExpressionEvaluationContext EvalContext(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+      Instantiation);
   ExprEvalContexts.back().DelayedDefaultInitializationContext = {
       PointOfInstantiation, Instantiation, CurContext};
 
