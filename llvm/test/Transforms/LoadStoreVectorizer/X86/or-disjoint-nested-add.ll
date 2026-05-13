@@ -28,7 +28,7 @@ define void @or_disjoint_inner(i32 %v0, i32 %v1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[LB2:%.*]] = extractelement <4 x i8> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[LC3:%.*]] = extractelement <4 x i8> [[TMP0]], i32 2
 ; CHECK-NEXT:    [[LD4:%.*]] = extractelement <4 x i8> [[TMP0]], i32 3
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x i8> undef, i8 [[LA1]], i32 0
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x i8> poison, i8 [[LA1]], i32 0
 ; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x i8> [[R0]], i8 [[LB2]], i32 1
 ; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x i8> [[R1]], i8 [[LC3]], i32 2
 ; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x i8> [[R2]], i8 [[LD4]], i32 3
@@ -59,7 +59,7 @@ bb:
   %gd = getelementptr inbounds i8, ptr %src, i64 %ed
   %ld = load i8, ptr %gd, align 1
 
-  %r0 = insertelement <4 x i8> undef, i8 %la, i32 0
+  %r0 = insertelement <4 x i8> poison, i8 %la, i32 0
   %r1 = insertelement <4 x i8> %r0, i8 %lb, i32 1
   %r2 = insertelement <4 x i8> %r1, i8 %lc, i32 2
   %r3 = insertelement <4 x i8> %r2, i8 %ld, i32 3
@@ -83,7 +83,7 @@ define void @or_disjoint_both_inner(i32 %v0, i32 %v1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[LB2:%.*]] = extractelement <4 x i8> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[LC3:%.*]] = extractelement <4 x i8> [[TMP0]], i32 2
 ; CHECK-NEXT:    [[LD4:%.*]] = extractelement <4 x i8> [[TMP0]], i32 3
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x i8> undef, i8 [[LA1]], i32 0
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x i8> poison, i8 [[LA1]], i32 0
 ; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x i8> [[R0]], i8 [[LB2]], i32 1
 ; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x i8> [[R1]], i8 [[LC3]], i32 2
 ; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x i8> [[R2]], i8 [[LD4]], i32 3
@@ -115,7 +115,7 @@ bb:
   %gd = getelementptr inbounds i8, ptr %src, i64 %ed
   %ld = load i8, ptr %gd, align 1
 
-  %r0 = insertelement <4 x i8> undef, i8 %la, i32 0
+  %r0 = insertelement <4 x i8> poison, i8 %la, i32 0
   %r1 = insertelement <4 x i8> %r0, i8 %lb, i32 1
   %r2 = insertelement <4 x i8> %r1, i8 %lc, i32 2
   %r3 = insertelement <4 x i8> %r2, i8 %ld, i32 3
@@ -148,7 +148,7 @@ define void @or_plain_inner(i32 %v0, i32 %v1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[ED:%.*]] = sext i32 [[D]] to i64
 ; CHECK-NEXT:    [[GD:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[ED]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i8, ptr [[GD]], align 1
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x i8> undef, i8 [[LA]], i32 0
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x i8> poison, i8 [[LA]], i32 0
 ; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x i8> [[R0]], i8 [[LB]], i32 1
 ; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x i8> [[R1]], i8 [[LC]], i32 2
 ; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x i8> [[R2]], i8 [[LD]], i32 3
@@ -179,7 +179,7 @@ bb:
   %gd = getelementptr inbounds i8, ptr %src, i64 %ed
   %ld = load i8, ptr %gd, align 1
 
-  %r0 = insertelement <4 x i8> undef, i8 %la, i32 0
+  %r0 = insertelement <4 x i8> poison, i8 %la, i32 0
   %r1 = insertelement <4 x i8> %r0, i8 %lb, i32 1
   %r2 = insertelement <4 x i8> %r1, i8 %lc, i32 2
   %r3 = insertelement <4 x i8> %r2, i8 %ld, i32 3
