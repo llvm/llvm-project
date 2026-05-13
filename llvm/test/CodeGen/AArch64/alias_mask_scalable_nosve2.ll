@@ -19,9 +19,9 @@ define <vscale x 4 x i1> @whilewr_i32_addresses(i32 %a, i32 %b) {
 ; CHECK-NEXT:    subs w8, w1, w0
 ; CHECK-NEXT:    add w9, w8, #3
 ; CHECK-NEXT:    csel w8, w9, w8, mi
+; CHECK-NEXT:    cmp w1, w0
 ; CHECK-NEXT:    asr w8, w8, #2
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-NEXT:    csinv w8, w8, wzr, hi
 ; CHECK-NEXT:    whilelo p0.s, wzr, w8
 ; CHECK-NEXT:    ret
 entry:
