@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float16 nearbyintf16(float16 x) {
+LIBC_INLINE LIBC_CONSTEXPR float16 nearbyintf16(float16 x) {
   return fputil::round_using_current_rounding_mode(x);
 }
 

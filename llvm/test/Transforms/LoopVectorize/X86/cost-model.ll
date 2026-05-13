@@ -355,8 +355,8 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP20]]
-; CHECK-NEXT:    [[TMP21:%.*]] = load i64, ptr [[SRC_2]], align 8, !alias.scope [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[TMP21:%.*]] = load i64, ptr [[SRC_2]], align 8, !alias.scope [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp ne i64 [[TMP21]], 0
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[TMP23]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
