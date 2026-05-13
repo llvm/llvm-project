@@ -482,6 +482,9 @@ class ConstraintSatisfactionChecker {
   ConstraintSatisfaction &Satisfaction;
   bool BuildExpression;
 
+  // The closest concept declaration when evaluating atomic constraints.
+  ConceptDecl *ParentConcept = nullptr;
+
   // This is for TemplateInstantiator to not instantiate the same template
   // parameter mapping many times, in order to improve substitution performance.
   llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
@@ -724,6 +727,13 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.IsSatisfied = false;
     return ExprEmpty();
   }
+
+  // Make sure that concepts are not evaluated in the context they are used,
+  // i.e they should not have access to the current class object or its
+  // non-public members.
+  std::optional<Sema::ContextRAII> ConceptContext;
+  if (ParentConcept)
+    ConceptContext.emplace(S, ParentConcept->getDeclContext());
 
   Sema::ArgPackSubstIndexRAII SubstIndex(S, PackSubstitutionIndex);
   ExprResult SubstitutedAtomicExpr = EvaluateAtomicConstraint(
@@ -1034,6 +1044,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     return ExprError();
 
   unsigned Size = Satisfaction.Details.size();
+
+  llvm::SaveAndRestore PushConceptDecl(
+      ParentConcept, cast<ConceptDecl>(ConceptId->getNamedConcept()));
 
   ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
 
