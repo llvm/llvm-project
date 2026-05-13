@@ -103,12 +103,26 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/cppcoreguidelines/special-member-functions>`
   ``hicpp-static-assert``            :doc:`misc-static-assert
                                      <clang-tidy/checks/misc/static-assert>`
+  ``hicpp-uppercase-literal-suffix`` :doc:`readability-uppercase-literal-suffix
+                                     <clang-tidy/checks/readability/uppercase-literal-suffix>`
   ``hicpp-undelegated-constructor``  :doc:`bugprone-undelegated-constructor
                                      <clang-tidy/checks/bugprone/undelegated-constructor>`
   ``hicpp-use-auto``                 :doc:`modernize-use-auto
                                      <clang-tidy/checks/modernize/use-auto>`
   ``hicpp-use-emplace``              :doc:`modernize-use-emplace
                                      <clang-tidy/checks/modernize/use-emplace>`
+  ``hicpp-use-equals-default``       :doc:`modernize-use-equals-default
+                                     <clang-tidy/checks/modernize/use-equals-default>`
+  ``hicpp-use-equals-delete``        :doc:`modernize-use-equals-delete
+                                     <clang-tidy/checks/modernize/use-equals-delete>`
+  ``hicpp-use-noexcept``             :doc:`modernize-use-noexcept
+                                     <clang-tidy/checks/modernize/use-noexcept>`
+  ``hicpp-use-nullptr``              :doc:`modernize-use-nullptr
+                                     <clang-tidy/checks/modernize/use-nullptr>`
+  ``hicpp-use-override``             :doc:`modernize-use-override
+                                     <clang-tidy/checks/modernize/use-override>`
+  ``hicpp-vararg``                   :doc:`cppcoreguidelines-pro-type-vararg
+                                     <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>`
   ================================== ========================================================================
 
 Improvements to clangd
