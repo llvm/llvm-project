@@ -124,6 +124,17 @@ int main(int argc, char *argv[]) {
   amd_comgr_(action_info_set_vfs(DataAction, true));
   amd_comgr_(action_info_set_vfs(DataAction, false));
 
+  // ---- create_data, set_data_name
+  // Relative-path names are allowed; ':' (drive letters like "C:\") is not.
+  amd_comgr_data_t Data;
+  amd_comgr_(create_data(AMD_COMGR_DATA_KIND_SOURCE, &Data));
+  amd_comgr_(set_data_name(Data, "source.hip"));
+  amd_comgr_(set_data_name(Data, "sub/source.hip"));
+  amd_comgr_(set_data_name(Data, NULL));
+  fail_amd_comgr_(set_data_name(Data, "C:/path/source.hip"));
+  fail_amd_comgr_(set_data_name(Data, "source.hip:stream"));
+  amd_comgr_(release_data(Data));
+
   amd_comgr_(destroy_action_info(DataAction));
   return 0;
 }

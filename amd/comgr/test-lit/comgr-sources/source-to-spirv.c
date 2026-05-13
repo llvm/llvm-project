@@ -38,7 +38,7 @@ int main(int argc, const char *argv[]) {
 
   amd_comgr_(create_data(AMD_COMGR_DATA_KIND_SOURCE, &DataSource));
   amd_comgr_(set_data(DataSource, SizeSource, BufSource));
-  amd_comgr_(set_data_name(DataSource, InputPath));
+  amd_comgr_(set_data_name(DataSource, "source.hip"));
 
   amd_comgr_(create_data_set(&DataSetSource));
   amd_comgr_(data_set_add(DataSetSource, DataSource));

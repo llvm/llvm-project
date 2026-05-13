@@ -646,6 +646,11 @@ amd_comgr_status_t AMD_COMGR_API
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
 
+  // Drive letters like "C:\" break getFilePath()'s temp-dir join.
+  if (Name && StringRef(Name).contains(':')) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
   return DataP->setName(Name);
 }
 
