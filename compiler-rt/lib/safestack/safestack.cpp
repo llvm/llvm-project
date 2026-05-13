@@ -168,7 +168,7 @@ void StaticSpinMutex::LockSlow() {
 }
 
 // sigactions_mu guarantees atomicity of sigaction() and signal() calls.
-// Access to sigactions[] is gone with relaxed atomics to avoid data race with
+// Access to sigactions[] is done with relaxed atomics to avoid data race with
 // the signal handler.
 const int kMaxSignals = 1024;
 static atomic_uintptr_t* sigactions = nullptr;

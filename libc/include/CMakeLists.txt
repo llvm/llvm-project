@@ -205,8 +205,8 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .inttypes
-    .llvm-libc-types.in_addr
     .llvm-libc-types.in_addr_t
+    .llvm-libc-types.struct_in_addr
 )
 
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
@@ -340,6 +340,7 @@ add_header_macro(
     .llvm-libc-types.thrd_start_t
     .llvm-libc-types.tss_t
     .llvm-libc-types.tss_dtor_t
+    .llvm-libc-types.struct_timespec
 )
 
 add_header_macro(
