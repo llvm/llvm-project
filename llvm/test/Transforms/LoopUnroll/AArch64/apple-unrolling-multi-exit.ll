@@ -337,18 +337,183 @@ exit:
   ret i1 %c.3
 }
 
+; Multi-exit loop with body size > 5 but <= 10. Exercises the raised Apple
+; budget (AppleMLoopSizeBudget=10).
+define i1 @multi_exit_search_apple_budget(ptr %start, ptr %end, i32 %tgt, i32 %mask) {
+; APPLE-LABEL: define i1 @multi_exit_search_apple_budget(
+; APPLE-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[TGT:%.*]], i32 [[MASK:%.*]]) #[[ATTR0]] {
+; APPLE-NEXT:  [[ENTRY:.*]]:
+; APPLE-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; APPLE-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; APPLE-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
+; APPLE-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
+; APPLE-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
+; APPLE-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; APPLE-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
+; APPLE-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; APPLE-NEXT:    [[TMP4:%.*]] = freeze i64 [[TMP3]]
+; APPLE-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], -1
+; APPLE-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP4]], 3
+; APPLE-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_HEADER_PROL_PREHEADER:.*]], label %[[LOOP_HEADER_PROL_LOOPEXIT:.*]]
+; APPLE:       [[LOOP_HEADER_PROL_PREHEADER]]:
+; APPLE-NEXT:    br label %[[LOOP_HEADER_PROL:.*]]
+; APPLE:       [[LOOP_HEADER_PROL]]:
+; APPLE-NEXT:    [[PTR_IV_PROL:%.*]] = phi ptr [ [[PTR_IV_NEXT_PROL:%.*]], %[[LOOP_LATCH_PROL:.*]] ], [ [[START]], %[[LOOP_HEADER_PROL_PREHEADER]] ]
+; APPLE-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ 0, %[[LOOP_HEADER_PROL_PREHEADER]] ], [ [[PROL_ITER_NEXT:%.*]], %[[LOOP_LATCH_PROL]] ]
+; APPLE-NEXT:    [[L_1_PROL:%.*]] = load i32, ptr [[PTR_IV_PROL]], align 4
+; APPLE-NEXT:    [[GEP_1_PROL:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_PROL]], i64 4
+; APPLE-NEXT:    [[L_2_PROL:%.*]] = load i32, ptr [[GEP_1_PROL]], align 4
+; APPLE-NEXT:    [[AND_PROL:%.*]] = and i32 [[L_1_PROL]], [[MASK]]
+; APPLE-NEXT:    [[SUM_PROL:%.*]] = add i32 [[AND_PROL]], [[L_2_PROL]]
+; APPLE-NEXT:    [[C_1_PROL:%.*]] = icmp eq i32 [[SUM_PROL]], [[TGT]]
+; APPLE-NEXT:    br i1 [[C_1_PROL]], label %[[EXIT_UNR_LCSSA_LOOPEXIT3:.*]], label %[[LOOP_LATCH_PROL]]
+; APPLE:       [[LOOP_LATCH_PROL]]:
+; APPLE-NEXT:    [[PTR_IV_NEXT_PROL]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_PROL]], i64 8
+; APPLE-NEXT:    [[C_2_PROL:%.*]] = icmp eq ptr [[PTR_IV_NEXT_PROL]], [[END]]
+; APPLE-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
+; APPLE-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 [[PROL_ITER_NEXT]], [[XTRAITER]]
+; APPLE-NEXT:    br i1 [[PROL_ITER_CMP]], label %[[LOOP_HEADER_PROL]], label %[[LOOP_HEADER_PROL_LOOPEXIT_UNR_LCSSA:.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; APPLE:       [[LOOP_HEADER_PROL_LOOPEXIT_UNR_LCSSA]]:
+; APPLE-NEXT:    [[RES_UNR_PH:%.*]] = phi ptr [ [[END]], %[[LOOP_LATCH_PROL]] ]
+; APPLE-NEXT:    [[PTR_IV_UNR_PH:%.*]] = phi ptr [ [[PTR_IV_NEXT_PROL]], %[[LOOP_LATCH_PROL]] ]
+; APPLE-NEXT:    br label %[[LOOP_HEADER_PROL_LOOPEXIT]]
+; APPLE:       [[LOOP_HEADER_PROL_LOOPEXIT]]:
+; APPLE-NEXT:    [[RES_UNR:%.*]] = phi ptr [ poison, %[[ENTRY]] ], [ [[RES_UNR_PH]], %[[LOOP_HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; APPLE-NEXT:    [[PTR_IV_UNR:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[PTR_IV_UNR_PH]], %[[LOOP_HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; APPLE-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], 3
+; APPLE-NEXT:    br i1 [[TMP6]], label %[[EXIT:.*]], label %[[ENTRY_NEW:.*]]
+; APPLE:       [[ENTRY_NEW]]:
+; APPLE-NEXT:    br label %[[LOOP_HEADER:.*]]
+; APPLE:       [[LOOP_HEADER]]:
+; APPLE-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_UNR]], %[[ENTRY_NEW]] ], [ [[PTR_IV_NEXT_3:%.*]], %[[LOOP_LATCH_3:.*]] ]
+; APPLE-NEXT:    [[L_1:%.*]] = load i32, ptr [[PTR_IV]], align 4
+; APPLE-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 4
+; APPLE-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_1]], align 4
+; APPLE-NEXT:    [[AND:%.*]] = and i32 [[L_1]], [[MASK]]
+; APPLE-NEXT:    [[SUM:%.*]] = add i32 [[AND]], [[L_2]]
+; APPLE-NEXT:    [[C_1:%.*]] = icmp eq i32 [[SUM]], [[TGT]]
+; APPLE-NEXT:    br i1 [[C_1]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[LOOP_LATCH:.*]]
+; APPLE:       [[LOOP_LATCH]]:
+; APPLE-NEXT:    [[PTR_IV_NEXT:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 8
+; APPLE-NEXT:    [[L_1_1:%.*]] = load i32, ptr [[PTR_IV_NEXT]], align 4
+; APPLE-NEXT:    [[GEP_1_1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT]], i64 4
+; APPLE-NEXT:    [[L_2_1:%.*]] = load i32, ptr [[GEP_1_1]], align 4
+; APPLE-NEXT:    [[AND_1:%.*]] = and i32 [[L_1_1]], [[MASK]]
+; APPLE-NEXT:    [[SUM_1:%.*]] = add i32 [[AND_1]], [[L_2_1]]
+; APPLE-NEXT:    [[C_1_1:%.*]] = icmp eq i32 [[SUM_1]], [[TGT]]
+; APPLE-NEXT:    br i1 [[C_1_1]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_LATCH_1:.*]]
+; APPLE:       [[LOOP_LATCH_1]]:
+; APPLE-NEXT:    [[PTR_IV_NEXT_1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT]], i64 8
+; APPLE-NEXT:    [[L_1_2:%.*]] = load i32, ptr [[PTR_IV_NEXT_1]], align 4
+; APPLE-NEXT:    [[GEP_1_2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT_1]], i64 4
+; APPLE-NEXT:    [[L_2_2:%.*]] = load i32, ptr [[GEP_1_2]], align 4
+; APPLE-NEXT:    [[AND_2:%.*]] = and i32 [[L_1_2]], [[MASK]]
+; APPLE-NEXT:    [[SUM_2:%.*]] = add i32 [[AND_2]], [[L_2_2]]
+; APPLE-NEXT:    [[C_1_2:%.*]] = icmp eq i32 [[SUM_2]], [[TGT]]
+; APPLE-NEXT:    br i1 [[C_1_2]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_LATCH_2:.*]]
+; APPLE:       [[LOOP_LATCH_2]]:
+; APPLE-NEXT:    [[PTR_IV_NEXT_2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT_1]], i64 8
+; APPLE-NEXT:    [[L_1_3:%.*]] = load i32, ptr [[PTR_IV_NEXT_2]], align 4
+; APPLE-NEXT:    [[GEP_1_3:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT_2]], i64 4
+; APPLE-NEXT:    [[L_2_3:%.*]] = load i32, ptr [[GEP_1_3]], align 4
+; APPLE-NEXT:    [[AND_3:%.*]] = and i32 [[L_1_3]], [[MASK]]
+; APPLE-NEXT:    [[SUM_3:%.*]] = add i32 [[AND_3]], [[L_2_3]]
+; APPLE-NEXT:    [[C_1_3:%.*]] = icmp eq i32 [[SUM_3]], [[TGT]]
+; APPLE-NEXT:    br i1 [[C_1_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_LATCH_3]]
+; APPLE:       [[LOOP_LATCH_3]]:
+; APPLE-NEXT:    [[PTR_IV_NEXT_3]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT_2]], i64 8
+; APPLE-NEXT:    [[C_2_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT_3]], [[END]]
+; APPLE-NEXT:    br i1 [[C_2_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_HEADER]]
+; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
+; APPLE-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH_3]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ]
+; APPLE-NEXT:    br label %[[EXIT_UNR_LCSSA:.*]]
+; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT3]]:
+; APPLE-NEXT:    [[RES_PH_PH4:%.*]] = phi ptr [ [[PTR_IV_PROL]], %[[LOOP_HEADER_PROL]] ]
+; APPLE-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; APPLE:       [[EXIT_UNR_LCSSA]]:
+; APPLE-NEXT:    [[RES_PH:%.*]] = phi ptr [ [[RES_PH_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ], [ [[RES_PH_PH4]], %[[EXIT_UNR_LCSSA_LOOPEXIT3]] ]
+; APPLE-NEXT:    br label %[[EXIT]]
+; APPLE:       [[EXIT]]:
+; APPLE-NEXT:    [[RES:%.*]] = phi ptr [ [[RES_UNR]], %[[LOOP_HEADER_PROL_LOOPEXIT]] ], [ [[RES_PH]], %[[EXIT_UNR_LCSSA]] ]
+; APPLE-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
+; APPLE-NEXT:    ret i1 [[C_3]]
+;
+; NOUNROLL-LABEL: define i1 @multi_exit_search_apple_budget(
+; NOUNROLL-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[TGT:%.*]], i32 [[MASK:%.*]]) #[[ATTR0]] {
+; NOUNROLL-NEXT:  [[ENTRY:.*]]:
+; NOUNROLL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
+; NOUNROLL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
+; NOUNROLL-NEXT:    br label %[[LOOP_HEADER:.*]]
+; NOUNROLL:       [[LOOP_HEADER]]:
+; NOUNROLL-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
+; NOUNROLL-NEXT:    [[L_1:%.*]] = load i32, ptr [[PTR_IV]], align 4
+; NOUNROLL-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 4
+; NOUNROLL-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_1]], align 4
+; NOUNROLL-NEXT:    [[AND:%.*]] = and i32 [[L_1]], [[MASK]]
+; NOUNROLL-NEXT:    [[SUM:%.*]] = add i32 [[AND]], [[L_2]]
+; NOUNROLL-NEXT:    [[C_1:%.*]] = icmp eq i32 [[SUM]], [[TGT]]
+; NOUNROLL-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; NOUNROLL:       [[LOOP_LATCH]]:
+; NOUNROLL-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 8
+; NOUNROLL-NEXT:    [[C_2:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
+; NOUNROLL-NEXT:    br i1 [[C_2]], label %[[EXIT]], label %[[LOOP_HEADER]]
+; NOUNROLL:       [[EXIT]]:
+; NOUNROLL-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
+; NOUNROLL-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
+; NOUNROLL-NEXT:    ret i1 [[C_3]]
+;
+entry:
+  call void @llvm.assume(i1 true) [ "align"(ptr %start, i64 8) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %end, i64 8) ]
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop.latch ], [ %start, %entry ]
+  %l.1 = load i32, ptr %ptr.iv, align 4
+  %gep.1 = getelementptr inbounds nuw i8, ptr %ptr.iv, i64 4
+  %l.2 = load i32, ptr %gep.1, align 4
+  %and = and i32 %l.1, %mask
+  %sum = add i32 %and, %l.2
+  %c.1 = icmp eq i32 %sum, %tgt
+  br i1 %c.1, label %exit, label %loop.latch
+
+loop.latch:
+  %ptr.iv.next = getelementptr inbounds nuw i8, ptr %ptr.iv, i64 8
+  %c.2 = icmp eq ptr %ptr.iv.next, %end
+  br i1 %c.2, label %exit, label %loop.header
+
+exit:
+  %res = phi ptr [ %ptr.iv, %loop.header ], [ %end, %loop.latch ]
+  %c.3 = icmp eq ptr %res, %end
+  ret i1 %c.3
+}
+
 define i1 @multi_3_exit_find_ptr_loop(ptr %vec, ptr %tgt, ptr %tgt2) {
 ; APPLE-LABEL: define i1 @multi_3_exit_find_ptr_loop(
 ; APPLE-SAME: ptr [[VEC:%.*]], ptr [[TGT:%.*]], ptr [[TGT2:%.*]]) #[[ATTR0]] {
 ; APPLE-NEXT:  [[ENTRY:.*]]:
 ; APPLE-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
+; APPLE-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; APPLE-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
 ; APPLE-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
 ; APPLE-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
+; APPLE-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
 ; APPLE-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
+; APPLE-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
+; APPLE-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; APPLE-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
+; APPLE-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; APPLE-NEXT:    [[TMP4:%.*]] = freeze i64 [[TMP3]]
+; APPLE-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], -1
+; APPLE-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP4]], 3
+; APPLE-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_HEADER_PROL_PREHEADER:.*]], label %[[LOOP_HEADER_PROL_LOOPEXIT:.*]]
+; APPLE:       [[LOOP_HEADER_PROL_PREHEADER]]:
 ; APPLE-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; APPLE:       [[LOOP_HEADER]]:
-; APPLE-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
+; APPLE-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[LOOP_HEADER_PROL_PREHEADER]] ]
+; APPLE-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ 0, %[[LOOP_HEADER_PROL_PREHEADER]] ], [ [[PROL_ITER_NEXT:%.*]], %[[LOOP_LATCH]] ]
 ; APPLE-NEXT:    [[L:%.*]] = load ptr, ptr [[PTR_IV]], align 8
 ; APPLE-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L]], [[TGT]]
 ; APPLE-NEXT:    [[C_2:%.*]] = icmp eq ptr [[L]], [[TGT2]]
@@ -357,9 +522,63 @@ define i1 @multi_3_exit_find_ptr_loop(ptr %vec, ptr %tgt, ptr %tgt2) {
 ; APPLE:       [[LOOP_LATCH]]:
 ; APPLE-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 8
 ; APPLE-NEXT:    [[C_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; APPLE-NEXT:    br i1 [[C_3]], label %[[EXIT]], label %[[LOOP_HEADER]]
+; APPLE-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
+; APPLE-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 [[PROL_ITER_NEXT]], [[XTRAITER]]
+; APPLE-NEXT:    br i1 [[PROL_ITER_CMP]], label %[[LOOP_HEADER]], label %[[LOOP_HEADER_PROL_LOOPEXIT_UNR_LCSSA:.*]], !llvm.loop [[LOOP4:![0-9]+]]
+; APPLE:       [[LOOP_HEADER_PROL_LOOPEXIT_UNR_LCSSA]]:
+; APPLE-NEXT:    [[RES_UNR_PH:%.*]] = phi ptr [ [[END]], %[[LOOP_LATCH]] ]
+; APPLE-NEXT:    [[PTR_IV_UNR_PH:%.*]] = phi ptr [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ]
+; APPLE-NEXT:    br label %[[LOOP_HEADER_PROL_LOOPEXIT]]
+; APPLE:       [[LOOP_HEADER_PROL_LOOPEXIT]]:
+; APPLE-NEXT:    [[RES_UNR:%.*]] = phi ptr [ poison, %[[ENTRY]] ], [ [[RES_UNR_PH]], %[[LOOP_HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; APPLE-NEXT:    [[PTR_IV_UNR:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[PTR_IV_UNR_PH]], %[[LOOP_HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; APPLE-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], 3
+; APPLE-NEXT:    br i1 [[TMP6]], label %[[EXIT1:.*]], label %[[ENTRY_NEW:.*]]
+; APPLE:       [[ENTRY_NEW]]:
+; APPLE-NEXT:    br label %[[LOOP_HEADER1:.*]]
+; APPLE:       [[LOOP_HEADER1]]:
+; APPLE-NEXT:    [[PTR_IV1:%.*]] = phi ptr [ [[PTR_IV_UNR]], %[[ENTRY_NEW]] ], [ [[PTR_IV_NEXT_3:%.*]], %[[LOOP_LATCH_3:.*]] ]
+; APPLE-NEXT:    [[L1:%.*]] = load ptr, ptr [[PTR_IV1]], align 8
+; APPLE-NEXT:    [[C_5:%.*]] = icmp eq ptr [[L1]], [[TGT]]
+; APPLE-NEXT:    [[C_6:%.*]] = icmp eq ptr [[L1]], [[TGT2]]
+; APPLE-NEXT:    [[OR_COND1:%.*]] = select i1 [[C_5]], i1 true, i1 [[C_6]]
+; APPLE-NEXT:    br i1 [[OR_COND1]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[LOOP_LATCH1:.*]]
+; APPLE:       [[LOOP_LATCH1]]:
+; APPLE-NEXT:    [[PTR_IV_NEXT1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV1]], i64 8
+; APPLE-NEXT:    [[L_1:%.*]] = load ptr, ptr [[PTR_IV_NEXT1]], align 8
+; APPLE-NEXT:    [[C_1_1:%.*]] = icmp eq ptr [[L_1]], [[TGT]]
+; APPLE-NEXT:    [[C_2_1:%.*]] = icmp eq ptr [[L_1]], [[TGT2]]
+; APPLE-NEXT:    [[OR_COND_1:%.*]] = select i1 [[C_1_1]], i1 true, i1 [[C_2_1]]
+; APPLE-NEXT:    br i1 [[OR_COND_1]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_LATCH_1:.*]]
+; APPLE:       [[LOOP_LATCH_1]]:
+; APPLE-NEXT:    [[PTR_IV_NEXT_1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT1]], i64 8
+; APPLE-NEXT:    [[L_2:%.*]] = load ptr, ptr [[PTR_IV_NEXT_1]], align 8
+; APPLE-NEXT:    [[C_1_2:%.*]] = icmp eq ptr [[L_2]], [[TGT]]
+; APPLE-NEXT:    [[C_2_2:%.*]] = icmp eq ptr [[L_2]], [[TGT2]]
+; APPLE-NEXT:    [[OR_COND_2:%.*]] = select i1 [[C_1_2]], i1 true, i1 [[C_2_2]]
+; APPLE-NEXT:    br i1 [[OR_COND_2]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_LATCH_2:.*]]
+; APPLE:       [[LOOP_LATCH_2]]:
+; APPLE-NEXT:    [[PTR_IV_NEXT_2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT_1]], i64 8
+; APPLE-NEXT:    [[L_3:%.*]] = load ptr, ptr [[PTR_IV_NEXT_2]], align 8
+; APPLE-NEXT:    [[C_1_3:%.*]] = icmp eq ptr [[L_3]], [[TGT]]
+; APPLE-NEXT:    [[C_2_3:%.*]] = icmp eq ptr [[L_3]], [[TGT2]]
+; APPLE-NEXT:    [[OR_COND_3:%.*]] = select i1 [[C_1_3]], i1 true, i1 [[C_2_3]]
+; APPLE-NEXT:    br i1 [[OR_COND_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_LATCH_3]]
+; APPLE:       [[LOOP_LATCH_3]]:
+; APPLE-NEXT:    [[PTR_IV_NEXT_3]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT_2]], i64 8
+; APPLE-NEXT:    [[C_3_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT_3]], [[END]]
+; APPLE-NEXT:    br i1 [[C_3_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_HEADER1]]
+; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
+; APPLE-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV1]], %[[LOOP_HEADER1]] ], [ [[END]], %[[LOOP_LATCH_3]] ], [ [[PTR_IV_NEXT1]], %[[LOOP_LATCH1]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ]
+; APPLE-NEXT:    br label %[[EXIT_UNR_LCSSA:.*]]
 ; APPLE:       [[EXIT]]:
-; APPLE-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
+; APPLE-NEXT:    [[RES_PH_PH4:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ]
+; APPLE-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; APPLE:       [[EXIT_UNR_LCSSA]]:
+; APPLE-NEXT:    [[RES_PH:%.*]] = phi ptr [ [[RES_PH_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ], [ [[RES_PH_PH4]], %[[EXIT]] ]
+; APPLE-NEXT:    br label %[[EXIT1]]
+; APPLE:       [[EXIT1]]:
+; APPLE-NEXT:    [[RES:%.*]] = phi ptr [ [[RES_UNR]], %[[LOOP_HEADER_PROL_LOOPEXIT]] ], [ [[RES_PH]], %[[EXIT_UNR_LCSSA]] ]
 ; APPLE-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
 ; APPLE-NEXT:    [[C_4:%.*]] = icmp eq ptr [[RES]], [[END]]
 ; APPLE-NEXT:    ret i1 [[C_4]]
