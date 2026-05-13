@@ -790,8 +790,8 @@ define i1 @testSwapCmpWithLSL32_12_multiuse(i32 %a) nounwind {
 ; CHECK-NEXT:    lsl w19, w0, #12
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    cmp wzr, w19
-; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    cmp w19, #0
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %shl = shl i32 %a, 12

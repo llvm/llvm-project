@@ -4259,7 +4259,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         }
         break;
       }
-    } else if (C.isZero()) {
+    } else if (C.isZero() && LHS.hasOneUse()) {
       // Fold into CMP WZR, reg, shift #amount
       unsigned Opc = LHS.getOpcode();
       if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA) {
