@@ -35,7 +35,7 @@ void UseEnumClassCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseEnumClassCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *UnscopedEnum = Result.Nodes.getNodeAs<EnumDecl>("unscoped_enum");
-  const auto SourceLoc = UnscopedEnum->getLocation();
+  const SourceLocation SourceLoc = UnscopedEnum->getLocation();
 
   if (IgnoreMacros && SourceLoc.isMacroID())
     return;
