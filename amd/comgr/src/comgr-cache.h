@@ -27,9 +27,10 @@ namespace COMGR {
 class CommandCache {
   std::string CacheDir;
   llvm::CachePruningPolicy Policy;
+  llvm::raw_ostream &LogS;
 
-  CommandCache(llvm::StringRef CacheDir,
-               const llvm::CachePruningPolicy &Policy);
+  CommandCache(llvm::StringRef CacheDir, const llvm::CachePruningPolicy &Policy,
+               llvm::raw_ostream &LogS);
 
   static std::optional<llvm::CachePruningPolicy>
   getPolicyFromEnv(llvm::raw_ostream &LogS);

@@ -164,16 +164,11 @@ CommandCache::getPolicyFromEnv(llvm::raw_ostream &LogS) {
 }
 
 void CommandCache::prune() {
-  // pruneCache calls report_fatal_error when sys::fs::disk_space()
-  // fails and size-based pruning is enabled (MaxSizePercentageOfAvailableSpace
-  // or MaxSizeBytes > 0). Guard against this by probing disk_space before
-  // calling pruneCache; skip pruning entirely if the query fails.
-  if (Policy.MaxSizePercentageOfAvailableSpace > 0 || Policy.MaxSizeBytes > 0) {
-    auto SpaceOrErr = sys::fs::disk_space(CacheDir);
-    if (!SpaceOrErr)
-      return;
+  Expected<bool> PrunedOrErr = pruneCache(CacheDir, Policy);
+  if (!PrunedOrErr) {
+    auto ErrorHandler = getComgrCacheErrorHandler(LogS);
+    ErrorHandler(PrunedOrErr.takeError(), "when pruning the cache");
   }
-  pruneCache(CacheDir, Policy);
 }
 
 std::unique_ptr<CommandCache> CommandCache::get(raw_ostream &LogS) {
@@ -186,11 +181,13 @@ std::unique_ptr<CommandCache> CommandCache::get(raw_ostream &LogS) {
   if (!Policy)
     return nullptr;
 
-  return std::unique_ptr<CommandCache>(new CommandCache(CacheDir, *Policy));
+  return std::unique_ptr<CommandCache>(
+      new CommandCache(CacheDir, *Policy, LogS));
 }
 
-CommandCache::CommandCache(StringRef CacheDir, const CachePruningPolicy &Policy)
-    : CacheDir(CacheDir.str()), Policy(Policy) {
+CommandCache::CommandCache(StringRef CacheDir, const CachePruningPolicy &Policy,
+                           llvm::raw_ostream &LogS)
+    : CacheDir(CacheDir.str()), Policy(Policy), LogS(LogS) {
   assert(!CacheDir.empty());
 }
 
