@@ -6180,7 +6180,6 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_sincosf_utils",
-        ":errno",
     ],
 )
 
@@ -6195,7 +6194,6 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_math_sincosf16_utils",
-        ":errno",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -6362,7 +6360,6 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_math_exp10f_utils",
-        ":errno",
     ],
 )
 
@@ -6382,7 +6379,6 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_exp10f16_utils",
-        ":errno",
         ":llvm_libc_macros_float16_macros",
     ],
 )
