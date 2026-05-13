@@ -1620,6 +1620,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   if ((RegMemOpcode == SystemZ::SDB || RegMemOpcode == SystemZ::SEB) &&
       FoldAsLoadDefReg != RHS.getReg())
     return nullptr;
+  if (!MRI->isSSA() && DstReg != RegMO.getReg())
+    return nullptr;
 
   MachineOperand &Base = LoadMI.getOperand(1);
   MachineOperand &Disp = LoadMI.getOperand(2);
