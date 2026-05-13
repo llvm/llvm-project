@@ -106,7 +106,7 @@ PreservedAnalyses LowerCommentStringPass::run(Module &M,
   // 1. Create a single null-terminated string global.
   Constant *StrInit = ConstantDataArray::getString(Ctx, Text, /*AddNull=*/true);
 
-  // Global variable should be Internal, constant, TU-local.
+  // The global variable should be internal, constant, and TU-local.
   // This avoids duplicate symbol issues across TUs.
   auto *StrGV = new GlobalVariable(M, StrInit->getType(),
                                    /*isConstant=*/true,

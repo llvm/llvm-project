@@ -3311,10 +3311,9 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  // Handle AIX Target restrictions (i.e., warn on all non-copyright kinds).
   if (PP.getTargetInfo().getTriple().isOSAIX() && Kind != PCK_Copyright) {
-    // pragma comment kinds linker, lib, compiler, exestr and user are
-    // ignored when targeting AIX.
+    // Currently, pragma comment kinds aside from "copyright" are not fully
+    // implemented by Clang for AIX targets.
     PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
         << II->getName();
     return;

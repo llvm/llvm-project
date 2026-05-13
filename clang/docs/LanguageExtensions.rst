@@ -6821,7 +6821,7 @@ The second parameter is the library name (without the traditional Unix prefix of
 
 Embedding Copyright Information on AIX
 ======================================
-Clang supports the ``#pragma comment(copyright, "string")`` directive on AIX
+Clang supports the ``#pragma comment(copyright, "string")`` directive for AIX
 targets. This directive embeds a copyright or identifying string into the
 compiled object file. The string is included in the final executable or shared
 library and loaded into memory at program runtime. The directive is ignored on
@@ -6831,7 +6831,7 @@ non-AIX targets.
 
    #pragma comment(copyright, "string-literal")
 
-The second argument is an ordinary string literal. Concatenated ordinary string 
+The second argument is an ordinary string literal. Concatenated ordinary string
 literals are also accepted. The directive is intended to appear at file scope;
 Clang treats it as being at file scope when it appears within other scopes.
 

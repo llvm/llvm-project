@@ -1544,7 +1544,7 @@ public:
   /// Appends a dependent lib to the appropriate metadata value.
   void AddDependentLib(StringRef Lib);
 
-  /// Process Pragma Comment Copyright.
+  /// Process #pragma comment(copyright, ...).
   void ProcessPragmaCommentCopyright(StringRef Comment, bool isFromASTFile);
 
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
@@ -2139,11 +2139,8 @@ private:
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const ValueDecl *D);
 
-  /// Emit load-time comment metadata for #pragma comment(copyright, ...).
-  /// This adds the copyright string to the module's named metadata, which will
-  /// be processed by the IR passes to embed it in the .text section
-  /// of the generated object file, where it will be loaded into memory at
-  /// program runtime.
+  /// Emit the load-time comment metadata (e.g., from
+  /// #pragma comment(copyright, ...)) for the translation unit.
   void EmitLoadTimeComment();
 
   /// Determine whether the definition can be emitted eagerly, or should be

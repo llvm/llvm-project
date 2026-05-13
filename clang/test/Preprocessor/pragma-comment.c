@@ -68,11 +68,11 @@
 #pragma comment(copyright, "Duplicate Copyright") // expected-warning {{'#pragma comment copyright' ignored: it can be specified only once per translation unit}}
 
 //--- raw-string-literal.c
-// Raw string literals are accepted
+// Raw string literals are accepted.
 #pragma comment(copyright, R"foo(printf("Hello (world)");)foo")  // expected-no-diagnostics
 
 //--- concat-escape.c
-// Concatenated ordinary string literals and escapes are accepted
+// Concatenated ordinary string literals and escapes are accepted.
 #pragma comment(copyright, "@(#) Hello, " "world\n\t\"@(#) quoted\"") // expected-no-diagnostics
 
 //--- u8-literal.c
