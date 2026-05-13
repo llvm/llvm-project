@@ -5,7 +5,10 @@
 
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: yaml2obj %s -o %t/main.o
-# RUN: dsymutil %t/main.o -o %t/main.dSYM
+# RUN: dsymutil --linker classic %t/main.o -o %t/main.dSYM
+# RUN: obj2yaml %t/main.dSYM/Contents/Resources/DWARF/main.o -o %t/out.yaml
+# RUN: FileCheck %s < %t/out.yaml
+# RUN: dsymutil --linker parallel %t/main.o -o %t/main.dSYM
 # RUN: obj2yaml %t/main.dSYM/Contents/Resources/DWARF/main.o -o %t/out.yaml
 # RUN: FileCheck %s < %t/out.yaml
 

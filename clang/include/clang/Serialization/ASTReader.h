@@ -418,14 +418,13 @@ struct LookupBlockOffsets : VisibleLookupBlockOffsets {
 /// The AST reader provides lazy de-serialization of declarations, as
 /// required when traversing the AST. Only those AST nodes that are
 /// actually required will be de-serialized.
-class ASTReader
-  : public ExternalPreprocessorSource,
-    public ExternalPreprocessingRecordSource,
-    public ExternalHeaderFileInfoSource,
-    public ExternalSemaSource,
-    public IdentifierInfoLookup,
-    public ExternalSLocEntrySource
-{
+class ASTReader : public ExternalPreprocessorSource,
+                  public ExternalPreprocessingRecordSource,
+                  public ExternalHeaderFileInfoSource,
+                  public ExternalSemaSource,
+                  public IdentifierInfoLookup,
+                  public ExternalSLocEntrySource,
+                  public ExternalSubmoduleSource {
 public:
   /// Types of AST files.
   friend class ASTDeclMerger;
@@ -819,32 +818,6 @@ private:
   /// A mapping from each of the hidden submodules to the deserialized
   /// declarations in that submodule that could be made visible.
   HiddenNamesMapType HiddenNamesMap;
-
-  /// A module import, export, or conflict that hasn't yet been resolved.
-  struct UnresolvedModuleRef {
-    /// The file in which this module resides.
-    ModuleFile *File;
-
-    /// The module that is importing or exporting.
-    Module *Mod;
-
-    /// The kind of module reference.
-    enum { Import, Export, Conflict, Affecting } Kind;
-
-    /// The local ID of the module that is being exported.
-    unsigned ID;
-
-    /// Whether this is a wildcard export.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsWildcard : 1;
-
-    /// String data.
-    StringRef String;
-  };
-
-  /// The set of module imports and exports that still need to be
-  /// resolved.
-  SmallVector<UnresolvedModuleRef, 2> UnresolvedModuleRefs;
 
   /// A vector containing selectors that have already been loaded.
   ///
@@ -1612,8 +1585,6 @@ private:
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
-  llvm::Error ReadSubmoduleBlock(ModuleFile &F,
-                                 unsigned ClientLoadCapabilities);
   static bool ParseLanguageOptions(const RecordData &Record,
                                    StringRef ModuleFilename, bool Complain,
                                    ASTReaderListener &Listener,
@@ -2444,8 +2415,7 @@ public:
                                                   unsigned LocalID) const;
 
   /// Retrieve the submodule that corresponds to a global submodule ID.
-  ///
-  Module *getSubmodule(serialization::SubmoduleID GlobalID);
+  Module *getSubmodule(uint32_t GlobalID) override;
 
   /// Retrieve the module that corresponds to the given module ID.
   ///

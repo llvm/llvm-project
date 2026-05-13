@@ -6691,2217 +6691,2213 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:    ALU 114, @35, KC0[], KC1[]
 ; EG-NEXT:    ALU 115, @150, KC0[], KC1[]
 ; EG-NEXT:    ALU 115, @266, KC0[], KC1[]
-; EG-NEXT:    ALU 111, @382, KC0[], KC1[]
+; EG-NEXT:    ALU 109, @382, KC0[], KC1[]
 ; EG-NEXT:    TEX 1 @30
-; EG-NEXT:    ALU 114, @494, KC0[], KC1[]
-; EG-NEXT:    ALU 113, @609, KC0[], KC1[]
-; EG-NEXT:    ALU 114, @723, KC0[], KC1[]
-; EG-NEXT:    ALU 113, @838, KC0[], KC1[]
-; EG-NEXT:    ALU 114, @952, KC0[], KC1[]
-; EG-NEXT:    ALU 113, @1067, KC0[], KC1[]
-; EG-NEXT:    ALU 114, @1181, KC0[], KC1[]
-; EG-NEXT:    ALU 113, @1296, KC0[], KC1[]
-; EG-NEXT:    ALU 114, @1410, KC0[], KC1[]
-; EG-NEXT:    ALU 114, @1525, KC0[], KC1[]
-; EG-NEXT:    ALU 114, @1640, KC0[], KC1[]
-; EG-NEXT:    ALU 115, @1755, KC0[], KC1[]
-; EG-NEXT:    ALU 113, @1871, KC0[], KC1[]
-; EG-NEXT:    ALU 112, @1985, KC0[], KC1[]
-; EG-NEXT:    ALU 99, @2098, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.XYZW, T1.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T7.XYZW, T0.X, 1
+; EG-NEXT:    ALU 114, @492, KC0[], KC1[]
+; EG-NEXT:    ALU 112, @607, KC0[], KC1[]
+; EG-NEXT:    ALU 113, @720, KC0[], KC1[]
+; EG-NEXT:    ALU 114, @834, KC0[], KC1[]
+; EG-NEXT:    ALU 114, @949, KC0[], KC1[]
+; EG-NEXT:    ALU 113, @1064, KC0[], KC1[]
+; EG-NEXT:    ALU 114, @1178, KC0[], KC1[]
+; EG-NEXT:    ALU 113, @1293, KC0[], KC1[]
+; EG-NEXT:    ALU 114, @1407, KC0[], KC1[]
+; EG-NEXT:    ALU 113, @1522, KC0[], KC1[]
+; EG-NEXT:    ALU 114, @1636, KC0[], KC1[]
+; EG-NEXT:    ALU 113, @1751, KC0[], KC1[]
+; EG-NEXT:    ALU 112, @1865, KC0[], KC1[]
+; EG-NEXT:    ALU 114, @1978, KC0[], KC1[]
+; EG-NEXT:    ALU 100, @2093, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.XYZW, T0.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T5.XYZW, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 26:
-; EG-NEXT:     VTX_READ_128 T1.XYZW, T2.X, 32, #1
-; EG-NEXT:     VTX_READ_128 T0.XYZW, T2.X, 0, #1
+; EG-NEXT:     VTX_READ_128 T2.XYZW, T0.X, 32, #1
+; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 0, #1
 ; EG-NEXT:    Fetch clause starting at 30:
-; EG-NEXT:     VTX_READ_128 T9.XYZW, T2.X, 16, #1
-; EG-NEXT:     VTX_READ_128 T10.XYZW, T2.X, 48, #1
+; EG-NEXT:     VTX_READ_128 T8.XYZW, T0.X, 16, #1
+; EG-NEXT:     VTX_READ_128 T9.XYZW, T0.X, 48, #1
 ; EG-NEXT:    ALU clause starting at 34:
-; EG-NEXT:     MOV * T2.X, KC0[2].Z,
+; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 35:
-; EG-NEXT:     ASHR * T3.W, T1.Y, literal.x,
+; EG-NEXT:     ASHR * T3.W, T2.W, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT * T2.W, T1.X, PV.W,
-; EG-NEXT:     XOR_INT * T7.W, PV.W, T3.W,
-; EG-NEXT:     SUB_INT T2.Z, 0.0, PV.W,
-; EG-NEXT:     ASHR T2.W, T0.Y, literal.x,
-; EG-NEXT:     RECIP_UINT * T2.Y, PV.W,
+; EG-NEXT:     ADD_INT * T0.W, T2.Z, PV.W,
+; EG-NEXT:     XOR_INT * T6.W, PV.W, T3.W,
+; EG-NEXT:     SUB_INT T0.Z, 0.0, PV.W,
+; EG-NEXT:     ASHR T0.W, T1.W, literal.x,
+; EG-NEXT:     RECIP_UINT * T0.Y, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT T3.Z, T0.Y, PV.W,
-; EG-NEXT:     ADDC_UINT T4.W, T0.X, PV.W,
-; EG-NEXT:     MULLO_INT * T0.Y, PV.Z, PS,
-; EG-NEXT:     ADD_INT T4.W, PV.Z, PV.W,
-; EG-NEXT:     MULHI * T0.Y, T2.Y, PS,
-; EG-NEXT:     ADD_INT T5.W, T2.Y, PS,
-; EG-NEXT:     XOR_INT * T4.W, PV.W, T2.W,
+; EG-NEXT:     ADD_INT T3.Z, T1.W, PV.W,
+; EG-NEXT:     ADDC_UINT T1.W, T1.Z, PV.W,
+; EG-NEXT:     MULLO_INT * T0.Z, PV.Z, PS,
+; EG-NEXT:     ADD_INT T1.W, PV.Z, PV.W,
+; EG-NEXT:     MULHI * T0.Z, T0.Y, PS,
+; EG-NEXT:     ADD_INT T4.W, T0.Y, PS,
+; EG-NEXT:     XOR_INT * T1.W, PV.W, T0.W,
 ; EG-NEXT:     MULHI * T0.Y, PS, PV.W,
-; EG-NEXT:     MULLO_INT * T0.Y, PS, T7.W,
-; EG-NEXT:     SUB_INT * T5.W, T4.W, PS,
-; EG-NEXT:     SETGE_UINT T6.W, PV.W, T7.W,
-; EG-NEXT:     SUB_INT * T8.W, PV.W, T7.W,
-; EG-NEXT:     CNDE_INT T2.Z, PV.W, T5.W, PS, BS:VEC_021/SCL_122
-; EG-NEXT:     ADD_INT T5.W, T1.Y, T3.W,
-; EG-NEXT:     ADDC_UINT * T6.W, T1.X, T3.W,
-; EG-NEXT:     ADD_INT T3.Z, PV.W, PS,
-; EG-NEXT:     SETGE_UINT T5.W, PV.Z, T7.W,
-; EG-NEXT:     SUB_INT * T6.W, PV.Z, T7.W,
-; EG-NEXT:     ADD_INT T4.Z, T0.X, T2.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T5.W, PV.W, T2.Z, PS,
-; EG-NEXT:     XOR_INT * T6.W, PV.Z, T3.W,
-; EG-NEXT:     CNDE_INT T3.W, PS, PV.W, T4.W,
-; EG-NEXT:     XOR_INT * T8.W, PV.Z, T2.W,
-; EG-NEXT:     BIT_ALIGN_INT T4.W, PV.W, PS, literal.x,
-; EG-NEXT:     LSHR * T3.W, PV.W, literal.x,
+; EG-NEXT:     MULLO_INT * T0.Y, PS, T6.W,
+; EG-NEXT:     SUB_INT * T4.W, T1.W, PS,
+; EG-NEXT:     SETGE_UINT T5.W, PV.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, PV.W, T6.W,
+; EG-NEXT:     CNDE_INT T0.Z, PV.W, T4.W, PS, BS:VEC_021/SCL_122
+; EG-NEXT:     ADD_INT T2.W, T2.W, T3.W,
+; EG-NEXT:     ADDC_UINT * T4.W, T2.Z, T3.W,
+; EG-NEXT:     ADD_INT T2.Z, PV.W, PS,
+; EG-NEXT:     SETGE_UINT T2.W, PV.Z, T6.W,
+; EG-NEXT:     SUB_INT * T4.W, PV.Z, T6.W,
+; EG-NEXT:     ADD_INT T1.Z, T1.Z, T0.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T2.W, PV.W, T0.Z, PS,
+; EG-NEXT:     XOR_INT * T4.W, PV.Z, T3.W,
+; EG-NEXT:     CNDE_INT T1.W, PS, PV.W, T1.W,
+; EG-NEXT:     XOR_INT * T5.W, PV.Z, T0.W,
+; EG-NEXT:     BIT_ALIGN_INT T2.W, PV.W, PS, literal.x,
+; EG-NEXT:     LSHR * T1.W, PV.W, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETE_INT T2.Z, PS, T6.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.W, PS, T6.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T7.W,
+; EG-NEXT:     SETE_INT T0.Z, PS, T4.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T3.W, PS, T4.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T6.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.Z, PV.W, PS,
-; EG-NEXT:     SUB_INT * T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T5.W, T3.W, T6.W,
-; EG-NEXT:     SUBB_UINT * T9.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT T5.W, T5.W, PV.W,
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT * T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T3.W, T1.W, T4.W,
+; EG-NEXT:     SUBB_UINT * T7.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT T3.W, T3.W, PV.W,
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    30(4.203895e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    29(4.063766e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    28(3.923636e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    27(3.783506e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    26(3.643376e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT * T2.Z, PS, T7.W,
+; EG-NEXT:     SETGE_UINT * T0.Z, PS, T6.W,
 ; EG-NEXT:    ALU clause starting at 150:
-; EG-NEXT:     SETE_INT T5.W, T3.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, T3.W, T6.W,
-; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, T2.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SETE_INT T3.W, T1.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, T1.W, T4.W,
+; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, T0.Z,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    25(3.503246e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    24(3.363116e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    23(3.222986e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    22(3.082857e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    21(2.942727e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    20(2.802597e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    19(2.662467e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T2.Z, T4.W, T7.W,
+; EG-NEXT:     SUB_INT * T0.Z, T2.W, T6.W,
 ; EG-NEXT:    ALU clause starting at 266:
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    18(2.522337e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    17(2.382207e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    15(2.101948e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    14(1.961818e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    13(1.821688e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    12(1.681558e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
 ; EG-NEXT:    ALU clause starting at 382:
-; EG-NEXT:     LSHL T2.Z, T4.W, 1,
-; EG-NEXT:     BFE_UINT * T9.W, T8.W, literal.x, 1, BS:VEC_120/SCL_212
+; EG-NEXT:     LSHL T0.Z, T2.W, 1,
+; EG-NEXT:     BFE_UINT * T7.W, T5.W, literal.x, 1, BS:VEC_120/SCL_212
 ; EG-NEXT:    11(1.541428e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, T5.W,
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PV.W, T4.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T4.W, T2.Z, T9.W,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PV.W, T2.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T2.W, T0.Z, T7.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    10(1.401298e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    7(9.809089e-45), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    6(8.407791e-45), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T9.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    5(7.006492e-45), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T9.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:    ALU clause starting at 494:
-; EG-NEXT:     LSHL T2.Z, T4.W, 1,
-; EG-NEXT:     BFE_UINT * T11.W, T8.W, literal.x, 1, BS:VEC_120/SCL_212
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:    ALU clause starting at 492:
+; EG-NEXT:     SUB_INT T3.W, T7.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, T5.W,
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PV.W, T4.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T4.W, T2.Z, T11.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T11.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T2.Z, PS, 1,
-; EG-NEXT:     BFE_UINT T11.W, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T3.W, T0.Y, T3.W, PV.W,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T0.Z, PS, 1,
+; EG-NEXT:     BFE_UINT T7.W, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T1.W, PV.W,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T3.W, PS, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T4.W, PV.Z, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T1.W, PS, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T2.W, PV.Z, PV.W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.Z, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.W, PV.W, T6.W,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.W, T6.W,
+; EG-NEXT:     SETGE_UINT T0.Z, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.W, PV.W, T4.W,
+; EG-NEXT:     SETGE_UINT * T7.W, PV.W, T4.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Z, T4.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T5.W, T4.W, T7.W,
-; EG-NEXT:     SUB_INT * T11.W, T3.W, T6.W,
-; EG-NEXT:     SUB_INT T5.W, PV.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T4.W, T0.Y, T4.W, T2.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T2.Z, T8.W, literal.x, 1,
-; EG-NEXT:     CNDE_INT T3.W, T0.Y, T3.W, PV.W,
-; EG-NEXT:     ASHR * T11.W, T10.Y, literal.y,
+; EG-NEXT:     SUB_INT T0.Z, T2.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T3.W, T2.W, T6.W,
+; EG-NEXT:     SUB_INT * T7.W, T1.W, T4.W,
+; EG-NEXT:     SUB_INT T3.W, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T2.W, T0.Y, T2.W, T0.Z,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T0.Z, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T1.W, T0.Y, T1.W, PV.W,
+; EG-NEXT:     ASHR * T7.W, T9.W, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 31(4.344025e-44)
-; EG-NEXT:     ADD_INT T3.Z, T10.X, PS,
-; EG-NEXT:     BIT_ALIGN_INT T5.W, PV.W, T4.W, literal.x,
-; EG-NEXT:     OR_INT * T12.W, PV.Y, PV.Z,
+; EG-NEXT:     ADD_INT T1.Z, T9.Z, PS,
+; EG-NEXT:     BIT_ALIGN_INT T3.W, PV.W, T2.W, literal.x,
+; EG-NEXT:     OR_INT * T10.W, PV.Y, PV.Z,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T0.Y, PS, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T2.Z, PV.W, T6.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T3.W, PV.W, T6.W, BS:VEC_102/SCL_221
-; EG-NEXT:     XOR_INT * T4.W, PV.Z, T11.W,
-; EG-NEXT:     SUB_INT T13.W, 0.0, PS,
-; EG-NEXT:     CNDE_INT * T14.W, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T0.X, T12.W, T7.W,
-; EG-NEXT:     SUBB_UINT * T0.Y, T12.W, T7.W,
-; EG-NEXT:     SUB_INT T2.Z, T5.W, T6.W,
-; EG-NEXT:     ASHR T3.W, T9.Y, literal.x,
-; EG-NEXT:     RECIP_UINT * T1.X, T4.W,
+; EG-NEXT:     SETGE_UINT T0.Y, PS, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T0.Z, PV.W, T4.W, BS:VEC_102/SCL_221
+; EG-NEXT:     SETGE_UINT T1.W, PV.W, T4.W, BS:VEC_102/SCL_221
+; EG-NEXT:     XOR_INT * T2.W, PV.Z, T7.W,
+; EG-NEXT:     SUB_INT T11.W, 0.0, PS,
+; EG-NEXT:     CNDE_INT * T12.W, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T0.X, T10.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T0.Y, T10.W, T6.W,
+; EG-NEXT:     SUB_INT T0.Z, T3.W, T4.W,
+; EG-NEXT:     ASHR * T1.W, T8.W, literal.x, BS:VEC_201
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT T1.Y, T9.Y, PV.W,
-; EG-NEXT:     SUB_INT T2.Z, PV.Z, T0.Y,
-; EG-NEXT:     CNDE_INT T12.W, T14.W, T12.W, T0.X,
-; EG-NEXT:     MULLO_INT * T0.X, T13.W, PS,
-; EG-NEXT:     ADDC_UINT T2.X, T9.X, T3.W,
+; EG-NEXT:     RECIP_UINT * T1.Z, T2.W,
+; EG-NEXT:     ADD_INT T3.Y, T8.W, T1.W,
+; EG-NEXT:     SUB_INT * T0.Z, T0.Z, T0.Y,
+; EG-NEXT:     CNDE_INT T8.W, T12.W, T10.W, T0.X,
+; EG-NEXT:     MULLO_INT * T0.X, T11.W, T1.Z,
+; EG-NEXT:     ADDC_UINT T3.X, T8.Z, T1.W,
 ; EG-NEXT:     LSHL T0.Y, PV.W, 1,
-; EG-NEXT:     BFE_UINT * T3.Z, T8.W, 1, 1,
-; EG-NEXT:     CNDE_INT T5.W, T14.W, T5.W, T2.Z,
-; EG-NEXT:     MULHI * T0.X, T1.X, T0.X,
-; EG-NEXT:     ADD_INT T2.Y, T1.X, PS,
-; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.W, T12.W, literal.x,
-; EG-NEXT:     OR_INT T12.W, T0.Y, T3.Z,
-; EG-NEXT:     ADD_INT * T5.W, T1.Y, T2.X,
+; EG-NEXT:     BFE_UINT * T2.Z, T5.W, 1, 1,
+; EG-NEXT:     CNDE_INT T3.W, T12.W, T3.W, T0.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     MULHI * T0.X, T1.Z, T0.X,
+; EG-NEXT:     ADD_INT T0.X, T1.Z, PS,
+; EG-NEXT:     BIT_ALIGN_INT T4.Y, PV.W, T8.W, literal.x,
+; EG-NEXT:     OR_INT T0.Z, T0.Y, T2.Z,
+; EG-NEXT:     ASHR T8.W, T2.Y, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     ADD_INT * T3.W, T3.Y, T3.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     XOR_INT T1.X, PS, T3.W,
-; EG-NEXT:     ASHR T0.Y, T10.W, literal.x,
-; EG-NEXT:     SETGE_UINT * T2.Z, PV.W, T7.W, BS:VEC_021/SCL_122
+; EG-NEXT:     XOR_INT T3.X, PS, T1.W, BS:VEC_021/SCL_122
+; EG-NEXT:     ADD_INT T0.Y, T2.X, PV.W,
+; EG-NEXT:     SETGE_UINT T1.Z, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     SETE_INT T3.W, PV.Y, T4.W,
+; EG-NEXT:     SETGE_UINT * T10.W, PV.Y, T4.W,
+; EG-NEXT:     CNDE_INT T4.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T0.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUBB_UINT T1.Z, T0.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T10.W, T4.Y, T4.W, BS:VEC_102/SCL_221
+; EG-NEXT:     XOR_INT * T3.W, PV.Y, T8.W,
+; EG-NEXT:     SUB_INT T5.X, 0.0, PS,
+; EG-NEXT:     ASHR T5.Y, T9.Y, literal.x,
+; EG-NEXT:     SUB_INT T1.Z, PV.W, PV.Z,
+; EG-NEXT:     CNDE_INT T10.W, PV.X, T0.Z, PV.Y,
+; EG-NEXT:     RECIP_UINT * T2.Z, PS,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETE_INT T5.W, T4.Z, T6.W,
-; EG-NEXT:     SETGE_UINT * T13.W, T4.Z, T6.W,
-; EG-NEXT:     CNDE_INT T1.Y, PV.W, PS, T2.Z,
-; EG-NEXT:     SUB_INT T3.Z, T12.W, T7.W,
-; EG-NEXT:     ADD_INT T5.W, T10.Z, T0.Y, BS:VEC_021/SCL_122
-; EG-NEXT:     MULHI * T0.X, T1.X, T2.Y,
-; EG-NEXT:     SUBB_UINT T2.X, T12.W, T7.W,
-; EG-NEXT:     SUB_INT T2.Y, T4.Z, T6.W, BS:VEC_021/SCL_122
-; EG-NEXT:     XOR_INT * T2.Z, PV.W, T0.Y,
-; EG-NEXT:     ASHR T5.W, T9.W, literal.x,
-; EG-NEXT:     MULLO_INT * T0.X, T0.X, T4.W,
+; EG-NEXT:     LSHL T6.X, PV.W, 1,
+; EG-NEXT:     AND_INT T3.Y, T5.W, 1,
+; EG-NEXT:     CNDE_INT T0.Z, T4.X, T4.Y, PV.Z,
+; EG-NEXT:     ADD_INT T5.W, T9.X, PV.Y, BS:VEC_120/SCL_212
+; EG-NEXT:     MULLO_INT * T1.Z, PV.X, PS,
+; EG-NEXT:     XOR_INT T0.Y, PV.W, T5.Y,
+; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.Z, T10.W, literal.x,
+; EG-NEXT:     OR_INT T10.W, PV.X, PV.Y,
+; EG-NEXT:     MULHI * T3.Y, T3.X, T0.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT T3.X, T9.W, PV.W,
-; EG-NEXT:     SUB_INT T3.Y, 0.0, T2.Z,
-; EG-NEXT:     SUB_INT T5.Z, T2.Y, T2.X,
-; EG-NEXT:     CNDE_INT T9.W, T1.Y, T12.W, T3.Z, BS:VEC_120/SCL_212
-; EG-NEXT:     RECIP_UINT * T2.X, T2.Z,
-; EG-NEXT:     ADDC_UINT T4.X, T9.Z, T5.W,
-; EG-NEXT:     LSHL T2.Y, PV.W, 1,
-; EG-NEXT:     AND_INT T3.Z, T8.W, 1,
-; EG-NEXT:     CNDE_INT T8.W, T1.Y, T4.Z, PV.Z,
-; EG-NEXT:     MULLO_INT * T1.Y, PV.Y, PS,
-; EG-NEXT:     BIT_ALIGN_INT T3.Y, PV.W, T9.W, literal.x,
-; EG-NEXT:     OR_INT T5.Z, PV.Y, PV.Z,
-; EG-NEXT:     ADD_INT T8.W, T3.X, PV.X,
-; EG-NEXT:     MULHI * T1.Y, T2.X, PS,
+; EG-NEXT:     SETGE_UINT T4.Y, PV.W, T6.W,
+; EG-NEXT:     SETE_INT T3.Z, PV.Z, T4.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T5.W, 0.0, PV.Y,
+; EG-NEXT:     RECIP_UINT * T4.X, PV.Y,
+; EG-NEXT:     SETGE_UINT T0.X, T0.Z, T4.W,
+; EG-NEXT:     SUBB_UINT T6.Y, T10.W, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T4.Z, T0.Z, T4.W,
+; EG-NEXT:     ASHR T4.W, T8.Y, literal.x,
+; EG-NEXT:     MULLO_INT * T5.X, PV.W, PS,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT T2.X, T2.X, PS,
-; EG-NEXT:     XOR_INT T1.Y, PV.W, T5.W,
-; EG-NEXT:     SETGE_UINT T3.Z, PV.Z, T7.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T8.W, PV.Y, T6.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SUB_INT * T9.W, T1.X, T0.X,
-; EG-NEXT:     SETGE_UINT T0.X, T3.Y, T6.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUBB_UINT T2.Y, T5.Z, T7.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SUB_INT T4.Z, T3.Y, T6.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.W, PS, T4.W,
-; EG-NEXT:     SUB_INT * T12.W, PS, T4.W,
-; EG-NEXT:     CNDE_INT T3.X, PV.W, T9.W, PS,
-; EG-NEXT:     ADD_INT T4.Y, T10.Y, T11.W, BS:VEC_102/SCL_221
-; EG-NEXT:     ADDC_UINT T6.Z, T10.X, T11.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SUB_INT T6.W, PV.Z, PV.Y,
-; EG-NEXT:     CNDE_INT * T8.W, T8.W, PV.X, T3.Z,
-; EG-NEXT:     CNDE_INT T0.X, PS, T3.Y, PV.W,
-; EG-NEXT:     ADD_INT * T2.Y, PV.Y, PV.Z,
-; EG-NEXT:    ALU clause starting at 609:
-; EG-NEXT:     SETGE_UINT T3.Z, T3.X, T4.W,
-; EG-NEXT:     SUB_INT T6.W, T3.X, T4.W,
-; EG-NEXT:     MULHI * T2.X, T1.Y, T2.X,
-; EG-NEXT:     ASHR T4.X, T1.W, literal.x,
-; EG-NEXT:     CNDE_INT T3.Y, PV.Z, T3.X, PV.W,
-; EG-NEXT:     XOR_INT T3.Z, T2.Y, T11.W,
-; EG-NEXT:     ADD_INT T6.W, T9.Z, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     MULLO_INT * T2.X, PS, T2.Z,
+; EG-NEXT:     ADD_INT T6.X, T8.Y, PV.W,
+; EG-NEXT:     ADDC_UINT T7.Y, T8.X, PV.W,
+; EG-NEXT:     SUB_INT T4.Z, PV.Z, PV.Y,
+; EG-NEXT:     CNDE_INT T11.W, T3.Z, PV.X, T4.Y,
+; EG-NEXT:     MULHI * T3.Z, T4.X, PS,
+; EG-NEXT:     CNDE_INT T0.X, PV.W, T0.Z, PV.Z,
+; EG-NEXT:     ADD_INT T4.Y, T4.X, PS,
+; EG-NEXT:     ASHR * T0.Z, T1.Y, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     XOR_INT T3.X, PV.W, T5.W,
-; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.Y, T1.X,
-; EG-NEXT:     ADD_INT T4.Z, T1.Z, PV.X,
-; EG-NEXT:     SUB_INT T9.W, T1.Y, PS,
-; EG-NEXT:     ASHR * T6.W, T0.W, literal.x,
+; EG-NEXT:    ALU clause starting at 607:
+; EG-NEXT:     ADD_INT T5.W, T6.X, T7.Y,
+; EG-NEXT:     MULLO_INT * T3.Y, T3.Y, T2.W,
+; EG-NEXT:     XOR_INT T4.X, PV.W, T4.W,
+; EG-NEXT:     ADD_INT T1.Y, T1.Y, T0.Z, BS:VEC_102/SCL_221
+; EG-NEXT:     ADDC_UINT T3.Z, T1.X, T0.Z, BS:VEC_102/SCL_221
+; EG-NEXT:     SUB_INT T5.W, T3.X, PS,
+; EG-NEXT:     MULHI * T1.Z, T2.Z, T1.Z,
+; EG-NEXT:     ADD_INT T5.X, T2.Z, PS,
+; EG-NEXT:     SETGE_UINT T3.Y, PV.W, T2.W,
+; EG-NEXT:     SUB_INT T1.Z, PV.W, T2.W,
+; EG-NEXT:     ADD_INT T12.W, PV.Y, PV.Z,
+; EG-NEXT:     MULHI * T1.Y, PV.X, T4.Y,
+; EG-NEXT:     XOR_INT T6.X, PV.W, T0.Z,
+; EG-NEXT:     CNDE_INT T3.Y, PV.Y, T5.W, PV.Z,
+; EG-NEXT:     ADD_INT T1.Z, T9.W, T7.W, BS:VEC_021/SCL_122
+; EG-NEXT:     ADDC_UINT T5.W, T9.Z, T7.W, BS:VEC_021/SCL_122
+; EG-NEXT:     MULLO_INT * T1.Y, PS, T0.Y,
+; EG-NEXT:     ADD_INT T7.X, T8.X, T4.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T1.Y, T4.X, PS, BS:VEC_120/SCL_212
+; EG-NEXT:     ADD_INT T1.Z, PV.Z, PV.W,
+; EG-NEXT:     SETGE_UINT T5.W, PV.Y, T2.W,
+; EG-NEXT:     SUB_INT * T9.W, PV.Y, T2.W,
+; EG-NEXT:     ADD_INT T8.X, T8.Z, T1.W,
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, T3.Y, PS, BS:VEC_021/SCL_122
+; EG-NEXT:     XOR_INT T1.Z, PV.Z, T7.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.W, PV.Y, T0.Y,
+; EG-NEXT:     SUB_INT * T7.W, PV.Y, T0.Y,
+; EG-NEXT:     CNDE_INT T10.X, PV.W, T1.Y, PS,
+; EG-NEXT:     ADD_INT T1.Y, T9.Y, T5.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     ADDC_UINT T2.Z, T9.X, T5.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T5.W, PV.Z, PV.Y, T3.X,
+; EG-NEXT:     XOR_INT * T7.W, PV.X, T1.W,
+; EG-NEXT:     BIT_ALIGN_INT T8.X, PV.W, PS, literal.x,
+; EG-NEXT:     LSHR T3.Y, PV.W, literal.x,
+; EG-NEXT:     ADD_INT T2.Z, PV.Y, PV.Z,
+; EG-NEXT:     SETGE_UINT T5.W, PV.X, T0.Y,
+; EG-NEXT:     SUB_INT * T9.W, PV.X, T0.Y,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT T1.X, T0.W, PS,
-; EG-NEXT:     ADDC_UINT T3.Y, T0.Z, PS,
-; EG-NEXT:     SETGE_UINT T6.Z, PV.W, T2.Z,
-; EG-NEXT:     SUB_INT T11.W, PV.W, T2.Z,
-; EG-NEXT:     XOR_INT * T0.W, PV.Z, T4.X,
-; EG-NEXT:     SUB_INT T2.X, 0.0, PS,
-; EG-NEXT:     CNDE_INT T4.Y, PV.Z, T9.W, PV.W,
-; EG-NEXT:     ADD_INT T4.Z, T10.W, T0.Y,
-; EG-NEXT:     ADDC_UINT T9.W, T10.Z, T0.Y,
-; EG-NEXT:     RECIP_UINT * T5.X, PS,
-; EG-NEXT:     ADD_INT T6.X, PV.Z, PV.W,
-; EG-NEXT:     SETGE_UINT T5.Y, PV.Y, T2.Z,
-; EG-NEXT:     SUB_INT T4.Z, PV.Y, T2.Z,
-; EG-NEXT:     ADD_INT T9.W, T9.X, T3.W,
-; EG-NEXT:     MULLO_INT * T6.Y, PV.X, PS,
-; EG-NEXT:     XOR_INT T2.X, PV.W, T3.W,
-; EG-NEXT:     CNDE_INT T4.Y, PV.Y, T4.Y, PV.Z,
-; EG-NEXT:     XOR_INT T4.Z, PV.X, T0.Y, BS:VEC_021/SCL_122
-; EG-NEXT:     ADD_INT T9.W, T1.X, T3.Y, BS:VEC_102/SCL_221
-; EG-NEXT:     MULHI * T0.Y, T5.X, PS,
-; EG-NEXT:     ADD_INT T1.X, T5.X, PS,
-; EG-NEXT:     XOR_INT T0.Y, PV.W, T6.W,
-; EG-NEXT:     CNDE_INT T6.Z, PV.Z, PV.Y, T1.Y, BS:VEC_021/SCL_122
-; EG-NEXT:     BIT_ALIGN_INT T9.W, T2.Y, PV.X, literal.x,
-; EG-NEXT:     LSHR * T10.W, T2.Y, literal.x,
+; EG-NEXT:     CNDE_INT T3.X, PV.W, T10.X, PS,
+; EG-NEXT:     XOR_INT T1.Y, PV.Z, T5.Y,
+; EG-NEXT:     SETE_INT T2.Z, PV.Y, T1.Z,
+; EG-NEXT:     SETGE_UINT T5.W, PV.Y, T1.Z,
+; EG-NEXT:     SETGE_UINT * T9.W, PV.X, T2.W,
+; EG-NEXT:     CNDE_INT T9.X, PV.Z, PV.W, PS,
+; EG-NEXT:     SUB_INT T4.Y, T8.X, T2.W,
+; EG-NEXT:     CNDE_INT T2.Z, PV.Y, PV.X, T4.X,
+; EG-NEXT:     XOR_INT * T5.W, T7.X, T4.W, BS:VEC_120/SCL_212
+; EG-NEXT:     SUB_INT * T6.W, T10.W, T6.W,
+; EG-NEXT:     CNDE_INT T3.X, T11.W, T10.W, PV.W,
+; EG-NEXT:     BIT_ALIGN_INT T5.Y, T2.Z, T5.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     LSHR T2.Z, T2.Z, literal.x,
+; EG-NEXT:     CNDE_INT * T9.W, T9.X, T8.X, T4.Y,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETE_INT T5.X, PS, T3.Z,
-; EG-NEXT:     SETGE_UINT T1.Y, PS, T3.Z,
-; EG-NEXT:     SETGE_UINT T7.Z, PV.W, T4.W,
-; EG-NEXT:     LSHR T11.W, PV.Z, literal.x,
-; EG-NEXT:     MULHI * T1.X, PV.Y, PV.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETE_INT T6.X, PV.W, T4.Z,
-; EG-NEXT:     CNDE_INT T1.Y, PV.X, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT T7.Z, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     BIT_ALIGN_INT T12.W, T6.Z, T3.X, literal.x,
-; EG-NEXT:     MULLO_INT * T1.X, PS, T0.W,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T5.X, T11.W, T4.Z,
-; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T2.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     SUB_INT T6.Z, T0.Y, PS,
-; EG-NEXT:     CNDE_INT T13.W, PV.Y, T9.W, PV.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT * T7.W, T5.Z, T7.W,
-; EG-NEXT:     CNDE_INT T1.X, T8.W, T5.Z, PS,
-; EG-NEXT:     LSHL T3.Y, PV.W, 1,
-; EG-NEXT:     SETGE_UINT T5.Z, PV.Z, T0.W,
-; EG-NEXT:     SUB_INT T7.W, PV.Z, T0.W,
-; EG-NEXT:     CNDE_INT * T8.W, T6.X, PV.X, PV.Y,
-; EG-NEXT:     SUB_INT T5.X, T12.W, T2.Z,
-; EG-NEXT:     SUB_INT T2.Y, T11.W, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     SUBB_UINT T7.Z, T12.W, T2.Z,
-; EG-NEXT:     ADD_INT T1.W, T1.W, T4.X, BS:VEC_201
-; EG-NEXT:     ADDC_UINT * T14.W, T1.Z, T4.X,
-; EG-NEXT:     BFE_UINT T6.X, T2.X, literal.x, 1,
-; EG-NEXT:     ADD_INT T4.Y, PV.W, PS,
-; EG-NEXT:     SUB_INT T1.Z, PV.Y, PV.Z,
-; EG-NEXT:     CNDE_INT T1.W, T8.W, T12.W, PV.X, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T7.W, T5.Z, T6.Z, T7.W,
+; EG-NEXT:     MULHI * T3.Z, T6.X, T5.X,
+; EG-NEXT:     LSHL T4.X, T9.W, 1,
+; EG-NEXT:     SETE_INT T4.Y, T2.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT T4.Z, T2.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT T6.W, T5.Y, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     MULLO_INT * T3.Z, PS, T3.W,
+; EG-NEXT:     CNDE_INT T5.X, PV.Y, PV.Z, PV.W,
+; EG-NEXT:     SUB_INT T4.Y, T5.Y, T0.Y,
+; EG-NEXT:     SUB_INT T4.Z, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SUBB_UINT T6.W, T5.Y, T0.Y,
+; EG-NEXT:     SUB_INT * T10.W, T6.X, PS,
+; EG-NEXT:     BFE_UINT T7.X, T7.W, literal.x, 1,
+; EG-NEXT:     SETGE_UINT T6.Y, PS, T3.W,
+; EG-NEXT:     SUB_INT T3.Z, PS, T3.W,
+; EG-NEXT:     SUB_INT T6.W, PV.Z, PV.W,
+; EG-NEXT:     CNDE_INT * T11.W, PV.X, T5.Y, PV.Y,
 ; EG-NEXT:    30(4.203895e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T5.X, PS, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SUB_INT T2.Y, PS, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     LSHL T5.Z, PV.W, 1,
-; EG-NEXT:     BFE_UINT T12.W, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T8.W, T8.W, T11.W, PV.Z,
+; EG-NEXT:     LSHL T10.X, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Y, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Z, T5.X, T2.Z, PV.W,
+; EG-NEXT:     ADD_INT T6.W, T2.Y, T8.W,
+; EG-NEXT:     ADDC_UINT * T12.W, T2.X, T8.W,
 ; EG-NEXT:    30(4.203895e-44), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T7.X, PS, T1.W, literal.x,
-; EG-NEXT:     OR_INT T5.Y, PV.Z, PV.W,
-; EG-NEXT:     ADD_INT T0.Z, T0.Z, T6.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T7.W, PV.X, T7.W, PV.Y, BS:VEC_102/SCL_221
-; EG-NEXT:     XOR_INT * T1.W, T4.Y, T4.X,
+; EG-NEXT:     SUB_INT T2.X, T3.Y, T1.Z,
+; EG-NEXT:     ADD_INT T2.Y, PV.W, PS,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.Z, T11.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T11.W, PV.X, PV.Y,
+; EG-NEXT:     CNDE_INT * T6.W, T6.Y, T10.W, T3.Z,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, PS, PV.W, T0.Y,
-; EG-NEXT:     XOR_INT T0.Y, PV.Z, T6.W,
-; EG-NEXT:     SETGE_UINT T0.Z, PV.Y, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T7.W, PV.X, T4.Z,
-; EG-NEXT:     SETGE_UINT * T8.W, PV.X, T4.Z,
-; EG-NEXT:     SUB_INT T5.X, T10.W, T3.Z,
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T0.Z, T5.Y, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     BIT_ALIGN_INT T7.W, PV.X, PV.Y, literal.x,
-; EG-NEXT:     LSHR * T8.W, PV.X, literal.x,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T5.Y, T2.Z,
-; EG-NEXT:     SUB_INT T4.Y, T7.X, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T1.Z, PS, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T11.W, PS, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT * T12.W, PV.W, T0.W,
-; EG-NEXT:     SUB_INT T8.X, T8.W, T1.W,
-; EG-NEXT:     CNDE_INT * T6.Y, PV.Z, PV.W, PS,
-; EG-NEXT:     SUB_INT T1.Z, T7.W, T0.W,
-; EG-NEXT:     SUB_INT T11.W, T4.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T12.W, T2.Y, T5.Y, T0.Z,
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T0.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.X, PS, T3.W,
+; EG-NEXT:     SUB_INT T4.Y, PS, T3.W,
+; EG-NEXT:     SETGE_UINT T3.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T10.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T1.Y,
+; EG-NEXT:     CNDE_INT T10.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Y, T11.W, T0.Y,
+; EG-NEXT:     ADD_INT T3.Z, T1.X, T0.Z,
+; EG-NEXT:     CNDE_INT T10.W, PV.X, T6.W, PV.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     XOR_INT * T6.W, T2.Y, T8.W,
+; EG-NEXT:     SUBB_UINT T1.X, T11.W, T0.Y,
+; EG-NEXT:     SUB_INT T2.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T4.Z, PS, PV.W, T6.X,
+; EG-NEXT:     XOR_INT T8.W, PV.Z, T0.Z,
+; EG-NEXT:     CNDE_INT * T10.W, PV.X, T11.W, PV.Y,
+; EG-NEXT:     SUBB_UINT T5.X, T8.X, T2.W,
 ; EG-NEXT:     LSHL T4.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T11.W, T2.Y, T7.X, PV.W,
-; EG-NEXT:     CNDE_INT * T7.W, T6.Y, T7.W, PV.Z,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, PV.Z, PV.W, literal.x,
+; EG-NEXT:     LSHR T11.W, PV.Z, literal.x,
+; EG-NEXT:     SUB_INT * T12.W, PV.Y, PV.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T10.X, T2.Z, PS,
+; EG-NEXT:     SETE_INT T2.Z, PV.W, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T12.W, PV.W, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT * T13.W, PV.Z, T3.W,
 ; EG-NEXT:    29(4.063766e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT * T7.X, T9.W, T4.W,
-; EG-NEXT:    ALU clause starting at 723:
-; EG-NEXT:     LSHL T2.Y, T7.W, 1,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, T11.W, T12.W, literal.x, BS:VEC_120/SCL_212
-; EG-NEXT:     OR_INT T9.W, T4.Y, T0.Z,
+; EG-NEXT:     CNDE_INT T6.X, PV.Z, PV.W, PS,
+; EG-NEXT:     SUB_INT T5.Y, T3.Z, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT * T2.Z, PV.Y, T10.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:    ALU clause starting at 720:
+; EG-NEXT:     OR_INT T10.W, T4.Y, T1.X, BS:VEC_102/SCL_221
+; EG-NEXT:     SUB_INT * T12.W, T2.X, T5.X,
+; EG-NEXT:     CNDE_INT T1.X, T9.X, T3.Y, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T4.Z, T2.Z, T1.Y, BS:VEC_102/SCL_221
+; EG-NEXT:     SETGE_UINT * T12.W, T2.Z, T1.Y, BS:VEC_102/SCL_221
+; EG-NEXT:     CNDE_INT * T13.W, T6.X, T3.Z, T5.Y,
+; EG-NEXT:     LSHL T2.X, PV.W, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T4.Z, T12.W, T2.Y,
+; EG-NEXT:     SUB_INT T4.Z, T10.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T9.W, T1.X, T9.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T12.W, T4.X, T7.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T0.Y,
+; EG-NEXT:     SUB_INT T3.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T2.W,
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T4.X, T12.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T12.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T10.W, T2.Y, T10.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T9.W, T1.Z,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T5.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T2.Y, T2.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T12.W, PV.Y, T12.W, PV.Z,
+; EG-NEXT:    28(3.923636e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T5.X, T8.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T10.W, literal.y,
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T4.X,
+; EG-NEXT:    30(4.203895e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T9.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T9.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.Z, T1.Y,
+; EG-NEXT:    29(4.063766e-44), 0(0.000000e+00)
+; EG-NEXT:     SUB_INT T4.X, T11.W, T6.W,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T4.Z, T10.W, T0.Y, BS:VEC_201
+; EG-NEXT:     BIT_ALIGN_INT T9.W, T3.Y, T12.W, literal.x,
+; EG-NEXT:     OR_INT * T12.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T0.Y,
+; EG-NEXT:     SUB_INT T2.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T2.W,
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T7.X, T12.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T12.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T10.W, T4.Y, T10.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T9.W, T1.Z,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T5.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T4.Y, T2.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T12.W, PV.Y, T12.W, PV.Z,
+; EG-NEXT:    27(3.783506e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T8.X, T3.Z, T3.W,
+; EG-NEXT:     LSHL T4.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T10.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T7.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
+; EG-NEXT:     SETGE_UINT T3.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T9.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.Z, T1.Y,
+; EG-NEXT:    28(3.923636e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T7.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T10.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, PV.Y, T12.W, literal.x,
+; EG-NEXT:     OR_INT T9.W, T4.Y, PV.X,
+; EG-NEXT:     SUB_INT * T12.W, T4.X, T8.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T6.X, T11.W, PS, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T2.W, BS:VEC_102/SCL_221
+; EG-NEXT:     SETE_INT T4.Z, PV.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T1.Z,
+; EG-NEXT:     CNDE_INT * T12.W, PV.X, T10.W, PV.Y,
+; EG-NEXT:     LSHL T4.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T4.Z, T9.W, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T13.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T13.W, T2.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T2.W,
+; EG-NEXT:     SUB_INT T3.Y, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T5.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T14.W, T11.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T15.W, T11.W, T6.W,
+; EG-NEXT:     SUBB_UINT T2.X, T13.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, T5.Z,
+; EG-NEXT:     SUB_INT T5.Z, T13.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, T3.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T9.W, T2.Y, T9.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T6.W,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T7.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T14.W, T2.Y, T3.Z, PV.W,
+; EG-NEXT:    27(3.783506e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T13.W, T4.Y, T13.W, T5.Z,
+; EG-NEXT:     BFE_UINT T5.X, T5.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T14.W, T9.W, literal.y, BS:VEC_120/SCL_212
+; EG-NEXT:     OR_INT T9.W, T3.Y, T4.Z,
+; EG-NEXT:     SUB_INT * T14.W, T1.X, T2.X,
+; EG-NEXT:    26(3.643376e-44), 31(4.344025e-44)
+; EG-NEXT:    ALU clause starting at 834:
+; EG-NEXT:     BFE_UINT T1.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T3.Y, T4.Y, T11.W, T14.W,
+; EG-NEXT:    29(4.063766e-44), 0(0.000000e+00)
+; EG-NEXT:     SETGE_UINT T4.Z, T9.W, T2.W,
+; EG-NEXT:     SETE_INT T11.W, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T14.W, T3.Z, T1.Z,
+; EG-NEXT:     SUBB_UINT T2.X, T10.W, T0.Y,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T4.Z, T9.W, T2.W, BS:VEC_120/SCL_212
+; EG-NEXT:     BIT_ALIGN_INT T10.W, T3.Y, T13.W, literal.x,
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T2.W,
+; EG-NEXT:     SUB_INT T2.Y, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T5.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T13.W, T10.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T10.W, T6.W,
+; EG-NEXT:     SUBB_UINT T6.X, T11.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, T5.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T13.W, T2.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T9.W, T4.Y, T9.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T10.W, T6.W,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T7.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T13.W, T4.Y, T3.Z, PV.W,
+; EG-NEXT:    26(3.643376e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T11.W, T3.Y, T11.W, T5.Z,
+; EG-NEXT:     SUB_INT T8.X, T2.Z, T1.Y,
+; EG-NEXT:     LSHL T4.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T13.W, T9.W, literal.x,
+; EG-NEXT:     OR_INT T9.W, T2.Y, T4.Z,
+; EG-NEXT:     SUB_INT * T13.W, T1.X, T6.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T10.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T10.W, PV.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T13.W, PV.Z, T1.Z,
+; EG-NEXT:    28(3.923636e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T6.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T9.W, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.Y, T11.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T10.W, T4.Y, PV.X,
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T2.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T7.X, T2.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T2.Z, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     CNDE_INT * T13.W, PV.X, T9.W, PV.Y,
+; EG-NEXT:     LSHL T2.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T2.Z, T10.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T12.W, T4.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T3.W,
+; EG-NEXT:     SUB_INT T3.Y, T4.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Y,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Y,
+; EG-NEXT:     SUBB_UINT T4.X, T12.W, T0.Y,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T12.W, T0.Y,
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T10.W, T2.Y, T10.W, T2.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T1.Y,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T2.Z, T8.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T2.Y, T4.Z, PV.W,
+; EG-NEXT:     CNDE_INT * T12.W, PV.Y, T12.W, PV.Z,
+; EG-NEXT:    27(3.783506e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T5.X, T7.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.W, T10.W, literal.y,
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T4.X,
+; EG-NEXT:    25(3.503246e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT * T2.Z, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:    25(3.503246e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T11.W, T4.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T4.Z, T6.W,
+; EG-NEXT:     SUBB_UINT T4.X, T9.W, T2.W,
+; EG-NEXT:     CNDE_INT * T4.Y, PV.W, PS, T2.Z,
+; EG-NEXT:     SUB_INT T2.Z, T10.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T9.W, T3.Y, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T3.W,
+; EG-NEXT:     SUB_INT T2.Y, T4.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T12.W, PV.W, T1.Y,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.W, T1.Y,
+; EG-NEXT:     SUBB_UINT T7.X, T11.W, T0.Y,
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T0.Y,
+; EG-NEXT:     SUB_INT T12.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T10.W, T4.Y, T10.W, T2.Z,
+; EG-NEXT:     SUB_INT T1.X, T9.W, T1.Y,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T2.Z, T8.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T12.W, T4.Y, T4.Z, PV.W,
+; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
+; EG-NEXT:    26(3.643376e-44), 0(0.000000e+00)
+; EG-NEXT:     SUB_INT T8.X, T3.Z, T1.Z,
+; EG-NEXT:     LSHL T4.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.W, T10.W, literal.x,
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T12.W, PV.X, T7.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT * T1.X, T5.W, literal.x, 1,
+; EG-NEXT:    24(3.363116e-44), 0(0.000000e+00)
+; EG-NEXT:    ALU clause starting at 949:
+; EG-NEXT:     CNDE_INT * T2.Y, T3.Y, T9.W, T12.W,
+; EG-NEXT:     SETGE_UINT T2.Z, T10.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T9.W, T4.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T12.W, T4.Z, T6.W,
+; EG-NEXT:     CNDE_INT T7.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T10.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, T2.Y, T11.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T9.W, T4.Y, T1.X, BS:VEC_102/SCL_221
 ; EG-NEXT:     SUB_INT * T11.W, T8.X, T4.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T4.Y, T6.Y, T8.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T8.W, PV.Z, T4.Z,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.Z, T4.Z,
-; EG-NEXT:    30(4.203895e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T8.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T5.Y, T9.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.Y, T7.W, literal.x,
-; EG-NEXT:     OR_INT T7.W, T2.Y, PV.X,
-; EG-NEXT:     SUB_INT * T8.W, T5.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T1.Y, T10.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.Z, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT * T8.W, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T10.W, T8.X, T9.W, T5.Y,
-; EG-NEXT:     LSHL T5.X, PV.W, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T5.Z, T8.W, T1.Y,
-; EG-NEXT:     SUB_INT * T5.Z, T7.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     BIT_ALIGN_INT T8.W, T4.X, T13.W, literal.x,
-; EG-NEXT:     OR_INT * T11.W, T3.Y, T6.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T0.W,
-; EG-NEXT:     SUB_INT * T2.Y, T0.Z, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, T11.W, T4.W,
-; EG-NEXT:     SETE_INT T12.W, T8.W, T3.Z, BS:VEC_201
-; EG-NEXT:     SETGE_UINT * T13.W, T8.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T6.X, T11.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T11.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T12.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T7.W, T1.Y, T7.W, T5.Z,
-; EG-NEXT:     SUB_INT T4.X, T8.W, T3.Z,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T0.Z, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
-; EG-NEXT:    29(4.063766e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T3.X, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T7.W, literal.y,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T6.X,
-; EG-NEXT:    28(3.923636e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T8.W, PS, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.W, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETE_INT T8.W, PV.Z, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T1.W,
-; EG-NEXT:    29(4.063766e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T6.X, T9.W, T2.Z,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T5.Z, T7.W, T0.W, BS:VEC_120/SCL_212
-; EG-NEXT:     BIT_ALIGN_INT T8.W, T2.Y, T11.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T0.W,
-; EG-NEXT:     SUB_INT * T1.Y, T0.Z, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, T9.W, T4.W,
-; EG-NEXT:     SETE_INT T11.W, T8.W, T3.Z, BS:VEC_201
-; EG-NEXT:     SETGE_UINT * T12.W, T8.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T9.X, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T11.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T7.W, T3.Y, T7.W, T5.Z,
-; EG-NEXT:     SUB_INT T4.X, T8.W, T3.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T11.W, T3.Y, T0.Z, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    28(3.923636e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T1.Z, T4.Z,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T7.W, literal.x,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T11.W, PV.X, T9.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T8.W, PS, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.W, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETE_INT T8.W, PV.Z, T1.W,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.Z, T1.W,
-; EG-NEXT:    28(3.923636e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T9.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T7.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.Y, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T8.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T6.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T8.X, T1.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T1.Z, PV.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T11.W, PV.X, T7.W, PV.Y,
-; EG-NEXT:     LSHL T6.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T1.Z, T8.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T10.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T10.W, T5.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T4.W,
-; EG-NEXT:     SUB_INT T2.Y, T5.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T6.Z, PS, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T12.W, T9.W, T4.Z,
-; EG-NEXT:     SETGE_UINT * T13.W, T9.W, T4.Z,
-; EG-NEXT:     SUBB_UINT T5.X, T10.W, T2.Z,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT * T6.Z, T10.W, T2.Z,
-; EG-NEXT:    ALU clause starting at 838:
-; EG-NEXT:     SUB_INT T12.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T1.Y, T8.W, T1.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T4.Z,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T1.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T5.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T10.W, T3.Y, T10.W, T6.Z,
-; EG-NEXT:    27(3.783506e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T0.Y, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.W, T8.W, literal.y,
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T5.X,
-; EG-NEXT:    27(3.783506e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T3.Z,
-; EG-NEXT:    27(3.783506e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T5.X, T7.W, T0.W,
-; EG-NEXT:     CNDE_INT * T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T1.Z, T8.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T7.W, T2.Y, T10.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T4.W,
-; EG-NEXT:     SUB_INT T1.Y, T5.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T6.Z, PS, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T10.W, T7.W, T4.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, T7.W, T4.Z,
-; EG-NEXT:     SUBB_UINT T8.X, T9.W, T2.Z,
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T2.Z,
-; EG-NEXT:     SUB_INT T10.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T3.Y, T8.W, T1.Z,
-; EG-NEXT:     SUB_INT T4.X, T7.W, T4.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T1.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T10.W, T3.Y, T5.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    26(3.643376e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T0.Z, T1.W,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.W, T8.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T10.W, PV.X, T8.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T7.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T7.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T10.W, PV.Z, T3.Z,
-; EG-NEXT:    26(3.643376e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T8.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T8.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.Y, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T7.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T5.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T9.X, T0.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T0.Z, PV.Z, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T10.W, PV.X, T8.W, PV.Y,
-; EG-NEXT:     LSHL T5.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T0.Z, T7.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T11.W, literal.x,
-; EG-NEXT:     OR_INT * T11.W, T6.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T2.Z,
-; EG-NEXT:     SUB_INT T2.Y, T1.Z, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, PS, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T12.W, PV.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T13.W, PV.W, T1.W,
-; EG-NEXT:     SUBB_UINT T6.X, T11.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T11.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T12.W, PV.Y, PV.X,
-; EG-NEXT:     CNDE_INT * T7.W, T1.Y, T7.W, T0.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T1.Z, PV.W,
-; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
-; EG-NEXT:    25(3.503246e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T2.X, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.W, T7.W, literal.y,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T6.X,
-; EG-NEXT:    25(3.503246e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T4.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T4.Z,
-; EG-NEXT:    26(3.643376e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T6.X, T8.W, T4.W,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T0.Z, T7.W, T2.Z, BS:VEC_201
-; EG-NEXT:     BIT_ALIGN_INT T8.W, T2.Y, T11.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T2.Z,
-; EG-NEXT:     SUB_INT T1.Y, T1.Z, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, PS, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T11.W, PV.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.W, T1.W,
-; EG-NEXT:     SUBB_UINT T9.X, T9.W, T0.W,
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T0.W,
-; EG-NEXT:     SUB_INT * T11.W, PV.Y, PV.X,
-; EG-NEXT:    ALU clause starting at 952:
-; EG-NEXT:     CNDE_INT * T7.W, T3.Y, T7.W, T0.Z,
-; EG-NEXT:     SUB_INT T4.X, T8.W, T1.W,
-; EG-NEXT:     LSHL T1.Y, PV.W, 1,
-; EG-NEXT:     BFE_UINT T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T11.W, T3.Y, T1.Z, T11.W,
-; EG-NEXT:    24(3.363116e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T9.W, T2.Y, T9.W, T6.Z,
-; EG-NEXT:     SUB_INT T10.X, T5.Z, T3.Z,
-; EG-NEXT:     LSHL T3.Y, PV.W, 1,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, T11.W, T7.W, literal.x,
-; EG-NEXT:     OR_INT T7.W, T1.Y, T0.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT * T11.W, T4.X, T9.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T8.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T8.W, PV.Z, T4.Z,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.Z, T4.Z,
-; EG-NEXT:    25(3.503246e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T9.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T7.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.Y, T9.W, literal.x,
-; EG-NEXT:     OR_INT T8.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T6.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T8.X, T5.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.Z, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T11.W, PV.X, T7.W, PV.Y,
-; EG-NEXT:     LSHL T6.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T5.Z, T8.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T10.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T10.W, T5.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T0.W,
-; EG-NEXT:     SUB_INT * T2.Y, T0.Z, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, T10.W, T4.W,
-; EG-NEXT:     SETE_INT T12.W, T9.W, T3.Z, BS:VEC_201
-; EG-NEXT:     SETGE_UINT * T13.W, T9.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T5.X, T10.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T10.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T12.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T1.Y, T8.W, T5.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T3.Z,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T0.Z, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T10.W, PV.Y, T10.W, PV.Z,
-; EG-NEXT:    24(3.363116e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T3.X, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T8.W, literal.y,
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T5.X,
-; EG-NEXT:    23(3.222986e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.W, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T1.W,
-; EG-NEXT:    24(3.363116e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T5.X, T7.W, T2.Z,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T5.Z, T8.W, T0.W, BS:VEC_120/SCL_212
-; EG-NEXT:     BIT_ALIGN_INT T7.W, T2.Y, T10.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T0.W,
-; EG-NEXT:     SUB_INT * T1.Y, T0.Z, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, T9.W, T4.W,
-; EG-NEXT:     SETE_INT T10.W, T7.W, T3.Z, BS:VEC_201
-; EG-NEXT:     SETGE_UINT * T12.W, T7.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T8.X, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T10.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T3.Y, T8.W, T5.Z,
-; EG-NEXT:     SUB_INT T4.X, T7.W, T3.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T10.W, T3.Y, T0.Z, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    23(3.222986e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T1.Z, T4.Z,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T8.W, literal.x,
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T10.W, PV.X, T8.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T7.W, PS, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.W, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETE_INT T7.W, PV.Z, T1.W,
-; EG-NEXT:     SETGE_UINT * T10.W, PV.Z, T1.W,
-; EG-NEXT:    23(3.222986e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T8.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T8.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.Y, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T7.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T5.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T9.X, T1.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T1.Z, PV.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T10.W, PV.X, T8.W, PV.Y,
-; EG-NEXT:     LSHL T5.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T1.Z, T7.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T11.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T11.W, T6.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:    ALU clause starting at 1067:
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T4.W,
-; EG-NEXT:     SUB_INT T2.Y, T5.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT * T6.Z, T11.W, T2.Z, BS:VEC_210
-; EG-NEXT:     SETE_INT T12.W, T9.W, T4.Z,
-; EG-NEXT:     SETGE_UINT * T13.W, T9.W, T4.Z,
-; EG-NEXT:     SUBB_UINT T6.X, T11.W, T2.Z,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT T6.Z, T11.W, T2.Z,
-; EG-NEXT:     SUB_INT T12.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T7.W, T1.Y, T7.W, T1.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T4.Z,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T1.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T5.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
-; EG-NEXT:    22(3.082857e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T0.Y, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.W, T7.W, literal.y,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T6.X,
-; EG-NEXT:    22(3.082857e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T3.Z,
-; EG-NEXT:    22(3.082857e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T6.X, T8.W, T0.W,
-; EG-NEXT:     CNDE_INT * T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T1.Z, T7.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T8.W, T2.Y, T11.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T4.W,
-; EG-NEXT:     SUB_INT T1.Y, T5.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T6.Z, PS, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T11.W, T8.W, T4.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, T8.W, T4.Z,
-; EG-NEXT:     SUBB_UINT T9.X, T9.W, T2.Z,
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T2.Z,
-; EG-NEXT:     SUB_INT T11.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T7.W, T3.Y, T7.W, T1.Z,
-; EG-NEXT:     SUB_INT T4.X, T8.W, T4.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T1.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T11.W, T3.Y, T5.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    21(2.942727e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T0.Z, T1.W,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.W, T7.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T11.W, PV.X, T9.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T8.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T8.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.Z, T3.Z,
-; EG-NEXT:    21(2.942727e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T9.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T7.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.Y, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T8.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T6.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T8.X, T0.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T0.Z, PV.Z, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T11.W, PV.X, T7.W, PV.Y,
-; EG-NEXT:     LSHL T6.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T0.Z, T8.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T10.W, literal.x,
-; EG-NEXT:     OR_INT * T10.W, T5.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T2.Z,
-; EG-NEXT:     SUB_INT T2.Y, T1.Z, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, PS, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T12.W, PV.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T13.W, PV.W, T1.W,
-; EG-NEXT:     SUBB_UINT T5.X, T10.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T10.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T12.W, PV.Y, PV.X,
-; EG-NEXT:     CNDE_INT * T8.W, T1.Y, T8.W, T0.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T1.Z, PV.W,
-; EG-NEXT:     CNDE_INT * T10.W, PV.Y, T10.W, PV.Z,
-; EG-NEXT:    20(2.802597e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T2.X, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.W, T8.W, literal.y,
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T5.X,
-; EG-NEXT:    20(2.802597e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T4.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T4.Z,
-; EG-NEXT:    21(2.942727e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T5.X, T7.W, T4.W,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T0.Z, T8.W, T2.Z, BS:VEC_201
-; EG-NEXT:     BIT_ALIGN_INT T7.W, T2.Y, T10.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT * T4.X, T8.W, T2.Z,
-; EG-NEXT:    ALU clause starting at 1181:
-; EG-NEXT:     SUB_INT T1.Y, T1.Z, T4.Z,
-; EG-NEXT:     SETGE_UINT * T6.Z, T9.W, T0.W,
-; EG-NEXT:     SETE_INT T10.W, T7.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, T7.W, T1.W,
-; EG-NEXT:     SUBB_UINT T8.X, T9.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T10.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T3.Y, T8.W, T0.Z,
-; EG-NEXT:     SUB_INT T4.X, T7.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T10.W, T3.Y, T1.Z, PV.W,
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    19(2.662467e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T5.Z, T3.Z,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.W, T8.W, literal.x,
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T10.W, PV.X, T8.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T7.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T7.W, PV.Z, T4.Z,
-; EG-NEXT:     SETGE_UINT * T10.W, PV.Z, T4.Z,
-; EG-NEXT:    20(2.802597e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T8.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T8.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.Y, T9.W, literal.x,
-; EG-NEXT:     OR_INT T7.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T5.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T9.X, T5.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.Z, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T10.W, PV.X, T8.W, PV.Y,
-; EG-NEXT:     LSHL T5.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T5.Z, T7.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T11.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T11.W, T6.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T0.W,
-; EG-NEXT:     SUB_INT * T2.Y, T0.Z, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, T11.W, T4.W,
-; EG-NEXT:     SETE_INT T12.W, T9.W, T3.Z, BS:VEC_201
-; EG-NEXT:     SETGE_UINT * T13.W, T9.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T6.X, T11.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T11.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T12.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T7.W, T1.Y, T7.W, T5.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T3.Z,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T0.Z, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
-; EG-NEXT:    19(2.662467e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T3.X, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T7.W, literal.y,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T6.X,
-; EG-NEXT:    18(2.522337e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.W, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T1.W,
-; EG-NEXT:    19(2.662467e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T6.X, T8.W, T2.Z,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T5.Z, T7.W, T0.W, BS:VEC_120/SCL_212
-; EG-NEXT:     BIT_ALIGN_INT T8.W, T2.Y, T11.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T0.W,
-; EG-NEXT:     SUB_INT * T1.Y, T0.Z, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, T9.W, T4.W,
-; EG-NEXT:     SETE_INT T11.W, T8.W, T3.Z, BS:VEC_201
-; EG-NEXT:     SETGE_UINT * T12.W, T8.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T9.X, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T11.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T7.W, T3.Y, T7.W, T5.Z,
-; EG-NEXT:     SUB_INT T4.X, T8.W, T3.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T11.W, T3.Y, T0.Z, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    18(2.522337e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T1.Z, T4.Z,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T7.W, literal.x,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T11.W, PV.X, T9.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T8.W, PS, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.W, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETE_INT T8.W, PV.Z, T1.W,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.Z, T1.W,
-; EG-NEXT:    18(2.522337e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T9.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T7.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.Y, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T8.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T6.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T8.X, T1.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T4.W,
-; EG-NEXT:     SETE_INT * T1.Z, PV.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:    ALU clause starting at 1296:
-; EG-NEXT:     SETGE_UINT T9.W, T5.Z, T3.Z,
-; EG-NEXT:     CNDE_INT * T11.W, T9.X, T7.W, T2.Y,
-; EG-NEXT:     LSHL T6.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T1.Z, PV.W, T1.Y,
-; EG-NEXT:     SUB_INT T1.Z, T8.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, T4.X, T10.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T10.W, T5.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T4.W,
-; EG-NEXT:     SUB_INT T2.Y, T5.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T6.Z, PS, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T12.W, T9.W, T4.Z,
-; EG-NEXT:     SETGE_UINT * T13.W, T9.W, T4.Z,
-; EG-NEXT:     SUBB_UINT T5.X, T10.W, T2.Z,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT T6.Z, T10.W, T2.Z,
-; EG-NEXT:     SUB_INT T12.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T1.Y, T8.W, T1.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T4.Z,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T1.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T5.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T10.W, PV.Y, T10.W, PV.Z,
-; EG-NEXT:    17(2.382207e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T0.Y, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.W, T8.W, literal.y,
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T5.X,
-; EG-NEXT:    17(2.382207e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T3.Z,
-; EG-NEXT:    17(2.382207e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T5.X, T7.W, T0.W,
-; EG-NEXT:     CNDE_INT * T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T1.Z, T8.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T7.W, T2.Y, T10.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T4.W,
-; EG-NEXT:     SUB_INT T1.Y, T5.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T6.Z, PS, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T10.W, T7.W, T4.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, T7.W, T4.Z,
-; EG-NEXT:     SUBB_UINT T8.X, T9.W, T2.Z,
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T2.Z,
-; EG-NEXT:     SUB_INT T10.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T3.Y, T8.W, T1.Z,
-; EG-NEXT:     SUB_INT T4.X, T7.W, T4.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T1.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T10.W, T3.Y, T5.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T0.Z, T1.W,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.W, T8.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T10.W, PV.X, T8.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T7.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T7.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T10.W, PV.Z, T3.Z,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T8.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T8.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.Y, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T7.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T5.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T9.X, T0.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T0.Z, PV.Z, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T10.W, PV.X, T8.W, PV.Y,
-; EG-NEXT:     LSHL T5.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T0.Z, T7.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T11.W, literal.x,
-; EG-NEXT:     OR_INT * T11.W, T6.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T2.Z,
-; EG-NEXT:     SUB_INT T2.Y, T1.Z, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, PS, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T12.W, PV.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T13.W, PV.W, T1.W,
-; EG-NEXT:     SUBB_UINT T6.X, T11.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T11.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T12.W, PV.Y, PV.X,
-; EG-NEXT:     CNDE_INT * T7.W, T1.Y, T7.W, T0.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T1.Z, PV.W,
-; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
-; EG-NEXT:    15(2.101948e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T2.X, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.W, T7.W, literal.y,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T6.X,
-; EG-NEXT:    15(2.101948e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z,
-; EG-NEXT:     SETE_INT * T9.W, PV.Z, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:    ALU clause starting at 1410:
-; EG-NEXT:     SETGE_UINT * T12.W, T1.Z, T4.Z,
-; EG-NEXT:     SUBB_UINT T6.X, T8.W, T4.W,
-; EG-NEXT:     CNDE_INT * T3.Y, T9.W, PV.W, T0.Z, BS:VEC_201
-; EG-NEXT:     SUB_INT T0.Z, T7.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T8.W, T2.Y, T11.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T2.Z,
-; EG-NEXT:     SUB_INT T1.Y, T1.Z, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, PS, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T11.W, PV.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.W, T1.W,
-; EG-NEXT:     SUBB_UINT T9.X, T9.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T11.W, PV.Y, PV.X,
-; EG-NEXT:     CNDE_INT * T7.W, T3.Y, T7.W, T0.Z,
-; EG-NEXT:     SUB_INT T4.X, T8.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T11.W, T3.Y, T1.Z, PV.W,
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    14(1.961818e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T5.Z, T3.Z,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.W, T7.W, literal.x,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T11.W, PV.X, T9.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T8.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T8.W, PV.Z, T4.Z,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.Z, T4.Z,
-; EG-NEXT:    15(2.101948e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T9.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T7.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.Y, T9.W, literal.x,
-; EG-NEXT:     OR_INT T8.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T6.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T8.X, T5.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.Z, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T11.W, PV.X, T7.W, PV.Y,
-; EG-NEXT:     LSHL T6.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T5.Z, T8.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T10.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T10.W, T5.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T0.W,
-; EG-NEXT:     SUB_INT * T2.Y, T0.Z, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, T10.W, T4.W,
-; EG-NEXT:     SETE_INT T12.W, T9.W, T3.Z, BS:VEC_201
-; EG-NEXT:     SETGE_UINT * T13.W, T9.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T5.X, T10.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T10.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T12.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T1.Y, T8.W, T5.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T3.Z,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T0.Z, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T10.W, PV.Y, T10.W, PV.Z,
-; EG-NEXT:    14(1.961818e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T3.X, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T8.W, literal.y,
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T5.X,
-; EG-NEXT:    13(1.821688e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.W, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T1.W,
-; EG-NEXT:    14(1.961818e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T5.X, T7.W, T2.Z,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T5.Z, T8.W, T0.W, BS:VEC_120/SCL_212
-; EG-NEXT:     BIT_ALIGN_INT T7.W, T2.Y, T10.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T0.W,
-; EG-NEXT:     SUB_INT * T1.Y, T0.Z, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, T9.W, T4.W,
-; EG-NEXT:     SETE_INT T10.W, T7.W, T3.Z, BS:VEC_201
-; EG-NEXT:     SETGE_UINT * T12.W, T7.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T8.X, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T10.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T3.Y, T8.W, T5.Z,
-; EG-NEXT:     SUB_INT T4.X, T7.W, T3.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T10.W, T3.Y, T0.Z, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    13(1.821688e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T1.Z, T4.Z,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T8.W, literal.x,
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T10.W, PV.X, T8.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T7.W, PS, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.W, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETE_INT T7.W, PV.Z, T1.W,
-; EG-NEXT:     SETGE_UINT * T10.W, PV.Z, T1.W,
-; EG-NEXT:    13(1.821688e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T8.X, PV.W, PS, PV.Z,
-; EG-NEXT:    ALU clause starting at 1525:
-; EG-NEXT:     SUB_INT T2.Y, T8.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, T1.Y, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T7.W, T3.Y, T4.X, BS:VEC_102/SCL_221
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T5.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T9.X, T1.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T1.Z, PV.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T10.W, T8.X, T8.W, PV.Y,
-; EG-NEXT:     LSHL T5.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T1.Z, T7.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T11.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T11.W, T6.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T4.W,
-; EG-NEXT:     SUB_INT T2.Y, T5.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T6.Z, PS, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T12.W, T9.W, T4.Z,
-; EG-NEXT:     SETGE_UINT * T13.W, T9.W, T4.Z,
-; EG-NEXT:     SUBB_UINT T6.X, T11.W, T2.Z,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT T6.Z, T11.W, T2.Z,
-; EG-NEXT:     SUB_INT T12.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T7.W, T1.Y, T7.W, T1.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T4.Z,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T1.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T5.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
-; EG-NEXT:    12(1.681558e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T0.Y, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.W, T7.W, literal.y,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T6.X,
-; EG-NEXT:    12(1.681558e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T3.Z,
-; EG-NEXT:    12(1.681558e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T6.X, T8.W, T0.W,
-; EG-NEXT:     CNDE_INT * T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T1.Z, T7.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T8.W, T2.Y, T11.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T4.W,
-; EG-NEXT:     SUB_INT T1.Y, T5.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T6.Z, PS, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T11.W, T8.W, T4.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, T8.W, T4.Z,
-; EG-NEXT:     SUBB_UINT T9.X, T9.W, T2.Z,
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T2.Z,
-; EG-NEXT:     SUB_INT T11.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T7.W, T3.Y, T7.W, T1.Z,
-; EG-NEXT:     SUB_INT T4.X, T8.W, T4.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T1.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T11.W, T3.Y, T5.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    11(1.541428e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T0.Z, T1.W,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.W, T7.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T11.W, PV.X, T9.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T8.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T8.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.Z, T3.Z,
-; EG-NEXT:    11(1.541428e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T9.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T7.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.Y, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T8.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T6.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T8.X, T0.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T0.Z, PV.Z, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T11.W, PV.X, T7.W, PV.Y,
-; EG-NEXT:     LSHL T6.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T0.Z, T8.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T10.W, literal.x,
-; EG-NEXT:     OR_INT * T10.W, T5.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T2.Z,
-; EG-NEXT:     SUB_INT T2.Y, T1.Z, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, PS, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T12.W, PV.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T13.W, PV.W, T1.W,
-; EG-NEXT:     SUBB_UINT T5.X, T10.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T10.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T12.W, PV.Y, PV.X,
-; EG-NEXT:     CNDE_INT * T8.W, T1.Y, T8.W, T0.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T1.Z, PV.W,
-; EG-NEXT:     CNDE_INT * T10.W, PV.Y, T10.W, PV.Z,
-; EG-NEXT:    10(1.401298e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T2.X, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT * T1.Z, PV.W, T8.W, literal.y,
-; EG-NEXT:    10(1.401298e-44), 31(4.344025e-44)
-; EG-NEXT:    ALU clause starting at 1640:
-; EG-NEXT:     OR_INT T8.W, T2.Y, T0.Z,
-; EG-NEXT:     SUB_INT * T12.W, T4.X, T5.X,
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     SETE_INT T9.W, T1.Z, T4.Z, BS:VEC_210
-; EG-NEXT:     SETGE_UINT * T12.W, T1.Z, T4.Z,
-; EG-NEXT:    11(1.541428e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T5.X, T7.W, T4.W,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T0.Z, T8.W, T2.Z, BS:VEC_201
-; EG-NEXT:     BIT_ALIGN_INT T7.W, T2.Y, T10.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T2.Z,
-; EG-NEXT:     SUB_INT T1.Y, T1.Z, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, PS, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T10.W, PV.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.W, T1.W,
-; EG-NEXT:     SUBB_UINT T8.X, T9.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T10.W, PV.Y, PV.X,
-; EG-NEXT:     CNDE_INT * T8.W, T3.Y, T8.W, T0.Z,
-; EG-NEXT:     SUB_INT T4.X, T7.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T10.W, T3.Y, T1.Z, PV.W,
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T5.Z, T3.Z,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.W, T8.W, literal.x,
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T10.W, PV.X, T8.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T7.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T7.W, PV.Z, T4.Z,
-; EG-NEXT:     SETGE_UINT * T10.W, PV.Z, T4.Z,
-; EG-NEXT:    10(1.401298e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T8.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T8.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.Y, T9.W, literal.x,
-; EG-NEXT:     OR_INT T7.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T5.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T9.X, T5.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.Z, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T10.W, PV.X, T8.W, PV.Y,
-; EG-NEXT:     LSHL T5.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T5.Z, T7.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T11.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T11.W, T6.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T0.W,
-; EG-NEXT:     SUB_INT * T2.Y, T0.Z, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, T11.W, T4.W,
-; EG-NEXT:     SETE_INT T12.W, T9.W, T3.Z, BS:VEC_201
-; EG-NEXT:     SETGE_UINT * T13.W, T9.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T6.X, T11.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T11.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T12.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T7.W, T1.Y, T7.W, T5.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T3.Z,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T0.Z, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
-; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T3.X, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T7.W, literal.y,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T6.X,
-; EG-NEXT:    8(1.121039e-44), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.W, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T1.W,
-; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T6.X, T8.W, T2.Z,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T5.Z, T7.W, T0.W, BS:VEC_120/SCL_212
-; EG-NEXT:     BIT_ALIGN_INT T8.W, T2.Y, T11.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T0.W,
-; EG-NEXT:     SUB_INT * T1.Y, T0.Z, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, T9.W, T4.W,
-; EG-NEXT:     SETE_INT T11.W, T8.W, T3.Z, BS:VEC_201
-; EG-NEXT:     SETGE_UINT * T12.W, T8.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T9.X, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T11.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T7.W, T3.Y, T7.W, T5.Z,
-; EG-NEXT:     SUB_INT T4.X, T8.W, T3.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T11.W, T3.Y, T0.Z, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T1.Z, T4.Z,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T7.W, literal.x,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T11.W, PV.X, T9.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:    ALU clause starting at 1755:
-; EG-NEXT:     BFE_UINT T4.X, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T1.Y, T2.Y, T8.W, T11.W,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T5.Z, T7.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T8.W, T0.Z, T1.W,
-; EG-NEXT:     SETGE_UINT * T11.W, T0.Z, T1.W,
-; EG-NEXT:     CNDE_INT T9.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T7.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, T1.Y, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T8.W, T3.Y, T4.X, BS:VEC_102/SCL_221
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T6.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T8.X, T1.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T1.Z, PV.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T11.W, PV.X, T7.W, PV.Y,
-; EG-NEXT:     LSHL T6.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T1.Z, T8.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T10.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T10.W, T5.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T4.W,
-; EG-NEXT:     SUB_INT T2.Y, T5.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T6.Z, PS, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T12.W, T9.W, T4.Z,
-; EG-NEXT:     SETGE_UINT * T13.W, T9.W, T4.Z,
-; EG-NEXT:     SUBB_UINT T5.X, T10.W, T2.Z,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT T6.Z, T10.W, T2.Z,
-; EG-NEXT:     SUB_INT T12.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T1.Y, T8.W, T1.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T4.Z,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T1.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T5.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T10.W, PV.Y, T10.W, PV.Z,
-; EG-NEXT:    7(9.809089e-45), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T7.X, T0.Y, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.W, T8.W, literal.y,
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T12.W, PV.X, T5.X,
-; EG-NEXT:    7(9.809089e-45), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T3.Z,
-; EG-NEXT:    7(9.809089e-45), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T5.X, T7.W, T0.W,
-; EG-NEXT:     CNDE_INT * T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T1.Z, T8.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T7.W, T2.Y, T10.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T8.W, T4.W,
-; EG-NEXT:     SUB_INT T1.Y, T5.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T6.Z, PS, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T10.W, T7.W, T4.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, T7.W, T4.Z,
-; EG-NEXT:     SUBB_UINT T8.X, T9.W, T2.Z,
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, T6.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T2.Z,
-; EG-NEXT:     SUB_INT T10.W, T1.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T8.W, T3.Y, T8.W, T1.Z,
-; EG-NEXT:     SUB_INT T4.X, T7.W, T4.Z,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T1.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T10.W, T3.Y, T5.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    6(8.407791e-45), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T0.Z, T1.W,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T5.Z, PV.W, T8.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T10.W, PV.X, T8.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T7.W, PS,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.W, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T7.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T10.W, PV.Z, T3.Z,
-; EG-NEXT:    6(8.407791e-45), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T8.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T8.W, T4.W,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.Y, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T7.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T5.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T9.X, T0.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T0.Z, PV.Z, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T4.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T10.W, PV.X, T8.W, PV.Y,
-; EG-NEXT:     LSHL T5.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T0.Z, T7.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T11.W, literal.x,
-; EG-NEXT:     OR_INT * T11.W, T6.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T2.Z,
-; EG-NEXT:     SUB_INT T2.Y, T1.Z, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, PS, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T12.W, PV.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T13.W, PV.W, T1.W,
-; EG-NEXT:     SUBB_UINT T6.X, T11.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T11.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T12.W, PV.Y, PV.X,
-; EG-NEXT:     CNDE_INT * T7.W, T1.Y, T7.W, T0.Z,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T1.W,
-; EG-NEXT:     LSHL T2.Y, PS, 1,
-; EG-NEXT:     BFE_UINT * T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:    5(7.006492e-45), 0(0.000000e+00)
-; EG-NEXT:    ALU clause starting at 1871:
-; EG-NEXT:     CNDE_INT T12.W, T1.Y, T1.Z, T12.W,
-; EG-NEXT:     CNDE_INT * T11.W, T3.Y, T11.W, T6.Z,
-; EG-NEXT:     BFE_UINT T7.X, T2.X, literal.x, 1,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.W, T7.W, literal.y,
-; EG-NEXT:     OR_INT T7.W, T2.Y, T0.Z,
-; EG-NEXT:     SUB_INT * T12.W, T4.X, T6.X,
-; EG-NEXT:    5(7.006492e-45), 31(4.344025e-44)
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T9.W, PV.Z, T4.Z,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T4.Z,
-; EG-NEXT:    6(8.407791e-45), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T6.X, T8.W, T4.W,
-; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T0.Z, T7.W, T2.Z, BS:VEC_201
-; EG-NEXT:     BIT_ALIGN_INT T8.W, T2.Y, T11.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T1.Y, T4.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T4.X, T7.W, T2.Z,
-; EG-NEXT:     SUB_INT T1.Y, T1.Z, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T6.Z, PS, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T11.W, PV.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, PV.W, T1.W,
-; EG-NEXT:     SUBB_UINT T9.X, T9.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T2.Y, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T6.Z, T9.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T11.W, PV.Y, PV.X,
-; EG-NEXT:     CNDE_INT * T7.W, T3.Y, T7.W, T0.Z,
-; EG-NEXT:     SUB_INT T4.X, T8.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T0.Z, T3.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T11.W, T3.Y, T1.Z, PV.W,
-; EG-NEXT:     CNDE_INT * T9.W, PV.Y, T9.W, PV.Z,
-; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T10.X, T5.Z, T3.Z,
-; EG-NEXT:     LSHL T3.Y, PS, 1,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.W, T7.W, literal.x,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T11.W, PV.X, T9.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T2.Y, T8.W, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T8.W, PV.Z, T4.Z,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.Z, T4.Z,
-; EG-NEXT:    5(7.006492e-45), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T9.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T2.Y, T7.W, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.Y, T9.W, literal.x,
-; EG-NEXT:     OR_INT T8.W, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T10.X, T6.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T4.X, T8.X, T5.Z, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.W, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T5.Z, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T1.W, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T11.W, PV.X, T7.W, PV.Y,
-; EG-NEXT:     LSHL T6.X, PS, 1,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T5.Z, T8.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T10.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T10.W, T5.X, T7.X,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T4.X, T3.X, literal.x, 1,
-; EG-NEXT:     SETGE_UINT T2.Y, PS, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T6.Z, PV.W, T3.Z,
-; EG-NEXT:     SETGE_UINT T12.W, PV.W, T3.Z,
-; EG-NEXT:     CNDE_INT * T13.W, PV.Y, T8.W, PV.Z,
-; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHL T5.X, PS, 1,
+; EG-NEXT:     CNDE_INT T1.X, T6.X, T3.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T0.Y,
+; EG-NEXT:     SETE_INT T3.Z, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T12.W, PV.X, T10.W, PV.Y,
+; EG-NEXT:     LSHL T4.X, PS, 1,
 ; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
-; EG-NEXT:     SUB_INT T5.Z, T10.W, T4.W,
-; EG-NEXT:     SUBB_UINT T12.W, T10.W, T4.W,
-; EG-NEXT:     SUB_INT * T14.W, T9.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T7.X, T7.W, T2.Z,
-; EG-NEXT:     SUBB_UINT * T3.Y, T8.W, T0.W, BS:VEC_120/SCL_212
-; EG-NEXT:     SUB_INT T6.Z, T0.Z, T1.W,
-; EG-NEXT:     SUB_INT * T7.W, T14.W, T12.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T8.W, T2.Y, T10.W, T5.Z,
-; EG-NEXT:     SUB_INT T8.X, T1.Z, T4.Z,
-; EG-NEXT:     LSHL T4.Y, PV.W, 1,
-; EG-NEXT:     BFE_UINT T5.Z, T2.X, literal.x, 1,
-; EG-NEXT:     CNDE_INT T7.W, T2.Y, T9.W, T7.W,
-; EG-NEXT:     SUB_INT * T9.W, T6.Z, T3.Y,
-; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; EG-NEXT:     BFE_UINT T10.X, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT T1.Y, T1.Y, T0.Z, PS, BS:VEC_120/SCL_212
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, PV.W, T8.W, literal.y,
-; EG-NEXT:     OR_INT T7.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT * T8.W, PV.X, T7.X,
-; EG-NEXT:    4(5.605194e-45), 31(4.344025e-44)
-; EG-NEXT:     CNDE_INT T7.X, T9.X, T1.Z, PS,
-; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T4.W,
-; EG-NEXT:     SETE_INT T1.Z, PV.Z, T3.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     BIT_ALIGN_INT T8.W, PV.Y, T13.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT * T9.W, T5.X, PV.X,
+; EG-NEXT:     SUB_INT T3.Z, T9.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T13.W, literal.x,
+; EG-NEXT:     OR_INT * T13.W, T2.X, T5.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T5.X, T0.Z, T3.Z,
-; EG-NEXT:     SUBB_UINT T1.Y, T7.W, T4.W,
-; EG-NEXT:     SETGE_UINT * T5.Z, PS, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T10.W, T8.W, T1.W,
-; EG-NEXT:     SETGE_UINT * T12.W, T8.W, T1.W,
-; EG-NEXT:     SUB_INT T8.X, T0.Z, T3.Z,
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T0.Y,
+; EG-NEXT:     SUB_INT T3.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T2.W,
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T2.X, T13.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T13.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T9.W, T2.Y, T9.W, T3.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T1.Z,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T3.Z, T5.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T2.Y, T2.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T13.W, PV.Y, T13.W, PV.Z,
+; EG-NEXT:    23(3.222986e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T5.X, T8.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T9.W, literal.y,
+; EG-NEXT:     OR_INT T9.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T2.X,
+; EG-NEXT:    25(3.503246e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT T3.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T11.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.Z, T1.Y,
+; EG-NEXT:    24(3.363116e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T2.X, T10.W, T3.W,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T3.Z, T9.W, T0.Y, BS:VEC_201
+; EG-NEXT:     BIT_ALIGN_INT T10.W, T3.Y, T13.W, literal.x,
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T0.Y,
+; EG-NEXT:     SUB_INT T2.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T2.W,
+; EG-NEXT:     SETE_INT T13.W, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T6.X, T11.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T13.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T9.W, T4.Y, T9.W, T3.Z,
+; EG-NEXT:     SUB_INT T1.X, T10.W, T1.Z,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T3.Z, T5.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T13.W, T4.Y, T2.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
+; EG-NEXT:    22(3.082857e-44), 0(0.000000e+00)
+; EG-NEXT:     SUB_INT T8.X, T4.Z, T6.W,
+; EG-NEXT:     LSHL T4.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T9.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T9.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T13.W, PV.X, T6.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T10.W, PS,
+; EG-NEXT:     SETGE_UINT T3.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T10.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T13.W, PV.Z, T1.Y,
+; EG-NEXT:    23(3.222986e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T6.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T9.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, PV.Y, T11.W, literal.x,
+; EG-NEXT:     OR_INT T10.W, T4.Y, PV.X,
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T2.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T7.X, T4.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T4.Z, PV.Z, T1.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T1.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T13.W, PV.X, T9.W, PV.Y,
+; EG-NEXT:     LSHL T2.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T4.Z, T10.W, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T12.W, T4.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T2.W,
+; EG-NEXT:     SUB_INT T3.Y, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T5.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T14.W, T11.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T15.W, T11.W, T6.W,
+; EG-NEXT:     SUBB_UINT T4.X, T12.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, T5.Z,
+; EG-NEXT:     SUB_INT T5.Z, T12.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, T3.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T10.W, T2.Y, T10.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T6.W,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T7.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T14.W, T2.Y, T3.Z, PV.W,
+; EG-NEXT:    22(3.082857e-44), 0(0.000000e+00)
+; EG-NEXT:    ALU clause starting at 1064:
+; EG-NEXT:     CNDE_INT * T12.W, T4.Y, T12.W, T5.Z,
+; EG-NEXT:     BFE_UINT T5.X, T5.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T14.W, T10.W, literal.y, BS:VEC_120/SCL_212
+; EG-NEXT:     OR_INT T10.W, T3.Y, T4.Z,
+; EG-NEXT:     SUB_INT * T14.W, T1.X, T4.X,
+; EG-NEXT:    21(2.942727e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T11.W, PV.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.Z, T1.Z,
+; EG-NEXT:    24(3.363116e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T4.X, T9.W, T0.Y,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T4.Z, T10.W, T2.W, BS:VEC_120/SCL_212
+; EG-NEXT:     BIT_ALIGN_INT T9.W, T3.Y, T12.W, literal.x,
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T2.W,
+; EG-NEXT:     SUB_INT T2.Y, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T5.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T12.W, T9.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T9.W, T6.W,
+; EG-NEXT:     SUBB_UINT T7.X, T11.W, T3.W, BS:VEC_021/SCL_122
 ; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, T5.Z,
-; EG-NEXT:     SUB_INT T5.Z, T9.W, T0.W,
-; EG-NEXT:     SUBB_UINT * T10.W, T9.W, T0.W,
-; EG-NEXT:     SUB_INT * T12.W, T8.W, T1.W,
-; EG-NEXT:     SUB_INT T9.X, PV.W, T10.W,
-; EG-NEXT:     CNDE_INT * T4.Y, T3.Y, T9.W, T5.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T5.Z, T7.W, T4.W,
-; EG-NEXT:     SUB_INT T9.W, T8.X, T1.Y,
-; EG-NEXT:     CNDE_INT * T10.W, T1.Z, T5.X, T2.Y,
-; EG-NEXT:    ALU clause starting at 1985:
-; EG-NEXT:     CNDE_INT T5.X, T10.W, T0.Z, T9.W,
-; EG-NEXT:     CNDE_INT T1.Y, T10.W, T7.W, T5.Z,
-; EG-NEXT:     LSHL T0.Z, T4.Y, 1,
-; EG-NEXT:     BFE_UINT * T7.W, T0.Y, literal.x, 1, BS:VEC_120/SCL_212
-; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T8.W, T3.Y, T8.W, T9.X,
-; EG-NEXT:     BIT_ALIGN_INT T8.X, PV.W, T4.Y, literal.x,
-; EG-NEXT:     OR_INT T2.Y, T0.Z, T7.W,
-; EG-NEXT:     BIT_ALIGN_INT T0.Z, T5.X, T1.Y, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     BIT_ALIGN_INT * T7.W, T7.X, T11.W, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T12.W, T2.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T10.W, T4.Y, T10.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T9.W, T6.W,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T7.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T12.W, T4.Y, T3.Z, PV.W,
+; EG-NEXT:    21(2.942727e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T11.W, T3.Y, T11.W, T5.Z,
+; EG-NEXT:     SUB_INT T8.X, T2.Z, T1.Y,
+; EG-NEXT:     LSHL T4.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T12.W, T10.W, literal.x,
+; EG-NEXT:     OR_INT T10.W, T2.Y, T4.Z,
+; EG-NEXT:     SUB_INT * T12.W, T1.X, T7.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T8.W, T6.X, T4.X,
-; EG-NEXT:     SETGE_UINT T4.X, PV.W, T2.Z,
-; EG-NEXT:     SETE_INT T3.Y, T7.W, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T1.Z, T7.W, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     BFE_UINT T9.W, T2.X, literal.x, 1,
-; EG-NEXT:     LSHL * T10.W, T1.Y, 1,
-; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     OR_INT T5.X, PS, PV.W,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Y, PV.Z, PV.X,
-; EG-NEXT:     SUB_INT T1.Z, T8.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SUBB_UINT T9.W, T8.W, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT * T10.W, T7.W, T4.Z,
-; EG-NEXT:     SUB_INT T4.X, PS, PV.W,
-; EG-NEXT:     CNDE_INT T3.Y, PV.Y, T8.W, PV.Z,
-; EG-NEXT:     SETGE_UINT T1.Z, PV.X, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T8.W, T0.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T9.W, T0.Z, T3.Z,
-; EG-NEXT:     CNDE_INT T6.X, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT T4.Y, T5.X, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     LSHL T1.Z, PV.Y, 1,
-; EG-NEXT:     BFE_UINT T8.W, T3.X, literal.x, 1, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT * T7.W, T1.Y, T7.W, PV.X,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     BIT_ALIGN_INT T4.X, PS, T3.Y, literal.x,
-; EG-NEXT:     OR_INT T1.Y, PV.Z, PV.W,
-; EG-NEXT:     CNDE_INT T1.Z, PV.X, T5.X, PV.Y,
-; EG-NEXT:     SUBB_UINT T7.W, T2.Y, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT * T8.W, T8.X, T1.W,
+; EG-NEXT:     BFE_UINT T1.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T9.W, PV.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T1.Z,
+; EG-NEXT:    23(3.222986e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T7.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T10.W, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.Y, T11.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T9.W, T4.Y, PV.X,
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T4.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T7.X, PS, PV.W,
-; EG-NEXT:     LSHL T3.Y, PV.Z, 1,
-; EG-NEXT:     SETGE_UINT T5.Z, PV.Y, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T7.W, PV.X, T4.Z,
-; EG-NEXT:     SETGE_UINT * T8.W, PV.X, T4.Z,
-; EG-NEXT:     BFE_UINT T9.X, T2.X, literal.x, 1,
-; EG-NEXT:     SETGE_UINT T4.Y, T2.Y, T0.W,
-; EG-NEXT:     SETE_INT T6.Z, T8.X, T1.W, BS:VEC_120/SCL_212
-; EG-NEXT:     CNDE_INT T7.W, PV.W, PS, PV.Z,
-; EG-NEXT:     SUB_INT * T8.W, T1.Y, T2.Z,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T10.X, T1.Y, T2.Z,
-; EG-NEXT:     SUB_INT T5.Y, T4.X, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SUBB_UINT * T5.Z, T5.X, T4.W, BS:VEC_120/SCL_212
-; EG-NEXT:     SUB_INT T9.W, T0.Z, T3.Z,
-; EG-NEXT:     CNDE_INT * T8.W, T7.W, T1.Y, T8.W,
-; EG-NEXT:     SETGE_UINT T5.X, T8.X, T1.W,
-; EG-NEXT:     LSHL T1.Y, PS, 1,
-; EG-NEXT:     BFE_UINT T7.Z, T3.X, 1, 1, BS:VEC_201
-; EG-NEXT:     SUB_INT T9.W, PV.W, T5.Z,
-; EG-NEXT:     SUB_INT * T10.W, T5.Y, T10.X,
-; EG-NEXT:     CNDE_INT T4.X, T7.W, T4.X, PS,
-; EG-NEXT:     CNDE_INT T5.Y, T6.X, T0.Z, PV.W,
-; EG-NEXT:     OR_INT T0.Z, PV.Y, PV.Z,
-; EG-NEXT:     CNDE_INT T7.W, T6.Z, PV.X, T4.Y, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT * T9.W, T2.Y, T0.W,
-; EG-NEXT:     CNDE_INT T5.X, PV.W, T2.Y, PS,
-; EG-NEXT:     SETGE_UINT T1.Y, PV.Z, T2.Z,
-; EG-NEXT:     BIT_ALIGN_INT T1.Z, PV.Y, T1.Z, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     BIT_ALIGN_INT T8.W, PV.X, T8.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T3.Y, T9.X,
+; EG-NEXT:     CNDE_INT T1.X, T6.X, T2.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T2.Z, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     CNDE_INT * T12.W, PV.X, T10.W, PV.Y,
+; EG-NEXT:     LSHL T4.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T2.Z, T9.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T13.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T13.W, T2.X, T5.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETE_INT T4.X, PV.W, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PS, T4.W,
-; EG-NEXT:     SETE_INT T10.W, PV.Z, T3.Z,
-; EG-NEXT:     SETGE_UINT * T11.W, PV.Z, T3.Z,
-; EG-NEXT:     CNDE_INT T6.X, PV.W, PS, PV.Z,
-; EG-NEXT:     CNDE_INT T1.Y, PV.X, PV.Y, T1.Y,
-; EG-NEXT:     LSHL T5.Z, T5.X, 1, BS:VEC_201
-; EG-NEXT:     BFE_UINT T10.W, T0.Y, literal.x, 1,
-; EG-NEXT:     CNDE_INT * T7.W, T7.W, T8.X, T7.X,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T4.X, T0.Z, T2.Z,
-; EG-NEXT:     SUBB_UINT T2.Y, T0.Z, T2.Z,
-; EG-NEXT:     SUB_INT T6.Z, T8.W, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     BIT_ALIGN_INT T7.W, PS, T5.X, literal.x,
-; EG-NEXT:     OR_INT * T10.W, PV.Z, PV.W,
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T3.W,
+; EG-NEXT:     SUB_INT T3.Y, T4.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Y,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Y,
+; EG-NEXT:     SUBB_UINT T2.X, T13.W, T0.Y,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T13.W, T0.Y,
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T9.W, T2.Y, T9.W, T2.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T1.Y,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T2.Z, T8.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T2.Y, T4.Z, PV.W,
+; EG-NEXT:     CNDE_INT * T13.W, PV.Y, T13.W, PV.Z,
+; EG-NEXT:    22(3.082857e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T5.X, T7.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.W, T9.W, literal.y,
+; EG-NEXT:     OR_INT T9.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T2.X,
+; EG-NEXT:    20(2.802597e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT * T2.Z, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:    20(2.802597e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T11.W, T4.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T4.Z, T6.W,
+; EG-NEXT:     SUBB_UINT T2.X, T10.W, T2.W,
+; EG-NEXT:     CNDE_INT * T4.Y, PV.W, PS, T2.Z,
+; EG-NEXT:     SUB_INT T2.Z, T9.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T10.W, T3.Y, T13.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T5.X, PS, T0.W,
-; EG-NEXT:     SETE_INT T3.Y, PV.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T11.W, PV.Z, PV.Y,
-; EG-NEXT:     CNDE_INT * T12.W, T1.Y, T0.Z, PV.X,
-; EG-NEXT:     SUBB_UINT * T4.X, T10.W, T0.W,
-; EG-NEXT:     SUB_INT T2.Y, T7.W, T1.W,
-; EG-NEXT:     LSHL T0.Z, T12.W, 1, BS:VEC_201
-; EG-NEXT:     AND_INT * T13.W, T3.X, 1,
-; EG-NEXT:     CNDE_INT * T8.W, T1.Y, T8.W, T11.W,
-; EG-NEXT:     SUB_INT T3.X, T10.W, T0.W,
-; EG-NEXT:     BIT_ALIGN_INT * T1.Y, PV.W, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T3.W,
+; EG-NEXT:     SUB_INT T2.Y, T4.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T13.W, PV.W, T1.Y,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.W, T1.Y,
+; EG-NEXT:     SUBB_UINT T6.X, T11.W, T0.Y,
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T0.Y,
+; EG-NEXT:     SUB_INT T13.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T9.W, T4.Y, T9.W, T2.Z,
+; EG-NEXT:     SUB_INT T1.X, T10.W, T1.Y,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T2.Z, T8.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T13.W, T4.Y, T4.Z, PV.W,
+; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
+; EG-NEXT:    21(2.942727e-44), 0(0.000000e+00)
+; EG-NEXT:    ALU clause starting at 1178:
+; EG-NEXT:     SUB_INT T8.X, T3.Z, T1.Z,
+; EG-NEXT:     LSHL T4.Y, T11.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, T13.W, T9.W, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     OR_INT T9.W, T2.Y, T2.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT * T13.W, T1.X, T6.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT T0.Z, T0.Z, T13.W,
-; EG-NEXT:     SUB_INT T8.W, T2.Y, T4.X,
-; EG-NEXT:     CNDE_INT * T11.W, T3.Y, T5.Z, T5.X,
-; EG-NEXT:     SUB_INT T4.X, T9.W, T4.W,
-; EG-NEXT:     CNDE_INT T2.Y, PS, T7.W, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T5.Z, PV.Z, T2.Z,
-; EG-NEXT:     SETE_INT * T7.W, T1.Y, T4.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT * T8.W, T11.W, T10.W, T3.X,
-; EG-NEXT:     SETGE_UINT T3.X, T1.Y, T4.Z,
-; EG-NEXT:     SUBB_UINT T3.Y, T0.Z, T2.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT * T4.Z, T1.Y, T4.Z,
-; EG-NEXT:    ALU clause starting at 2098:
-; EG-NEXT:     BFE_UINT T10.W, T0.Y, 1, 1,
-; EG-NEXT:     LSHL * T11.W, T8.W, 1,
-; EG-NEXT:     SUBB_UINT T5.X, T9.W, T4.W,
-; EG-NEXT:     SUB_INT T4.Y, T1.Z, T3.Z,
-; EG-NEXT:     OR_INT T6.Z, PS, PV.W,
-; EG-NEXT:     SUB_INT * T10.W, T4.Z, T3.Y, BS:VEC_201
-; EG-NEXT:     CNDE_INT * T7.W, T7.W, T3.X, T5.Z,
-; EG-NEXT:     CNDE_INT T3.X, PV.W, T1.Y, T10.W,
-; EG-NEXT:     SETGE_UINT T1.Y, T6.Z, T0.W,
-; EG-NEXT:     SUB_INT T4.Z, T4.Y, T5.X,
-; EG-NEXT:     BIT_ALIGN_INT * T8.W, T2.Y, T8.W, literal.x, BS:VEC_201
+; EG-NEXT:     BFE_UINT T1.X, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T10.W, PS,
+; EG-NEXT:     SETGE_UINT * T2.Z, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:    19(2.662467e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T10.W, T4.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T13.W, T4.Z, T6.W,
+; EG-NEXT:     CNDE_INT T6.X, PV.W, PS, T2.Z,
+; EG-NEXT:     SUB_INT T3.Y, T9.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, T2.Y, T11.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T10.W, T4.Y, T1.X, BS:VEC_102/SCL_221
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T2.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT * T9.W, T6.X, T9.W, T4.X,
-; EG-NEXT:     SETE_INT T4.X, T8.W, T1.W,
-; EG-NEXT:     SETGE_UINT T2.Y, T8.W, T1.W,
-; EG-NEXT:     LSHL T5.Z, PV.W, 1,
-; EG-NEXT:     BFE_UINT T10.W, T2.X, 1, 1,
-; EG-NEXT:     CNDE_INT * T11.W, T6.X, T1.Z, T4.Z,
-; EG-NEXT:     BIT_ALIGN_INT T5.X, PS, T9.W, literal.x, BS:VEC_021/SCL_122
-; EG-NEXT:     OR_INT T3.Y, PV.Z, PV.W,
-; EG-NEXT:     CNDE_INT T1.Z, PV.X, PV.Y, T1.Y,
-; EG-NEXT:     SUB_INT T9.W, T6.Z, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     XOR_INT * T10.W, T3.X, T5.W,
+; EG-NEXT:     CNDE_INT T1.X, T7.X, T3.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T0.Y,
+; EG-NEXT:     SETE_INT T3.Z, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T13.W, PV.X, T9.W, PV.Y,
+; EG-NEXT:     LSHL T2.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T3.Z, T10.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T12.W, literal.x,
+; EG-NEXT:     OR_INT * T12.W, T4.X, T5.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SUB_INT T3.X, PS, T5.W,
-; EG-NEXT:     CNDE_INT T1.Y, PV.Z, T6.Z, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT T4.Z, PV.Y, T4.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETE_INT T9.W, PV.X, T3.Z,
-; EG-NEXT:     SETGE_UINT * T10.W, PV.X, T3.Z,
-; EG-NEXT:     CNDE_INT T4.X, PV.W, PS, PV.Z,
-; EG-NEXT:     LSHL T2.Y, PV.Y, 1,
-; EG-NEXT:     AND_INT T4.Z, T0.Y, 1,
-; EG-NEXT:     SUBB_UINT T9.W, T6.Z, T0.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SUB_INT * T10.W, T8.W, T1.W,
-; EG-NEXT:     SUB_INT T6.X, T3.Y, T4.W,
-; EG-NEXT:     SUB_INT T0.Y, PS, PV.W,
-; EG-NEXT:     SUBB_UINT T5.Z, T3.Y, T4.W,
-; EG-NEXT:     SUB_INT T9.W, T5.X, T3.Z,
-; EG-NEXT:     OR_INT * T10.W, PV.Y, PV.Z,
-; EG-NEXT:     SUB_INT T7.X, PS, T0.W,
-; EG-NEXT:     SUB_INT T2.Y, PV.W, PV.Z,
-; EG-NEXT:     CNDE_INT T1.Z, T1.Z, T8.W, PV.Y, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T8.W, T4.X, T3.Y, PV.X,
-; EG-NEXT:     SUB_INT * T9.W, T0.Z, T2.Z,
-; EG-NEXT:     CNDE_INT T6.X, T7.W, T0.Z, PS,
-; EG-NEXT:     LSHL T0.Y, PV.W, 1,
-; EG-NEXT:     AND_INT T0.Z, T2.X, 1,
-; EG-NEXT:     BIT_ALIGN_INT T7.W, PV.Z, T1.Y, literal.x,
-; EG-NEXT:     CNDE_INT * T9.W, T4.X, T5.X, PV.Y,
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T0.Y,
+; EG-NEXT:     SUB_INT T3.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T2.W,
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T4.X, T12.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T12.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T10.W, T2.Y, T10.W, T3.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T1.Z,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T3.Z, T5.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T2.Y, T2.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T12.W, PV.Y, T12.W, PV.Z,
+; EG-NEXT:    18(2.522337e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T5.X, T8.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T10.W, literal.y,
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T4.X,
+; EG-NEXT:    20(2.802597e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT T3.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T11.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.Z, T1.Y,
+; EG-NEXT:    19(2.662467e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T4.X, T9.W, T3.W,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T3.Z, T10.W, T0.Y, BS:VEC_201
+; EG-NEXT:     BIT_ALIGN_INT T9.W, T3.Y, T12.W, literal.x,
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T2.X, T10.W, T0.W,
-; EG-NEXT:     SETE_INT T1.Y, PV.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SETGE_UINT * T1.Z, PV.W, T1.W, BS:VEC_021/SCL_122
-; EG-NEXT:     BIT_ALIGN_INT T8.W, T9.W, T8.W, literal.x,
-; EG-NEXT:     OR_INT * T9.W, T0.Y, T0.Z,
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T0.Y,
+; EG-NEXT:     SUB_INT T2.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T2.W,
+; EG-NEXT:     SETE_INT T12.W, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T7.X, T11.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T12.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T10.W, T4.Y, T10.W, T3.Z,
+; EG-NEXT:     SUB_INT T1.X, T9.W, T1.Z,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T3.Z, T5.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T12.W, T4.Y, T2.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
+; EG-NEXT:    17(2.382207e-44), 0(0.000000e+00)
+; EG-NEXT:     SUB_INT T8.X, T4.Z, T6.W,
+; EG-NEXT:     LSHL T4.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T10.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T12.W, PV.X, T7.X,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     SETGE_UINT T4.X, PS, T4.W,
-; EG-NEXT:     SETE_INT T0.Y, PV.W, T3.Z,
-; EG-NEXT:     SETGE_UINT T0.Z, PV.W, T3.Z,
-; EG-NEXT:     SUBB_UINT T11.W, PS, T4.W,
-; EG-NEXT:     SUB_INT * T12.W, PV.W, T3.Z,
-; EG-NEXT:     SUBB_UINT * T5.X, T10.W, T0.W,
-; EG-NEXT:     SUB_INT * T2.Y, T7.W, T1.W,
-; EG-NEXT:     SUB_INT * T2.Z, T9.W, T4.W,
-; EG-NEXT:     SUB_INT T0.W, T12.W, T11.W,
-; EG-NEXT:     CNDE_INT * T1.W, T0.Y, T0.Z, T4.X,
-; EG-NEXT:     CNDE_INT T4.X, PS, T8.W, PV.W, BS:VEC_021/SCL_122
-; EG-NEXT:     CNDE_INT T0.Y, PS, T9.W, T2.Z, BS:VEC_102/SCL_221
-; EG-NEXT:     SUB_INT T0.Z, T2.Y, T5.X,
-; EG-NEXT:     CNDE_INT T0.W, T1.Y, T1.Z, T2.X, BS:VEC_210
-; EG-NEXT:     XOR_INT * T1.W, T6.X, T5.W,
-; EG-NEXT:     SUBB_UINT T2.X, PS, T5.W,
-; EG-NEXT:     CNDE_INT T1.Y, PV.W, T7.W, PV.Z, BS:VEC_021/SCL_122
-; EG-NEXT:     XOR_INT T0.Z, PV.Y, T3.W, BS:VEC_102/SCL_221
-; EG-NEXT:     XOR_INT * T4.W, PV.X, T3.W, BS:VEC_102/SCL_221
-; EG-NEXT:     CNDE_INT * T0.W, T0.W, T10.W, T7.X,
-; EG-NEXT:     XOR_INT T4.X, PV.W, T6.W,
-; EG-NEXT:     SUB_INT T0.Y, T4.W, T3.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUBB_UINT T1.Z, T0.Z, T3.W, BS:VEC_021/SCL_122
-; EG-NEXT:     XOR_INT T0.W, T1.Y, T6.W,
-; EG-NEXT:     SUB_INT * T7.W, T3.X, T2.X,
-; EG-NEXT:     SUB_INT T2.X, PV.W, T6.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT T7.Y, PV.Y, PV.Z,
-; EG-NEXT:     SUBB_UINT T1.Z, PV.X, T6.W, BS:VEC_021/SCL_122
-; EG-NEXT:     XOR_INT T0.W, T1.X, T2.W,
-; EG-NEXT:     XOR_INT * T4.W, T0.X, T2.W,
-; EG-NEXT:     SUB_INT T0.Y, PS, T2.W,
-; EG-NEXT:     SUB_INT T7.Z, T1.W, T5.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUBB_UINT T1.W, PV.W, T2.W,
-; EG-NEXT:     SUB_INT * T4.W, PV.X, PV.Z,
-; EG-NEXT:     SUB_INT T7.X, T0.Z, T3.W,
-; EG-NEXT:     SUB_INT T4.Y, PV.Y, PV.W,
-; EG-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.x,
+; EG-NEXT:     BFE_UINT T1.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
+; EG-NEXT:     SETGE_UINT T3.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T9.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T1.Y,
+; EG-NEXT:    18(2.522337e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T7.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T10.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, PV.Y, T11.W, literal.x,
+; EG-NEXT:     OR_INT T9.W, T4.Y, PV.X,
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T4.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T6.X, T4.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T4.Z, PV.Z, T1.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T1.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T12.W, PV.X, T10.W, PV.Y,
+; EG-NEXT:     LSHL T4.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T4.Z, T9.W, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T13.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T13.W, T2.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T2.W,
+; EG-NEXT:     SUB_INT T3.Y, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T5.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T14.W, T11.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T15.W, T11.W, T6.W,
+; EG-NEXT:     SUBB_UINT T2.X, T13.W, T3.W,
+; EG-NEXT:     CNDE_INT * T4.Y, PV.W, PS, T5.Z,
+; EG-NEXT:    ALU clause starting at 1293:
+; EG-NEXT:     SUB_INT T5.Z, T13.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, T3.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T9.W, T2.Y, T9.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T6.W,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T7.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T14.W, T2.Y, T3.Z, PV.W,
+; EG-NEXT:    17(2.382207e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T13.W, T4.Y, T13.W, T5.Z,
+; EG-NEXT:     BFE_UINT T5.X, T5.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T14.W, T9.W, literal.y, BS:VEC_120/SCL_212
+; EG-NEXT:     OR_INT T9.W, T3.Y, T4.Z,
+; EG-NEXT:     SUB_INT * T14.W, T1.X, T2.X,
+; EG-NEXT:    16(2.242078e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T11.W, PV.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.Z, T1.Z,
+; EG-NEXT:    19(2.662467e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T2.X, T10.W, T0.Y,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T4.Z, T9.W, T2.W, BS:VEC_120/SCL_212
+; EG-NEXT:     BIT_ALIGN_INT T10.W, T3.Y, T13.W, literal.x,
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T2.W,
+; EG-NEXT:     SUB_INT T2.Y, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T5.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T13.W, T10.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T10.W, T6.W,
+; EG-NEXT:     SUBB_UINT T6.X, T11.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, T5.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T13.W, T2.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T9.W, T4.Y, T9.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T10.W, T6.W,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T7.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T13.W, T4.Y, T3.Z, PV.W,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR T0.X, PV.W, literal.x,
-; EG-NEXT:     SUB_INT T4.Z, T4.X, T6.W, BS:VEC_102/SCL_221
-; EG-NEXT:     SUB_INT * T4.X, T0.W, T2.W,
+; EG-NEXT:     CNDE_INT * T11.W, T3.Y, T11.W, T5.Z,
+; EG-NEXT:     SUB_INT T8.X, T2.Z, T1.Y,
+; EG-NEXT:     LSHL T4.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T13.W, T9.W, literal.x,
+; EG-NEXT:     OR_INT T9.W, T2.Y, T4.Z,
+; EG-NEXT:     SUB_INT * T13.W, T1.X, T6.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T10.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T10.W, PV.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T13.W, PV.Z, T1.Z,
+; EG-NEXT:    18(2.522337e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T6.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T9.W, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.Y, T11.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T10.W, T4.Y, PV.X,
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T2.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T7.X, T2.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T2.Z, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     CNDE_INT * T13.W, PV.X, T9.W, PV.Y,
+; EG-NEXT:     LSHL T2.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T2.Z, T10.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T12.W, T4.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T3.W,
+; EG-NEXT:     SUB_INT T3.Y, T4.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Y,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Y,
+; EG-NEXT:     SUBB_UINT T4.X, T12.W, T0.Y,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T12.W, T0.Y,
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T10.W, T2.Y, T10.W, T2.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T1.Y,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T2.Z, T8.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T2.Y, T4.Z, PV.W,
+; EG-NEXT:     CNDE_INT * T12.W, PV.Y, T12.W, PV.Z,
+; EG-NEXT:    17(2.382207e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T5.X, T7.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.W, T10.W, literal.y,
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T4.X,
+; EG-NEXT:    15(2.101948e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT * T2.Z, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:    15(2.101948e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T11.W, T4.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T4.Z, T6.W,
+; EG-NEXT:     SUBB_UINT T4.X, T9.W, T2.W,
+; EG-NEXT:     CNDE_INT * T4.Y, PV.W, PS, T2.Z,
+; EG-NEXT:     SUB_INT T2.Z, T10.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T9.W, T3.Y, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T3.W,
+; EG-NEXT:     SUB_INT T2.Y, T4.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T12.W, PV.W, T1.Y,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.W, T1.Y,
+; EG-NEXT:     SUBB_UINT T7.X, T11.W, T0.Y,
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T5.Z, T11.W, T0.Y,
+; EG-NEXT:    ALU clause starting at 1407:
+; EG-NEXT:     SUB_INT T12.W, T2.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T10.W, T4.Y, T10.W, T2.Z,
+; EG-NEXT:     SUB_INT T1.X, T9.W, T1.Y,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T2.Z, T8.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T12.W, T4.Y, T4.Z, PV.W,
+; EG-NEXT:     CNDE_INT * T11.W, T3.Y, T11.W, T5.Z,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     SUB_INT T8.X, T3.Z, T1.Z,
+; EG-NEXT:     LSHL T4.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.W, T10.W, literal.x,
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T12.W, PV.X, T7.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
+; EG-NEXT:     SETGE_UINT * T2.Z, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:    14(1.961818e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T9.W, T4.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T12.W, T4.Z, T6.W,
+; EG-NEXT:     CNDE_INT T7.X, PV.W, PS, T2.Z,
+; EG-NEXT:     SUB_INT T3.Y, T10.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, T2.Y, T11.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T9.W, T4.Y, T1.X, BS:VEC_102/SCL_221
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T4.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T6.X, T3.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T0.Y,
+; EG-NEXT:     SETE_INT T3.Z, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T12.W, PV.X, T10.W, PV.Y,
+; EG-NEXT:     LSHL T4.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T3.Z, T9.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T13.W, literal.x,
+; EG-NEXT:     OR_INT * T13.W, T2.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T0.Y,
+; EG-NEXT:     SUB_INT T3.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T2.W,
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T2.X, T13.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T13.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T9.W, T2.Y, T9.W, T3.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T1.Z,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T3.Z, T5.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T2.Y, T2.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T13.W, PV.Y, T13.W, PV.Z,
+; EG-NEXT:    13(1.821688e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T5.X, T8.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T9.W, literal.y,
+; EG-NEXT:     OR_INT T9.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T2.X,
+; EG-NEXT:    15(2.101948e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT T3.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T11.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.Z, T1.Y,
+; EG-NEXT:    14(1.961818e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T2.X, T10.W, T3.W,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T3.Z, T9.W, T0.Y, BS:VEC_201
+; EG-NEXT:     BIT_ALIGN_INT T10.W, T3.Y, T13.W, literal.x,
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T0.Y,
+; EG-NEXT:     SUB_INT T2.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T2.W,
+; EG-NEXT:     SETE_INT T13.W, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T6.X, T11.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T13.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T9.W, T4.Y, T9.W, T3.Z,
+; EG-NEXT:     SUB_INT T1.X, T10.W, T1.Z,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T3.Z, T5.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T13.W, T4.Y, T2.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
+; EG-NEXT:    12(1.681558e-44), 0(0.000000e+00)
+; EG-NEXT:     SUB_INT T8.X, T4.Z, T6.W,
+; EG-NEXT:     LSHL T4.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T9.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T9.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T13.W, PV.X, T6.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T10.W, PS,
+; EG-NEXT:     SETGE_UINT T3.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T10.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T13.W, PV.Z, T1.Y,
+; EG-NEXT:    13(1.821688e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T6.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T9.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, PV.Y, T11.W, literal.x,
+; EG-NEXT:     OR_INT T10.W, T4.Y, PV.X,
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T2.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T7.X, T4.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T4.Z, PV.Z, T1.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T1.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T13.W, PV.X, T9.W, PV.Y,
+; EG-NEXT:     LSHL T2.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T4.Z, T10.W, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT * T11.W, PV.X, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:    ALU clause starting at 1522:
+; EG-NEXT:     OR_INT * T12.W, T4.X, T5.X,
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T2.W,
+; EG-NEXT:     SUB_INT T3.Y, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T5.Z, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T14.W, T11.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T15.W, T11.W, T6.W,
+; EG-NEXT:     SUBB_UINT T4.X, T12.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, T5.Z,
+; EG-NEXT:     SUB_INT T5.Z, T12.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, T3.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T10.W, T2.Y, T10.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T6.W,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T7.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T14.W, T2.Y, T3.Z, PV.W,
+; EG-NEXT:    12(1.681558e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T12.W, T4.Y, T12.W, T5.Z,
+; EG-NEXT:     BFE_UINT T5.X, T5.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T14.W, T10.W, literal.y, BS:VEC_120/SCL_212
+; EG-NEXT:     OR_INT T10.W, T3.Y, T4.Z,
+; EG-NEXT:     SUB_INT * T14.W, T1.X, T4.X,
+; EG-NEXT:    11(1.541428e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T11.W, PV.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.Z, T1.Z,
+; EG-NEXT:    14(1.961818e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T4.X, T9.W, T0.Y,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T4.Z, T10.W, T2.W, BS:VEC_120/SCL_212
+; EG-NEXT:     BIT_ALIGN_INT T9.W, T3.Y, T12.W, literal.x,
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T2.W,
+; EG-NEXT:     SUB_INT T2.Y, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T5.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T12.W, T9.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T9.W, T6.W,
+; EG-NEXT:     SUBB_UINT T7.X, T11.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, T5.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T12.W, T2.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T10.W, T4.Y, T10.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T9.W, T6.W,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T7.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T12.W, T4.Y, T3.Z, PV.W,
+; EG-NEXT:    11(1.541428e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T11.W, T3.Y, T11.W, T5.Z,
+; EG-NEXT:     SUB_INT T8.X, T2.Z, T1.Y,
+; EG-NEXT:     LSHL T4.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T12.W, T10.W, literal.x,
+; EG-NEXT:     OR_INT T10.W, T2.Y, T4.Z,
+; EG-NEXT:     SUB_INT * T12.W, T1.X, T7.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T9.W, PV.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T1.Z,
+; EG-NEXT:    13(1.821688e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T7.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T10.W, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.Y, T11.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T9.W, T4.Y, PV.X,
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T4.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T6.X, T2.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T2.Z, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     CNDE_INT * T12.W, PV.X, T10.W, PV.Y,
+; EG-NEXT:     LSHL T4.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T2.Z, T9.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T13.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T13.W, T2.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T3.W,
+; EG-NEXT:     SUB_INT T3.Y, T4.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Y,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Y,
+; EG-NEXT:     SUBB_UINT T2.X, T13.W, T0.Y,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T13.W, T0.Y,
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T9.W, T2.Y, T9.W, T2.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T1.Y,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T2.Z, T8.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T2.Y, T4.Z, PV.W,
+; EG-NEXT:     CNDE_INT * T13.W, PV.Y, T13.W, PV.Z,
+; EG-NEXT:    12(1.681558e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T5.X, T7.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.W, T9.W, literal.y,
+; EG-NEXT:     OR_INT T9.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T2.X,
+; EG-NEXT:    10(1.401298e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT * T2.Z, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:    10(1.401298e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T11.W, T4.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T4.Z, T6.W,
+; EG-NEXT:     SUBB_UINT T2.X, T10.W, T2.W,
+; EG-NEXT:     CNDE_INT * T4.Y, PV.W, PS, T2.Z,
+; EG-NEXT:     SUB_INT T2.Z, T9.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T10.W, T3.Y, T13.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:    ALU clause starting at 1636:
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T3.W,
+; EG-NEXT:     SUB_INT * T2.Y, T4.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, T11.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T13.W, T10.W, T1.Y, BS:VEC_102/SCL_221
+; EG-NEXT:     SETGE_UINT * T14.W, T10.W, T1.Y,
+; EG-NEXT:     SUBB_UINT T6.X, T11.W, T0.Y,
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T0.Y,
+; EG-NEXT:     SUB_INT T13.W, T2.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T9.W, T4.Y, T9.W, T2.Z,
+; EG-NEXT:     SUB_INT T1.X, T10.W, T1.Y,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T2.Z, T8.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T13.W, T4.Y, T4.Z, PV.W,
+; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
+; EG-NEXT:    11(1.541428e-44), 0(0.000000e+00)
+; EG-NEXT:     SUB_INT T8.X, T3.Z, T1.Z,
+; EG-NEXT:     LSHL T4.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.W, T9.W, literal.x,
+; EG-NEXT:     OR_INT T9.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T13.W, PV.X, T6.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T10.W, PS,
+; EG-NEXT:     SETGE_UINT * T2.Z, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T10.W, T4.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T13.W, T4.Z, T6.W,
+; EG-NEXT:     CNDE_INT T6.X, PV.W, PS, T2.Z,
+; EG-NEXT:     SUB_INT T3.Y, T9.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, T2.Y, T11.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T10.W, T4.Y, T1.X, BS:VEC_102/SCL_221
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T2.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T7.X, T3.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T0.Y,
+; EG-NEXT:     SETE_INT T3.Z, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T13.W, PV.X, T9.W, PV.Y,
+; EG-NEXT:     LSHL T2.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T3.Z, T10.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T12.W, literal.x,
+; EG-NEXT:     OR_INT * T12.W, T4.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T0.Y,
+; EG-NEXT:     SUB_INT T3.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T2.W,
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T4.X, T12.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T12.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T10.W, T2.Y, T10.W, T3.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T1.Z,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T3.Z, T5.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T2.Y, T2.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T12.W, PV.Y, T12.W, PV.Z,
+; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T5.X, T8.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T10.W, literal.y,
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T4.X,
+; EG-NEXT:    10(1.401298e-44), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT T3.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T11.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.Z, T1.Y,
+; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T4.X, T9.W, T3.W,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T3.Z, T10.W, T0.Y, BS:VEC_201
+; EG-NEXT:     BIT_ALIGN_INT T9.W, T3.Y, T12.W, literal.x,
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T0.Y,
+; EG-NEXT:     SUB_INT T2.Y, T2.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T2.W,
+; EG-NEXT:     SETE_INT T12.W, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T7.X, T11.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T12.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T10.W, T4.Y, T10.W, T3.Z,
+; EG-NEXT:     SUB_INT T1.X, T9.W, T1.Z,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T3.Z, T5.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T12.W, T4.Y, T2.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T11.W, PV.Y, T11.W, PV.Z,
+; EG-NEXT:    7(9.809089e-45), 0(0.000000e+00)
+; EG-NEXT:     SUB_INT T8.X, T4.Z, T6.W,
+; EG-NEXT:     LSHL T4.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T10.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T12.W, PV.X, T7.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T9.W, PS,
+; EG-NEXT:     SETGE_UINT T3.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T9.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T12.W, PV.Z, T1.Y,
+; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T7.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T10.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, PV.Y, T11.W, literal.x,
+; EG-NEXT:     OR_INT T9.W, T4.Y, PV.X,
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T4.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T6.X, T4.Z, PS,
+; EG-NEXT:     SETGE_UINT * T2.Y, PV.W, T2.W,
+; EG-NEXT:    ALU clause starting at 1751:
+; EG-NEXT:     SETE_INT T4.Z, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT T11.W, T3.Z, T1.Z,
+; EG-NEXT:     CNDE_INT * T12.W, T7.X, T10.W, T3.Y,
+; EG-NEXT:     LSHL T4.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, T2.Y,
+; EG-NEXT:     SUB_INT T4.Z, T9.W, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, T1.X, T13.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T13.W, T2.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T2.W,
+; EG-NEXT:     SUB_INT T3.Y, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T5.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T14.W, T11.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T15.W, T11.W, T6.W,
+; EG-NEXT:     SUBB_UINT T2.X, T13.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, T5.Z,
+; EG-NEXT:     SUB_INT T5.Z, T13.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T14.W, T3.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T9.W, T2.Y, T9.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T6.W,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T7.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T14.W, T2.Y, T3.Z, PV.W,
+; EG-NEXT:    7(9.809089e-45), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T13.W, T4.Y, T13.W, T5.Z,
+; EG-NEXT:     BFE_UINT T5.X, T5.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T14.W, T9.W, literal.y, BS:VEC_120/SCL_212
+; EG-NEXT:     OR_INT T9.W, T3.Y, T4.Z,
+; EG-NEXT:     SUB_INT * T14.W, T1.X, T2.X,
+; EG-NEXT:    6(8.407791e-45), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T11.W, PV.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T14.W, PV.Z, T1.Z,
+; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T2.X, T10.W, T0.Y,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT * T4.Z, T9.W, T2.W, BS:VEC_120/SCL_212
+; EG-NEXT:     BIT_ALIGN_INT T10.W, T3.Y, T13.W, literal.x,
+; EG-NEXT:     OR_INT * T11.W, T2.Y, T1.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T9.W, T2.W,
+; EG-NEXT:     SUB_INT T2.Y, T3.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T5.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T13.W, T10.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T10.W, T6.W,
+; EG-NEXT:     SUBB_UINT T6.X, T11.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, T5.Z,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T13.W, T2.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T9.W, T4.Y, T9.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T10.W, T6.W,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T7.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T13.W, T4.Y, T3.Z, PV.W,
+; EG-NEXT:    6(8.407791e-45), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T11.W, T3.Y, T11.W, T5.Z,
+; EG-NEXT:     SUB_INT T8.X, T2.Z, T1.Y,
+; EG-NEXT:     LSHL T4.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T13.W, T9.W, literal.x,
+; EG-NEXT:     OR_INT T9.W, T2.Y, T4.Z,
+; EG-NEXT:     SUB_INT * T13.W, T1.X, T6.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Y, T10.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T10.W, PV.Z, T1.Z,
+; EG-NEXT:     SETGE_UINT * T13.W, PV.Z, T1.Z,
+; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T6.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T3.Y, T9.W, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.Y, T11.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T10.W, T4.Y, PV.X,
+; EG-NEXT:     SUB_INT * T11.W, T8.X, T2.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T7.X, T2.Z, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T2.Z, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     SETGE_UINT T11.W, PV.Z, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     CNDE_INT * T13.W, PV.X, T9.W, PV.Y,
+; EG-NEXT:     LSHL T2.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T2.Z, T10.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T12.W, T4.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T10.W, T3.W,
+; EG-NEXT:     SUB_INT T3.Y, T4.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T14.W, PV.W, T1.Y,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.W, T1.Y,
+; EG-NEXT:     SUBB_UINT T4.X, T12.W, T0.Y,
+; EG-NEXT:     CNDE_INT T4.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Z, T12.W, T0.Y,
+; EG-NEXT:     SUB_INT T14.W, PV.Y, PV.X,
+; EG-NEXT:     CNDE_INT * T10.W, T2.Y, T10.W, T2.Z,
+; EG-NEXT:     SUB_INT T1.X, T11.W, T1.Y,
+; EG-NEXT:     LSHL T3.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T2.Z, T8.W, literal.x, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T14.W, T2.Y, T4.Z, PV.W,
+; EG-NEXT:     CNDE_INT * T12.W, PV.Y, T12.W, PV.Z,
+; EG-NEXT:    7(9.809089e-45), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T5.X, T7.W, literal.x, 1,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BIT_ALIGN_INT T4.Z, PV.W, T10.W, literal.y,
+; EG-NEXT:     OR_INT T10.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T14.W, PV.X, T4.X,
+; EG-NEXT:    5(7.006492e-45), 31(4.344025e-44)
+; EG-NEXT:     BFE_UINT T1.X, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Y, T11.W, PS,
+; EG-NEXT:     SETGE_UINT * T2.Z, PV.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:    5(7.006492e-45), 0(0.000000e+00)
+; EG-NEXT:    ALU clause starting at 1865:
+; EG-NEXT:     SETE_INT T11.W, T4.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T4.Z, T6.W,
+; EG-NEXT:     CNDE_INT T4.X, PV.W, PS, T2.Z,
+; EG-NEXT:     SUB_INT T4.Y, T10.W, T3.W,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, T3.Y, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT T11.W, T2.Y, T1.X, BS:VEC_102/SCL_221
+; EG-NEXT:     OR_INT * T12.W, T2.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SETGE_UINT T1.X, PS, T2.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T0.Y,
+; EG-NEXT:     SETE_INT T5.Z, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T14.W, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T15.W, PV.X, T10.W, PV.Y,
+; EG-NEXT:     LSHL T2.X, PS, 1,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T5.Z, T11.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SUBB_UINT T14.W, T11.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT * T16.W, T2.Z, T1.Y,
+; EG-NEXT:     SUBB_UINT * T5.X, T10.W, T3.W,
+; EG-NEXT:     SUBB_UINT T3.Y, T9.W, T2.W,
+; EG-NEXT:     SUB_INT * T6.Z, T3.Z, T1.Z,
+; EG-NEXT:     SUB_INT T9.W, T16.W, T14.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T10.W, T2.Y, T11.W, T5.Z,
+; EG-NEXT:     SUB_INT T7.X, T4.Z, T6.W,
+; EG-NEXT:     LSHL T4.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T5.Z, T5.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T9.W, T2.Y, T2.Z, PV.W,
+; EG-NEXT:     SUB_INT * T11.W, T6.Z, T3.Y,
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T8.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T6.X, T3.Z, PS,
+; EG-NEXT:     BIT_ALIGN_INT T2.Z, PV.W, T10.W, literal.y,
+; EG-NEXT:     OR_INT T9.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T10.W, PV.X, T5.X,
+; EG-NEXT:    6(8.407791e-45), 31(4.344025e-44)
+; EG-NEXT:     CNDE_INT T4.X, T4.X, T4.Z, PS,
+; EG-NEXT:     SETGE_UINT T3.Y, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T3.Z, PV.Z, T1.Y,
+; EG-NEXT:     BIT_ALIGN_INT T10.W, PV.Y, T13.W, literal.x,
+; EG-NEXT:     SETGE_UINT * T11.W, PV.Z, T1.Y,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T5.X, PV.W, T1.Z,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PS, PV.Y,
+; EG-NEXT:     SUB_INT T3.Z, T9.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, PV.X, T15.W, literal.x,
+; EG-NEXT:     OR_INT * T13.W, T2.X, T8.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SETGE_UINT T2.X, T10.W, T1.Z,
+; EG-NEXT:     SETGE_UINT T3.Y, PS, T3.W,
+; EG-NEXT:     SETE_INT T4.Z, PV.W, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT * T14.W, PV.W, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T15.W, T2.Y, T9.W, T3.Z,
+; EG-NEXT:     LSHL T4.X, PV.W, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T4.Z, T14.W, T3.Y,
+; EG-NEXT:     SUB_INT T3.Z, T13.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T14.W, T5.X, T2.X, T1.X,
+; EG-NEXT:     SUB_INT * T16.W, T12.W, T2.W,
+; EG-NEXT:     SUBB_UINT T1.X, T12.W, T2.W,
+; EG-NEXT:     SUB_INT * T4.Y, T10.W, T1.Z, BS:VEC_201
+; EG-NEXT:     SUBB_UINT * T4.Z, T13.W, T3.W,
+; EG-NEXT:     SUB_INT * T17.W, T11.W, T6.W,
+; EG-NEXT:     CNDE_INT * T12.W, T14.W, T12.W, T16.W,
+; EG-NEXT:     LSHL T2.X, PV.W, 1,
+; EG-NEXT:     BFE_UINT T5.Y, T7.W, literal.x, 1,
+; EG-NEXT:     SUB_INT T4.Z, T17.W, T4.Z, BS:VEC_210
+; EG-NEXT:     SUB_INT T16.W, T4.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T13.W, T3.Y, T13.W, T3.Z,
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
+; EG-NEXT:     LSHL T1.X, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Y, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T3.Z, T14.W, T10.W, PV.W, BS:VEC_120/SCL_212
+; EG-NEXT:    5(7.006492e-45), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T10.W, T3.Y, T11.W, T4.Z,
+; EG-NEXT:     OR_INT * T11.W, T2.X, T5.Y,
+; EG-NEXT:     BFE_UINT T2.X, T5.W, literal.x, 1,
+; EG-NEXT:     SETGE_UINT T3.Y, PS, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT * T4.Z, PV.W, T13.W, literal.y, BS:VEC_021/SCL_122
+; EG-NEXT:    3(4.203895e-45), 31(4.344025e-44)
+; EG-NEXT:     BIT_ALIGN_INT T10.W, T3.Z, T12.W, literal.x,
+; EG-NEXT:     OR_INT * T12.W, T1.X, T4.Y,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T1.X, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT T4.Y, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT T3.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T13.W, T4.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T14.W, T4.Z, T6.W,
+; EG-NEXT:     CNDE_INT T5.X, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T5.Y, T12.W, T3.W,
+; EG-NEXT:     CNDE_INT * T3.Z, PV.X, PV.Y, T3.Y,
+; EG-NEXT:     SUB_INT T13.W, T11.W, T2.W,
+; EG-NEXT:     OR_INT * T14.W, T4.X, T2.X,
+; EG-NEXT:     SETGE_UINT T1.X, PS, T0.Y,
+; EG-NEXT:     SUBB_UINT T3.Y, T11.W, T2.W,
+; EG-NEXT:     SUB_INT T5.Z, T10.W, T1.Z, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T11.W, T3.Z, T11.W, PV.W, BS:VEC_102/SCL_221
+; EG-NEXT:     CNDE_INT * T13.W, T5.X, T12.W, T5.Y,
+; EG-NEXT:     LSHL T2.X, PV.W, 1,
+; EG-NEXT:     LSHL T4.Y, T11.W, 1,
+; EG-NEXT:     SUBB_UINT * T6.Z, T12.W, T3.W, BS:VEC_120/SCL_212
+; EG-NEXT:     SUB_INT T12.W, T4.Z, T6.W,
+; EG-NEXT:     SUB_INT * T16.W, T5.Z, T3.Y,
+; EG-NEXT:     BFE_UINT T4.X, T7.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Y, T3.Z, T10.W, PS,
+; EG-NEXT:     SUBB_UINT T3.Z, T9.W, T0.Y, BS:VEC_201
+; EG-NEXT:     SUB_INT T9.W, T2.Z, T1.Y, BS:VEC_210
+; EG-NEXT:     SUB_INT * T10.W, PV.W, T6.Z,
+; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T6.X, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T5.Y, T5.X, T4.Z, PS,
+; EG-NEXT:     SUB_INT T3.Z, PV.W, PV.Z,
+; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.Y, T11.W, literal.y,
+; EG-NEXT:     OR_INT * T10.W, T4.Y, PV.X,
+; EG-NEXT:    4(5.605194e-45), 31(4.344025e-44)
+; EG-NEXT:    ALU clause starting at 1978:
+; EG-NEXT:     SETGE_UINT T4.X, T10.W, T2.W,
+; EG-NEXT:     SETE_INT T3.Y, T9.W, T1.Z, BS:VEC_201
+; EG-NEXT:     CNDE_INT * T2.Z, T2.Y, T2.Z, T3.Z,
+; EG-NEXT:     BIT_ALIGN_INT T11.W, T5.Y, T13.W, literal.x,
+; EG-NEXT:     OR_INT * T12.W, T2.X, T6.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SETGE_UINT T2.X, T9.W, T1.Z,
+; EG-NEXT:     SETGE_UINT T2.Y, PS, T3.W,
+; EG-NEXT:     SETE_INT * T3.Z, PV.W, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     BIT_ALIGN_INT T13.W, T2.Z, T15.W, literal.x, BS:VEC_102/SCL_221
+; EG-NEXT:     SETGE_UINT * T15.W, T11.W, T6.W,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T5.X, PV.W, T1.Y,
+; EG-NEXT:     CNDE_INT T2.Y, T3.Z, PS, T2.Y,
+; EG-NEXT:     SUB_INT T2.Z, T12.W, T3.W,
+; EG-NEXT:     CNDE_INT * T15.W, T3.Y, T2.X, T4.X,
+; EG-NEXT:     SUB_INT * T16.W, T10.W, T2.W,
+; EG-NEXT:     SUBB_UINT T2.X, T10.W, T2.W,
+; EG-NEXT:     SUB_INT * T3.Y, T9.W, T1.Z, BS:VEC_201
+; EG-NEXT:     SUBB_UINT * T3.Z, T12.W, T3.W,
+; EG-NEXT:     SUB_INT * T17.W, T11.W, T6.W,
+; EG-NEXT:     CNDE_INT * T10.W, T15.W, T10.W, T16.W,
+; EG-NEXT:     LSHL T4.X, PV.W, 1,
+; EG-NEXT:     BFE_UINT T4.Y, T7.W, literal.x, 1,
+; EG-NEXT:     SUB_INT T3.Z, T17.W, T3.Z, BS:VEC_210
+; EG-NEXT:     SUB_INT T16.W, T3.Y, T2.X,
+; EG-NEXT:     CNDE_INT * T12.W, T2.Y, T12.W, T2.Z,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:     LSHL T2.X, PS, 1,
+; EG-NEXT:     BFE_UINT T3.Y, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT * T2.Z, T15.W, T9.W, PV.W, BS:VEC_120/SCL_212
+; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T9.W, T2.Y, T11.W, T3.Z,
+; EG-NEXT:     OR_INT * T11.W, T4.X, T4.Y,
+; EG-NEXT:     SETGE_UINT T4.X, T13.W, T1.Y,
+; EG-NEXT:     SETGE_UINT T2.Y, PS, T2.W,
+; EG-NEXT:     BIT_ALIGN_INT * T3.Z, PV.W, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BIT_ALIGN_INT T9.W, T2.Z, T10.W, literal.x,
+; EG-NEXT:     OR_INT * T10.W, T2.X, T3.Y,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SETE_INT T2.X, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT T3.Y, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT T2.Z, PS, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T12.W, T3.Z, T6.W,
+; EG-NEXT:     SETGE_UINT * T15.W, T3.Z, T6.W,
+; EG-NEXT:     CNDE_INT T6.X, PV.W, PS, PV.Z,
+; EG-NEXT:     CNDE_INT T2.Y, PV.X, PV.Y, T2.Y,
+; EG-NEXT:     SUB_INT T2.Z, T11.W, T2.W,
+; EG-NEXT:     SUBB_UINT T12.W, T11.W, T2.W,
+; EG-NEXT:     SUB_INT * T15.W, T9.W, T1.Z,
+; EG-NEXT:     SUB_INT T2.X, T10.W, T3.W,
+; EG-NEXT:     SUBB_UINT T3.Y, T10.W, T3.W,
+; EG-NEXT:     SUB_INT T4.Z, T3.Z, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT * T12.W, PS, PV.W,
+; EG-NEXT:     CNDE_INT * T11.W, T2.Y, T11.W, T2.Z,
+; EG-NEXT:     LSHL T7.X, PV.W, 1,
+; EG-NEXT:     BFE_UINT T4.Y, T7.W, 1, 1,
+; EG-NEXT:     CNDE_INT T2.Z, T2.Y, T9.W, T12.W,
+; EG-NEXT:     SUB_INT * T9.W, T4.Z, T3.Y,
+; EG-NEXT:     CNDE_INT * T10.W, T6.X, T10.W, T2.X,
+; EG-NEXT:     LSHL T2.X, PV.W, 1,
+; EG-NEXT:     BFE_UINT T2.Y, T8.W, literal.x, 1,
+; EG-NEXT:     CNDE_INT T3.Z, T6.X, T3.Z, T9.W,
+; EG-NEXT:     BIT_ALIGN_INT T9.W, T2.Z, T11.W, literal.y,
+; EG-NEXT:     OR_INT * T11.W, T7.X, T4.Y,
+; EG-NEXT:    2(2.802597e-45), 31(4.344025e-44)
+; EG-NEXT:     SETGE_UINT T6.X, PS, T2.W,
+; EG-NEXT:     SETE_INT T3.Y, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT T2.Z, PV.W, T1.Z,
+; EG-NEXT:     BIT_ALIGN_INT T10.W, PV.Z, T10.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T12.W, PV.X, PV.Y,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T2.X, PS, T3.W,
+; EG-NEXT:     SUB_INT T2.Y, PV.W, T6.W, BS:VEC_102/SCL_221
+; EG-NEXT:     CNDE_INT T2.Z, PV.Y, PV.Z, PV.X,
+; EG-NEXT:     CNDE_INT T15.W, T5.X, T4.X, T1.X,
+; EG-NEXT:     SUB_INT * T16.W, T14.W, T0.Y,
+; EG-NEXT:     SUBB_UINT T1.X, T14.W, T0.Y,
+; EG-NEXT:     SUB_INT * T3.Y, T13.W, T1.Y, BS:VEC_120/SCL_212
+; EG-NEXT:     SETGE_UINT * T3.Z, T12.W, T3.W,
+; EG-NEXT:     SETE_INT T17.W, T10.W, T6.W,
+; EG-NEXT:     SETGE_UINT * T18.W, T10.W, T6.W,
+; EG-NEXT:     SUB_INT T4.X, T11.W, T2.W,
+; EG-NEXT:     CNDE_INT * T4.Y, PV.W, PS, T3.Z,
+; EG-NEXT:     SUB_INT T3.Z, T12.W, T3.W,
+; EG-NEXT:     SUB_INT * T17.W, T3.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T14.W, T15.W, T14.W, T16.W,
+; EG-NEXT:     LSHL T1.X, PV.W, 1,
+; EG-NEXT:     BFE_UINT * T3.Y, T5.W, literal.x, 1,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T4.Z, T15.W, T13.W, T17.W,
+; EG-NEXT:     CNDE_INT T12.W, T4.Y, T12.W, T3.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T13.W, T2.Z, T11.W, T4.X,
+; EG-NEXT:     LSHL T4.X, PS, 1,
+; EG-NEXT:     LSHL T5.Y, PV.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, T4.Z, T14.W, literal.x,
+; EG-NEXT:     OR_INT T14.W, T1.X, T3.Y,
+; EG-NEXT:     SUB_INT * T15.W, T2.Y, T2.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_UINT T1.X, T8.W, 1, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T4.Y, T10.W, PS,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T10.W, PV.Z, T1.Y,
+; EG-NEXT:     SETGE_UINT * T15.W, PV.Z, T1.Y,
+; EG-NEXT:     AND_INT T2.X, T7.W, 1,
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, PS, PV.Z,
+; EG-NEXT:     SUB_INT T4.Z, T14.W, T0.Y, BS:VEC_102/SCL_221
+; EG-NEXT:     BIT_ALIGN_INT T7.W, PV.Y, T12.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T10.W, T5.Y, PV.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, T14.W, T0.Y,
+; EG-NEXT:     SUB_INT T2.Y, T3.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T5.Z, PS, T3.W,
+; EG-NEXT:     SETE_INT * T12.W, PV.W, T6.W, BS:VEC_021/SCL_122
+; EG-NEXT:    ALU clause starting at 2093:
+; EG-NEXT:     SETGE_UINT * T15.W, T7.W, T6.W,
+; EG-NEXT:     SUBB_UINT T5.X, T11.W, T2.W,
+; EG-NEXT:     CNDE_INT * T4.Y, T12.W, PV.W, T5.Z, BS:VEC_201
+; EG-NEXT:     SUB_INT T5.Z, T10.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T11.W, T2.Y, T1.X,
+; EG-NEXT:     CNDE_INT * T12.W, T3.Y, T14.W, T4.Z,
+; EG-NEXT:     SUB_INT T1.X, T9.W, T1.Z,
+; EG-NEXT:     LSHL T2.Y, PS, 1,
+; EG-NEXT:     BFE_UINT T4.Z, T5.W, 1, 1, BS:VEC_201
+; EG-NEXT:     CNDE_INT T11.W, T3.Y, T3.Z, PV.W, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T14.W, T4.Y, T10.W, PV.Z,
+; EG-NEXT:     LSHL T6.X, PS, 1,
+; EG-NEXT:     AND_INT T3.Y, T8.W, 1,
+; EG-NEXT:     BIT_ALIGN_INT T3.Z, PV.W, T12.W, literal.x,
+; EG-NEXT:     OR_INT T8.W, PV.Y, PV.Z,
+; EG-NEXT:     SUB_INT * T11.W, PV.X, T5.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT T1.X, T2.Z, T9.W, PS,
+; EG-NEXT:     SETGE_UINT T2.Y, PV.W, T0.Y,
+; EG-NEXT:     SETE_INT T2.Z, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETGE_UINT T9.W, PV.Z, T1.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T11.W, PV.X, PV.Y,
+; EG-NEXT:     SUB_INT T5.X, PS, T3.W,
+; EG-NEXT:     CNDE_INT T2.Y, PV.Z, PV.W, PV.Y,
+; EG-NEXT:     SUB_INT T2.Z, T8.W, T0.Y,
+; EG-NEXT:     BIT_ALIGN_INT T9.W, PV.X, T13.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     OR_INT * T12.W, T4.X, T2.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SETGE_UINT T1.X, PS, T2.W,
+; EG-NEXT:     SETE_INT T3.Y, PV.W, T1.Z,
+; EG-NEXT:     SETGE_UINT T4.Z, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T13.W, PS, T2.W,
+; EG-NEXT:     SUB_INT * T15.W, PV.W, T1.Z,
+; EG-NEXT:     SUBB_UINT T2.X, T8.W, T0.Y,
+; EG-NEXT:     SUB_INT T5.Y, T3.Z, T1.Y, BS:VEC_102/SCL_221
+; EG-NEXT:     SUB_INT T1.Z, PS, PV.W,
+; EG-NEXT:     CNDE_INT T13.W, PV.Y, PV.Z, PV.X,
+; EG-NEXT:     CNDE_INT * T8.W, T2.Y, T8.W, T2.Z,
+; EG-NEXT:     LSHL T1.X, PS, 1,
+; EG-NEXT:     CNDE_INT T3.Y, PV.W, T9.W, PV.Z,
+; EG-NEXT:     SUBB_UINT * T1.Z, T10.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T9.W, T7.W, T6.W,
+; EG-NEXT:     SUB_INT * T10.W, T5.Y, T2.X,
+; EG-NEXT:     AND_INT T2.X, T5.W, 1,
+; EG-NEXT:     CNDE_INT T2.Y, T2.Y, T3.Z, PS,
+; EG-NEXT:     SUB_INT T1.Z, PV.W, T1.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT * T2.W, T12.W, T2.W, BS:VEC_120/SCL_212
+; EG-NEXT:     XOR_INT * T5.W, T3.Y, T1.W,
+; EG-NEXT:     SUB_INT * T4.X, PV.W, T1.W,
+; EG-NEXT:     CNDE_INT * T3.Y, T13.W, T12.W, T2.W,
+; EG-NEXT:     CNDE_INT T1.Z, T4.Y, T7.W, T1.Z,
+; EG-NEXT:     BIT_ALIGN_INT T2.W, T2.Y, T8.W, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     OR_INT * T5.W, T1.X, T2.X,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SETGE_UINT T1.X, PS, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T2.Y, PV.W, T1.Y,
+; EG-NEXT:     SETGE_UINT T2.Z, PV.W, T1.Y,
+; EG-NEXT:     SUBB_UINT T7.W, PS, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT * T8.W, PV.W, T1.Y,
+; EG-NEXT:     SUB_INT T2.X, T5.W, T0.Y,
+; EG-NEXT:     SUB_INT T0.Y, PS, PV.W,
+; EG-NEXT:     CNDE_INT T2.Z, PV.Y, PV.Z, PV.X,
+; EG-NEXT:     BIT_ALIGN_INT T7.W, T1.Z, T14.W, literal.x, BS:VEC_021/SCL_122
+; EG-NEXT:     XOR_INT * T8.W, T3.Y, T1.W,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     SUBB_UINT T1.X, PS, T1.W,
+; EG-NEXT:     SETGE_UINT * T1.Y, T11.W, T3.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SETE_INT T1.Z, T7.W, T6.W,
+; EG-NEXT:     CNDE_INT * T2.W, T2.Z, T2.W, T0.Y, BS:VEC_021/SCL_122
+; EG-NEXT:     CNDE_INT * T5.W, T2.Z, T5.W, T2.X,
+; EG-NEXT:     SETGE_UINT * T2.X, T7.W, T6.W,
+; EG-NEXT:     SUBB_UINT * T0.Y, T11.W, T3.W,
+; EG-NEXT:     SUB_INT * T2.Z, T7.W, T6.W,
+; EG-NEXT:     XOR_INT T3.W, T5.W, T4.W,
+; EG-NEXT:     XOR_INT * T2.W, T2.W, T4.W,
+; EG-NEXT:     SUB_INT T6.X, PS, T4.W,
+; EG-NEXT:     SUBB_UINT T2.Y, PV.W, T4.W,
+; EG-NEXT:     SUB_INT T2.Z, T2.Z, T0.Y,
+; EG-NEXT:     CNDE_INT T2.W, T1.Z, T2.X, T1.Y, BS:VEC_102/SCL_221
+; EG-NEXT:     SUB_INT * T5.W, T4.X, T1.X,
+; EG-NEXT:     CNDE_INT T1.X, PV.W, T7.W, PV.Z, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT T5.Y, PV.X, PV.Y,
+; EG-NEXT:     CNDE_INT T1.Z, PV.W, T11.W, T5.X, BS:VEC_201
+; EG-NEXT:     XOR_INT T2.W, T3.X, T0.W,
+; EG-NEXT:     XOR_INT * T6.W, T0.X, T0.W,
+; EG-NEXT:     SUB_INT T0.X, PS, T0.W,
+; EG-NEXT:     SUBB_UINT T0.Y, PV.W, T0.W,
+; EG-NEXT:     SUB_INT T5.Z, T8.W, T1.W, BS:VEC_021/SCL_122
+; EG-NEXT:     XOR_INT T1.W, PV.Z, T0.Z,
+; EG-NEXT:     XOR_INT * T6.W, PV.X, T0.Z,
+; EG-NEXT:     SUB_INT T5.X, T3.W, T4.W,
+; EG-NEXT:     SUB_INT T1.Z, PS, T0.Z,
+; EG-NEXT:     SUBB_UINT T3.W, PV.W, T0.Z,
+; EG-NEXT:     SUB_INT * T4.W, PV.X, PV.Y,
+; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
+; EG-NEXT:     SUB_INT * T4.Y, PV.Z, PV.W,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT T1.X, PV.X, literal.x,
+; EG-NEXT:     SUB_INT T4.Z, T2.W, T0.W,
+; EG-NEXT:     SUB_INT * T4.X, T1.W, T0.Z,
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
   %den_ptr = getelementptr <4 x i64>, ptr addrspace(1) %in, i64 1
   %num = load <4 x i64>, ptr addrspace(1) %in
   %den = load <4 x i64>, ptr addrspace(1) %den_ptr
@@ -9056,9 +9052,9 @@ define amdgpu_kernel void @srem_v4i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 48, @11, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T3.XYZW, T0.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.XYZW, T1.X, 1
+; EG-NEXT:    ALU 49, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T3.XYZW, T1.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.XYZW, T2.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 6:
 ; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 16, #1
@@ -9068,53 +9064,54 @@ define amdgpu_kernel void @srem_v4i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     ASHR * T1.W, T1.W, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     ASHR T2.Z, T0.Y, literal.x,
-; EG-NEXT:     ASHR T2.W, T1.Y, literal.x, BS:VEC_120/SCL_212
-; EG-NEXT:     LSHR * T1.W, PV.W, literal.y,
-; EG-NEXT:    31(4.344025e-44), 30(4.203895e-44)
-; EG-NEXT:     ADD_INT T0.Y, T1.Z, PS,
-; EG-NEXT:     ASHR T3.Z, T0.W, literal.x,
-; EG-NEXT:     LSHR T0.W, PV.W, literal.y,
-; EG-NEXT:     LSHR * T2.W, PV.Z, literal.y,
-; EG-NEXT:    31(4.344025e-44), 30(4.203895e-44)
-; EG-NEXT:     ADD_INT T2.X, T0.X, PS,
-; EG-NEXT:     ADD_INT T1.Y, T1.X, PV.W, BS:VEC_120/SCL_212
-; EG-NEXT:     LSHR T2.Z, PV.Z, literal.x,
-; EG-NEXT:     ADDC_UINT T1.W, T1.Z, T1.W,
-; EG-NEXT:     AND_INT * T3.W, PV.Y, literal.y,
+; EG-NEXT:     LSHR * T1.W, PV.W, literal.x,
+; EG-NEXT:    30(4.203895e-44), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT T2.W, T1.Z, PV.W,
+; EG-NEXT:     ASHR * T3.W, T1.Y, literal.x,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     LSHR T3.W, PS, literal.x,
+; EG-NEXT:     AND_INT * T2.W, PV.W, literal.y,
 ; EG-NEXT:    30(4.203895e-44), -4(nan)
-; EG-NEXT:     SUBB_UINT T3.X, T1.Z, PS,
-; EG-NEXT:     BFE_INT T0.Y, PV.W, 0.0, 1,
-; EG-NEXT:     ADD_INT T3.Z, T0.Z, PV.Z, BS:VEC_120/SCL_212
-; EG-NEXT:     ADDC_UINT T0.W, T1.X, T0.W,
-; EG-NEXT:     AND_INT * T1.W, PV.Y, literal.x,
+; EG-NEXT:     SUBB_UINT T1.Y, T1.Z, PS,
+; EG-NEXT:     ASHR T2.Z, T0.W, literal.x,
+; EG-NEXT:     ADD_INT T0.W, T1.X, PV.W,
+; EG-NEXT:     ADDC_UINT * T1.W, T1.Z, T1.W,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_INT T2.X, PS, 0.0, 1,
+; EG-NEXT:     ADDC_UINT T2.Y, T1.X, T3.W,
+; EG-NEXT:     AND_INT T3.Z, PV.W, literal.x,
+; EG-NEXT:     ASHR T0.W, T0.Y, literal.y,
+; EG-NEXT:     LSHR * T1.W, PV.Z, literal.z,
+; EG-NEXT:    -4(nan), 31(4.344025e-44)
+; EG-NEXT:    30(4.203895e-44), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT T3.X, T0.Z, PS,
+; EG-NEXT:     LSHR T0.Y, PV.W, literal.x,
+; EG-NEXT:     SUBB_UINT T2.Z, T1.X, PV.Z,
+; EG-NEXT:     BFE_INT T0.W, PV.Y, 0.0, 1,
+; EG-NEXT:     SUB_INT * T4.W, PV.X, T1.Y,
+; EG-NEXT:    30(4.203895e-44), 0(0.000000e+00)
+; EG-NEXT:     SUB_INT T4.Y, PV.W, PV.Z,
+; EG-NEXT:     ADD_INT T2.Z, T0.X, PV.Y,
+; EG-NEXT:     ADDC_UINT T0.W, T0.Z, T1.W,
+; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
 ; EG-NEXT:    -4(nan), 0(0.000000e+00)
-; EG-NEXT:     ADDC_UINT T4.X, T0.Z, T2.Z,
-; EG-NEXT:     SUBB_UINT T1.Y, T1.X, PS,
-; EG-NEXT:     BFE_INT T2.Z, PV.W, 0.0, 1,
-; EG-NEXT:     AND_INT T0.W, PV.Z, literal.x,
-; EG-NEXT:     SUB_INT * T4.W, PV.Y, PV.X,
+; EG-NEXT:     SUBB_UINT T2.X, T0.Z, PS,
+; EG-NEXT:     BFE_INT T1.Y, PV.W, 0.0, 1,
+; EG-NEXT:     SUB_INT T4.Z, T1.Z, T2.W, BS:VEC_120/SCL_212
+; EG-NEXT:     ADDC_UINT T0.W, T0.X, T0.Y,
+; EG-NEXT:     AND_INT * T2.W, PV.Z, literal.x,
 ; EG-NEXT:    -4(nan), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T3.X, T0.Z, PV.W,
-; EG-NEXT:     SUB_INT T4.Y, PV.Z, PV.Y,
-; EG-NEXT:     BFE_INT T2.Z, PV.X, 0.0, 1,
-; EG-NEXT:     ADDC_UINT T2.W, T0.X, T2.W,
-; EG-NEXT:     AND_INT * T5.W, T2.X, literal.x,
-; EG-NEXT:    -4(nan), 0(0.000000e+00)
-; EG-NEXT:     SUBB_UINT T0.Y, T0.X, PS,
-; EG-NEXT:     SUB_INT T4.Z, T1.Z, T3.W,
-; EG-NEXT:     BFE_INT T2.W, PV.W, 0.0, 1,
-; EG-NEXT:     SUB_INT * T3.W, PV.Z, PV.X,
-; EG-NEXT:     SUB_INT T4.X, T1.X, T1.W,
-; EG-NEXT:     SUB_INT T3.Y, PV.W, PV.Y,
-; EG-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR T1.X, PV.W, literal.x,
-; EG-NEXT:     SUB_INT T3.Z, T0.Z, T0.W, BS:VEC_021/SCL_122
-; EG-NEXT:     SUB_INT * T3.X, T0.X, T5.W,
+; EG-NEXT:     SUB_INT T4.X, T1.X, T3.Z,
+; EG-NEXT:     SUBB_UINT T1.Z, T0.X, PS, BS:VEC_120/SCL_212
+; EG-NEXT:     BFE_INT T0.W, PV.W, 0.0, 1,
+; EG-NEXT:     SUB_INT * T3.W, PV.Y, PV.X,
+; EG-NEXT:     LSHR T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:     SUB_INT * T3.Y, PV.W, PV.Z,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT T2.X, PV.X, literal.x,
+; EG-NEXT:     SUB_INT T3.Z, T0.Z, T1.W, BS:VEC_021/SCL_122
+; EG-NEXT:     SUB_INT * T3.X, T0.X, T2.W,
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
   %num = load <4 x i64>, ptr addrspace(1) %in
   %result = srem <4 x i64> %num, <i64 4, i64 4, i64 4, i64 4>
   store <4 x i64> %result, ptr addrspace(1) %out

@@ -456,4 +456,85 @@ define void @test_neg_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
   ret void
 }
 
-
+define i128 @PR196493(i1 %c, i128 %a, ptr %m) {
+; SSE2-LABEL: PR196493:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE2-NEXT:    andl $1, %edi
+; SSE2-NEXT:    negl %edi
+; SSE2-NEXT:    movd %edi, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE2-NEXT:    movq %xmm0, %rdx
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: PR196493:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE4-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE4-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE4-NEXT:    andl $1, %edi
+; SSE4-NEXT:    negl %edi
+; SSE4-NEXT:    movd %edi, %xmm0
+; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE4-NEXT:    pand %xmm1, %xmm0
+; SSE4-NEXT:    movq %xmm0, %rax
+; SSE4-NEXT:    pextrq $1, %xmm0, %rdx
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: PR196493:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    andl $1, %edi
+; AVX1-NEXT:    negl %edi
+; AVX1-NEXT:    vmovd %edi, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR196493:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-NEXT:    andl $1, %edi
+; AVX2-NEXT:    negl %edi
+; AVX2-NEXT:    vmovd %edi, %xmm1
+; AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: PR196493:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqa (%rcx), %xmm0
+; AVX512F-NEXT:    andb $1, %dil
+; AVX512F-NEXT:    negb %dil
+; AVX512F-NEXT:    kmovw %edi, %k1
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: PR196493:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    andb $1, %dil
+; AVX512VL-NEXT:    negb %dil
+; AVX512VL-NEXT:    kmovd %edi, %k1
+; AVX512VL-NEXT:    vmovdqa32 (%rcx), %xmm0 {%k1} {z}
+; AVX512VL-NEXT:    vmovq %xmm0, %rax
+; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VL-NEXT:    retq
+  %b = load i128, ptr %m
+  %sel = select i1 %c, i128 %b, i128 0
+  ret i128 %sel
+}

@@ -83,8 +83,9 @@ public:
     return simplifyGEPInst(Ty, Ptr, IdxList, NW, SQ);
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
-    return simplifySelectInst(C, True, False, SQ);
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF = FastMathFlags()) const override {
+    return simplifySelectInst(C, True, False, FMF, SQ);
   }
 
   Value *FoldExtractValue(Value *Agg,
@@ -119,10 +120,10 @@ public:
     return simplifyCastInst(Op, V, DestTy, SQ);
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource = nullptr) const override {
-    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, SQ,
-                                   dyn_cast_if_present<CallBase>(FMFSource));
+  Value *
+  FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
+                      FastMathFlags FMF = FastMathFlags()) const override {
+    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, FMF, SQ);
   }
 
   //===--------------------------------------------------------------------===//

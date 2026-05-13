@@ -645,25 +645,21 @@ let Predicates = [HasStdExtP, IsRV64] in {
 
   def PADD_WS   : RVPBinaryScalar_rr<0b001, 0b01, 0b010, "padd.ws">;
 
-  let Defs = [VXSAT] in {
+  let Defs = [VXSAT] in
   def PSSHL_WS  : RVPBinaryScalar_rr<0b010, 0b01, 0b010, "psshl.ws">;
   def SHL       : RVPBinaryScalar_rr<0b010, 0b11, 0b010, "shl">;
-  } // Defs = [VXSAT]
 
-  let Defs = [VXSAT] in {
+  let Defs = [VXSAT] in
   def PSSHLR_WS : RVPBinaryScalar_rr<0b011, 0b01, 0b010, "psshlr.ws">;
   def SHLR      : RVPBinaryScalar_rr<0b011, 0b11, 0b010, "shlr">;
-  } // Defs = [VXSAT]
 
-  let Defs = [VXSAT] in {
+  let Defs = [VXSAT] in
   def PSSHA_WS  : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "pssha.ws">;
   def SHA       : RVPBinaryScalar_rr<0b110, 0b11, 0b010, "sha">;
-  } // Defs = [VXSAT]
 
-  let Defs = [VXSAT] in {
+  let Defs = [VXSAT] in
   def PSSHAR_WS : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "psshar.ws">;
   def SHAR      : RVPBinaryScalar_rr<0b111, 0b11, 0b010, "shar">;
-  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
@@ -1101,8 +1097,10 @@ let Predicates = [HasStdExtP] in {
   def PAS_HX   : RVPBinary_rr<0b0000, 0b00, 0b110, "pas.hx">;
   def PSA_HX   : RVPBinary_rr<0b0000, 0b10, 0b110, "psa.hx">;
 
+  let Defs = [VXSAT] in {
   def PSAS_HX  : RVPBinary_rr<0b0010, 0b00, 0b110, "psas.hx">;
   def PSSA_HX  : RVPBinary_rr<0b0010, 0b10, 0b110, "pssa.hx">;
+  } // Defs = [VXSAT]
 
   def PAAS_HX  : RVPBinary_rr<0b0011, 0b00, 0b110, "paas.hx">;
   def PASA_HX  : RVPBinary_rr<0b0011, 0b10, 0b110, "pasa.hx">;
@@ -1139,8 +1137,10 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PAS_WX   : RVPBinary_rr<0b0000, 0b01, 0b110, "pas.wx">;
   def PSA_WX   : RVPBinary_rr<0b0000, 0b11, 0b110, "psa.wx">;
 
+  let Defs = [VXSAT] in {
   def PSAS_WX  : RVPBinary_rr<0b0010, 0b01, 0b110, "psas.wx">;
   def PSSA_WX  : RVPBinary_rr<0b0010, 0b11, 0b110, "pssa.wx">;
+  } // Defs = [VXSAT]
 
   def PAAS_WX  : RVPBinary_rr<0b0011, 0b01, 0b110, "paas.wx">;
   def PASA_WX  : RVPBinary_rr<0b0011, 0b11, 0b110, "pasa.wx">;
@@ -1632,8 +1632,10 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PAS_DHX      : RVPPairBinaryExchanged_rr<0b0000, 0b00, "pas.dhx">;
   def PSA_DHX      : RVPPairBinaryExchanged_rr<0b0000, 0b10, "psa.dhx">;
 
+  let Defs = [VXSAT] in {
   def PSAS_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b00, "psas.dhx">;
   def PSSA_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b10, "pssa.dhx">;
+  } // Defs = [VXSAT]
 
   def PAAS_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b00, "paas.dhx">;
   def PASA_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b10, "pasa.dhx">;
@@ -1838,6 +1840,11 @@ let Predicates = [HasStdExtP, IsRV32] in {
 // Codegen patterns
 //===----------------------------------------------------------------------===//
 
+// Pattern class for GPRPair operations
+class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
+    : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
+          (Inst GPRPair:$rs1, GPRPair:$rs2)>;
+
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
 
@@ -1934,6 +1941,23 @@ def IncImm : SDNodeXForm<imm, [{
     return CurDAG->getTargetConstant(N->getZExtValue() + 1, SDLoc(N),
                                      N->getValueType(0));
 }]>;
+
+def SDT_RISCVBuildPairGPRVec : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                    SDTCisVT<1, i32>,
+                                                    SDTCisSameAs<1, 2>]>;
+def SDT_RISCVSplitGPRVec : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
+                                                SDTCisSameAs<0, 1>,
+                                                SDTCisVec<2>]>;
+
+// These nodes are used to handle 64-bit vector arguments and returns on RV32.
+// One side is a pair of i32 GPRs, the other is a 64-bit vector.
+// TOD: We might be able to use 32-bit vectors with concat_vectors/build_vector
+// and extract_subvector/extract_vectorelt instead. Using custom nodes prevents
+// 64-bit vector aithmetic operations in our lit tests from being split until
+// we can tune some generic combines.
+def RISCVBuildPairGPRVec : RVSDNode<"BuildPairGPRVec",
+                                    SDT_RISCVBuildPairGPRVec>;
+def RISCVSplitGPRVec     : RVSDNode<"SplitGPRVec", SDT_RISCVSplitGPRVec>;
 
 let Predicates = [HasStdExtP] in {
 
@@ -2185,6 +2209,78 @@ let Predicates = [HasStdExtP, IsRV32] in {
   // Build vector patterns
   def : Pat<(v2i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (PACK GPR:$a, GPR:$b)>;
+
+  // Basic 8-bit arithmetic patterns
+  def : PatGprPairGprPair<add, PADD_DB, v8i8>;
+  def : PatGprPairGprPair<sub, PSUB_DB, v8i8>;
+
+  // Basic 16-bit arithmetic patterns
+  def : PatGprPairGprPair<add, PADD_DH, v4i16>;
+  def : PatGprPairGprPair<sub, PSUB_DH, v4i16>;
+
+  // Basic 32-bit arithmetic patterns
+  def : PatGprPairGprPair<add, PADD_DW, v2i32>;
+  def : PatGprPairGprPair<sub, PSUB_DW, v2i32>;
+
+  // 8-bit saturating add/sub patterns
+  def : PatGprPairGprPair<saddsat, PSADD_DB, v8i8>;
+  def : PatGprPairGprPair<uaddsat, PSADDU_DB, v8i8>;
+  def : PatGprPairGprPair<ssubsat, PSSUB_DB, v8i8>;
+  def : PatGprPairGprPair<usubsat, PSSUBU_DB, v8i8>;
+
+  // 16-bit saturating add/sub patterns
+  def : PatGprPairGprPair<saddsat, PSADD_DH, v4i16>;
+  def : PatGprPairGprPair<uaddsat, PSADDU_DH, v4i16>;
+  def : PatGprPairGprPair<ssubsat, PSSUB_DH, v4i16>;
+  def : PatGprPairGprPair<usubsat, PSSUBU_DH, v4i16>;
+
+  // 32-bit saturating add/sub patterns
+  def : PatGprPairGprPair<saddsat, PSADD_DW, v2i32>;
+  def : PatGprPairGprPair<uaddsat, PSADDU_DW, v2i32>;
+  def : PatGprPairGprPair<ssubsat, PSSUB_DW, v2i32>;
+  def : PatGprPairGprPair<usubsat, PSSUBU_DW, v2i32>;
+
+  // 8-bit averaging patterns
+  def : PatGprPairGprPair<avgfloors, PAADD_DB, v8i8>;
+  def : PatGprPairGprPair<avgflooru, PAADDU_DB, v8i8>;
+  def : PatGprPairGprPair<riscv_asub, PASUB_DB, v8i8>;
+  def : PatGprPairGprPair<riscv_asubu, PASUBU_DB, v8i8>;
+
+  // 16-bit averaging patterns
+  def : PatGprPairGprPair<avgfloors, PAADD_DH, v4i16>;
+  def : PatGprPairGprPair<avgflooru, PAADDU_DH, v4i16>;
+  def : PatGprPairGprPair<riscv_asub, PASUB_DH, v4i16>;
+  def : PatGprPairGprPair<riscv_asubu, PASUBU_DH, v4i16>;
+
+  // 32-bit averaging patterns
+  def : PatGprPairGprPair<avgfloors, PAADD_DW, v2i32>;
+  def : PatGprPairGprPair<avgflooru, PAADDU_DW, v2i32>;
+  def : PatGprPairGprPair<riscv_asub, PASUB_DW, v2i32>;
+  def : PatGprPairGprPair<riscv_asubu, PASUBU_DW, v2i32>;
+
+  // 8-bit absolute difference patterns
+  def : Pat<(v8i8 (abs GPRPair:$rs1)), (PABD_DB GPRPair:$rs1, (v8i8 X0_Pair))>;
+  def : PatGprPairGprPair<abds, PABD_DB, v8i8>;
+  def : PatGprPairGprPair<abdu, PABDU_DB, v8i8>;
+
+  // 16-bit absolute difference patterns
+  def : Pat<(v4i16 (abs GPRPair:$rs1)), (PABD_DH GPRPair:$rs1, (v4i16 X0_Pair))>;
+  def : PatGprPairGprPair<abds, PABD_DH, v4i16>;
+  def : PatGprPairGprPair<abdu, PABDU_DH, v4i16>;
+
+  // [s|u]min/[s|u]max patterns
+  def : PatGprPairGprPair<smin, PMIN_DB, v8i8>;
+  def : PatGprPairGprPair<umin, PMINU_DB, v8i8>;
+  def : PatGprPairGprPair<smin, PMIN_DH, v4i16>;
+  def : PatGprPairGprPair<umin, PMINU_DH, v4i16>;
+  def : PatGprPairGprPair<smin, PMIN_DW, v2i32>;
+  def : PatGprPairGprPair<umin, PMINU_DW, v2i32>;
+  def : PatGprPairGprPair<smax, PMAX_DB, v8i8>;
+  def : PatGprPairGprPair<umax, PMAXU_DB, v8i8>;
+  def : PatGprPairGprPair<smax, PMAX_DH, v4i16>;
+  def : PatGprPairGprPair<umax, PMAXU_DH, v4i16>;
+  def : PatGprPairGprPair<smax, PMAX_DW, v2i32>;
+  def : PatGprPairGprPair<umax, PMAXU_DW, v2i32>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {

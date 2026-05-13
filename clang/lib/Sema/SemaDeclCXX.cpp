@@ -15180,7 +15180,7 @@ buildSingleCopyAssign(Sema &S, SourceLocation Loc, QualType T,
                       const ExprBuilder &To, const ExprBuilder &From,
                       bool CopyingBaseSubobject, bool Copying) {
   // Maybe we should use a memcpy?
-  if (T->isArrayType() && !T.isConstQualified() && !T.isVolatileQualified() &&
+  if (T->isArrayType() && !T.hasQualifiers() &&
       T.isTriviallyCopyableType(S.Context))
     return buildMemcpyForAssignmentOp(S, Loc, T, To, From);
 
@@ -19290,6 +19290,7 @@ bool Sema::DefineUsedVTables() {
         !(Class->getOwningModule() &&
           Class->getOwningModule()->isInterfaceOrPartition()) &&
         ClassTSK != TSK_ImplicitInstantiation &&
+        ClassTSK != TSK_ExplicitInstantiationDeclaration &&
         ClassTSK != TSK_ExplicitInstantiationDefinition) {
       const FunctionDecl *KeyFunctionDef = nullptr;
       if (!KeyFunction || (KeyFunction->hasBody(KeyFunctionDef) &&

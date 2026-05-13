@@ -65,7 +65,6 @@ class VPRegionBlock;
 class VPlan;
 class VPLane;
 class VPReplicateRecipe;
-class VPlanSlp;
 class Value;
 class LoopVectorizationCostModel;
 
@@ -535,6 +534,10 @@ public:
 
   /// Returns true if the recipe may have side-effects.
   bool mayHaveSideEffects() const;
+
+  /// Return true if we can safely execute this recipe unconditionally even if
+  /// it is masked originally.
+  bool isSafeToSpeculativelyExecute() const;
 
   /// Returns true for PHI-like recipes.
   bool isPhi() const;
@@ -1221,8 +1224,6 @@ public:
 /// predication.
 class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
                                         public VPIRMetadata {
-  friend class VPlanSlp;
-
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
   enum {
@@ -1230,8 +1231,6 @@ public:
         Instruction::OtherOpsEnd + 1, // Combines the incoming and previous
                                       // values of a first-order recurrence.
     Not,
-    SLPLoad,
-    SLPStore,
     // Creates a mask where each lane is active (true) whilst the current
     // counter (first operand + index) is less than the second operand. i.e.
     //    mask[i] = icmpt ult (op0 + i), op1
@@ -2872,11 +2871,10 @@ protected:
     assert((!Mask || !IG->isReverse()) &&
            "Reversed masked interleave-group not supported.");
     if (StoredValues.empty()) {
-      for (unsigned I = 0; I < IG->getFactor(); ++I)
-        if (Instruction *Inst = IG->getMember(I)) {
-          assert(!Inst->getType()->isVoidTy() && "must have result");
-          new VPRecipeValue(this, Inst);
-        }
+      for (Instruction *Inst : IG->members()) {
+        assert(!Inst->getType()->isVoidTy() && "must have result");
+        new VPRecipeValue(this, Inst);
+      }
     } else {
       for (auto *SV : StoredValues)
         addOperand(SV);
@@ -3252,11 +3250,6 @@ public:
     return true;
   }
 
-  /// Returns true if the recipe is used by a widened recipe via an intervening
-  /// VPPredInstPHIRecipe. In this case, the scalar values should also be packed
-  /// in a vector.
-  bool shouldPack() const;
-
   /// Return the mask of a predicated VPReplicateRecipe.
   VPValue *getMask() {
     assert(isPredicated() && "Trying to get the mask of a unpredicated recipe");
@@ -3484,13 +3477,6 @@ public:
                               VPCostContext &Ctx) const override {
     // TODO: Compute accurate cost after retiring the legacy cost model.
     return 0;
-  }
-
-  /// Returns true if the recipe uses scalars of operand \p Op.
-  bool usesScalars(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
   }
 
 protected:
@@ -4573,9 +4559,11 @@ class VPlan {
   SmallVector<VPBlockBase *> CreatedBlocks;
 
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
-  /// wrapping the original header of the scalar loop.
-  VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
-      : Entry(Entry), ScalarHeader(ScalarHeader) {
+  /// wrapping the original header of the scalar loop. The vector loop will have
+  /// index type \p IdxTy.
+  VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader, Type *IdxTy)
+      : Entry(Entry), ScalarHeader(ScalarHeader), VectorTripCount(IdxTy),
+        VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
     Entry->setPlan(this);
     assert(ScalarHeader->getNumSuccessors() == 0 &&
            "scalar header must be a leaf node");
@@ -4584,12 +4572,14 @@ class VPlan {
 public:
   /// Construct a VPlan for \p L. This will create VPIRBasicBlocks wrapping the
   /// original preheader and scalar header of \p L, to be used as entry and
-  /// scalar header blocks of the new VPlan.
-  VPlan(Loop *L);
+  /// scalar header blocks of the new VPlan. The vector loop will have index
+  /// type \p IdxTy.
+  VPlan(Loop *L, Type *IdxTy);
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
-  /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
-  VPlan(BasicBlock *ScalarHeaderBB) {
+  /// wrapping \p ScalarHeaderBB and vector loop index of type \p IdxTy.
+  VPlan(BasicBlock *ScalarHeaderBB, Type *IdxTy)
+      : VectorTripCount(IdxTy), VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
     setEntry(createVPBasicBlock("preheader"));
     ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
   }
@@ -4612,8 +4602,8 @@ public:
 
   /// Returns the preheader of the vector loop region, if one exists, or null
   /// otherwise.
-  VPBasicBlock *getVectorPreheader() {
-    VPRegionBlock *VectorRegion = getVectorLoopRegion();
+  VPBasicBlock *getVectorPreheader() const {
+    const VPRegionBlock *VectorRegion = getVectorLoopRegion();
     return VectorRegion
                ? cast<VPBasicBlock>(VectorRegion->getSinglePredecessor())
                : nullptr;
@@ -4622,6 +4612,10 @@ public:
   /// Returns the VPRegionBlock of the vector loop.
   LLVM_ABI_FOR_TEST VPRegionBlock *getVectorLoopRegion();
   LLVM_ABI_FOR_TEST const VPRegionBlock *getVectorLoopRegion() const;
+
+  /// Returns true if this VPlan is for an outer loop, i.e., its vector
+  /// loop region contains a nested loop region.
+  LLVM_ABI_FOR_TEST bool isOuterLoop() const;
 
   /// Returns the 'middle' block of the plan, that is the block that selects
   /// whether to execute the scalar tail loop or the exit block from the loop
@@ -4688,8 +4682,9 @@ public:
 
   /// The backedge taken count of the original loop.
   VPValue *getOrCreateBackedgeTakenCount() {
+    // BTC shares the canonical IV type with VectorTripCount.
     if (!BackedgeTakenCount)
-      BackedgeTakenCount = new VPSymbolicValue();
+      BackedgeTakenCount = new VPSymbolicValue(VectorTripCount.getType());
     return BackedgeTakenCount;
   }
   VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }
@@ -4917,6 +4912,9 @@ public:
     return ScalarPH &&
            is_contained(ScalarPH->getPredecessors(), getMiddleBlock());
   }
+
+  /// The type of the canonical induction variable of the vector loop.
+  Type *getIndexType() const { return VF.getType(); }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

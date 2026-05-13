@@ -239,9 +239,9 @@ public:
   /// Return target specific asm information.
   const MCAsmInfo &getMCAsmInfo() const { return *AsmInfo; }
 
-  const MCRegisterInfo *getMCRegisterInfo() const { return MRI.get(); }
+  const MCRegisterInfo &getMCRegisterInfo() const { return *MRI; }
   const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }
-  const MCSubtargetInfo *getMCSubtargetInfo() const { return STI.get(); }
+  const MCSubtargetInfo &getMCSubtargetInfo() const { return *STI; }
 
   /// Return the ExceptionHandling to use, considering TargetOptions and the
   /// Triple's default.

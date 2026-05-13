@@ -19,6 +19,11 @@ module matching
     module procedure sub_managed
   end interface
 
+  interface optional_extra_args
+    module procedure sub_host_3args
+    module procedure sub_unified_5args
+  end interface
+
 contains
   subroutine sub_host(a)
     integer :: a(:)
@@ -35,21 +40,35 @@ contains
   subroutine sub_unified(a)
     integer, unified :: a(:)
   end
+
+  subroutine sub_host_3args(a, b, c)
+    integer :: a(:)
+    integer :: b, c
+  end
+
+  subroutine sub_unified_5args(a, b, c, d, e)
+    integer, unified :: a(:)
+    integer :: b, c
+    integer, optional :: d, e
+  end
 end module
 
 program m
   use matching
 
   integer, allocatable :: actual_host(:)
+  integer :: i
 
   allocate(actual_host(10))
 
   call host_and_device(actual_host)     ! Should resolve to sub_device
   call all(actual_host)                 ! Should resolved to unified
   call all_without_unified(actual_host) ! Should resolved to managed
+  call optional_extra_args(actual_host, i, i) ! Should resolve to sub_unified_5args
 end
 
 ! CHECK: fir.call @_QMmatchingPsub_device
 ! CHECK: fir.call @_QMmatchingPsub_unified
 ! CHECK: fir.call @_QMmatchingPsub_managed
+! CHECK: fir.call @_QMmatchingPsub_unified_5args
 
