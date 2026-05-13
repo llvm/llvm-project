@@ -377,7 +377,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   case CK_FloatingCast: {
     // HLSL uses CK_FloatingCast to cast between vectors.
     if (E->getType()->isVectorType())
-      return this->emitVectorElementwiseCast(E);
+      return this->emitVectorConversion(E->getSubExpr(), E);
     if (!SubExpr->getType()->isFloatingType() ||
         !E->getType()->isFloatingType())
       return false;
@@ -389,7 +389,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   case CK_IntegralToFloating: {
     if (E->getType()->isVectorType())
-      return this->emitVectorElementwiseCast(E);
+      return this->emitVectorConversion(E->getSubExpr(), E);
     if (!E->getType()->isRealFloatingType())
       return false;
     if (!this->visit(SubExpr))
@@ -401,7 +401,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   case CK_FloatingToBoolean: {
     if (E->getType()->isVectorType())
-      return this->emitVectorElementwiseCast(E);
+      return this->emitVectorConversion(E->getSubExpr(), E);
     if (!SubExpr->getType()->isRealFloatingType() ||
         !E->getType()->isBooleanType())
       return false;
@@ -414,7 +414,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   case CK_FloatingToIntegral: {
     if (E->getType()->isVectorType())
-      return this->emitVectorElementwiseCast(E);
+      return this->emitVectorConversion(E->getSubExpr(), E);
     if (!E->getType()->isIntegralOrEnumerationType())
       return false;
     if (!this->visit(SubExpr))
@@ -563,7 +563,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   case CK_IntegralToBoolean:
   case CK_FixedPointToBoolean: {
     if (E->getType()->isVectorType())
-      return this->emitVectorElementwiseCast(E);
+      return this->emitVectorConversion(E->getSubExpr(), E);
     // HLSL uses this to cast to one-element vectors.
     OptPrimType FromT = classify(SubExpr->getType());
     if (!FromT)
@@ -578,7 +578,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   case CK_IntegralCast:
     if (E->getType()->isVectorType())
-      return this->emitVectorElementwiseCast(E);
+      return this->emitVectorConversion(E->getSubExpr(), E);
     [[fallthrough]];
   case CK_BooleanToSignedIntegral: {
     OptPrimType FromT = classify(SubExpr->getType());
@@ -4366,6 +4366,14 @@ bool Compiler<Emitter>::emitVectorConversion(const Expr *Src, const Expr *E) {
   QualType SrcType = Src->getType();
   PrimType SrcElemT = classifyVectorElementType(SrcType);
 
+  if (!Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
   unsigned SrcOffset =
       this->allocateLocalPrimitive(Src, PT_Ptr, /*IsConst=*/true);
   if (!this->visit(Src))
@@ -4396,7 +4404,6 @@ bool Compiler<Emitter>::emitVectorConversion(const Expr *Src, const Expr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
-  assert(Initializing);
   return emitVectorConversion(E->getSrcExpr(), E);
 }
 
@@ -8125,27 +8132,6 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
     return this->emitPop(*ToT, E);
 
   return true;
-}
-
-/// Cast each element of a source vector to the corresponding element type of a
-/// destination vector using a scalar primitive cast. A pointer to the
-/// destination must be on top of the interpreter stack when \p Initializing is
-/// true; otherwise a new local is allocated for the result.
-template <class Emitter>
-bool Compiler<Emitter>::emitVectorElementwiseCast(const CastExpr *E) {
-  const Expr *SubExpr = E->getSubExpr();
-  assert(SubExpr->getType()->isVectorType() && "expected vector source type");
-  assert(E->getType()->isVectorType() && "expected vector destination type");
-
-  if (!Initializing) {
-    UnsignedOrNone LocalIndex = allocateLocal(E);
-    if (!LocalIndex)
-      return false;
-    if (!this->emitGetPtrLocal(*LocalIndex, E))
-      return false;
-  }
-
-  return emitVectorConversion(SubExpr, E);
 }
 
 /// Replicate a scalar value into every scalar element of an aggregate.
