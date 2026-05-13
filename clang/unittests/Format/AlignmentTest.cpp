@@ -1135,6 +1135,25 @@ TEST_F(AlignmentTest, ConsecutiveAssignmentsAcrossEmptyLinesAndComments) {
                Alignment);
 }
 
+TEST_F(AlignmentTest, ConsecutiveEnumAssignments) {
+  FormatStyle Alignment = getLLVMStyle();
+  Alignment.AlignConsecutiveAssignments.EnumAssignments = true;
+  verifyFormat("enum ValueKind {\n"
+               "  VK_Argument   = 1,\n"
+               "  VK_BasicBlock = 2,\n"
+               "  VK_Segment    = 8,\n"
+               "};",
+               Alignment);
+  Alignment.AlignConsecutiveAssignments.Enabled = true;
+  Alignment.AlignConsecutiveAssignments.EnumAssignments = false;
+  verifyFormat("enum ValueKind {\n"
+               "  VK_Argument   = 1,\n"
+               "  VK_BasicBlock = 2,\n"
+               "  VK_Segment    = 8,\n"
+               "};",
+               Alignment);
+}
+
 TEST_F(AlignmentTest, ConsecutiveCompoundAssignments) {
   FormatStyle Alignment = getLLVMStyle();
   Alignment.AlignConsecutiveAssignments.Enabled = true;
@@ -2370,14 +2389,14 @@ TEST_F(AlignmentTest, AlignWithLineBreaks) {
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/false,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/true}));
+                 /*EnumAssignments=*/false, /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/true,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/false}));
+                 /*EnumAssignments=*/false, /*PadOperators=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"
