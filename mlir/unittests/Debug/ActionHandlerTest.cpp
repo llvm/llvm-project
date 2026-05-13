@@ -7,20 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Action.h"
-#include "mlir/Support/TypeID.h"
-#include "gmock/gmock.h"
+#include "mlir/IR/MLIRContext.h"
 
 #include <gtest/gtest.h>
 
-#include <mlir/IR/MLIRContext.h>
-#include <mlir/IR/Action.h>
-#include <mlir/Support/LLVM.h>
-#include <mlir/Debug/ExecutionContext.h>
-#include <llvm/ADT/StringRef.h>
-
 #include <memory>
-#include <string>
-#include <vector>
 
 using namespace mlir;
 using namespace mlir::tracing;
@@ -30,19 +21,20 @@ namespace {
 struct DummyAction final : ActionImpl<DummyAction> {
     MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DummyAction)
     static constexpr StringLiteral tag = "dummy-action";
+
+    DummyAction(llvm::ArrayRef<IRUnit> irUnits) {}
 };
 
 } // namespace
 
 namespace {
 
-// State class — lives on the heap, shared across all copies of the handler
+// State class
 struct HandlerState {
     bool enabled{true};
 };
 
-/// Owner of a shared_ptr to the state
-/// Every copy of the functor points at the same HandlerState object.
+// Owner of a shared_ptr to the state
 struct StatefulHandler {
     std::shared_ptr<HandlerState> state;
 
@@ -56,52 +48,44 @@ struct StatefulHandler {
     }
 };
 
-TEST(ActionHandlerSharedState, SingleCopyEnabledState) {
+TEST(ActionHandlerSharedState, EnabledState) {
     mlir::MLIRContext ctx;
 
     ctx.registerActionHandler(StatefulHandler{std::make_shared<HandlerState>()});
 
-    // Retrieve a copy of the handler.
-    auto handlerCopy = ctx.getActionHandler();
-    ASSERT_TRUE(static_cast<bool>(handlerCopy));
+    auto handlerRef = ctx.getActionHandler();
+    ASSERT_TRUE(static_cast<bool>(handlerRef));
 
     int executionCount = 0;
     auto workFn = [&]() { ++executionCount; };
 
-    DummyAction action;
+    ctx.executeAction<DummyAction>(workFn, {});
 
-    handlerCopy(workFn, action);
-
-    // Recover the shared_ptr from the handler copy via target<StatefulHandler>().
+    // Recover the shared_ptr from the handler via target<StatefulHandler>().
     // target<T>() returns a non-null pointer only when the stored callable type
     // matches T exactly — which is guaranteed here since we registered StatefulHandler.
-    auto* recovered = handlerCopy.target<StatefulHandler>();
+    auto* recovered = handlerRef.target<StatefulHandler>();
     ASSERT_NE(recovered, nullptr);
 
     EXPECT_EQ(executionCount, 1);
     EXPECT_TRUE(recovered->state->enabled == true);
 }
 
-TEST(ActionHandlerSharedState, MultipleCopiesDisabledState) {
+TEST(ActionHandlerSharedState, DisabledState) {
     mlir::MLIRContext ctx;
 
     ctx.registerActionHandler(StatefulHandler{std::make_shared<HandlerState>()});
 
     // Recover the shared_ptr and disable the state
-    auto handlerCopy = ctx.getActionHandler();
-    auto* recovered = handlerCopy.target<StatefulHandler>();
+    auto handlerRef = ctx.getActionHandler();
+    auto* recovered = handlerRef.target<StatefulHandler>();
     ASSERT_NE(recovered, nullptr);
     recovered->state->enabled = false;
-
-    // A second independent copy also sees enabled==false
-    auto handlerCopy2 = ctx.getActionHandler();
 
     int executionCount = 0;
     auto workFn = [&]() { ++executionCount; };
 
-    DummyAction action;
-
-    handlerCopy2(workFn, action);
+    ctx.executeAction<DummyAction>(workFn, {});
 
     // workFn was skipped because the handler saw enabled==false
     EXPECT_EQ(executionCount, 0);

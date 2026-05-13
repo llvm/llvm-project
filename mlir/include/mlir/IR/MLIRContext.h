@@ -267,9 +267,9 @@ public:
   /// context. A nullptr handler can be set to disable a previously set handler.
   void registerActionHandler(HandlerTy handler);
 
-  /// Return a copy of the currently registered action handler. Its target can
+  /// Return a reference to the currently registered action handler. Its target can
   /// be used to gain access to the handler's state, if any.
-  HandlerTy getActionHandler();
+  const HandlerTy &getActionHandler();
 
   /// Return true if a valid ActionHandler is set.
   bool hasActionHandler();
