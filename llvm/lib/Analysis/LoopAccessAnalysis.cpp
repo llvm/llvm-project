@@ -100,16 +100,26 @@ static cl::opt<unsigned> MemoryCheckMergeThreshold(
              "runtime memory checks. (default = 100)"),
     cl::init(100));
 
+static cl::opt<bool> EnableStencilMerge(
+    "enable-stencil-runtime-check-merge", cl::Hidden,
+    cl::desc("Enable stencil-pattern merging of runtime memory checks "
+             "(default = false, intended to be flipped to true in a "
+             "follow-up patch once the algorithm has settled)"),
+    cl::init(false));
+
 static cl::opt<bool> ForceStencilMerge(
     "force-stencil-runtime-check-merge", cl::Hidden,
     cl::desc("Force merging of runtime check groups with stencil stride "
-             "patterns regardless of check count (default = false)"),
+             "patterns regardless of check count (default = false). "
+             "Implies enabling the merge regardless of "
+             "-enable-stencil-runtime-check-merge."),
     cl::init(false));
 
 static cl::opt<unsigned> StencilMergeCheckThreshold(
     "stencil-merge-check-threshold", cl::Hidden,
     cl::desc("Auto-trigger stencil group merging when runtime check count "
-             "exceeds this threshold (default = 128)"),
+             "exceeds this threshold (default = 128). Only used when "
+             "-enable-stencil-runtime-check-merge is true."),
     cl::init(128));
 
 /// Maximum SIMD width.
@@ -811,12 +821,17 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     return;
 
   // Stencil merging runs when either:
-  //   - the user opted in explicitly (-force-stencil-runtime-check-merge), or
-  //   - the current check count exceeds the auto-trigger threshold, where the
+  //   - the test/debug flag forces it (-force-stencil-runtime-check-merge), or
+  //   - the feature is enabled (-enable-stencil-runtime-check-merge) AND the
+  //     current check count exceeds the auto-trigger threshold, where the
   //     vectorizer would otherwise reject the loop for having too many runtime
   //     checks. In that case the merge can only improve things: at worst we
   //     decline to merge and behave as before.
   if (!ForceStencilMerge) {
+    if (!EnableStencilMerge) {
+      LLVM_DEBUG(dbgs() << "LAA: stencil merge disabled by default flag\n");
+      return;
+    }
     unsigned TotalChecks = 0;
     for (unsigned I = 0; I < CheckingGroups.size(); ++I)
       for (unsigned J = I + 1; J < CheckingGroups.size(); ++J)
