@@ -25,7 +25,7 @@ void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
 
 /// Read the configuration from the file with path \p InputFile  into /p IConf.
 bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
-                        LLVMContext &Ctx);
+                        LLVMContext &Ctx, vfs::FileSystem &FS);
 
 } // end namespace instrumentor
 } // end namespace llvm

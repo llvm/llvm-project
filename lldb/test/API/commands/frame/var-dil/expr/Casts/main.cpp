@@ -22,6 +22,9 @@ class Foo {};
 // Global variable
 bool myGlobalName = true;
 
+enum UnscopedEnum { kZero, kOne, kTwo };
+enum UnscopedEnumInt8 : int8_t { kMinusOne8 = -1, kZero8, kOne8 };
+
 int main(int argc, char **argv) {
   int a = 1;
   int *ap = &a;
@@ -80,6 +83,9 @@ int main(int argc, char **argv) {
   };
 
   struct myGlobalName secondStruct = {42, false};
+
+  auto enum_one = UnscopedEnum::kOne;
+  auto enum_one8 = UnscopedEnumInt8::kOne8;
 
   return 0; // Set a breakpoint here
 }
