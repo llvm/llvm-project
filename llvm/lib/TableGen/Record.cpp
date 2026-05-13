@@ -2105,6 +2105,8 @@ const Init *FoldOpInit::resolveReferences(Resolver &R) const {
 }
 
 const Init *FoldOpInit::getBit(unsigned Bit) const {
+  if (isa<BitRecTy>(getType()))
+    return this;
   return VarBitInit::get(this, Bit);
 }
 
