@@ -762,10 +762,19 @@ struct StencilDecomposition {
 /// strides: C + a1*s1 + a2*s2 + ...
 /// Relies on SCEV's canonical form: AddExpr operands are flattened (N-ary),
 /// MulExpr has the constant operand first when present.
-/// Returns std::nullopt if the expression contains non-stencil terms.
+/// Returns std::nullopt if the expression contains non-stencil terms or any
+/// SCEV constant doesn't fit in int64_t (we commit to the signed
+/// interpretation; values that need more than 64 significant bits are
+/// out of scope).
 static std::optional<StencilDecomposition>
 decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   StencilDecomposition D;
+
+  auto ToInt64 = [](const APInt &V) -> std::optional<int64_t> {
+    if (V.getSignificantBits() > 64)
+      return std::nullopt;
+    return V.getSExtValue();
+  };
 
   // Collect top-level additive terms.
   SmallVector<const SCEV *, 4> Terms;
@@ -778,12 +787,18 @@ decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   const SCEV *Stride;
   for (const SCEV *Term : Terms) {
     if (match(Term, m_SCEVConstant(C))) {
-      D.Constant += C->getAPInt().getSExtValue();
+      auto V = ToInt64(C->getAPInt());
+      if (!V)
+        return std::nullopt;
+      D.Constant += *V;
     } else if (match(Term, m_scev_Mul(m_SCEVConstant(C), m_SCEV(Stride)))) {
       // Canonical 2-operand pattern (constant * loop-invariant).
       if (!SE.isLoopInvariant(Stride, &L))
         return std::nullopt;
-      D.Coefficients[Stride] += C->getAPInt().getSExtValue();
+      auto V = ToInt64(C->getAPInt());
+      if (!V)
+        return std::nullopt;
+      D.Coefficients[Stride] += *V;
     } else if (SE.isLoopInvariant(Term, &L)) {
       D.Coefficients[Term] += 1;
     } else {
