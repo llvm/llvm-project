@@ -691,6 +691,9 @@ public:
   ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call2) {
     return AA.getModRefInfo(I, Call2, AAQI);
   }
+  ModRefInfo getModRefInfo(const Instruction *I, const Instruction *I2) {
+    return AA.getModRefInfo(I, I2, AAQI);
+  }
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
     return AA.getArgModRefInfo(Call, ArgIdx);
   }
@@ -991,6 +994,11 @@ LLVM_ABI bool isNotVisibleOnUnwind(const Value *Object,
 /// loads.
 LLVM_ABI bool isWritableObject(const Value *Object,
                                bool &ExplicitlyDereferenceableOnly);
+
+/// Get ModRefInfo for a synchronizing operation, such as a fence or stronger
+/// than monotonic atomic load/store.
+LLVM_ABI ModRefInfo getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
+                                   AAQueryInfo &AAQI);
 
 /// A manager for alias analyses.
 ///

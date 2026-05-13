@@ -3293,10 +3293,12 @@ static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
 static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            int ArgOrdinal,
                                            clang::QualType PassedType) {
-  clang::QualType BaseType =
-      PassedType->isVectorType()
-          ? PassedType->castAs<clang::VectorType>()->getElementType()
-          : PassedType;
+  clang::QualType BaseType = PassedType;
+  if (const auto *VT = PassedType->getAs<clang::VectorType>())
+    BaseType = VT->getElementType();
+  else if (const auto *MT = PassedType->getAs<clang::MatrixType>())
+    BaseType = MT->getElementType();
+
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
@@ -4698,6 +4700,19 @@ static void BuildFlattenedTypeList(QualType BaseTy,
     }
     List.push_back(T);
   }
+}
+
+bool SemaHLSL::IsConstantBufferElementCompatible(clang::QualType QT) {
+  if (QT.isNull())
+    return false;
+
+  // Must be a class/struct.
+  const auto *RD = QT->getAsCXXRecordDecl();
+  if (!RD || RD->isUnion())
+    return false;
+
+  // Cannot be a resource type or contain one.
+  return !QT->isHLSLIntangibleType();
 }
 
 bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {

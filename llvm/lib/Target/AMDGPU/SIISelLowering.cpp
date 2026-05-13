@@ -518,8 +518,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMadMacF32Insts())
     setOperationAction(ISD::FMAD, MVT::f32, Legal);
 
-  setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
-  setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
+  setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_POISON}, MVT::i32, Custom);
+  setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_POISON}, MVT::i32, Custom);
   setOperationAction(ISD::CTLS, MVT::i32, Custom);
 
   // We only really have 32-bit BFE instructions (and 16-bit on VI).
@@ -592,7 +592,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction({ISD::SIGN_EXTEND, ISD::SDIV, ISD::UDIV, ISD::SREM,
                         ISD::UREM, ISD::BITREVERSE, ISD::CTTZ,
-                        ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF,
+                        ISD::CTTZ_ZERO_POISON, ISD::CTLZ, ISD::CTLZ_ZERO_POISON,
                         ISD::CTPOP},
                        MVT::i16, Promote);
 
@@ -705,6 +705,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LOAD, MVT::v2f16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v2f16, MVT::i32);
 
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::v2i16, Promote);
+    AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v2i16, MVT::i32);
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::v2f16, Promote);
+    AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v2f16, MVT::i32);
+
+    setOperationAction(ISD::ATOMIC_STORE, MVT::v2i16, Promote);
+    AddPromotedToType(ISD::ATOMIC_STORE, MVT::v2i16, MVT::i32);
+    setOperationAction(ISD::ATOMIC_STORE, MVT::v2f16, Promote);
+    AddPromotedToType(ISD::ATOMIC_STORE, MVT::v2f16, MVT::i32);
+
     setOperationAction(ISD::AND, MVT::v2i16, Promote);
     AddPromotedToType(ISD::AND, MVT::v2i16, MVT::i32);
     setOperationAction(ISD::OR, MVT::v2i16, Promote);
@@ -718,6 +728,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::LOAD, MVT::v4f16, MVT::v2i32);
     setOperationAction(ISD::LOAD, MVT::v4bf16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v4bf16, MVT::v2i32);
+
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::v4i16, Promote);
+    AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v4i16, MVT::i64);
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::v4f16, Promote);
+    AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v4f16, MVT::i64);
+
+    setOperationAction(ISD::ATOMIC_STORE, MVT::v4i16, Promote);
+    AddPromotedToType(ISD::ATOMIC_STORE, MVT::v4i16, MVT::i64);
+    setOperationAction(ISD::ATOMIC_STORE, MVT::v4f16, Promote);
+    AddPromotedToType(ISD::ATOMIC_STORE, MVT::v4f16, MVT::i64);
 
     setOperationAction(ISD::STORE, MVT::v4i16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v4i16, MVT::v2i32);
@@ -828,8 +848,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         ISD::UADDSAT, ISD::USUBSAT, ISD::SADDSAT, ISD::SSUBSAT},
                        MVT::v2i16, Legal);
 
-    setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMINNUM_IEEE,
-                        ISD::FMAXNUM_IEEE, ISD::FCANONICALIZE},
+    setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FABS,
+                        ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
+                        ISD::FCANONICALIZE},
                        MVT::v2f16, Legal);
 
     setOperationAction(ISD::EXTRACT_VECTOR_ELT,
@@ -851,7 +872,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     for (MVT VT : {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16})
       // Split vector operations.
-      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FABS,
+                          ISD::FCANONICALIZE},
                          VT, Custom);
 
     setOperationAction(
@@ -10098,6 +10120,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
   bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
   bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
+  bool IsGFX13 = AMDGPU::isGFX13(*Subtarget);
 
   SmallVector<EVT, 3> ResultTypes(Op->values());
   SmallVector<EVT, 3> OrigResultTypes(Op->values());
@@ -10425,7 +10448,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       UseNSA ? VAddrs.size() : VAddr.getValueType().getSizeInBits() / 32;
   int Opcode = -1;
 
-  if (IsGFX12Plus) {
+  if (IsGFX13) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else if (IsGFX12Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
                                    NumVDataDwords, NumVAddrDwords);
   } else if (IsGFX11Plus) {
@@ -17400,7 +17426,7 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
 }
 
 static bool isCtlzOpc(unsigned Opc) {
-  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF;
+  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_POISON;
 }
 
 SDValue SITargetLowering::performSubCombine(SDNode *N,
@@ -19790,7 +19816,7 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
       return !TRI->isSGPRReg(MRI, Reg);
 
     if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
-      return UA->isDivergent(V);
+      return UA->isDivergentAtDef(V);
 
     assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
     return !TRI->isSGPRReg(MRI, Reg);

@@ -305,6 +305,8 @@ protected:
       if (!label.empty()) {
         if (auto E = target_sp->SetLabel(label))
           result.SetError(std::move(E));
+        else
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
         return;
       }
 
@@ -433,6 +435,8 @@ protected:
             result.AppendMessageWithFormatv(
                 "Core file '{0}' ({1}) was loaded.\n", core_file.GetPath(),
                 target_sp->GetArchitecture().GetArchitectureName());
+            if (auto core_args = process_sp->GetCoreFileArgs())
+              core_args->Format(result.GetOutputStream());
             result.SetStatus(eReturnStatusSuccessFinishNoResult);
             on_error.release();
           }
@@ -989,6 +993,8 @@ protected:
 
     m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
                                            m_cmd_name);
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupOptions m_option_group;
@@ -3104,6 +3110,8 @@ protected:
       result.AppendError("either the \"--file <module>\" or the \"--uuid "
                          "<uuid>\" option must be specified.\n");
     }
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupOptions m_option_group;
@@ -3772,6 +3780,7 @@ protected:
 
       result.GetOutputStream().Printf("\n");
     }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   CommandOptions m_options;

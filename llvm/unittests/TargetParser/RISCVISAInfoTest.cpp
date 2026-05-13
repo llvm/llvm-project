@@ -1152,6 +1152,7 @@ R"(All available -march extensions for RISC-V
     zicboz               1.0
     ziccamoa             1.0
     ziccamoc             1.0
+    ziccid               1.0
     ziccif               1.0
     zicclsm              1.0
     ziccrse              1.0
@@ -1389,6 +1390,7 @@ Experimental extensions
     zvkgs                0.7
     zvqwbdota16i         0.2
     zvqwbdota8i          0.2
+    zvvfmm               0.1
     zvvmm                0.1
     zvzip                0.1
     smpmpmt              0.6

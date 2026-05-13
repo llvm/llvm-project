@@ -482,9 +482,7 @@ class ConstraintSatisfactionChecker {
   ConstraintSatisfaction &Satisfaction;
   bool BuildExpression;
 
-  // The most closest concept declaration when evaluating atomic constriants.
-  // This is to make sure that lambdas in the atomic expression live in the
-  // right context.
+  // The closest concept declaration when evaluating atomic constraints.
   ConceptDecl *ParentConcept = nullptr;
 
   // This is for TemplateInstantiator to not instantiate the same template
@@ -730,19 +728,12 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     return ExprEmpty();
   }
 
-  // Note that generic lambdas inside requires body require a lambda context
-  // decl from which to fetch correct template arguments. But we don't have any
-  // proper decls because the constraints are already normalized.
-  if (ParentConcept) {
-    // FIXME: the evaluation context should learn to track template arguments
-    // separately from a Decl.
-    EvaluationContext.emplace(
-        S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-        /*LambdaContextDecl=*/
-        ImplicitConceptSpecializationDecl::Create(
-            S.Context, ParentConcept->getDeclContext(),
-            ParentConcept->getBeginLoc(), SubstitutedOutermost));
-  }
+  // Make sure that concepts are not evaluated in the context they are used,
+  // i.e they should not have access to the current class object or its
+  // non-public members.
+  std::optional<Sema::ContextRAII> ConceptContext;
+  if (ParentConcept)
+    ConceptContext.emplace(S, ParentConcept->getDeclContext());
 
   Sema::ArgPackSubstIndexRAII SubstIndex(S, PackSubstitutionIndex);
   ExprResult SubstitutedAtomicExpr = EvaluateAtomicConstraint(
@@ -1052,10 +1043,10 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (InstTemplate.isInvalid())
     return ExprError();
 
+  unsigned Size = Satisfaction.Details.size();
+
   llvm::SaveAndRestore PushConceptDecl(
       ParentConcept, cast<ConceptDecl>(ConceptId->getNamedConcept()));
-
-  unsigned Size = Satisfaction.Details.size();
 
   ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
 
@@ -2312,6 +2303,14 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
     }
     assert(!ArgsAsWritten);
     const ConceptSpecializationExpr *CSE = CC.getConceptSpecializationExpr();
+    // Make sure that lambdas within template arguments live in a
+    // dependent context such that they are assured to be transformed during
+    // constraint evaluation.
+    EnterExpressionEvaluationContext EECtx(
+        SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        /*LambdaContextDecl=*/
+        const_cast<ImplicitConceptSpecializationDecl *>(
+            CSE->getSpecializationDecl()));
     SmallVector<TemplateArgument> InnerArgs(CSE->getTemplateArguments());
     ConceptDecl *Concept = CSE->getNamedConcept();
     if (RemovePacksForFoldExpr) {
