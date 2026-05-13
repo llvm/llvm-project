@@ -750,9 +750,8 @@ const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F, const Metadata 
   }
 
   // Don't assign IDs to metadata nodes.
-  if (auto *N = dyn_cast<MDNode>(MD)) {
+  if (auto *N = dyn_cast<MDNode>(MD))
     return N;
-  }
 
   // Save the metadata.
   MDs.push_back(MD);

@@ -1947,7 +1947,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     const auto LangVersionMask = (uint64_t(1) << 63);
     const bool HasVersionedLanguage = Record[1] & LangVersionMask;
     const uint32_t LanguageVersion = Record.size() > 22 ? Record[22] : 0;
-    uint16_t Dialect =
+    const uint16_t Dialect =
         Record.size() > 23
             ? static_cast<uint16_t>(Record[23])
             : static_cast<uint16_t>(dwarf::DW_LANG_DIALECT_invalid);
