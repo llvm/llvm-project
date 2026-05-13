@@ -40,18 +40,15 @@
        // (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG
 #endif // LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 
-#ifndef LIBC_HAS_BUILTIN_BIT_CAST
-#if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC)
-#define LIBC_HAS_BUILTIN_BIT_CAST 1
-#else
-#define LIBC_HAS_BUILTIN_BIT_CAST 0
-#endif // has_builtin(__builtin_bit_cast)
-#endif // LIBC_HAS_BUILTIN_BIT_CAST
-
 // TODO: Remove the macro once Clang/LLVM bump their minimum compilers' version.
 // The reason for indirection is GCC is known to fail with constexpr qualified
-// functions that doesn't produce constant expression.
-#if (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED && LIBC_HAS_BUILTIN_BIT_CAST)
+// functions that doesn't produce constant expression. This avoids it by using
+// LIBC_ENABLE_CONSTEXPR as a flag to control whether the function should be
+// constexpr qualified or not.
+#if LIBC_ENABLE_CONSTEXPR &&                                                   \
+    (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED ||                                 \
+     (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 1100)) ||     \
+     (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 900))
 #define LIBC_HAS_CONSTANT_EVALUATION
 #define LIBC_CONSTEXPR constexpr
 #else
