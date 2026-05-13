@@ -10,7 +10,8 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t/stack-pointer.o %t/stack-pointer.s
 # RUN: not wasm-ld --libcall-thread-context %t/start.o %t/stack-pointer.o -o %t/fail.wasm 2>&1 | FileCheck %s
 
-# CHECK: error: --libcall-thread-context is disallowed by {{.*}} because it uses globals for thread context rather than library function calls.
+# CHECK: stack-pointer.o: object file uses globals for thread context, but --libcall-thread-context was specified
+# | ^
 
 #--- start.s
 .globl _start
