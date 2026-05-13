@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation for the putwchar function.
+/// This file contains the implementation for the putwchar function, which
+/// writes a single character to stdout.
 ///
 //===----------------------------------------------------------------------===//
 
