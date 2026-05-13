@@ -18,10 +18,13 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+#define DEBUG_TYPE "ejit-aot-module"
 
 namespace {
 
@@ -91,8 +94,10 @@ static void runDiagnosticCheck(Module &M) {
 
 PreservedAnalyses
 EJitAotModulePass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (!hasAnyEjitMetadata(M))
+  if (!hasAnyEjitMetadata(M)) {
+    LLVM_DEBUG(dbgs() << "ejit-aot-module: no EJIT metadata, skip\n");
     return PreservedAnalyses::all();
+  }
 
   // Run sub-passes in order: PASS2 → PASS3 → PASS4
   // (PASS1 is an independent early pass, not part of this pipeline)

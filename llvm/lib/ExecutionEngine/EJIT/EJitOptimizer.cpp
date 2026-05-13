@@ -7,6 +7,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
@@ -18,6 +19,8 @@
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+#define DEBUG_TYPE "ejit-optimizer"
 
 EJitOptimizer::EJitOptimizer(PeriodArrayRegistry &reg)
     : registry_(reg) {
@@ -32,6 +35,8 @@ EJitOptimizer::EJitOptimizer(PeriodArrayRegistry &reg)
 
 void EJitOptimizer::preReplacePeriodIndices(
     Module &M, const SpecializationContext &ctx) {
+  LLVM_DEBUG(dbgs() << "ejit-optimizer: preReplacePeriodIndices, "
+                    << ctx.dimensions.size() << " dim(s)\n");
   for (Function &F : M.functions()) {
     MDNode *MD = F.getMetadata(MD_EJIT_METADATA);
     if (!MD)
@@ -76,6 +81,15 @@ void EJitOptimizer::runInstCombine(Module &M) {
   for (Function &F : M.functions())
     if (!F.isDeclaration())
       FPM.run(F, FAM_);
+}
+
+void EJitOptimizer::runInline(Module &M) {
+  PassBuilder PB;
+  ModulePassManager MPM;
+  MPM.addPass(AlwaysInlinerPass());
+  MPM.addPass(PB.buildModuleInlinerPipeline(
+      llvm::OptimizationLevel::O2, ThinOrFullLTOPhase::None));
+  MPM.run(M, MAM_);
 }
 
 void EJitOptimizer::runOptimizationPipeline(Module &M,

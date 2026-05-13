@@ -11,10 +11,13 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 #include <cstring>
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+#define DEBUG_TYPE "ejit-struct-field"
 
 namespace {
 
@@ -348,5 +351,8 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
     changed = true;
   }
 
+  LLVM_DEBUG(if (changed) dbgs() << "ejit-struct-field: replaced "
+                                  << replacements.size() << " load(s) in "
+                                  << F.getName() << "\n");
   return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

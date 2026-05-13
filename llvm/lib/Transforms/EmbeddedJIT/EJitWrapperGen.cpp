@@ -23,9 +23,12 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+#define DEBUG_TYPE "ejit-wrapper-gen"
 
 static cl::opt<bool> EJitNoInlineEntry(
     "ejit-noinline-entry", cl::init(true), cl::Hidden,
@@ -96,8 +99,11 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
     return false;
   };
 
+  LLVM_DEBUG(dbgs() << "ejit-wrapper-gen: " << EntryFuncs.size()
+                    << " entry function(s)\n");
   bool Changed = false;
   for (Function *F : EntryFuncs) {
+    LLVM_DEBUG(dbgs() << "ejit-wrapper-gen: wrapping " << F->getName() << "\n");
     // Idempotency guard: skip functions already wrapped by an earlier pass run.
     // PASS3 may be invoked multiple times via EJitAotModulePass (e.g. O1+O2
     // pipelines), and re-wrapping produces broken PHI nodes referencing stale

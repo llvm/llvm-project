@@ -16,6 +16,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -24,7 +25,6 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,6 +33,8 @@
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+#define DEBUG_TYPE "ejit-register-bitcode"
 
 static void collectEntryFunctions(Module &M,
                                   SmallVectorImpl<Function *> &EntryFuncs) {
@@ -88,19 +90,14 @@ static void preOptimizeBitcode(Module &M) {
   PB.registerModuleAnalyses(MAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  // Step 1: Inline — expand callees at AOT time. After JIT parameter
-  // substitution, the inlined code's GEP indices become constants and
-  // PASS6 can trace through them. AlwaysInline first, then cost-based
-  // inliner for small index-wrapper functions.
+  // Step 1: AlwaysInline — expand alwaysinline callees at AOT time.
   {
     ModulePassManager MPM;
     MPM.addPass(AlwaysInlinerPass());
-    MPM.addPass(PB.buildModuleInlinerPipeline(
-        llvm::OptimizationLevel::O2, ThinOrFullLTOPhase::None));
     MPM.run(M, MAM);
   }
 
-  // Step 2: Mem2Reg — promote allocas from inlined code to SSA.
+  // Step 2: Mem2Reg — promote allocas to SSA.
   {
     FunctionPassManager FPM;
     FPM.addPass(PromotePass());
@@ -118,14 +115,6 @@ static void preOptimizeBitcode(Module &M) {
         FPM.run(F, FAM);
   }
 
-  // Step 4: SimplifyCFG — clean up dead branches.
-  {
-    FunctionPassManager FPM;
-    FPM.addPass(SimplifyCFGPass());
-    for (Function &F : M.functions())
-      if (!F.isDeclaration())
-        FPM.run(F, FAM);
-  }
 }
 
 static std::string extractAndSerialize(Module &M,
@@ -308,14 +297,19 @@ static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
 
 PreservedAnalyses
 EJitRegisterBitcodePass::run(Module &M, ModuleAnalysisManager &) {
+  LLVM_DEBUG(dbgs() << "ejit-register-bitcode: running on " << M.getName() << "\n");
   SmallVector<Function *, 4> EntryFuncs;
   collectEntryFunctions(M, EntryFuncs);
-  if (EntryFuncs.empty())
+  if (EntryFuncs.empty()) {
+    LLVM_DEBUG(dbgs() << "ejit-register-bitcode: no entry functions, skip\n");
     return PreservedAnalyses::all();
+  }
 
   SetVector<Function *> ClosureFuncs;
   SetVector<GlobalVariable *> ClosureGlobals;
   computeTransitiveClosure(EntryFuncs, ClosureFuncs, ClosureGlobals);
+  LLVM_DEBUG(dbgs() << "ejit-register-bitcode: closure " << ClosureFuncs.size()
+                    << " funcs, " << ClosureGlobals.size() << " globals\n");
   if (ClosureFuncs.empty())
     return PreservedAnalyses::all();
 

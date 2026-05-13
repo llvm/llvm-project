@@ -22,9 +22,12 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+#define DEBUG_TYPE "ejit-period-handler"
 
 namespace {
 
@@ -108,8 +111,12 @@ EJitPeriodHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
       LcFuncs.push_back(&F);
   }
 
-  if (LcFuncs.empty())
+  if (LcFuncs.empty()) {
+    LLVM_DEBUG(dbgs() << "ejit-period-handler: no lifecycle functions\n");
     return PreservedAnalyses::all();
+  }
+  LLVM_DEBUG(dbgs() << "ejit-period-handler: " << LcFuncs.size()
+                    << " lifecycle function(s)\n");
 
   LLVMContext &Ctx = M.getContext();
   auto *PtrTy = PointerType::getUnqual(Ctx);

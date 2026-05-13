@@ -23,10 +23,13 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+#define DEBUG_TYPE "ejit-register-period"
 
 PreservedAnalyses
 EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
@@ -54,8 +57,12 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
     }
   }
 
-  if (PeriodArrays.empty() && StaticVars.empty())
+  if (PeriodArrays.empty() && StaticVars.empty()) {
+    LLVM_DEBUG(dbgs() << "ejit-register-period: no period vars\n");
     return PreservedAnalyses::all();
+  }
+  LLVM_DEBUG(dbgs() << "ejit-register-period: " << PeriodArrays.size()
+                    << " arrays, " << StaticVars.size() << " static vars\n");
 
   LLVMContext &Ctx = M.getContext();
   auto *PtrTy = PointerType::getUnqual(Ctx);

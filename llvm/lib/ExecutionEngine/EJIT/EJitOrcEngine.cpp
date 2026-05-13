@@ -12,12 +12,15 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Triple.h"
 #include <map>
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+#define DEBUG_TYPE "ejit-orc-engine"
 
 struct EJitOrcEngine::Impl {
   std::unique_ptr<orc::LLJIT> J;
@@ -94,6 +97,8 @@ EJitOrcEngine::Create(const Config &config,
           const orc::MaterializationResponsibility &R)
           -> Expected<orc::ThreadSafeModule> {
         TSM.withModuleDo([engine, &periodReg](Module &M) {
+          LLVM_DEBUG(dbgs() << "ejit-orc-engine: JIT transform on "
+                            << M.getName() << "\n");
           const SpecializationContext *ctx = engine->P->activeCtx;
           if (!ctx)
             return;
@@ -106,8 +111,11 @@ EJitOrcEngine::Create(const Config &config,
           // 2. InstCombine: fold constant chains from substituted params
           opt.runInstCombine(M);
 
-          // 3. First EJitStructFieldPass: replace ejit_may_const loads
-          //    (Inlining already done in AOT preOptimizeBitcode by PASS1)
+          // 3. Inline: expand callees so StructFieldPass can trace GEP chains.
+          //    Cost-based inliner handles small index-wrapper functions.
+          opt.runInline(M);
+
+          // 4. First EJitStructFieldPass: replace ejit_may_const loads
           //    before the optimization pipeline so SCCP/ADCE can propagate
           //    the resulting constants.
           {
@@ -117,11 +125,11 @@ EJitOrcEngine::Create(const Config &config,
                 structField.run(F, opt.getFAM());
           }
 
-          // 4. Run the standard optimization pipeline at the configured level.
+          // 5. Run the standard optimization pipeline at the configured level.
           opt.runOptimizationPipeline(M, ctx->optLevel);
 
-          // 5. Second EJitStructFieldPass + InstCombine: catch loads exposed
-          //    after loop unrolling (L3) or constant folding.
+          // 6. Second EJitStructFieldPass + InstCombine: catch loads exposed
+          //    after loop unrolling (L3) or inlining.
           {
             EJitStructFieldPass structField(periodReg);
             for (Function &F : M.functions())
