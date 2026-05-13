@@ -8348,7 +8348,7 @@ Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
 
 namespace {
 
-/// This canonicalization folds the following round-trip identity:
+/// This folder works on the following round-trip identity:
 ///  interleave(deinterleave(x).even, deinterleave(x).odd) -> x
 struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
   using Base::Base;
@@ -8357,24 +8357,12 @@ struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
                                 PatternRewriter &rewriter) const override {
     auto lhsDefOp = interleaveOp.getLhs().getDefiningOp<DeinterleaveOp>();
     auto rhsDefOp = interleaveOp.getRhs().getDefiningOp<DeinterleaveOp>();
-    if (!lhsDefOp || !rhsDefOp)
-      return rewriter.notifyMatchFailure(
-          interleaveOp,
-          "expected both operands to be defined by a deinterleave op");
-    if (lhsDefOp != rhsDefOp)
-      return rewriter.notifyMatchFailure(
-          interleaveOp,
-          "expected both operands to be defined by the same deinterleave op");
-    if (auto deinterleaveRes = cast<OpResult>(interleaveOp.getLhs());
-        deinterleaveRes.getResultNumber())
-      return rewriter.notifyMatchFailure(interleaveOp,
-                                         "expected the lhs operand to be the "
-                                         "first result of the deinterleave op");
-    if (auto deinterleaveRes = cast<OpResult>(interleaveOp.getRhs());
-        deinterleaveRes.getResultNumber() != 1)
-      return rewriter.notifyMatchFailure(
-          interleaveOp, "expected the rhs operand to be the second result of "
-                        "the deinterleave op");
+    if (!lhsDefOp || !rhsDefOp || lhsDefOp != rhsDefOp)
+      return failure();
+    for (auto [idx, operand] : llvm::enumerate(interleaveOp.getOperands())) {
+      if (auto opRes = cast<OpResult>(operand); opRes.getResultNumber() != idx)
+        return failure();
+    }
     rewriter.replaceOp(interleaveOp, lhsDefOp.getSource());
     return success();
   }
