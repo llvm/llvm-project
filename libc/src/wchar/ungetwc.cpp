@@ -25,8 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(wint_t, ungetwc, (wint_t wc, ::FILE *stream)) {
   LIBC_CRASH_ON_NULLPTR(stream);
 
-  auto *f = reinterpret_cast<File *>(stream);
-  return f->ungetwc(wc);
+  return reinterpret_cast<File *>(stream)->ungetwc(wc);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

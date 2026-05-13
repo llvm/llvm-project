@@ -206,3 +206,34 @@ TEST(LlvmLibcUngetwcTest, PushbackAtStartOfFile) {
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
+
+TEST(LlvmLibcUngetwcTest, PushbackMultibyteChars) {
+  auto FILENAME =
+      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_multibyte.test"));
+  ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
+  ASSERT_FALSE(file == nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+
+  // 2-byte UTF-8 character: '¢' (U+00A2)
+  file = LIBC_NAMESPACE::fopen(FILENAME, "r");
+  ASSERT_FALSE(file == nullptr);
+  EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'¢', file), static_cast<wint_t>(L'¢'));
+  EXPECT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'¢'));
+  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+
+#if WCHAR_MAX > 0xFFFF
+  // 3-byte UTF-8 character: '€' (U+20AC)
+  file = LIBC_NAMESPACE::fopen(FILENAME, "r");
+  ASSERT_FALSE(file == nullptr);
+  EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'€', file), static_cast<wint_t>(L'€'));
+  EXPECT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'€'));
+  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+
+  // 4-byte UTF-8 character: '𐍈' (U+10348)
+  file = LIBC_NAMESPACE::fopen(FILENAME, "r");
+  ASSERT_FALSE(file == nullptr);
+  EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'𐍈', file), static_cast<wint_t>(L'𐍈'));
+  EXPECT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'𐍈'));
+  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+#endif
+}

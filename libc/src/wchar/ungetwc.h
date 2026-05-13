@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation header for the ungetwc function, which
+/// This file contains the function prototype for the ungetwc function, which
 /// pushes a wide character back into an input stream.
 ///
 //===----------------------------------------------------------------------===//
