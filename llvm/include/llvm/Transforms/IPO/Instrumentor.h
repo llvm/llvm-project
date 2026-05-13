@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EnumeratedArray.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -358,6 +359,9 @@ struct InstrumentationConfig {
         "Regular expression to be matched against the module target. "
         "Only targets that match this regex will be instrumented",
         "");
+    DemangleFunctionNames = BaseConfigurationOption::createBoolOption(
+        *this, "demangle_function_names",
+        "Demangle functions names passed to the runtime.", true);
     HostEnabled = BaseConfigurationOption::createBoolOption(
         *this, "host_enabled", "Instrument non-GPU targets", true);
     GPUEnabled = BaseConfigurationOption::createBoolOption(
@@ -394,12 +398,31 @@ struct InstrumentationConfig {
     return Obj;
   }
 
+  /// Mapping to remember global strings passed to the runtime.
+  DenseMap<StringRef, Constant *> GlobalStringsMap;
+
+  /// Mapping from constants to globals with the constant as initializer.
+  DenseMap<Constant *, GlobalVariable *> ConstantGlobalsCache;
+
+  Constant *getGlobalString(StringRef S, InstrumentorIRBuilderTy &IIRB) {
+    Constant *&V = GlobalStringsMap[SS.save(S)];
+    if (!V) {
+      auto &M = *IIRB.IRB.GetInsertBlock()->getModule();
+      V = IIRB.IRB.CreateGlobalString(
+          S, getRTName() + ".str",
+          M.getDataLayout().getDefaultGlobalsAddressSpace(), &M);
+      if (V->getType() != IIRB.IRB.getPtrTy())
+        V = ConstantExpr::getAddrSpaceCast(V, IIRB.IRB.getPtrTy());
+    }
+    return V;
+  }
   /// The list of enabled base configuration options.
   SmallVector<BaseConfigurationOption *> BaseConfigurationOptions;
 
   /// The base configuration options.
   std::unique_ptr<BaseConfigurationOption> RuntimePrefix;
   std::unique_ptr<BaseConfigurationOption> RuntimeStubsFile;
+  std::unique_ptr<BaseConfigurationOption> DemangleFunctionNames;
   std::unique_ptr<BaseConfigurationOption> TargetRegex;
   std::unique_ptr<BaseConfigurationOption> HostEnabled;
   std::unique_ptr<BaseConfigurationOption> GPUEnabled;
@@ -539,6 +562,96 @@ struct InstructionIO : public InstrumentationOpportunity {
   }
 };
 
+/// The instrumentation opportunity for functions.
+struct FunctionIO final : public InstrumentationOpportunity {
+  FunctionIO(bool IsPRE)
+      : InstrumentationOpportunity(
+            InstrumentationLocation(InstrumentationLocation(
+                IsPRE ? InstrumentationLocation::FUNCTION_PRE
+                      : InstrumentationLocation::FUNCTION_POST))) {}
+
+  enum ConfigKind {
+    PassAddress = 0,
+    PassName,
+    PassNumArguments,
+    PassArguments,
+    ReplaceArguments,
+    PassIsMain,
+    PassId,
+    NumConfig,
+  };
+
+  struct ConfigTy final : public BaseConfigTy<ConfigKind> {
+    std::function<bool(Argument &)> ArgFilter;
+
+    ConfigTy(bool Enable = true) : BaseConfigTy(Enable) {}
+  } Config;
+
+  StringRef getName() const override { return "function"; }
+
+  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+            ConfigTy *UserConfig = nullptr);
+
+  static Value *getFunctionAddress(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB);
+  static Value *getFunctionName(Value &V, Type &Ty,
+                                InstrumentationConfig &IConf,
+                                InstrumentorIRBuilderTy &IIRB);
+  Value *getNumArguments(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB);
+  Value *getArguments(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                      InstrumentorIRBuilderTy &IIRB);
+  Value *setArguments(Value &V, Value &NewV, InstrumentationConfig &IConf,
+                      InstrumentorIRBuilderTy &IIRB);
+  static Value *isMainFunction(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB);
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO = IConf.allocate<FunctionIO>(true);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO = IConf.allocate<FunctionIO>(false);
+    PostIO->init(IConf, IIRB);
+  }
+};
+
+/// The instrumentation opportunity for alloca instructions.
+struct AllocaIO final : public InstructionIO<Instruction::Alloca> {
+  AllocaIO(bool IsPRE) : InstructionIO(IsPRE) {}
+
+  enum ConfigKind {
+    PassAddress = 0,
+    ReplaceAddress,
+    PassSize,
+    ReplaceSize,
+    PassAlignment,
+    PassId,
+    NumConfig,
+  };
+
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+
+  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+            ConfigTy *UserConfig = nullptr);
+
+  static Value *getSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB);
+  static Value *setSize(Value &V, Value &NewV, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB);
+  static Value *getAlignment(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB);
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO = IConf.allocate<AllocaIO>(true);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO = IConf.allocate<AllocaIO>(false);
+    PostIO->init(IConf, IIRB);
+  }
+};
+
 /// The instrumentation opportunity for store instructions.
 struct StoreIO : public InstructionIO<Instruction::Store> {
   virtual ~StoreIO() {};
@@ -608,10 +721,10 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
   /// instrumentation calls.
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
-    for (auto IsPRE : {true, false}) {
-      auto *AIC = IConf.allocate<StoreIO>(IsPRE);
-      AIC->init(IConf, IIRB);
-    }
+    auto *PreIO = IConf.allocate<StoreIO>(true);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO = IConf.allocate<StoreIO>(false);
+    PostIO->init(IConf, IIRB);
   }
 };
 
@@ -683,10 +796,10 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
   /// Create the store opportunities for PRE and POST positions.
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
-    for (auto IsPRE : {true, false}) {
-      auto *AIC = IConf.allocate<LoadIO>(IsPRE);
-      AIC->init(IConf, IIRB);
-    }
+    auto *PreIO = IConf.allocate<LoadIO>(true);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO = IConf.allocate<LoadIO>(false);
+    PostIO->init(IConf, IIRB);
   }
 };
 
@@ -696,6 +809,9 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
 class InstrumentorPass : public RequiredPassInfoMixin<InstrumentorPass> {
   using InstrumentationConfig = instrumentor::InstrumentationConfig;
   using InstrumentorIRBuilderTy = instrumentor::InstrumentorIRBuilderTy;
+
+  /// File system to be used for read operations.
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
 
   /// The configuration and IR builder provided by the user.
   InstrumentationConfig *UserIConf;
@@ -710,9 +826,9 @@ public:
   /// provided, a default builder is used. When the configuration is not
   /// provided, it is read from the config file if available and otherwise a
   /// default configuration is used.
-  InstrumentorPass(InstrumentationConfig *IC = nullptr,
-                   InstrumentorIRBuilderTy *IIRB = nullptr)
-      : UserIConf(IC), UserIIRB(IIRB) {}
+  InstrumentorPass(IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr,
+                   InstrumentationConfig *IC = nullptr,
+                   InstrumentorIRBuilderTy *IIRB = nullptr);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

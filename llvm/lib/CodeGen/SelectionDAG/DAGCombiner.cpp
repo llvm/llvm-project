@@ -12314,8 +12314,8 @@ SDValue DAGCombiner::foldCTLZToCTLS(SDValue Src, const SDLoc &DL) {
   bool NeedAdd = true;
 
   SDValue X;
-  if (sd_match(Src, m_OneUse(m_Or(m_OneUse(m_Shl(m_Value(X), m_SpecificInt(1))),
-                                  m_SpecificInt(1))))) {
+  if (sd_match(Src,
+               m_OneUse(m_Or(m_OneUse(m_Shl(m_Value(X), m_One())), m_One())))) {
     NeedAdd = false;
     Src = X;
   }

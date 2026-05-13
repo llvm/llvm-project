@@ -139,6 +139,8 @@ private:
     case TT_StructLBrace:
     case TT_UnionLBrace:
       return ST_Class;
+    case TT_EnumLBrace:
+      return ST_Enum;
     case TT_CompoundRequirementLBrace:
       return ST_CompoundRequirement;
     default:
@@ -1212,8 +1214,8 @@ private:
 
     unsigned CommaCount = 0;
     while (CurrentToken) {
+      assert(!Scopes.empty());
       if (CurrentToken->is(tok::r_brace)) {
-        assert(!Scopes.empty());
         assert(Scopes.back() == getScopeType(OpeningBrace));
         Scopes.pop_back();
         assert(OpeningBrace.Optional == CurrentToken->Optional);
@@ -1239,6 +1241,7 @@ private:
              (!Contexts.back().ColonIsDictLiteral || !IsCpp)) ||
             Style.isProto()) {
           OpeningBrace.setType(TT_DictLiteral);
+          Scopes.back() = getScopeType(OpeningBrace);
           if (Previous->Tok.getIdentifierInfo() ||
               Previous->is(tok::string_literal)) {
             Previous->setType(TT_SelectorName);
@@ -1247,16 +1250,20 @@ private:
         if (CurrentToken->is(tok::colon) && OpeningBrace.is(TT_Unknown) &&
             !Style.isTableGen()) {
           OpeningBrace.setType(TT_DictLiteral);
+          Scopes.back() = getScopeType(OpeningBrace);
         } else if (Style.isJavaScript()) {
           OpeningBrace.overwriteFixedType(TT_DictLiteral);
+          Scopes.back() = getScopeType(OpeningBrace);
         }
       }
       bool IsBracedListComma = false;
       if (CurrentToken->is(tok::comma)) {
-        if (Style.isJavaScript())
+        if (Style.isJavaScript()) {
           OpeningBrace.overwriteFixedType(TT_DictLiteral);
-        else
+          Scopes.back() = getScopeType(OpeningBrace);
+        } else {
           IsBracedListComma = OpeningBrace.is(BK_BracedInit);
+        }
         ++CommaCount;
       }
       if (!consumeToken())
@@ -1835,6 +1842,8 @@ private:
       // In TableGen, there must be a value after "=";
       if (Style.isTableGen() && !parseTableGenValue())
         return false;
+      if (!Scopes.empty() && Scopes.back() == ST_Enum)
+        Tok->setFinalizedType(TT_EnumEqual);
       break;
     default:
       break;
@@ -5705,7 +5714,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return getTokenReferenceAlignment(Right) != FormatStyle::PAS_Left;
   }
   if ((Right.is(TT_BinaryOperator) && Left.isNot(tok::l_paren)) ||
-      (Left.isOneOf(TT_BinaryOperator, TT_ConditionalExpr) &&
+      (Left.isOneOf(TT_BinaryOperator, TT_EnumEqual, TT_ConditionalExpr) &&
        Right.isNot(tok::r_paren))) {
     return true;
   }

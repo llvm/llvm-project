@@ -20,14 +20,14 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float rsqrtf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float rsqrtf(float x) {
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
 
   uint32_t x_u = xbits.uintval();
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
-  constexpr uint32_t INF_BITS = FPBits::inf().uintval();
+  LIBC_CONSTEXPR uint32_t INF_BITS = FPBits::inf().uintval();
 
   // x is 0, inf/nan, or negative.
   if (LIBC_UNLIKELY(x_u == 0 || x_u >= INF_BITS)) {
