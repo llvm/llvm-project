@@ -2408,16 +2408,13 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars,
                                   "'omp.iterator' ops";
 
     // Check that the iterator body yields a value defined by omp.map.info.
-    auto &region = iterOp.getRegion();
-    if (region.empty())
-      continue;
-
-    auto yieldOp = dyn_cast<mlir::omp::YieldOp>(region.front().getTerminator());
-    if (!yieldOp || yieldOp.getNumOperands() == 0)
+    auto yieldOp = dyn_cast<mlir::omp::YieldOp>(
+        iterOp.getRegion().front().getTerminator());
+    if (!yieldOp || yieldOp.getResults().empty())
       continue;
 
     auto yieldedMapInfo =
-        yieldOp.getOperand(0).getDefiningOp<mlir::omp::MapInfoOp>();
+        yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
     if (!yieldedMapInfo)
       return op->emitOpError() << "'map_iterated' iterator body must yield "
                                   "a value defined by 'omp.map.info'";
@@ -5249,7 +5246,7 @@ LogicalResult IteratorOp::verify() {
   }
 
   Block &b = getRegion().front();
-  auto yield = llvm::dyn_cast<omp::YieldOp>(b.getTerminator());
+  auto yield = b.empty() ? nullptr : llvm::dyn_cast<omp::YieldOp>(b.back());
 
   if (!yield)
     return emitOpError() << "region must be terminated by omp.yield";

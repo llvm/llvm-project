@@ -4456,6 +4456,15 @@ func.func @iterator_missing_yield(%lb : index, %ub : index, %st : index) {
 
 // -----
 
+func.func @iterator_empty_body(%lb : index, %ub : index, %st : index) {
+  // expected-error@+1 {{region must be terminated by omp.yield}}
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+  } -> !omp.iterated<index>
+  return
+}
+
+// -----
+
 func.func @iterator_yield_wrong_num_operands(%lb : index, %ub : index, %st : index) {
   // expected-error@+1 {{omp.yield in omp.iterator region must yield exactly one value}}
   %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {

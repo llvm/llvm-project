@@ -3861,6 +3861,21 @@ func.func @omp_iterator(%s2 : !llvm.struct<(ptr, i64)>) -> () {
   return
 }
 
+// CHECK-LABEL: func.func @omp_iterator_explicit_yield
+func.func @omp_iterator_explicit_yield(%value : index) -> () {
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 4 : index
+  %st = arith.constant 1 : index
+
+  // CHECK: omp.iterator(%{{.*}}: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   omp.yield(%{{.*}} : index)
+  // CHECK: } -> !omp.iterated<index>
+  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%value : index)
+  } -> !omp.iterated<index>
+  return
+}
+
 // CHECK-LABEL: func.func @omp_iterator_2d
 func.func @omp_iterator_2d(%s2 : !llvm.struct<(ptr, i64)>) -> () {
   // CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) =
