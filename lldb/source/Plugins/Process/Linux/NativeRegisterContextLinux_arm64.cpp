@@ -214,26 +214,12 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
       GetRegisterInfoInterface().GetRegisterInfo(),
       GetRegisterInfoInterface().GetRegisterCount());
 
-  ::memset(&m_fpr, 0, sizeof(m_fpr));
-  ::memset(&m_gpr_arm64, 0, sizeof(m_gpr_arm64));
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
   ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
-  ::memset(&m_sve_header, 0, sizeof(m_sve_header));
-  ::memset(&m_pac_mask, 0, sizeof(m_pac_mask));
-  ::memset(&m_tls_regs, 0, sizeof(m_tls_regs));
-  ::memset(&m_sme_pseudo_regs, 0, sizeof(m_sme_pseudo_regs));
-  ::memset(&m_gcs_regs, 0, sizeof(m_gcs_regs));
-  ::memset(&m_poe_regs, 0, sizeof(m_poe_regs));
-  std::fill(m_zt_reg.begin(), m_zt_reg.end(), 0);
-
-  m_mte_ctrl_reg = 0;
-  m_fpmr_reg = 0;
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
   m_max_hbp_supported = 16;
-
-  m_refresh_hwdebug_info = true;
 
   m_gpr_is_valid = false;
   m_fpu_is_valid = false;
