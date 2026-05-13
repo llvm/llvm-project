@@ -359,8 +359,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
               return error(Info.second, "unknown intrinsic '" + Name + "'");
             // For non-overloaded intrinsics, show a got/expected pair so the
             // user can see both the declared and expected types at once.
-            // TODO: For overloaded intrinsics, derive the expected type from
-            // the overload slots resolved before the mismatch point.
             if (!Intrinsic::isOverloaded(IID)) {
               FunctionType *ExpFTy = Intrinsic::getType(M->getContext(), IID);
               std::string Detail = "for '" + Name + "': got ";
@@ -371,7 +369,14 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
               return error(Info.second,
                            "invalid intrinsic signature\n" + Detail);
             }
-            return error(Info.second, ErrorMsg);
+            // For overloaded intrinsics, use printIntrinsicSignatureMismatch
+            // which resolves the overload types from the context and identifies
+            // the specific mismatching argument.
+            std::string Detail;
+            raw_string_ostream DetailOS(Detail);
+            Intrinsic::printIntrinsicSignatureMismatch(DetailOS, IID,
+                                                       CB->getFunctionType());
+            return error(Info.second, Detail);
           }
 
           U.set(TmpF);

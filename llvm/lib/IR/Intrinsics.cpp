@@ -39,12 +39,20 @@
 
 using namespace llvm;
 
+struct SignatureMatchFailInfo {
+  // -1: return type, >=0: argument index, -2: unknown
+  int ArgIdx = -2;
+  // OverloadTys.size() before the failing arg
+  unsigned OverloadTysSizeBefore = 0;
+};
+
 // Forward declaration of static functions.
 static bool isSignatureValid(FunctionType *FTy,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
-                             raw_ostream &OS);
+                             raw_ostream &OS,
+                             SignatureMatchFailInfo *FailInfo = nullptr);
 
 /// Table of string intrinsic names indexed by enum value.
 #define GET_INTRINSIC_NAME_TABLE
@@ -1080,14 +1088,20 @@ static bool isSignatureValid(FunctionType *FTy,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
-                             raw_ostream &OS) {
+                             raw_ostream &OS,
+                             SignatureMatchFailInfo *FailInfo) {
+  bool IsVarArg = isIntrinsicVarArg(Infos, /*Consume=*/true);
+
   SmallVector<DeferredIntrinsicMatchPair, 2> DeferredChecks;
   if (matchIntrinsicType(FTy->getReturnType(), Infos, OverloadTys,
                          DeferredChecks, false)) {
     OS << "intrinsic has incorrect return type!";
+    if (FailInfo)
+      FailInfo->ArgIdx = -1;
     return false;
   }
   unsigned NumDeferredReturnChecks = DeferredChecks.size();
+  unsigned ArgIdx = 0;
 
   if (FTy->getNumParams() != NumArgs) {
     OS << "intrinsic has incorrect number of args. Expected " << NumArgs
@@ -1096,10 +1110,16 @@ static bool isSignatureValid(FunctionType *FTy,
   }
 
   for (Type *Ty : FTy->params()) {
+    unsigned SizeBefore = OverloadTys.size();
     if (matchIntrinsicType(Ty, Infos, OverloadTys, DeferredChecks, false)) {
       OS << "intrinsic has incorrect argument type!";
+      if (FailInfo) {
+        FailInfo->ArgIdx = ArgIdx;
+        FailInfo->OverloadTysSizeBefore = SizeBefore;
+      }
       return false;
     }
+    ++ArgIdx;
   }
 
   for (unsigned I = 0, E = DeferredChecks.size(); I != E; ++I) {
@@ -1107,10 +1127,13 @@ static bool isSignatureValid(FunctionType *FTy,
     if (!matchIntrinsicType(Check.first, Check.second, OverloadTys,
                             DeferredChecks, true))
       continue;
-    if (I < NumDeferredReturnChecks)
+    if (I < NumDeferredReturnChecks) {
       OS << "intrinsic has incorrect return type!";
-    else
+      if (FailInfo)
+        FailInfo->ArgIdx = -1;
+    } else {
       OS << "intrinsic has incorrect argument type!";
+    }
     return false;
   }
 
@@ -1156,6 +1179,21 @@ bool Intrinsic::isSignatureValid(Function *F,
                           OverloadTys, OS);
 }
 
+/// Returns the number of distinct overload slots for \p ID.  Both Overloaded
+/// and VecOfAnyPtrsToElt descriptors create new slots; all others only
+/// reference existing ones.  This is the minimum OverloadTys size required
+/// by getType().
+static unsigned getRequiredOverloadCount(Intrinsic::ID ID) {
+  SmallVector<Intrinsic::IITDescriptor, 8> Table;
+  Intrinsic::getIntrinsicInfoTableEntries(ID, Table);
+  unsigned Count = 0;
+  for (const auto &D : Table)
+    if (D.Kind == Intrinsic::IITDescriptor::Overloaded ||
+        D.Kind == Intrinsic::IITDescriptor::VecOfAnyPtrsToElt)
+      Count = std::max(Count, D.getOverloadIndex() + 1u);
+  return Count;
+}
+
 void Intrinsic::printIntrinsicSignatureMismatch(raw_ostream &OS,
                                                 Intrinsic::ID ID,
                                                 FunctionType *FT) {
@@ -1166,7 +1204,8 @@ void Intrinsic::printIntrinsicSignatureMismatch(raw_ostream &OS,
   FunctionType *CanonFT =
       isOverloaded(ID) ? nullptr : getType(FT->getContext(), ID);
 
-  // For non-overloaded intrinsics, handle vararg mismatch with a specific message.
+  // For non-overloaded intrinsics, handle vararg mismatch with a specific
+  // message.
   if (CanonFT && FT->isVarArg() != CanonFT->isVarArg()) {
     if (CanonFT->isVarArg())
       OS << "intrinsic was not defined with variable arguments!";
@@ -1179,13 +1218,15 @@ void Intrinsic::printIntrinsicSignatureMismatch(raw_ostream &OS,
   // For non-overloaded intrinsics we can compare return types directly.
   // For overloaded intrinsics we run the matching and inspect the message.
   bool IsRetMismatch;
+  SmallVector<Type *, 4> OverloadTys;
+  SignatureMatchFailInfo FailInfo;
+
   if (CanonFT) {
     IsRetMismatch = FT->getReturnType() != CanonFT->getReturnType();
   } else {
-    SmallVector<Type *, 4> OverloadTys;
     std::string KindMsg;
     raw_string_ostream KindOS(KindMsg);
-    ::isSignatureValid(FT, TableRef, OverloadTys, KindOS);
+    ::isSignatureValid(FT, TableRef, OverloadTys, KindOS, &FailInfo);
     IsRetMismatch = StringRef(KindMsg).contains("return type");
   }
 
@@ -1200,14 +1241,64 @@ void Intrinsic::printIntrinsicSignatureMismatch(raw_ostream &OS,
     }
   };
 
-  if (IsRetMismatch)
+  if (IsRetMismatch) {
     FormatMismatch(
         "intrinsic has incorrect return type! declared return type is '",
         [&] { FT->getReturnType()->print(OS); });
-  else
-    FormatMismatch(
-        "intrinsic has incorrect argument type! declared signature is '",
-        [&] { FT->print(OS); });
+    return;
+  }
+
+  // Emit a per-argument mismatch: prints argument index, actual vs expected
+  // type, declared signature, and optionally the canonical signature.
+  auto EmitArgMismatch = [&](unsigned i, FunctionType *ExpectedFT,
+                             FunctionType *CanonicalFT) {
+    OS << "intrinsic has incorrect argument type! argument " << (i + 1)
+       << " has type '";
+    FT->getParamType(i)->print(OS);
+    OS << "' (expected '";
+    ExpectedFT->getParamType(i)->print(OS);
+    OS << "'). declared signature is '";
+    FT->print(OS);
+    OS << "'";
+    if (CanonicalFT) {
+      OS << ", canonical signature is '";
+      CanonicalFT->print(OS);
+      OS << "'";
+    }
+  };
+
+  // For non-overloaded intrinsics with matching param count, identify the
+  // specific mismatching argument.
+  if (CanonFT && FT->getNumParams() == CanonFT->getNumParams()) {
+    for (unsigned i = 0; i < FT->getNumParams(); ++i) {
+      if (FT->getParamType(i) != CanonFT->getParamType(i)) {
+        EmitArgMismatch(i, CanonFT, CanonFT);
+        return;
+      }
+    }
+  }
+
+  // For overloaded intrinsics: if all overload types were established before
+  // the failing argument (i.e., the failure is a type mismatch against an
+  // already-resolved overload slot, not against a newly introduced one),
+  // reconstruct the expected signature and identify the bad argument.
+  if (!CanonFT && FailInfo.ArgIdx >= 0) {
+    unsigned Required = getRequiredOverloadCount(ID);
+    if (FailInfo.OverloadTysSizeBefore == Required) {
+      OverloadTys.resize(Required);
+      FunctionType *ExpectedFT = getType(FT->getContext(), ID, OverloadTys);
+      unsigned i = FailInfo.ArgIdx;
+      if (i < FT->getNumParams() && i < ExpectedFT->getNumParams() &&
+          FT->getParamType(i) != ExpectedFT->getParamType(i)) {
+        EmitArgMismatch(i, ExpectedFT, nullptr);
+        return;
+      }
+    }
+  }
+
+  FormatMismatch(
+      "intrinsic has incorrect argument type! declared signature is '",
+      [&] { FT->print(OS); });
 }
 
 std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {

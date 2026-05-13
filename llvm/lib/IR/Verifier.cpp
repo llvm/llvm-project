@@ -3933,13 +3933,42 @@ void Verifier::visitCallBase(CallBase &Call) {
   if (IsIntrinsic) {
     FunctionType *DeclFTy = cast<FunctionType>(Callee->getValueType());
     if (DeclFTy != FTy) {
-      std::string Msg = "Intrinsic called with incompatible signature: "
-                        "expected signature: ";
+      std::string Msg;
       raw_string_ostream SS(Msg);
+      SS << "Intrinsic called with incompatible signature";
+
+      Value *WrongOperand = nullptr;
+      if (DeclFTy->getReturnType() != FTy->getReturnType()) {
+        SS << ": return type is '";
+        FTy->getReturnType()->print(SS);
+        SS << "' (expected '";
+        DeclFTy->getReturnType()->print(SS);
+        SS << "')";
+      } else if (DeclFTy->getNumParams() != FTy->getNumParams()) {
+        SS << ": expected " << DeclFTy->getNumParams() << " argument(s), got "
+           << FTy->getNumParams();
+      } else {
+        for (unsigned i = 0; i < DeclFTy->getNumParams(); ++i) {
+          if (DeclFTy->getParamType(i) != FTy->getParamType(i)) {
+            SS << ": argument " << (i + 1) << " has type '";
+            FTy->getParamType(i)->print(SS);
+            SS << "' (expected '";
+            DeclFTy->getParamType(i)->print(SS);
+            SS << "')";
+            WrongOperand = Call.getArgOperand(i);
+            break;
+          }
+        }
+      }
+      SS << "; expected signature: ";
       DeclFTy->print(SS);
       SS << ", got: ";
       FTy->print(SS);
-      CheckFailed(Msg, Call);
+
+      if (WrongOperand)
+        CheckFailed(Msg, WrongOperand, Call);
+      else
+        CheckFailed(Msg, Call);
       return;
     }
   }

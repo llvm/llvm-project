@@ -292,7 +292,7 @@ LLVM_ABI bool isSignatureValid(Function *F,
 /// canonical signature is included; for overloaded intrinsics only the
 /// declared signature is shown.
 LLVM_ABI void printIntrinsicSignatureMismatch(raw_ostream &OS, Intrinsic::ID,
-                                                FunctionType *FT);
+                                              FunctionType *FT);
 
 // Checks if the intrinsic name matches with its signature and if not
 // returns the declaration with the same signature and remangled name.

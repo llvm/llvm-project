@@ -1,6 +1,7 @@
 ; RUN: split-file %s %t
 ; RUN: not llc -mtriple=nvptx64 -mcpu=sm_50 < %t/main.ll 2>&1 | FileCheck %s
 ; RUN: not llc -mtriple=nvptx64 -mcpu=sm_50 < %t/fma-bad-call.ll 2>&1 | FileCheck %s --check-prefix=FMA-CALL
+; RUN: not llc -mtriple=nvptx64 -mcpu=sm_50 < %t/decl-bad-arg.ll 2>&1 | FileCheck %s --check-prefix=DECL-ARG
 ; RUN: not llc -mtriple=nvptx64 -mcpu=sm_50 < %t/parser-bad-ret.ll 2>&1 | FileCheck %s --check-prefix=PARSER-RET
 ; RUN: not llc -mtriple=nvptx64 -mcpu=sm_50 < %t/parser-bad-arg.ll 2>&1 | FileCheck %s --check-prefix=PARSER-ARG
 ; RUN: not llc -mtriple=nvptx64 -mcpu=sm_50 < %t/parser-bad-count.ll 2>&1 | FileCheck %s --check-prefix=PARSER-COUNT
@@ -11,26 +12,33 @@
 ; CHECK-SAME: declared return type is 'i16', canonical signature is 'i32 (i32, i32, i32)'
 ; CHECK-NEXT: @llvm.nvvm.sad.i
 
-; Non-overloaded intrinsic: wrong call-site argument type.
+; Non-overloaded intrinsic: wrong call-site argument type — wrong argument pointed.
 ; CHECK: Intrinsic called with incompatible signature
-; CHECK-SAME: expected signature: i32 (i32, i32, i32), got: i32 (i32, i32, i16)
-; CHECK-NEXT: @llvm.nvvm.sad.ui
+; CHECK-SAME: argument 3 has type 'i16' (expected 'i32'); expected signature: i32 (i32, i32, i32), got: i32 (i32, i32, i16)
+; CHECK-NEXT: i16 %z
+; CHECK-NEXT: call i32 @llvm.nvvm.sad.ui
 
 ; Non-overloaded intrinsic: wrong call-site argument count.
 ; CHECK: Intrinsic called with incompatible signature
-; CHECK-SAME: expected signature: i64 (i64, i64, i64), got: i64 (i64, i64, i64, i64)
-; CHECK-NEXT: @llvm.nvvm.sad.ull
+; CHECK-SAME: expected 3 argument(s), got 4; expected signature: i64 (i64, i64, i64), got: i64 (i64, i64, i64, i64)
+; CHECK-NEXT: call i64 @llvm.nvvm.sad.ull
 
-; Overloaded intrinsic: wrong argument type in declaration — no canonical signature shown.
+; Non-overloaded intrinsic: wrong argument type in declaration — argument index and canonical signature shown.
+; DECL-ARG: intrinsic has incorrect argument type!
+; DECL-ARG-SAME: argument 3 has type 'i16' (expected 'i32'). declared signature is 'i32 (i32, i32, i16)', canonical signature is 'i32 (i32, i32, i32)'
+; DECL-ARG-NEXT: @llvm.nvvm.sad.ui
+
+; Overloaded intrinsic: wrong argument type in declaration — argument index shown, no canonical signature.
 ; CHECK: intrinsic has incorrect argument type!
-; CHECK-SAME: declared signature is 'float (float, float, double)'
+; CHECK-SAME: argument 3 has type 'double' (expected 'float'). declared signature is 'float (float, float, double)'
 ; CHECK-NOT: canonical signature
 ; CHECK-NEXT: @llvm.fma.f32
 
-; Overloaded intrinsic: wrong call-site argument type — declared and actual signatures shown.
+; Overloaded intrinsic: wrong call-site argument type — wrong argument pointed.
 ; FMA-CALL: Intrinsic called with incompatible signature
-; FMA-CALL-SAME: expected signature: float (float, float, float), got: float (float, float, double)
-; FMA-CALL-NEXT: @llvm.fma.f32
+; FMA-CALL-SAME: argument 3 has type 'double' (expected 'float'); expected signature: float (float, float, float), got: float (float, float, double)
+; FMA-CALL-NEXT: double %z
+; FMA-CALL-NEXT: call float @llvm.fma.f32
 
 ; PARSER-RET: invalid intrinsic signature
 ; PARSER-RET-NEXT: for 'llvm.nvvm.sad.i': got i16 (i32, i32, i32), expected i32 (i32, i32, i32)
@@ -41,9 +49,9 @@
 ; PARSER-COUNT: invalid intrinsic signature
 ; PARSER-COUNT-NEXT: for 'llvm.nvvm.sad.ull': got i64 (i64, i64, i64, i64), expected i64 (i64, i64, i64)
 
-; Overloaded intrinsic: parser error — got/expected not shown until overloaded
-; diagnostics are extended.
+; Overloaded intrinsic: parser error — argument index and expected type now shown.
 ; PARSER-FMA-ARG: intrinsic has incorrect argument type!
+; PARSER-FMA-ARG-SAME: argument 3 has type 'double' (expected 'float'). declared signature is 'float (float, float, double)'
 ; PARSER-FMA-ARG-NOT: for 'llvm.fma.f32'
 
 ;--- main.ll
@@ -119,3 +127,13 @@ define float @test_parser_fma_bad_arg(float %x, float %y, double %z) {
   %1 = call float @llvm.fma.f32(float %x, float %y, double %z)
   ret float %1
 }
+
+;--- decl-bad-arg.ll
+
+; Non-overloaded intrinsic: declaration has wrong argument type — argument index shown.
+define i32 @test_decl_bad_arg(i32 %x, i32 %y, i16 %z) {
+  %1 = call i32 @llvm.nvvm.sad.ui(i32 %x, i32 %y, i16 %z)
+  ret i32 %1
+}
+
+declare i32 @llvm.nvvm.sad.ui(i32, i32, i16)
