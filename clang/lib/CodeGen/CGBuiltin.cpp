@@ -2704,7 +2704,7 @@ namespace {
 
 // PaddingClearer is a utility class that clears padding bits in a
 // c/c++ type. It traverses the type recursively, collecting occupied
-// bit intervals, and then compute the padding intervals.
+// bit intervals, and then computes the padding intervals.
 // In the end, it clears the padding bits by writing zeros
 // to the padding intervals bytes-by-bytes. If a byte only contains
 // some padding bits, it writes zeros to only those bits. This is
