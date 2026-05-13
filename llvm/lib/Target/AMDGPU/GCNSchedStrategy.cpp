@@ -2681,6 +2681,14 @@ bool RewriteMFMAFormStage::rewrite(
             unsigned UpdateRegion = LMI->second;
             DAG.Regions[UpdateRegion].second = VGPRCopy;
             LastMIToRegion.erase(RD);
+            // If RD was also the first MI of the next region, update that
+            // region's start boundary to keep the two sides in sync.
+            DenseMap<MachineInstr *, unsigned>::iterator FMI =
+                FirstMIToRegion.find(RD);
+            if (FMI != FirstMIToRegion.end()) {
+              DAG.Regions[FMI->second].first = VGPRCopy;
+              FirstMIToRegion.erase(RD);
+            }
           }
         }
       }
@@ -2688,45 +2696,57 @@ bool RewriteMFMAFormStage::rewrite(
 
     DenseSet<MachineOperand *> &DstRegSet = ReplaceMap[DstReg];
 
-    // For same-block sub-register uses: all RUs that share the same DstReg
-    // and are in the same MBB as the MFMA can reuse a single COPY instead of
-    // inserting one COPY per use. The COPY is placed immediately after the
-    // MFMA so it dominates every same-block use regardless of their order in
-    // DstReachingUseCopies.
-    Register SameBlockNewUseReg;
-
+    // Collect same-block uses; defer cross-block uses to ReachingUseTracker.
+    SmallVector<MachineOperand *, 4> SameBlockUses;
     for (MachineOperand *RU : DstReachingUseCopies) {
       MachineBasicBlock *RUBlock = RU->getParent()->getParent();
-      // Just keep track of the reaching use of this register by block. After we
-      // have scanned all the MFMAs we can find optimal insert pts.
       if (RUBlock != MI->getParent()) {
         ReachingUseTracker[RUBlock->getNumber()][DstReg].insert(RU);
         continue;
       }
+      SameBlockUses.push_back(RU);
+    }
 
-      // Special case: the use is in the same block as the MFMA. Insert a single
-      // COPY immediately after the MFMA and reuse it for all same-block uses.
-      if (SameBlockNewUseReg.isValid()) {
-        // Reuse the COPY already inserted for this DstReg; no new instruction.
-        RU->setReg(SameBlockNewUseReg);
-        continue;
+    // One COPY for all same-block uses, placed before the earliest use to
+    // minimise the live range of the bridging VGPR.
+    if (!SameBlockUses.empty()) {
+      MachineOperand *Earliest = SameBlockUses[0];
+      SlotIndex EarliestPt =
+          DAG.LIS->getInstructionIndex(*Earliest->getParent());
+      for (MachineOperand *RU : SameBlockUses) {
+        SlotIndex Pt = DAG.LIS->getInstructionIndex(*RU->getParent());
+        if (SlotIndex::isEarlierInstr(Pt, EarliestPt)) {
+          EarliestPt = Pt;
+          Earliest = RU;
+        }
       }
-
-      // First same-block use: create one COPY placed right after the MFMA so
-      // it dominates all subsequent same-block uses of DstReg.
       const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
       const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
-      SameBlockNewUseReg = DAG.MRI.createVirtualRegister(VGPRRC);
+      Register SameBlockNewUseReg = DAG.MRI.createVirtualRegister(VGPRRC);
+      MachineInstr *UseInst = Earliest->getParent();
       MachineInstrBuilder VGPRCopy =
-          BuildMI(*MI->getParent(), std::next(MI->getIterator()),
-                  MI->getDebugLoc(), TII->get(TargetOpcode::COPY))
+          BuildMI(*UseInst->getParent(), UseInst->getIterator(),
+                  UseInst->getDebugLoc(), TII->get(TargetOpcode::COPY))
               .addDef(SameBlockNewUseReg, {}, 0)
               .addUse(DstReg, {}, 0);
       DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-      // Since we know this use has only one reaching def, we can replace the
-      // use reg.
-      RU->setReg(SameBlockNewUseReg);
-      // Track the copy source operand for replacement.
+      // If the earliest use was the first MI of a region, update the boundary.
+      DenseMap<MachineInstr *, unsigned>::iterator FI =
+          FirstMIToRegion.find(UseInst);
+      if (FI != FirstMIToRegion.end()) {
+        DAG.Regions[FI->second].first = VGPRCopy;
+        FirstMIToRegion.erase(FI);
+        // If UseInst was also the exclusive end of the preceding region, update
+        // that region's end boundary to keep the two sides in sync.
+        DenseMap<MachineInstr *, unsigned>::iterator LMI =
+            LastMIToRegion.find(UseInst);
+        if (LMI != LastMIToRegion.end()) {
+          DAG.Regions[LMI->second].second = VGPRCopy;
+          LastMIToRegion.erase(LMI);
+        }
+      }
+      for (MachineOperand *RU : SameBlockUses)
+        RU->setReg(SameBlockNewUseReg);
       DstRegSet.insert(&VGPRCopy->getOperand(1));
     }
 
@@ -2775,6 +2795,14 @@ bool RewriteMFMAFormStage::rewrite(
         unsigned UpdateRegion = FI->second;
         DAG.Regions[UpdateRegion].first = VGPRCopy;
         FirstMIToRegion.erase(UseInst);
+        // If UseInst was also the exclusive end of the preceding region, update
+        // that region's end boundary to keep the two sides in sync.
+        DenseMap<MachineInstr *, unsigned>::iterator LMI =
+            LastMIToRegion.find(UseInst);
+        if (LMI != LastMIToRegion.end()) {
+          DAG.Regions[LMI->second].second = VGPRCopy;
+          LastMIToRegion.erase(UseInst);
+        }
       }
 
       // Replace the operand for all users.
