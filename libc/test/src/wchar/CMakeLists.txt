@@ -631,7 +631,8 @@ add_libc_test(
   SRCS
     ungetwc_test.cpp
   DEPENDS
-    libc.include.stdio
+    libc.hdr.stdio_macros
+    libc.hdr.wchar_macros
     libc.src.stdio.fopen
     libc.src.stdio.fclose
     libc.src.stdio.fwrite
