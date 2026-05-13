@@ -16,7 +16,7 @@
 
 // Capture the expected interchange format so not every check needs to be duplicated
 // CHECK-DXIL: %[[RET:.*]] = call [[CC:]]i32 @llvm.[[ICF:dx]].quad.read.across.y.i32(i32 %[[#]])
-// CHECK-SPIRV: %[[RET:.*]] = call [[CC:spir_func ]]i32 @llvm.[[ICF:spv]].quad.read.across.y.i32(i32 %[[#]])
+// CHECK-SPIRV: %[[RET:.*]] = call [[CC:]]i32 @llvm.[[ICF:spv]].quad.read.across.y.i32(i32 %[[#]])
 // CHECK: ret i32 %[[RET]]
 int test_int(int expr) { return QuadReadAcrossY(expr); }
 

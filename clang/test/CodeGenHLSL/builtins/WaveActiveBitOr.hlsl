@@ -4,7 +4,7 @@
 
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -triple \
 // RUN:   spirv-pc-vulkan-compute %s -emit-llvm -disable-llvm-passes -o - | \
-// RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK -DCALL="call spir_func"
+// RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK -DCALL="call"
 
 // Test basic lowering to runtime function call.
 

@@ -5233,7 +5233,11 @@ llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
                                                  const llvm::Twine &name) {
   llvm::CallInst *call = Builder.CreateCall(
       callee, args, getBundlesForFunclet(callee.getCallee()), name);
-  call->setCallingConv(getRuntimeCC());
+  // Intrinsics must use CallingConv::C; only apply the runtime CC to
+  // non-intrinsic callees.
+  if (auto *F = dyn_cast<llvm::Function>(callee.getCallee());
+      !F || !F->isIntrinsic())
+    call->setCallingConv(getRuntimeCC());
 
   if (CGM.shouldEmitConvergenceTokens() && call->isConvergent())
     return cast<llvm::CallInst>(addConvergenceControlToken(call));
