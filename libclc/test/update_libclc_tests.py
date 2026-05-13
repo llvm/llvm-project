@@ -70,7 +70,7 @@ def replace_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
 def revert_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
     # Only revert in the RUN line context, not in generated CHECK lines.
     content = path.read_bytes()
-    content = content.replace(f"-target {triple}".encode(), b"-target %target")
+    content = content.replace(f"--target={triple}".encode(), b"--target=%target")
     if cpu:
         content = content.replace(f"-mcpu={cpu}".encode(), b"-mcpu=%cpu")
     content = content.replace(
