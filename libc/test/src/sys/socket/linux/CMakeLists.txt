@@ -1,3 +1,18 @@
+add_header_library(
+  socket_test_support
+  HDRS
+    socket_test_support.h
+  DEPENDS
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.socklen_t
+    libc.hdr.types.struct_sockaddr_un
+    libc.src.__support.common
+    libc.src.__support.CPP.string_view
+    libc.src.string.strncpy
+    libc.src.string.strnlen
+)
+
 add_custom_target(libc_sys_socket_unittests)
 
 add_libc_unittest(
@@ -22,6 +37,7 @@ add_libc_unittest(
   SRCS
     bind_test.cpp
   DEPENDS
+    .socket_test_support
     libc.include.sys_socket
     libc.hdr.sys_socket_macros
     libc.hdr.types.struct_sockaddr_un
@@ -30,6 +46,7 @@ add_libc_unittest(
     libc.src.sys.socket.bind
     libc.src.stdio.remove
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -41,6 +58,7 @@ add_libc_unittest(
   SRCS
     connect_accept_test.cpp
   DEPENDS
+    .socket_test_support
     libc.include.sys_socket
     libc.hdr.fcntl_macros
     libc.hdr.sys_socket_macros
@@ -54,10 +72,9 @@ add_libc_unittest(
     libc.src.sys.socket.connect
     libc.src.sys.socket.listen
     libc.src.sys.socket.socket
-    libc.src.string.strlen
-    libc.src.string.strncpy
     libc.src.stdio.remove
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -69,6 +86,7 @@ add_libc_unittest(
   SRCS
     listen_test.cpp
   DEPENDS
+    .socket_test_support
     libc.include.sys_socket
     libc.hdr.sys_socket_macros
     libc.hdr.types.struct_sockaddr_un
@@ -78,6 +96,7 @@ add_libc_unittest(
     libc.src.sys.socket.listen
     libc.src.stdio.remove
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -99,6 +118,7 @@ add_libc_unittest(
     libc.src.sys.socket.socket
     libc.src.unistd.close
     libc.src.unistd.pipe
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -125,12 +145,13 @@ add_libc_unittest(
   SRCS
     send_recv_test.cpp
   DEPENDS
-    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
     libc.src.errno.errno
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.send
     libc.src.sys.socket.recv
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -148,6 +169,7 @@ add_libc_unittest(
     libc.src.sys.socket.sendto
     libc.src.sys.socket.recvfrom
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -159,12 +181,19 @@ add_libc_unittest(
   SRCS
     sendmsg_recvmsg_test.cpp
   DEPENDS
-    libc.include.sys_socket
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_cmsghdr
     libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.string.memcpy
+    libc.src.string.memset
+    libc.src.sys.socket.getsockopt
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.sendmsg
     libc.src.sys.socket.recvmsg
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

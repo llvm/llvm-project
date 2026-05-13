@@ -4,10 +4,10 @@
 define void @test(ptr %a) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
 ; CHECK-NEXT:    store ptr null, ptr null, align 8
 ; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr null, align 8
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    store i32 [[V]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP]]

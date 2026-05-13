@@ -109,10 +109,7 @@ Your format class must inherit from ``SerializationFormat`` and define a ``Forma
 
   } // namespace clang::ssaf
 
-  namespace llvm {
-  extern template class CLANG_TEMPLATE_ABI
-      Registry<clang::ssaf::MyFormat::FormatInfo>;
-  } // namespace llvm
+  LLVM_DECLARE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
 
 Step 2: Register the format
 ===========================
@@ -131,7 +128,7 @@ Step 2: Register the format
   static SerializationFormatRegistry::Add<MyFormat>
       RegisterFormat("myformat", "My awesome serialization format");
 
-  LLVM_INSTANTIATE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
+  LLVM_DEFINE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
 
 The format name (``"myformat"``) is matched against the file extension in ``--ssaf-tu-summary-file=output.myformat``.
 

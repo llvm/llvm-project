@@ -930,9 +930,11 @@ INITIALIZE_PASS_END(AArch64PostLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine AArch64 MachineInstrs after legalization", false,
                     false)
 
-AArch64PostLegalizerCombinerPass::AArch64PostLegalizerCombinerPass()
+AArch64PostLegalizerCombinerPass::AArch64PostLegalizerCombinerPass(
+    const AArch64TargetMachine *TM)
     : RuleConfig(
-          std::make_unique<AArch64PostLegalizerCombinerImplRuleConfig>()) {
+          std::make_unique<AArch64PostLegalizerCombinerImplRuleConfig>()),
+      TM(TM) {
   if (!RuleConfig->parseCommandLineOption())
     reportFatalUsageError("invalid rule identifier");
 }
@@ -948,7 +950,7 @@ AArch64PostLegalizerCombinerPass::run(MachineFunction &MF,
   if (MF.getProperties().hasFailedISel())
     return PreservedAnalyses::all();
 
-  bool IsOptNone = llvm::isGlobalISelOptNone(&MF.getTarget());
+  bool IsOptNone = TM->isGlobalISelOptNone();
   bool EnableOpt = !IsOptNone;
 
   GISelValueTracking *VT = &MFAM.getResult<GISelValueTrackingAnalysis>(MF);

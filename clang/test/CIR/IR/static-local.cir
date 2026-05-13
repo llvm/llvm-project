@@ -14,6 +14,8 @@ cir.global "private" internal static_local_guard<"_HasInitGuard2"> @_HasInit2 : 
 // CHECK: cir.global "private" internal static_local_guard<"_HasInitGuard2"> @_HasInit2 : !s32i
 cir.global "private" internal static_local_guard<"_HasInitGuard3"> @_HasInit3 : !s32i
 // CHECK: cir.global "private" internal static_local_guard<"_HasInitGuard3"> @_HasInit3 : !s32i
+cir.global "private" internal static_local_guard<"_HasInitGuard4"> @_HasInit4 : !s32i
+// CHECK: cir.global "private" internal static_local_guard<"_HasInitGuard4"> @_HasInit4 : !s32i
 
 cir.func @test_static_local() {
   %0 = cir.get_global static_local @_ZZ1fvE1x : !cir.ptr<!s32i>
@@ -33,11 +35,13 @@ cir.func @test_static_local2() {
   cir.local_init static_local @_HasInit2 dtor {
     cir.yield
   }
+  cir.scope {
   %2 = cir.get_global static_local @_HasInit3 : !cir.ptr<!s32i>
-  cir.local_init static_local @_HasInit3 ctor {
-    cir.yield
-  } dtor {
-    cir.yield
+    cir.local_init static_local @_HasInit3 ctor {
+      cir.yield
+    } dtor {
+      cir.yield
+    }
   }
   cir.return
 }
@@ -50,11 +54,13 @@ cir.func @test_static_local2() {
 // CHECK:  cir.local_init static_local @_HasInit2 dtor {
 // CHECK:    cir.yield
 // CHECK:  }
-// CHECK:  %{{.*}} = cir.get_global static_local @_HasInit3 : !cir.ptr<!s32i>
-// CHECK:  cir.local_init static_local @_HasInit3 ctor {
-// CHECK:    cir.yield
-// CHECK:  } dtor {
-// CHECK:    cir.yield
+// CHECK:  cir.scope {
+// CHECK:    %{{.*}} = cir.get_global static_local @_HasInit3 : !cir.ptr<!s32i>
+// CHECK:    cir.local_init static_local @_HasInit3 ctor {
+// CHECK:      cir.yield
+// CHECK:    } dtor {
+// CHECK:      cir.yield
+// CHECK:    }
 // CHECK:  }
 // CHECK:  cir.return
 
