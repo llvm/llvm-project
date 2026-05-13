@@ -4315,8 +4315,6 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
 
     Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
     for (int CapturingParamIdx : Attr->params()) {
-      if (CapturingParamIdx == LifetimeCaptureByAttr::Invalid)
-        continue;
       // lifetime_capture_by(this) case is handled in the lifetimebound expr
       // initialization codepath.
       if (CapturingParamIdx == LifetimeCaptureByAttr::This &&
