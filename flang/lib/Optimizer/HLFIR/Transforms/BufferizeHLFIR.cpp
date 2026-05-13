@@ -43,6 +43,32 @@ namespace hlfir {
 
 namespace {
 
+/// Cast \p temp to \p targetType so it can be used as a fir.if result.
+/// createTempFromMold may produce a raw ref or unboxed type that differs
+/// from the ExprType-derived result type (e.g. static vs dynamic extents).
+static hlfir::Entity castTempToResultType(mlir::Location loc,
+                                          fir::FirOpBuilder &builder,
+                                          hlfir::Entity temp,
+                                          mlir::Type targetType) {
+  if (temp.getType() == targetType)
+    return temp;
+  if (mlir::isa<fir::BoxCharType>(targetType)) {
+    llvm::SmallVector<mlir::Value> lenParams;
+    hlfir::genLengthParameters(loc, builder, temp, lenParams);
+    assert(!lenParams.empty() && "character must have length");
+    const mlir::Value ref{builder.createConvert(
+        loc, builder.getRefType(temp.getFortranElementType()), temp)};
+    return hlfir::Entity{
+        fir::EmboxCharOp::create(builder, loc, targetType, ref, lenParams[0])};
+  }
+  if (mlir::isa<fir::BaseBoxType>(targetType) &&
+      !mlir::isa<fir::BaseBoxType>(temp.getType())) {
+    return hlfir::genVariableBox(loc, builder, temp,
+                                 mlir::cast<fir::BaseBoxType>(targetType));
+  }
+  return hlfir::Entity{builder.createConvert(loc, targetType, temp)};
+}
+
 /// Helper to create tuple from a bufferized expr storage and clean up
 /// instruction flag. The storage is an HLFIR variable so that it can
 /// be manipulated as a variable later (all shape and length information
@@ -881,8 +907,7 @@ struct ConditionalOpConversion
         mlir::cast<hlfir::ExprType>(condOp.getResult().getType())};
     const mlir::Type tempBaseType{hlfir::getVariableType(exprType)};
 
-    // Emit one branch: clone ops, create temp, assign, run deferred
-    // destroys, yield (temp, mustFree).
+    // Clone branch body, assign into temp, replay cleanup region ops.
     auto emitBranch = [&](mlir::Region &region) {
       mlir::IRMapping mapper;
       auto yield{mlir::cast<hlfir::YieldOp>(region.front().getTerminator())};
@@ -901,33 +926,10 @@ struct ConditionalOpConversion
             }))
           asExprToForward = asExpr;
       }
-      // Ops after yieldDefOp are cleanups that must be deferred until after
-      // the temp assign to avoid use-after-free.
-      mlir::Operation *const yieldDefOp{yieldedEntity.getDefiningOp()};
-      const bool hasDeferredCleanups{!asExprToForward && yieldDefOp &&
-                                     yieldDefOp->getBlock() == &region.front()};
-      // Clone ops up to and including yieldDefOp, collecting deferred cleanups
-      // and the destroy of yieldedEntity for later replay.
-      llvm::SmallVector<mlir::Operation *> deferredOps;
-      mlir::Operation *destroyOfYielded{nullptr};
-      bool pastYieldDef{false};
+      // Clone all non-terminator ops from the branch body.
       for (auto &op : region.front().without_terminator()) {
-        if (auto destroy{mlir::dyn_cast<hlfir::DestroyOp>(op)};
-            destroy && destroy.getExpr() == yieldedEntity) {
-          destroyOfYielded = &op;
-          continue;
-        }
         if (asExprToForward && &op == asExprToForward.getOperation())
           continue;
-        if (hasDeferredCleanups && &op == yieldDefOp) {
-          builder.clone(op, mapper);
-          pastYieldDef = true;
-          continue;
-        }
-        if (pastYieldDef) {
-          deferredOps.push_back(&op);
-          continue;
-        }
         builder.clone(op, mapper);
       }
       if (asExprToForward) {
@@ -953,43 +955,11 @@ struct ConditionalOpConversion
                               /*realloc=*/false,
                               /*keep_lhs_length_if_realloc=*/false,
                               /*temporary_lhs=*/true);
-      // Replay deferred cleanups after the assign; destroy last.
-      for (auto *op : deferredOps)
-        builder.clone(*op, mapper);
-      if (destroyOfYielded)
-        builder.clone(*destroyOfYielded, mapper);
-      // Cast temp to match the fir.if result type if needed (e.g. the mold
-      // may have static extents while ExprType prescribes dynamic ones).
-      if (temp.getType() != tempBaseType) {
-        if (mlir::isa<fir::BoxCharType>(tempBaseType)) {
-          llvm::SmallVector<mlir::Value> lenParams;
-          hlfir::genLengthParameters(loc, builder, temp, lenParams);
-          assert(!lenParams.empty() && "character must have length");
-          const mlir::Value ref{builder.createConvert(
-              loc, builder.getRefType(temp.getFortranElementType()), temp)};
-          temp = hlfir::Entity{fir::EmboxCharOp::create(
-              builder, loc, tempBaseType, ref, lenParams[0])};
-        } else if (mlir::isa<fir::BaseBoxType>(tempBaseType) &&
-                   !mlir::isa<fir::BaseBoxType>(temp.getType())) {
-          // Unboxed temp needs emboxing to satisfy the fir.if result type.
-          const mlir::Value shape{temp.isArray()
-                                      ? hlfir::genShape(loc, builder, temp)
-                                      : mlir::Value{}};
-          // Only pass length params for dynamic-length character elements;
-          // fir.embox rejects redundant length operands.
-          llvm::SmallVector<mlir::Value> lenParams;
-          hlfir::genLengthParameters(loc, builder, temp, lenParams);
-          const mlir::Type elemType{hlfir::getFortranElementType(tempBaseType)};
-          if (auto charTy{mlir::dyn_cast<fir::CharacterType>(elemType)};
-              charTy && charTy.hasConstantLen())
-            lenParams.clear();
-          temp = hlfir::Entity{
-              fir::EmboxOp::create(builder, loc, tempBaseType, temp, shape,
-                                   /*slice=*/nullptr, lenParams)};
-        } else {
-          temp = hlfir::Entity{builder.createConvert(loc, tempBaseType, temp)};
-        }
-      }
+      // Replay cleanup ops after the assign to avoid use-after-free.
+      if (!yield.getCleanup().empty())
+        for (auto &op : yield.getCleanup().front().without_terminator())
+          builder.clone(op, mapper);
+      temp = castTempToResultType(loc, builder, temp, tempBaseType);
       const mlir::Value mustFreeVal{builder.createBool(loc, isHeapAlloc)};
       fir::ResultOp::create(builder, loc, mlir::ValueRange{temp, mustFreeVal});
     };

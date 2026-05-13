@@ -1869,22 +1869,21 @@ private:
                                                    elementType, isPolymorphic)};
     auto condOp =
         hlfir::ConditionalOp::create(builder, loc, exprType, condition);
-    // Populate each region inside a scope so that any cleanups
-    // (hlfir.destroy) emitted by gen() stay inside the region, avoiding
-    // dominance violations. The ConditionalOpConversion in bufferization
-    // defers these destroy ops until after the assign into the temp.
-    builder.setInsertionPointToStart(&condOp.getThenRegion().front());
-    getStmtCtx().pushScope();
-    const hlfir::Entity thenEntity{hlfir::derefPointersAndAllocatables(
-        loc, builder, hlfir::Entity{gen(condExpr.thenValue())})};
-    getStmtCtx().finalizeAndPop();
-    hlfir::YieldOp::create(builder, loc, thenEntity);
-    builder.setInsertionPointToStart(&condOp.getElseRegion().front());
-    getStmtCtx().pushScope();
-    const hlfir::Entity elseEntity{hlfir::derefPointersAndAllocatables(
-        loc, builder, hlfir::Entity{gen(condExpr.elseValue())})};
-    getStmtCtx().finalizeAndPop();
-    hlfir::YieldOp::create(builder, loc, elseEntity);
+    // Cleanups are placed in the yield's cleanup region so that
+    // bufferization can replay them after the assign into the temp.
+    auto genBranch = [&](mlir::Region &region, const auto &value) {
+      builder.setInsertionPointToStart(&region.front());
+      getStmtCtx().pushScope();
+      hlfir::Entity entity{hlfir::derefPointersAndAllocatables(
+          loc, builder, hlfir::Entity{gen(value)})};
+      auto yieldOp = hlfir::YieldOp::create(builder, loc, entity);
+      Fortran::lower::genCleanUpInRegionIfAny(
+          loc, builder, yieldOp.getCleanup(), getStmtCtx());
+      if (yieldOp.getCleanup().empty())
+        getStmtCtx().pop();
+    };
+    genBranch(condOp.getThenRegion(), condExpr.thenValue());
+    genBranch(condOp.getElseRegion(), condExpr.elseValue());
     builder.setInsertionPointAfter(condOp);
     fir::FirOpBuilder *const bldr{&builder};
     mlir::Value result{condOp.getResult()};

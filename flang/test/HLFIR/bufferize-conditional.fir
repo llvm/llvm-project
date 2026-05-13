@@ -52,9 +52,10 @@ func.func @test_scalar_polymorphic(%cond: i1, %a: !fir.class<!fir.type<_Tt{x:i32
 // CHECK:         fir.result %{{.*}}, %[[TRUE2]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       }
 
-// --- Test 3: Polymorphic function results with deferred cleanups ---
-// The branch body contains cleanup ops (Destroy + freemem) after the declare.
-// Verify that assign happens BEFORE the cleanup (no use-after-free).
+// --- Test 3: Polymorphic function results with cleanup region ---
+// The branch body contains the call + declare; cleanup ops (Destroy + freemem)
+// are in the yield's cleanup region.  Verify that assign happens BEFORE the
+// cleanup ops are replayed (no use-after-free).
 func.func @test_poly_func_result_cleanup(%cond: i1) {
   %alloca = fir.alloca !fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>> {bindc_name = ".result"}
   %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<!fir.type<_Tt{x:i32}>?> {
@@ -62,36 +63,37 @@ func.func @test_poly_func_result_cleanup(%cond: i1) {
     fir.save_result %1 to %alloca : !fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
     %2 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
     %3:2 = hlfir.declare %2 {uniq_name = ".tmp.func_result"} : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> (!fir.class<!fir.type<_Tt{x:i32}>>, !fir.class<!fir.type<_Tt{x:i32}>>)
-    // Cleanup: Destroy + freemem (must run AFTER assign in bufferized output)
-    %4 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
-    %5 = fir.convert %4 : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> !fir.box<none>
-    fir.call @_FortranADestroy(%5) fastmath<contract> : (!fir.box<none>) -> ()
-    %6 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
-    %7 = fir.box_addr %6 : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> !fir.heap<!fir.type<_Tt{x:i32}>>
-    %8 = fir.convert %7 : (!fir.heap<!fir.type<_Tt{x:i32}>>) -> i64
-    %c0 = arith.constant 0 : i64
-    %9 = arith.cmpi ne, %8, %c0 : i64
-    fir.if %9 {
-      fir.freemem %7 : !fir.heap<!fir.type<_Tt{x:i32}>>
+    hlfir.yield %3#0 : !fir.class<!fir.type<_Tt{x:i32}>> cleanup {
+      %4 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
+      %5 = fir.convert %4 : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> !fir.box<none>
+      fir.call @_FortranADestroy(%5) fastmath<contract> : (!fir.box<none>) -> ()
+      %6 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
+      %7 = fir.box_addr %6 : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> !fir.heap<!fir.type<_Tt{x:i32}>>
+      %8 = fir.convert %7 : (!fir.heap<!fir.type<_Tt{x:i32}>>) -> i64
+      %c0 = arith.constant 0 : i64
+      %9 = arith.cmpi ne, %8, %c0 : i64
+      fir.if %9 {
+        fir.freemem %7 : !fir.heap<!fir.type<_Tt{x:i32}>>
+      }
     }
-    hlfir.yield %3#0 : !fir.class<!fir.type<_Tt{x:i32}>>
   } else {
     %1 = fir.call @_QPmake_poly() fastmath<contract> : () -> !fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>
     fir.save_result %1 to %alloca : !fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
     %2 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
     %3:2 = hlfir.declare %2 {uniq_name = ".tmp.func_result"} : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> (!fir.class<!fir.type<_Tt{x:i32}>>, !fir.class<!fir.type<_Tt{x:i32}>>)
-    %4 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
-    %5 = fir.convert %4 : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> !fir.box<none>
-    fir.call @_FortranADestroy(%5) fastmath<contract> : (!fir.box<none>) -> ()
-    %6 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
-    %7 = fir.box_addr %6 : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> !fir.heap<!fir.type<_Tt{x:i32}>>
-    %8 = fir.convert %7 : (!fir.heap<!fir.type<_Tt{x:i32}>>) -> i64
-    %c0 = arith.constant 0 : i64
-    %9 = arith.cmpi ne, %8, %c0 : i64
-    fir.if %9 {
-      fir.freemem %7 : !fir.heap<!fir.type<_Tt{x:i32}>>
+    hlfir.yield %3#0 : !fir.class<!fir.type<_Tt{x:i32}>> cleanup {
+      %4 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
+      %5 = fir.convert %4 : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> !fir.box<none>
+      fir.call @_FortranADestroy(%5) fastmath<contract> : (!fir.box<none>) -> ()
+      %6 = fir.load %alloca : !fir.ref<!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>>
+      %7 = fir.box_addr %6 : (!fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>) -> !fir.heap<!fir.type<_Tt{x:i32}>>
+      %8 = fir.convert %7 : (!fir.heap<!fir.type<_Tt{x:i32}>>) -> i64
+      %c0 = arith.constant 0 : i64
+      %9 = arith.cmpi ne, %8, %c0 : i64
+      fir.if %9 {
+        fir.freemem %7 : !fir.heap<!fir.type<_Tt{x:i32}>>
+      }
     }
-    hlfir.yield %3#0 : !fir.class<!fir.type<_Tt{x:i32}>>
   }
   hlfir.destroy %0 : !hlfir.expr<!fir.type<_Tt{x:i32}>?>
   return
@@ -127,14 +129,16 @@ func.func @test_array_static(%cond: i1, %a: !fir.ref<!fir.array<10xi32>>, %b: !f
 // CHECK:         %[[ALLOC:.*]] = fir.allocmem !fir.array<10xi32>
 // CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
 // CHECK:         hlfir.assign %[[A]] to %[[DECL]]#0 temporary_lhs
-// CHECK:         %[[BOX:.*]] = fir.embox %[[DECL]]#0(%{{.*}}) : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:         %[[CVT:.*]] = fir.convert %[[DECL]]#0 : (!fir.heap<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xi32>>
+// CHECK:         %[[BOX:.*]] = fir.embox %[[CVT]](%{{.*}}) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         fir.result %[[BOX]], %[[TRUE]] : !fir.box<!fir.array<?xi32>>, i1
 // CHECK:       } else {
 // CHECK:         %[[ALLOC2:.*]] = fir.allocmem !fir.array<10xi32>
 // CHECK:         %[[DECL2:.*]]:2 = hlfir.declare %[[ALLOC2]]
 // CHECK:         hlfir.assign %[[B]] to %[[DECL2]]#0 temporary_lhs
-// CHECK:         %[[BOX2:.*]] = fir.embox %[[DECL2]]#0(%{{.*}}) : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:         %[[CVT2:.*]] = fir.convert %[[DECL2]]#0 : (!fir.heap<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xi32>>
+// CHECK:         %[[BOX2:.*]] = fir.embox %[[CVT2]](%{{.*}}) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:         %[[TRUE2:.*]] = arith.constant true
 // CHECK:         fir.result %[[BOX2]], %[[TRUE2]] : !fir.box<!fir.array<?xi32>>, i1
 // CHECK:       }
@@ -220,14 +224,16 @@ func.func @test_char_array_static_len(%cond: i1, %a: !fir.ref<!fir.array<3x!fir.
 // CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
 // CHECK:         hlfir.assign %[[A]] to %[[DECL]]#0 temporary_lhs
 // Verify embox has NO typeparams (no extra operands after shape):
-// CHECK:         %[[BOX:.*]] = fir.embox %[[DECL]]#0(%{{.*}}) : (!fir.heap<!fir.array<3x!fir.char<1,15>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,15>>>
+// CHECK:         %[[CVT:.*]] = fir.convert %[[DECL]]#0 : (!fir.heap<!fir.array<3x!fir.char<1,15>>>) -> !fir.ref<!fir.array<?x!fir.char<1,15>>>
+// CHECK:         %[[BOX:.*]] = fir.embox %[[CVT]](%{{.*}}) : (!fir.ref<!fir.array<?x!fir.char<1,15>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,15>>>
 // CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         fir.result %[[BOX]], %[[TRUE]] : !fir.box<!fir.array<?x!fir.char<1,15>>>, i1
 // CHECK:       } else {
 // CHECK:         %[[ALLOC2:.*]] = fir.allocmem !fir.array<3x!fir.char<1,15>>
 // CHECK:         %[[DECL2:.*]]:2 = hlfir.declare %[[ALLOC2]]
 // CHECK:         hlfir.assign %[[B]] to %[[DECL2]]#0 temporary_lhs
-// CHECK:         %[[BOX2:.*]] = fir.embox %[[DECL2]]#0(%{{.*}}) : (!fir.heap<!fir.array<3x!fir.char<1,15>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,15>>>
+// CHECK:         %[[CVT2:.*]] = fir.convert %[[DECL2]]#0 : (!fir.heap<!fir.array<3x!fir.char<1,15>>>) -> !fir.ref<!fir.array<?x!fir.char<1,15>>>
+// CHECK:         %[[BOX2:.*]] = fir.embox %[[CVT2]](%{{.*}}) : (!fir.ref<!fir.array<?x!fir.char<1,15>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,15>>>
 // CHECK:         %[[TRUE2:.*]] = arith.constant true
 // CHECK:         fir.result %[[BOX2]], %[[TRUE2]] : !fir.box<!fir.array<?x!fir.char<1,15>>>, i1
 // CHECK:       }
