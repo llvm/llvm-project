@@ -1943,7 +1943,7 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
   case tgtok::XForEach:
   case tgtok::XFilter:
   case tgtok::XSort: {
-    return ParseOperationForEachFilter(CurRec, ItemType);
+    return ParseOperationListComprehension(CurRec, ItemType);
   }
 
   case tgtok::XRange: {
@@ -2577,8 +2577,8 @@ const Init *TGParser::ParseOperationFind(Record *CurRec,
 /// ForEach ::= !foreach(ID, list-or-dag, expr) => list<expr type>
 /// Filter  ::= !filter(ID, list, predicate) ==> list<list type>
 /// Sort    ::= !sort(ID, list, key-expr) ==> list<list type>
-const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
-                                                  const RecTy *ItemType) {
+const Init *TGParser::ParseOperationListComprehension(Record *CurRec,
+                                                      const RecTy *ItemType) {
   SMLoc OpLoc = Lex.getLoc();
   tgtok::TokKind Operation = Lex.getCode();
   Lex.Lex(); // eat the operation
@@ -2630,11 +2630,19 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
     InEltType = InListTy->getElementType();
     if (ItemType) {
       if (const auto *OutListTy = dyn_cast<ListRecTy>(ItemType)) {
-        ExprEltType =
-            (Operation == tgtok::XForEach)
-                ? OutListTy->getElementType()
-                : (Operation == tgtok::XFilter ? IntRecTy::get(Records)
-                                               : nullptr);
+        switch (Operation) {
+        case tgtok::XForEach:
+          ExprEltType = OutListTy->getElementType();
+          break;
+        case tgtok::XFilter:
+          ExprEltType = IntRecTy::get(Records);
+          break;
+        case tgtok::XSort:
+          ExprEltType = nullptr;
+          break;
+        default:
+          llvm_unreachable("unexpected token");
+        }
       } else {
         Error(OpLoc, "expected value of type '" +
                          Twine(ItemType->getAsString()) +
@@ -2643,10 +2651,17 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
       }
     }
   } else if (const auto *InDagTy = dyn_cast<DagRecTy>(MHSt->getType())) {
-    if (Operation == tgtok::XFilter || Operation == tgtok::XSort) {
-      TokError(Twine("!") + (Operation == tgtok::XFilter ? "filter" : "sort") +
-               " must have a list argument");
+    switch (Operation) {
+    case tgtok::XFilter:
+      TokError("!filter must have a list argument");
       return nullptr;
+    case tgtok::XSort:
+      TokError("!sort must have a list argument");
+      return nullptr;
+    case tgtok::XForEach:
+      break;
+    default:
+      llvm_unreachable("unexpected token");
     }
     InEltType = InDagTy;
     if (ItemType && !isa<DagRecTy>(ItemType)) {
@@ -2656,13 +2671,19 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
     }
     IsDAG = true;
   } else {
-    if (Operation == tgtok::XForEach)
+    switch (Operation) {
+    case tgtok::XForEach:
       TokError("!foreach must have a list or dag argument");
-    else if (Operation == tgtok::XFilter)
+      return nullptr;
+    case tgtok::XFilter:
       TokError("!filter must have a list argument");
-    else
+      return nullptr;
+    case tgtok::XSort:
       TokError("!sort must have a list argument");
-    return nullptr;
+      return nullptr;
+    default:
+      llvm_unreachable("unexpected token");
+    }
   }
 
   // We need to create a temporary record to provide a scope for the
@@ -2699,11 +2720,20 @@ const Init *TGParser::ParseOperationForEachFilter(Record *CurRec,
     OutType = InEltType->getListTy();
   }
 
-  TernOpInit::TernaryOp Opc = TernOpInit::FOREACH;
-  if (Operation == tgtok::XFilter)
+  TernOpInit::TernaryOp Opc;
+  switch (Operation) {
+  case tgtok::XForEach:
+    Opc = TernOpInit::FOREACH;
+    break;
+  case tgtok::XFilter:
     Opc = TernOpInit::FILTER;
-  else if (Operation == tgtok::XSort)
+    break;
+  case tgtok::XSort:
     Opc = TernOpInit::SORT;
+    break;
+  default:
+    llvm_unreachable("unexpected token");
+  }
   return (TernOpInit::get(Opc, LHS, MHS, RHS, OutType))->Fold(CurRec);
 }
 
