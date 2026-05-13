@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "lldb/Target/PostMortemProcess.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/ObjectFile/ELF/ELFHeader.h"
@@ -96,6 +97,7 @@ public:
   // Returns AUXV structure found in the core file
   lldb_private::DataExtractor GetAuxvData() override;
 
+  std::optional<Process::CoreArgs> GetCoreFileArgs() override;
   bool GetProcessInfo(lldb_private::ProcessInstanceInfo &info) override;
 
 protected:
@@ -155,6 +157,8 @@ private:
   // Executable name found from the ELF PRPSINFO
   std::string m_executable_name;
 
+  // Command line args found from the ELF PRPSINFO (pr_psargs)
+  Process::CoreArgs m_process_args;
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
       const elf::ELFProgramHeader &segment_header,
