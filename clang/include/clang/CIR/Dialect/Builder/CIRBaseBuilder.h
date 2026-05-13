@@ -801,8 +801,7 @@ public:
   }
 
   // Materialize an alignment value as a CIR integer constant of the given
-  // integer type.  Used to pass std::align_val_t (or its size_t fallback) to
-  // aligned-allocation operator new / operator delete calls.
+  // integer type.
   cir::ConstantOp getAlignment(mlir::Location loc, mlir::Type t,
                                clang::CharUnits alignment) {
     return getConstantInt(loc, t, alignment.getQuantity());
