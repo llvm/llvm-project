@@ -1,5 +1,5 @@
-// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=8 assume-aligned=true" --cse --verify-diagnostics --split-input-file %s | FileCheck %s
-// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=32 assume-aligned=true" --cse --verify-diagnostics --split-input-file %s | FileCheck %s --check-prefix=CHECK32
+// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=8" --cse --verify-diagnostics --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=32" --cse --verify-diagnostics --split-input-file %s | FileCheck %s --check-prefix=CHECK32
 
 // Expect no conversions.
 func.func @memref_i8() -> i8 {
@@ -267,7 +267,7 @@ func.func @memref_subview_dynamic_inner_offset_i4(%off: index) -> i4 {
 
 func.func @memref_subview_aligned_dynamic_inner_offset_i4(%x: index) -> i4 {
   %c0 = arith.constant 0 : index
-  %off = affine.apply affine_map<()[s0] -> (s0 * 2)>()[%x]
+  %off = affine.apply affine_map<()[s0] -> (s0 * 8)>()[%x]
   %arr = memref.alloc() : memref<128xi4>
   %subview = memref.subview %arr[%off] [32] [1] : memref<128xi4> to memref<32xi4, strided<[1], offset: ?>>
   %ld = memref.load %subview[%c0] : memref<32xi4, strided<[1], offset: ?>>
@@ -277,9 +277,16 @@ func.func @memref_subview_aligned_dynamic_inner_offset_i4(%x: index) -> i4 {
 // CHECK-LABEL:   func.func @memref_subview_aligned_dynamic_inner_offset_i4(
 // CHECK-SAME:        %[[X:[a-zA-Z0-9_]+]]: index
 // CHECK:           %[[ALLOC:.+]] = memref.alloc() : memref<64xi8>
-// CHECK-NOT:       affine.apply
-// CHECK:           %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][%[[X]]] [16] [1] : memref<64xi8> to memref<16xi8, strided<[1], offset: ?>>
+// CHECK:           %[[OFF:.+]] = affine.apply
+// CHECK:           %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][%[[OFF]]] [16] [1] : memref<64xi8> to memref<16xi8, strided<[1], offset: ?>>
 // CHECK:           memref.load %[[SUBVIEW]]
+
+// CHECK32-LABEL:   func.func @memref_subview_aligned_dynamic_inner_offset_i4(
+// CHECK32-SAME:        %[[X:[a-zA-Z0-9_]+]]: index
+// CHECK32:           %[[ALLOC:.+]] = memref.alloc() : memref<16xi32>
+// CHECK32-NOT:       affine.apply
+// CHECK32:           %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][%[[X]]] [4] [1] : memref<16xi32> to memref<4xi32, strided<[1], offset: ?>>
+// CHECK32:           memref.load %[[SUBVIEW]]
 
 // -----
 
@@ -711,4 +718,46 @@ func.func @alloc_non_contiguous() {
 // expected-error @+1 {{failed to legalize operation 'func.func' that was explicitly marked illegal}}
 func.func @argument_non_contiguous(%arg0 : memref<8x8xi4, strided<[1, 8]>>) {
   return
+}
+
+// -----
+
+// Divisibility-aware acceptance: the dynamic offset is `%i * 8`, which the
+// `IntegerDivisibilityAnalysis` proves is a multiple of both the i4 -> i8
+// ratio (2) and the i4 -> i32 ratio (8). Lowering succeeds and emits the
+// linearized reinterpret_cast.
+
+func.func @reinterpret_cast_dynamic_offset_divisible_i4(%arg0: memref<2x4x8xi4>, %i: index) -> memref<4x4x8xi4, strided<[32, 8, 1], offset: ?>> {
+  %c8 = arith.constant 8 : index
+  %off = arith.muli %i, %c8 : index
+  %r = memref.reinterpret_cast %arg0 to offset: [%off], sizes: [4, 4, 8], strides: [32, 8, 1] : memref<2x4x8xi4> to memref<4x4x8xi4, strided<[32, 8, 1], offset: ?>>
+  return %r : memref<4x4x8xi4, strided<[32, 8, 1], offset: ?>>
+}
+
+// CHECK-LABEL:   func @reinterpret_cast_dynamic_offset_divisible_i4(
+//  CHECK-SAME:        %[[ARG0:.+]]: memref<32xi8>,
+//  CHECK-SAME:        %[[I:.+]]: index
+//       CHECK:     %[[NEWOFF:.+]] = affine.apply
+//       CHECK:     %[[R:.+]] = memref.reinterpret_cast %[[ARG0]] to offset: {{\[}}%[[NEWOFF]]{{\]}}, sizes: [64], strides: [1] : memref<32xi8> to memref<64xi8, strided<[1], offset: ?>>
+//       CHECK:     return %[[R]]
+
+// CHECK32-LABEL: func @reinterpret_cast_dynamic_offset_divisible_i4(
+//  CHECK32-SAME:        %[[ARG0:.+]]: memref<8xi32>,
+//  CHECK32-SAME:        %[[I:.+]]: index
+//       CHECK32:     %[[R:.+]] = memref.reinterpret_cast %[[ARG0]] to offset: {{.*}}, sizes: [16], strides: [1] : memref<8xi32> to memref<16xi32, strided<[1], offset: ?>>
+//       CHECK32:     return %[[R]]
+
+// -----
+
+// Divisibility-aware rejection: the dynamic offset is `%i * 3`. With i4 -> i8
+// emulation, the divisor 3 is not a multiple of `elementsPerByte == 2`, so
+// the analysis proves the offset is not multi-element aligned. The pattern
+// must reject and partial conversion must fail.
+
+func.func @negative_reinterpret_cast_dynamic_offset_not_divisible_i4(%arg0: memref<2x4x8xi4>, %i: index) -> memref<4x4x8xi4, strided<[32, 8, 1], offset: ?>> {
+  %c3 = arith.constant 3 : index
+  %off = arith.muli %i, %c3 : index
+  // expected-error @+1 {{failed to legalize operation 'memref.reinterpret_cast' that was explicitly marked illegal}}
+  %r = memref.reinterpret_cast %arg0 to offset: [%off], sizes: [4, 4, 8], strides: [32, 8, 1] : memref<2x4x8xi4> to memref<4x4x8xi4, strided<[32, 8, 1], offset: ?>>
+  return %r : memref<4x4x8xi4, strided<[32, 8, 1], offset: ?>>
 }

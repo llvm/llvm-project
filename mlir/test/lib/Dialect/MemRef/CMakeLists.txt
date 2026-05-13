@@ -10,7 +10,9 @@ add_mlir_library(MLIRMemRefTestPasses
   MLIRTestDialect
   )
 mlir_target_link_libraries(MLIRMemRefTestPasses PUBLIC
+  MLIRAffineDialect
   MLIRAnalysis
+  MLIRArithDialect
   MLIRPass
   MLIRMemRefDialect
   MLIRMemRefTransforms

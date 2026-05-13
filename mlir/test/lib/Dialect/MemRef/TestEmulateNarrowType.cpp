@@ -12,7 +12,9 @@
 #include "mlir/Analysis/DataFlow/IntegerDivisibilityAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/InferIntDivisibilityOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/InferIntDivisibilityOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/Transforms/NarrowTypeEmulationConverter.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -41,6 +43,8 @@ struct TestEmulateNarrowTypePass
     registry
         .insert<arith::ArithDialect, func::FuncDialect, memref::MemRefDialect,
                 vector::VectorDialect, affine::AffineDialect>();
+    arith::registerInferIntDivisibilityOpInterfaceExternalModels(registry);
+    affine::registerInferIntDivisibilityOpInterfaceExternalModels(registry);
   }
   StringRef getArgument() const final { return "test-emulate-narrow-int"; }
   StringRef getDescription() const final {

@@ -758,3 +758,37 @@ func.func @vector_maskedstore_i4_arith_constant(%val_to_store: vector<8xi4>) {
 // CHECK: %[[SELECT:.+]] = arith.select %[[MASK]], %[[VAL_TO_STORE]], %[[LOAD_UPCAST]]
 // CHECK: %[[SELECT_DOWNCAST:.+]] = vector.bitcast %[[SELECT]]
 // CHECK: vector.maskedstore %[[ALLOC]][%[[IDX_FLATTENED]]], %[[COMPRESSED_MASK]], %[[SELECT_DOWNCAST]]
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// vector.store - divisibility-analysis-driven alignment
+///----------------------------------------------------------------------------------------
+
+/// The innermost dynamic index is `arith.muli %arg, %c8`, which the
+/// `IntegerDivisibilityAnalysis` proves is a multiple of both the i4 -> i8
+/// ratio (2) and the i4 -> i32 ratio (8). The aligned fast path is taken:
+/// `vector.bitcast` + `vector.store`.
+
+func.func @vector_store_i4_dyn_index_divisible(%arg0: vector<8xi4>, %i: index) {
+    %0 = memref.alloc() : memref<32xi4>
+    %c8 = arith.constant 8 : index
+    %idx = arith.muli %i, %c8 : index
+    vector.store %arg0, %0[%idx] : memref<32xi4>, vector<8xi4>
+    return
+}
+
+// CHECK-LABEL: func @vector_store_i4_dyn_index_divisible
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: vector<8xi4>
+//  CHECK-SAME:   %[[I:[a-zA-Z0-9]+]]: index
+//       CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<16xi8>
+//       CHECK:   %[[INDEX:.+]] = affine.apply
+//       CHECK:   %[[VEC_I8:.+]] = vector.bitcast %[[ARG0]] : vector<8xi4> to vector<4xi8>
+//       CHECK:   vector.store %[[VEC_I8]], %[[ALLOC]][%[[INDEX]]] : memref<16xi8>, vector<4xi8>
+
+// CHECK32-LABEL: func @vector_store_i4_dyn_index_divisible
+//  CHECK32-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: vector<8xi4>
+//  CHECK32-SAME:   %[[I:[a-zA-Z0-9]+]]: index
+//       CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<4xi32>
+//       CHECK32:   %[[VEC_I32:.+]] = vector.bitcast %[[ARG0]] : vector<8xi4> to vector<1xi32>
+//       CHECK32:   vector.store %[[VEC_I32]], %[[ALLOC]]
