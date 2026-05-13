@@ -38,8 +38,7 @@ define void @non_constant_scalar_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], 2
 ; STRIDED-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; STRIDED-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], [[TMP1]]
-; STRIDED-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP1]]
-; STRIDED-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX2]], [[TMP9]]
+; STRIDED-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX2]], [[TMP1]]
 ; STRIDED-NEXT:    [[TMP11:%.*]] = mul i64 2, [[TMP1]]
 ; STRIDED-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX2]], [[TMP11]]
 ; STRIDED-NEXT:    [[TMP13:%.*]] = mul i64 3, [[TMP1]]

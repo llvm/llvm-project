@@ -850,7 +850,6 @@ define i32 @select_icmp_const_truncated_iv_unwidened_exit(ptr %a, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
 ; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP7]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], 3
@@ -877,7 +876,7 @@ define i32 @select_icmp_const_truncated_iv_unwidened_exit(ptr %a, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[TMP32]] = select i1 [[TMP30]], i1 [[TMP21]], i1 [[TMP1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP33]] = select i1 [[TMP30]], i1 [[TMP22]], i1 [[TMP2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP34]] = select i1 [[TMP30]], i1 [[TMP23]], i1 [[TMP3]]
-; CHECK-VF1IC4-NEXT:    [[TMP35]] = select i1 [[TMP30]], i32 [[TMP8]], i32 [[VEC_PHI]]
+; CHECK-VF1IC4-NEXT:    [[TMP35]] = select i1 [[TMP30]], i32 [[TMP7]], i32 [[VEC_PHI]]
 ; CHECK-VF1IC4-NEXT:    [[TMP36]] = select i1 [[TMP30]], i32 [[TMP9]], i32 [[VEC_PHI1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP37]] = select i1 [[TMP30]], i32 [[TMP10]], i32 [[VEC_PHI2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP38]] = select i1 [[TMP30]], i32 [[TMP11]], i32 [[VEC_PHI3]]
@@ -1114,7 +1113,6 @@ define i32 @select_icmp_const_truncated_iv_unsigned_loop_guard(ptr %a, i32 %n) {
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
 ; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP7]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], 3
@@ -1141,7 +1139,7 @@ define i32 @select_icmp_const_truncated_iv_unsigned_loop_guard(ptr %a, i32 %n) {
 ; CHECK-VF1IC4-NEXT:    [[TMP32]] = select i1 [[TMP30]], i1 [[TMP21]], i1 [[TMP1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP33]] = select i1 [[TMP30]], i1 [[TMP22]], i1 [[TMP2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP34]] = select i1 [[TMP30]], i1 [[TMP23]], i1 [[TMP3]]
-; CHECK-VF1IC4-NEXT:    [[TMP35]] = select i1 [[TMP30]], i32 [[TMP8]], i32 [[VEC_PHI]]
+; CHECK-VF1IC4-NEXT:    [[TMP35]] = select i1 [[TMP30]], i32 [[TMP7]], i32 [[VEC_PHI]]
 ; CHECK-VF1IC4-NEXT:    [[TMP36]] = select i1 [[TMP30]], i32 [[TMP9]], i32 [[VEC_PHI1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP37]] = select i1 [[TMP30]], i32 [[TMP10]], i32 [[VEC_PHI2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP38]] = select i1 [[TMP30]], i32 [[TMP11]], i32 [[VEC_PHI3]]
@@ -1322,7 +1320,6 @@ define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
 ; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP7]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], 3
@@ -1349,7 +1346,7 @@ define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP32]] = select i1 [[TMP30]], i1 [[TMP21]], i1 [[TMP1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP33]] = select i1 [[TMP30]], i1 [[TMP22]], i1 [[TMP2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP34]] = select i1 [[TMP30]], i1 [[TMP23]], i1 [[TMP3]]
-; CHECK-VF1IC4-NEXT:    [[TMP35]] = select i1 [[TMP30]], i32 [[TMP8]], i32 [[VEC_PHI]]
+; CHECK-VF1IC4-NEXT:    [[TMP35]] = select i1 [[TMP30]], i32 [[TMP7]], i32 [[VEC_PHI]]
 ; CHECK-VF1IC4-NEXT:    [[TMP36]] = select i1 [[TMP30]], i32 [[TMP9]], i32 [[VEC_PHI1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP37]] = select i1 [[TMP30]], i32 [[TMP10]], i32 [[VEC_PHI2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP38]] = select i1 [[TMP30]], i32 [[TMP11]], i32 [[VEC_PHI3]]
@@ -1562,7 +1559,6 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
 ; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP7]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], 3
@@ -1597,7 +1593,7 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF1IC4-NEXT:    [[TMP40]] = select i1 [[TMP38]], i1 [[TMP29]], i1 [[TMP16]]
 ; CHECK-VF1IC4-NEXT:    [[TMP41]] = select i1 [[TMP38]], i1 [[TMP30]], i1 [[TMP2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP42]] = select i1 [[TMP38]], i1 [[TMP31]], i1 [[TMP3]]
-; CHECK-VF1IC4-NEXT:    [[TMP43]] = select i1 [[TMP38]], i32 [[TMP8]], i32 [[VEC_PHI]]
+; CHECK-VF1IC4-NEXT:    [[TMP43]] = select i1 [[TMP38]], i32 [[TMP7]], i32 [[VEC_PHI]]
 ; CHECK-VF1IC4-NEXT:    [[TMP44]] = select i1 [[TMP38]], i32 [[TMP9]], i32 [[VEC_PHI1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP45]] = select i1 [[TMP38]], i32 [[TMP10]], i32 [[VEC_PHI2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP46]] = select i1 [[TMP38]], i32 [[TMP11]], i32 [[VEC_PHI3]]
@@ -1796,7 +1792,6 @@ define i32 @not_vectorized_select_fcmp_invalid_const_ub(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
 ; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP7]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], 3
@@ -1823,7 +1818,7 @@ define i32 @not_vectorized_select_fcmp_invalid_const_ub(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP32]] = select i1 [[TMP30]], i1 [[TMP21]], i1 [[TMP1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP33]] = select i1 [[TMP30]], i1 [[TMP22]], i1 [[TMP2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP34]] = select i1 [[TMP30]], i1 [[TMP23]], i1 [[TMP3]]
-; CHECK-VF1IC4-NEXT:    [[TMP35]] = select i1 [[TMP30]], i32 [[TMP8]], i32 [[VEC_PHI]]
+; CHECK-VF1IC4-NEXT:    [[TMP35]] = select i1 [[TMP30]], i32 [[TMP7]], i32 [[VEC_PHI]]
 ; CHECK-VF1IC4-NEXT:    [[TMP36]] = select i1 [[TMP30]], i32 [[TMP9]], i32 [[VEC_PHI1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP37]] = select i1 [[TMP30]], i32 [[TMP10]], i32 [[VEC_PHI2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP38]] = select i1 [[TMP30]], i32 [[TMP11]], i32 [[VEC_PHI3]]
@@ -2066,7 +2061,6 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
 ; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i16
-; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i16 [[TMP7]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i16 [[TMP7]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i16 [[TMP7]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i16 [[TMP7]], 3
@@ -2101,7 +2095,7 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF1IC4-NEXT:    [[TMP40]] = select i1 [[TMP38]], i1 [[TMP29]], i1 [[TMP16]]
 ; CHECK-VF1IC4-NEXT:    [[TMP41]] = select i1 [[TMP38]], i1 [[TMP30]], i1 [[TMP2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP42]] = select i1 [[TMP38]], i1 [[TMP31]], i1 [[TMP3]]
-; CHECK-VF1IC4-NEXT:    [[TMP43]] = select i1 [[TMP38]], i16 [[TMP8]], i16 [[VEC_PHI]]
+; CHECK-VF1IC4-NEXT:    [[TMP43]] = select i1 [[TMP38]], i16 [[TMP7]], i16 [[VEC_PHI]]
 ; CHECK-VF1IC4-NEXT:    [[TMP44]] = select i1 [[TMP38]], i16 [[TMP9]], i16 [[VEC_PHI1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP45]] = select i1 [[TMP38]], i16 [[TMP10]], i16 [[VEC_PHI2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP46]] = select i1 [[TMP38]], i16 [[TMP11]], i16 [[VEC_PHI3]]
@@ -2352,9 +2346,7 @@ define i1 @select_with_trunc_i1_iv(i64 %n, i64 %start) {
 ; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 3
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = trunc i64 [[INDEX]] to i1
-; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i1 [[TMP9]], false
 ; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i1 [[TMP9]], true
-; CHECK-VF1IC4-NEXT:    [[TMP12:%.*]] = add i1 [[TMP9]], false
 ; CHECK-VF1IC4-NEXT:    [[TMP13:%.*]] = add i1 [[TMP9]], true
 ; CHECK-VF1IC4-NEXT:    [[TMP14:%.*]] = icmp ne i64 [[OFFSET_IDX]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP15:%.*]] = icmp ne i64 [[TMP6]], 0
@@ -2371,9 +2363,9 @@ define i1 @select_with_trunc_i1_iv(i64 %n, i64 %start) {
 ; CHECK-VF1IC4-NEXT:    [[TMP26]] = select i1 [[TMP24]], i1 [[TMP15]], i1 [[TMP3]]
 ; CHECK-VF1IC4-NEXT:    [[TMP27]] = select i1 [[TMP24]], i1 [[TMP16]], i1 [[TMP4]]
 ; CHECK-VF1IC4-NEXT:    [[TMP28]] = select i1 [[TMP24]], i1 [[TMP17]], i1 [[TMP5]]
-; CHECK-VF1IC4-NEXT:    [[TMP29]] = select i1 [[TMP24]], i1 [[TMP10]], i1 [[VEC_PHI]]
+; CHECK-VF1IC4-NEXT:    [[TMP29]] = select i1 [[TMP24]], i1 [[TMP9]], i1 [[VEC_PHI]]
 ; CHECK-VF1IC4-NEXT:    [[TMP30]] = select i1 [[TMP24]], i1 [[TMP11]], i1 [[VEC_PHI1]]
-; CHECK-VF1IC4-NEXT:    [[TMP31]] = select i1 [[TMP24]], i1 [[TMP12]], i1 [[VEC_PHI2]]
+; CHECK-VF1IC4-NEXT:    [[TMP31]] = select i1 [[TMP24]], i1 [[TMP9]], i1 [[VEC_PHI2]]
 ; CHECK-VF1IC4-NEXT:    [[TMP32]] = select i1 [[TMP24]], i1 [[TMP13]], i1 [[VEC_PHI3]]
 ; CHECK-VF1IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-VF1IC4-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

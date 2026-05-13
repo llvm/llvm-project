@@ -11,9 +11,8 @@ define float @pr70988() {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX1]], 0
 ; CHECK-NEXT:    [[VEC_IV2:%.*]] = add i32 [[INDEX1]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[VEC_IV]], 1020
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[INDEX1]], 1020
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[VEC_IV2]], 1020
 ; CHECK-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP0]], float 1.000000e+00, float -0.000000e+00
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd contract float [[VEC_PHI]], [[TMP2]]
@@ -76,9 +75,8 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE3:%.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[PRED_LOAD_CONTINUE3]] ]
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[VEC_IV1:%.*]] = add i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[VEC_IV]], 14
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[INDEX]], 14
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[VEC_IV1]], 14
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
@@ -172,9 +170,8 @@ define float @fadd_reduction_with_live_in(float %inc) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[VEC_IV1:%.*]] = add i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[VEC_IV]], 1000
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[INDEX]], 1000
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[VEC_IV1]], 1000
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], float [[INC]], float -0.000000e+00
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd float [[VEC_PHI]], [[TMP2]]

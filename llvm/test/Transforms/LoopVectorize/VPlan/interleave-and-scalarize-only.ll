@@ -242,9 +242,8 @@ define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i32 [[TMP3]], 1
-; CHECK-NEXT:    store i32 [[INDUCTION]], ptr [[DST]], align 4
+; CHECK-NEXT:    store i32 [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], %n.vec
 ; CHECK-NEXT:    br i1 [[TMP4]], label %middle.block, label %vector.body
@@ -388,9 +387,8 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %b, [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = shl i64 [[INDEX]], 7
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX2]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX2]], 128
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP15]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[OFFSET_IDX2]]
 ; CHECK-NEXT:    [[NEXT_GEP3]] = getelementptr i8, ptr null, i64 [[TMP12]]
 ; CHECK-NEXT:    store ptr [[VECTOR_RECUR]], ptr [[NEXT_GEP]], align 8
 ; CHECK-NEXT:    store ptr [[NEXT_GEP]], ptr [[NEXT_GEP3]], align 8

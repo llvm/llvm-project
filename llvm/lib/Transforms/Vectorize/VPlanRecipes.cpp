@@ -2619,17 +2619,40 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   for (unsigned Lane = 0; Lane < EndLane; ++Lane) {
     // It is okay if the induction variable type cannot hold the lane number,
     // we expect truncation in this case.
-    Constant *LaneValue =
-        BaseIVTy->isIntegerTy()
-            ? ConstantInt::get(BaseIVTy, Lane, /*IsSigned=*/false,
-                               /*ImplicitTrunc=*/true)
-            : ConstantFP::get(BaseIVTy, Lane);
-    Value *StartIdx = Builder.CreateBinOp(AddOp, StartIdx0, LaneValue);
+    Value *StartIdx;
+    if (Lane) {
+      Constant *LaneValue =
+          BaseIVTy->isIntegerTy()
+              ? ConstantInt::get(BaseIVTy, Lane, /*IsSigned=*/false,
+                                 /*ImplicitTrunc=*/true)
+              : ConstantFP::get(BaseIVTy, Lane);
+      StartIdx = Builder.CreateBinOp(AddOp, StartIdx0, LaneValue);
+    } else
+      StartIdx = StartIdx0;
     assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
            "Expected StartIdx to be folded to a constant when VF is not "
            "scalable");
-    auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
-    auto *Add = Builder.CreateBinOp(AddOp, BaseIV, Mul);
+
+    auto IsExactlyOne = [](Value *V) -> bool {
+      return isa<Constant>(V) && cast<Constant>(V)->isOneValue();
+    };
+    auto IsExactlyZero = [](Value *V) -> bool {
+      return isa<Constant>(V) && cast<Constant>(V)->isNullValue();
+    };
+    Value *Mul;
+    if (IsExactlyOne(Step))
+      Mul = StartIdx;
+    else if (IsExactlyOne(StartIdx))
+      Mul = Step;
+    else
+      Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
+    Value *Add;
+    if (IsExactlyZero(Mul))
+      Add = BaseIV;
+    else if (IsExactlyZero(BaseIV))
+      Add = Mul;
+    else
+      Add = Builder.CreateBinOp(AddOp, BaseIV, Mul);
     State.set(this, Add, VPLane(Lane));
   }
 }
