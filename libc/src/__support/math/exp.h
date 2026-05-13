@@ -109,7 +109,7 @@ LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
 LIBC_INLINE Float128 poly_approx_f128(const Float128 &dx) {
-  LIBC_CONSTEXPR Float128 COEFFS_128[]{
+  constexpr Float128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
