@@ -25,6 +25,11 @@ int main(int argc, char *argv[]) {
 
   // Generate stdout/stderr output.
   generate_output();
+
+  // Break after stdout/stderr to verify it appears in console before scrolling.
+  int break_after_output = 0; // break here middle
+
+  // Generate large output to test buffer draining.
   generate_large_output();
 
   // Wait to capture output.
