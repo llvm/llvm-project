@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 
+import { attachToProcess } from "./commands/attach-to-process";
+import { pickProcess } from "./commands/pick-process";
 import { LLDBDapDescriptorFactory } from "./debug-adapter-factory";
 import { LLDBDapConfigurationProvider } from "./debug-configuration-provider";
 import { DebugSessionTracker } from "./debug-session-tracker";
@@ -57,6 +59,14 @@ export class LLDBDapExtension extends DisposableContext {
       vscode.commands.registerCommand(
         "lldb-dap.modules.copyProperty",
         (node: ModuleProperty) => vscode.env.clipboard.writeText(node.value),
+      ),
+      vscode.commands.registerCommand(
+        "lldb-dap.pickProcess",
+        () => pickProcess(logger, logFilePath),
+      ),
+      vscode.commands.registerCommand(
+        "lldb-dap.attachToProcess",
+        () => attachToProcess(logger, logFilePath),
       ),
     );
 

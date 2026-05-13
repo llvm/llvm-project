@@ -299,6 +299,16 @@
         "category": "lldb-dap",
         "command": "lldb-dap.debug.showSymbols",
         "title": "Show Symbols of a Module"
+      },
+      {
+        "category": "LLDB DAP",
+        "command": "lldb-dap.pickProcess",
+        "title": "Pick Process"
+      },
+      {
+        "category": "LLDB DAP",
+        "command": "lldb-dap.attachToProcess",
+        "title": "Attach to Process..."
       }
     ],
     "menus": {
@@ -314,6 +324,10 @@
         {
           "command": "lldb-dap.debug.showSymbols",
           "when": "debuggersAvailable && debugType == 'lldb-dap' && lldb-dap.supportsModuleSymbolsRequest"
+        },
+        {
+          "command": "lldb-dap.pickProcess",
+          "when": "false"
         }
       ],
       "view/item/context": [
@@ -401,6 +415,10 @@
           "rust",
           "swift"
         ],
+        "variables": {
+          "PickProcess": "lldb-dap.pickProcess",
+          "pickProcess": "lldb-dap.pickProcess"
+        },
         "configurationAttributes": {
           "launch": {
             "required": [
@@ -732,8 +750,19 @@
                 "description": "Path to the program to attach to."
               },
               "pid": {
-                "type": "number",
-                "description": "System process ID to attach to."
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "description": "System process ID to attach to."
+                  },
+                  {
+                    "enum": [
+                      "${command:PickProcess}",
+                      "${command:pickProcess}"
+                    ],
+                    "description": "Use the LLDB DAP process picker to select a process to attach to."
+                  }
+                ]
               },
               "waitFor": {
                 "type": "boolean",
@@ -946,6 +975,16 @@
               "name": "${2:Attach}",
               "program": "${1:<your program>}",
               "waitFor": true
+            }
+          },
+          {
+            "label": "LLDB: Attach to Process",
+            "description": "",
+            "body": {
+              "type": "lldb-dap",
+              "request": "attach",
+              "name": "${1:Attach}",
+              "pid": "^\"\\${command:PickProcess}\""
             }
           },
           {

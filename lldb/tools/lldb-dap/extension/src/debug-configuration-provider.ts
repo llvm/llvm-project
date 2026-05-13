@@ -2,6 +2,7 @@ import * as child_process from "child_process";
 import * as util from "util";
 import * as vscode from "vscode";
 import * as os from "os";
+import { setPickProcessContext } from "./commands/pick-process-context";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { LogFilePathProvider } from "./logging";
@@ -20,6 +21,34 @@ const exec = util.promisify(child_process.execFile);
 async function isServerModeSupported(exe: string): Promise<boolean> {
   const { stdout } = await exec(exe, ["--help"]);
   return /--connection/.test(stdout);
+}
+
+/**
+ * Converts the given value to an integer if it isn't already. Returns
+ * `undefined` if the value is not an integer or a string that parses as one.
+ */
+function convertToInteger(value: unknown): number | undefined {
+  let result: number | undefined;
+  switch (typeof value) {
+    case "number":
+      result = value;
+      break;
+    case "string":
+      result = Number(value);
+      break;
+    default:
+      return undefined;
+  }
+  return Number.isInteger(result) ? result : undefined;
+}
+
+/**
+ * Heuristic: does this `pid` value look like it will trigger our process
+ * picker command? We stash the debug configuration context only when the
+ * picker might actually run.
+ */
+function pidMayInvokePicker(pid: unknown): boolean {
+  return typeof pid === "string" && pid.includes("${command:PickProcess}");
 }
 
 interface BoolConfig {
@@ -158,6 +187,13 @@ export class LLDBDapConfigurationProvider
       debugConfiguration[key] = value;
     }
 
+    // Stash the in-flight configuration so that a subsequent
+    // ${command:PickProcess} substitution can target the right lldb-dap
+    // binary and platform. See pick-process-context.ts for details.
+    if (pidMayInvokePicker(debugConfiguration.pid)) {
+      setPickProcessContext({ folder, debugConfiguration });
+    }
+
     return debugConfiguration;
   }
 
@@ -167,6 +203,19 @@ export class LLDBDapConfigurationProvider
     _token?: vscode.CancellationToken,
   ): Promise<vscode.DebugConfiguration | null | undefined> {
     try {
+      // Convert "pid" to a number if it came in as a string (e.g. via the
+      // ${command:PickProcess} variable substitution).
+      if ("pid" in debugConfiguration) {
+        const pid = convertToInteger(debugConfiguration.pid);
+        if (pid === undefined) {
+          throw new ErrorWithNotification(
+            "Invalid debug configuration: property 'pid' must either be an integer or a string containing an integer value.",
+            new ConfigureButton(),
+          );
+        }
+        debugConfiguration.pid = pid;
+      }
+
       if (
         "debugAdapterHostname" in debugConfiguration &&
         !("debugAdapterPort" in debugConfiguration)
