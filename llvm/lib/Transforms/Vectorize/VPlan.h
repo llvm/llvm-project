@@ -4056,8 +4056,9 @@ struct CastInfoMixinImpl
                 "Each type in RecipeTys must derive from VPMixin");
   static bool isPossible(VPRecipeBase *R) { return isa<RecipeTys...>(R); }
   static VPMixin *doCast(VPRecipeBase *R) {
-    VPMixin *Out;
+    VPMixin *Out = nullptr;
     (void)((Out = dyn_cast<RecipeTys>(R)) || ...);
+    assert(Out && "Illegal recipe for cast");
     return Out;
   }
   static VPMixin *castFailed() { return nullptr; }
