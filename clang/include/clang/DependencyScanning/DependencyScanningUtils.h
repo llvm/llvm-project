@@ -19,54 +19,6 @@
 
 namespace clang {
 namespace dependencies {
-
-/// Graph of modular dependencies.
-using ModuleDepsGraph = std::vector<ModuleDeps>;
-
-/// The full dependencies and module graph for a specific input.
-struct TranslationUnitDeps {
-  /// The graph of direct and transitive modular dependencies.
-  ModuleDepsGraph ModuleGraph;
-
-  /// The identifier of the C++20 module this translation unit exports.
-  ///
-  /// If the translation unit is not a module then \c ID.ModuleName is empty.
-  ModuleID ID;
-
-  /// A collection of absolute paths to files that this translation unit
-  /// directly depends on, not including transitive dependencies.
-  std::vector<std::string> FileDeps;
-
-  /// A collection of prebuilt modules this translation unit directly depends
-  /// on, not including transitive dependencies.
-  std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
-
-  /// A list of modules this translation unit directly depends on, not including
-  /// transitive dependencies.
-  ///
-  /// This may include modules with a different context hash when it can be
-  /// determined that the differences are benign for this compilation.
-  std::vector<ModuleID> ClangModuleDeps;
-
-  /// A list of module names that are visible to this translation unit. This
-  /// includes both direct and transitive module dependencies.
-  std::vector<std::string> VisibleModules;
-
-  /// A list of the C++20 named modules this translation unit depends on.
-  std::vector<std::string> NamedModuleDeps;
-
-  /// The sequence of commands required to build the translation unit. Commands
-  /// should be executed in order.
-  ///
-  /// FIXME: If we add support for multi-arch builds in clang-scan-deps, we
-  /// should make the dependencies between commands explicit to enable parallel
-  /// builds of each architecture.
-  std::vector<Command> Commands;
-
-  /// Deprecated driver command-line. This will be removed in a future version.
-  std::vector<std::string> DriverCommandLine;
-};
-
 class FullDependencyConsumer : public DependencyConsumer {
 public:
   FullDependencyConsumer(const llvm::DenseSet<ModuleID> &AlreadySeen)

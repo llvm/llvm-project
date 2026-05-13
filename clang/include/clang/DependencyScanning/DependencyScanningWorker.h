@@ -35,14 +35,6 @@ namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
 
-/// A command-line tool invocation that is part of building a TU.
-///
-/// \see TranslationUnitDeps::Commands.
-struct Command {
-  std::string Executable;
-  std::vector<std::string> Arguments;
-};
-
 class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
