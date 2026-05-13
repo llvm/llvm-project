@@ -2053,7 +2053,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
 
       setOperationAction(ISD::CLMUL, {MVT::nxv16i8, MVT::nxv4i32}, Legal);
-      setOperationAction(ISD::CLMUL, {MVT::nxv8i16}, Custom);
+      setOperationAction(ISD::CLMUL, {MVT::nxv8i16, MVT::nxv2i64}, Custom);
 
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8f16, Legal);
@@ -8099,16 +8099,42 @@ static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   assert((VT == MVT::i64 || VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8 ||
-          VT == MVT::nxv8i16) &&
+          VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
          "Unexpected Type");
+  SDValue OpA = Op.getOperand(0);
+  SDValue OpB = Op.getOperand(1);
+  auto IsZextedFromHalfTy = [&](SDValue Op) {
+    uint64_t FullSize = VT.getScalarSizeInBits();
+    uint64_t HalfSize = FullSize / 2;
+    APInt HiWordMask = APInt::getBitsSet(FullSize, HalfSize, FullSize);
+    return DAG.MaskedValueIsZero(Op, HiWordMask);
+  };
+  auto MakePMULLB = [&](SDValue OpA, SDValue OpB) {
+    EVT NewVT = EVT::getVectorVT(
+        *DAG.getContext(),
+        VT.getVectorElementType().getHalfSizedIntegerVT(*DAG.getContext()),
+        VT.getVectorElementCount() * 2);
+    OpA = DAG.getNode(AArch64ISD::NVCAST, DL, NewVT, OpA);
+    OpB = DAG.getNode(AArch64ISD::NVCAST, DL, NewVT, OpB);
+    SDValue PMULLB =
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NewVT, PMULLB, OpA, OpB);
+  };
+
+  if (VT == MVT::nxv2i64) {
+    if (IsZextedFromHalfTy(OpA) && IsZextedFromHalfTy(OpB))
+      return MakePMULLB(OpA, OpB);
+    return SDValue();
+  }
 
   if (VT == MVT::nxv8i16) {
+    if (IsZextedFromHalfTy(OpA) && IsZextedFromHalfTy(OpB))
+      return MakePMULLB(OpA, OpB);
+
     // clmul.i16(a, b) = xor(pmullb(a_lo, b_lo),
     //                       lsl(xor(pmul(a_hi, b_lo),
     //                               pmul(a_lo, b_hi)),
     //                           8))
-    SDValue OpA = Op.getOperand(0);
-    SDValue OpB = Op.getOperand(1);
     // Bitcast to i8 for byte-wise PMUL and PMULLB.
     OpA = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, OpA);
     OpB = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, OpB);
@@ -8124,10 +8150,7 @@ static SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) {
     EORBT = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, EORBT, PMUL,
                         PMUL, PMUL);
 
-    SDValue PMULLB =
-        DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64);
-    PMULLB = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, PMULLB, OpA,
-                         OpB);
+    SDValue PMULLB = MakePMULLB(OpA, OpB);
 
     SDValue EORTB =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_eortb, DL, MVT::i64);
