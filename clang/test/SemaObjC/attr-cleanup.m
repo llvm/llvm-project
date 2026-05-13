@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -verify=noarc -fsyntax-only -fblocks
 // RUN: %clang_cc1 %s -verify=arc -fsyntax-only -fblocks -fobjc-arc
+// RUN: %clang_cc1 %s -verify=arc -fsyntax-only -fblocks -fobjc-arc -x objective-c++
 // noarc-no-diagnostics
 
 @class NSString;
@@ -16,7 +17,7 @@ void t1(void)
 void c2(NSString *__autoreleasing *obj) { (void)obj; }
 
 void t2(void) {
-  NSString *x __attribute__((cleanup(c2))) = (void *)0;
+  NSString *x __attribute__((cleanup(c2)));
 }
 
 typedef void (^DeferBlock)(void);
@@ -33,5 +34,5 @@ void t3(void) {
 void c4(NSString *__unsafe_unretained *obj) { (void)obj; }
 
 void t4(void) {
-  NSString *x __attribute__((cleanup(c4))) = (void *)0; // arc-error {{'cleanup' function 'c4' parameter has type 'NSString *__unsafe_unretained *' which is incompatible with type 'NSString *__strong *'}}
+  NSString *x __attribute__((cleanup(c4))); // arc-error {{'cleanup' function 'c4' parameter has type 'NSString *__unsafe_unretained *' which is incompatible with type 'NSString *__strong *'}}
 }
