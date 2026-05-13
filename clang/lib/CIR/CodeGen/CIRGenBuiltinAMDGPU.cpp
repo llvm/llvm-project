@@ -190,16 +190,20 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     mlir::Value src5 = emitScalarExpr(expr->getArg(5));
     mlir::Value result =
         cir::LLVMIntrinsicCallOp::create(builder, getLoc(expr->getExprLoc()),
-                                         builder.getStringAttr(intrinsicName), src0.getType(),
+                                         builder.getStringAttr(intrinsicName),
+                                         src0.getType(),
                                          {src0, src1, src2, src3, src4, src5})
             .getResult();
     return result;
   }
   case AMDGPU::BI__builtin_amdgcn_permlane64: {
     mlir::Value src = emitScalarExpr(expr->getArg(0));
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "amdgcn.permlane64", src.getType(),
-                                       mlir::ValueRange{src});
+    mlir::Value result =
+        cir::LLVMIntrinsicCallOp::create(
+            builder, getLoc(expr->getExprLoc()),
+            builder.getStringAttr("amdgcn.permlane64"), src.getType(), {src})
+            .getResult();
+    return result;
   }
   case AMDGPU::BI__builtin_amdgcn_readlane:
   case AMDGPU::BI__builtin_amdgcn_readfirstlane:
