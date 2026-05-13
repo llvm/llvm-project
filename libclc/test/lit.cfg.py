@@ -31,8 +31,21 @@ config.test_exec_root = config.libclc_obj_root
 
 config.target_triple = config.libclc_target
 
-arch = config.libclc_arch.upper()
-config.available_features.add(arch)
+supported_test_architectures = ["amdgcn", "amdgpu"]
+
+def calculate_arch_features(arch_string):
+    features = []
+    for arch in arch_string.split():
+        if (
+            arch.lower() in supported_test_architectures
+            and config.libclc_arch.lower() in supported_test_architectures
+        ):
+            features.append(arch.lower() + "-registered-target")
+    return features
+
+llvm_config.feature_config(
+    [("--targets-built", calculate_arch_features)]
+)
 
 llvm_config.use_default_substitutions()
 
@@ -41,9 +54,10 @@ llvm_config.use_clang()
 llvm_config.add_tool_substitutions(["llvm-nm"], config.llvm_tools_dir)
 
 config.substitutions.extend([
-    ("%libclc_library_dir", config.libclc_library_dir),
-    ("%libclc_target", config.libclc_target),
-    ("%check_prefix", arch)
+    ("%library_dir", config.libclc_library_dir),
+    ("%target", config.libclc_target),
+    ("%cpu", config.libclc_cpu),
+    ("%check_prefix", config.libclc_arch.upper())
 ])
 
 # Propagate PATH from environment

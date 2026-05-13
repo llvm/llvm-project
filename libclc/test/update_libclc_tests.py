@@ -6,9 +6,9 @@ The script accepts an architecture argument to determine the triple and check
 prefix. Supported arch values: amdgpu, amdgcn, nvptx64, spirv, spirv64.
 
 The script does 3 things:
-1. Replaces %libclc_target and %check_prefix in the .cl file for the arch.
+1. Replaces %target, %cpu, and %check_prefix in the .cl file for the arch.
 2. Runs update_cc_test_checks.py to update CHECK lines.
-3. Reverts the .cl file back to using %libclc_target and %check_prefix.
+3. Reverts the .cl file back to using %target, %cpu, and %check_prefix.
 
 Usage:
 
@@ -17,10 +17,11 @@ Usage:
 """
 
 import argparse
+import os
 import re
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 ARCH_TO_TRIPLE = {
@@ -29,6 +30,22 @@ ARCH_TO_TRIPLE = {
     "nvptx64":  "nvptx64-nvidia-cuda",
     "spirv":    "spirv-unknown-mesa3d",
     "spirv64":  "spirv64-unknown-mesa3d",
+}
+
+ARCH_TO_CPU = {
+    "amdgpu":   "gfx900",
+    "amdgcn":   "gfx900",
+    "nvptx64":  "",
+    "spirv":    "",
+    "spirv64":  "",
+}
+
+ARCH_TO_REQUIRES = {
+    "amdgpu":   "amdgpu-registered-target",
+    "amdgcn":   "amdgpu-registered-target",
+    "nvptx64":  "nvptx-registered-target",
+    "spirv":    "spirv-registered-target",
+    "spirv64":  "spirv-registered-target",
 }
 
 SCRIPT_DIR = Path(__file__).parent
@@ -41,19 +58,25 @@ def find_cl_files(test_dir: Path):
     return list(test_dir.rglob("*.cl"))
 
 
-def replace_in_file(path: Path, triple: str, check_prefix: str):
+def replace_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
     content = path.read_bytes()
-    content = content.replace(b"%libclc_target", triple.encode())
+    content = content.replace(b"%target", triple.encode())
+    if cpu:
+        content = content.replace(b"%cpu", cpu.encode())
     content = content.replace(b"%check_prefix", check_prefix.encode())
     path.write_bytes(content)
 
 
-def revert_in_file(path: Path, triple: str, check_prefix: str):
+def revert_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
     # Only revert in the RUN line context, not in generated CHECK lines.
     content = path.read_bytes()
     content = content.replace(
-        f"-target {triple}".encode(), b"-target %libclc_target"
+        f"-target {triple}".encode(), b"-target %target"
     )
+    if cpu:
+        content = content.replace(
+            f"-mcpu={cpu}".encode(), b"-mcpu=%cpu"
+        )
     content = content.replace(
         f"--check-prefix={check_prefix}".encode(), b"--check-prefix=%check_prefix"
     )
@@ -75,8 +98,8 @@ def file_requires_feature(path: Path, feature: str) -> bool:
     return False
 
 
-def process_file(cl_file: Path, triple: str, check_prefix: str) -> bool:
-    replace_in_file(cl_file, triple, check_prefix)
+def process_file(cl_file: Path, triple: str, cpu: str, check_prefix: str) -> bool:
+    replace_in_file(cl_file, triple, cpu, check_prefix)
     cmd = [
         sys.executable,
         str(UPDATE_SCRIPT),
@@ -88,7 +111,7 @@ def process_file(cl_file: Path, triple: str, check_prefix: str) -> bool:
     ok = result.returncode == 0
     if not ok:
         print(f"  FAILED: {result.stderr.strip()}", file=sys.stderr)
-    revert_in_file(cl_file, triple, check_prefix)
+    revert_in_file(cl_file, triple, cpu, check_prefix)
     return ok
 
 
@@ -105,6 +128,7 @@ def main():
 
     arch = args.arch.lower()
     triple = ARCH_TO_TRIPLE[arch]
+    cpu = ARCH_TO_CPU[arch]
     # check_prefix matches REQUIRES feature: uppercase of canonical arch name
     # amdgpu -> AMDGCN (same triple as amdgcn), others uppercased
     if arch == "amdgpu":
@@ -112,21 +136,22 @@ def main():
     else:
         check_prefix = arch.upper()
 
+    requires_feature = ARCH_TO_REQUIRES[arch]
     cl_files = find_cl_files(SCRIPT_DIR)
-    # Only process files that REQUIRES this feature
-    target_files = [f for f in cl_files if file_requires_feature(f, check_prefix)]
+    target_files = [f for f in cl_files if file_requires_feature(f, requires_feature)]
 
     if not target_files:
-        print(f"No .cl files found with REQUIRES: {check_prefix}")
+        print(f"No .cl files found with REQUIRES: {requires_feature}")
         return
 
-    print(f"arch={arch}  triple={triple}  check_prefix={check_prefix}")
+    print(f"arch={arch}  triple={triple}  cpu={cpu}  check_prefix={check_prefix}  requires={requires_feature}")
     print(f"Processing {len(target_files)} file(s)...")
 
     failed = []
-    with ThreadPoolExecutor() as executor:
+    num_workers = max(1, os.cpu_count() // 2)
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
         futures = {
-            executor.submit(process_file, f, triple, check_prefix): f
+            executor.submit(process_file, f, triple, cpu, check_prefix): f
             for f in target_files
         }
         for future in as_completed(futures):
