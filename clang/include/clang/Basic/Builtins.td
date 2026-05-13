@@ -4604,9 +4604,19 @@ def FeClearExcept : LibBuiltin<"fenv.h"> {
   let Prototype = "int(int)";
 }
 
+def FeGetExceptFlag : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetexceptflag"];
+  let Prototype = "int(fexcept_t*, int)";
+}
+
 def FeRaiseExcept : LibBuiltin<"fenv.h"> {
   let Spellings = ["feraiseexcept"];
   let Prototype = "int(int)";
+}
+
+def FeSetExceptFlag : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetexceptflag"];
+  let Prototype = "int(fexcept_t const*, int)";
 }
 
 def FeTestExcept : LibBuiltin<"fenv.h"> {
@@ -4622,6 +4632,26 @@ def FeGetRound : LibBuiltin<"fenv.h"> {
 def FeSetRound : LibBuiltin<"fenv.h"> {
   let Spellings = ["fesetround"];
   let Prototype = "int(int)";
+}
+
+def FeGetEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetenv"];
+  let Prototype = "int(fenv_t*)";
+}
+
+def FeHoldExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feholdexcept"];
+  let Prototype = "int(fenv_t*)";
+}
+
+def FeSetEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetenv"];
+  let Prototype = "int(fenv_t const*)";
+}
+
+def FeUpdateEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feupdateenv"];
+  let Prototype = "int(fenv_t const*)";
 }
 
 def __Addressof : LangBuiltin<"CXX_LANG"> {

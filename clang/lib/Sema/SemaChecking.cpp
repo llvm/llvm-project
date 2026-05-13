@@ -3930,10 +3930,16 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
 
   case Builtin::BIfeclearexcept:
+  case Builtin::BIfegetexceptflag:
   case Builtin::BIferaiseexcept:
+  case Builtin::BIfesetexceptflag:
   case Builtin::BIfetestexcept:
   case Builtin::BIfegetround:
   case Builtin::BIfesetround:
+  case Builtin::BIfegetenv:
+  case Builtin::BIfeholdexcept:
+  case Builtin::BIfesetenv:
+  case Builtin::BIfeupdateenv:
     if (TheCall->getFPFeaturesInEffect(getLangOpts()).getExceptionMode() ==
         LangOptions::FPE_Ignore) {
       Diag(TheCall->getBeginLoc(), diag::warn_fe_access_without_fenv_access)
