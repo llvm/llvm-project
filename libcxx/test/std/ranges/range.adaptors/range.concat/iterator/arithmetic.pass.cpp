@@ -70,8 +70,8 @@ struct SizedSentinelForIter {
   Iter e;
 
   constexpr SizedSentinelForIter() = default;
-  constexpr SizedSentinelForIter(const Iter& ptr, const Iter& e = nullptr) : ptr(ptr), e(e) {}
-  constexpr SizedSentinelForIter(const SizedSentinelForIter& other) : ptr(other.ptr) {}
+  constexpr SizedSentinelForIter(const Iter& ptr_, const Iter& e_ = nullptr) : ptr(ptr_), e(e_) {}
+  constexpr SizedSentinelForIter(const SizedSentinelForIter& other) : ptr(other.ptr), e(other.e) {}
 
   constexpr value_type& operator*() const { return *ptr; }
 
