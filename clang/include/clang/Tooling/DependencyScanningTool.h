@@ -110,9 +110,18 @@ public:
   llvm::Expected<dependencies::TranslationUnitDeps> getModuleDependencies(
       StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::DependencyActionController &Controller);
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
+
+  static std::unique_ptr<dependencies::DependencyActionController>
+  createActionController(
+      dependencies::DependencyScanningWorker &Worker,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
+
+  std::unique_ptr<dependencies::DependencyActionController>
+  createActionController(
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
 private:
   dependencies::DependencyScanningWorker Worker;

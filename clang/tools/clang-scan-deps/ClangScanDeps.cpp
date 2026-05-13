@@ -1102,18 +1102,18 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         SmallVector<StringRef> Names;
         ModuleNameRef.split(Names, ',');
 
-        CallbackActionController Controller(LookupOutput);
-
         if (Names.size() == 1) {
           auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
               Names[0], Input->CommandLine, CWD, AlreadySeenModules,
-              Controller);
+              LookupOutput);
           if (handleModuleResult(Names[0], MaybeModuleDepsGraph, *FD,
                                  LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         } else {
+          auto Controller = WorkerTool.createActionController(LookupOutput);
+
           auto CIWithCtx = CompilerInstanceWithContext::initializeOrError(
-              WorkerTool, CWD, Input->CommandLine, Controller);
+              WorkerTool, CWD, Input->CommandLine, *Controller);
           if (llvm::Error Err = CIWithCtx.takeError()) {
             handleErrorWithInfoString(
                 "Compiler instance with context setup error", std::move(Err),
@@ -1125,7 +1125,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           for (auto N : Names) {
             auto MaybeModuleDepsGraph =
                 CIWithCtx->computeDependenciesByNameOrError(
-                    N, AlreadySeenModules, Controller);
+                    N, AlreadySeenModules, *Controller);
             if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
                                    DependencyOS, Errs)) {
               HadErrors = true;
