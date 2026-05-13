@@ -95,10 +95,10 @@ private:
   bool m_gcs_is_valid;
   bool m_poe_is_valid;
 
-  // 64-bit general purpose registers.
+  /// 64-bit general purpose registers.
   struct user_pt_regs m_gpr_arm64{};
 
-  // Floating-point registers including extended register sets.
+  /// Floating-point registers including extended register sets.
   RegisterInfoPOSIX_arm64::FPU m_fpr{};
 
   SVEState m_sve_state = SVEState::Unknown;
