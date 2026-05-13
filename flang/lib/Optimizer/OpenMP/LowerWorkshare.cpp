@@ -362,11 +362,11 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
       return nullptr;
     Type ty = v.getType();
     // fir.alloca cannot wrap fir.ref, so for reference-typed values
-    // (e.g. results of dynamic fir.alloca ops) use fir.heap as the
+    // (e.g. results of dynamic fir.alloca ops) use fir.ptr as the
     // intermediary pointer type for the broadcast alloca.
     Type allocTy = ty;
     if (auto rt = mlir::dyn_cast<fir::ReferenceType>(ty))
-      allocTy = fir::HeapType::get(rt.getEleTy());
+      allocTy = fir::PointerType::get(rt.getEleTy());
     Value alloc = fir::AllocaOp::create(allocaBuilder, loc, allocTy);
     Value singleVal = singleMapping.lookup(v);
     if (allocTy != ty)
@@ -440,14 +440,35 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           // cannot use the simple load/store copyprivate copy function
           // because it only copies a single element for sequence types like
           // !fir.array<?xi32>. Instead, keep the alloca in the single block
-          // and broadcast only its pointer to all threads.
+          // and broadcast its address via a box to all threads. The box
+          // preserves shape information and is semantically correct for
+          // copyprivate.
           singleBuilder.clone(op, singleMapping);
           if (isTransitivelyUsedOutside(alloca.getResult(), sr)) {
-            auto alloc =
-                mapReloadedValue(alloca.getResult(), allocaBuilder,
-                                 singleBuilder, parallelBuilder, singleMapping);
-            if (alloc)
-              copyPrivate.push_back(alloc);
+            Value clonedResult = singleMapping.lookup(alloca.getResult());
+            if (!rootMapping.lookupOrNull(alloca.getResult())) {
+              // Create a box type wrapping the allocated array type.
+              Type eleTy =
+                  cast<fir::ReferenceType>(alloca.getType()).getEleTy();
+              auto boxTy = fir::BoxType::get(eleTy);
+              Value boxAlloc = fir::AllocaOp::create(allocaBuilder, loc, boxTy);
+              // In single: create a shape from the alloca extents, embox
+              // the array, and store the box.
+              SmallVector<Value> extents;
+              for (Value ext : alloca.getShape())
+                extents.push_back(singleMapping.lookupOrDefault(ext));
+              Value shape = fir::ShapeOp::create(singleBuilder, loc, extents);
+              Value box = fir::EmboxOp::create(singleBuilder, loc, boxTy,
+                                               clonedResult, shape);
+              fir::StoreOp::create(singleBuilder, loc, box, boxAlloc);
+              // After single: load the box and extract the address.
+              Value loadedBox =
+                  fir::LoadOp::create(parallelBuilder, loc, boxTy, boxAlloc);
+              Value addr = fir::BoxAddrOp::create(parallelBuilder, loc,
+                                                  alloca.getType(), loadedBox);
+              rootMapping.map(alloca.getResult(), addr);
+              copyPrivate.push_back(boxAlloc);
+            }
           }
           allParallelized = false;
         } else {
