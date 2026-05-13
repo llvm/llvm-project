@@ -1972,9 +1972,9 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
     ValueDecl *Var = Cap.getVariable();
     // For OpenMP structured bindings, capture the decomposed decl, not the
     // binding.
-    if (IsOpenMPMapping && isa<BindingDecl>(Var)) {
+    auto *BD = dyn_cast<BindingDecl>(Var);
+    if (IsOpenMPMapping && BD)
       Var = cast<BindingDecl>(Var)->getDecomposedDecl();
-    }
     Name = Var->getIdentifier();
     Init = BuildDeclarationNameExpr(
         CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
@@ -2083,14 +2083,23 @@ bool Sema::DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
 
 /// Create a field within the lambda class or captured statement record for the
 /// given capture.
-FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
-                                   const sema::Capture &Capture) {
+FieldDecl *Sema::BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
+                                   bool isOpenMP) {
   SourceLocation Loc = Capture.getLocation();
   QualType FieldType = Capture.getCaptureType();
-
   TypeSourceInfo *TSI = nullptr;
   if (Capture.isVariableCapture()) {
-    const auto *Var = dyn_cast_or_null<VarDecl>(Capture.getVariable());
+    const VarDecl *Var = nullptr;
+    if (isOpenMP) {
+      if (auto *BD = dyn_cast_or_null<BindingDecl>(Capture.getVariable())) {
+        assert(Capture.isReferenceCapture() &&
+               "OpenMP structured binding capture must be by reference");
+        Var = cast<VarDecl>(BD->getDecomposedDecl());
+        FieldType = Context.getLValueReferenceType(Var->getType());
+      }
+    }
+    if (!Var)
+      Var = dyn_cast_or_null<VarDecl>(Capture.getVariable());
     if (Var && Var->isInitCapture())
       TSI = Var->getTypeSourceInfo();
   }

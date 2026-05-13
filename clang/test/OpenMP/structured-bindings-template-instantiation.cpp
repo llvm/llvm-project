@@ -1,12 +1,16 @@
-// RUN: %clang_cc1 -verify -std=c++20 -fopenmp -triple x86_64-pc-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -std=c++20 \
+// RUN: -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -std=c++20 -fopenmp -triple x86_64-pc-linux-gnu -ast-dump %s | FileCheck %s --check-prefix=AST
-
-// Test that template instantiation with structured binding captures in OpenMP
-// works correctly when multiple bindings from the same decomposition are deduped
-// into a single capture.
+// RUN: %clang_cc1 -verify -std=c++20 -fopenmp -triple x86_64-pc-linux-gnu \
+// RUN: -ast-dump %s | FileCheck %s --check-prefix=AST
 
 // expected-no-diagnostics
+
+// Test template instantiation with structured bindings in OpenMP regions.
+// This verifies that skipping duplicate captures (when both bindings from
+// the same decomposition are used) doesn't break template instantiation.
+
+void use(int);
 
 struct Point {
   int x, y;
@@ -16,29 +20,49 @@ struct Point3D {
   int x, y, z;
 };
 
-
-// CHECK-LABEL: define {{.*}}@_Z28test_template_single_binding5Point            
-// CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 1, ptr {{.*}}, ptr
+// CHECK-LABEL: define {{.*}} @_Z28test_template_single_bindingI5PointEvT_(
+// CHECK: call void {{.*}}@__kmpc_fork_call(ptr @{{[0-9]+}}, i32 1, ptr @{{.*}}.omp_outlined, ptr
+//
+// AST: FunctionDecl {{.*}} test_template_single_binding 'void (Point)' implicit_instantiation
+// AST: DecompositionDecl {{.*}} used 'Point'
+// AST: OMPParallelDirective
+// AST-NEXT: CapturedStmt
+// AST: DeclRefExpr {{.*}} 'Point' lvalue Decomposition {{.*}} first_binding 'a' 'Point'
 template<typename T>
 void test_template_single_binding(T p) {
   auto [a, b] = p;
 #pragma omp parallel
   {
-    use(a);  // Only one binding captured                                       
+    use(a);
   }
 }
 
-// Template function capturing two bindings from struct decomposition.
+// CHECK-LABEL: define {{.*}}@_Z26test_template_two_bindingsI5PointEvT_
+// CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
+//
+// AST: FunctionDecl {{.*}} test_template_two_bindings 'void (Point)' implicit_instantiation
+// AST: DecompositionDecl {{.*}} used 'Point'
+// AST: OMPParallelDirective
+// AST: CapturedStmt
+// AST: DeclRefExpr {{.*}} 'Point' lvalue Decomposition {{.*}} first_binding 'a' 'Point'
 template<typename T>
 void test_template_two_bindings(T p) {
   auto [a, b] = p;
+  int result = 0;
 #pragma omp parallel reduction(+:result)
   {
     result = a + b;
   }
 }
 
-// Template function capturing three bindings.
+// CHECK-LABEL: define {{.*}}@_Z28test_template_three_bindingsI7Point3DEiT_
+// CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
+//
+// AST: FunctionDecl {{.*}} test_template_three_bindings 'int (Point3D)' implicit_instantiation
+// AST: DecompositionDecl {{.*}} used 'Point3D'
+// AST: OMPParallelDirective
+// AST: CapturedStmt
+// AST: DeclRefExpr {{.*}} 'Point3D' lvalue Decomposition
 template<typename T>
 int test_template_three_bindings(T p) {
   auto [x, y, z] = p;
@@ -51,7 +75,13 @@ int test_template_three_bindings(T p) {
   return result;
 }
 
-// Template with multiple uses of same binding.
+// CHECK-LABEL: define {{.*}}@_Z28test_template_reuse_bindingsI5PointEiT_
+// CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
+//
+// AST: FunctionDecl {{.*}} test_template_reuse_bindings 'int (Point)' implicit_instantiation
+// AST: DecompositionDecl {{.*}} used 'Point'
+// AST: CapturedStmt
+// AST: DeclRefExpr {{.*}} 'Point' lvalue Decomposition
 template<typename T>
 int test_template_reuse_bindings(T p) {
   auto [a, b] = p;
@@ -63,7 +93,14 @@ int test_template_reuse_bindings(T p) {
   return result;
 }
 
-// Template with nested OpenMP constructs.
+// CHECK-LABEL: define {{.*}}@_Z20test_template_nestedI5PointEiT_
+// CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
+//
+// AST: FunctionDecl {{.*}} test_template_nested 'int (Point)' implicit_instantiation
+// AST: DecompositionDecl {{.*}} used 'Point'
+// AST: OMPParallelDirective
+// AST: CapturedStmt
+// AST: DeclRefExpr {{.*}} 'Point' lvalue Decomposition
 template<typename T>
 int test_template_nested(T p) {
   auto [a, b] = p;
@@ -78,7 +115,14 @@ int test_template_nested(T p) {
   return result;
 }
 
-// Template with multiple OpenMP regions capturing same bindings.
+// CHECK-LABEL: define {{.*}}@_Z30test_template_multiple_regionsI5PointEvT_
+// CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
+//
+// AST: FunctionDecl {{.*}} test_template_multiple_regions 'void (Point)' implicit_instantiation
+// AST: DecompositionDecl {{.*}} used 'Point'
+// AST: OMPParallelDirective
+// AST: CapturedStmt
+// AST: DeclRefExpr {{.*}} 'Point' lvalue Decomposition
 template<typename T>
 void test_template_multiple_regions(T p) {
   auto [a, b] = p;
@@ -89,24 +133,15 @@ void test_template_multiple_regions(T p) {
   }
 }
 
-void instantiate_tests() {
-  Point p2{1, 2};
-  Point3D p3{1, 2, 3};
-
-  test_template_two_bindings(p2);
-  test_template_two_bindings(Point{5, 6});
-
-  test_template_three_bindings(p3);
-  test_template_three_bindings(Point3D{7, 8, 9});
-
-  test_template_reuse_bindings(p2);
-  test_template_nested(p2);
-  test_template_multiple_regions(p2);
-}
-
 typedef unsigned int size_t;
-
-// Test with array bindings.
+// CHECK-LABEL: define {{.*}}@_Z19test_template_arrayIiLj2EEiRAT0__T_
+// CHECK: call void {{.*}}@__kmpc_fork_call(ptr {{.*}}, i32 2, ptr {{.*}}, ptr
+//
+// AST: FunctionDecl {{.*}} test_template_array 'int (int (&)[2])' implicit_instantiation
+// AST: DecompositionDecl {{.*}} used 'int[2]'
+// AST: OMPParallelDirective
+// AST: CapturedStmt
+// AST: DeclRefExpr {{.*}} 'int[2]' lvalue Decomposition
 template<typename T, size_t N>
 int test_template_array(T (&arr)[N]) {
   auto [a, b] = arr;
@@ -118,7 +153,15 @@ int test_template_array(T (&arr)[N]) {
   return result;
 }
 
-void test_array_instantiation() {
-  int arr2[2] = {1, 2};
-  test_template_array(arr2);
+void instantiate_tests() {
+  Point p1{1, 2};
+  Point3D p2{1, 2, 3};
+  int arr[2] = {1, 2};
+  test_template_single_binding(p1);
+  test_template_two_bindings(p1);
+  test_template_three_bindings(p2);
+  test_template_reuse_bindings(p1);
+  test_template_nested(p1);
+  test_template_multiple_regions(p1);
+  test_template_array(arr);
 }

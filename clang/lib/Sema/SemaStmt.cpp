@@ -4710,18 +4710,12 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
     FieldDecl *Field = nullptr;
     if (RSI->CapRegionKind == CR_OpenMP && CapVar &&
         CapVar != Cap.getVariable() && isa<DecompositionDecl>(CapVar)) {
-      // Manually build a reference field with the DecompositionDecl's type.
-      QualType DDType = cast<VarDecl>(CapVar)->getType();
-      QualType RefType = S.Context.getLValueReferenceType(DDType);
-      TypeSourceInfo *TSI =
-          S.Context.getTrivialTypeSourceInfo(RefType, Cap.getLocation());
-      Field = FieldDecl::Create(S.Context, RSI->TheRecordDecl,
-                                Cap.getLocation(), Cap.getLocation(),
-                                /*Id=*/nullptr, RefType, TSI,
-                                /*BW=*/nullptr, /*Mutable=*/false, ICIS_NoInit);
-      Field->setImplicit(true);
-      Field->setAccess(AS_private);
-      RSI->TheRecordDecl->addDecl(Field);
+      assert(isa<BindingDecl>(Cap.getVariable()) &&
+             cast<BindingDecl>(Cap.getVariable())->getDecomposedDecl() ==
+                 CapVar &&
+             "OpenMP capture redirection should only happen for BindingDecl -> "
+             "DecompositionDecl");
+      Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap, true);
     } else {
       Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap);
     }
@@ -4736,8 +4730,10 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
     } else {
       assert(Cap.isVariableCapture() && "unknown kind of capture");
 
-      if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
-        S.OpenMP().setOpenMPCaptureKind(Field, CapVar, RSI->OpenMPLevel);
+      if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
+        ValueDecl *DSAVar = Cap.getVariable();
+        S.OpenMP().setOpenMPCaptureKind(Field, DSAVar, RSI->OpenMPLevel);
+      }
       Captures.emplace_back(Cap.getLocation(),
                             Cap.isReferenceCapture() ? CapturedStmt::VCK_ByRef
                                                      : CapturedStmt::VCK_ByCopy,

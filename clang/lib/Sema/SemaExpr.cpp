@@ -19380,18 +19380,16 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
   }
 
   if (isa<BindingDecl>(Var)) {
-    if (Var->getDeclName() && !Var->isImplicit()) {
-      if (auto *RSI = dyn_cast<CapturedRegionScopeInfo>(CSI)) {
-        if (RSI->CapRegionKind == CR_OpenMP) {
-          if (Diagnose && S.getLangOpts().CPlusPlus) {
-            S.Diag(Loc, S.LangOpts.CPlusPlus20
-                            ? diag::warn_cxx17_compat_capture_binding
-                            : diag::ext_capture_binding)
-                << Var;
-            S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
-          }
-          return true;
+    if (auto *RSI = dyn_cast<CapturedRegionScopeInfo>(CSI)) {
+      if (RSI->CapRegionKind == CR_OpenMP) {
+        if (Diagnose && S.getLangOpts().CPlusPlus) {
+          S.Diag(Loc, S.LangOpts.CPlusPlus20
+                          ? diag::warn_cxx17_compat_capture_binding
+                          : diag::ext_capture_binding)
+              << Var;
+          S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
         }
+        return true;
       }
     }
     if (!IsLambda || !S.getLangOpts().CPlusPlus) {
