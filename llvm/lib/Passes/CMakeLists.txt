@@ -1,6 +1,5 @@
 add_llvm_component_library(LLVMPasses
   CodeGenPassBuilder.cpp
-  IRTrackerInstrumentation.cpp
   OptimizationLevel.cpp
   PassBuilder.cpp
   PassBuilderBindings.cpp

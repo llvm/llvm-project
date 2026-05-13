@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/CodeGen/IRTracker.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/Passes.h"
@@ -833,6 +834,8 @@ void TargetPassConfig::addMachinePostPasses(const std::string &Banner) {
       addStripDebugPass();
   }
   addVerifyPass(Banner);
+  if (auto *P = createIRTrackerMIRPass(Banner))
+    PM->add(P);
 }
 
 /// Add common target configurable passes that perform LLVM IR to IR transforms

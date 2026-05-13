@@ -1,4 +1,4 @@
-//===- IRTrackerInstrumentation.cpp - IR tracker recorder -----------------===//
+//===- IRTracker.cpp - IR tracker recorder --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Passes/IRTrackerInstrumentation.h"
+#include "llvm/CodeGen/IRTracker.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StableHashing.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -32,12 +35,16 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/StructuralHash.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+
+#include <memory>
+#include <mutex>
 
 using namespace llvm;
 
@@ -401,6 +408,10 @@ static void printAPIntValue(raw_ostream &OS, const APInt &V) {
 }
 
 class IRTrackerRecorder {
+  /// Serializes the public entry points; one recorder may be shared
+  /// across the legacy and new-PM hooks within a single compilation.
+  std::mutex WriteMutex;
+
   /// Open file handle for the TSV row stream. Opened by the constructor;
   /// closed when the IRTrackerRecorder is destroyed.
   std::unique_ptr<raw_fd_ostream> OS;
@@ -1254,7 +1265,6 @@ class IRTrackerRecorder {
     return false;
   }
 
-public:
   /// Open the TSV output file. report_fatal_error if the path is not
   /// writable -- there is nothing useful the recorder can do without
   /// a working output sink.
@@ -1265,17 +1275,45 @@ public:
       report_fatal_error(Twine("ir-tracker output open: ") + EC.message());
   }
 
-  // Emit one synthetic "final" pass record on teardown covering every
-  // function of the last-seen module with ``SkipUnchanged=false`` so the
-  // post-optimization IR is fully materialized in the DB. The pass
-  // manager's ``PassInstrumentationCallbacks`` (which owns the shared_ptr
-  // holding this object) is destroyed before the module in the standard
-  // opt/clang flow, so ``LastModule`` is still live at this point. The
-  // cache reset is required because writeInstructionsInFunction also
-  // short-circuits per-instruction on matching ``TrackerIDToPrevHash``
-  // even when ``SkipUnchanged`` is false; without the reset the final
-  // record would only contain whatever changed since the last pass.
-  ~IRTrackerRecorder() {
+public:
+  /// Return the recorder writing to ``Path``. Recorders live for the
+  /// lifetime of the process so sequential pipelines targeting the same
+  /// output path append to one stream rather than reopening (and
+  /// truncating) the file between them.
+  static std::shared_ptr<IRTrackerRecorder> getOrCreate(StringRef Path) {
+    static std::mutex CacheMutex;
+    static StringMap<std::shared_ptr<IRTrackerRecorder>> Cache;
+    std::lock_guard<std::mutex> G(CacheMutex);
+    auto &S = Cache[Path];
+    if (!S)
+      S.reset(new IRTrackerRecorder(Path));
+    return S;
+  }
+
+  /// Record the MIR snapshot after a legacy-PM machine pass.
+  /// ``PassName`` is the bare pass name. The first call per
+  /// MachineFunction also emits an "initial" row; under the legacy PM
+  /// this reflects post-first-pass state because no per-pass pre-hook
+  /// exists.
+  void recordMIRAfterPass(const MachineFunction &MF, StringRef PassName) {
+    std::lock_guard<std::mutex> G(WriteMutex);
+    if (!isFunctionInPrintList(MF.getName()))
+      return;
+    if (MIRInitialCaptured.insert(&MF).second)
+      writeMIR(MF, NextSeq++, "initial", "<initial>", /*SkipUnchanged=*/false);
+    writeMIR(MF, NextSeq++, "after", PassName, /*SkipUnchanged=*/true);
+  }
+
+  /// Emit the synthetic "final" IR record covering every function of
+  /// ``LastModule``. The caller is responsible for invoking this while
+  /// the module is still live; the recorder's own destructor runs at
+  /// process exit, after the LLVMContext is gone. Idempotent. The hash
+  /// caches must be cleared first because writeInstructionsInFunction
+  /// short-circuits per-instruction on matching ``TrackerIDToPrevHash``;
+  /// without the reset the final record would only contain whatever
+  /// changed since the last pass.
+  void writeFinal() {
+    std::lock_guard<std::mutex> G(WriteMutex);
     if (!LastModule)
       return;
     FunctionHashes.clear();
@@ -1287,6 +1325,7 @@ public:
     writePassRecord(NextSeq++, "ir", "final", "<final>", "[module]");
     for (const Function &F : *LastModule)
       writeInstructionsInFunction(F, /*SkipUnchanged=*/false);
+    LastModule = nullptr;
   }
 
   // Before any other beforePass work runs, ensure the module containing
@@ -1318,6 +1357,7 @@ public:
   /// stream has a baseline against which subsequent per-pass diffs make
   /// sense; subsequent invocations are no-ops.
   void beforePass(StringRef PassID, Any IR) {
+    std::lock_guard<std::mutex> G(WriteMutex);
     if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
       if (isIgnored(PassID) || !shouldPrintMIR(IR))
         return;
@@ -1347,6 +1387,7 @@ public:
   /// of changed functions show up as I rows.
   void afterPass(StringRef PassID, Any IR, PassInstrumentationCallbacks &PIC,
                  const PreservedAnalyses &PA) {
+    std::lock_guard<std::mutex> G(WriteMutex);
     if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
       if (isIgnored(PassID) || !shouldPrintMIR(IR))
         return;
@@ -1394,19 +1435,82 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+// Legacy pass manager hook.
+//
+// The legacy PM has no PassInstrumentationCallbacks;
+// ``TargetPassConfig::addMachinePostPasses(Banner)`` is the only per-pass
+// post-hook. A no-op MachineFunctionPass scheduled there forwards to the
+// shared recorder so one ``-ir-tracker-output=...`` capture covers both
+// pass managers.
+//===----------------------------------------------------------------------===//
+
+class IRTrackerMIRPass : public MachineFunctionPass {
+  std::shared_ptr<IRTrackerRecorder> Rec;
+  std::string PassName;
+
+public:
+  static char ID;
+  IRTrackerMIRPass(StringRef Banner)
+      : MachineFunctionPass(ID),
+        Rec(IRTrackerRecorder::getOrCreate(IRTrackerOutput)) {
+    // ``Banner`` is built by addPass as ``"After " + P->getPassName()``;
+    // strip the prefix so the recorded pass name matches the new-PM format.
+    StringRef BannerRef(Banner);
+    BannerRef.consume_front("After ");
+    PassName = BannerRef.str();
+  }
+
+  StringRef getPassName() const override { return "IR Tracker MIR Recorder"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (Rec)
+      Rec->recordMIRAfterPass(MF, PassName);
+    return false;
+  }
+};
+
+char IRTrackerMIRPass::ID = 0;
+
+/// Captured by the PIC callbacks so writeFinal() runs at PIC teardown,
+/// while the Module is still live. The recorder itself outlives this
+/// sentinel via the process-lifetime cache in getOrCreate.
+struct FinalSnapshotSentinel {
+  std::shared_ptr<IRTrackerRecorder> Rec;
+  ~FinalSnapshotSentinel() {
+    if (Rec)
+      Rec->writeFinal();
+  }
+};
+
 } // namespace
 
-void IRTrackerInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+void llvm::registerIRTrackerCallbacks(PassInstrumentationCallbacks &PIC) {
   StringRef Path = IRTrackerOutput;
   if (Path.empty())
     return;
 
-  auto State = std::make_shared<IRTrackerRecorder>(Path);
+  auto State = IRTrackerRecorder::getOrCreate(Path);
+  auto Sentinel = std::make_shared<FinalSnapshotSentinel>();
+  Sentinel->Rec = State;
   PIC.registerBeforeNonSkippedPassCallback(
-      [State](StringRef PassID, Any IR) { State->beforePass(PassID, IR); });
+      [State, Sentinel](StringRef PassID, Any IR) {
+        State->beforePass(PassID, IR);
+      });
   PIC.registerAfterPassCallback(
-      [State, &PIC](StringRef PassID, Any IR, const PreservedAnalyses &PA) {
+      [State, Sentinel, &PIC](StringRef PassID, Any IR,
+                              const PreservedAnalyses &PA) {
         State->afterPass(PassID, IR, PIC, PA);
       });
+}
+
+MachineFunctionPass *llvm::createIRTrackerMIRPass(StringRef Banner) {
+  if (IRTrackerOutput.empty())
+    return nullptr;
+  return new IRTrackerMIRPass(Banner);
 }

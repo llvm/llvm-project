@@ -83,6 +83,7 @@ add_llvm_component_library(LLVMCodeGen
   InterleavedAccessPass.cpp
   InterleavedLoadCombinePass.cpp
   IntrinsicLowering.cpp
+  IRTracker.cpp
   JMCInstrumenter.cpp
   KCFI.cpp
   LatencyPriorityQueue.cpp
