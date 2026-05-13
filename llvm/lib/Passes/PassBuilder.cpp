@@ -1435,14 +1435,14 @@ Expected<SROAOptions> parseSROAOptions(StringRef Params) {
 
     if (ParamName == "modify-cfg") {
       if (SawCFGOption)
-        return make_error<StringError>(
-            "multiple SROA CFG options specified", inconvertibleErrorCode());
+        return make_error<StringError>("multiple SROA CFG options specified",
+                                       inconvertibleErrorCode());
       Result.CFG = SROAOptions::ModifyCFG;
       SawCFGOption = true;
     } else if (ParamName == "preserve-cfg") {
       if (SawCFGOption)
-        return make_error<StringError>(
-            "multiple SROA CFG options specified", inconvertibleErrorCode());
+        return make_error<StringError>("multiple SROA CFG options specified",
+                                       inconvertibleErrorCode());
       Result.CFG = SROAOptions::PreserveCFG;
       SawCFGOption = true;
     } else if (ParamName == "canonicalize-struct-to-vector") {

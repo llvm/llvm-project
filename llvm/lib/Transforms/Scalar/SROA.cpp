@@ -5090,13 +5090,14 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
 /// Try to canonicalize a homogeneous struct partition to a vector type.
 ///
-/// We can do this if all the elements of the struct are the same and tightly packed.
-/// This can sometimes eliminate allocas because structs cannot get promoted to LLVM values,
-/// but vectors can.
+/// We can do this if all the elements of the struct are the same and tightly
+/// packed. This can sometimes eliminate allocas because structs cannot get
+/// promoted to LLVM values, but vectors can.
 ///
-/// We only want to do this if this eliminates an alloca that wouldn't have been eliminated
-/// by memcpyopt, so this transformation only applies on the SROA pass in the pipeline after memcpyopt.
-/// We gate this transformation by the "CanonicalizeStructToVector" pass option.
+/// We only want to do this if this eliminates an alloca that wouldn't have been
+/// eliminated by memcpyopt, so this transformation only applies on the SROA
+/// pass in the pipeline after memcpyopt. We gate this transformation by the
+/// "CanonicalizeStructToVector" pass option.
 static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
                                                       Partition &P,
                                                       const DataLayout &DL) {
@@ -6146,8 +6147,7 @@ public:
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-    auto [Changed, _] =
-        SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
+    auto [Changed, _] = SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
     return Changed;
   }
 
