@@ -33,8 +33,6 @@
 
 #include "comgr-hotswap-internal.h"
 
-#if !defined(_MSC_VER)
-
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 
@@ -90,7 +88,7 @@ bool patchScaleSrc2(uint8_t *InstBytes) {
 // This only fires on the B0-to-A0 rewrite path (applyGfx1250B0toA0Rules).
 // A0-native binaries are compiled with an A0-targeted Clang that sets the
 // field correctly at codegen time, so they do not need hotswap rewriting.
-uint32_t applyVop3px2Src2Fix(PatchContext &Ctx) {
+static uint32_t applyVop3px2Src2FixImpl(PatchContext &Ctx) {
   uint32_t Patched = 0;
   unsigned Scanned = 0;
 
@@ -112,7 +110,9 @@ uint32_t applyVop3px2Src2Fix(PatchContext &Ctx) {
   return Patched;
 }
 
+void registerVop3px2Src2Patch(HotswapPatchVTable &VT) {
+  VT.applyVop3px2Src2Fix = &applyVop3px2Src2FixImpl;
+}
+
 } // namespace hotswap
 } // namespace COMGR
-
-#endif // !defined(_MSC_VER)

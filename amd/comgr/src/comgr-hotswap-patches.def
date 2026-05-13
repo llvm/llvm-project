@@ -1,0 +1,34 @@
+//===- comgr-hotswap-patches.def - HotSwap patch registry ----------------===//
+//
+// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// X-macro list of HotSwap patch modules. One line per patch; each entry
+/// names the module suffix used to form the installer symbol
+/// registerXxxPatch(HotswapPatchVTable&) defined in the patch module's .cpp
+/// file.
+///
+/// New patches add exactly one HOTSWAP_PATCH() line here (alpha-ordered)
+/// plus a sibling comgr-hotswap-patch-<name>.cpp file that defines its
+/// registerXxxPatch function. The dispatcher reads this file twice from
+/// comgr-hotswap-b0a0.cpp: once to forward-declare every registerXxxPatch,
+/// and once to call them all from installHotswapPatches().
+///
+/// HotswapPatchVTable slots default to nullptr. An entry here without a
+/// matching .cpp registrar produces a link error rather than leaving the
+/// patch silently unbound.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef HOTSWAP_PATCH
+#error "comgr-hotswap-patches.def included without HOTSWAP_PATCH defined"
+#endif
+
+HOTSWAP_PATCH(InPlace)
+HOTSWAP_PATCH(Trampoline)
+HOTSWAP_PATCH(Vop3px2Src2)
+HOTSWAP_PATCH(WmmaHazard)
+HOTSWAP_PATCH(WmmaSplit)

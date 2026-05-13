@@ -15,8 +15,6 @@
 
 #include "comgr-hotswap-internal.h"
 
-#if !defined(_MSC_VER)
-
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -172,7 +170,7 @@ std::vector<WmmaHazard> findWmmaCoexecHazards(const PatchContext &Ctx) {
 
 } // anonymous namespace
 
-uint32_t applyWmmaHazardPatch(PatchContext &Ctx) {
+static uint32_t applyWmmaHazardPatchImpl(PatchContext &Ctx) {
   std::vector<WmmaHazard> Hazards = findWmmaCoexecHazards(Ctx);
   if (Hazards.empty())
     return 0;
@@ -207,7 +205,9 @@ uint32_t applyWmmaHazardPatch(PatchContext &Ctx) {
   return Patched;
 }
 
+void registerWmmaHazardPatch(HotswapPatchVTable &VT) {
+  VT.applyWmmaHazardPatch = &applyWmmaHazardPatchImpl;
+}
+
 } // namespace hotswap
 } // namespace COMGR
-
-#endif // !defined(_MSC_VER)

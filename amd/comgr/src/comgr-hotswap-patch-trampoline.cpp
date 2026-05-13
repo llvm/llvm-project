@@ -15,13 +15,6 @@
 
 #include "comgr-hotswap-internal.h"
 
-// MSVC does not support weak symbols; LLVM_ATTRIBUTE_WEAK expands to nothing,
-// so the stub in comgr-hotswap-b0a0.cpp becomes a regular definition and
-// this file would produce a duplicate-symbol link error (LNK2005). Guard
-// the strong override until a proper registration mechanism replaces the
-// weak-symbol pattern on Windows (tracked in #2294 / #2285).
-#if !defined(_MSC_VER)
-
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -361,7 +354,7 @@ static bool patchDs2AddrStride64(PatchContext &Ctx, size_t Idx) {
 //
 //   ds_*_2addr_stride64_*  -> split into two single-address DS ops
 
-uint32_t applyTrampolinePatches(PatchContext &Ctx, size_t Idx) {
+static uint32_t applyTrampolinePatchesImpl(PatchContext &Ctx, size_t Idx) {
   StringRef Mnem(Ctx.Decoded[Idx].Mnemonic);
 
   if (!getDs2AddrReplacement(Mnem).empty())
@@ -370,7 +363,9 @@ uint32_t applyTrampolinePatches(PatchContext &Ctx, size_t Idx) {
   return 0;
 }
 
+void registerTrampolinePatch(HotswapPatchVTable &VT) {
+  VT.applyTrampolinePatches = &applyTrampolinePatchesImpl;
+}
+
 } // namespace hotswap
 } // namespace COMGR
-
-#endif // !defined(_MSC_VER)

@@ -6,7 +6,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Strong-symbol override for applyWmmaSplitPatches. Decomposes WMMA
+/// Patch module bound to HotswapPatchVTable::applyWmmaSplitPatches via
+/// registerWmmaSplitPatch (see comgr-hotswap-patches.def). Decomposes WMMA
 /// variants present on GFX1250 B0 but not on A0 into pairs of narrower WMMAs
 /// that exist on both steppings, emitted as trampolines appended to .text:
 ///
@@ -61,13 +62,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "comgr-hotswap-internal.h"
-
-// MSVC does not support weak symbols; LLVM_ATTRIBUTE_WEAK expands to nothing,
-// so the stub in comgr-hotswap-b0a0.cpp becomes a regular definition and
-// this file would produce a duplicate-symbol link error (LNK2005). Guard
-// the strong override until a proper registration mechanism replaces the
-// weak-symbol pattern on Windows (tracked in #2294 / #2285).
-#if !defined(_MSC_VER)
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -594,7 +588,7 @@ std::vector<std::string> buildSplit32x16Asm(StringRef Replacement,
 // log() (so the failure is at least visible when AMD_COMGR_EMIT_VERBOSE_LOGS
 // is set) and returns 0. The early "did not match" path returns 0
 // without logging.
-uint32_t applyWmmaSplitPatches(PatchContext &Ctx, size_t Idx) {
+static uint32_t applyWmmaSplitPatchesImpl(PatchContext &Ctx, size_t Idx) {
   InternalDecodedInst &DI = Ctx.Decoded[Idx];
 
   std::optional<SplitRule> Match = lookupSplitRule(DI.Mnemonic);
@@ -679,7 +673,9 @@ uint32_t applyWmmaSplitPatches(PatchContext &Ctx, size_t Idx) {
   return 1;
 }
 
+void registerWmmaSplitPatch(HotswapPatchVTable &VT) {
+  VT.applyWmmaSplitPatches = &applyWmmaSplitPatchesImpl;
+}
+
 } // namespace hotswap
 } // namespace COMGR
-
-#endif // !defined(_MSC_VER)

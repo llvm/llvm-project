@@ -509,13 +509,67 @@ struct PatchContext {
                                        uint32_t InstSize,
                                        llvm::ArrayRef<uint8_t> Replacement);
 
-// -- Patch entry points (weak stubs in comgr-hotswap-b0a0.cpp) ----------------
+// -- Patch dispatch vtable ----------------------------------------------------
+//
+// Function-pointer dispatch table that replaces the prior LLVM_ATTRIBUTE_WEAK
+// + `#if !defined(_MSC_VER)` override pattern. PE/COFF does not honour weak
+// the way ELF does, so on Windows the weak stubs silently won every patch
+// call and the feature was a no-op (issue ROCm/llvm-project#2479).
+//
+// Patch modules supply their implementations through register*Patch
+// functions invoked by installHotswapPatches(). The membership list is
+// comgr-hotswap-patches.def; each entry there corresponds to one slot
+// below and one register*Patch function in a sibling
+// comgr-hotswap-patch-*.cpp. nullptr slots are treated as no-op by the
+// dispatcher, so an unmigrated pass family (e.g. scratch) is safe to
+// leave unbound until its first strong override lands.
+//
+// The singleton accessor below eagerly installs every registered slot in
+// its own initializer, so production callers never observe an empty
+// vtable. installHotswapPatches() is still exported for unit tests that
+// want to drive the install against a local HotswapPatchVTable.
 
-uint32_t applyInPlacePatches(PatchContext &Ctx, size_t Idx);
-uint32_t applyTrampolinePatches(PatchContext &Ctx, size_t Idx);
-uint32_t applyWmmaHazardPatch(PatchContext &Ctx);
-uint32_t applyWmmaSplitPatches(PatchContext &Ctx, size_t Idx);
-uint32_t applyScratchPatches(PatchContext &Ctx, size_t Idx);
+struct HotswapPatchVTable {
+  // Per-instruction passes: called in declaration order; first non-zero
+  // return wins for an instruction (matches the pre-vtable dispatcher
+  // behaviour in applyGfx1250B0toA0Rules).
+  uint32_t (*applyInPlacePatches)(PatchContext &, size_t) = nullptr;
+  uint32_t (*applyTrampolinePatches)(PatchContext &, size_t) = nullptr;
+  uint32_t (*applyWmmaSplitPatches)(PatchContext &, size_t) = nullptr;
+  uint32_t (*applyScratchPatches)(PatchContext &, size_t) = nullptr;
+
+  // Whole-kernel passes: called once per kernel after the per-instruction
+  // loop completes.
+  uint32_t (*applyWmmaHazardPatch)(PatchContext &) = nullptr;
+  uint32_t (*applyVop3px2Src2Fix)(PatchContext &) = nullptr;
+};
+
+/// Walk comgr-hotswap-patches.def and bind every patch module's
+/// implementation into \p VT by calling its register*Patch function.
+/// A missing register*Patch produces a link error, which is the
+/// loud-failure shape the weak-symbol pattern lacked. Production code
+/// never calls this directly; it runs inside getHotswapPatchVTable()'s
+/// initializer. Exposed here so unit tests can drive the install against
+/// a local HotswapPatchVTable.
+void installHotswapPatches(HotswapPatchVTable &VT);
+
+/// Process-wide HotswapPatchVTable singleton (Meyers-style). The
+/// initializer eagerly calls installHotswapPatches() on its own storage,
+/// so every reference returned here is to a fully bound vtable. C++11
+/// [stmt.dcl]/4 guarantees the initializer runs exactly once and is safe
+/// under concurrent first access, which removes the need for an explicit
+/// std::call_once at the entry point and any inter-TU static-init order
+/// contract on the patch modules.
+HotswapPatchVTable &getHotswapPatchVTable();
+
+// Forward-declare every patch module's installer from the central .def
+// registry. Patch modules define these in their comgr-hotswap-patch-*.cpp;
+// installHotswapPatches() consumes them; unit tests under test-unit/ also
+// invoke them directly. A patches.def line with no matching definition
+// produces a libamd_comgr / HotswapMCTests link error.
+#define HOTSWAP_PATCH(Name) void register##Name##Patch(HotswapPatchVTable &);
+#include "comgr-hotswap-patches.def"
+#undef HOTSWAP_PATCH
 
 // -- Function declarations (B0-to-A0 policy layer) ----------------------------
 
