@@ -625,7 +625,8 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
               innerOffset);
       if (lattice && !lattice->getValue().isUninitialized()) {
         uint64_t udiv = lattice->getValue().getValue().udiv();
-        if (udiv % static_cast<uint64_t>(emulatedPerContainerElem) != 0)
+        if (udiv > 1 &&
+            udiv % static_cast<uint64_t>(emulatedPerContainerElem) != 0)
           fastPathOffsetAligned = false;
       }
     }
