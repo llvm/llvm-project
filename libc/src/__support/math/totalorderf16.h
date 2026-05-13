@@ -19,7 +19,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr int totalorderf16(const float16 *x, const float16 *y) {
+LIBC_INLINE LIBC_CONSTEXPR int totalorderf16(const float16 *x,
+                                             const float16 *y) {
   return static_cast<int>(fputil::totalorder(*x, *y));
 }
 
