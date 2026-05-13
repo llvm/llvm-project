@@ -237,6 +237,7 @@ module m01
     call charray(assumed_shape_char(1))  ! not an error if character
     call assumedsize(arr(1))  ! not an error if element in sequence
     call assumedrank(x)  ! not an error
+    !PORTABILITY: A scalar actual argument for an assumed-size TYPE(*) dummy is not portable [-Wassumed-type-size-dummy]
     call assumedtypeandsize(x)  ! not an error
   end subroutine
 
@@ -295,16 +296,16 @@ module m01
     integer :: j(1)
     j(1) = 1
     !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'x=' is not definable
-    !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
+    !BECAUSE: Variable 'a(__builtin_int(j,kind=8))' has a vector subscript
     call intentout_arr(a(j))
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' is not definable
-    !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
+    !BECAUSE: Variable 'a(__builtin_int(j,kind=8))' has a vector subscript
     call intentinout_arr(a(j))
     !WARNING: Actual argument associated with ASYNCHRONOUS dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
-    !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
+    !BECAUSE: Variable 'a(__builtin_int(j,kind=8))' has a vector subscript
     call asynchronous_arr(a(j))
     !WARNING: Actual argument associated with VOLATILE dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
-    !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
+    !BECAUSE: Variable 'a(__builtin_int(j,kind=8))' has a vector subscript
     call volatile_arr(a(j))
   end subroutine
 
@@ -373,6 +374,7 @@ module m01
     call volatileassumedsize(d(::2))
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
     call volatilecontiguous(d(::2))
+    !ERROR: Assumed-rank actual argument may not be associated with a dummy argument 'x=' that is not also assumed-rank
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
     call volatilecontiguous(assumedrank)
   end subroutine

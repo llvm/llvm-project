@@ -520,7 +520,7 @@ bool RegAllocFastImpl::mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const {
   if (MBB->isInlineAsmBrIndirectTarget() && TII->isStoreToStackSlot(MI, FI) &&
       MFI->isSpillSlotObjectIndex(FI))
     for (const auto &Op : MI.operands())
-      if (Op.isReg() && MBB->isLiveIn(Op.getReg()))
+      if (Op.isReg() && Op.getReg().isValid() && MBB->isLiveIn(Op.getReg()))
         return true;
   return false;
 }
@@ -1776,7 +1776,7 @@ void RegAllocFastImpl::handleBundle(MachineInstr &MI) {
       if (!Reg.isVirtual() || !shouldAllocateRegister(Reg))
         continue;
 
-      DenseMap<Register, LiveReg>::iterator DI = BundleVirtRegsMap.find(Reg);
+      auto DI = BundleVirtRegsMap.find(Reg);
       assert(DI != BundleVirtRegsMap.end() && "Unassigned virtual register");
 
       setPhysReg(MI, MO, DI->second);

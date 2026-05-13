@@ -6,6 +6,7 @@
 // UNSUPPORTED: x86_64h-darwin && lsan
 // XFAIL: tsan
 // XFAIL: android && asan
+// XFAIL: darwin-remote
 
 // FIXME: support -fsanitize-coverage on AIX
 // UNSUPPORTED: target={{.*aix.*}}

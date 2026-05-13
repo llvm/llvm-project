@@ -158,7 +158,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, v0, v1
 ; GFX11-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v1, v4, v5
-; GFX11-NEXT:    exp mrt0 v0, v1, off, off done
+; GFX11-NEXT:    exp mrt0, v0, v1, off, off done
 ; GFX11-NEXT:    s_endpgm
 .entry:
   %i = call i64 @llvm.amdgcn.s.getpc()

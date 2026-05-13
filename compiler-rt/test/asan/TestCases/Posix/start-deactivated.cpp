@@ -1,8 +1,6 @@
 // Test for ASAN_OPTIONS=start_deactivated=1 mode.
 // Main executable is uninstrumented, but linked to ASan runtime. The shared
 // library is instrumented. Memory errors before dlopen are not detected.
-// Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46862
-// XFAIL: !compiler-rt-optimized
 
 // For this case, do_another_bad_thing(which calls malloc) is compiled to a shared library,
 // and intercepting symbols in a shared library is still unsupported.

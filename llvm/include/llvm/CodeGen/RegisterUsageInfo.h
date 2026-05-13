@@ -21,7 +21,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include <cstdint>
@@ -68,10 +67,7 @@ class PhysicalRegisterUsageInfoWrapperLegacy : public ImmutablePass {
 
 public:
   static char ID;
-  PhysicalRegisterUsageInfoWrapperLegacy() : ImmutablePass(ID) {
-    initializePhysicalRegisterUsageInfoWrapperLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  PhysicalRegisterUsageInfoWrapperLegacy() : ImmutablePass(ID) {}
 
   PhysicalRegisterUsageInfo &getPRUI() { return *PRUI; }
   const PhysicalRegisterUsageInfo &getPRUI() const { return *PRUI; }
@@ -100,13 +96,12 @@ public:
 };
 
 class PhysicalRegisterUsageInfoPrinterPass
-    : public PassInfoMixin<PhysicalRegisterUsageInfoPrinterPass> {
+    : public RequiredPassInfoMixin<PhysicalRegisterUsageInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit PhysicalRegisterUsageInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

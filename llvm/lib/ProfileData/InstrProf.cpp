@@ -30,6 +30,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -485,25 +486,18 @@ bool isGPUProfTarget(const Module &M) {
 }
 
 void setPGOFuncVisibility(Module &M, GlobalVariable *FuncNameVar) {
-  // If the target is a GPU, make the symbol protected so it can
-  // be read from the host device
-  if (isGPUProfTarget(M))
-    FuncNameVar->setVisibility(GlobalValue::ProtectedVisibility);
   // Hide the symbol so that we correctly get a copy for each executable.
-  else if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
+  if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
     FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
 }
 
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName) {
-  // Ensure profiling variables on GPU are visible to be read from host
-  if (isGPUProfTarget(M))
-    Linkage = GlobalValue::ExternalLinkage;
   // We generally want to match the function's linkage, but available_externally
   // and extern_weak both have the wrong semantics, and anything that doesn't
   // need to link across compilation units doesn't need to be visible at all.
-  else if (Linkage == GlobalValue::ExternalWeakLinkage)
+  if (Linkage == GlobalValue::ExternalWeakLinkage)
     Linkage = GlobalValue::LinkOnceAnyLinkage;
   else if (Linkage == GlobalValue::AvailableExternallyLinkage)
     Linkage = GlobalValue::LinkOnceODRLinkage;
@@ -531,11 +525,14 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
     // Ignore in this case.
     if (!F.hasName())
       continue;
-    if (Error E = addFuncWithName(F, getIRPGOFuncName(F, InLTO), AddCanonical))
+    auto IRPGOFuncName = getIRPGOFuncName(F, InLTO);
+    if (Error E = addFuncWithName(F, IRPGOFuncName, AddCanonical))
       return E;
     // Also use getPGOFuncName() so that we can find records from older profiles
-    if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO), AddCanonical))
-      return E;
+    auto PGOFuncName = getPGOFuncName(F, InLTO);
+    if (PGOFuncName != IRPGOFuncName)
+      if (Error E = addFuncWithName(F, PGOFuncName, AddCanonical))
+        return E;
   }
 
   for (GlobalVariable &G : M.globals()) {
@@ -645,22 +642,20 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   //
   // ".__uniq." suffix is used to differentiate internal linkage functions in
   // different modules and should be kept. This is the only suffix with the
-  // pattern ".xxx" which is kept before matching, other suffixes similar as
-  // ".llvm." will be stripped.
-  const std::string UniqSuffix = ".__uniq.";
-  size_t Pos = PGOName.find(UniqSuffix);
-  if (Pos != StringRef::npos)
-    Pos += UniqSuffix.length();
-  else
-    Pos = 0;
-
-  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise search '.' from
-  // the beginning.
-  Pos = PGOName.find('.', Pos);
-  if (Pos != StringRef::npos && Pos != 0)
-    return PGOName.substr(0, Pos);
-
-  return PGOName;
+  // pattern ".xxx" which is kept before matching, other suffixes ".llvm." and
+  // ".part" will be stripped.
+  //
+  // Leverage the common canonicalization logic from FunctionSamples. Instead of
+  // removing all suffixes except ".__uniq.", explicitly specify the ones to be
+  // removed. This avoids the issue of colliding the canonical names of
+  // coroutine function with its await suspend wrappers or with its post-split
+  // clones. i.e. coro function foo, its wrappers
+  // (foo.__await_suspend_wrapper__init, and foo.__await_suspend_wrapper__final)
+  // and its post-split clones (foo.resume, foo.cleanup) are all canonicalized
+  // to "foo" otherwise, which can make the symtab lookup return unexpected
+  // result.
+  const SmallVector<StringRef> SuffixesToRemove{".llvm.", ".part."};
+  return FunctionSamples::getCanonicalFnName(PGOName, SuffixesToRemove);
 }
 
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,

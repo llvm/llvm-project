@@ -14,12 +14,6 @@
 ; CHECK-DAG: OpName [[ZEXT8_16:%.*]] "u8tou16"
 ; CHECK-DAG: OpName [[ZEXT16_32:%.*]] "u16tou32"
 
-; CHECK-DAG: OpName %[[#R16:]] "r16"
-; CHECK-DAG: OpName %[[#R17:]] "r17"
-; CHECK-DAG: OpName %[[#R18:]] "r18"
-; CHECK-DAG: OpName %[[#R19:]] "r19"
-; CHECK-DAG: OpName %[[#R20:]] "r20"
-
 ; CHECK-DAG: OpName [[TRUNC32_16v4:%.*]] "i32toi16v4"
 ; CHECK-DAG: OpName [[TRUNC32_8v4:%.*]] "i32toi8v4"
 ; CHECK-DAG: OpName [[TRUNC16_8v4:%.*]] "i16toi8v4"
@@ -30,11 +24,13 @@
 ; CHECK-DAG: OpName [[ZEXT8_16v4:%.*]] "u8tou16v4"
 ; CHECK-DAG: OpName [[ZEXT16_32v4:%.*]] "u16tou32v4"
 
-; CHECK-DAG: OpDecorate %[[#R16]] FPRoundingMode RTZ
-; CHECK-DAG: OpDecorate %[[#R17]] FPRoundingMode RTE
-; CHECK-DAG: OpDecorate %[[#R18]] FPRoundingMode RTP
-; CHECK-DAG: OpDecorate %[[#R19]] FPRoundingMode RTN
-; CHECK-DAG: OpDecorate %[[#R20]] SaturatedConversion
+; CHECK-DAG: OpDecorate %[[#R14:]] FPRoundingMode RTZ
+; CHECK-DAG: OpDecorate %[[#R15:]] FPRoundingMode RTZ
+; CHECK-DAG: OpDecorate %[[#R16:]] FPRoundingMode RTZ
+; CHECK-DAG: OpDecorate %[[#R17:]] FPRoundingMode RTE
+; CHECK-DAG: OpDecorate %[[#R18:]] FPRoundingMode RTP
+; CHECK-DAG: OpDecorate %[[#R19:]] FPRoundingMode RTN
+; CHECK-DAG: OpDecorate %[[#R20:]] SaturatedConversion
 
 ; CHECK-DAG: [[F32:%.*]] = OpTypeFloat 32
 ; CHECK-DAG: [[F16:%.*]] = OpTypeFloat 16
@@ -264,35 +260,55 @@ define <4 x i32>  @u16tou32v4(<4 x i16> %a) {
 ; CHECK: %[[#]] = OpConvertUToPtr %[[#]] [[Arg2]]
 ; CHECK: %[[#]] = OpUConvert [[U32v4]] %[[#]]
 ; CHECK: %[[#]] = OpSConvert [[U32v4]] %[[#]]
-; CHECK: %[[#]] = OpConvertUToF [[F32]] %[[#]]
-; CHECK: %[[#]] = OpConvertUToF [[F32]] %[[#]]
+; CHECK: %[[#R14]] = OpConvertUToF [[F32]] %[[#]]
+; CHECK: %[[#R15]] = OpConvertUToF [[F32]] %[[#]]
 ; CHECK: %[[#R16]] = OpFConvert [[F32v2]] %[[#]]
 ; CHECK: %[[#R17]] = OpFConvert [[F32v2]] %[[#]]
 ; CHECK: %[[#R18]] = OpFConvert [[F32v2]] %[[#]]
 ; CHECK: %[[#R19]] = OpFConvert [[F32v2]] %[[#]]
 ; CHECK: %[[#R20]] = OpConvertFToU [[U8]] %[[#]]
 ; CHECK: OpFunctionEnd
-define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg_ptr, <4 x i8> %arg_v2) {
+define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg_ptr, <4 x i8> %arg_v2, ptr addrspace(1) %out_i32, ptr addrspace(1) %out_float, ptr addrspace(1) %out_half, ptr addrspace(1) %out_i64, ptr addrspace(1) %out_ptr, ptr addrspace(1) %out_v4i32, ptr addrspace(1) %out_v2f32, ptr addrspace(1) %out_i8) {
   %r1 = call spir_func i32 @__spirv_ConvertFToU(float 0.000000e+00)
+  store volatile i32 %r1, ptr addrspace(1) %out_i32
   %r2 = call spir_func i32 @__spirv_ConvertFToS(float 0.000000e+00)
+  store volatile i32 %r2, ptr addrspace(1) %out_i32
   %r3 = call spir_func float @__spirv_ConvertSToF(i32 1)
+  store volatile float %r3, ptr addrspace(1) %out_float
   %r4 = call spir_func float @__spirv_ConvertUToF(i32 1)
+  store volatile float %r4, ptr addrspace(1) %out_float
   %r5 = call spir_func i32 @__spirv_UConvert(i64 1)
+  store volatile i32 %r5, ptr addrspace(1) %out_i32
   %r6 = call spir_func i32 @__spirv_SConvert(i64 1)
+  store volatile i32 %r6, ptr addrspace(1) %out_i32
   %r7 = call spir_func half @__spirv_FConvert(float 0.000000e+00)
+  store volatile half %r7, ptr addrspace(1) %out_half
   %r8 = call spir_func i64 @__spirv_SatConvertSToU(i64 1)
+  store volatile i64 %r8, ptr addrspace(1) %out_i64
   %r9 = call spir_func i64 @__spirv_SatConvertUToS(i64 1)
+  store volatile i64 %r9, ptr addrspace(1) %out_i64
   %r10 = call spir_func i64 @__spirv_ConvertPtrToU(ptr addrspace(4) %arg)
+  store volatile i64 %r10, ptr addrspace(1) %out_i64
   %r11 = call spir_func ptr addrspace(4) @__spirv_ConvertUToPtr(i64 %arg_ptr)
+  store volatile ptr addrspace(4) %r11, ptr addrspace(1) %out_ptr
   %r12 = call spir_func <4 x i32> @_Z22__spirv_UConvert_Rint2Dv2_a(<4 x i8> %arg_v2)
+  store volatile <4 x i32> %r12, ptr addrspace(1) %out_v4i32
   %r13 = call spir_func <4 x i32> @_Z22__spirv_SConvert_Rint2Dv2_a(<4 x i8> %arg_v2)
+  store volatile <4 x i32> %r13, ptr addrspace(1) %out_v4i32
   %r14 = call spir_func float @_Z30__spirv_ConvertUToF_Rfloat_rtz(i64 %arg_ptr)
+  store volatile float %r14, ptr addrspace(1) %out_float
   %r15 = call spir_func float @__spirv_ConvertUToF_Rfloat_rtz(i64 %arg_ptr)
+  store volatile float %r15, ptr addrspace(1) %out_float
   %r16 = call spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rtzDv2_DF16_(<2 x half> noundef <half 0xH409A, half 0xH439A>)
+  store volatile <2 x float> %r16, ptr addrspace(1) %out_v2f32
   %r17 = call spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rteDv2_DF16_(<2 x half> noundef <half 0xH409A, half 0xH439A>)
+  store volatile <2 x float> %r17, ptr addrspace(1) %out_v2f32
   %r18 = call spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rtpDv2_DF16_(<2 x half> noundef <half 0xH409A, half 0xH439A>)
+  store volatile <2 x float> %r18, ptr addrspace(1) %out_v2f32
   %r19 = call spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rtnDv2_DF16_(<2 x half> noundef <half 0xH409A, half 0xH439A>)
+  store volatile <2 x float> %r19, ptr addrspace(1) %out_v2f32
   %r20 = call spir_func i8 @_Z30__spirv_ConvertFToU_Ruchar_satf(float noundef 42.0)
+  store volatile i8 %r20, ptr addrspace(1) %out_i8
   ret void
 }
 

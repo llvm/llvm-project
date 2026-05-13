@@ -5,7 +5,7 @@
 // RUN:     -dwarf-ext-refs -fmodules                                   \
 // RUN:     -fmodule-format=obj -fimplicit-module-maps -DMODULES \
 // RUN:     -triple %itanium_abi_triple \
-// RUN:     -fmodules-cache-path=%t %s -I %S/Inputs -I %t -emit-llvm -o - \
+// RUN:     -fmodules-cache-path=%t/cache %s -I %S/Inputs -I %t -emit-llvm -o - \
 // RUN:   | FileCheck %s
 
 #include "DebugNestedB.h"

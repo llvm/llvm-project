@@ -1,6 +1,10 @@
 // Check that UAR mode can handle very deep recursion.
 // On AIX, we need a large stack size to contain all the 15000 frames and its callees.
 // REQUIRES: shell
+// TODO(boomanaiden154): This test currently fails with the internal
+// shell because python is not able to set RLIMIT_STACK. We should
+// reenable this when the behavior is fixed.
+// UNSUPPORTED: system-darwin
 // RUN: %clangxx_asan -O2 %s -o %t
 // RUN: ulimit -s 8192
 // RUN: %env_asan_opts=detect_stack_use_after_return=1 %run %t 2>&1 | FileCheck %s

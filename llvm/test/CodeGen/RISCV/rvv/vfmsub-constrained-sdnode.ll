@@ -11,8 +11,6 @@
 ; This tests a mix of vfmsac and vfmsub by using different operand orders to
 ; trigger commuting in TwoAddressInstructionPass.
 
-declare <vscale x 1 x half> @llvm.experimental.constrained.fma.nxv1f16(<vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, metadata, metadata)
-
 define <vscale x 1 x half> @vfmsub_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb, <vscale x 1 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfmsub_vv_nxv1f16:
 ; ZVFH:       # %bb.0:
@@ -66,8 +64,6 @@ define <vscale x 1 x half> @vfmsub_vf_nxv1f16(<vscale x 1 x half> %va, <vscale x
   %vd = call <vscale x 1 x half> @llvm.experimental.constrained.fma.nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %splat, <vscale x 1 x half> %neg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 1 x half> %vd
 }
-
-declare <vscale x 2 x half> @llvm.experimental.constrained.fma.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, metadata, metadata)
 
 define <vscale x 2 x half> @vfmsub_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb, <vscale x 2 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfmsub_vv_nxv2f16:
@@ -123,8 +119,6 @@ define <vscale x 2 x half> @vfmsub_vf_nxv2f16(<vscale x 2 x half> %va, <vscale x
   ret <vscale x 2 x half> %vd
 }
 
-declare <vscale x 4 x half> @llvm.experimental.constrained.fma.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, metadata, metadata)
-
 define <vscale x 4 x half> @vfmsub_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %vb, <vscale x 4 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfmsub_vv_nxv4f16:
 ; ZVFH:       # %bb.0:
@@ -178,8 +172,6 @@ define <vscale x 4 x half> @vfmsub_vf_nxv4f16(<vscale x 4 x half> %va, <vscale x
   %vd = call <vscale x 4 x half> @llvm.experimental.constrained.fma.nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %splat, <vscale x 4 x half> %neg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 4 x half> %vd
 }
-
-declare <vscale x 8 x half> @llvm.experimental.constrained.fma.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, metadata, metadata)
 
 define <vscale x 8 x half> @vfmsub_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb, <vscale x 8 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfmsub_vv_nxv8f16:
@@ -235,8 +227,6 @@ define <vscale x 8 x half> @vfmsub_vf_nxv8f16(<vscale x 8 x half> %va, <vscale x
   ret <vscale x 8 x half> %vd
 }
 
-declare <vscale x 16 x half> @llvm.experimental.constrained.fma.nxv16f16(<vscale x 16 x half>, <vscale x 16 x half>, <vscale x 16 x half>, metadata, metadata)
-
 define <vscale x 16 x half> @vfmsub_vv_nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb, <vscale x 16 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfmsub_vv_nxv16f16:
 ; ZVFH:       # %bb.0:
@@ -290,8 +280,6 @@ define <vscale x 16 x half> @vfmsub_vf_nxv16f16(<vscale x 16 x half> %va, <vscal
   %vd = call <vscale x 16 x half> @llvm.experimental.constrained.fma.nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %splat, <vscale x 16 x half> %neg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 16 x half> %vd
 }
-
-declare <vscale x 32 x half> @llvm.experimental.constrained.fma.nxv32f16(<vscale x 32 x half>, <vscale x 32 x half>, <vscale x 32 x half>, metadata, metadata)
 
 define <vscale x 32 x half> @vfmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb, <vscale x 32 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfmsub_vv_nxv32f16:
@@ -469,8 +457,6 @@ define <vscale x 32 x half> @vfmsub_vf_nxv32f16(<vscale x 32 x half> %va, <vscal
   ret <vscale x 32 x half> %vd
 }
 
-declare <vscale x 1 x float> @llvm.experimental.constrained.fma.nxv1f32(<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, metadata, metadata)
-
 define <vscale x 1 x float> @vfmsub_vv_nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %vb, <vscale x 1 x float> %vc) strictfp {
 ; CHECK-LABEL: vfmsub_vv_nxv1f32:
 ; CHECK:       # %bb.0:
@@ -494,8 +480,6 @@ define <vscale x 1 x float> @vfmsub_vf_nxv1f32(<vscale x 1 x float> %va, <vscale
   %vd = call <vscale x 1 x float> @llvm.experimental.constrained.fma.nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %splat, <vscale x 1 x float> %neg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 1 x float> %vd
 }
-
-declare <vscale x 2 x float> @llvm.experimental.constrained.fma.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, metadata, metadata)
 
 define <vscale x 2 x float> @vfmsub_vv_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb, <vscale x 2 x float> %vc) strictfp {
 ; CHECK-LABEL: vfmsub_vv_nxv2f32:
@@ -521,8 +505,6 @@ define <vscale x 2 x float> @vfmsub_vf_nxv2f32(<vscale x 2 x float> %va, <vscale
   ret <vscale x 2 x float> %vd
 }
 
-declare <vscale x 4 x float> @llvm.experimental.constrained.fma.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, metadata, metadata)
-
 define <vscale x 4 x float> @vfmsub_vv_nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %vb, <vscale x 4 x float> %vc) strictfp {
 ; CHECK-LABEL: vfmsub_vv_nxv4f32:
 ; CHECK:       # %bb.0:
@@ -547,8 +529,6 @@ define <vscale x 4 x float> @vfmsub_vf_nxv4f32(<vscale x 4 x float> %va, <vscale
   ret <vscale x 4 x float> %vd
 }
 
-declare <vscale x 8 x float> @llvm.experimental.constrained.fma.nxv8f32(<vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float>, metadata, metadata)
-
 define <vscale x 8 x float> @vfmsub_vv_nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb, <vscale x 8 x float> %vc) strictfp {
 ; CHECK-LABEL: vfmsub_vv_nxv8f32:
 ; CHECK:       # %bb.0:
@@ -572,8 +552,6 @@ define <vscale x 8 x float> @vfmsub_vf_nxv8f32(<vscale x 8 x float> %va, <vscale
   %vd = call <vscale x 8 x float> @llvm.experimental.constrained.fma.nxv8f32(<vscale x 8 x float> %vb, <vscale x 8 x float> %splat, <vscale x 8 x float> %neg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 8 x float> %vd
 }
-
-declare <vscale x 16 x float> @llvm.experimental.constrained.fma.nxv16f32(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>, metadata, metadata)
 
 define <vscale x 16 x float> @vfmsub_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb, <vscale x 16 x float> %vc) strictfp {
 ; CHECK-LABEL: vfmsub_vv_nxv16f32:
@@ -600,8 +578,6 @@ define <vscale x 16 x float> @vfmsub_vf_nxv16f32(<vscale x 16 x float> %va, <vsc
   ret <vscale x 16 x float> %vd
 }
 
-declare <vscale x 1 x double> @llvm.experimental.constrained.fma.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, metadata, metadata)
-
 define <vscale x 1 x double> @vfmsub_vv_nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb, <vscale x 1 x double> %vc) strictfp {
 ; CHECK-LABEL: vfmsub_vv_nxv1f64:
 ; CHECK:       # %bb.0:
@@ -625,8 +601,6 @@ define <vscale x 1 x double> @vfmsub_vf_nxv1f64(<vscale x 1 x double> %va, <vsca
   %vd = call <vscale x 1 x double> @llvm.experimental.constrained.fma.nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %splat, <vscale x 1 x double> %neg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 1 x double> %vd
 }
-
-declare <vscale x 2 x double> @llvm.experimental.constrained.fma.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, metadata, metadata)
 
 define <vscale x 2 x double> @vfmsub_vv_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x double> %vb, <vscale x 2 x double> %vc) strictfp {
 ; CHECK-LABEL: vfmsub_vv_nxv2f64:
@@ -652,8 +626,6 @@ define <vscale x 2 x double> @vfmsub_vf_nxv2f64(<vscale x 2 x double> %va, <vsca
   ret <vscale x 2 x double> %vd
 }
 
-declare <vscale x 4 x double> @llvm.experimental.constrained.fma.nxv4f64(<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, metadata, metadata)
-
 define <vscale x 4 x double> @vfmsub_vv_nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %vb, <vscale x 4 x double> %vc) strictfp {
 ; CHECK-LABEL: vfmsub_vv_nxv4f64:
 ; CHECK:       # %bb.0:
@@ -677,8 +649,6 @@ define <vscale x 4 x double> @vfmsub_vf_nxv4f64(<vscale x 4 x double> %va, <vsca
   %vd = call <vscale x 4 x double> @llvm.experimental.constrained.fma.nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %splat, <vscale x 4 x double> %neg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 4 x double> %vd
 }
-
-declare <vscale x 8 x double> @llvm.experimental.constrained.fma.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>, <vscale x 8 x double>, metadata, metadata)
 
 define <vscale x 8 x double> @vfmsub_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb, <vscale x 8 x double> %vc) strictfp {
 ; CHECK-LABEL: vfmsub_vv_nxv8f64:

@@ -21,6 +21,7 @@
 
 #include "benchmark/benchmark.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 namespace support {
@@ -64,7 +65,7 @@ void sequence_container_benchmarks(std::string container) {
   /////////////////////////
   if constexpr (std::is_constructible_v<Container, std::size_t>) {
     // not all containers provide this constructor
-    bench("ctor(size)", [](auto& st) {
+    bench("ctor(size_type)", [](auto& st) {
       auto const size = st.range(0);
 
       for ([[maybe_unused]] auto _ : st) {
@@ -75,7 +76,7 @@ void sequence_container_benchmarks(std::string container) {
   }
 
   for (auto gen : generators)
-    bench("ctor(size, value_type)" + tostr(gen), [gen](auto& st) {
+    bench("ctor(size_type, const value_type&)" + tostr(gen), [gen](auto& st) {
       auto const size = st.range(0);
       ValueType value = gen();
       benchmark::DoNotOptimize(value);
@@ -117,7 +118,7 @@ void sequence_container_benchmarks(std::string container) {
 #endif
 
   for (auto gen : generators)
-    bench("ctor(const&)" + tostr(gen), [gen](auto& st) {
+    bench("ctor(const Self&)" + tostr(gen), [gen](auto& st) {
       auto const size = st.range(0);
       Container in;
       std::generate_n(std::back_inserter(in), size, gen);
@@ -134,7 +135,7 @@ void sequence_container_benchmarks(std::string container) {
   // Assignment
   /////////////////////////
   for (auto gen : generators)
-    bench("operator=(const&)" + tostr(gen), [gen](auto& st) {
+    bench("operator=(const Self&)" + tostr(gen), [gen](auto& st) {
       auto const size = st.range(0);
       Container in1, in2;
       std::generate_n(std::back_inserter(in1), size, gen);
@@ -309,7 +310,7 @@ void sequence_container_benchmarks(std::string container) {
   }
 
   /////////////////////////
-  // Variations of push_back
+  // Appending elements
   /////////////////////////
   static constexpr bool has_push_back = requires(Container c, ValueType v) { c.push_back(v); };
   static constexpr bool has_capacity  = requires(Container c) { c.capacity(); };
@@ -397,6 +398,53 @@ void sequence_container_benchmarks(std::string container) {
           st.PauseTiming();
           c.clear();
           st.ResumeTiming();
+        }
+      });
+
+#if TEST_STD_VER >= 23
+    for (auto gen : generators)
+      bench("append_range() (into empty container)" + tostr(gen), [gen](auto& state) {
+        auto const size = state.range(0);
+        std::vector<ValueType> in;
+        std::generate_n(std::back_inserter(in), size, gen);
+        DoNotOptimizeData(in);
+
+        Container c;
+        DoNotOptimizeData(c);
+        for (auto _ : state) {
+          c.append_range(in);
+          DoNotOptimizeData(c);
+
+          state.PauseTiming();
+          c.clear();
+          state.ResumeTiming();
+        }
+      });
+#endif
+  }
+
+  /////////////////////////
+  // Prepending elements
+  /////////////////////////
+  static constexpr bool has_prepend_range = requires(Container c, std::vector<ValueType> v) { c.prepend_range(v); };
+
+  if constexpr (has_prepend_range) {
+    for (auto gen : generators)
+      bench("prepend_range() (into empty container)" + tostr(gen), [gen](auto& state) {
+        auto const size = state.range(0);
+        std::vector<ValueType> in;
+        std::generate_n(std::back_inserter(in), size, gen);
+        DoNotOptimizeData(in);
+
+        Container c;
+        DoNotOptimizeData(c);
+        for (auto _ : state) {
+          c.prepend_range(in);
+          DoNotOptimizeData(c);
+
+          state.PauseTiming();
+          c.clear();
+          state.ResumeTiming();
         }
       });
   }

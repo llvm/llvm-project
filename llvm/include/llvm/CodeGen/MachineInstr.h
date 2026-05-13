@@ -22,6 +22,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -73,14 +74,15 @@ class MachineInstr
 public:
   using mmo_iterator = ArrayRef<MachineMemOperand *>::iterator;
 
+  using AsmPrinterFlagTy = uint8_t;
+
   /// Flags to specify different kinds of comments to output in
   /// assembly code.  These flags carry semantic information not
   /// otherwise easily derivable from the IR text.
-  ///
-  enum CommentFlag {
-    ReloadReuse = 0x1,    // higher bits are reserved for target dep comments.
+  enum CommentFlag : AsmPrinterFlagTy {
+    ReloadReuse = 0x1, // higher bits are reserved for target dep comments.
     NoSchedComment = 0x2,
-    TAsmComments = 0x4    // Target Asm comments should start from this value.
+    TAsmComments = 0x4 // Target Asm comments should start from this value.
   };
 
   enum MIFlag {
@@ -123,8 +125,9 @@ public:
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
     SameSign = 1 << 21,      // Both operands have the same sign.
-    InBounds = 1 << 22       // Pointer arithmetic remains inbounds.
+    InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
                              // Implies NoUSWrap.
+    LRSplit = 1 << 23        // Instruction for live range split.
   };
 
 private:
@@ -135,7 +138,7 @@ private:
   MachineOperand *Operands = nullptr;   // Pointer to the first operand.
 
 #define LLVM_MI_NUMOPERANDS_BITS 24
-#define LLVM_MI_FLAGS_BITS 24
+#define LLVM_MI_FLAGS_BITS 32
 #define LLVM_MI_ASMPRINTERFLAGS_BITS 8
 
   /// Number of operands on instruction.
@@ -147,12 +150,19 @@ private:
   OperandCapacity CapOperands;          // Capacity of the Operands array.
 
   /// Various bits of additional information about the machine instruction.
-  uint32_t Flags : LLVM_MI_FLAGS_BITS;
+  uint32_t Flags;
 
   /// Various bits of information used by the AsmPrinter to emit helpful
   /// comments.  This is *not* semantic information.  Do not use this for
   /// anything other than to convey comment information to AsmPrinter.
-  uint32_t AsmPrinterFlags : LLVM_MI_ASMPRINTERFLAGS_BITS;
+  AsmPrinterFlagTy AsmPrinterFlags;
+
+  /// Cached opcode from MCID.
+  uint32_t Opcode;
+
+  /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
+  /// defined by this instruction.
+  unsigned DebugInstrNum;
 
   /// Internal implementation detail class that provides out-of-line storage for
   /// extra info used by the machine instruction when this info cannot be stored
@@ -160,8 +170,9 @@ private:
   ///
   /// This has to be defined eagerly due to the implementation constraints of
   /// `PointerSumType` where it is used.
-  class ExtraInfo final : TrailingObjects<ExtraInfo, MachineMemOperand *,
-                                          MCSymbol *, MDNode *, uint32_t> {
+  class ExtraInfo final
+      : TrailingObjects<ExtraInfo, MachineMemOperand *, MCSymbol *, MDNode *,
+                        uint32_t, Value *> {
   public:
     static ExtraInfo *create(BumpPtrAllocator &Allocator,
                              ArrayRef<MachineMemOperand *> MMOs,
@@ -169,20 +180,23 @@ private:
                              MCSymbol *PostInstrSymbol = nullptr,
                              MDNode *HeapAllocMarker = nullptr,
                              MDNode *PCSections = nullptr, uint32_t CFIType = 0,
-                             MDNode *MMRAs = nullptr) {
+                             MDNode *MMRAs = nullptr, Value *DS = nullptr) {
       bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
       bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
       bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
       bool HasMMRAs = MMRAs != nullptr;
       bool HasCFIType = CFIType != 0;
       bool HasPCSections = PCSections != nullptr;
+      bool HasDS = DS != nullptr;
       auto *Result = new (Allocator.Allocate(
-          totalSizeToAlloc<MachineMemOperand *, MCSymbol *, MDNode *, uint32_t>(
+          totalSizeToAlloc<MachineMemOperand *, MCSymbol *, MDNode *, uint32_t,
+                           Value *>(
               MMOs.size(), HasPreInstrSymbol + HasPostInstrSymbol,
-              HasHeapAllocMarker + HasPCSections + HasMMRAs, HasCFIType),
+              HasHeapAllocMarker + HasPCSections + HasMMRAs, HasCFIType, HasDS),
           alignof(ExtraInfo)))
           ExtraInfo(MMOs.size(), HasPreInstrSymbol, HasPostInstrSymbol,
-                    HasHeapAllocMarker, HasPCSections, HasCFIType, HasMMRAs);
+                    HasHeapAllocMarker, HasPCSections, HasCFIType, HasMMRAs,
+                    HasDS);
 
       // Copy the actual data into the trailing objects.
       llvm::copy(MMOs, Result->getTrailingObjects<MachineMemOperand *>());
@@ -202,6 +216,8 @@ private:
         Result->getTrailingObjects<uint32_t>()[0] = CFIType;
       if (HasMMRAs)
         Result->getTrailingObjects<MDNode *>()[MDNodeIdx++] = MMRAs;
+      if (HasDS)
+        Result->getTrailingObjects<Value *>()[0] = DS;
 
       return Result;
     }
@@ -240,6 +256,10 @@ private:
                       : nullptr;
     }
 
+    Value *getDeactivationSymbol() const {
+      return HasDS ? getTrailingObjects<Value *>()[0] : 0;
+    }
+
   private:
     friend TrailingObjects;
 
@@ -255,6 +275,7 @@ private:
     const bool HasPCSections;
     const bool HasCFIType;
     const bool HasMMRAs;
+    const bool HasDS;
 
     // Implement the `TrailingObjects` internal API.
     size_t numTrailingObjects(OverloadToken<MachineMemOperand *>) const {
@@ -269,16 +290,17 @@ private:
     size_t numTrailingObjects(OverloadToken<uint32_t>) const {
       return HasCFIType;
     }
+    size_t numTrailingObjects(OverloadToken<Value *>) const { return HasDS; }
 
     // Just a boring constructor to allow us to initialize the sizes. Always use
     // the `create` routine above.
     ExtraInfo(int NumMMOs, bool HasPreInstrSymbol, bool HasPostInstrSymbol,
               bool HasHeapAllocMarker, bool HasPCSections, bool HasCFIType,
-              bool HasMMRAs)
+              bool HasMMRAs, bool HasDS)
         : NumMMOs(NumMMOs), HasPreInstrSymbol(HasPreInstrSymbol),
           HasPostInstrSymbol(HasPostInstrSymbol),
           HasHeapAllocMarker(HasHeapAllocMarker), HasPCSections(HasPCSections),
-          HasCFIType(HasCFIType), HasMMRAs(HasMMRAs) {}
+          HasCFIType(HasCFIType), HasMMRAs(HasMMRAs), HasDS(HasDS) {}
   };
 
   /// Enumeration of the kinds of inline extra info available. It is important
@@ -304,13 +326,6 @@ private:
       Info;
 
   DebugLoc DbgLoc; // Source line information.
-
-  /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
-  /// defined by this instruction.
-  unsigned DebugInstrNum;
-
-  /// Cached opcode from MCID.
-  uint16_t Opcode;
 
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
@@ -373,28 +388,28 @@ public:
   }
 
   /// Return the asm printer flags bitvector.
-  uint8_t getAsmPrinterFlags() const { return AsmPrinterFlags; }
+  AsmPrinterFlagTy getAsmPrinterFlags() const { return AsmPrinterFlags; }
 
   /// Clear the AsmPrinter bitvector.
   void clearAsmPrinterFlags() { AsmPrinterFlags = 0; }
 
   /// Return whether an AsmPrinter flag is set.
-  bool getAsmPrinterFlag(CommentFlag Flag) const {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  bool getAsmPrinterFlag(AsmPrinterFlagTy Flag) const {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     return AsmPrinterFlags & Flag;
   }
 
   /// Set a flag for the AsmPrinter.
-  void setAsmPrinterFlag(uint8_t Flag) {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  void setAsmPrinterFlag(AsmPrinterFlagTy Flag) {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     AsmPrinterFlags |= Flag;
   }
 
   /// Clear specific AsmPrinter flags.
-  void clearAsmPrinterFlag(CommentFlag Flag) {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  void clearAsmPrinterFlag(AsmPrinterFlagTy Flag) {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     AsmPrinterFlags &= ~Flag;
   }
@@ -659,7 +674,7 @@ public:
       return true;
     if (isRegSequence() && OpIdx > 1 && (OpIdx % 2) == 0)
       return true;
-    if (isSubregToReg() && OpIdx == 3)
+    if (isSubregToReg() && OpIdx == 2)
       return true;
     return false;
   }
@@ -864,6 +879,14 @@ public:
       return nullptr;
     if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
       return EI->getMMRAMetadata();
+    return nullptr;
+  }
+
+  Value *getDeactivationSymbol() const {
+    if (!Info)
+      return nullptr;
+    if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
+      return EI->getDeactivationSymbol();
     return nullptr;
   }
 
@@ -1308,7 +1331,10 @@ public:
   /// If this instruction is the header of a bundle, the whole bundle is erased.
   /// This function can not be used for instructions inside a bundle, use
   /// eraseFromBundle() to erase individual bundled instructions.
-  LLVM_ABI void eraseFromParent();
+  /// \returns the iterator following the erased instruction. If this is the
+  /// header of a bundle it returns the iterator following the erased bundle
+  /// iterator.
+  LLVM_ABI MachineInstrBundleIterator<MachineInstr> eraseFromParent();
 
   /// Unlink 'this' from its basic block and delete it.
   ///
@@ -1431,6 +1457,10 @@ public:
     return getOpcode() == TargetOpcode::COPY;
   }
 
+  bool isCopyLaneMask() const {
+    return getOpcode() == TargetOpcode::COPY_LANEMASK;
+  }
+
   bool isFullCopy() const {
     return isCopy() && !getOperand(0).getSubReg() && !getOperand(1).getSubReg();
   }
@@ -1464,6 +1494,7 @@ public:
     case TargetOpcode::PHI:
     case TargetOpcode::G_PHI:
     case TargetOpcode::COPY:
+    case TargetOpcode::COPY_LANEMASK:
     case TargetOpcode::INSERT_SUBREG:
     case TargetOpcode::SUBREG_TO_REG:
     case TargetOpcode::REG_SEQUENCE:
@@ -1969,6 +2000,8 @@ public:
   /// Set the CFI type for the instruction.
   LLVM_ABI void setCFIType(MachineFunction &MF, uint32_t Type);
 
+  LLVM_ABI void setDeactivationSymbol(MachineFunction &MF, Value *DS);
+
   /// Return the MIFlags which represent both MachineInstrs. This
   /// should be used when merging two MachineInstrs into one. This routine does
   /// not modify the MIFlags of this MachineInstr.
@@ -2088,7 +2121,7 @@ private:
   void setExtraInfo(MachineFunction &MF, ArrayRef<MachineMemOperand *> MMOs,
                     MCSymbol *PreInstrSymbol, MCSymbol *PostInstrSymbol,
                     MDNode *HeapAllocMarker, MDNode *PCSections,
-                    uint32_t CFIType, MDNode *MMRAs);
+                    uint32_t CFIType, MDNode *MMRAs, Value *DS);
 };
 
 /// Special DenseMapInfo traits to compare MachineInstr* by *value* of the

@@ -205,6 +205,21 @@ bool DITypeAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// DIDerivedTypeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult DIDerivedTypeAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, unsigned tag, StringAttr name,
+    DIFileAttr file, uint32_t line, DIScopeAttr scope, DITypeAttr baseType,
+    uint64_t sizeInBits, uint32_t alignInBits, uint64_t offsetInBits,
+    std::optional<unsigned> dwarfAddressSpace, DIFlags flags,
+    Attribute extraData) {
+  if (extraData && !llvm::isa<DINodeAttr, IntegerAttr>(extraData))
+    return emitError() << "extraData must be a DINodeAttr or an IntegerAttr";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TBAANodeAttr
 //===----------------------------------------------------------------------===//
 
@@ -320,14 +335,36 @@ DICompositeTypeAttr::withRecId(DistinctAttr recId) {
       getContext(), recId, getIsRecSelf(), getTag(), getName(), getFile(),
       getLine(), getScope(), getBaseType(), getFlags(), getSizeInBits(),
       getAlignInBits(), getDataLocation(), getRank(), getAllocated(),
-      getAssociated(), getElements());
+      getAssociated(), getIdentifier(), getDiscriminator(), getElements());
 }
 
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
   return DICompositeTypeAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
                                   0, {}, {}, 0, {}, {}, DIFlags(), 0, 0, {}, {},
-                                  {}, {}, {});
+                                  {}, {}, {}, {}, {});
+}
+
+//===----------------------------------------------------------------------===//
+// DICompileUnitAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface DICompileUnitAttr::withRecId(DistinctAttr recId) {
+  return DICompileUnitAttr::get(
+      getContext(), recId, getIsRecSelf(), getId(), getSourceLanguage(),
+      getFile(), getProducer(), getIsOptimized(), getEmissionKind(),
+      getIsDebugInfoForProfiling(), getNameTableKind(), getSplitDebugFilename(),
+      getImportedEntities());
+}
+
+DIRecursiveTypeAttrInterface DICompileUnitAttr::getRecSelf(DistinctAttr recId) {
+
+  return DICompileUnitAttr::get(
+      recId.getContext(), recId, /*isRecSelf=*/true, /*id=*/{},
+      /*sourceLanguage=*/0u, /*file=*/{}, /*producer=*/{},
+      /*isOptimized=*/false, DIEmissionKind::None,
+      /*isDebugInfoForProfiling=*/false, DINameTableKind::Default,
+      /*splitDebugFilename=*/{}, /*importedEntities=*/{});
 }
 
 //===----------------------------------------------------------------------===//
@@ -531,7 +568,17 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (isa<IntegerAttr, StringAttr>(value))
     return success();
 
-  return emitError() << "only integer and string values are currently "
-                        "supported for unknown key '"
+  // Allow non-empty ArrayAttr of StringAttrs to represent MDTuples of
+  // MDStrings (e.g. the "riscv-isa" module flag). Integer values within
+  // MDTuples are not handled here because integer module flags are encoded as
+  // ConstantAsMetadata at the top level (not as MDTuples), so no known use
+  // case requires an array-of-integers representation.
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(value))
+    if (!arrayAttr.empty() &&
+        llvm::all_of(arrayAttr, [](Attribute a) { return isa<StringAttr>(a); }))
+      return success();
+
+  return emitError() << "only integer, string, and string-array values are "
+                        "currently supported for unknown key '"
                      << key << "'";
 }

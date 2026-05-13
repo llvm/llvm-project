@@ -483,16 +483,17 @@ bool AArch64LowerHomogeneousPE::lowerEpilog(
   assert(MI.getOpcode() == AArch64::HOM_Epilog);
 
   auto Return = NextMBBI;
+  MachineInstr *HelperCall = nullptr;
   if (shouldUseFrameHelper(MBB, NextMBBI, Regs, FrameHelperType::EpilogTail)) {
     // When MBB ends with a return, emit a tail-call to the epilog helper
     auto *EpilogTailHelper =
         getOrCreateFrameHelper(M, MMI, Regs, FrameHelperType::EpilogTail);
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::TCRETURNdi))
-        .addGlobalAddress(EpilogTailHelper)
-        .addImm(0)
-        .setMIFlag(MachineInstr::FrameDestroy)
-        .copyImplicitOps(MI)
-        .copyImplicitOps(*Return);
+    HelperCall = BuildMI(MBB, MBBI, DL, TII->get(AArch64::TCRETURNdi))
+                     .addGlobalAddress(EpilogTailHelper)
+                     .addImm(0)
+                     .setMIFlag(MachineInstr::FrameDestroy)
+                     .copyImplicitOps(MI)
+                     .copyImplicitOps(*Return);
     NextMBBI = std::next(Return);
     Return->removeFromParent();
   } else if (shouldUseFrameHelper(MBB, NextMBBI, Regs,
@@ -500,10 +501,10 @@ bool AArch64LowerHomogeneousPE::lowerEpilog(
     // The default epilog helper case.
     auto *EpilogHelper =
         getOrCreateFrameHelper(M, MMI, Regs, FrameHelperType::Epilog);
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
-        .addGlobalAddress(EpilogHelper)
-        .setMIFlag(MachineInstr::FrameDestroy)
-        .copyImplicitOps(MI);
+    HelperCall = BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
+                     .addGlobalAddress(EpilogHelper)
+                     .setMIFlag(MachineInstr::FrameDestroy)
+                     .copyImplicitOps(MI);
   } else {
     // Fall back to no-helper.
     for (int I = 0; I < Size - 2; I += 2)
@@ -512,6 +513,12 @@ bool AArch64LowerHomogeneousPE::lowerEpilog(
     emitLoad(MF, MBB, MBBI, *TII, Regs[Size - 2], Regs[Size - 1], Size, true);
   }
 
+  // Make sure all explicit definitions are preserved in the helper call;
+  // implicit ones are already handled by copyImplicitOps.
+  if (HelperCall)
+    for (auto &Def : MBBI->defs())
+      HelperCall->addRegisterDefined(Def.getReg(),
+                                     MF.getRegInfo().getTargetRegisterInfo());
   MBBI->removeFromParent();
   return true;
 }

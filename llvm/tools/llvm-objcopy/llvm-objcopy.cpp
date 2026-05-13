@@ -73,12 +73,26 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
 
   if (Is("bitcode-strip") || Is("bitcode_strip"))
     return parseBitcodeStripOptions(Args, reportWarning);
-  else if (Is("strip"))
+
+  if (Is("strip"))
     return parseStripOptions(Args, reportWarning);
-  else if (Is("install-name-tool") || Is("install_name_tool"))
+
+  if (Is("install-name-tool") || Is("install_name_tool"))
     return parseInstallNameToolOptions(Args);
-  else
-    return parseObjcopyOptions(Args, reportWarning);
+
+  if (Is("llvm-extract-bundle-entry")) {
+    Expected<SmallVector<StringRef>> ArgsOrErr =
+        parseExtractBundleEntryOptions(Args);
+    if (!ArgsOrErr)
+      return ArgsOrErr.takeError();
+    if (Error Err = runExtractBundleEntry(*ArgsOrErr))
+      return Err;
+
+    // The functionality of llvm-extract-bundle-entry is completely
+    // handled in runExtractBundleEntry, so we can exit(0) here.
+    std::exit(0);
+  }
+  return parseObjcopyOptions(Args, reportWarning);
 }
 
 /// The function executeObjcopyOnIHex does the dispatch based on the format

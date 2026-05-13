@@ -1,9 +1,9 @@
-<!--===- docs/FortranIR.md 
-  
+<!--===- docs/FortranIR.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Design: Fortran IR
@@ -95,7 +95,7 @@ The CFG can be directly constructed by traversing the parse tree, threading cont
 
 * Pro: Straightforward implementation when control-flow is well-structured as the contextual state parallels the syntax of the language closely.
 * Con: The contextual state needed can become large and difficult to manage in the presence of unstructured control-flow. For example, not every labeled statement in Fortran may be a control-flow destination.
-* Con: The contextual state must deal with the recursive nature of the parse tree. 
+* Con: The contextual state must deal with the recursive nature of the parse tree.
 * Con: Complexity. Since structured constructs cohabitate with unstructured constructs, the context needs to carry information about all combinations until the basic blocks and relations are fully elaborated.
 
 #### Alternative: linearized approach (decomposing the problem)
@@ -104,7 +104,7 @@ Instead of constructing the CFG directly from a parse tree traversal, an interme
 
 While each control-flow source statement is explicit in the traversal, it can be the case that not all of the targets have been traversed yet (references to forward basic blocks), and those basic blocks will not yet have been created.  These relations can be captured at the time the source is traversed, added to a to do list, and then completed when all the basic blocks for the procedure have been created. Specifically, at the point when we create a terminator all information is known to create the FIR terminator, however all basic blocks that may be referenced may not have been created. Those are resolved in one final "clean up" pass over a list of closures.
 
-* Con: An extra representation must be defined and constructed.  
+* Con: An extra representation must be defined and constructed.
 * Pro: This representation reifies all the information that is referred to as contextual state in the direct approach.
 * Pro: Constructing the linearized form can be done with a simple traversal of the parse tree.
 * Pro: Once composed the linearized form can be traversed and a CFG directly constructed.  This greatly reduces bookkeeping of contextual state.

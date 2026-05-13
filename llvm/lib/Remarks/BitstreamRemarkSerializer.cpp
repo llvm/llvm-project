@@ -198,7 +198,7 @@ void BitstreamRemarkSerializerHelper::setupBlockInfo() {
     Bitstream.Emit(static_cast<unsigned>(C), 8);
 
   Bitstream.EnterBlockInfoBlock();
-  auto ExitBlock = make_scope_exit([&] { Bitstream.ExitBlock(); });
+  llvm::scope_exit ExitBlock([&] { Bitstream.ExitBlock(); });
 
   // Setup the main metadata. Depending on the container type, we'll setup the
   // required records next.
@@ -225,7 +225,7 @@ void BitstreamRemarkSerializerHelper::emitMetaBlock(
     std::optional<StringRef> Filename) {
   // Emit the meta block
   Bitstream.EnterSubblock(META_BLOCK_ID, 3);
-  auto ExitBlock = make_scope_exit([&] { Bitstream.ExitBlock(); });
+  llvm::scope_exit ExitBlock([&] { Bitstream.ExitBlock(); });
 
   // The container version and type.
   R.clear();

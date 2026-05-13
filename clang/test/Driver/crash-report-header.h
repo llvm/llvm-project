@@ -1,7 +1,7 @@
 // RUN: export LSAN_OPTIONS=detect_leaks=0
 // RUN: rm -rf %t
 // RUN: mkdir %t
-// RUN: env TMPDIR="%t" TEMP="%t" TMP="%t" RC_DEBUG_OPTIONS=1 not %clang -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: env TMPDIR="%t" TEMP="%t" TMP="%t" RC_DEBUG_OPTIONS=1 not %crash_opt %clang -fsyntax-only %s 2>&1 | FileCheck %s
 // RUN: cat %t/crash-report-header-*.h | FileCheck --check-prefix=CHECKSRC "%s"
 // RUN: cat %t/crash-report-header-*.sh | FileCheck --check-prefix=CHECKSH "%s"
 // REQUIRES: crash-recovery

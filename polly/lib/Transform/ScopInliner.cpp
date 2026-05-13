@@ -34,7 +34,9 @@ namespace {
 
 /// Inliner implementation that works with both, LPM (using SCC_t=CallGraph) and
 /// NPM (using SCC_t=LazyCallGraph::SCC)
-template <typename SCC_t> bool runScopInlinerImpl(Function *F, SCC_t &SCC) {
+template <typename SCC_t>
+bool runScopInlinerImpl(Function *F, SCC_t &SCC,
+                        IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   // We do not try to inline non-trivial SCCs because this would lead to
   // "infinite" inlining if we are not careful.
   if (SCC.size() > 1)
@@ -50,7 +52,11 @@ template <typename SCC_t> bool runScopInlinerImpl(Function *F, SCC_t &SCC) {
     return false;
   }
 
-  PassBuilder PB;
+  PassBuilder PB(
+      /*TM=*/nullptr,
+      /*PipelineTuningOptions=*/{},
+      /*PGOOpt=*/{},
+      /*PIC=*/nullptr, std::move(FS));
   // Populate analysis managers and register Polly-specific analyses.
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -96,7 +102,8 @@ template <typename SCC_t> bool runScopInlinerImpl(Function *F, SCC_t &SCC) {
 }
 } // namespace
 
-polly::ScopInlinerPass::ScopInlinerPass() {
+polly::ScopInlinerPass::ScopInlinerPass(IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : FS(std::move(FS)) {
   if (!polly::PollyAllowFullFunction) {
     report_fatal_error(
         "Aborting from ScopInliner because it only makes sense to run with "
@@ -113,6 +120,6 @@ PreservedAnalyses polly::ScopInlinerPass::run(llvm::LazyCallGraph::SCC &SCC,
                                               llvm::LazyCallGraph &CG,
                                               llvm::CGSCCUpdateResult &UR) {
   Function *F = &SCC.begin()->getFunction();
-  bool Changed = runScopInlinerImpl(F, SCC);
+  bool Changed = runScopInlinerImpl(F, SCC, FS);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

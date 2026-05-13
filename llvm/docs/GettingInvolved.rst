@@ -204,14 +204,18 @@ what to add to your calendar invite.
      - Every 2 weeks on Mondays
      - `gcal <https://calendar.google.com/calendar/u/0?cid=c3ljbC5sbHZtLndnQGdtYWlsLmNvbQ>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1ivYDSn_5ChTeiZ7TiO64WC_jYJnGwAUiT9Ngi9cAdFU/edit?usp=sharing>`__
+   * - Formal Semantics Working Group
+     - Every 2 weeks on Mondays
+     - `gcal <https://calendar.google.com/calendar/event?eid=aHJpNnNzb3Zia3FtNzNuYjdpbmJtZG5nZGVfMjAyNjA1MDRUMTUzMDAwWiBjYWxlbmRhckBsbHZtLm9yZw>`__
+     - `Meeting notes <https://docs.google.com/document/d/1muS2gZ7PUhbypbl0bmjb2J-UUzY7K8AO9a8RHVw_Mjo/edit?tab=t.0>`__
    * - Vectorizer Improvement Working Group
      - 3rd Tuesday of the month
-     - `ics <https://drive.google.com/file/d/1ten-u-4yjOcCoONUtR4_AxsFxRDTUp1b/view?usp=sharing>`__
+     - `ics <https://www.icloud.com/iclouddrive/032PeZzdN6U4uRMwJRJPrS2Lw#Vectorizer_Improvements>`__
      - `Meeting details/agenda: <https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit>`__
    * - `LLVM Qualification Working Group <https://llvm.org/docs/QualGroup.html>`__
-     - 1st Tuesday/Wednesday of the month
-     - `ics <https://calendar.google.com/calendar/ical/c_fe5774fa2769c5085d6b87e8fac272e8940e7d0089bc0e0a58dc3ead7978504b%40group.calendar.google.com/public/basic.ics>`__
-       `gcal <https://calendar.google.com/calendar/embed?src=c_fe5774fa2769c5085d6b87e8fac272e8940e7d0089bc0e0a58dc3ead7978504b%40group.calendar.google.com&ctz=Asia%2FTokyo>`__
+     - Monthly: 2nd Tuesday (EU/Asia) and 2nd Friday JST / Thursday (Americas)
+     - `ics <https://calendar.google.com/calendar/ical/f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com&ctz=Asia%2FTokyo>`__
      - `Minutes/docs <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`__
    * - MLIR C/C++ Frontend Working Group
      - Monthly, usually 1st Monday of the month
@@ -297,7 +301,7 @@ The :doc:`CodeOfConduct` applies to all office hours.
       submitting talks; and other general LLVM-related topics. Arm/AArch64
       codegen. LLVM security group. LLVM Office Hours.
     - Every 2nd and 4th Wednesday of the month at 9.30am CET, for 30 minutes.
-      `ics <https://calendar.google.com/calendar/ical/co0h4ndpvtfe64opn7eraiq3ac%40group.calendar.google.com/public/basic.ics>`__
+      `ics <https://user.fm/calendar/v1-eac36694e3024854a9402da023f9e0fa/Kristof%20Beyls%20LLVM%20office%20hours.ics>`__
     - `Jitsi <https://meet.jit.si/KristofBeylsLLVMOfficeHour>`__
     - English, Flemish, Dutch
   * - Alina Sbirlea

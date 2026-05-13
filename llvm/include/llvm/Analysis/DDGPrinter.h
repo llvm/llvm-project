@@ -25,11 +25,10 @@ class Loop;
 //===--------------------------------------------------------------------===//
 // Implementation of DDG DOT Printer for a loop.
 //===--------------------------------------------------------------------===//
-class DDGDotPrinterPass : public PassInfoMixin<DDGDotPrinterPass> {
+class DDGDotPrinterPass : public RequiredPassInfoMixin<DDGDotPrinterPass> {
 public:
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
-  static bool isRequired() { return true; }
 };
 
 //===--------------------------------------------------------------------===//
@@ -63,6 +62,10 @@ struct DOTGraphTraits<const DataDependenceGraph *>
   /// Do not print nodes that are part of a pi-block separately. They
   /// will be printed when their containing pi-block is being printed.
   bool isNodeHidden(const DDGNode *Node, const DataDependenceGraph *G);
+
+  /// Return DOT attributes for a node (e.g. border and fill for pi-blocks).
+  static std::string getNodeAttributes(const DDGNode *Node,
+                                       const DataDependenceGraph *G);
 
 private:
   /// Print a DDG node in concise form.

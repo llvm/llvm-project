@@ -60,6 +60,7 @@
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
@@ -889,7 +890,8 @@ static void yamlToPdb(StringRef Path) {
   AppendingTypeTableBuilder TS(Allocator);
   for (const auto &R : Tpi.Records) {
     CVType Type = R.toCodeViewRecord(TS);
-    TpiBuilder.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    TpiBuilder.addTypeRecord(Type.RecordData, Hash);
   }
 
   const auto &Ipi = YamlObj.IpiStream.value_or(DefaultIpiStream);
@@ -897,7 +899,8 @@ static void yamlToPdb(StringRef Path) {
   IpiBuilder.setVersionHeader(Ipi.Version);
   for (const auto &R : Ipi.Records) {
     CVType Type = R.toCodeViewRecord(TS);
-    IpiBuilder.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    IpiBuilder.addTypeRecord(Type.RecordData, Hash);
   }
 
   if (YamlObj.PublicsStream) {
@@ -1395,10 +1398,12 @@ static void mergePdbs() {
   auto &DestTpi = Builder.getTpiBuilder();
   auto &DestIpi = Builder.getIpiBuilder();
   MergedTpi.ForEachRecord([&DestTpi](TypeIndex TI, const CVType &Type) {
-    DestTpi.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    DestTpi.addTypeRecord(Type.RecordData, Hash);
   });
   MergedIpi.ForEachRecord([&DestIpi](TypeIndex TI, const CVType &Type) {
-    DestIpi.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    DestIpi.addTypeRecord(Type.RecordData, Hash);
   });
   Builder.getInfoBuilder().addFeature(PdbRaw_FeatureSig::VC140);
 

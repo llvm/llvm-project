@@ -23,6 +23,7 @@ PROJECT_DEPENDENCIES = {
     "bolt": {"clang", "lld", "llvm"},
     "clang-tools-extra": {"clang", "llvm"},
     "compiler-rt": {"clang", "lld"},
+    "cross-project-tests": {"clang", "lldb", "lld"},
     "libc": {"clang", "lld"},
     "openmp": {"clang", "lld"},
     "flang": {"llvm", "clang"},
@@ -48,6 +49,7 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
+        "cross-project-tests",
     },
     "lld": {"bolt", "cross-project-tests"},
     "clang": {"clang-tools-extra", "cross-project-tests", "lldb"},
@@ -64,7 +66,6 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
-        "libclc",
         "openmp",
     },
 }
@@ -72,7 +73,9 @@ DEPENDENTS_TO_TEST = {
 # This mapping describes runtimes that should be enabled for a specific project,
 # but not necessarily run for testing. The only case of this currently is lldb
 # which needs some runtimes enabled for tests.
-DEPENDENT_RUNTIMES_TO_BUILD = {"lldb": {"libcxx", "libcxxabi", "libunwind"}}
+DEPENDENT_RUNTIMES_TO_BUILD = {
+    "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"}
+}
 
 # This mapping describes runtimes that should be tested when the key project is
 # touched.
@@ -80,10 +83,11 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "clang": {"compiler-rt"},
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
+    "libclc": {"libclc"},
     "compiler-rt": {"compiler-rt"},
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
-    ".ci": {"compiler-rt", "libc", "flang-rt"},
+    ".ci": {"compiler-rt", "libc", "flang-rt", "libclc"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
@@ -92,15 +96,19 @@ DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
 }
 
 EXCLUDE_LINUX = {
-    "cross-project-tests",  # TODO(issues/132796): Tests are failing.
     "openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
+}
+
+# Runtimes configured for cross-compilation using LLVM_RUNTIME_TARGETS.
+# The same build may also use LLVM_ENABLE_RUNTIMES for other runtimes.
+CROSS_COMPILATION_RUNTIMES = {
+    "libclc",
 }
 
 EXCLUDE_WINDOWS = {
     "cross-project-tests",  # TODO(issues/132797): Tests are failing.
     "openmp",  # TODO(issues/132799): Does not detect perl installation.
     "libc",  # No Windows Support.
-    "lldb",  # TODO(issues/132800): Needs environment setup.
     "bolt",  # No Windows Support.
     "libcxx",
     "libcxxabi",
@@ -109,10 +117,10 @@ EXCLUDE_WINDOWS = {
 }
 
 # These are projects that we should test if the project itself is changed but
-# where testing is not yet stable enough for it to be enabled on changes to
-# dependencies.
+# where testing is not yet stable enough or is too expensive for it to be
+# enabled on changes to dependencies.
 EXCLUDE_DEPENDENTS_WINDOWS = {
-    "flang",  # TODO(issues/132803): Flang is not stable.
+    "flang",
 }
 
 EXCLUDE_MAC = {
@@ -145,6 +153,7 @@ PROJECT_CHECK_TARGETS = {
     "flang": "check-flang",
     "flang-rt": "check-flang-rt",
     "libc": "check-libc",
+    "libclc": "check-libclc",
     "lld": "check-lld",
     "lldb": "check-lldb",
     "mlir": "check-mlir",
@@ -153,7 +162,15 @@ PROJECT_CHECK_TARGETS = {
     "lit": "check-lit",
 }
 
-RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt"}
+RUNTIMES = {
+    "libcxx",
+    "libcxxabi",
+    "libunwind",
+    "compiler-rt",
+    "libc",
+    "flang-rt",
+    "libclc",
+}
 
 # Meta projects are projects that need explicit handling but do not reside
 # in their own top level folder. To add a meta project, the start of the path
@@ -175,6 +192,20 @@ SKIP_BUILD_PROJECTS = ["CIR", "lit"]
 
 # Projects that should not run any tests. These need to be metaprojects.
 SKIP_PROJECTS = ["docs", "gn"]
+
+# Overrides for PROJECT_CHECK_TARGETS on a per-platform basis. If a platform
+# has an entry for a given project here, its value is used as the ninja
+# target(s) instead of the default check target. This is intended for cases
+# where a project can be built but its tests are not yet stable on that
+# platform, so we still want a compile-time signal.
+PROJECT_CHECK_TARGETS_OVERRIDE = {
+    "Windows": {
+        # TODO(issues/132800): LLDB tests need environment setup on Windows.
+        # In the meantime, at least compile lldb and lldb-dap to catch
+        # breakage.
+        "lldb": "lldb lldb-dap",
+    },
+}
 
 
 def _add_dependencies(projects: Set[str], runtimes: Set[str]) -> Set[str]:
@@ -230,10 +261,15 @@ def _compute_projects_to_build(
     return _add_dependencies(projects_to_test, runtimes)
 
 
-def _compute_project_check_targets(projects_to_test: Set[str]) -> Set[str]:
+def _compute_project_check_targets(
+    projects_to_test: Set[str], platform: str
+) -> Set[str]:
     check_targets = set()
+    platform_overrides = PROJECT_CHECK_TARGETS_OVERRIDE.get(platform, {})
     for project_to_test in projects_to_test:
-        if project_to_test in PROJECT_CHECK_TARGETS:
+        if project_to_test in platform_overrides:
+            check_targets.add(platform_overrides[project_to_test])
+        elif project_to_test in PROJECT_CHECK_TARGETS:
             check_targets.add(PROJECT_CHECK_TARGETS[project_to_test])
     return check_targets
 
@@ -265,7 +301,9 @@ def _compute_runtimes_to_build(
     for modified_project in modified_projects:
         if modified_project in DEPENDENT_RUNTIMES_TO_BUILD:
             runtimes_to_build.update(DEPENDENT_RUNTIMES_TO_BUILD[modified_project])
-    return _exclude_projects(runtimes_to_build, platform)
+    runtimes_to_build = _exclude_projects(runtimes_to_build, platform)
+    runtimes_to_build -= CROSS_COMPILATION_RUNTIMES
+    return runtimes_to_build
 
 
 def _path_matches(matcher: tuple[str], file_path: tuple[str]) -> bool:
@@ -309,11 +347,14 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     runtimes_to_build = _compute_runtimes_to_build(
         runtimes_to_test | runtimes_to_test_needs_reconfig, modified_projects, platform
     )
-    projects_to_build = _compute_projects_to_build(projects_to_test, runtimes_to_build)
-    projects_check_targets = _compute_project_check_targets(projects_to_test)
-    runtimes_check_targets = _compute_project_check_targets(runtimes_to_test)
+    cross_runtimes_to_test = runtimes_to_test & CROSS_COMPILATION_RUNTIMES
+    projects_to_build = _compute_projects_to_build(
+        projects_to_test, runtimes_to_build | cross_runtimes_to_test
+    )
+    projects_check_targets = _compute_project_check_targets(projects_to_test, platform)
+    runtimes_check_targets = _compute_project_check_targets(runtimes_to_test, platform)
     runtimes_check_targets_needs_reconfig = _compute_project_check_targets(
-        runtimes_to_test_needs_reconfig
+        runtimes_to_test_needs_reconfig, platform
     )
 
     # CIR is used as a pseudo-project in this script. It is built as part of the

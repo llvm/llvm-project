@@ -17,12 +17,31 @@
 define void @f(ptr %dst) {
 entry:
   ; CHECK: [[PTR:%.*]] = call ptr addrspace(2) @llvm.dx.resource.getpointer.{{.*}}(target("dx.CBuffer", %__cblayout_CB) {{%.*}}, i32 0)
-  ; CHECK: getelementptr inbounds nuw i8, ptr addrspace(2) [[PTR]], i32 16
+  ; CHECK: [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(2) [[PTR]], i32 16
+  ; CHECK-COUNT-2: load float, ptr addrspace(2) [[GEP]]
   %a1 = load float, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @a1, i32 16), align 4
   store float %a1, ptr %dst, align 32
 
-  ; CHECK: [[PTR:%.*]] = call ptr addrspace(2) @llvm.dx.resource.getpointer.{{.*}}(target("dx.CBuffer", %__cblayout_CB) {{%.*}}, i32 0)
-  ; CHECK: getelementptr inbounds nuw i8, ptr addrspace(2) [[PTR]], i32 16
+  %a2 = load float, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @a1, i32 16), align 4
+  store float %a2, ptr %dst, align 32
+
+  ret void
+}
+
+; CHECK: define void @g
+define void @g(ptr %dst) {
+entry:
+  ; CHECK: [[PTR1:%.*]] = call ptr addrspace(2) @llvm.dx.resource.getpointer.{{.*}}(target("dx.CBuffer", %__cblayout_CB) {{%.*}}, i32 0)
+  ; CHECK: [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(2) [[PTR1]], i32 16
+  ; CHECK: load float, ptr addrspace(2) [[GEP1]]
+  %a1 = load float, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @a1, i32 16), align 4
+  store float %a1, ptr %dst, align 32
+  br label %next
+
+next:
+  ; CHECK: [[PTR2:%.*]] = call ptr addrspace(2) @llvm.dx.resource.getpointer.{{.*}}(target("dx.CBuffer", %__cblayout_CB) {{%.*}}, i32 0)
+  ; CHECK: [[GEP2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(2) [[PTR2]], i32 16
+  ; CHECK: load float, ptr addrspace(2) [[GEP2]]
   %a2 = load float, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @a1, i32 16), align 4
   store float %a2, ptr %dst, align 32
 

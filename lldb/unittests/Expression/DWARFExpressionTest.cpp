@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "lldb/Expression/DWARFExpression.h"
 #include "ValueMatcher.h"
+#include <unordered_map>
 #ifdef ARCH_AARCH64
 #include "Plugins/ABI/AArch64/ABISysV_arm64.h"
 #endif
@@ -39,49 +40,118 @@ using namespace lldb_private;
 using namespace llvm::dwarf;
 
 namespace {
-struct MockProcess : Process {
-  MockProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
-      : Process(target_sp, listener_sp) {}
+/// A mock implementation of DWARFExpression::Delegate for testing.
+/// This class provides default implementations of all delegate methods,
+/// with the DWARF version being configurable via the constructor.
+class MockDwarfDelegate : public DWARFExpression::Delegate {
+public:
+  static constexpr uint16_t DEFAULT_DWARF_VERSION = 5;
+  static MockDwarfDelegate Dwarf5() { return MockDwarfDelegate(5); }
+  static MockDwarfDelegate Dwarf2() { return MockDwarfDelegate(2); }
 
-  llvm::StringRef GetPluginName() override { return "mock process"; }
+  MockDwarfDelegate() : MockDwarfDelegate(DEFAULT_DWARF_VERSION) {}
+  explicit MockDwarfDelegate(uint16_t version) : m_dwarf_version(version) {}
 
-  bool CanDebug(lldb::TargetSP target, bool plugin_specified_by_name) override {
-    return false;
-  };
+  uint16_t GetVersion() const override { return m_dwarf_version; }
 
-  Status DoDestroy() override { return {}; }
+  dw_addr_t GetBaseAddress() const override { return 0; }
 
-  void RefreshStateAfterStop() override {}
+  uint8_t GetAddressByteSize() const override { return 4; }
 
-  bool DoUpdateThreadList(ThreadList &old_thread_list,
-                          ThreadList &new_thread_list) override {
-    return false;
-  };
-
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
-    for (size_t i = 0; i < size; ++i)
-      ((char *)buf)[i] = (vm_addr + i) & 0xff;
-    error.Clear();
-    return size;
+  llvm::Expected<std::pair<uint64_t, bool>>
+  GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "GetDIEBitSizeAndSign not implemented");
   }
+
+  dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const override {
+    return 0;
+  }
+
+  lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
+                                          const lldb::offset_t data_offset,
+                                          const uint8_t op) const override {
+    return LLDB_INVALID_OFFSET;
+  }
+
+  bool ParseVendorDWARFOpcode(uint8_t op, const llvm::DataExtractor &opcodes,
+                              lldb::offset_t &offset, RegisterContext *reg_ctx,
+                              lldb::RegisterKind reg_kind,
+                              DWARFExpression::Stack &stack) const override {
+    return false;
+  }
+
+private:
+  uint16_t m_dwarf_version;
 };
 
-/// A Process whose `ReadMemory` override queries a DenseMap.
-struct MockProcessWithMemRead : Process {
+/// Mock memory implementation for testing.
+/// Stores predefined memory contents indexed by {address, size} pairs.
+class MockMemory {
+public:
+  /// Represents a memory read request with an address and size.
+  /// Used as a key in the memory map to look up predefined test data.
+  struct Request {
+    lldb::addr_t addr;
+    size_t size;
+
+    bool operator==(const Request &other) const {
+      return addr == other.addr && size == other.size;
+    }
+
+    /// Hash function for Request to enable its use in unordered_map.
+    struct Hash {
+      size_t operator()(const Request &req) const {
+        size_t h1 = std::hash<lldb::addr_t>{}(req.addr);
+        size_t h2 = std::hash<size_t>{}(req.size);
+        return h1 ^ (h2 << 1);
+      }
+    };
+  };
+
+  typedef std::unordered_map<Request, std::vector<uint8_t>, Request::Hash> Map;
+  MockMemory() = default;
+  MockMemory(Map memory) : m_memory(std::move(memory)) {
+    // Make sure the requested memory size matches the returned value.
+    for ([[maybe_unused]] auto &[req, bytes] : m_memory) {
+      assert(bytes.size() == req.size);
+    }
+  }
+
+  llvm::Expected<std::vector<uint8_t>> ReadMemory(lldb::addr_t addr,
+                                                  size_t size) {
+    if (!m_memory.count({addr, size})) {
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "MockMemory::ReadMemory {address=0x%" PRIx64 ", size=%zu} not found",
+          addr, size);
+    }
+    return m_memory[{addr, size}];
+  }
+
+private:
+  std::unordered_map<Request, std::vector<uint8_t>, Request::Hash> m_memory;
+};
+
+/// A Process whose `ReadMemory` override queries MockMemory.
+struct MockProcess : Process {
   using addr_t = lldb::addr_t;
 
-  llvm::DenseMap<addr_t, addr_t> memory_map;
+  MockMemory m_memory;
 
-  MockProcessWithMemRead(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-                         llvm::DenseMap<addr_t, addr_t> &&memory_map)
-      : Process(target_sp, listener_sp), memory_map(memory_map) {}
+  MockProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+              MockMemory memory)
+      : Process(target_sp, listener_sp), m_memory(std::move(memory)) {}
   size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
-    assert(memory_map.contains(vm_addr));
-    assert(size == sizeof(addr_t));
-    *reinterpret_cast<addr_t *>(buf) = memory_map[vm_addr];
-    return sizeof(addr_t);
+    auto expected_memory = m_memory.ReadMemory(vm_addr, size);
+    if (!expected_memory) {
+      error = Status::FromError(expected_memory.takeError());
+      return 0;
+    }
+    assert(expected_memory->size() == size);
+    std::memcpy(buf, expected_memory->data(), expected_memory->size());
+    return size;
   }
   size_t ReadMemory(addr_t addr, void *buf, size_t size,
                     Status &status) override {
@@ -164,11 +234,12 @@ private:
 
 static llvm::Expected<Value> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                       lldb::ModuleSP module_sp = {},
-                                      DWARFUnit *unit = nullptr,
+                                      DWARFExpression::Delegate *unit = nullptr,
                                       ExecutionContext *exe_ctx = nullptr,
                                       RegisterContext *reg_ctx = nullptr) {
-  DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
-                          /*addr_size*/ 4);
+  DataExtractor extractor(
+      expr.data(), expr.size(), lldb::eByteOrderLittle,
+      /*addr_size*/ exe_ctx ? exe_ctx->GetAddressByteSize() : 4);
 
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, extractor, unit,
                                    lldb::eRegisterKindLLDB,
@@ -202,6 +273,35 @@ public:
   }
 };
 
+/// Mock target implementation for testing.
+/// Provides predefined memory contents via MockMemory instead of reading from
+/// a real process.
+class MockTarget : public Target {
+public:
+  MockTarget(Debugger &debugger, const ArchSpec &target_arch,
+             const lldb::PlatformSP &platform_sp, MockMemory memory)
+      : Target(debugger, target_arch, platform_sp, true),
+        m_memory(std::move(memory)) {}
+
+  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                    Status &error, bool force_live_memory = false,
+                    lldb::addr_t *load_addr_ptr = nullptr,
+                    bool *did_read_live_memory = nullptr) override {
+    auto expected_memory = m_memory.ReadMemory(addr.GetOffset(), dst_len);
+    if (!expected_memory) {
+      error = Status::FromError(expected_memory.takeError());
+      return 0;
+    }
+    const size_t bytes_read = expected_memory->size();
+    assert(bytes_read <= dst_len);
+    std::memcpy(dst, expected_memory->data(), bytes_read);
+    return bytes_read;
+  }
+
+private:
+  MockMemory m_memory;
+};
+
 struct TestContext {
   lldb::PlatformSP platform_sp;
   lldb::TargetSP target_sp;
@@ -213,30 +313,34 @@ struct TestContext {
 
 /// A helper function to create TestContext objects with the
 /// given triple, memory, and register contents.
-static bool CreateTestContext(
-    TestContext *ctx, llvm::StringRef triple,
-    std::optional<RegisterValue> reg_value = {},
-    std::optional<llvm::DenseMap<lldb::addr_t, lldb::addr_t>> memory = {}) {
+static bool CreateTestContext(TestContext *ctx, llvm::StringRef triple,
+                              std::optional<RegisterValue> reg_value = {},
+                              std::optional<MockMemory> process_memory = {},
+                              std::optional<MockMemory> target_memory = {}) {
   ArchSpec arch(triple);
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
-  lldb::PlatformSP platform_sp;
+  lldb::PlatformSP platform_sp =
+      platform_linux::PlatformLinux::CreateInstance(true, &arch);
+  Platform::SetHostPlatform(platform_sp);
   lldb::TargetSP target_sp;
   lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  Status status = debugger_sp->GetTargetList().CreateTarget(
-      *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
+
+  Status status;
+  if (target_memory)
+    target_sp = std::make_shared<MockTarget>(*debugger_sp, arch, platform_sp,
+                                             std::move(*target_memory));
+  else
+    status = debugger_sp->GetTargetList().CreateTarget(
+        *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
 
   EXPECT_TRUE(status.Success());
   if (!status.Success())
     return false;
 
   lldb::ProcessSP process_sp;
-  if (memory)
-    process_sp = std::make_shared<MockProcessWithMemRead>(
-        target_sp, Listener::MakeListener("dummy"), std::move(*memory));
-  else
-    process_sp = std::make_shared<MockProcess>(target_sp,
-                                               Listener::MakeListener("dummy"));
+  if (!process_memory)
+    process_memory = MockMemory();
+  process_sp = std::make_shared<MockProcess>(
+      target_sp, Listener::MakeListener("dummy"), std::move(*process_memory));
 
   auto thread_sp = std::make_shared<MockThread>(*process_sp);
 
@@ -252,35 +356,6 @@ static bool CreateTestContext(
                      process_sp,  thread_sp, reg_ctx_sp};
   return true;
 }
-
-// NB: This class doesn't use the override keyword to avoid
-// -Winconsistent-missing-override warnings from the compiler. The
-// inconsistency comes from the overriding definitions in the MOCK_*** macros.
-class MockTarget : public Target {
-public:
-  MockTarget(Debugger &debugger, const ArchSpec &target_arch,
-             const lldb::PlatformSP &platform_sp)
-      : Target(debugger, target_arch, platform_sp, true) {}
-
-  MOCK_METHOD2(ReadMemory,
-               llvm::Expected<std::vector<uint8_t>>(lldb::addr_t addr,
-                                                    size_t size));
-
-  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
-                    Status &error, bool force_live_memory = false,
-                    lldb::addr_t *load_addr_ptr = nullptr,
-                    bool *did_read_live_memory = nullptr) /*override*/ {
-    auto expected_memory = this->ReadMemory(addr.GetOffset(), dst_len);
-    if (!expected_memory) {
-      llvm::consumeError(expected_memory.takeError());
-      return 0;
-    }
-    const size_t bytes_read = expected_memory->size();
-    assert(bytes_read <= dst_len);
-    std::memcpy(dst, expected_memory->data(), bytes_read);
-    return bytes_read;
-  }
-};
 
 TEST(DWARFExpression, DW_OP_pick) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_lit0, DW_OP_pick, 0}),
@@ -505,6 +580,23 @@ TEST(DWARFExpression, DW_OP_stack_value) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
 }
 
+// This test shows that the dwarf version is used by the expression evaluation.
+// Note that the different behavior tested here is not meant to imply that this
+// is the correct interpretation of dwarf2 vs. dwarf5, but rather it was picked
+// as an easy example that evaluates differently based on the dwarf version.
+TEST(DWARFExpression, dwarf_version) {
+  MockDwarfDelegate dwarf2 = MockDwarfDelegate::Dwarf2();
+  MockDwarfDelegate dwarf5 = MockDwarfDelegate::Dwarf5();
+
+  // In dwarf2 the constant on top of the stack is treated as a value.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1}, {}, &dwarf2), ExpectScalar(1));
+
+  // In dwarf5 the constant on top of the stack is implicitly converted to an
+  // address.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1}, {}, &dwarf5),
+                       ExpectLoadAddress(1));
+}
+
 TEST(DWARFExpression, DW_OP_piece) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const2u, 0x11, 0x22, DW_OP_piece, 2,
                                  DW_OP_const2u, 0x33, 0x44, DW_OP_piece, 2}),
@@ -537,15 +629,526 @@ TEST(DWARFExpression, DW_OP_unknown) {
   EXPECT_THAT_EXPECTED(
       Evaluate({0xff}),
       llvm::FailedWithMessage(
-          "Unhandled opcode DW_OP_unknown_ff in DWARFExpression"));
+          "unhandled opcode DW_OP_unknown_ff in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_addr) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_addr, 0x10, 0x20, 0x30, 0x40, DW_OP_stack_value}),
+      ExpectScalar(uint32_t{0x40302010}));
+}
+
+TEST(DWARFExpression, DW_OP_addr_big_endian) {
+  // Same operand bytes, big-endian extractor: the address must be read in
+  // target byte order.
+  uint8_t expr[] = {DW_OP_addr, 0x10, 0x20, 0x30, 0x40, DW_OP_stack_value};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderBig,
+                          /*addr_size*/ 4);
+  EXPECT_THAT_EXPECTED(
+      DWARFExpression::Evaluate(/*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr,
+                                /*module_sp=*/{}, extractor,
+                                /*dwarf_cu=*/nullptr, lldb::eRegisterKindLLDB,
+                                /*initial_value_ptr=*/nullptr,
+                                /*object_address_ptr=*/nullptr),
+      ExpectScalar(uint32_t{0x10203040}));
+}
+
+TEST(DWARFExpression, DW_OP_nop) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_nop}), ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_neg) {
+  // neg interprets the operand as signed.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_neg}),
+                       ExpectScalar(static_cast<int32_t>(-5)));
+}
+
+TEST(DWARFExpression, DW_OP_abs) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-5), DW_OP_abs}),
+      ExpectScalar(5));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_abs}), ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_div_int_min_by_neg_one) {
+  // INT32_MIN / -1 is C++ UB; the evaluator must not crash.
+  auto result = Evaluate({DW_OP_const4s, 0x00, 0x00, 0x00, 0x80, DW_OP_const1s,
+                          static_cast<uint8_t>(-1), DW_OP_div});
+  if (!result)
+    llvm::consumeError(result.takeError());
+  SUCCEED();
+}
+
+TEST(DWARFExpression, DW_OP_div) {
+  // Signed division: -10 / 3 = -3 (truncation toward zero).
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-10),
+                                 DW_OP_const1s, 3, DW_OP_div}),
+                       ExpectScalar(static_cast<int32_t>(-3)));
+}
+
+TEST(DWARFExpression, DW_OP_mod) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-7),
+                                 DW_OP_const1s, 3, DW_OP_mod}),
+                       ExpectScalar(static_cast<int32_t>(-1)));
+}
+
+TEST(DWARFExpression, DW_OP_minus) {
+  // Generic arithmetic wraps modulo address-size: 0 - 1 = 0xFFFFFFFF.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_lit1, DW_OP_minus}),
+                       ExpectScalar(uint32_t{0xFFFFFFFF}));
+}
+
+TEST(DWARFExpression, DW_OP_plus) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit3, DW_OP_plus}),
+                       ExpectScalar(8));
+}
+
+TEST(DWARFExpression, DW_OP_mul) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit3, DW_OP_mul}),
+                       ExpectScalar(15));
+}
+
+TEST(DWARFExpression, DW_OP_plus_uconst) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-10),
+                                 DW_OP_plus_uconst, 5}),
+                       ExpectScalar(static_cast<int32_t>(-5)));
+}
+
+TEST(DWARFExpression, DW_OP_and) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x0F, DW_OP_const1u, 0x33, DW_OP_and}),
+      ExpectScalar(0x03));
+}
+
+TEST(DWARFExpression, DW_OP_or) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x0F, DW_OP_const1u, 0x30, DW_OP_or}),
+      ExpectScalar(0x3F));
+}
+
+TEST(DWARFExpression, DW_OP_xor) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x0F, DW_OP_const1u, 0x33, DW_OP_xor}),
+      ExpectScalar(0x3C));
+}
+
+TEST(DWARFExpression, DW_OP_not) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_not}),
+                       ExpectScalar(uint32_t{0xFFFFFFFF}));
+}
+
+TEST(DWARFExpression, DW_OP_lt) {
+  // a < b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_lt}),
+      ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_lt}),
+                       ExpectScalar(0));
+  // a > b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lt}),
+      ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_gt) {
+  // a > b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_gt}),
+      ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_gt}),
+                       ExpectScalar(0));
+  // a < b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_gt}),
+      ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_le) {
+  // a < b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_le}),
+      ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_le}),
+                       ExpectScalar(1));
+  // a > b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_le}),
+      ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_ge) {
+  // a > b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_ge}),
+      ExpectScalar(1));
+  // a == b
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_ge}),
+                       ExpectScalar(1));
+  // a < b
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1), DW_OP_lit0, DW_OP_ge}),
+      ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_eq) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_eq}),
+                       ExpectScalar(1));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit3, DW_OP_eq}),
+                       ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_ne) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit3, DW_OP_ne}),
+                       ExpectScalar(1));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit5, DW_OP_ne}),
+                       ExpectScalar(0));
+}
+
+TEST(DWARFExpression, DW_OP_swap) {
+  // After swap, top is the value pushed first (lit1).
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_lit2, DW_OP_swap}),
+                       ExpectScalar(1));
+}
+
+TEST(DWARFExpression, DW_OP_rot) {
+  // Stack pre-rot (top last): [1, 2, 3]. Post-rot: [2, 3, 1]. Top = 2.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit1, DW_OP_lit2, DW_OP_lit3, DW_OP_rot}),
+      ExpectScalar(2));
+}
+
+TEST(DWARFExpression, DW_OP_over) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_lit2, DW_OP_over}),
+                       ExpectScalar(1));
+}
+
+TEST(DWARFExpression, DW_OP_dup) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_dup}), ExpectScalar(5));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_dup}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_drop) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit3, DW_OP_lit5, DW_OP_drop}),
+                       ExpectScalar(3));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_drop}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_skip_backward) {
+  // Layout (offsets):
+  //   0: skip +5  → end_offset=3, target=8
+  //   3: const1u 0x42  ← target of backward branch
+  //   5: skip +3  → end_offset=8, target=11 (== expr.size, exits)
+  //   8: skip -8  → end_offset=11, target=3
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_skip, 0x05, 0x00, DW_OP_const1u, 0x42, DW_OP_skip, 0x03,
+                0x00, DW_OP_skip, 0xF8, 0xFF}),
+      ExpectScalar(0x42));
+}
+
+TEST(DWARFExpression, DW_OP_skip_to_end) {
+  // skip 0 from end-of-skip lands at end-of-expression and terminates cleanly.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_skip, 0x00, 0x00}),
+                       ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_bra_branches) {
+  // Top is non-zero → branch is taken, skip past the trailing const1u 0xff and
+  // return the previously-pushed 0x42.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1u, 0x42, DW_OP_lit1, DW_OP_bra,
+                                 0x02, 0x00, DW_OP_const1u, 0xff}),
+                       ExpectScalar(0x42));
+  // Top is 0 → no branch, fall through to next opcode.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit5, DW_OP_lit0, DW_OP_bra, 0x63, 0x00}),
+      ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_lit_all) {
+  for (uint8_t n = 0; n <= 31; ++n) {
+    uint8_t opcode = DW_OP_lit0 + n;
+    EXPECT_THAT_EXPECTED(Evaluate({opcode}), ExpectScalar(n))
+        << "DW_OP_lit" << static_cast<int>(n) << " failed";
+  }
+}
+
+TEST(DWARFExpression, DW_OP_shl) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit5, DW_OP_lit1, DW_OP_shl}),
+                       ExpectScalar(10));
+}
+
+TEST(DWARFExpression, DW_OP_shr) {
+  // Logical right shift: -1 >> 1 = 0x7FFFFFFF on 32-bit.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1),
+                                 DW_OP_lit1, DW_OP_shr}),
+                       ExpectScalar(0x7FFFFFFF));
+}
+
+TEST(DWARFExpression, DW_OP_shra) {
+  // Arithmetic right shift sign-fills: -8 >> 1 = -4.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-8),
+                                 DW_OP_lit1, DW_OP_shra}),
+                       ExpectScalar(static_cast<int32_t>(-4)));
+}
+
+TEST(DWARFExpression, DW_OP_shl_overflow_count) {
+  // Shift count exceeding scalar bit width must not crash.
+  auto result = Evaluate({DW_OP_lit1, DW_OP_const1u, 99, DW_OP_shl});
+  if (!result)
+    llvm::consumeError(result.takeError());
+  SUCCEED();
+}
+
+TEST(DWARFExpression, DW_OP_push_object_address_no_object) {
+  // Without an object_address_ptr, must fail cleanly.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_push_object_address}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_fbreg_no_frame) {
+  // Without a stack frame, fbreg fails cleanly.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_fbreg, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_call_frame_cfa_no_frame) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_call_frame_cfa}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_form_tls_address_no_process) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_form_tls_address}),
+                       llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_GNU_push_tls_address_no_process) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_GNU_push_tls_address}),
+                       llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_entry_value_no_context) {
+  // entry_value with empty sub-expression and no execution context.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_entry_value, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_GNU_entry_value_no_context) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_GNU_entry_value, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_addrx_no_unit) {
+  // addrx requires a compile unit delegate.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_addrx, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_GNU_addr_index_no_unit) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_GNU_addr_index, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_GNU_const_index_no_unit) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_GNU_const_index, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_bit_piece_overflow) {
+  // bit_piece extracting more bits than the underlying scalar holds: the
+  // implementation silently zero-extends-then-truncates back to the scalar's
+  // original width. This locks in the current behavior.
+  // ULEB128(99) = 0x63 (single byte; 99 < 128).
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit5, DW_OP_stack_value, DW_OP_bit_piece, 0x63, 0x00}),
+      ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_bit_piece_empty_stack) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bit_piece, 0x08, 0x00}), llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_deref_size_exceeds_address_size) {
+  // DWARF 5: deref_size operand may not be larger than the address size.
+  // address_size = 4 (default Evaluate). size operand = 8 (> addr_size).
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_deref_size, 0x08}),
+      llvm::FailedWithMessage(
+          "DW_OP_deref_size size (8) exceeds address size (4)"));
+}
+
+TEST(DWARFExpression, DW_OP_deref_size_too_large) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref_size, 0x09}),
+                       llvm::Failed());
+}
+
+// Status-locking tests for opcodes that today return a clean error. These
+// catch any change in implemented/unimplemented status.
+
+TEST(DWARFExpression, DW_OP_xderef_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef}),
+      llvm::FailedWithMessage("unimplemented opcode: DW_OP_xderef"));
+}
+
+TEST(DWARFExpression, DW_OP_xderef_size_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef_size, 4}),
+      llvm::FailedWithMessage("unimplemented opcode: DW_OP_xderef_size"));
+}
+
+TEST(DWARFExpression, DW_OP_call2_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_call2, 0x00, 0x00}),
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_call2"));
+}
+
+TEST(DWARFExpression, DW_OP_call4_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_call4, 0x00, 0x00, 0x00, 0x00}),
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_call4"));
+}
+
+TEST(DWARFExpression, DW_OP_call_ref_unhandled) {
+  // call_ref has stack arity 1 in LLVM's table, so push a value first.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_call_ref, 0x00, 0x00, 0x00, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_call_ref in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_implicit_pointer_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_implicit_pointer, 0x00, 0x00, 0x00, 0x00, 0x00}),
+      llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_GNU_implicit_pointer_unhandled) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_GNU_implicit_pointer, 0x00, 0x00, 0x00, 0x00, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_GNU_implicit_pointer in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_const_type_unhandled) {
+  // const_type: ULEB128 type DIE offset, 1-byte size, N-byte value block.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const_type, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_const_type in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_regval_type_unhandled) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_regval_type, 0x00, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_regval_type in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_deref_type_unhandled) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_deref_type, 0x04, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_deref_type in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_xderef_type_unhandled) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef_type, 0x04, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_xderef_type in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_constx_unhandled) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_constx, 0x00}),
+                       llvm::FailedWithMessage(
+                           "unhandled opcode DW_OP_constx in DWARFExpression"));
+}
+
+TEST(DWARFExpression, DW_OP_reinterpret_unhandled) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit0, DW_OP_reinterpret, 0x00}),
+      llvm::FailedWithMessage(
+          "unhandled opcode DW_OP_reinterpret in DWARFExpression"));
+}
+
+// Register-based tests need a register context. MockRegisterContext returns the
+// same value for every register query.
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_reg0) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0xCAFE})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_reg0}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
+      ExpectScalar(0xCAFE, Value::ContextType::RegisterInfo));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_reg_all) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0xABCD})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  for (uint8_t n = 0; n <= 31; ++n) {
+    uint8_t opcode = DW_OP_reg0 + n;
+    EXPECT_THAT_EXPECTED(
+        Evaluate({opcode}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
+        ExpectScalar(0xABCD, Value::ContextType::RegisterInfo))
+        << "DW_OP_reg" << static_cast<int>(n) << " failed";
+  }
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_regx) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0xBEEF})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  // ULEB128(64) for register 64.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_regx, 0x40}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
+      ExpectScalar(0xBEEF, Value::ContextType::RegisterInfo));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_breg0) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x1000})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  // breg0 + 0x10 = 0x1010 (load address).
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_breg0, 0x10}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
+      ExpectLoadAddress(0x1010));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_breg_all) {
+  TestContext ctx;
+  ASSERT_TRUE(
+      CreateTestContext(&ctx, "i386-pc-linux", RegisterValue(uint32_t{0x100})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  for (uint8_t n = 0; n <= 31; ++n) {
+    uint8_t opcode = DW_OP_breg0 + n;
+    EXPECT_THAT_EXPECTED(
+        Evaluate({opcode, 0x05}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
+        ExpectLoadAddress(0x105))
+        << "DW_OP_breg" << static_cast<int>(n) << " failed";
+  }
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_bregx) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x2000})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  // bregx reg=64 (ULEB128 0x40), offset=+16 (SLEB128 0x10).
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bregx, 0x40, 0x10}, {}, {}, &exe_ctx,
+                                ctx.reg_ctx_sp.get()),
+                       ExpectLoadAddress(0x2010));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
 
   // Set up a mock process.
+  MockMemory::Map memory = {
+      {{0x4, 4}, {0x4, 0x5, 0x6, 0x7}},
+  };
   TestContext test_ctx;
-  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux"));
+  ASSERT_TRUE(
+      CreateTestContext(&test_ctx, "i386-pc-linux", {}, std::move(memory)));
 
   ExecutionContext exe_ctx(test_ctx.process_sp);
   // Implicit location: *0x4.
@@ -706,8 +1309,7 @@ public:
   }
 
   virtual bool ParseVendorDWARFOpcode(
-      uint8_t op, const lldb_private::DataExtractor &opcodes,
-      lldb::offset_t &offset,
+      uint8_t op, const llvm::DataExtractor &opcodes, lldb::offset_t &offset,
 
       RegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
       std::vector<lldb_private::Value> &stack) const override {
@@ -718,12 +1320,12 @@ public:
     // DW_OP_WASM_location WASM_GLOBAL:0x03 index:u32
     // Called with "arguments" 0x03 and  0x04
     // Location type:
-    if (opcodes.GetU8(&offset) != /* global */ 0x03) {
+    if (opcodes.getU8(&offset) != /* global */ 0x03) {
       return false;
     }
 
     // Index:
-    if (opcodes.GetU32(&offset) != 0x04) {
+    if (opcodes.getU32(&offset) != 0x04) {
       return false;
     }
 
@@ -1057,23 +1659,16 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
   using ::testing::Return;
 
   // Set up a mock process.
-  ArchSpec arch("i386-pc-linux");
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
-  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  ASSERT_TRUE(debugger_sp);
-  lldb::PlatformSP platform_sp;
-  auto target_sp =
-      std::make_shared<MockTarget>(*debugger_sp, arch, platform_sp);
-  ASSERT_TRUE(target_sp);
-  ASSERT_TRUE(target_sp->GetArchitecture().IsValid());
+  TestContext test_ctx;
+  MockMemory::Map memory = {
+      {{0x40, 1}, {0x11}},
+      {{0x50, 1}, {0x22}},
+  };
+  ASSERT_TRUE(
+      CreateTestContext(&test_ctx, "i386-pc-linux", {}, {}, std::move(memory)));
+  ASSERT_TRUE(test_ctx.target_sp->GetArchitecture().IsValid());
 
-  EXPECT_CALL(*target_sp, ReadMemory(0x40, 1))
-      .WillOnce(Return(ByMove(std::vector<uint8_t>{0x11})));
-  EXPECT_CALL(*target_sp, ReadMemory(0x50, 1))
-      .WillOnce(Return(ByMove(std::vector<uint8_t>{0x22})));
-
-  ExecutionContext exe_ctx(static_cast<lldb::TargetSP>(target_sp), false);
+  ExecutionContext exe_ctx(test_ctx.target_sp, false);
 
   uint8_t expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0, DW_OP_piece, 1,
                     DW_OP_addr, 0x50, 0x0, 0x0, 0x0, DW_OP_piece, 1};
@@ -1106,10 +1701,10 @@ public:
 /// The expression DW_OP_breg22, 0, DW_OP_deref should produce that same value,
 /// without clearing the top byte 0xff.
 TEST_F(DWARFExpressionMockProcessTestWithAArch, DW_op_deref_no_ptr_fixing) {
-  llvm::DenseMap<lldb::addr_t, lldb::addr_t> memory;
   constexpr lldb::addr_t expected_value = ((0xffULL) << 56) | 0xabcdefULL;
   constexpr lldb::addr_t addr = 42;
-  memory[addr] = expected_value;
+  MockMemory::Map memory = {
+      {{addr, sizeof(addr)}, {0xef, 0xcd, 0xab, 0x00, 0x00, 0x00, 0x00, 0xff}}};
 
   TestContext test_ctx;
   ASSERT_TRUE(CreateTestContext(&test_ctx, "aarch64-pc-linux",
@@ -1127,4 +1722,108 @@ TEST_F(DWARFExpressionMockProcessTestWithAArch, DW_op_deref_no_ptr_fixing) {
   uint8_t expr_deref[] = {DW_OP_breg22, 0, DW_OP_deref};
   llvm::Expected<Value> result_deref = evaluate_expr(expr_deref);
   EXPECT_THAT_EXPECTED(result_deref, ExpectLoadAddress(expected_value));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, deref_register) {
+  TestContext test_ctx;
+  constexpr uint32_t reg_r0 = 0x504;
+  MockMemory::Map memory = {
+      {{0x004, 4}, {0x1, 0x2, 0x3, 0x4}},
+      {{0x504, 4}, {0xa, 0xb, 0xc, 0xd}},
+      {{0x505, 4}, {0x5, 0x6, 0x7, 0x8}},
+  };
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(reg_r0), memory, memory));
+
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr_data) {
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, &delegate, &exe_ctx,
+                    test_ctx.reg_ctx_sp.get());
+  };
+
+  // Reads from the register r0.
+  // Sets the context to RegisterInfo so we know this is a register location.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0}),
+                       ExpectScalar(reg_r0, Value::ContextType::RegisterInfo));
+
+  // Reads from the location(register r0).
+  // Clears the context so we know this is a value not a location.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0, DW_OP_deref}),
+                       ExpectLoadAddress(reg_r0, Value::ContextType::Invalid));
+
+  // Reads from the location(register r0) and adds the value to the host buffer.
+  // The evaluator should implicitly convert it to a memory location when
+  // added to a composite value and should add the contents of memory[r0]
+  // to the host buffer.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0, DW_OP_deref, DW_OP_piece, 4}),
+                       ExpectHostAddress({0xa, 0xb, 0xc, 0xd}));
+
+  // Reads from the location(register r0) and truncates the value to one byte.
+  // Clears the context so we know this is a value not a location.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_reg0, DW_OP_deref_size, 1}),
+      ExpectLoadAddress(reg_r0 & 0xff, Value::ContextType::Invalid));
+
+  // Reads from the location(register r0) and truncates to one byte then adds
+  // the value to the host buffer. The evaluator should implicitly convert it to
+  // a memory location when added to a composite value and should add the
+  // contents of memory[r0 & 0xff] to the host buffer.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0, DW_OP_deref_size, 1, DW_OP_piece, 4}),
+                       ExpectHostAddress({0x1, 0x2, 0x3, 0x4}));
+
+  // Reads from the register r0 + 1.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_breg0, 1}),
+      ExpectLoadAddress(reg_r0 + 1, Value::ContextType::Invalid));
+
+  // Reads from address r0 + 1, which contains the bytes [5,6,7,8].
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_breg0, 1, DW_OP_deref}),
+      ExpectLoadAddress(0x08070605, Value::ContextType::Invalid));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, deref_implicit_value) {
+  TestContext test_ctx;
+  MockMemory::Map memory = {
+      {{0x4, 1}, {0x1}},
+      {{0x4, 4}, {0x1, 0x2, 0x3, 0x4}},
+  };
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux", {}, memory));
+
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr_data) {
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, &delegate, &exe_ctx,
+                    test_ctx.reg_ctx_sp.get());
+  };
+
+  // Creates an implicit location with a value of 4.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_stack_value}),
+                       ExpectScalar(0x4));
+
+  // Creates an implicit location with a value of 4. The deref reads the value
+  // out of the location and implicitly converts it to a load address.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_stack_value, DW_OP_deref}),
+                       ExpectLoadAddress(0x4));
+
+  // Creates an implicit location with a value of 0x504 (uleb128(0x504) =
+  // 0xa84). The deref reads the low byte out of the location and implicitly
+  // converts it to a load address.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_constu, 0x84, 0xa, DW_OP_stack_value, DW_OP_deref_size, 1}),
+      ExpectLoadAddress(0x4));
+
+  // The tests below are similar to the ones above, but there is no implicit
+  // location created by a stack_value operation. They are provided here as a
+  // reference to contrast with the above tests.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4}), ExpectLoadAddress(0x4));
+
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_deref}),
+                       ExpectLoadAddress(0x04030201));
+
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_deref_size, 1}),
+                       ExpectLoadAddress(0x01));
 }

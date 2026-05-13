@@ -211,12 +211,12 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
         .legalFor({s32, s32})
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
         .lowerFor({s32, s32})
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
   } else {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
         .libcallFor({s32, s32})
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
@@ -365,10 +365,10 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     StructType *RetTy = StructType::get(Ctx, {ArgTy, ArgTy}, /* Packed */ true);
     Register RetRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
                           OriginalResult};
-    auto Status = createLibcall(MIRBuilder, Libcall, {RetRegs, RetTy, 0},
-                                {{MI.getOperand(1).getReg(), ArgTy, 0},
-                                 {MI.getOperand(2).getReg(), ArgTy, 0}},
-                                LocObserver, &MI);
+    auto Status = Helper.createLibcall(Libcall, {RetRegs, RetTy, 0},
+                                       {{MI.getOperand(1).getReg(), ArgTy, 0},
+                                        {MI.getOperand(2).getReg(), ArgTy, 0}},
+                                       LocObserver, &MI);
     if (Status != LegalizerHelper::Legalized)
       return false;
     break;
@@ -401,11 +401,11 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     SmallVector<Register, 2> Results;
     for (auto Libcall : Libcalls) {
       auto LibcallResult = MRI.createGenericVirtualRegister(LLT::scalar(32));
-      auto Status = createLibcall(MIRBuilder, Libcall.LibcallID,
-                                  {LibcallResult, RetTy, 0},
-                                  {{MI.getOperand(2).getReg(), ArgTy, 0},
-                                   {MI.getOperand(3).getReg(), ArgTy, 0}},
-                                  LocObserver, &MI);
+      auto Status =
+          Helper.createLibcall(Libcall.LibcallID, {LibcallResult, RetTy, 0},
+                               {{MI.getOperand(2).getReg(), ArgTy, 0},
+                                {MI.getOperand(3).getReg(), ArgTy, 0}},
+                               LocObserver, &MI);
 
       if (Status != LegalizerHelper::Legalized)
         return false;

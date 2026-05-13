@@ -1,7 +1,7 @@
-; RUN: opt -S -passes=lowertypetests -mtriple=i686-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=i686-pc-win32 %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-pc-win32 %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-pc-win32 %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-pc-win32 %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv32-unknown-linux-gnu %s | FileCheck --check-prefixes=RISCV,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv64-unknown-linux-gnu %s | FileCheck --check-prefixes=RISCV,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=wasm32-unknown-unknown %s | FileCheck --check-prefix=WASM32 %s
@@ -16,6 +16,7 @@
 ; RUN: %if arm-registered-target %{ opt -S -passes=lowertypetests -mtriple=thumbv6m-unknown-linux-gnu %s | FileCheck --check-prefixes=THUMBV6M,NATIVE,JT16 %s %}
 ; RUN: %if arm-registered-target %{ opt -S -passes=lowertypetests -mtriple=thumbv5-unknown-linux-gnu %s | FileCheck --check-prefixes=ARM,NATIVE,JT4 %s %}
 ; RUN: %if arm-registered-target %{ opt -S -passes=lowertypetests -mtriple=aarch64-unknown-linux-gnu %s | FileCheck --check-prefixes=ARM,NATIVE,JT4 %s %}
+; RUN: opt -S -passes=lowertypetests -mtriple=hexagon-unknown-linux-musl %s | FileCheck --check-prefixes=HEXAGON,NATIVE,JT4 %s
 
 ; Tests that we correctly handle bitsets containing 2 or more functions.
 
@@ -73,6 +74,8 @@ define i1 @foo(ptr %p) {
 
 ; ARM:      b $0
 
+; HEXAGON:      jump $0
+
 ; THUMB:      b.w $0
 
 ; THUMBV6M:      push {r0,r1}
@@ -97,6 +100,8 @@ define i1 @foo(ptr %p) {
 
 ; ARM-NEXT: b $0
 
+; HEXAGON-NEXT: jump $0
+
 ; THUMB-NEXT: b.w $0
 
 ; THUMBV6M-NEXT: push {r0,r1}
@@ -114,13 +119,13 @@ define i1 @foo(ptr %p) {
 
 ; NATIVE-SAME: "s"(ptr @g.cfi)
 
-; X86-LINUX: attributes #[[ATTR]] = { naked nocf_check noinline }
-; X86-WIN32: attributes #[[ATTR]] = { nocf_check noinline }
+; X86: attributes #[[ATTR]] = { naked nocf_check noinline }
 ; ARM: attributes #[[ATTR]] = { naked noinline
 ; THUMB: attributes #[[ATTR]] = { naked noinline "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
 ; THUMBV6M: attributes #[[ATTR]] = { naked noinline "target-features"="+thumb-mode" }
 ; RISCV: attributes #[[ATTR]] = { naked noinline "target-features"="-c,-relax" }
 ; LOONGARCH64: attributes #[[ATTR]] = { naked noinline }
+; HEXAGON: attributes #[[ATTR]] = { naked noinline }
 
 ; WASM32: ![[I0]] = !{i64 1}
 ; WASM32: ![[I1]] = !{i64 2}

@@ -48,6 +48,7 @@ enum class CudaVersion {
   CUDA_126,
   CUDA_128,
   CUDA_129,
+  CUDA_130,
   FULLY_SUPPORTED = CUDA_128,
   PARTIALLY_SUPPORTED =
       CUDA_129, // Partially supported. Proceed with a warning.
@@ -82,6 +83,12 @@ enum class CudaFeature {
 CudaVersion ToCudaVersion(llvm::VersionTuple);
 bool CudaFeatureEnabled(llvm::VersionTuple, CudaFeature);
 bool CudaFeatureEnabled(CudaVersion, CudaFeature);
+
+/// Get the numeric ID (e.g. 700) of a CUDA architecture.
+unsigned CudaArchToID(OffloadArch Arch);
+
+/// Check if the CUDA architecture is an accelerated variant (e.g. sm_90a).
+bool IsNVIDIAAcceleratedOffloadArch(OffloadArch Arch);
 
 } // namespace clang
 

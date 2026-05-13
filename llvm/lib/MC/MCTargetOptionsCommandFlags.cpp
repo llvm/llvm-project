@@ -24,6 +24,13 @@ using namespace llvm;
     return *NAME##View;                                                        \
   }
 
+#define MCSTROPT(NAME)                                                         \
+  static cl::opt<std::string> *NAME##View;                                     \
+  StringRef llvm::mc::get##NAME() {                                            \
+    assert(NAME##View && "RegisterMCTargetOptionsFlags not created.");         \
+    return *NAME##View;                                                        \
+  }
+
 #define MCOPT_EXP(TY, NAME)                                                    \
   MCOPT(TY, NAME)                                                              \
   std::optional<TY> llvm::mc::getExplicit##NAME() {                            \
@@ -52,8 +59,9 @@ MCOPT(bool, Crel)
 MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
-MCOPT(std::string, ABIName)
-MCOPT(std::string, AsSecureLogFile)
+MCOPT(RelocSectionSymType, RelocSectionSym)
+MCSTROPT(ABIName)
+MCSTROPT(AsSecureLogFile)
 
 llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
 #define MCBINDOPT(NAME)                                                        \
@@ -161,6 +169,19 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                               "instructions with VEX prefix"));
   MCBINDOPT(X86Sse2Avx);
 
+  static cl::opt<RelocSectionSymType> RelocSectionSym(
+      "reloc-section-sym",
+      cl::desc("Control section symbol conversion for relocations"),
+      cl::init(RelocSectionSymType::All),
+      cl::values(
+          clEnumValN(RelocSectionSymType::All, "all",
+                     "Use section symbols for all eligible local symbols"),
+          clEnumValN(RelocSectionSymType::Internal, "internal",
+                     "Only use section symbols for internal local symbols"),
+          clEnumValN(RelocSectionSymType::None, "none",
+                     "Never use section symbols")));
+  MCBINDOPT(RelocSectionSym);
+
   static cl::opt<std::string> ABIName(
       "target-abi",
       cl::desc("The name of the ABI to be targeted from the backend."),
@@ -192,6 +213,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.ImplicitMapSyms = getImplicitMapSyms();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.X86Sse2Avx = getX86Sse2Avx();
+  Options.RelocSectionSym = getRelocSectionSym();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
   Options.EmitSFrameUnwind = getEmitSFrameUnwind();

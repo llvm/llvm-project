@@ -18,6 +18,8 @@
 #define FORTRAN_LOWER_CONVERT_VARIABLE_H
 
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/Value.h"
@@ -26,13 +28,6 @@
 namespace cuf {
 class DataAttributeAttr;
 }
-
-namespace fir {
-class ExtendedValue;
-class FirOpBuilder;
-class GlobalOp;
-class FortranVariableFlagsAttr;
-} // namespace fir
 
 namespace Fortran {
 namespace semantics {

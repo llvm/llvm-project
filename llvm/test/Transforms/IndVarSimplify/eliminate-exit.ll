@@ -193,7 +193,7 @@ define void @mixed_width(i32 %len) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IV]], [[LEN_ZEXT]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[IV]], [[LEN_ZEXT]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BACKEDGE]], label [[EXIT:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @side_effect()
@@ -221,6 +221,220 @@ exit:
 }
 
 define void @many_exits([100 x i64] %len) {
+; CHECK-LABEL: @many_exits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LEN1:%.*]] = extractvalue [100 x i64] [[LEN:%.*]], 1
+; CHECK-NEXT:    [[LEN2:%.*]] = extractvalue [100 x i64] [[LEN]], 2
+; CHECK-NEXT:    [[LEN3:%.*]] = extractvalue [100 x i64] [[LEN]], 3
+; CHECK-NEXT:    [[LEN4:%.*]] = extractvalue [100 x i64] [[LEN]], 4
+; CHECK-NEXT:    [[LEN5:%.*]] = extractvalue [100 x i64] [[LEN]], 5
+; CHECK-NEXT:    [[LEN6:%.*]] = extractvalue [100 x i64] [[LEN]], 6
+; CHECK-NEXT:    [[LEN7:%.*]] = extractvalue [100 x i64] [[LEN]], 7
+; CHECK-NEXT:    [[LEN8:%.*]] = extractvalue [100 x i64] [[LEN]], 8
+; CHECK-NEXT:    [[LEN9:%.*]] = extractvalue [100 x i64] [[LEN]], 9
+; CHECK-NEXT:    [[LEN10:%.*]] = extractvalue [100 x i64] [[LEN]], 10
+; CHECK-NEXT:    [[LEN11:%.*]] = extractvalue [100 x i64] [[LEN]], 11
+; CHECK-NEXT:    [[LEN12:%.*]] = extractvalue [100 x i64] [[LEN]], 12
+; CHECK-NEXT:    [[LEN13:%.*]] = extractvalue [100 x i64] [[LEN]], 13
+; CHECK-NEXT:    [[LEN14:%.*]] = extractvalue [100 x i64] [[LEN]], 14
+; CHECK-NEXT:    [[LEN15:%.*]] = extractvalue [100 x i64] [[LEN]], 15
+; CHECK-NEXT:    [[LEN16:%.*]] = extractvalue [100 x i64] [[LEN]], 16
+; CHECK-NEXT:    [[LEN17:%.*]] = extractvalue [100 x i64] [[LEN]], 17
+; CHECK-NEXT:    [[LEN18:%.*]] = extractvalue [100 x i64] [[LEN]], 18
+; CHECK-NEXT:    [[LEN19:%.*]] = extractvalue [100 x i64] [[LEN]], 19
+; CHECK-NEXT:    [[LEN20:%.*]] = extractvalue [100 x i64] [[LEN]], 20
+; CHECK-NEXT:    [[LEN21:%.*]] = extractvalue [100 x i64] [[LEN]], 21
+; CHECK-NEXT:    [[LEN22:%.*]] = extractvalue [100 x i64] [[LEN]], 22
+; CHECK-NEXT:    [[LEN23:%.*]] = extractvalue [100 x i64] [[LEN]], 23
+; CHECK-NEXT:    [[LEN24:%.*]] = extractvalue [100 x i64] [[LEN]], 24
+; CHECK-NEXT:    [[LEN25:%.*]] = extractvalue [100 x i64] [[LEN]], 25
+; CHECK-NEXT:    [[LEN26:%.*]] = extractvalue [100 x i64] [[LEN]], 26
+; CHECK-NEXT:    [[LEN27:%.*]] = extractvalue [100 x i64] [[LEN]], 27
+; CHECK-NEXT:    [[LEN28:%.*]] = extractvalue [100 x i64] [[LEN]], 28
+; CHECK-NEXT:    [[LEN29:%.*]] = extractvalue [100 x i64] [[LEN]], 29
+; CHECK-NEXT:    [[LEN30:%.*]] = extractvalue [100 x i64] [[LEN]], 30
+; CHECK-NEXT:    [[LEN31:%.*]] = extractvalue [100 x i64] [[LEN]], 31
+; CHECK-NEXT:    [[LEN32:%.*]] = extractvalue [100 x i64] [[LEN]], 32
+; CHECK-NEXT:    [[LEN33:%.*]] = extractvalue [100 x i64] [[LEN]], 33
+; CHECK-NEXT:    [[LEN34:%.*]] = extractvalue [100 x i64] [[LEN]], 34
+; CHECK-NEXT:    [[LEN35:%.*]] = extractvalue [100 x i64] [[LEN]], 35
+; CHECK-NEXT:    [[LEN36:%.*]] = extractvalue [100 x i64] [[LEN]], 36
+; CHECK-NEXT:    [[LEN37:%.*]] = extractvalue [100 x i64] [[LEN]], 37
+; CHECK-NEXT:    [[LEN38:%.*]] = extractvalue [100 x i64] [[LEN]], 38
+; CHECK-NEXT:    [[LEN39:%.*]] = extractvalue [100 x i64] [[LEN]], 39
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[LEN0:%.*]] = extractvalue [100 x i64] [[LEN]], 0
+; CHECK-NEXT:    [[EARLY0:%.*]] = icmp eq i64 [[IV]], [[LEN0]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY0]], label [[EXIT:%.*]], label [[CONT0:%.*]]
+; CHECK:       cont0:
+; CHECK-NEXT:    [[EARLY1:%.*]] = icmp eq i64 [[IV]], [[LEN1]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY1]], label [[EXIT]], label [[CONT1:%.*]]
+; CHECK:       cont1:
+; CHECK-NEXT:    [[EARLY2:%.*]] = icmp eq i64 [[IV]], [[LEN2]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY2]], label [[EXIT]], label [[CONT2:%.*]]
+; CHECK:       cont2:
+; CHECK-NEXT:    [[EARLY3:%.*]] = icmp eq i64 [[IV]], [[LEN3]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY3]], label [[EXIT]], label [[CONT3:%.*]]
+; CHECK:       cont3:
+; CHECK-NEXT:    [[EARLY4:%.*]] = icmp eq i64 [[IV]], [[LEN4]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY4]], label [[EXIT]], label [[CONT4:%.*]]
+; CHECK:       cont4:
+; CHECK-NEXT:    [[EARLY5:%.*]] = icmp eq i64 [[IV]], [[LEN5]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY5]], label [[EXIT]], label [[CONT5:%.*]]
+; CHECK:       cont5:
+; CHECK-NEXT:    [[EARLY6:%.*]] = icmp eq i64 [[IV]], [[LEN6]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY6]], label [[EXIT]], label [[CONT6:%.*]]
+; CHECK:       cont6:
+; CHECK-NEXT:    [[EARLY7:%.*]] = icmp eq i64 [[IV]], [[LEN7]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY7]], label [[EXIT]], label [[CONT7:%.*]]
+; CHECK:       cont7:
+; CHECK-NEXT:    [[EARLY8:%.*]] = icmp eq i64 [[IV]], [[LEN8]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY8]], label [[EXIT]], label [[CONT8:%.*]]
+; CHECK:       cont8:
+; CHECK-NEXT:    [[EARLY9:%.*]] = icmp eq i64 [[IV]], [[LEN9]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY9]], label [[EXIT]], label [[CONT9:%.*]]
+; CHECK:       cont9:
+; CHECK-NEXT:    [[EARLY10:%.*]] = icmp eq i64 [[IV]], [[LEN10]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY10]], label [[EXIT]], label [[CONT10:%.*]]
+; CHECK:       cont10:
+; CHECK-NEXT:    [[EARLY11:%.*]] = icmp eq i64 [[IV]], [[LEN11]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY11]], label [[EXIT]], label [[CONT11:%.*]]
+; CHECK:       cont11:
+; CHECK-NEXT:    [[EARLY12:%.*]] = icmp eq i64 [[IV]], [[LEN12]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY12]], label [[EXIT]], label [[CONT12:%.*]]
+; CHECK:       cont12:
+; CHECK-NEXT:    [[EARLY13:%.*]] = icmp eq i64 [[IV]], [[LEN13]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY13]], label [[EXIT]], label [[CONT13:%.*]]
+; CHECK:       cont13:
+; CHECK-NEXT:    [[EARLY14:%.*]] = icmp eq i64 [[IV]], [[LEN14]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY14]], label [[EXIT]], label [[CONT14:%.*]]
+; CHECK:       cont14:
+; CHECK-NEXT:    [[EARLY15:%.*]] = icmp eq i64 [[IV]], [[LEN15]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY15]], label [[EXIT]], label [[CONT15:%.*]]
+; CHECK:       cont15:
+; CHECK-NEXT:    [[EARLY16:%.*]] = icmp eq i64 [[IV]], [[LEN16]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY16]], label [[EXIT]], label [[CONT16:%.*]]
+; CHECK:       cont16:
+; CHECK-NEXT:    [[EARLY17:%.*]] = icmp eq i64 [[IV]], [[LEN17]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY17]], label [[EXIT]], label [[CONT17:%.*]]
+; CHECK:       cont17:
+; CHECK-NEXT:    [[EARLY18:%.*]] = icmp eq i64 [[IV]], [[LEN18]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY18]], label [[EXIT]], label [[CONT18:%.*]]
+; CHECK:       cont18:
+; CHECK-NEXT:    [[EARLY19:%.*]] = icmp eq i64 [[IV]], [[LEN19]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY19]], label [[EXIT]], label [[CONT19:%.*]]
+; CHECK:       cont19:
+; CHECK-NEXT:    [[EARLY20:%.*]] = icmp eq i64 [[IV]], [[LEN20]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY20]], label [[EXIT]], label [[CONT20:%.*]]
+; CHECK:       cont20:
+; CHECK-NEXT:    [[EARLY21:%.*]] = icmp eq i64 [[IV]], [[LEN21]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY21]], label [[EXIT]], label [[CONT21:%.*]]
+; CHECK:       cont21:
+; CHECK-NEXT:    [[EARLY22:%.*]] = icmp eq i64 [[IV]], [[LEN22]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY22]], label [[EXIT]], label [[CONT22:%.*]]
+; CHECK:       cont22:
+; CHECK-NEXT:    [[EARLY23:%.*]] = icmp eq i64 [[IV]], [[LEN23]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY23]], label [[EXIT]], label [[CONT23:%.*]]
+; CHECK:       cont23:
+; CHECK-NEXT:    [[EARLY24:%.*]] = icmp eq i64 [[IV]], [[LEN24]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY24]], label [[EXIT]], label [[CONT24:%.*]]
+; CHECK:       cont24:
+; CHECK-NEXT:    [[EARLY25:%.*]] = icmp eq i64 [[IV]], [[LEN25]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY25]], label [[EXIT]], label [[CONT25:%.*]]
+; CHECK:       cont25:
+; CHECK-NEXT:    [[EARLY26:%.*]] = icmp eq i64 [[IV]], [[LEN26]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY26]], label [[EXIT]], label [[CONT26:%.*]]
+; CHECK:       cont26:
+; CHECK-NEXT:    [[EARLY27:%.*]] = icmp eq i64 [[IV]], [[LEN27]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY27]], label [[EXIT]], label [[CONT27:%.*]]
+; CHECK:       cont27:
+; CHECK-NEXT:    [[EARLY28:%.*]] = icmp eq i64 [[IV]], [[LEN28]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY28]], label [[EXIT]], label [[CONT28:%.*]]
+; CHECK:       cont28:
+; CHECK-NEXT:    [[EARLY29:%.*]] = icmp eq i64 [[IV]], [[LEN29]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY29]], label [[EXIT]], label [[CONT29:%.*]]
+; CHECK:       cont29:
+; CHECK-NEXT:    [[EARLY30:%.*]] = icmp eq i64 [[IV]], [[LEN30]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY30]], label [[EXIT]], label [[CONT30:%.*]]
+; CHECK:       cont30:
+; CHECK-NEXT:    [[EARLY31:%.*]] = icmp eq i64 [[IV]], [[LEN31]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY31]], label [[EXIT]], label [[CONT31:%.*]]
+; CHECK:       cont31:
+; CHECK-NEXT:    [[EARLY32:%.*]] = icmp eq i64 [[IV]], [[LEN32]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY32]], label [[EXIT]], label [[CONT32:%.*]]
+; CHECK:       cont32:
+; CHECK-NEXT:    [[EARLY33:%.*]] = icmp eq i64 [[IV]], [[LEN33]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY33]], label [[EXIT]], label [[CONT33:%.*]]
+; CHECK:       cont33:
+; CHECK-NEXT:    [[EARLY34:%.*]] = icmp eq i64 [[IV]], [[LEN34]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY34]], label [[EXIT]], label [[CONT34:%.*]]
+; CHECK:       cont34:
+; CHECK-NEXT:    [[EARLY35:%.*]] = icmp eq i64 [[IV]], [[LEN35]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY35]], label [[EXIT]], label [[CONT35:%.*]]
+; CHECK:       cont35:
+; CHECK-NEXT:    [[EARLY36:%.*]] = icmp eq i64 [[IV]], [[LEN36]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY36]], label [[EXIT]], label [[CONT36:%.*]]
+; CHECK:       cont36:
+; CHECK-NEXT:    [[EARLY37:%.*]] = icmp eq i64 [[IV]], [[LEN37]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY37]], label [[EXIT]], label [[CONT37:%.*]]
+; CHECK:       cont37:
+; CHECK-NEXT:    [[EARLY38:%.*]] = icmp eq i64 [[IV]], [[LEN38]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY38]], label [[EXIT]], label [[CONT38:%.*]]
+; CHECK:       cont38:
+; CHECK-NEXT:    [[EARLY39:%.*]] = icmp eq i64 [[IV]], [[LEN39]]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 [[EARLY39]], label [[EXIT]], label [[CONT39:%.*]]
+; CHECK:       cont39:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i64 [[IV]], 999
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %loop
 loop:
@@ -457,7 +671,7 @@ define i32 @exit_cond_depends_on_inner_loop() {
 ; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[EXIT:%.*]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_OUTER_NEXT]] = add nuw nsw i32 [[IV_OUTER]], 1
-; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = icmp ult i32 [[IV_OUTER]], 100
+; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = icmp samesign ult i32 [[IV_OUTER]], 100
 ; CHECK-NEXT:    br i1 [[OUTER_COND_2]], label [[OUTER_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[X_RES:%.*]] = phi i32 [ [[X_LCSSA]], [[OUTER_EXITING_1]] ], [ -1, [[OUTER_LATCH]] ]
