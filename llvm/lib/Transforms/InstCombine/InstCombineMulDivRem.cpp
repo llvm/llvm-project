@@ -633,15 +633,7 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
 
 Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
   auto createPowiExpr = [](BinaryOperator &I, InstCombinerImpl &IC, Value *X,
-                           Value *Y, Value *Z) -> Instruction * {
-    auto *CY = dyn_cast<ConstantInt>(Y);
-    auto *CZ = dyn_cast<ConstantInt>(Z);
-    if (CY && CZ) {
-      bool Overflow;
-      (void)CY->getValue().sadd_ov(CZ->getValue(), Overflow);
-      if (Overflow)
-        return nullptr;
-    }
+                           Value *Y, Value *Z) {
     InstCombiner::BuilderTy &Builder = IC.Builder;
     Value *YZ = Builder.CreateNSWAdd(Y, Z);
     Instruction *NewPow = Builder.CreateIntrinsic(
@@ -675,9 +667,9 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
                      m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y)))) &&
       match(Op1, m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(m_Specific(X),
                                                              m_Value(Z)))) &&
-      Y->getType() == Z->getType()) {
-    if (Instruction *NewPow = createPowiExpr(I, *this, X, Y, Z))
-      return replaceInstUsesWith(I, NewPow);
+      Y->getType() == Z->getType() && willNotOverflowSignedAdd(Y, Z, I)) {
+    Instruction *NewPow = createPowiExpr(I, *this, X, Y, Z);
+    return replaceInstUsesWith(I, NewPow);
   }
 
   if (Opcode == Instruction::FDiv && I.hasAllowReassoc() && I.hasNoNaNs()) {
