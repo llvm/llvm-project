@@ -1,15 +1,15 @@
 // RUN: llvm-tblgen -gen-target-library-info -I %p/../../include %s | FileCheck %s
 
-include "llvm/Analysis/TargetLibraryInfoImpl.td"
+include "llvm/IR/RuntimeLibcallsImpl.td"
 
-def cosf : TargetLibCall< "cosf", Flt, [Flt]>;
-def sinf : TargetLibCall< "sinf", Flt, [Flt]>;
+def TLI_cosf : TargetLibCall_D< "cosf", Flt, [Flt]>;
+def TLI_sinf : TargetLibCall_D< "sinf", Flt, [Flt]>;
 
-def fmaxf : TargetLibCall< "fmaxf", Floating, [Same, Same]>;
+def TLI_fmaxf : TargetLibCall_D< "fmaxf", Floating, [Same, Same]>;
 
-def printf : TargetLibCall< "printf", Int, [Ptr, Ellip]>;
+def TLI_printf : TargetLibCall_D< "printf", Int, [Ptr, Ellip]>;
 
-def cabs : TargetLibCall< "cabs", ? /* Checked manually. */>;
+def TLI_cabs : TargetLibCall_D< "cabs", ? /* Checked manually. */>;
 
 // CHECK:      #ifdef GET_TARGET_LIBRARY_INFO_ENUM
 // CHECK-NEXT: #undef GET_TARGET_LIBRARY_INFO_ENUM
