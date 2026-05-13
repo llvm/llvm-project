@@ -897,6 +897,15 @@ def HasStdExtZvvmm : Predicate<"Subtarget->hasStdExtZvvmm()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvvmm),
                          "'Zvvmm' (Integer Matrix Multiply-Accumulate)">;
 
+// Integrated Matrix Extension floating-point matrix multiply-accumulate
+def FeatureStdExtZvvfmm
+    : RISCVExperimentalExtension<0, 1,
+                                 "Floating-Point Matrix Multiply-Accumulate",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvvfmm : Predicate<"Subtarget->hasStdExtZvvfmm()">,
+                      AssemblerPredicate<(all_of FeatureStdExtZvvfmm),
+                          "'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
