@@ -426,6 +426,7 @@ define void @store_atomic_i128_from_gep() {
 ; SDAG-LABEL: store_atomic_i128_from_gep:
 ; SDAG:    bl init
 ; SDAG:    dmb ish
+; SDAG:    stp xzr, xzr, [sp, #16]
   %a = alloca [3 x i128]
   call void @init(ptr %a)
   %arrayidx  = getelementptr [3 x i128], ptr %a, i64 0, i64 1
