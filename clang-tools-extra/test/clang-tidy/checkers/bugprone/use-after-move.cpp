@@ -1806,4 +1806,4 @@ namespace GH62206 {
     std::move(d);
     d = b; // Should not warn
   }
-}
+} // namespace GH62206
