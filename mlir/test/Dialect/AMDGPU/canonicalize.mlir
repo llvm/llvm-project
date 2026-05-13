@@ -162,6 +162,35 @@ func.func @fold_gather_to_lds_of_cast_dest(%global: memref<128x72xf32, 1>, %lds:
 
 // -----
 
+// CHECK-LABEL: func @global_load_async_to_lds_true_mask
+// CHECK-SAME: %[[SRC:.*]]: memref<16xf32, #gpu.address_space<global>>, %[[DST:.*]]: memref<16xf32, #gpu.address_space<workgroup>>
+func.func @global_load_async_to_lds_true_mask(%src: memref<16xf32, #gpu.address_space<global>>, %dst: memref<16xf32, #gpu.address_space<workgroup>>) {
+  // CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-NEXT: amdgpu.global_load_async_to_lds %[[SRC]][%[[C0]]], %[[DST]][%[[C0]]] : f32, memref<16xf32, #gpu.address_space<global>>, memref<16xf32, #gpu.address_space<workgroup>>
+  // CHECK-NEXT: return
+  %c0 = arith.constant 0 : index
+  %true = arith.constant true
+  amdgpu.global_load_async_to_lds %src[%c0], %dst[%c0], %true
+    : f32, memref<16xf32, #gpu.address_space<global>>,
+      memref<16xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_false_mask
+func.func @global_load_async_to_lds_false_mask(%src: memref<16xf32, #gpu.address_space<global>>, %dst: memref<16xf32, #gpu.address_space<workgroup>>) {
+  // CHECK-NEXT: return
+  %c0 = arith.constant 0 : index
+  %false = arith.constant false
+  amdgpu.global_load_async_to_lds %src[%c0], %dst[%c0], %false
+    : f32, memref<16xf32, #gpu.address_space<global>>,
+      memref<16xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @scaled_mfma
 // CHECK: %[[SCALE_1:.*]] = vector.extract_strided_slice %0 {offsets = [0], sizes = [4], strides = [1]} : vector<16xf8E8M0FNU> to vector<4xf8E8M0FNU>
 // CHECK: %[[SCALE_2:.*]] = vector.extract_strided_slice %2 {offsets = [4], sizes = [4], strides = [1]} : vector<16xf8E8M0FNU> to vector<4xf8E8M0FNU>

@@ -16,11 +16,13 @@
 #include "llvm/Transforms/IPO/InstrumentorStubPrinter.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -42,6 +44,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <cassert>
 #include <cstdint>
@@ -231,11 +235,46 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
     return Changed;
 
   InstrumentationCaches ICaches;
+  SmallVector<Instruction *> FinalTIs;
   ReversePostOrderTraversal<Function *> RPOT(&Fn);
-  for (auto &It : RPOT)
+  for (auto &It : RPOT) {
     for (auto &I : *It)
       Changed |= instrumentInstruction(I, ICaches);
 
+    auto *TI = It->getTerminator();
+    if (!TI->getNumSuccessors())
+      FinalTIs.push_back(TI);
+  }
+
+  Value *FPtr = &Fn;
+  for (auto &[Name, IO] :
+       IConf.IChoices[InstrumentationLocation::FUNCTION_PRE]) {
+    if (!IO->Enabled)
+      continue;
+    // Count epochs eagerly.
+    ++IIRB.Epoch;
+
+    IIRB.IRB.SetInsertPoint(
+        cast<Function>(FPtr)->getEntryBlock().getFirstInsertionPt());
+    ensureDbgLoc(IIRB.IRB);
+    Changed |= bool(IO->instrument(FPtr, IConf, IIRB, ICaches));
+    IIRB.returnAllocas();
+  }
+
+  for (auto &[Name, IO] :
+       IConf.IChoices[InstrumentationLocation::FUNCTION_POST]) {
+    if (!IO->Enabled)
+      continue;
+    // Count epochs eagerly.
+    ++IIRB.Epoch;
+
+    for (Instruction *FinalTI : FinalTIs) {
+      IIRB.IRB.SetInsertPoint(FinalTI);
+      ensureDbgLoc(IIRB.IRB);
+      Changed |= bool(IO->instrument(FPtr, IConf, IIRB, ICaches));
+      IIRB.returnAllocas();
+    }
+  }
   return Changed;
 }
 
@@ -244,12 +283,14 @@ bool InstrumentorImpl::instrument() {
   if (!shouldInstrumentTarget())
     return Changed;
 
-  for (auto &It : IConf.IChoices[InstrumentationLocation::INSTRUCTION_PRE])
-    if (It.second->Enabled)
-      InstChoicesPRE[It.second->getOpcode()] = It.second;
-  for (auto &It : IConf.IChoices[InstrumentationLocation::INSTRUCTION_POST])
-    if (It.second->Enabled)
-      InstChoicesPOST[It.second->getOpcode()] = It.second;
+  for (auto &[Name, IO] :
+       IConf.IChoices[InstrumentationLocation::INSTRUCTION_PRE])
+    if (IO->Enabled)
+      InstChoicesPRE[IO->getOpcode()] = IO;
+  for (auto &[Name, IO] :
+       IConf.IChoices[InstrumentationLocation::INSTRUCTION_POST])
+    if (IO->Enabled)
+      InstChoicesPOST[IO->getOpcode()] = IO;
 
   for (Function &Fn : M)
     Changed |= instrumentFunction(Fn);
@@ -257,11 +298,19 @@ bool InstrumentorImpl::instrument() {
   return Changed;
 }
 
+InstrumentorPass::InstrumentorPass(IntrusiveRefCntPtr<vfs::FileSystem> FS,
+                                   InstrumentationConfig *IC,
+                                   InstrumentorIRBuilderTy *IIRB)
+    : FS(FS), UserIConf(IC), UserIIRB(IIRB) {
+  if (!FS)
+    this->FS = vfs::getRealFileSystem();
+}
+
 PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB,
                                         bool ReadConfig) {
   InstrumentorImpl Impl(IConf, IIRB, M);
-  if (ReadConfig && !readConfigFromJSON(IConf, ReadConfigFile, IIRB.Ctx))
+  if (ReadConfig && !readConfigFromJSON(IConf, ReadConfigFile, IIRB.Ctx, *FS))
     return PreservedAnalyses::all();
 
   writeConfigToJSON(IConf, WriteConfigFile, IIRB.Ctx);
@@ -315,6 +364,8 @@ BaseConfigurationOption::createStringOption(InstrumentationConfig &IConf,
 
 void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   /// List of all instrumentation opportunities.
+  FunctionIO::populate(*this, IIRB);
+  AllocaIO::populate(*this, IIRB);
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
 }
@@ -524,6 +575,253 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
   }
   return CI;
 }
+
+template <typename Ty> constexpr static Value *getValue(Ty &ValueOrUse) {
+  if constexpr (std::is_same<Ty, Use>::value)
+    return ValueOrUse.get();
+  else
+    return static_cast<Value *>(&ValueOrUse);
+}
+
+template <typename Range>
+static Value *createValuePack(const Range &R, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB) {
+  auto *Fn = IIRB.IRB.GetInsertBlock()->getParent();
+  auto *I32Ty = IIRB.IRB.getInt32Ty();
+  SmallVector<Constant *> ConstantValues;
+  SmallVector<std::pair<Value *, uint32_t>> Values;
+  SmallVector<Type *> Types;
+  for (auto &RE : R) {
+    Value *V = getValue(RE);
+    if (!V->getType()->isSized())
+      continue;
+    auto VSize = IIRB.DL.getTypeAllocSize(V->getType());
+    ConstantValues.push_back(getCI(I32Ty, VSize));
+    Types.push_back(I32Ty);
+    ConstantValues.push_back(getCI(I32Ty, V->getType()->getTypeID()));
+    Types.push_back(I32Ty);
+    if (uint32_t MisAlign = VSize % 8) {
+      Types.push_back(ArrayType::get(IIRB.Int8Ty, 8 - MisAlign));
+      ConstantValues.push_back(ConstantArray::getNullValue(Types.back()));
+    }
+    Types.push_back(V->getType());
+    if (auto *C = dyn_cast<Constant>(V)) {
+      ConstantValues.push_back(C);
+      continue;
+    }
+    Values.push_back({V, ConstantValues.size()});
+    ConstantValues.push_back(Constant::getNullValue(V->getType()));
+  }
+  if (Types.empty())
+    return ConstantPointerNull::get(IIRB.PtrTy);
+
+  StructType *STy = StructType::get(Fn->getContext(), Types, /*isPacked=*/true);
+  Constant *Initializer = ConstantStruct::get(STy, ConstantValues);
+
+  GlobalVariable *&GV = IConf.ConstantGlobalsCache[Initializer];
+  if (!GV)
+    GV = new GlobalVariable(*Fn->getParent(), STy, false,
+                            GlobalValue::InternalLinkage, Initializer,
+                            IConf.getRTName("", "value_pack"));
+
+  auto *AI = IIRB.getAlloca(Fn, STy);
+  IIRB.IRB.CreateMemCpy(AI, AI->getAlign(), GV, MaybeAlign(GV->getAlignment()),
+                        IIRB.DL.getTypeAllocSize(STy));
+  for (auto [Param, Idx] : Values) {
+    auto *Ptr = IIRB.IRB.CreateStructGEP(STy, AI, Idx);
+    IIRB.IRB.CreateStore(Param, Ptr);
+  }
+  return AI;
+}
+
+template <typename Range>
+static void readValuePack(const Range &R, Value &Pack,
+                          InstrumentorIRBuilderTy &IIRB,
+                          function_ref<void(int, Value *)> SetterCB) {
+  auto *Fn = IIRB.IRB.GetInsertBlock()->getParent();
+  auto &DL = Fn->getDataLayout();
+  SmallVector<Value *> ParameterValues;
+  unsigned Offset = 0;
+  for (const auto &[Idx, RE] : enumerate(R)) {
+    Value *V = getValue(RE);
+    if (!V->getType()->isSized())
+      continue;
+    Offset += 8;
+    auto VSize = DL.getTypeAllocSize(V->getType());
+    auto Padding = alignTo(VSize, 8) - VSize;
+    Offset += Padding;
+    auto *Ptr = IIRB.IRB.CreateConstInBoundsGEP1_32(IIRB.Int8Ty, &Pack, Offset);
+    auto *NewV = IIRB.IRB.CreateLoad(V->getType(), Ptr);
+    SetterCB(Idx, NewV);
+    Offset += VSize;
+  }
+}
+
+/// FunctionIO
+/// {
+void FunctionIO::init(InstrumentationConfig &IConf,
+                      InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+  using namespace std::placeholders;
+  if (UserConfig)
+    Config = *UserConfig;
+
+  bool IsPRE = getLocationKind() == InstrumentationLocation::FUNCTION_PRE;
+  if (Config.has(PassAddress))
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "address", "The function address.",
+                             IRTArg::NONE, getFunctionAddress));
+  if (Config.has(PassName))
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "name", "The function name.",
+                             IRTArg::STRING, getFunctionName));
+  if (Config.has(PassNumArguments))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int32Ty, "num_arguments",
+               "Number of function arguments (without varargs).", IRTArg::NONE,
+               std::bind(&FunctionIO::getNumArguments, this, _1, _2, _3, _4)));
+  if (Config.has(PassArguments))
+    IRTArgs.push_back(
+        IRTArg(IIRB.PtrTy, "arguments", "Description of the arguments.",
+               IsPRE && Config.has(ReplaceArguments) ? IRTArg::REPLACABLE_CUSTOM
+                                                     : IRTArg::NONE,
+               std::bind(&FunctionIO::getArguments, this, _1, _2, _3, _4),
+               std::bind(&FunctionIO::setArguments, this, _1, _2, _3, _4)));
+  if (Config.has(PassIsMain))
+    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_main",
+                             "Flag to indicate it is the main function.",
+                             IRTArg::NONE, isMainFunction));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+
+Value *FunctionIO::getFunctionAddress(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB) {
+  auto &Fn = cast<Function>(V);
+  if (Fn.isIntrinsic())
+    return Constant::getNullValue(&Ty);
+  return &V;
+}
+Value *FunctionIO::getFunctionName(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB) {
+  auto &Fn = cast<Function>(V);
+  return IConf.getGlobalString(IConf.DemangleFunctionNames->getBool()
+                                   ? demangle(Fn.getName())
+                                   : Fn.getName(),
+                               IIRB);
+}
+Value *FunctionIO::getNumArguments(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB) {
+  auto &Fn = cast<Function>(V);
+  if (!Config.ArgFilter)
+    return getCI(&Ty, Fn.arg_size());
+  auto FRange = make_filter_range(Fn.args(), Config.ArgFilter);
+  return getCI(&Ty, std::distance(FRange.begin(), FRange.end()));
+}
+Value *FunctionIO::getArguments(Value &V, Type &Ty,
+                                InstrumentationConfig &IConf,
+                                InstrumentorIRBuilderTy &IIRB) {
+  auto &Fn = cast<Function>(V);
+  if (!Config.ArgFilter)
+    return createValuePack(Fn.args(), IConf, IIRB);
+  return createValuePack(make_filter_range(Fn.args(), Config.ArgFilter), IConf,
+                         IIRB);
+}
+Value *FunctionIO::setArguments(Value &V, Value &NewV,
+                                InstrumentationConfig &IConf,
+                                InstrumentorIRBuilderTy &IIRB) {
+  auto &Fn = cast<Function>(V);
+  auto *AIt = Fn.arg_begin();
+  auto CB = [&](int Idx, Value *ReplV) {
+    while (Config.ArgFilter && !Config.ArgFilter(*AIt))
+      ++AIt;
+    Fn.getArg(Idx)->replaceUsesWithIf(ReplV, [&](Use &U) {
+      return IIRB.NewInsts.lookup(cast<Instruction>(U.getUser())) != IIRB.Epoch;
+    });
+    ++AIt;
+  };
+  if (!Config.ArgFilter)
+    readValuePack(Fn.args(), NewV, IIRB, CB);
+  else
+    readValuePack(make_filter_range(Fn.args(), Config.ArgFilter), NewV, IIRB,
+                  CB);
+  return &Fn;
+}
+Value *FunctionIO::isMainFunction(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB) {
+  auto &Fn = cast<Function>(V);
+  return getCI(&Ty, Fn.getName() == "main");
+}
+
+///}
+
+/// AllocaIO
+///{
+void AllocaIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+                    ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  if (!IsPRE && Config.has(PassAddress))
+    IRTArgs.push_back(
+        IRTArg(IIRB.PtrTy, "address", "The allocated memory address.",
+               Config.has(ReplaceAddress) ? IRTArg::REPLACABLE : IRTArg::NONE,
+               InstrumentationOpportunity::getValue,
+               InstrumentationOpportunity::replaceValue));
+  if (Config.has(PassSize))
+    IRTArgs.push_back(IRTArg(
+        IIRB.Int64Ty, "size", "The allocation size.",
+        (IsPRE && Config.has(ReplaceSize)) ? IRTArg::REPLACABLE : IRTArg::NONE,
+        getSize, setSize));
+  if (Config.has(PassAlignment))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "alignment",
+                             "The allocation alignment.", IRTArg::NONE,
+                             getAlignment));
+
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+
+Value *AllocaIO::getSize(Value &V, Type &Ty, InstrumentationConfig &IO,
+                         InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AllocaInst>(V);
+  const DataLayout &DL = AI.getDataLayout();
+  Value *SizeValue = nullptr;
+  TypeSize TypeSize = DL.getTypeAllocSize(AI.getAllocatedType());
+  if (TypeSize.isFixed()) {
+    SizeValue = getCI(&Ty, TypeSize.getFixedValue());
+  } else {
+    auto *NullPtr = ConstantPointerNull::get(AI.getType());
+    SizeValue = IIRB.IRB.CreatePtrToInt(
+        IIRB.IRB.CreateGEP(AI.getAllocatedType(), NullPtr,
+                           {IIRB.IRB.getInt32(1)}),
+        &Ty);
+  }
+  if (AI.isArrayAllocation())
+    SizeValue = IIRB.IRB.CreateMul(
+        SizeValue, IIRB.IRB.CreateZExtOrBitCast(AI.getArraySize(), &Ty));
+  return SizeValue;
+}
+
+Value *AllocaIO::setSize(Value &V, Value &NewV, InstrumentationConfig &IO,
+                         InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AllocaInst>(V);
+  const DataLayout &DL = AI.getDataLayout();
+  auto *NewAI = IIRB.IRB.CreateAlloca(IIRB.IRB.getInt8Ty(),
+                                      DL.getAllocaAddrSpace(), &NewV);
+  NewAI->setAlignment(AI.getAlign());
+  AI.replaceAllUsesWith(NewAI);
+  IIRB.eraseLater(&AI);
+  return NewAI;
+}
+
+Value *AllocaIO::getAlignment(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB) {
+  return getCI(&Ty, cast<AllocaInst>(V).getAlign().value());
+}
+///}
 
 void StoreIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
                    ConfigTy *UserConfig) {
