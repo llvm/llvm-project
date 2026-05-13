@@ -125,6 +125,7 @@ tools = [
     ToolSubst("llvm-bat-dump", unresolved="fatal"),
     ToolSubst("perf2bolt", unresolved="fatal"),
     ToolSubst("yaml2obj", unresolved="fatal"),
+    ToolSubst("obj2yaml", unresolved="fatal"),
     ToolSubst("llvm-mc", unresolved="fatal"),
     ToolSubst("llvm-nm", unresolved="fatal"),
     ToolSubst("llvm-objdump", unresolved="fatal"),
