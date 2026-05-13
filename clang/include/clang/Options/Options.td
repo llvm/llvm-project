@@ -1993,12 +1993,12 @@ defm bounds_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental bounds safety extension for C">>;
 
-defm lifetime_safety : BoolFOption<
-  "lifetime-safety",
-  LangOpts<"EnableLifetimeSafety">, DefaultTrue,
+defm debug_run_lifetime_safety : BoolFOption<
+  "debug-run-lifetime-safety",
+  LangOpts<"DebugRunLifetimeSafety">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
-  BothFlags<[], [CC1Option], " lifetime safety for C++">>;
+  BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,

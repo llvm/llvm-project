@@ -19,7 +19,6 @@ Clang-Tidy Checks
    darwin/*
    fuchsia/*
    google/*
-   hicpp/*
    linuxkernel/*
    llvm/*
    llvmlibc/*
@@ -605,13 +604,6 @@ Check aliases
    :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
-   :doc:`hicpp-uppercase-literal-suffix <hicpp/uppercase-literal-suffix>`, :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
-   :doc:`hicpp-use-equals-default <hicpp/use-equals-default>`, :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
-   :doc:`hicpp-use-equals-delete <hicpp/use-equals-delete>`, :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
-   :doc:`hicpp-use-noexcept <hicpp/use-noexcept>`, :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
-   :doc:`hicpp-use-nullptr <hicpp/use-nullptr>`, :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
-   :doc:`hicpp-use-override <hicpp/use-override>`, :doc:`modernize-use-override <modernize/use-override>`, "Yes"
-   :doc:`hicpp-vararg <hicpp/vararg>`, :doc:`cppcoreguidelines-pro-type-vararg <cppcoreguidelines/pro-type-vararg>`,
    :doc:`llvm-else-after-return <llvm/else-after-return>`, :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"
    :doc:`llvm-qualified-auto <llvm/qualified-auto>`, :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes"
    :doc:`performance-faster-string-find <performance/faster-string-find>`, :doc:`performance-prefer-single-char-overloads <performance/prefer-single-char-overloads>`, "Yes"

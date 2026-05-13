@@ -7595,7 +7595,7 @@ public:
                            SourceLocation RBraceLoc);
 
   ExprResult BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
-                           SourceLocation RBraceLoc);
+                           SourceLocation RBraceLoc, bool IsExplicit);
 
   /// Binary Operators.  'Tok' is the token for the operator.
   ExprResult ActOnBinOp(Scope *S, SourceLocation TokLoc, tok::TokenKind Kind,
@@ -13273,9 +13273,6 @@ public:
       // We are substituting template arguments into a constraint expression.
       ConstraintSubstitution,
 
-      // We are normalizing a constraint expression.
-      ConstraintNormalization,
-
       // Instantiating a Requires Expression parameter clause.
       RequirementParameterInstantiation,
 
@@ -13492,12 +13489,6 @@ public:
     /// concept.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           ConstraintSubstitution, NamedDecl *Template,
-                          SourceRange InstantiationRange);
-
-    struct ConstraintNormalization {};
-    /// \brief Note that we are normalizing a constraint expression.
-    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
-                          ConstraintNormalization, NamedDecl *Template,
                           SourceRange InstantiationRange);
 
     struct ParameterMappingSubstitution {};

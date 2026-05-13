@@ -1481,6 +1481,10 @@ foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "320", "35
   def VGPROp_#size#_Align2 : RegisterOperand<!cast<RegisterClassLike>("VReg_"#size#_Align2)>;
 }
 
+def VGPROp_32_Lo256 : RegisterOperand<VGPR_32_Lo256> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
+
 def VGPROp_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
   let EncoderMethod = "getMachineOpValueT16Lo128";
