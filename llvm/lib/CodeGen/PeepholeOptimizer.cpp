@@ -444,7 +444,8 @@ public:
   using RecurrenceCycle = SmallVector<RecurrenceInstr, 4>;
 
 private:
-  bool optimizeCmpInstr(MachineInstr &MI);
+  bool optimizeCmpInstr(MachineInstr &MI, MachineFunction &MF,
+                        SmallPtrSet<MachineInstr *, 16> &LocalMIs);
   bool optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
                         SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeSelect(MachineInstr &MI,
@@ -943,7 +944,9 @@ bool PeepholeOptimizer::optimizeExtInstr(
 /// against already sets (or could be modified to set) the same flag as the
 /// compare, then we can remove the comparison and use the flag from the
 /// previous instruction.
-bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
+bool PeepholeOptimizer::optimizeCmpInstr(
+    MachineInstr &MI, MachineFunction &MF,
+    SmallPtrSet<MachineInstr *, 16> &LocalMIs) {
   // If this instruction is a comparison against zero and isn't comparing a
   // physical register, we can try to optimize it.
   Register SrcReg, SrcReg2;
@@ -954,13 +957,23 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
 
   // Attempt to optimize the comparison instruction.
   LLVM_DEBUG(dbgs() << "Attempting to optimize compare: " << MI);
-  if (TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
-    LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
-    ++NumCmps;
-    return true;
+  if (!TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
+  ++NumCmps;
+
+  // The eliminated compare may have been the extra use preventing a
+  // load from being folded into the flag-setting instruction.
+  if (SrcReg.isVirtual() && MRI->hasOneNonDBGUser(SrcReg)) {
+    MachineInstr *FlagProducer = MRI->use_nodbg_begin(SrcReg)->getParent();
+    MachineInstr *LoadMI = MRI->getVRegDef(SrcReg);
+    if (LocalMIs.count(FlagProducer) && LoadMI && LoadMI->canFoldAsLoad() &&
+        LoadMI->mayLoad() && LocalMIs.count(LoadMI))
+      foldLoadInto(MF, *FlagProducer, SrcReg, LocalMIs);
   }
 
-  return false;
+  return true;
 }
 
 /// Optimize a select instruction.
@@ -1825,29 +1838,10 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
         NAPhysToVirtMIs.clear();
       }
 
-      if (MI->isCompare()) {
-        Register CmpSrcReg, SrcReg2;
-        int64_t CmpMask, CmpValue;
-        // Capture CmpSrcReg before MI is erased inside optimizeCmpInstr.
-        bool HaveVirtSrc =
-            TII->analyzeCompare(*MI, CmpSrcReg, SrcReg2, CmpMask, CmpValue) &&
-            CmpSrcReg.isVirtual() && !SrcReg2.isPhysical();
-        if (optimizeCmpInstr(*MI)) {
-          LocalMIs.erase(MI);
-          Changed = true;
-          // The eliminated compare may have been the extra use preventing a
-          // load from being folded into the flag-setting instruction.
-          if (HaveVirtSrc && MRI->hasOneNonDBGUser(CmpSrcReg)) {
-            MachineInstr *FlagProducer =
-                MRI->use_nodbg_begin(CmpSrcReg)->getParent();
-            MachineInstr *LoadMI = MRI->getVRegDef(CmpSrcReg);
-            if (LocalMIs.count(FlagProducer) && LoadMI &&
-                LoadMI->canFoldAsLoad() && LoadMI->mayLoad() &&
-                LocalMIs.count(LoadMI))
-              foldLoadInto(MF, *FlagProducer, CmpSrcReg, LocalMIs);
-          }
-          continue;
-        }
+      if (MI->isCompare() && optimizeCmpInstr(*MI, MF, LocalMIs)) {
+        LocalMIs.erase(MI);
+        Changed = true;
+        continue;
       }
 
       if ((isUncoalescableCopy(*MI) &&
