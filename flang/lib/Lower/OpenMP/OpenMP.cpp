@@ -1880,6 +1880,7 @@ genTargetClauses(lower::AbstractConverter &converter,
   cp.processDefaultMap(stmtCtx, defaultMaps);
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
+  cp.processDynGroupprivate(stmtCtx, clauseOps);
   cp.processHasDeviceAddr(stmtCtx, clauseOps, hasDeviceAddrObjects);
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter)) {
     // Only process host_eval if compiling for the host device.
@@ -1892,7 +1893,6 @@ genTargetClauses(lower::AbstractConverter &converter,
                 &mapObjects);
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
-  cp.processDynGroupprivate(stmtCtx, clauseOps);
   cp.processTODO<clause::Allocate, clause::InReduction, clause::UsesAllocators>(
       loc, llvm::omp::Directive::OMPD_target);
 
@@ -2025,6 +2025,9 @@ static void genTeamsClauses(lower::AbstractConverter &converter,
                             llvm::SmallVectorImpl<Object> &reductionObjects) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
+  // TODO: Only evaluate it here if it's not host-evaluated, like num_teams and
+  // thread_limit.
+  cp.processDynGroupprivate(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_teams, clauseOps);
 
   HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter);
