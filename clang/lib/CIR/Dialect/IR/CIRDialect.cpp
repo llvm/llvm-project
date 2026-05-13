@@ -376,9 +376,110 @@ LogicalResult cir::DeleteArrayOp::verify() {
 // AssumeOp
 //===----------------------------------------------------------------------===//
 
+// Print/parse helpers for the `custom<OpBundles>` directive on `cir.assume`.
+// These mirror the static helpers in mlir/lib/Dialect/LLVMIR/IR/LLVMDialect.cpp
+// so the assembly form of CIR operand bundles matches the LLVM dialect 1:1.
+
+static void printOneOpBundle(OpAsmPrinter &p, OperandRange operands,
+                             TypeRange operandTypes, StringRef tag) {
+  p.printString(tag);
+  p << "(";
+  if (!operands.empty()) {
+    p.printOperands(operands);
+    p << " : ";
+    llvm::interleaveComma(operandTypes, p);
+  }
+  p << ")";
+}
+
+static void printOpBundles(OpAsmPrinter &p, Operation *op,
+                           OperandRangeRange opBundleOperands,
+                           TypeRangeRange opBundleOperandTypes,
+                           std::optional<ArrayAttr> opBundleTags) {
+  if (opBundleOperands.empty())
+    return;
+  assert(opBundleTags && "expect operand bundle tags");
+
+  p << " [";
+  llvm::interleaveComma(
+      llvm::zip(opBundleOperands, opBundleOperandTypes, *opBundleTags), p,
+      [&p](auto bundle) {
+        auto bundleTag = cast<StringAttr>(std::get<2>(bundle)).getValue();
+        printOneOpBundle(p, std::get<0>(bundle), std::get<1>(bundle),
+                         bundleTag);
+      });
+  p << "]";
+}
+
+static ParseResult parseOneOpBundle(
+    OpAsmParser &p,
+    SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> &opBundleOperands,
+    SmallVector<SmallVector<Type>> &opBundleOperandTypes,
+    SmallVector<Attribute> &opBundleTags) {
+  SMLoc currentParserLoc = p.getCurrentLocation();
+  SmallVector<OpAsmParser::UnresolvedOperand> operands;
+  SmallVector<Type> types;
+  std::string tag;
+
+  if (p.parseString(&tag))
+    return p.emitError(currentParserLoc, "expect operand bundle tag");
+
+  if (p.parseLParen())
+    return failure();
+
+  if (p.parseOptionalRParen()) {
+    if (p.parseOperandList(operands) || p.parseColon() ||
+        p.parseTypeList(types) || p.parseRParen())
+      return failure();
+  }
+
+  opBundleOperands.push_back(std::move(operands));
+  opBundleOperandTypes.push_back(std::move(types));
+  opBundleTags.push_back(StringAttr::get(p.getContext(), tag));
+
+  return success();
+}
+
+static std::optional<ParseResult> parseOpBundles(
+    OpAsmParser &p,
+    SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> &opBundleOperands,
+    SmallVector<SmallVector<Type>> &opBundleOperandTypes,
+    ArrayAttr &opBundleTags) {
+  if (p.parseOptionalLSquare())
+    return std::nullopt;
+
+  if (succeeded(p.parseOptionalRSquare()))
+    return success();
+
+  SmallVector<Attribute> opBundleTagAttrs;
+  auto bundleParser = [&] {
+    return parseOneOpBundle(p, opBundleOperands, opBundleOperandTypes,
+                            opBundleTagAttrs);
+  };
+  if (p.parseCommaSeparatedList(bundleParser))
+    return failure();
+
+  if (p.parseRSquare())
+    return failure();
+
+  opBundleTags = ArrayAttr::get(p.getContext(), opBundleTagAttrs);
+
+  return success();
+}
+
 LogicalResult cir::AssumeOp::verify() {
-  if (!getBundleTagAttr() && !getBundleArgs().empty())
-    return emitOpError("bundle args present without a bundle tag");
+  std::optional<ArrayAttr> tags = getOpBundleTags();
+
+  auto isStringAttr = [](Attribute attr) { return isa<StringAttr>(attr); };
+  if (tags && !llvm::all_of(*tags, isStringAttr))
+    return emitOpError("operand bundle tag must be a StringAttr");
+
+  size_t numBundles = getOpBundleOperands().size();
+  size_t numTags = tags ? tags->size() : 0;
+  if (numBundles != numTags)
+    return emitOpError("expected ")
+           << numBundles << " operand bundle tags, but actually got "
+           << numTags;
   return success();
 }
 

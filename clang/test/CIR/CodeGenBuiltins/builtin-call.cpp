@@ -117,7 +117,7 @@ void *assume_aligned(void *ptr) {
 }
 
 // CIR: @_Z14assume_alignedPv
-// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16 : !cir.ptr<!void>
+// CIR:   cir.assume %{{.+}} ["align"(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)] : !cir.bool
 // CIR: }
 
 // LLVM: @_Z14assume_alignedPv
@@ -133,7 +133,7 @@ void *assume_aligned_misalignment(void *ptr, unsigned misalignment) {
 }
 
 // CIR: @_Z27assume_aligned_misalignmentPvj
-// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16[offset %{{.+}} : !u64i] : !cir.ptr<!void>
+// CIR:   cir.assume %{{.+}} ["align"(%{{.+}}, %{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i, !u64i)] : !cir.bool
 // CIR: }
 
 // LLVM: @_Z27assume_aligned_misalignmentPvj
@@ -149,7 +149,7 @@ void assume_separate_storage(void *p1, void *p2) {
 }
 
 // CIR: cir.func{{.*}} @_Z23assume_separate_storagePvS_
-// CIR:   cir.assume_separate_storage %{{.+}}, %{{.+}} : !cir.ptr<!void>
+// CIR:   cir.assume %{{.+}} ["separate_storage"(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !cir.ptr<!void>)] : !cir.bool
 // CIR: }
 
 // LLVM: define {{.*}}void @_Z23assume_separate_storagePvS_

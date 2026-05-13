@@ -1094,7 +1094,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_assume_separate_storage: {
     mlir::Value value0 = emitScalarExpr(e->getArg(0));
     mlir::Value value1 = emitScalarExpr(e->getArg(1));
-    cir::AssumeSepStorageOp::create(builder, loc, value0, value1);
+    mlir::Value cond = builder.getBool(true, loc);
+    cir::AssumeOp::create(builder, loc, cond, "separate_storage",
+                          mlir::ValueRange{value0, value1});
     return RValue::get(nullptr);
   }
 

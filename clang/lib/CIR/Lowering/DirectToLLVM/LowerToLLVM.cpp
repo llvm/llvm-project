@@ -820,47 +820,11 @@ mlir::LogicalResult CIRToLLVMSignBitOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value cond = adaptor.getPredicate();
-  if (std::optional<llvm::StringRef> tag = op.getBundleTag()) {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond, *tag,
-                                                      adaptor.getBundleArgs());
-  } else {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond);
-  }
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMAssumeAlignedOpLowering::matchAndRewrite(
-    cir::AssumeAlignedOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  SmallVector<mlir::Value, 3> opBundleArgs{adaptor.getPointer()};
-
-  auto alignment = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                                  adaptor.getAlignmentAttr());
-  opBundleArgs.push_back(alignment);
-
-  if (mlir::Value offset = adaptor.getOffset())
-    opBundleArgs.push_back(offset);
-
-  auto cond = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                             rewriter.getI1Type(), 1);
-  mlir::LLVM::AssumeOp::create(rewriter, op.getLoc(), cond, "align",
-                               opBundleArgs);
-
-  // The llvm.assume operation does not have a result, so we need to replace
-  // all uses of this cir.assume_aligned operation with the input ptr itself.
-  rewriter.replaceOp(op, adaptor.getPointer());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMAssumeSepStorageOpLowering::matchAndRewrite(
-    cir::AssumeSepStorageOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  auto cond = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                             rewriter.getI1Type(), 1);
+  llvm::SmallVector<mlir::ValueRange> bundleOperands;
+  for (mlir::ValueRange operands : adaptor.getOpBundleOperands())
+    bundleOperands.push_back(operands);
   rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(
-      op, cond, mlir::LLVM::AssumeSeparateStorageTag{}, adaptor.getPtr1(),
-      adaptor.getPtr2());
+      op, adaptor.getPredicate(), bundleOperands, op.getOpBundleTagsAttr());
   return mlir::success();
 }
 
