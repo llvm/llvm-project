@@ -256,6 +256,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
+    libc.src.sys.mman.memfd_create
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
     libc.src.sys.mman.mlock2
