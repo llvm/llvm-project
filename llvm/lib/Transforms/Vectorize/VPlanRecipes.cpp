@@ -3017,7 +3017,7 @@ VPExpressionRecipe::VPExpressionRecipe(
       if (Def && ExpressionRecipesAsSetOfUsers.contains(Def))
         continue;
       addOperand(Op);
-      LiveInPlaceholders.push_back(new VPSymbolicValue());
+      LiveInPlaceholders.push_back(new VPSymbolicValue(nullptr));
     }
   }
 
