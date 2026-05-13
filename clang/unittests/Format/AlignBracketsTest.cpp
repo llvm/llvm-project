@@ -608,6 +608,25 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndentInitializers) {
                "    {baz},\n"
                "};",
                Style);
+  // The closing brace should be at the start of the line.
+  verifyFormat("SomeStruct //\n"
+               "    s = SomeStruct{\n"
+               "        \"xxxxxxxxxxxxx\",\n"
+               "        \"yyyyyyyyyyyyy\",\n"
+               "        \"zzzzzzzzzzzzz\",\n"
+               "};");
+  verifyFormat("SomeStruct //\n"
+               "    s{\n"
+               "        \"xxxxxxxxxxxxx\",\n"
+               "        \"yyyyyyyyyyyyy\",\n"
+               "        \"zzzzzzzzzzzzz\",\n"
+               "};");
+  verifyFormat("SomeStruct //\n"
+               "    s = SomeStruct{\n"
+               "        \"xxxxxxxxxxxxx\",\n"
+               "        \"yyyyyyyyyyyyy\",\n"
+               "        \"zzzzzzzzzzzzz\",\n"
+               "};");
 }
 
 TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {
