@@ -3941,7 +3941,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BIfesetenv:
   case Builtin::BIfeupdateenv:
     if (TheCall->getFPFeaturesInEffect(getLangOpts()).getExceptionMode() ==
-        LangOptions::FPE_Ignore) {
+            LangOptions::FPE_Ignore &&
+        isPotentiallyEvaluatedContext()) {
       Diag(TheCall->getBeginLoc(), diag::warn_fe_access_without_fenv_access)
           << FDecl->getName() << TheCall->getSourceRange();
     }
