@@ -5277,7 +5277,7 @@ static bool isLoopSizeWithinBudget(Loop *L, const AArch64TTIImpl &TTI,
 
 static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
                                       const AArch64TTIImpl &TTI,
-                                      const unsigned SizeBudget = 5) {
+                                      const unsigned SizeBudget) {
   // Only consider loops with unknown trip counts for which we can determine
   // a symbolic expression. Multi-exit loops with small known trip counts will
   // likely be unrolled anyway.
