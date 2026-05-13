@@ -2847,7 +2847,7 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       return Triple("thumbv8m-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
       if (McpuDefault)
-        *McpuDefault = "cortex-m23";
+        *McpuDefault = "cortex-m33";
       if (ArchFlag)
         *ArchFlag = "armv8m.main";
       return Triple("thumbv8m-apple-darwin");

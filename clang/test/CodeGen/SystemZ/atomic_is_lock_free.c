@@ -22,7 +22,7 @@ _Atomic long double Atomic_fp128; // Also check the alignment of this.
 // CHECK: @Int128_Atomic = {{.*}} i128 0, align 16
 // CHECK: @Int128_Al16 = {{.*}} i128 0, align 16
 // CHECK: @AtomicStruct = {{.*}} { %struct.anon, [4 x i8] } zeroinitializer, align 16
-// CHECK: @Atomic_fp128 = {{.*}} fp128 0xL00000000000000000000000000000000, align 16
+// CHECK: @Atomic_fp128 = {{.*}} fp128 0.000000e+00, align 16
 
 
 // CHECK-LABEL: @fun0

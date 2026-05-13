@@ -236,6 +236,11 @@ struct FormatStyle {
     ///   int (*f)();
     /// \endcode
     bool AlignFunctionPointers;
+    /// Only for ``AlignConsecutiveAssignments``.
+    /// Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    /// setting this to ``true`` forces alignment for enum assignments only.
+    /// If ``Enabled`` is ``true``, enum assignments are always aligned.
+    bool EnumAssignments;
     /// Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     /// operators are left-padded to the same length as long ones in order to
     /// put all assignment operators to the right of the left hand side.
@@ -261,6 +266,7 @@ struct FormatStyle {
              AlignCompound == R.AlignCompound &&
              AlignFunctionDeclarations == R.AlignFunctionDeclarations &&
              AlignFunctionPointers == R.AlignFunctionPointers &&
+             EnumAssignments == R.EnumAssignments &&
              PadOperators == R.PadOperators;
     }
     bool operator!=(const AlignConsecutiveStyle &R) const {
@@ -835,8 +841,7 @@ struct FormatStyle {
   /// * ``InlineOnly``
   ///   Only merge functions defined inside a class. Same as ``inline``,
   ///   except it does not implies ``empty``: i.e. top level empty functions
-  ///   are not merged either. This option is **deprecated** and is retained
-  ///   for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
+  ///   are not merged either. See ``Inline`` of ``ShortFunctionStyle``.
   ///   \code
   ///     class Foo {
   ///       void f() { foo(); }
@@ -849,9 +854,7 @@ struct FormatStyle {
   ///   \endcode
   ///
   /// * ``Empty``
-  ///   Only merge empty functions. This option is **deprecated** and is
-  ///   retained for backwards compatibility. See ``Empty`` of
-  ///   ``ShortFunctionStyle``.
+  ///   Only merge empty functions. See ``Empty`` of ``ShortFunctionStyle``.
   ///   \code
   ///     void f() {}
   ///     void f2() {
@@ -860,9 +863,8 @@ struct FormatStyle {
   ///   \endcode
   ///
   /// * ``Inline``
-  ///   Only merge functions defined inside a class. Implies ``empty``. This
-  ///   option is **deprecated** and is retained for backwards compatibility.
-  ///   See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
+  ///   Only merge functions defined inside a class. Implies ``empty``. See
+  ///   ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
   ///   \code
   ///     class Foo {
   ///       void f() { foo(); }
@@ -2647,6 +2649,20 @@ struct FormatStyle {
   /// The break constructor initializers style to use.
   /// \version 5
   BreakConstructorInitializersStyle BreakConstructorInitializers;
+
+  /// If ``true``, clang-format will always break before function declaration
+  /// parameters.
+  /// \code
+  ///    true:
+  ///    void functionDeclaration(
+  ///             int A, int B);
+  ///
+  ///    false:
+  ///    void functionDeclaration(int A, int B);
+  ///
+  /// \endcode
+  /// \version 23
+  bool BreakFunctionDeclarationParameters;
 
   /// If ``true``, clang-format will always break before function definition
   /// parameters.
@@ -6080,6 +6096,8 @@ struct FormatStyle {
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           BreakFunctionDeclarationParameters ==
+               R.BreakFunctionDeclarationParameters &&
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&

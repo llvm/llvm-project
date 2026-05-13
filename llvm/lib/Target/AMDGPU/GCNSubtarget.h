@@ -359,10 +359,6 @@ public:
 
   bool hasAtomicCSub() const { return HasGFX10_BEncoding; }
 
-  bool hasMTBUFInsts() const { return !hasGFX1250Insts(); }
-
-  bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
-
   bool hasExportInsts() const {
     return !hasGFX940Insts() && !hasGFX1250Insts();
   }
@@ -506,8 +502,6 @@ public:
   }
 
   bool hasMadF16() const;
-
-  bool hasMovB64() const { return HasGFX940Insts || HasGFX1250Insts; }
 
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return HasGFX1250Insts; }
