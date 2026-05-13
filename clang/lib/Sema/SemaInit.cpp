@@ -4383,10 +4383,13 @@ static void TryArrayCopy(Sema &S, const InitializationKind &Kind,
       InitializedEntity::InitializeElement(S.Context, 0, Entity);
   QualType InitEltT =
       S.Context.getAsArrayType(Initializer->getType())->getElementType();
-  OpaqueValueExpr OVE(Initializer->getExprLoc(), InitEltT,
-                      Initializer->getValueKind(),
-                      Initializer->getObjectKind());
-  Expr *OVEAsExpr = &OVE;
+
+  // FIXME: Here's a functional memory leak cuz we don't have a temporary
+  // allocator at the moment
+  OpaqueValueExpr *OVE = new (S.Context) OpaqueValueExpr(
+      Initializer->getExprLoc(), InitEltT, Initializer->getValueKind(),
+      Initializer->getObjectKind());
+  Expr *OVEAsExpr = OVE;
   Sequence.InitializeFrom(S, Element, Kind, OVEAsExpr,
                           /*TopLevelOfInitList*/ false,
                           TreatUnavailableAsInvalid);
@@ -10341,11 +10344,11 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
                   Context.getLValueReferenceType(ElementTypes[I].withConst());
           }
 
-        if (FunctionTemplateDecl *TD =
+        if (CXXDeductionGuideDecl *GD =
                 DeclareAggregateDeductionGuideFromInitList(
                     LookupTemplateDecl, ElementTypes,
                     TSInfo->getTypeLoc().getEndLoc())) {
-          auto *GD = cast<CXXDeductionGuideDecl>(TD->getTemplatedDecl());
+          auto *TD = GD->getDescribedFunctionTemplate();
           addDeductionCandidate(TD, GD, DeclAccessPair::make(TD, AS_public),
                                 OnlyListConstructors,
                                 /*AllowAggregateDeductionCandidate=*/true);
@@ -10497,7 +10500,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
     // Make sure we didn't select an unusable deduction guide, and mark it
     // as referenced.
-    DiagnoseUseOfDecl(Best->FoundDecl, Kind.getLocation());
+    DiagnoseUseOfDecl(Best->Function, Kind.getLocation());
     MarkFunctionReferenced(Kind.getLocation(), Best->Function);
     break;
   }

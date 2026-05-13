@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -483,6 +484,9 @@ void VectorDialect::initialize() {
 
   addInterfaces<VectorInlinerInterface>();
 
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface, LoadOp, StoreOp,
+                            MaskedLoadOp, MaskedStoreOp, ExpandLoadOp,
+                            CompressStoreOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface,
                             TransferReadOp, TransferWriteOp, GatherOp, MaskOp,
                             YieldOp>();
@@ -7088,6 +7092,10 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+std::optional<SmallVector<int64_t, 4>> BitCastOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
 //===----------------------------------------------------------------------===//
 // TypeCastOp
 //===----------------------------------------------------------------------===//
@@ -8332,6 +8340,22 @@ Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
 
   return arith::SelectOp::create(builder, newValue.getLoc(), newValue.getType(),
                                  mask, newValue, passthru);
+}
+
+//===----------------------------------------------------------------------===//
+// InterleaveOp
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+//===----------------------------------------------------------------------===//
+// DeinterleaveOp
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>> DeinterleaveOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
 //===----------------------------------------------------------------------===//

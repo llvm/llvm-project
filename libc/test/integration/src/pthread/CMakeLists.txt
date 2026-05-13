@@ -50,6 +50,7 @@ add_integration_test(
   DEPENDS
     libc.hdr.time_macros
     libc.hdr.errno_macros
+    libc.hdr.sys_mman_macros
     libc.include.pthread
     libc.src.pthread.pthread_rwlock_destroy
     libc.src.pthread.pthread_rwlock_init
@@ -164,6 +165,8 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_equal
+    libc.src.pthread.pthread_getthreadid_np
+    libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_self
 )
@@ -262,6 +265,7 @@ add_integration_test(
   SRCS
     pthread_create_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.include.pthread
     libc.src.errno.errno
     libc.src.pthread.pthread_create
@@ -276,6 +280,7 @@ add_integration_test(
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_destroy
+    libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_self
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
