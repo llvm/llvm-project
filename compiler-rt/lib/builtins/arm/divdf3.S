@@ -154,7 +154,7 @@ LOCAL_LABEL(ddiv_normalised): // denormal handler will come back to here
   // Since the table index calculated above in r5 includes the high mantissa
   // bit, an index of 0x80 refers to the first table entry and 0xFF the last.
   // So we subtract 0x80 from the table address to compensate.
-#if 0 // (defined __pic__ || defined __PIC__ || defined __ARM_ROPI)
+#if defined __pic__ || defined __PIC__ || defined __ARM_ROPI
   // In PIC or ROPI modes, we must construct the address in a pc-relative
   // manner, by making a literal containing the offset from the current code.
   // The reference point for that offset is the value of pc as read by the add
