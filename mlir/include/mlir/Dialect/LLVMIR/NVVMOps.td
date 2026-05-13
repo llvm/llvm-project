@@ -578,6 +578,10 @@ def NVVM_Ex2Op : NVVM_F32UnaryApproxOp<"ex2"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM rsqrt op definitions
+//===----------------------------------------------------------------------===//
+
 def NVVM_RsqrtOp
     : NVVM_SingleResultIntrinsicOp<"rsqrt", [Pure, SameOperandsAndResultType]> {
   let summary = "Reciprocal square root (fast approximation)";
