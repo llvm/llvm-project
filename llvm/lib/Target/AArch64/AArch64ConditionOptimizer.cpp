@@ -16,14 +16,13 @@
 // - CCx are ordered conditions tested by the consumers (GT/LT/GE/LE)
 // - (Nx, CCx) are predicates over v
 // - F is a flag register, implicitly defined by the producers and tested by the
-// consumers
+//   consumers
 // - No instruction between P1 and P2 reads or writes F
 //
 // Apply the following transformation:
 // 1. Find an immediate N' reachable from N1 and N2 via +-1 adjustment
 // 2. Derive CC1' and CC2' such that P1' = (v, N', CC1') and P2' = (v, N', CC2')
-// are
-//    semantically equivalent to the originals
+//    are semantically equivalent to the originals
 // 3. Modify the producers to compare against N'
 // 4. Modify the consumers to test CC1' and CC2', respectively
 //
