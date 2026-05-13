@@ -5564,6 +5564,12 @@ requiresBuiltinLaunderImpl(const ASTContext &Context, QualType Ty,
   if (const auto *Arr = Context.getAsArrayType(Ty))
     Ty = Context.getBaseElementType(Arr);
 
+  if (const auto *AttrTy = getAs<AttributedType>(Ty))
+    Ty = Ty.getModifiedType();
+
+  assert(Ty->isCompleteType() &&
+         "Incomplete types cannot be evaluated for laundering");
+
   const auto *Record = Ty->getAsCXXRecordDecl();
   if (!Record)
     return false;
@@ -5571,9 +5577,6 @@ requiresBuiltinLaunderImpl(const ASTContext &Context, QualType Ty,
   // We've already checked this type, or are in the process of checking it.
   if (!Seen.insert(Record).second)
     return false;
-
-  assert(Record->hasDefinition() &&
-         "Incomplete types should already be diagnosed");
 
   if (Record->isDynamicClass())
     return true;
