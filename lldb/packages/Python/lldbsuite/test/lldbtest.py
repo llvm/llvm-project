@@ -434,6 +434,16 @@ class _LocalProcess(_BaseProcess):
 
         stdout = kwargs.pop("stdout", DEVNULL if not self._trace_on else None)
         stderr = kwargs.pop("stderr", None)
+        # This works around a bug in the macOS job control code where
+        # a supurious SIGHUP is sent to the the process group of our
+        # spawned subprocess when it is shutting down.
+        # While this SIGHUP doesn't cause any issues for our subprocess,
+        # it does reach the LIT process and stops the test suite run
+        # early.
+        # This parameter forces the spawned process into a new process
+        # group which prevents the supurious SIGHUP from reaching LIT.
+        # We don't
+        kwargs.setdefault("start_new_session", True)
 
         self._proc = Popen(
             [executable] + args,

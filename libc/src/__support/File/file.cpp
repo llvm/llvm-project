@@ -170,7 +170,7 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
 
     FileIOResult result =
         platform_write(this, remainder.data(), remainder.size());
-    size_t bytes_written = result.value;
+    bytes_written = result.value;
 
     // If less bytes were written than expected, then an error occurred. Return
     // the number of bytes that have been written from |data|.
@@ -590,8 +590,10 @@ FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
     auto write_res = write_unlocked_impl(buffer, char_size);
     if (write_res.has_error())
       return {written, write_res.error};
-    if (write_res.value < 1)
-      return {written, 0};
+    if (write_res.value < char_size) {
+      err = true;
+      return {written, EIO};
+    }
     ++written;
   }
   return {written, 0};
@@ -658,8 +660,8 @@ wint_t File::ungetwc_unlocked(wint_t wc) {
     break;
   }
 
-  char buf[4];
-  auto result = internal::wcrtomb(buf, static_cast<wchar_t>(wc), &mbstate);
+  char mb_buf[4];
+  auto result = internal::wcrtomb(mb_buf, static_cast<wchar_t>(wc), &mbstate);
   if (!result.has_value())
     return WEOF;
 
@@ -670,7 +672,7 @@ wint_t File::ungetwc_unlocked(wint_t wc) {
       return WEOF;
 
     for (size_t i = 0; i < n; ++i)
-      this->buf[i] = static_cast<uint8_t>(buf[i]);
+      buf[i] = static_cast<uint8_t>(mb_buf[i]);
 
     read_limit = n;
     pos = 0;
@@ -679,7 +681,7 @@ wint_t File::ungetwc_unlocked(wint_t wc) {
       return WEOF;
     pos -= n;
     for (size_t i = 0; i < n; ++i)
-      this->buf[pos + i] = static_cast<uint8_t>(buf[i]);
+      buf[pos + i] = static_cast<uint8_t>(mb_buf[i]);
   }
   eof = false;
   err = false;

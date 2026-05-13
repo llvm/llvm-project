@@ -31,7 +31,7 @@ body: |
   bb.0:
 
     ; GCN-LABEL: name: test_fconstant_s16
-    ; GCN: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
+    ; GCN: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
     ; GCN-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
     ; GCN-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s16) = G_FCONSTANT half 1.0

@@ -29,6 +29,8 @@ namespace llvm {
 void initializePass1Pass(PassRegistry &);
 void initializePass2Pass(PassRegistry &);
 
+} // namespace llvm
+
 namespace {
 struct Pass1 : public ModulePass {
   static char ID;
@@ -56,7 +58,6 @@ public:
 };
 char Pass2::ID;
 } // namespace
-} // namespace llvm
 
 INITIALIZE_PASS(Pass1, "Pass1", "Pass1", false, false)
 INITIALIZE_PASS(Pass2, "Pass2", "Pass2", false, false)
@@ -75,8 +76,8 @@ TEST(TimePassesTest, LegacyCustomOut) {
 
   // Setup pass manager
   legacy::PassManager PM1;
-  PM1.add(new llvm::Pass1());
-  PM1.add(new llvm::Pass2());
+  PM1.add(new Pass1());
+  PM1.add(new Pass2());
 
   // Enable time-passes and run passes.
   TimePassesIsEnabled = true;
@@ -100,7 +101,7 @@ TEST(TimePassesTest, LegacyCustomOut) {
 
   // Now run just a single pass to populate timers again.
   legacy::PassManager PM2;
-  PM2.add(new llvm::Pass2());
+  PM2.add(new Pass2());
   PM2.run(M);
 
   // Generate report again.

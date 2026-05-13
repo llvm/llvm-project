@@ -57,10 +57,10 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericAArch64:
   case TargetCXXABI::AppleARM64:
+  case TargetCXXABI::GenericARM:
     return CreateCIRGenItaniumCXXABI(cgm);
 
   case TargetCXXABI::Fuchsia:
-  case TargetCXXABI::GenericARM:
   case TargetCXXABI::iOS:
   case TargetCXXABI::WatchOS:
   case TargetCXXABI::GenericMIPS:
@@ -465,11 +465,19 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
+  // Weak references don't produce any output by themselves.
   if (global->hasAttr<WeakRefAttr>())
-    errorNYI(global->getSourceRange(), "emitGlobal: WeakRefAttr");
+    return;
 
-  if (global->hasAttr<AliasAttr>())
-    errorNYI(global->getSourceRange(), "emitGlobal: AliasAttr");
+  // If this is an alias definition (which otherwise looks like a declaration)
+  // emit it now.
+  if (global->hasAttr<AliasAttr>()) {
+    // Classic codegen calls shouldSkipAliasEmission here to skip alias
+    // emission for OpenMP target device and CUDA configurations.
+    assert(!cir::MissingFeatures::shouldSkipAliasEmission());
+    emitAliasDefinition(gd);
+    return;
+  }
 
   // If this is CUDA, be selective about which declarations we emit.
   // Non-constexpr non-lambda implicit host device functions are not emitted
@@ -1152,11 +1160,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
     setLinkageForGV(gv, d);
 
-    if (d->getTLSKind()) {
-      if (d->getTLSKind() == VarDecl::TLS_Dynamic)
-        errorNYI(d->getSourceRange(), "getOrCreateCIRGlobal: TLS dynamic");
+    if (d->getTLSKind())
       setTLSMode(gv, *d);
-    }
 
     setGVProperties(gv, d);
 
@@ -1500,7 +1505,8 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   setNonAliasAttributes(vd, gv);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  if (vd->getTLSKind() && !vd->isStaticLocal())
+    setTLSMode(gv, *vd);
 
   maybeSetTrivialComdat(*vd, gv);
 
@@ -1929,8 +1935,45 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
       builder.setInsertionPoint(noProtoCallOp);
 
       // Patch call type with the real function type.
-      cir::CallOp realCallOp = builder.createCallOp(
-          noProtoCallOp.getLoc(), newFn, noProtoCallOp.getOperands());
+      cir::FuncType newFnType = newFn.getFunctionType();
+      mlir::OperandRange callOperands = noProtoCallOp.getOperands();
+      bool returnTypeMatches =
+          newFnType.hasVoidReturn()
+              ? noProtoCallOp.getNumResults() == 0
+              : noProtoCallOp.getNumResults() == 1 &&
+                    noProtoCallOp.getResultTypes().front() ==
+                        newFnType.getReturnType();
+      bool typesMatch = !newFn.getNoProto() && returnTypeMatches &&
+                        callOperands.size() == newFnType.getNumInputs();
+      for (unsigned i = 0, e = newFnType.getNumInputs(); typesMatch && i != e;
+           ++i) {
+        if (callOperands[i].getType() != newFnType.getInput(i))
+          typesMatch = false;
+      }
+
+      cir::CallOp realCallOp;
+      if (typesMatch) {
+        // Patch call type with the real function type.
+        realCallOp =
+            builder.createCallOp(noProtoCallOp.getLoc(), newFn, callOperands);
+      } else {
+        // Build an indirect call whose function-pointer signature matches
+        // the existing call site.
+        cir::FuncType origFnType = oldFn.getFunctionType();
+        cir::FuncType callFnType =
+            origFnType.isVarArg()
+                ? cir::FuncType::get(origFnType.getInputs(),
+                                     origFnType.getReturnType(),
+                                     /*isVarArg=*/false)
+                : origFnType;
+        mlir::Value addr = cir::GetGlobalOp::create(
+            builder, noProtoCallOp.getLoc(), cir::PointerType::get(newFnType),
+            newFn.getSymName());
+        mlir::Value casted =
+            builder.createBitcast(addr, cir::PointerType::get(callFnType));
+        realCallOp = builder.createIndirectCallOp(
+            noProtoCallOp.getLoc(), casted, callFnType, callOperands);
+      }
 
       // Replace old no proto call with fixed call.
       noProtoCallOp.replaceAllUsesWith(realCallOp);
@@ -2766,6 +2809,13 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
 
   auto global = cast<cir::GlobalOp>(op);
   global.setTlsModel(tlm);
+
+  // For namespace-scope dyanmic TLS we need to set the wrapper, int, or guard
+  // info.
+  if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
+    return;
+
+  setGlobalTlsReferences(d, global);
 }
 
 void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
@@ -3374,8 +3424,88 @@ void CIRGenModule::release() {
 
   emitLLVMUsed();
 
+  // Classic codegen calls `checkAliases` here to validate any alias
+  // definitions emitted during codegen.
+  assert(!cir::MissingFeatures::checkAliases());
+
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
+}
+
+void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
+  const auto *d = cast<ValueDecl>(gd.getDecl());
+  const AliasAttr *aa = d->getAttr<AliasAttr>();
+  assert(aa && "Not an alias?");
+
+  StringRef mangledName = getMangledName(gd);
+
+  if (aa->getAliasee() == mangledName) {
+    diags.Report(aa->getLocation(), diag::err_cyclic_alias) << 0;
+    return;
+  }
+
+  // If there is a definition in the module, then it wins over the alias.
+  // This is dubious, but allow it to be safe. Just ignore the alias.
+  mlir::Operation *entry = getGlobalValue(mangledName);
+  if (entry) {
+    auto entryGV = mlir::dyn_cast<cir::CIRGlobalValueInterface>(entry);
+    if (entryGV && entryGV.isDefinition())
+      return;
+  }
+
+  // Classic codegen pushes the alias onto an `Aliases` list at this point so
+  // that `checkAliases` can later validate the alias and recover on error.
+  assert(!cir::MissingFeatures::checkAliases());
+
+  mlir::Location loc = getLoc(d->getSourceRange());
+  bool isFunction = isa<FunctionDecl>(d);
+
+  // Get the linkage and the type of the alias.
+  mlir::Type declTy;
+  cir::GlobalLinkageKind linkage;
+  if (isFunction) {
+    declTy = getTypes().getFunctionType(gd);
+    linkage = getFunctionLinkage(gd);
+  } else {
+    declTy = getTypes().convertTypeForMem(d->getType());
+    const auto *vd = cast<VarDecl>(d);
+    linkage = getCIRLinkageVarDefinition(vd);
+  }
+
+  // Aliases that target weak symbols must themselves be marked weak.
+  if (d->hasAttr<WeakAttr>() || d->hasAttr<WeakRefAttr>() ||
+      d->isWeakImported())
+    linkage = cir::GlobalLinkageKind::WeakAnyLinkage;
+
+  // Create the alias op. If there is an existing declaration with the same
+  // name, erase it: any references to it via flat symbol reference will
+  // automatically resolve to the new alias.
+  if (entry) {
+    eraseGlobalSymbol(entry);
+    entry->erase();
+  }
+
+  // Aliases are always definitions, so the MLIR visibility should match the
+  // linkage rather than defaulting to private.
+  mlir::SymbolTable::Visibility visibility =
+      getMLIRVisibilityFromCIRLinkage(linkage);
+
+  // TODO(cir): Make GlobalAlias a separate op.
+  cir::CIRGlobalValueInterface alias =
+      isFunction
+          ? mlir::cast<cir::CIRGlobalValueInterface>(
+                createCIRFunction(loc, mangledName,
+                                  mlir::cast<cir::FuncType>(declTy),
+                                  cast<FunctionDecl>(d))
+                    .getOperation())
+          : mlir::cast<cir::CIRGlobalValueInterface>(
+                createGlobalOp(*this, loc, mangledName, declTy).getOperation());
+  alias.setAliasee(aa->getAliasee());
+  alias.setLinkage(linkage);
+  mlir::SymbolTable::setSymbolVisibility(alias, visibility);
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  setCommonAttributes(gd, alias);
+  assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
 void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
