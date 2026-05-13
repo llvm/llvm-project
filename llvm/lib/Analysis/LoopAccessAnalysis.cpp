@@ -783,12 +783,6 @@ static std::optional<StencilDecomposition>
 decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   StencilDecomposition D;
 
-  auto ToInt64 = [](const APInt &V) -> std::optional<int64_t> {
-    if (V.getSignificantBits() > 64)
-      return std::nullopt;
-    return V.getSExtValue();
-  };
-
   // Collect top-level additive terms.
   SmallVector<const SCEV *, 4> Terms;
   if (auto *Add = dyn_cast<SCEVAddExpr>(Expr))
@@ -800,7 +794,7 @@ decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   const SCEV *Stride;
   for (const SCEV *Term : Terms) {
     if (match(Term, m_SCEVConstant(C))) {
-      auto V = ToInt64(C->getAPInt());
+      auto V = C->getAPInt().trySExtValue();
       if (!V)
         return std::nullopt;
       D.Constant += *V;
@@ -808,7 +802,7 @@ decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
       // Canonical 2-operand pattern (constant * loop-invariant).
       if (!SE.isLoopInvariant(Stride, &L))
         return std::nullopt;
-      auto V = ToInt64(C->getAPInt());
+      auto V = C->getAPInt().trySExtValue();
       if (!V)
         return std::nullopt;
       D.Coefficients[Stride] += *V;
