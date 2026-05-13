@@ -810,7 +810,7 @@ int main(int argc, char *argv[]) {
     }
     llvm::outs() << llvm::formatv("{0}\n",
                                   llvm::json::Value(std::move(*arr_or_err)));
-    return EXIT_FAILURE;
+    return EXIT_SUCCESS;
   }
 
   ReplMode default_repl_mode = ReplMode::Auto;
