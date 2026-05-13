@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../AST/ByteCode/Context.h"
 #include "ASTCommon.h"
 #include "ASTReaderInternals.h"
 #include "clang/AST/ASTConcept.h"
@@ -1702,6 +1703,13 @@ RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
 }
 
 void ASTDeclReader::ReadVarDeclInit(VarDecl *VD) {
+#if 0
+  std::string Result;
+  llvm::raw_string_ostream SS(Result);
+  VD->printQualifiedName(SS);
+  llvm::errs() << Result << '\n';
+#endif
+
   if (uint64_t Val = Record.readInt()) {
     EvaluatedStmt *Eval = VD->ensureEvaluatedStmt();
     Eval->HasConstantInitialization = (Val & 2) != 0;
@@ -1713,6 +1721,19 @@ void ASTDeclReader::ReadVarDeclInit(VarDecl *VD) {
       Eval->Evaluated = Record.readAPValue();
       if (Eval->Evaluated.needsCleanup())
         Reader.getContext().addDestruction(&Eval->Evaluated);
+
+      // The bytecode interpreter has its own internal representation of global
+      // variables. Notify it that we just deserialized one and what its value
+      // is. This is important because this declaration might initialize a
+      // previously declared global (e.g. because that one is extern).
+      //
+      // HACK: The isa<> check below is just to make a test case work.
+      if (Reader.getContext().getLangOpts().EnableNewConstInterp &&
+          VD->getPreviousDecl() != VD && VD->getPreviousDecl() != nullptr &&
+          !isa<VarTemplateSpecializationDecl>(VD)) {
+        Reader.getContext().getInterpContext().registerRedecl(VD,
+                                                              Eval->Evaluated);
+      }
     }
 
     // Store the offset of the initializer. Don't deserialize it yet: it might

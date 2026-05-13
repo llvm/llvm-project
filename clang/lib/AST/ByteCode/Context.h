@@ -67,6 +67,7 @@ public:
   /// Evaluates a toplevel initializer.
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
                              APValue &Result);
+  void registerRedecl(const VarDecl *VD, const APValue &V);
 
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);

@@ -21,6 +21,10 @@ EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          InterpStack &Stk)
     : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
 
+EvalEmitter::EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+                         InterpStack &Stk)
+    : Ctx(Ctx), P(P), S(Status, P, Stk, Ctx, this), EvalResult(&Ctx) {}
+
 EvalEmitter::~EvalEmitter() {
   for (auto &V : Locals) {
     Block *B = reinterpret_cast<Block *>(V.get());
