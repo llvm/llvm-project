@@ -37,7 +37,7 @@ public:
   uint64_t sdiv() const { return this->sdivVal; }
 
   // Returns the union (computed separately for signed and unsigned bounds)
-  // for this range and `other`.
+  // for this divisibility and `other`.
   ConstantIntDivisibility getUnion(const ConstantIntDivisibility &other) const {
     return ConstantIntDivisibility(
         /*udiv=*/std::gcd(udiv(), other.udiv()),
@@ -64,7 +64,7 @@ class IntegerDivisibility {
 public:
   IntegerDivisibility(ConstantIntDivisibility value)
       : value(std::move(value)) {}
-  IntegerDivisibility(
+  explicit IntegerDivisibility(
       std::optional<ConstantIntDivisibility> value = std::nullopt)
       : value(std::move(value)) {}
   // Gets the minimum divisibility of 1 that is used to indicate that the value
