@@ -23,32 +23,6 @@ namespace llvm::omp::target::plugin {
 class L0DeviceTy;
 class L0ProgramTy;
 
-/// Loop descriptor.
-struct TgtLoopDescTy {
-  int64_t Lb = 0;     // The lower bound of the i-th loop.
-  int64_t Ub = 0;     // The upper bound of the i-th loop.
-  int64_t Stride = 0; // The stride of the i-th loop.
-
-  bool operator==(const TgtLoopDescTy &other) const {
-    return Lb == other.Lb && Ub == other.Ub && Stride == other.Stride;
-  }
-};
-
-struct TgtNDRangeDescTy {
-  int32_t NumLoops = 0;      // Number of loops/dimensions.
-  int32_t DistributeDim = 0; // Dimensions lower than this one
-                             // must end up in one WG.
-  TgtLoopDescTy Levels[3];   // Up to 3 loops.
-
-  bool operator==(const TgtNDRangeDescTy &other) const {
-    return NumLoops == other.NumLoops && DistributeDim == other.DistributeDim &&
-           std::equal(Levels, Levels + 3, other.Levels);
-  }
-  bool operator!=(const TgtNDRangeDescTy &other) const {
-    return !(*this == other);
-  }
-};
-
 /// Forward declaration.
 struct L0LaunchEnvTy;
 
@@ -59,11 +33,8 @@ struct KernelPropertiesTy {
   uint32_t MaxThreadGroupSize = 0;
   uint32_t NumKernelArgs = 0;
   std::unique_ptr<uint32_t[]> ArgSizes;
-
-  /// Cached parameters used in the previous launch.
   ze_kernel_indirect_access_flags_t IndirectAccessFlags =
       std::numeric_limits<decltype(IndirectAccessFlags)>::max();
-
   std::mutex Mtx;
 };
 
