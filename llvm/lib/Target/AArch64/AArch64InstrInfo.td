@@ -5976,6 +5976,21 @@ let Predicates = [HasFRInt3264] in {
   defm FRINT64X : FRIntNNTVector<1, 1, "frint64x", int_aarch64_neon_frint64x>;
 } // HasFRInt3264
 
+let Predicates = [HasFRInt3264] in {
+  def : Pat<(v2f32 (sint_to_fp (v2i32 (fp_to_sint v2f32:$Rn)))),
+                      (FRINT32Zv2f32 V64:$Rn)>;
+  def : Pat<(v4f32 (sint_to_fp (v4i32 (fp_to_sint v4f32:$Rn)))),
+                      (FRINT32Zv4f32 V128:$Rn)>;
+  def : Pat<(v2f32 (sint_to_fp (v2i64 (fp_to_sint v2f32:$Rn)))),
+                      (FRINT64Zv2f32 V64:$Rn)>;
+  def : Pat<(v4f32 (sint_to_fp (v4i64 (fp_to_sint v4f32:$Rn)))),
+                      (FRINT64Zv4f32 V128:$Rn)>;
+  def : Pat<(v2f64 (sint_to_fp (v2i32 (fp_to_sint v2f64:$Rn)))),
+                      (FRINT32Zv2f64 V128:$Rn)>;
+  def : Pat<(v2f64 (sint_to_fp (v2i64 (fp_to_sint v2f64:$Rn)))),
+                      (FRINT64Zv2f64 V128:$Rn)>;
+}
+
 defm FRSQRTE: SIMDTwoVectorFP<1, 1, 0b11101, "frsqrte", int_aarch64_neon_frsqrte>;
 defm FSQRT  : SIMDTwoVectorFP<1, 1, 0b11111, "fsqrt", any_fsqrt>;
 defm NEG    : SIMDTwoVectorBHSD<1, 0b01011, "neg",
