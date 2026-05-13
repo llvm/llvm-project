@@ -33,33 +33,8 @@ class CompilerInstanceWithContext;
 
 namespace dependencies {
 
+class DependencyConsumer;
 class DependencyScanningWorkerFilesystem;
-
-class DependencyConsumer {
-public:
-  virtual ~DependencyConsumer() {}
-
-  virtual void handleProvidedAndRequiredStdCXXModules(
-      std::optional<P1689ModuleInfo> Provided,
-      std::vector<P1689ModuleInfo> Requires) {}
-
-  virtual void handleBuildCommand(Command Cmd) {}
-
-  virtual void
-  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
-
-  virtual void handleFileDependency(StringRef Filename) = 0;
-
-  virtual void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) = 0;
-
-  virtual void handleModuleDependency(ModuleDeps MD) = 0;
-
-  virtual void handleDirectModuleDependency(ModuleID MD) = 0;
-
-  virtual void handleVisibleModule(std::string ModuleName) = 0;
-
-  virtual void handleContextHash(std::string Hash) = 0;
-};
 
 /// An individual dependency scanning worker that is able to run on its own
 /// thread.
