@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 
-#include "mlir/Dialect/AMDGPU/AMDGPUIRUtils.h"
+#include "mlir/Dialect/AMDGPU/Utils/MemorySpaceUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
@@ -157,7 +157,8 @@ LogicalResult FatRawBufferCastOp::verify() {
 template <typename T>
 static LogicalResult verifyRawBufferOp(T &op) {
   MemRefType bufferType = llvm::cast<MemRefType>(op.getMemref().getType());
-  bool isGlobal = isGlobalMemorySpace(bufferType.getMemorySpace());
+  bool isGlobal =
+      isGlobalMemorySpace(bufferType.getMemorySpace(), /*allowFlat=*/true);
 
   if (!isGlobal)
     return op.emitOpError(
@@ -956,7 +957,7 @@ LogicalResult GatherToLDSOp::verify() {
     return emitOpError(
         "Transfering type size must be 8, 16, 32, 96 or 128 bits");
 
-  if (!isGlobalMemorySpace(srcType.getMemorySpace()) &&
+  if (!isGlobalMemorySpace(srcType.getMemorySpace(), /*allowFlat=*/true) &&
       !isFatRawBufferMemorySpace(srcType.getMemorySpace()))
     return emitOpError(
         "source memory address space must be global or fat raw buffer");
@@ -1027,7 +1028,7 @@ LogicalResult GlobalLoadAsyncToLDSOp::verify() {
   if (!llvm::is_contained({8, 32, 64, 128}, transferSize))
     return emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
 
-  if (!isGlobalMemorySpace(srcType.getMemorySpace()))
+  if (!isGlobalMemorySpace(srcType.getMemorySpace(), /*allowFlat=*/false))
     return emitOpError("source memory address space must be global");
 
   if (!isWorkgroupMemorySpace(dstType.getMemorySpace()))
@@ -1112,7 +1113,7 @@ LogicalResult GlobalTransposeLoadOp::verify() {
           verifyIndexCount(*this, "source", srcType, getSrcIndices().size())))
     return failure();
 
-  if (!isGlobalMemorySpace(srcType.getMemorySpace()))
+  if (!isGlobalMemorySpace(srcType.getMemorySpace(), /*allowFlat=*/false))
     return emitOpError("source memory address space must be Global");
 
   auto resultType = cast<VectorType>(getType());
@@ -1158,7 +1159,7 @@ static LogicalResult verifyBase(BaseOp op) {
   if (!isWorkgroupMemorySpace(ldsType.getMemorySpace()))
     return op.emitOpError(
         "lds memref must have workgroup address space attribute.");
-  if (!isGlobalMemorySpace(globalType.getMemorySpace()))
+  if (!isGlobalMemorySpace(globalType.getMemorySpace(), /*allowFlat=*/false))
     return op.emitOpError(
         "global memref must have global address space attribute.");
 
@@ -1495,7 +1496,7 @@ LogicalResult GlobalPrefetchOp::verify() {
   Attribute memSpace = src.getMemorySpace();
   if (!memSpace)
     return this->emitOpError("the source must have address space attribute");
-  if (!isGlobalMemorySpace(memSpace))
+  if (!isGlobalMemorySpace(memSpace, /*allowFlat=*/false))
     return this->emitOpError("the source must reside in global address space");
 
   const LoadTemporalHint temporalHint = getTemporalHint();

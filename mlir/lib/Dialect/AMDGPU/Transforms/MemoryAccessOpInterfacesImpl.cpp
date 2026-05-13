@@ -11,8 +11,8 @@
 
 #include "mlir/Dialect/AMDGPU/Transforms/MemoryAccessOpInterfacesImpl.h"
 
-#include "mlir/Dialect/AMDGPU/AMDGPUIRUtils.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/Utils/MemorySpaceUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
