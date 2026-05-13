@@ -1,15 +1,21 @@
-//===-- is_assignable type_traits -------------------------------*- C++ -*-===//
+//===------------------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file contains a free-standing implementation of is_assignable
+// type trait.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_ASSIGNABLE_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_ASSIGNABLE_H
 
-#include "src/__support/CPP/type_traits/add_rvalue_reference.h"
 #include "src/__support/CPP/type_traits/integral_constant.h"
+#include "src/__support/CPP/utility/declval.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
@@ -18,7 +24,7 @@ namespace cpp {
 
 namespace is_assignable_detail {
 
-#if LIBC_HAS_BUITLIN_IS_ASSIGNABLE
+#if LIBC_HAS_BUILTIN_IS_ASSIGNABLE
 
 template <typename T, typename U>
 struct is_assignable_impl : public bool_constant<__is_assignable(T, U)> {};
@@ -26,29 +32,26 @@ struct is_assignable_impl : public bool_constant<__is_assignable(T, U)> {};
 #else
 // Fallback SFINAE implementation for GCC 7 and older toolchains
 
-// Reuse declval from is_constructible or declare locally
-template <typename T> typename add_rvalue_reference<T>::type declval() noexcept;
-
 template <typename T, typename U> struct is_assignable_impl {
 private:
   template <typename T1, typename U1>
-  static auto test(int)
+  LIBC_INLINE static auto test(int)
       -> decltype(declval<T1>() = declval<U1>(), bool_constant<true>());
 
-  template <typename, typename> static auto test(...) -> bool_constant<false>;
+  template <typename, typename>
+  LIBC_INLINE static auto test(...) -> bool_constant<false>;
 
 public:
   using type = decltype(test<T, U>(0));
 };
 
-#endif // LIBC_HAS_BUITLIN_IS_ASSIGNABLE
+#endif // LIBC_HAS_BUILTIN_IS_ASSIGNABLE
 
 } // namespace is_assignable_detail
 
 // is_assignable
 template <typename T, typename U>
-struct is_assignable
-    : public is_assignable_detail::is_assignable_impl<T, U>::type {};
+struct is_assignable : public is_assignable_detail::is_assignable_impl<T, U> {};
 
 template <typename T, typename U>
 LIBC_INLINE_VAR constexpr bool is_assignable_v = is_assignable<T, U>::value;

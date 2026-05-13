@@ -1,16 +1,21 @@
-//===-- is_constructible type_traits ----------------------------*- C++ -*-===//
+//===------------------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file contains a free-standing implementation of is_constructible
+// type trait.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONSTRUCTIBLE_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONSTRUCTIBLE_H
 
-#include "src/__support/CPP/type_traits/add_lvalue_reference.h"
-#include "src/__support/CPP/type_traits/add_rvalue_reference.h"
 #include "src/__support/CPP/type_traits/integral_constant.h"
+#include "src/__support/CPP/utility/declval.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
@@ -19,7 +24,7 @@ namespace cpp {
 
 namespace is_contructible_detail {
 
-#if LIBC_HAS_BUITLIN_IS_CONSTRUCTIBLE
+#if LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE
 
 template <typename T, typename... Args>
 struct is_constructible_impl
@@ -27,8 +32,6 @@ struct is_constructible_impl
 
 #else
 // Fallback SFINAE implementation for GCC 7 and older toolchains
-
-template <typename T> typename add_rvalue_reference_t<T>::type declval();
 
 template <typename T, typename... Args> struct is_constructible_impl {
 private:
@@ -43,13 +46,13 @@ public:
   using type = decltype(test<T, Args...>(0));
 };
 
-#endif // LIBC_HAS_BUITLIN_IS_CONSTRUCTIBLE
+#endif // LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE
 
 } // namespace is_contructible_detail
 
 template <typename T, typename... Args>
 struct is_constructible
-    : public is_contructible_detail::is_constructible_impl<T, Args...>::type {};
+    : public is_contructible_detail::is_constructible_impl<T, Args...> {};
 
 template <typename T, typename... Args>
 LIBC_INLINE_VAR constexpr bool is_constructible_v =
