@@ -13658,29 +13658,27 @@ define <2 x bfloat> @flat_atomic_fmax_v2bf16_saddr_rtn(ptr inreg %ptr, <2 x bflo
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, 0
+; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
-; GFX1250-NEXT:    flat_load_b32 v0, v2, s[0:1] offset:40
+; GFX1250-NEXT:    flat_load_b32 v1, v2, s[0:1] offset:40
 ; GFX1250-NEXT:  .LBB130_1: ; %atomicrmw.start
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v5, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v5, v5
-; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v0, v1
+; GFX1250-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v5, v0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
+; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
+; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
 ; GFX1250-NEXT:    s_or_b32 s2, vcc_lo, s2
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
 ; GFX1250-NEXT:    s_cbranch_execnz .LBB130_1
 ; GFX1250-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX950-LABEL: flat_atomic_fmax_v2bf16_saddr_rtn:
@@ -13720,22 +13718,19 @@ define void @flat_atomic_fmax_v2bf16_saddr_nortn(ptr inreg %ptr, <2 x bfloat> %d
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v0, v0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
-; GFX1250-NEXT:    flat_load_b32 v1, v2, s[0:1] offset:40
+; GFX1250-NEXT:    flat_load_b32 v3, v1, s[0:1] offset:40
 ; GFX1250-NEXT:  .LBB131_1: ; %atomicrmw.start
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v1, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v3
+; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v3, v0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] offset:40 th:TH_ATOMIC_RETURN
+; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v2, v1, v[2:3], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX1250-NEXT:    s_or_b32 s2, vcc_lo, s2
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
@@ -13781,29 +13776,27 @@ define <2 x bfloat> @flat_atomic_fmin_v2bf16_saddr_rtn(ptr inreg %ptr, <2 x bflo
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, 0
+; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
-; GFX1250-NEXT:    flat_load_b32 v0, v2, s[0:1] offset:40
+; GFX1250-NEXT:    flat_load_b32 v1, v2, s[0:1] offset:40
 ; GFX1250-NEXT:  .LBB132_1: ; %atomicrmw.start
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v5, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v5, v5
-; GFX1250-NEXT:    v_pk_min_num_bf16 v4, v0, v1
+; GFX1250-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_pk_min_num_bf16 v4, v5, v0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
+; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
+; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
 ; GFX1250-NEXT:    s_or_b32 s2, vcc_lo, s2
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
 ; GFX1250-NEXT:    s_cbranch_execnz .LBB132_1
 ; GFX1250-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX950-LABEL: flat_atomic_fmin_v2bf16_saddr_rtn:
@@ -13843,22 +13836,19 @@ define void @flat_atomic_fmin_v2bf16_saddr_nortn(ptr inreg %ptr, <2 x bfloat> %d
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v0, v0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
-; GFX1250-NEXT:    flat_load_b32 v1, v2, s[0:1] offset:40
+; GFX1250-NEXT:    flat_load_b32 v3, v1, s[0:1] offset:40
 ; GFX1250-NEXT:  .LBB133_1: ; %atomicrmw.start
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v1, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, v3
+; GFX1250-NEXT:    v_pk_min_num_bf16 v2, v3, v0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] offset:40 th:TH_ATOMIC_RETURN
+; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v2, v1, v[2:3], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
-; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX1250-NEXT:    s_or_b32 s2, vcc_lo, s2
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
