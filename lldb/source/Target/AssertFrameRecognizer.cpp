@@ -16,15 +16,15 @@ using namespace lldb_private;
 namespace lldb_private {
 /// Fetches the abort frame location depending on the current platform.
 ///
-/// \param[in] os
-///    The target's os type.
+/// \param[in] triple
+///    The target's triple.
 /// \param[in,out] location
 ///    The struct that will contain the abort module spec and symbol names.
 /// \return
 ///    \b true, if the platform is supported
 ///    \b false, otherwise.
-bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
-  switch (os) {
+bool GetAbortLocation(const llvm::Triple &triple, SymbolLocation &location) {
+  switch (triple.getOS()) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
   case llvm::Triple::IOS:
@@ -45,6 +45,12 @@ bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
     location.symbols_are_regex = true;
     break;
   case llvm::Triple::Win32:
+    if (!triple.isWindowsMSVCEnvironment()) {
+      Log *log = GetLog(LLDBLog::Unwind);
+      LLDB_LOG(log, "AssertFrameRecognizer::GetAbortLocation Unsupported "
+                    "Windows environment");
+      return false;
+    }
     // Windows MSVC CRT can be statically or dynamically linked. With dynamic
     // linking, abort lives in ucrtbase.dll. With static linking it's embedded
     // in the executable.
@@ -62,15 +68,15 @@ bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
 
 /// Fetches the assert frame location depending on the current platform.
 ///
-/// \param[in] os
-///    The target's os type.
+/// \param[in] triple
+///    The target's triple.
 /// \param[in,out] location
 ///    The struct that will contain the assert module spec and symbol names.
 /// \return
 ///    \b true, if the platform is supported
 ///    \b false, otherwise.
-bool GetAssertLocation(llvm::Triple::OSType os, SymbolLocation &location) {
-  switch (os) {
+bool GetAssertLocation(const llvm::Triple &triple, SymbolLocation &location) {
+  switch (triple.getOS()) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
   case llvm::Triple::IOS:
@@ -88,6 +94,12 @@ bool GetAssertLocation(llvm::Triple::OSType os, SymbolLocation &location) {
     location.symbols.push_back(ConstString("__GI___assert_fail"));
     break;
   case llvm::Triple::Win32:
+    if (!triple.isWindowsMSVCEnvironment()) {
+      Log *log = GetLog(LLDBLog::Unwind);
+      LLDB_LOG(log, "AssertFrameRecognizer::GetAssertLocation Unsupported "
+                    "Windows environment");
+      return false;
+    }
     // See comment in GetAbortLocation for why we skip the module check.
     location.symbols.push_back(ConstString("_wassert"));
     break;
@@ -102,10 +114,10 @@ bool GetAssertLocation(llvm::Triple::OSType os, SymbolLocation &location) {
 
 void RegisterAssertFrameRecognizer(Process *process) {
   Target &target = process->GetTarget();
-  llvm::Triple::OSType os = target.GetArchitecture().GetTriple().getOS();
+  const llvm::Triple &triple = target.GetArchitecture().GetTriple();
   SymbolLocation location;
 
-  if (!GetAbortLocation(os, location))
+  if (!GetAbortLocation(triple, location))
     return;
 
   if (!location.symbols_are_regex) {
@@ -147,10 +159,10 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   ThreadSP thread_sp = frame_sp->GetThread();
   ProcessSP process_sp = thread_sp->GetProcess();
   Target &target = process_sp->GetTarget();
-  llvm::Triple::OSType os = target.GetArchitecture().GetTriple().getOS();
+  const llvm::Triple &triple = target.GetArchitecture().GetTriple();
   SymbolLocation location;
 
-  if (!GetAssertLocation(os, location))
+  if (!GetAssertLocation(triple, location))
     return RecognizedStackFrameSP();
 
   const uint32_t frames_to_fetch = 6;
@@ -173,7 +185,9 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
 
     if (!sym_ctx.module_sp)
       continue;
-    if (location.module_spec.GetFilename() &&
+    // On Windows the abort/assert symbols may live in the executable (static
+    // CRT) or a CRT DLL, so skip the module check there.
+    if (!triple.isOSWindows() &&
         !sym_ctx.module_sp->GetFileSpec().FileEquals(location.module_spec))
       continue;
 
