@@ -60,20 +60,21 @@ namespace math {
 
 namespace sqrtf128_internal {
 
-template <typename T, typename U = T> LIBC_INLINE constexpr T prod_hi(T, U);
+template <typename T, typename U = T>
+LIBC_INLINE LIBC_CONSTEXPR T prod_hi(T, U);
 
 // Get high part of integer multiplications.
 // Use template to prevent implicit conversion.
 template <>
-LIBC_INLINE constexpr uint64_t prod_hi<uint64_t>(uint64_t x, uint64_t y) {
+LIBC_INLINE LIBC_CONSTEXPR uint64_t prod_hi<uint64_t>(uint64_t x, uint64_t y) {
   return static_cast<uint64_t>(
       (static_cast<UInt128>(x) * static_cast<UInt128>(y)) >> 64);
 }
 
 // Get high part of unsigned 128x64 bit multiplication.
 template <>
-LIBC_INLINE constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 x,
-                                                         uint64_t y) {
+LIBC_INLINE LIBC_CONSTEXPR UInt128 prod_hi<UInt128, uint64_t>(UInt128 x,
+                                                              uint64_t y) {
   uint64_t x_lo = static_cast<uint64_t>(x);
   uint64_t x_hi = static_cast<uint64_t>(x >> 64);
   UInt128 xyl = static_cast<UInt128>(x_lo) * static_cast<UInt128>(y);
@@ -83,14 +84,14 @@ LIBC_INLINE constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 x,
 
 // Get high part of signed 64x64 bit multiplication.
 template <>
-LIBC_INLINE constexpr int64_t prod_hi<int64_t>(int64_t x, int64_t y) {
+LIBC_INLINE LIBC_CONSTEXPR int64_t prod_hi<int64_t>(int64_t x, int64_t y) {
   return static_cast<int64_t>(
       (static_cast<Int128>(x) * static_cast<Int128>(y)) >> 64);
 }
 
 // Get high 128-bit part of unsigned 128x128 bit multiplication.
 template <>
-LIBC_INLINE constexpr UInt128 prod_hi<UInt128>(UInt128 x, UInt128 y) {
+LIBC_INLINE LIBC_CONSTEXPR UInt128 prod_hi<UInt128>(UInt128 x, UInt128 y) {
   uint64_t x_lo = static_cast<uint64_t>(x);
   uint64_t x_hi = static_cast<uint64_t>(x >> 64);
   uint64_t y_lo = static_cast<uint64_t>(y);
@@ -107,7 +108,8 @@ LIBC_INLINE constexpr UInt128 prod_hi<UInt128>(UInt128 x, UInt128 y) {
 
 // Get high 128-bit part of mixed sign 128x128 bit multiplication.
 template <>
-LIBC_INLINE constexpr Int128 prod_hi<Int128, UInt128>(Int128 x, UInt128 y) {
+LIBC_INLINE LIBC_CONSTEXPR Int128 prod_hi<Int128, UInt128>(Int128 x,
+                                                           UInt128 y) {
   UInt128 mask = static_cast<UInt128>(x >> 127);
   UInt128 negative_part = y & mask;
   UInt128 prod = prod_hi(static_cast<UInt128>(x), y);
@@ -121,7 +123,8 @@ LIBC_INLINE constexpr Int128 prod_hi<Int128, UInt128>(Int128 x, UInt128 y) {
 //   r1 = r0 - r0 * h / 2
 // which has error bounded by:
 //   |r1 - 1/sqrt(x)| < h^2 / 2.
-LIBC_INLINE constexpr uint64_t rsqrt_newton_raphson(uint64_t m, uint64_t r) {
+LIBC_INLINE LIBC_CONSTEXPR uint64_t rsqrt_newton_raphson(uint64_t m,
+                                                         uint64_t r) {
   uint64_t r2 = prod_hi(r, r);
   // h = r0^2*x - 1.
   int64_t h = static_cast<int64_t>(prod_hi(m, r2) + r2);
@@ -137,7 +140,7 @@ LIBC_INLINE_VAR constexpr uint32_t RSQRT_COEFFS[12] = {
     0x01492449, 0x0066ff7d, 0x001e74a1, 0x000984cc, 0x00049abc, 0x00018340,
 };
 
-LIBC_INLINE constexpr uint64_t rsqrt_approx(uint64_t m) {
+LIBC_INLINE LIBC_CONSTEXPR uint64_t rsqrt_approx(uint64_t m) {
   int64_t x = static_cast<uint64_t>(m) ^ (uint64_t(1) << 63);
   int64_t x_26 = x >> 2;
   int64_t z = x >> 31;
@@ -247,7 +250,7 @@ LIBC_INLINE_VAR constexpr uint32_t RSQRT_COEFFS[64][4] = {
 // natural to round coefficients into 32 bit. The constant coefficient can be
 // rounded to 33 bits since the most significant bit is always 1 and implicitly
 // assumed in the table.
-LIBC_INLINE constexpr uint64_t rsqrt_approx(uint64_t m) {
+LIBC_INLINE LIBC_CONSTEXPR uint64_t rsqrt_approx(uint64_t m) {
   // ULP(m) = 2^-64.
   // Use the top 6 bits as index for looking up polynomial coeffs.
   uint64_t indx = m >> 58;
