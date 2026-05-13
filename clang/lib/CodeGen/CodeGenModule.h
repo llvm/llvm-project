@@ -1544,9 +1544,6 @@ public:
   /// Appends a dependent lib to the appropriate metadata value.
   void AddDependentLib(StringRef Lib);
 
-  /// Process #pragma comment(copyright, ...).
-  void ProcessPragmaCommentCopyright(StringRef Comment, bool isFromASTFile);
-
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
 
   void setFunctionLinkage(GlobalDecl GD, llvm::Function *F) {
@@ -1955,6 +1952,9 @@ private:
   ABIArgInfo convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
                                QualType Type);
 
+  /// Process #pragma comment(copyright, ...).
+  void ProcessPragmaCommentCopyright(StringRef Comment, bool isFromASTFile);
+
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -2139,10 +2139,6 @@ private:
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const ValueDecl *D);
 
-  /// Emit the load-time comment metadata (e.g., from
-  /// #pragma comment(copyright, ...)) for the translation unit.
-  void EmitLoadTimeComment();
-
   /// Determine whether the definition can be emitted eagerly, or should be
   /// delayed until the end of the translation unit. This is relevant for
   /// definitions whose linkage can change, e.g. implicit function instantions
@@ -2172,6 +2168,10 @@ private:
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.
   void emitPFPFieldsWithEvaluatedOffset();
+
+  /// Emit the load-time comment metadata (e.g., from
+  /// #pragma comment(copyright, ...)) for the translation unit.
+  void EmitLoadTimeComment();
 };
 
 }  // end namespace CodeGen
