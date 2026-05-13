@@ -58,9 +58,6 @@ common --incompatible_disable_starlark_host_transitions
 common --incompatible_disable_native_repo_rules
 common --incompatible_autoload_externally=
 
-# Avoid reliance on the legacy `external` directory in runfiles directories
-build --nolegacy_external_runfiles
-
 # Disable network access in sandboxes by default.
 build --sandbox_default_allow_network=false
 
