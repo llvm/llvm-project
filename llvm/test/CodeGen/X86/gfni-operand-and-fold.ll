@@ -89,17 +89,17 @@ define <16 x i8> @test_var_splat_on_const_matrix_nonzero_imm(<16 x i8> %src, i8 
 }
 
 ;; Multi use still shortens dependency chain
-define <16 x i8> @test_const_splat_on_const_matrix_multi_use(<16 x i8> %src) nounwind {
+define <16 x i8> @test_const_splat_on_const_matrix_multi_use(<16 x i8> %src, ptr %sink) nounwind {
 ; CHECK-LABEL: test_const_splat_on_const_matrix_multi_use:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; CHECK-NEXT:    vmovdqa %xmm1, (%rdi)
 ; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,8,4,2,1,0,0,0,0,8,4,2,1,0]
-; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %and = and <16 x i8> %src, splat(i8 15)
+  store <16 x i8> %and, ptr %sink
   %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> <i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128>, i8 0)
-  %xor = xor <16 x i8> %gfni, %and
-  ret <16 x i8> %xor
+  ret <16 x i8> %gfni
 }
 
 ;; Negative test: multi use would generate an additional AND
