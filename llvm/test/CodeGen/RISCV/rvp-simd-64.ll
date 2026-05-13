@@ -1858,7 +1858,7 @@ define <2 x i32> @test_pasubu_w(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i32> @test_non_const_splat_i32(i32 %elt) {
 ; RV32-LABEL: test_non_const_splat_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmv.dws a0, a0
+; RV32-NEXT:    mv a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_non_const_splat_i32:
@@ -1942,7 +1942,7 @@ define <4 x i16> @test_padd_hs_splat_rhs(<4 x i16> %a, i16 %b) {
 define <2 x i32> @test_padd_ws_splat_lhs(<2 x i32> %a, i32 %b) {
 ; RV32-LABEL: test_padd_ws_splat_lhs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmv.dws a2, a2
+; RV32-NEXT:    mv a3, a2
 ; RV32-NEXT:    padd.dw a0, a2, a0
 ; RV32-NEXT:    ret
 ;
@@ -1959,7 +1959,7 @@ define <2 x i32> @test_padd_ws_splat_lhs(<2 x i32> %a, i32 %b) {
 define <2 x i32> @test_padd_ws_splat_rhs(<2 x i32> %a, i32 %b) {
 ; RV32-LABEL: test_padd_ws_splat_rhs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmv.dws a2, a2
+; RV32-NEXT:    mv a3, a2
 ; RV32-NEXT:    padd.dw a0, a0, a2
 ; RV32-NEXT:    ret
 ;
