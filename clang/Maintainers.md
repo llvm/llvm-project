@@ -318,6 +318,9 @@ ekeane@nvidia.com (email), ErichKeane (Phabricator), [erichkeane](https://github
 Alexey Bader \
 alexey.bader@intel.com (email), bader (Phabricator), [bader](https://github.com/bader) (GitHub)
 
+Tom Honermann \
+tom@honermann.net (email), tahonermann (Phabricator), [tahonermann](https://github.com/tahonermann) (GitHub)
+
 ### HLSL conformance
 
 Chris Bieneman \
