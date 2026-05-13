@@ -18,6 +18,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/InstructionListener.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -97,8 +98,13 @@ const DataLayout &Instruction::getDataLayout() const {
 }
 
 void Instruction::setParent(BasicBlock *P) {
-  if (getParent() && getParent()->getParent() != P)
-    getParent()->getParent()->notifyInstructionRemoved(this);
+  if (BasicBlock *OldBB = getParent()) {
+    Function *OldF = OldBB->getParent();
+    Function *NewF = P ? P->getParent() : nullptr;
+    if (OldF && OldF != NewF && OldF->hasInstructionListeners())
+      for (InstructionListener *L : OldF->InstructionListeners)
+        L->instructionRemoved(this);
+  }
   using Base =
       ilist_node_with_parent<Instruction, BasicBlock, ilist_iterator_bits<true>,
                              ilist_parent<BasicBlock>>;

@@ -18,6 +18,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstructionListener.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -196,14 +197,14 @@ BasicBlock::~BasicBlock() {
 }
 
 void BasicBlock::setParent(Function *parent) {
-  // Notify per-function listeners when BB is removed from its parent function.
-  if (!parent && Parent && Parent->hasInstructionListeners()) {
-    for (Instruction &I : *this)
-      Parent->notifyInstructionRemoved(&I);
-  }
-  // Set Parent=parent, updating instruction symtab entries as appropriate.
-  if (Parent != parent)
+  if (Parent != parent) {
+    if (Parent && Parent->hasInstructionListeners()) {
+      for (Instruction &I : *this)
+        for (InstructionListener *L : Parent->InstructionListeners)
+          L->instructionRemoved(&I);
+    }
     Number = parent ? parent->NextBlockNum++ : -1u;
+  }
   InstList.setSymTabObject(&Parent, parent);
 }
 

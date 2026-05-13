@@ -377,4 +377,20 @@ TEST(InstructionListenerTest, CacheInvalidationPattern) {
   EXPECT_TRUE(Cache.empty());
 }
 
+TEST(InstructionListenerTest, FunctionErasedBeforeListener) {
+  LLVMContext C;
+  Module M("test", C);
+  Function *F = createFunction(M, "f");
+  BasicBlock *BB = BasicBlock::Create(C, "entry", F);
+  IRBuilder<> Builder(BB);
+  Builder.CreateRet(F->getArg(0));
+
+  DenseSet<const Value *> UniformValues;
+  TrackingListener Listener(*F, UniformValues);
+
+  EXPECT_TRUE(F->hasInstructionListeners());
+  F->eraseFromParent();
+  // Listener outlives the Function. Its destructor must not crash.
+}
+
 } // end anonymous namespace

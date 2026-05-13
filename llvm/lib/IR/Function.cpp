@@ -63,9 +63,9 @@ using ProfileCount = Function::ProfileCount;
 // are not in the public header file...
 template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<BasicBlock>;
 
-InstructionListener::InstructionListener(Function &F, CallbackT CB,
+InstructionListener::InstructionListener(Function &F, RemoveCallbackT REMCB,
                                          RAUWCallbackT RAUWCB)
-    : F(&F), Callback(CB), RAUWCallback(RAUWCB) {
+    : F(&F), RemoveCallback(REMCB), RAUWCallback(RAUWCB) {
   F.addInstructionListener(this);
 }
 
@@ -82,16 +82,6 @@ void Function::addInstructionListener(InstructionListener *L) {
 
 void Function::removeInstructionListener(InstructionListener *L) {
   InstructionListeners.erase(llvm::find(InstructionListeners, L));
-}
-
-void Function::notifyInstructionRemovedImpl(Instruction *I) {
-  for (InstructionListener *L : InstructionListeners)
-    L->instructionRemoved(I);
-}
-
-void Function::notifyInstructionRAUWImpl(Instruction *Old, Value *New) {
-  for (InstructionListener *L : InstructionListeners)
-    L->instructionRAUW(Old, New);
 }
 
 static cl::opt<int> NonGlobalValueMaxNameSize(

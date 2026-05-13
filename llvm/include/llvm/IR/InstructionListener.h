@@ -39,17 +39,17 @@ class Value;
 /// Function, and the destructor deregisters.
 class InstructionListener {
 public:
-  using CallbackT = void (*)(InstructionListener *, Instruction *);
+  using RemoveCallbackT = void (*)(InstructionListener *, Instruction *);
   using RAUWCallbackT = void (*)(InstructionListener *, Instruction *Old,
                                  Value *New);
 
 private:
   Function *F;
-  CallbackT Callback;
+  RemoveCallbackT RemoveCallback;
   RAUWCallbackT RAUWCallback;
 
 public:
-  LLVM_ABI InstructionListener(Function &F, CallbackT CB,
+  LLVM_ABI InstructionListener(Function &F, RemoveCallbackT REMCB,
                                RAUWCallbackT RAUWCB = nullptr);
   LLVM_ABI ~InstructionListener();
 
@@ -60,7 +60,10 @@ public:
   /// destroyed. After this call, the destructor becomes a no-op.
   void detach() { F = nullptr; }
 
-  void instructionRemoved(Instruction *I) { Callback(this, I); }
+  void instructionRemoved(Instruction *I) {
+    if (RemoveCallback)
+      RemoveCallback(this, I);
+  }
   void instructionRAUW(Instruction *Old, Value *New) {
     if (RAUWCallback)
       RAUWCallback(this, Old, New);

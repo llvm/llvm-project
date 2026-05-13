@@ -115,6 +115,9 @@ private:
   friend class SymbolTableListTraits<Function>;
 
   friend class InstructionListener;
+  friend class BasicBlock;
+  friend class Instruction;
+  friend class Value;
   SmallVector<InstructionListener *, 0> InstructionListeners;
 
   void addInstructionListener(InstructionListener *L);
@@ -122,22 +125,6 @@ private:
 
 public:
   bool hasInstructionListeners() const { return !InstructionListeners.empty(); }
-
-  void notifyInstructionRemoved(Instruction *I) {
-    if (hasInstructionListeners())
-      notifyInstructionRemovedImpl(I);
-  }
-
-  void notifyInstructionRAUW(Instruction *Old, Value *New) {
-    if (hasInstructionListeners())
-      notifyInstructionRAUWImpl(Old, New);
-  }
-
-private:
-  LLVM_ABI void notifyInstructionRemovedImpl(Instruction *I);
-  LLVM_ABI void notifyInstructionRAUWImpl(Instruction *Old, Value *New);
-
-public:
   /// hasLazyArguments/CheckLazyArguments - The argument list of a function is
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list
