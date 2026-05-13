@@ -3139,14 +3139,18 @@ TEST_F(FormatTest, FormatsLabels) {
                "}");
   verifyFormat("{\n"
                "  some_code();\n"
-               "test_label: { some_other_code(); }\n"
+               "test_label:\n"
+               "  {\n"
+               "    some_other_code();\n"
+               "  }\n"
                "}");
   verifyFormat("{\n"
                "  some_code();\n"
-               "test_label: {\n"
-               "  some_other_code();\n"
-               "  some_other_code();\n"
-               "}\n"
+               "test_label:\n"
+               "  {\n"
+               "    some_other_code();\n"
+               "    some_other_code();\n"
+               "  }\n"
                "}");
   verifyFormat("{\n"
                "L0:\n"
@@ -3155,10 +3159,11 @@ TEST_F(FormatTest, FormatsLabels) {
                "  g();\n"
                "}");
   verifyFormat("{\n"
-               "[[foo]] L1: {\n"
-               "[[bar]] [[baz]] L2:\n"
-               "  g();\n"
-               "}\n"
+               "[[foo]] L1:\n"
+               "  {\n"
+               "  [[bar]] [[baz]] L2:\n"
+               "    g();\n"
+               "  }\n"
                "}");
   verifyFormat("{\n"
                "[[foo]] L1:\n"
@@ -3166,6 +3171,25 @@ TEST_F(FormatTest, FormatsLabels) {
                "  {\n"
                "  [[bar]] [[baz]] L2:\n"
                "    g();\n"
+               "  }\n"
+               "}");
+  verifyFormat("void func() {\n"
+               "label:\n"
+               "  {\n"
+               "    // Block\n"
+               "  }\n"
+               "}");
+  verifyFormat("void func() {\n"
+               "label: // Comment\n"
+               "  {\n"
+               "    // Block\n"
+               "  }\n"
+               "}");
+  verifyFormat("void func() {\n"
+               "label:\n"
+               "  // Comment\n"
+               "  {\n"
+               "    // Block\n"
                "  }\n"
                "}");
 
@@ -3196,7 +3220,10 @@ TEST_F(FormatTest, FormatsLabels) {
                Style);
   verifyFormat("{\n"
                "  some_code();\n"
-               "test_label: { some_other_code(); }\n"
+               "test_label:\n"
+               "  {\n"
+               "    some_other_code();\n"
+               "  }\n"
                "}",
                Style);
   verifyFormat("{\n"
@@ -3331,17 +3358,17 @@ TEST_F(FormatTest, FormatsLabels) {
   verifyFormat("{\n"
                "  some_code();\n"
                "test_label:\n"
-               "{\n"
-               "  some_other_code();\n"
-               "}\n"
+               "  {\n"
+               "    some_other_code();\n"
+               "  }\n"
                "}",
                Style);
   verifyFormat("{\n"
                "[[foo]] L1:\n"
-               "{\n"
-               "[[bar]] [[baz]] L2:\n"
-               "  g();\n"
-               "}\n"
+               "  {\n"
+               "  [[bar]] [[baz]] L2:\n"
+               "    g();\n"
+               "  }\n"
                "}",
                Style);
 }
@@ -18572,7 +18599,10 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
                "}",
                CaseStyle);
   verifyFormat("switch (x) {\n"
-               "goto_label: { break; }\n"
+               "goto_label:\n"
+               "  {\n"
+               "    break;\n"
+               "  }\n"
                "default : {\n"
                "  break;\n"
                "}\n"
