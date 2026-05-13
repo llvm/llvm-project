@@ -58,6 +58,18 @@
 #define LIBC_CONSTEXPR
 #endif
 
+#ifndef LIBC_HAS_BUITLIN_IS_ASSIGNABLE
+#define LIBC_HAS_BUILTIN_IS_ASSIGNABLE                                         \
+  (__has_builtin(__is_assignable) ||                                           \
+   (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 800)))
+#endif // LIBC_HAS_BUITLIN_IS_ASSIGNABLE
+
+#ifndef LIBC_HAS_BUITLIN_IS_CONSTRUCTIBLE
+#define LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE                                      \
+  (__has_builtin(__is_constructible) ||                                        \
+   (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 800)))
+#endif // LIBC_HAS_BUITLIN_IS_CONSTRUCTIBLE
+
 // Uses the platform specific specialization
 #define LIBC_THREAD_MODE_PLATFORM 0
 
