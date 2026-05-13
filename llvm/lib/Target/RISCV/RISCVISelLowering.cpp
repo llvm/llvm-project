@@ -12822,9 +12822,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     if (isTypeLegal(NewVT) && isLegalVTForZvzipOperand(VT, Subtarget, *this)) {
       SDValue V1 = Op->getOperand(0);
       SDValue V2 = Op->getOperand(1);
-      // Freeze the sources so we can increase their use count.
-      V1 = DAG.getFreeze(V1);
-      V2 = DAG.getFreeze(V2);
       SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
       SDValue Even =
           lowerZvzipVUNZIP(RISCVISD::VUNZIPE_VL, V, DL, DAG, Subtarget);
