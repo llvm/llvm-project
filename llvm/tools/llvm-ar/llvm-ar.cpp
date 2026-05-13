@@ -863,9 +863,8 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
     if (Thin && !sys::path::is_absolute(Path)) {
       Expected<std::string> PathOrErr =
           computeArchiveRelativePath(ArchiveName, Path);
-      if (PathOrErr) {
+      if (PathOrErr)
         MatchPath = *PathOrErr;
-      }
     }
     if (!comparePaths(Name, MatchPath))
       return false;
