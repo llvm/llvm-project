@@ -4404,17 +4404,43 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
                                                         StringRef ParamName) {
+  StringRef AttrName = AL.getAttrName()->getName();
+  StringRef SpecialEntity;
+  if (AttrName == "lifetime_capture_by_this")
+    SpecialEntity = "this";
+  else if (AttrName == "lifetime_capture_by_global")
+    SpecialEntity = "global";
+  else if (AttrName == "lifetime_capture_by_unknown")
+    SpecialEntity = "unknown";
+  bool IsStandaloneSpecial = !SpecialEntity.empty();
+
+  if (IsStandaloneSpecial && AL.getNumArgs() != 0) {
+    Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 0;
+    return nullptr;
+  }
+
   // Atleast one capture by is required.
-  if (AL.getNumArgs() == 0) {
+  if (!IsStandaloneSpecial && AL.getNumArgs() == 0) {
     Diag(AL.getLoc(), diag::err_capture_by_attribute_no_entity)
         << AL.getRange();
     return nullptr;
   }
-  unsigned N = AL.getNumArgs();
+  unsigned N = IsStandaloneSpecial ? 1 : AL.getNumArgs();
   auto ParamIdents =
       MutableArrayRef<IdentifierInfo *>(new (Context) IdentifierInfo *[N], N);
   auto ParamLocs =
       MutableArrayRef<SourceLocation>(new (Context) SourceLocation[N], N);
+  if (IsStandaloneSpecial) {
+    ParamIdents[0] = &Context.Idents.get(SpecialEntity);
+    ParamLocs[0] = AL.getRange().getEnd();
+    SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::Invalid);
+    auto *CapturedBy =
+        LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N,
+                                      IsStandaloneSpecial, AL);
+    CapturedBy->setArgs(ParamIdents, ParamLocs);
+    return CapturedBy;
+  }
+
   bool IsValid = true;
   for (unsigned I = 0; I < N; ++I) {
     if (AL.isArgExpr(I)) {
@@ -4428,13 +4454,15 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
     IdentifierLoc *IdLoc = AL.getArgAsIdent(I);
     StringRef Name = IdLoc->getIdentifierInfo()->getName();
     StringRef Replacement;
-    if (Name == "global")
-      Replacement = "__global__";
+    if (Name == "this")
+      Replacement = "lifetime_capture_by_this";
+    else if (Name == "global")
+      Replacement = "lifetime_capture_by_global";
     else if (Name == "unknown")
-      Replacement = "__unknown__";
+      Replacement = "lifetime_capture_by_unknown";
     if (!Replacement.empty())
       Diag(IdLoc->getLoc(), diag::warn_deprecated_capture_by_special_entity)
-          << Name << Replacement;
+          << Name << Replacement << IdLoc->getLoc();
     if (IdLoc->getIdentifierInfo()->getName() == ParamName) {
       Diag(IdLoc->getLoc(), diag::err_capture_by_references_itself)
           << IdLoc->getLoc();
@@ -4448,19 +4476,14 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
     return nullptr;
   SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::Invalid);
   auto *CapturedBy =
-      LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N, AL);
+      LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N,
+                                    IsStandaloneSpecial, AL);
   CapturedBy->setArgs(ParamIdents, ParamLocs);
   return CapturedBy;
 }
 
 static void handleLifetimeCaptureByAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
-  // Do not allow multiple attributes.
-  if (D->hasAttr<LifetimeCaptureByAttr>()) {
-    S.Diag(AL.getLoc(), diag::err_capture_by_attribute_multiple)
-        << AL.getRange();
-    return;
-  }
   auto *PVD = dyn_cast<ParmVarDecl>(D);
   assert(PVD);
   auto *CaptureByAttr = S.ParseLifetimeCaptureByAttr(AL, PVD->getName());
@@ -4472,7 +4495,7 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
   bool HasImplicitThisParam = hasImplicitObjectParameter(FD);
   SmallVector<LifetimeCaptureByAttr *, 1> Attrs;
   for (ParmVarDecl *PVD : FD->parameters())
-    if (auto *A = PVD->getAttr<LifetimeCaptureByAttr>())
+    for (auto *A : PVD->specific_attrs<LifetimeCaptureByAttr>())
       Attrs.push_back(A);
   if (HasImplicitThisParam) {
     TypeSourceInfo *TSI = FD->getTypeSourceInfo();
@@ -4490,9 +4513,7 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
     return;
   llvm::StringMap<int> NameIdxMapping = {
       {"global", LifetimeCaptureByAttr::Global},
-      {"unknown", LifetimeCaptureByAttr::Unknown},
-      {"__global__", LifetimeCaptureByAttr::Global},
-      {"__unknown__", LifetimeCaptureByAttr::Unknown}};
+      {"unknown", LifetimeCaptureByAttr::Unknown}};
   int Idx = 0;
   if (HasImplicitThisParam) {
     NameIdxMapping["this"] = 0;
@@ -4513,15 +4534,18 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
       auto It = NameIdxMapping.find(Name);
       if (It == NameIdxMapping.end()) {
         auto Loc = CapturedBy->getArgLocs()[I];
-        if (!HasImplicitThisParam && Name == "this")
-          Diag(Loc, diag::err_capture_by_implicit_this_not_available) << Loc;
-        else
+        if (!HasImplicitThisParam && Name == "this") {
+          unsigned DiagID = CapturedBy->getIsStandaloneSpecial()
+                                ? diag::err_capture_by_this_attr_without_implicit_this
+                                : diag::err_capture_by_implicit_this_not_available;
+          Diag(Loc, DiagID) << Loc;
+        } else
           Diag(Loc, diag::err_capture_by_attribute_argument_unknown)
               << Entities[I] << Loc;
         continue;
       }
-      if (Name == "unknown" || Name == "global" || Name == "__unknown__" ||
-          Name == "__global__")
+      if ((Name == "unknown" || Name == "global") &&
+          !CapturedBy->getIsStandaloneSpecial())
         DisallowReservedParams(Name);
       CapturedBy->setParamIdx(I, It->second);
     }
