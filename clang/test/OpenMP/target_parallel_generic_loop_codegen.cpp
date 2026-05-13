@@ -48,20 +48,20 @@ int main() {
 // IR-GPU-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 8, addrspace(5)
-// IR-GPU-NEXT:    [[DEVICE_RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DEVICE_RESULT_ADDR]] to ptr addrspace(1)
-// IR-GPU-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OMP_PTEAM_MEM_ALLOC_ADDR]] to ptr addrspace(1)
+// IR-GPU-NEXT:    [[DEVICE_RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DEVICE_RESULT_ADDR]] to ptr
+// IR-GPU-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OMP_PTEAM_MEM_ALLOC_ADDR]] to ptr
 // IR-GPU-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NEXT:    [[CAPTURED_VARS_ADDRS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
-// IR-GPU-NEXT:    store ptr [[DEVICE_RESULT]], ptr addrspace(1) [[DEVICE_RESULT_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr addrspace(1) [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(1) [[DEVICE_RESULT_ADDR_ASCAST]], align 8, !nonnull [[META5:![0-9]+]], !align [[META6:![0-9]+]]
+// IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8, !nonnull [[META5:![0-9]+]], !align [[META6:![0-9]+]]
 // IR-GPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_kernel_environment to ptr), ptr [[DYN_PTR]])
 // IR-GPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // IR-GPU-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // IR-GPU:       user_code.entry:
 // IR-GPU-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
-// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr addrspace(1) [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 0
 // IR-GPU-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 8
 // IR-GPU-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 1
@@ -89,8 +89,8 @@ int main() {
 // IR-GPU-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTGLOBAL_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTGLOBAL_TID__ADDR]] to ptr
 // IR-GPU-NEXT:    [[DOTBOUND_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBOUND_TID__ADDR]] to ptr
-// IR-GPU-NEXT:    [[DEVICE_RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DEVICE_RESULT_ADDR]] to ptr addrspace(1)
-// IR-GPU-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OMP_PTEAM_MEM_ALLOC_ADDR]] to ptr addrspace(1)
+// IR-GPU-NEXT:    [[DEVICE_RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DEVICE_RESULT_ADDR]] to ptr
+// IR-GPU-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OMP_PTEAM_MEM_ALLOC_ADDR]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_IV_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IV]] to ptr
 // IR-GPU-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_LB]] to ptr
@@ -100,9 +100,9 @@ int main() {
 // IR-GPU-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
 // IR-GPU-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    store ptr [[DEVICE_RESULT]], ptr addrspace(1) [[DEVICE_RESULT_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr addrspace(1) [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(1) [[DEVICE_RESULT_ADDR_ASCAST]], align 8, !nonnull [[META5]], !align [[META6]]
+// IR-GPU-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8, !nonnull [[META5]], !align [[META6]]
 // IR-GPU-NEXT:    store i32 0, ptr [[DOTOMP_LB_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 63, ptr [[DOTOMP_UB_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
