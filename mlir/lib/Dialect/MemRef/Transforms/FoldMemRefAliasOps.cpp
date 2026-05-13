@@ -316,7 +316,8 @@ LogicalResult AccessOpOfCollapseShapeOpFolder::matchAndRewrite(
 
   SmallVector<Value> sourceIndices;
   memref::resolveSourceIndicesCollapseShape(op.getLoc(), rewriter, collapse,
-                                            op.getIndices(), sourceIndices);
+                                            op.getIndices(), sourceIndices,
+                                            op.hasInboundsIndices());
 
   std::optional<SmallVector<Value>> newValues = op.updateMemrefAndIndices(
       rewriter, collapse.getViewSource(), sourceIndices);
@@ -405,13 +406,15 @@ LogicalResult IndexedMemCopyOpOfCollapseShapeOpFolder::matchAndRewrite(
     newSrc = srcCollapse.getViewSource();
     newSrcIndices.clear();
     memref::resolveSourceIndicesCollapseShape(
-        op.getLoc(), rewriter, srcCollapse, op.getSrcIndices(), newSrcIndices);
+        op.getLoc(), rewriter, srcCollapse, op.getSrcIndices(), newSrcIndices,
+        /*startsInbounds=*/true);
   }
   if (dstCollapse) {
     newDst = dstCollapse.getViewSource();
     newDstIndices.clear();
     memref::resolveSourceIndicesCollapseShape(
-        op.getLoc(), rewriter, dstCollapse, op.getDstIndices(), newDstIndices);
+        op.getLoc(), rewriter, dstCollapse, op.getDstIndices(), newDstIndices,
+        /*startsInbounds=*/true);
   }
   op.setMemrefsAndIndices(rewriter, newSrc, newSrcIndices, newDst,
                           newDstIndices);
@@ -550,7 +553,8 @@ LogicalResult TransferOpOfCollapseShapeOpFolder::matchAndRewrite(
 
   SmallVector<Value> newIndices;
   memref::resolveSourceIndicesCollapseShape(op.getLoc(), rewriter, collapse,
-                                            op.getIndices(), newIndices);
+                                            op.getIndices(), newIndices,
+                                            /*startsInbounds=*/!op.getMask());
 
   op.updateStartingPosition(rewriter, collapse.getViewSource(), newIndices,
                             AffineMapAttr::get(newPerm));

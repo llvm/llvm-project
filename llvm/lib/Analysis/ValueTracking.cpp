@@ -3536,7 +3536,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     if (I->getType()->isPointerTy()) {
       if (Call->isReturnNonNull())
         return true;
-      if (const auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
+      if (const auto *RP = getArgumentAliasingToReturnedPointer(
+              Call, /*MustPreserveOffset=*/true))
         return isKnownNonZero(RP, Q, Depth);
     } else {
       if (MDNode *Ranges = Q.IIQ.getMetadata(Call, LLVMContext::MD_range))
@@ -6868,38 +6869,38 @@ uint64_t llvm::GetStringLength(const Value *V, unsigned CharSize) {
 
 const Value *
 llvm::getArgumentAliasingToReturnedPointer(const CallBase *Call,
-                                           bool MustPreserveNullness) {
+                                           bool MustPreserveOffset) {
   assert(Call &&
          "getArgumentAliasingToReturnedPointer only works on nonnull calls");
   if (const Value *RV = Call->getReturnedArgOperand())
     return RV;
   // This can be used only as a aliasing property.
   if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-          Call, MustPreserveNullness))
+          Call, MustPreserveOffset))
     return Call->getArgOperand(0);
   return nullptr;
 }
 
 bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-    const CallBase *Call, bool MustPreserveNullness) {
+    const CallBase *Call, bool MustPreserveOffset) {
   switch (Call->getIntrinsicID()) {
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
   case Intrinsic::aarch64_irg:
   case Intrinsic::aarch64_tagp:
   // The amdgcn_make_buffer_rsrc function does not alter the address of the
-  // input pointer (and thus preserve null-ness for the purposes of escape
-  // analysis, which is where the MustPreserveNullness flag comes in to play).
-  // However, it will not necessarily map ptr addrspace(N) null to ptr
-  // addrspace(8) null, aka the "null descriptor", which has "all loads return
-  // 0, all stores are dropped" semantics. Given the context of this intrinsic
-  // list, no one should be relying on such a strict interpretation of
-  // MustPreserveNullness (and, at time of writing, they are not), but we
-  // document this fact out of an abundance of caution.
+  // input pointer (and thus preserves the byte offset, which is the property
+  // the MustPreserveOffset flag selects). However, it will not necessarily
+  // map ptr addrspace(N) null to ptr addrspace(8) null, aka the "null
+  // descriptor", which has "all loads return 0, all stores are dropped"
+  // semantics. Given the context of this intrinsic list, no one should be
+  // relying on such a strict bit-exact null mapping (and, at time of
+  // writing, they are not), but we document this fact out of an abundance
+  // of caution.
   case Intrinsic::amdgcn_make_buffer_rsrc:
     return true;
   case Intrinsic::ptrmask:
-    return !MustPreserveNullness;
+    return !MustPreserveOffset;
   case Intrinsic::threadlocal_address:
     // The underlying variable changes with thread ID. The Thread ID may change
     // at coroutine suspend points.
@@ -6970,7 +6971,8 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
         // because it should be in sync with CaptureTracking. Not using it may
         // cause weird miscompilations where 2 aliasing pointers are assumed to
         // noalias.
-        if (auto *RP = getArgumentAliasingToReturnedPointer(Call, false)) {
+        if (auto *RP = getArgumentAliasingToReturnedPointer(
+                Call, /*MustPreserveOffset=*/false)) {
           V = RP;
           continue;
         }
