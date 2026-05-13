@@ -41,8 +41,8 @@ TextEncoding::setConvertersFromOptions(TextEncoding &TE,
   else
     return ErrorOrConverter.getError();
 
-  ErrorOrConverter = llvm::TextEncodingConverter::create(TE.SystemEncoding,
-                                                         TE.InternalEncoding);
+  ErrorOrConverter = llvm::TextEncodingConverter::create(
+      TInfo.getDefaultNarrowTextEncoding(), UTF8);
 
   if (ErrorOrConverter)
     TInfo.FormatStrConverter =
