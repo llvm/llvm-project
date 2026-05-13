@@ -30,12 +30,12 @@ static void writeString(raw_ostream &OS, StringRef S) {
   OS.write_zeros(1);
 }
 
-void DebugName::setFileName(StringRef DebugFileName) {
-  BaseData.first.NameLength = DebugFileName.size();
-  BaseData.second = DebugFileName;
+void DebugName::setFilename(StringRef DebugFilename) {
+  Parameters.NameLength = DebugFilename.size();
+  Filename = DebugFilename;
 }
 
 void DebugName::write(raw_ostream &OS) const {
-  writeStruct(OS, BaseData.first);
-  writeString(OS, BaseData.second.substr(0, BaseData.first.NameLength));
+  writeStruct(OS, Parameters);
+  writeString(OS, Filename.substr(0, Parameters.NameLength));
 }

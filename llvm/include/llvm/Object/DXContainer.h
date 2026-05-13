@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Compiler.h"
@@ -460,7 +461,6 @@ public:
 class DXContainer {
 public:
   using DXILData = std::pair<dxbc::ProgramHeader, const char *>;
-  using ILDNData = std::pair<dxbc::DebugNameHeader, StringRef>;
 
 private:
   DXContainer(MemoryBufferRef O);
@@ -477,7 +477,7 @@ private:
   DirectX::Signature InputSignature;
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
-  std::optional<ILDNData> DebugName;
+  std::optional<mcdxbc::DebugName> DebugName;
 
   Error parseHeader();
   Error parsePartOffsets();
@@ -576,7 +576,9 @@ public:
     return ProgramPart->first.ShaderKind;
   }
 
-  const std::optional<ILDNData> getDebugName() const { return DebugName; }
+  const std::optional<mcdxbc::DebugName> getDebugName() const {
+    return DebugName;
+  }
 
   std::optional<uint64_t> getShaderFeatureFlags() const {
     return ShaderFeatureFlags;

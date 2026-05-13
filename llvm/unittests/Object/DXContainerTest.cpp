@@ -9,6 +9,7 @@
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
@@ -295,12 +296,12 @@ TEST(DXCFile, ParseILDNPart) {
   DXContainer C =
       llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
   EXPECT_EQ(C.getHeader().PartCount, 1u);
-  const std::optional<object::DXContainer::ILDNData> &ILDN = C.getDebugName();
+  const std::optional<mcdxbc::DebugName> &ILDN = C.getDebugName();
   EXPECT_TRUE(ILDN.has_value());
-  dxbc::DebugNameHeader Header = ILDN->first;
+  dxbc::DebugNameHeader Header = ILDN->Parameters;
   EXPECT_EQ(Header.Flags, 0u);
   EXPECT_EQ(Header.NameLength, 7u);
-  EXPECT_EQ(ILDN->second, "abc.pdb");
+  EXPECT_EQ(ILDN->Filename, "abc.pdb");
 }
 
 static Expected<DXContainer>

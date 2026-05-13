@@ -179,13 +179,13 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
         continue;
 
       mcdxbc::DebugName DebugName;
-      DebugName.setFileName(P.DebugName->DebugName);
+      DebugName.setFilename(P.DebugName->Filename);
       // Override default flags with value from YAML.
       if (P.DebugName->Flags)
-        DebugName.BaseData.first.Flags = *P.DebugName->Flags;
+        DebugName.Parameters.Flags = *P.DebugName->Flags;
       // Override computed filename length with value from YAML.
       if (P.DebugName->NameLength)
-        DebugName.BaseData.first.NameLength = *P.DebugName->NameLength;
+        DebugName.Parameters.NameLength = *P.DebugName->NameLength;
       DebugName.write(OS);
       break;
     }

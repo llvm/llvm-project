@@ -299,7 +299,7 @@ struct Signature {
 struct DebugName {
   std::optional<uint16_t> Flags;
   std::optional<uint16_t> NameLength;
-  std::string DebugName;
+  std::string Filename;
 };
 
 struct Part {
