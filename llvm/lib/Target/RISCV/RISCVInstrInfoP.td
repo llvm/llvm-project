@@ -1845,6 +1845,16 @@ class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
+class PatGprPairImm<SDPatternOperator OpNode, RVInst Inst,
+                    SDPatternOperator ImmType, ValueType vt>
+    : Pat<(vt (OpNode (vt GPRPair:$rs1), ImmType:$imm)),
+          (Inst GPRPair:$rs1, ImmType:$imm)>;
+
+class PatGprPairShiftMask<SDPatternOperator OpNode, RVInst Inst,
+                          ComplexPattern ShiftMask, ValueType vt>
+    : Pat<(vt (OpNode GPRPair:$rs1, ShiftMask:$rs2)),
+          (Inst GPRPair:$rs1, ShiftMask:$rs2)>;
+
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
 
@@ -2267,6 +2277,54 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : Pat<(v4i16 (abs GPRPair:$rs1)), (PABD_DH GPRPair:$rs1, (v4i16 X0_Pair))>;
   def : PatGprPairGprPair<abds, PABD_DH, v4i16>;
   def : PatGprPairGprPair<abdu, PABDU_DH, v4i16>;
+
+  // 8-bit logical shift left/right patterns
+  def : PatGprPairImm<riscv_pshl, PSLLI_DB, uimm3, v8i8>;
+  def : PatGprPairImm<riscv_psrl, PSRLI_DB, uimm3, v8i8>;
+
+  // 16-bit logical shift left/right patterns
+  def : PatGprPairImm<riscv_pshl, PSLLI_DH, uimm4, v4i16>;
+  def : PatGprPairImm<riscv_psrl, PSRLI_DH, uimm4, v4i16>;
+
+  // 32-bit logical shift left/right patterns
+  def : PatGprPairImm<riscv_pshl, PSLLI_DW, uimm5, v2i32>;
+  def : PatGprPairImm<riscv_psrl, PSRLI_DW, uimm5, v2i32>;
+
+  // 8-bit arithmetic shift right patterns
+  def : PatGprPairImm<riscv_psra, PSRAI_DB, uimm3, v8i8>;
+
+  // 16-bit arithmetic shift right patterns
+  def : PatGprPairImm<riscv_psra, PSRAI_DH, uimm4, v4i16>;
+
+  // 32-bit arithmetic shift left/right patterns
+  def : PatGprPairImm<riscv_psra, PSRAI_DW, uimm5, v2i32>;
+
+  // 16-bit signed saturation shift left patterns
+  def : PatGprPairImm<riscv_psslai, PSSLAI_DH, timm, v4i16>;
+
+  // 32-bit signed saturation shift left patterns
+  def : PatGprPairImm<riscv_psslai, PSSLAI_DW, timm, v2i32>;
+
+  // 8-bit logical shift left/right
+  def : PatGprPairShiftMask<riscv_pshl, PSLL_DBS, shiftMask8, v8i8>;
+  def : PatGprPairShiftMask<riscv_psrl, PSRL_DBS, shiftMask8, v8i8>;
+
+  // 8-bit arithmetic shift left/right
+  def : PatGprPairShiftMask<riscv_psra, PSRA_DBS, shiftMask8, v8i8>;
+
+  // 16-bit logical shift left/right
+  def : PatGprPairShiftMask<riscv_pshl, PSLL_DHS, shiftMask16, v4i16>;
+  def : PatGprPairShiftMask<riscv_psrl, PSRL_DHS, shiftMask16, v4i16>;
+
+  // 16-bit arithmetic shift left/right
+  def : PatGprPairShiftMask<riscv_psra, PSRA_DHS, shiftMask16, v4i16>;
+
+  // 32-bit logical shift left/right
+  def : PatGprPairShiftMask<riscv_pshl, PSLL_DWS, shiftMask32, v2i32>;
+  def : PatGprPairShiftMask<riscv_psrl, PSRL_DWS, shiftMask32, v2i32>;
+
+  // 32-bit arithmetic shift left/right
+  def : PatGprPairShiftMask<riscv_psra, PSRA_DWS, shiftMask32, v2i32>;
 
   // [s|u]min/[s|u]max patterns
   def : PatGprPairGprPair<smin, PMIN_DB, v8i8>;

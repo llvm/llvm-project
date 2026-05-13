@@ -35,7 +35,7 @@ struct LogRR {
 //   sum: adding -log(r1) - log(r2) - log(r3) - log(r4) to the resulted sum.
 //   return value: the reduced argument v satisfying:
 //                 -0x1.0002143p-29 <= v < 0x1p-29,  and  ulp(v) >= 2^(-125).
-LIBC_INLINE constexpr fputil::DyadicFloat<128>
+LIBC_INLINE LIBC_CONSTEXPR fputil::DyadicFloat<128>
 log_range_reduction(double m_x, const LogRR &log_table,
                     fputil::DyadicFloat<128> &sum) {
   using namespace common_constants_internal;
