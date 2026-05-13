@@ -83,6 +83,32 @@ define void @alloca_escape_after(ptr %x) {
   ret void
 }
 
+; CHECK-LABEL: Function: alloca_escape_after_readonly:
+; CHECK:  Just Ref:  Ptr: i32* %a	<->  fence acq_rel
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  fence acq_rel
+; CHECK:  Just Ref:  Ptr: i32* %a	<->  %1 = atomicrmw add ptr %x, i32 1 acq_rel, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %1 = atomicrmw add ptr %x, i32 1 acq_rel, align 4
+; CHECK:  Just Ref:  Ptr: i32* %a	<->  %2 = cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %2 = cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic, align 4
+; CHECK:  Just Ref:  Ptr: i32* %a	<->  %3 = load atomic i32, ptr %x acquire, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %3 = load atomic i32, ptr %x acquire, align 4
+; CHECK:  Just Ref:  Ptr: i32* %a	<->  store atomic i32 0, ptr %x release, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  store atomic i32 0, ptr %x release, align 4
+define void @alloca_escape_after_readonly(ptr %x) {
+  %a = alloca i32
+  store i32 0, ptr %a
+
+  fence acq_rel
+  atomicrmw add ptr %x, i32 1 acq_rel
+  cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic
+  load atomic i32, ptr %x acquire, align 4
+  store atomic i32 0, ptr %x release, align 4
+
+  call void @escape(ptr captures(address, read_provenance) %a)
+
+  ret void
+}
+
 ; CHECK-LABEL: Function: alloca_no_escape_aliasing:
 ; CHECK:  Both ModRef:  Ptr: i32* %a	<->  %1 = atomicrmw add ptr %a, i32 1 monotonic, align 4
 ; CHECK:  Both ModRef:  Ptr: i32* %a	<->  %2 = cmpxchg ptr %a, i32 0, i32 1 monotonic monotonic, align 4

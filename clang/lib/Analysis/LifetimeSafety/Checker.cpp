@@ -278,8 +278,20 @@ public:
               SemaHelper->reportInvalidatedField(InvalidatedPVD,
                                                  FieldEscape->getFieldDecl(),
                                                  Warning.InvalidatedByExpr);
-          } else if (isa<GlobalEscapeFact>(OEF)) {
-            // FIXME: Diagnose invalidated global escapes separately.
+          } else if (const auto *GlobalEscape =
+                         dyn_cast<GlobalEscapeFact>(OEF)) {
+            // Invalidated object escapes to global or static storage.
+            if (IssueExpr)
+              // Invalidated object on stack escapes to global or static
+              // storage.
+              SemaHelper->reportInvalidatedGlobal(IssueExpr,
+                                                  GlobalEscape->getGlobal(),
+                                                  Warning.InvalidatedByExpr);
+            else if (InvalidatedPVD)
+              // Invalidated parameter escapes to global or static storage.
+              SemaHelper->reportInvalidatedGlobal(InvalidatedPVD,
+                                                  GlobalEscape->getGlobal(),
+                                                  Warning.InvalidatedByExpr);
           } else if (isa<ReturnEscapeFact>(OEF)) {
             // FIXME: Diagnose invalidated return escapes separately.
           } else
