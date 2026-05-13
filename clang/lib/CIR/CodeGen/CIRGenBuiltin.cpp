@@ -1101,12 +1101,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_assume_dereferenceable: {
     mlir::Value ptrValue = emitScalarExpr(e->getArg(0));
     mlir::Value sizeValue = emitScalarExpr(e->getArg(1));
-    // The operand bundle expects a pointer-sized integer; widen/narrow to
-    // intptr_t to match classic CodeGen.
-    mlir::Type intPtrTy = convertType(getContext().getIntPtrType());
-    if (sizeValue.getType() != intPtrTy)
-      sizeValue = builder.createIntCast(sizeValue, intPtrTy);
-    cir::AssumeDereferenceableOp::create(builder, loc, ptrValue, sizeValue);
+    // The `dereferenceable` operand bundle expects a pointer-sized unsigned
+    // integer; widen/narrow as needed.
+    mlir::Type uintPtrTy = convertType(getContext().getUIntPtrType());
+    if (sizeValue.getType() != uintPtrTy)
+      sizeValue = builder.createIntCast(sizeValue, uintPtrTy);
+    mlir::Value cond = builder.getBool(true, loc);
+    cir::AssumeOp::create(builder, loc, cond, "dereferenceable",
+                          mlir::ValueRange{ptrValue, sizeValue});
     return RValue::get(nullptr);
   }
 

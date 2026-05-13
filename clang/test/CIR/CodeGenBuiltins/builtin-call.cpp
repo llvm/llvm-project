@@ -165,7 +165,7 @@ void assume_dereferenceable(void *p, unsigned long n) {
 }
 
 // CIR: cir.func{{.*}} @_Z22assume_dereferenceablePvm
-// CIR:   cir.assume_dereferenceable %{{.+}}, %{{.+}} : !cir.ptr<!void>, !s64i
+// CIR:   cir.assume %{{.+}} ["dereferenceable"(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)] : !cir.bool
 // CIR: }
 
 // LLVM: define {{.*}}void @_Z22assume_dereferenceablePvm
@@ -181,7 +181,7 @@ void assume_dereferenceable_const(void *p) {
 }
 
 // CIR: cir.func{{.*}} @_Z28assume_dereferenceable_constPv
-// CIR:   cir.assume_dereferenceable %{{.+}}, %{{.+}} : !cir.ptr<!void>, !s64i
+// CIR:   cir.assume %{{.+}} ["dereferenceable"(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)] : !cir.bool
 // CIR: }
 
 // LLVM: define {{.*}}void @_Z28assume_dereferenceable_constPv
@@ -197,7 +197,7 @@ void assume_dereferenceable_narrow_size(void *p, unsigned n) {
 }
 
 // CIR: cir.func{{.*}} @_Z34assume_dereferenceable_narrow_sizePvj
-// CIR:   cir.assume_dereferenceable %{{.+}}, %{{.+}} : !cir.ptr<!void>, !s64i
+// CIR:   cir.assume %{{.+}} ["dereferenceable"(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)] : !cir.bool
 // CIR: }
 
 // LLVM: define {{.*}}void @_Z34assume_dereferenceable_narrow_sizePvj

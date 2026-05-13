@@ -6147,19 +6147,47 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
 def CIR_AssumeOp : CIR_Op<"assume"> {
   let summary = "Tell the optimizer that a boolean value is true";
   let description = [{
-    The `cir.assume` operation takes a single boolean prediate as its only
+    The `cir.assume` operation takes a single boolean predicate as its first
     argument and does not have any results. The operation tells the optimizer
     that the predicate is always true.
 
+    An optional operand bundle (tag + variadic args) can be attached to carry
+    additional assumption metadata, mirroring LLVM dialect's `llvm.assume`
+    bundles.  For example, `__builtin_assume_dereferenceable(p, n)` lowers
+    to `cir.assume %true ["dereferenceable"(%p, %n : !cir.ptr<!void>, !u64i)]`,
+    which in turn lowers to
+    `call void @llvm.assume(i1 true) [ "dereferenceable"(ptr, i64) ]`.
+
     This operation corresponds to the `__assume` and the `__builtin_assume`
-    builtin functions.
+    builtin functions, and (with a bundle) to other `__builtin_assume_*`
+    variants such as `__builtin_assume_dereferenceable`.
   }];
 
-  let arguments = (ins CIR_BoolType:$predicate);
+  let arguments = (ins
+    CIR_BoolType:$predicate,
+    OptionalAttr<StrAttr>:$bundle_tag,
+    Variadic<CIR_AnyType>:$bundle_args
+  );
 
   let assemblyFormat = [{
-    $predicate `:` type($predicate) attr-dict
+    $predicate
+    ( ` ` `[` $bundle_tag^ `(` $bundle_args `:` type($bundle_args) `)` `]` )?
+    `:` type($predicate) attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$predicate), [{
+      build($_builder, $_state, predicate, /*bundle_tag=*/mlir::StringAttr{},
+            /*bundle_args=*/mlir::ValueRange{});
+    }]>,
+    OpBuilder<(ins "mlir::Value":$predicate, "llvm::StringRef":$bundleTag,
+                   "mlir::ValueRange":$bundleArgs), [{
+      build($_builder, $_state, predicate,
+            $_builder.getStringAttr(bundleTag), bundleArgs);
+    }]>
+  ];
+
+  let hasVerifier = 1;
 }
 
 def CIR_AssumeAlignedOp : CIR_Op<"assume_aligned", [
@@ -6230,35 +6258,6 @@ def CIR_AssumeSepStorageOp : CIR_Op<"assume_separate_storage", [
 
   let assemblyFormat = [{
     $ptr1 `,` $ptr2 `:` qualified(type($ptr1)) attr-dict
-  }];
-}
-
-def CIR_AssumeDereferenceableOp : CIR_Op<"assume_dereferenceable"> {
-  let summary = "Tell the optimizer that a pointer is dereferenceable";
-  let description = [{
-    The `cir.assume_dereferenceable` operation takes a pointer and a size in
-    bytes.  It tells the optimizer that loading from `pointer` is well-defined
-    for any number of bytes up to `size`, i.e. the pointer is known to refer
-    to a region of at least `size` allocated bytes.
-
-    The size argument must be a pointer-sized integer (the lowering converts
-    smaller integer types to the target pointer width before emitting the
-    operand bundle).
-
-    This operation corresponds to the `__builtin_assume_dereferenceable`
-    builtin function.
-
-    Example:
-
-    ```
-    cir.assume_dereferenceable %p, %n : !cir.ptr<!void>, !u64i
-    ```
-  }];
-
-  let arguments = (ins CIR_PointerType:$pointer, CIR_IntType:$size);
-
-  let assemblyFormat = [{
-    $pointer `,` $size `:` qualified(type($pointer)) `,` type($size) attr-dict
   }];
 }
 

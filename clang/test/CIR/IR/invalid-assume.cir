@@ -1,0 +1,12 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!void = !cir.void
+
+module {
+  cir.func @assume_bundle_args_without_tag(%arg0 : !cir.ptr<!void>) {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    // expected-error@+1 {{bundle args present without a bundle tag}}
+    "cir.assume"(%0, %arg0) {operandSegmentSizes = array<i32: 1, 1>} : (!cir.bool, !cir.ptr<!void>) -> ()
+    cir.return
+  }
+}

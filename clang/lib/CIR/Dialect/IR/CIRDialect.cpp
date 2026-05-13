@@ -373,6 +373,16 @@ LogicalResult cir::DeleteArrayOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AssumeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AssumeOp::verify() {
+  if (!getBundleTagAttr() && !getBundleArgs().empty())
+    return emitOpError("bundle args present without a bundle tag");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // LocalInitOp
 //===----------------------------------------------------------------------===//
 

@@ -820,8 +820,13 @@ mlir::LogicalResult CIRToLLVMSignBitOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto cond = adaptor.getPredicate();
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond);
+  mlir::Value cond = adaptor.getPredicate();
+  if (std::optional<llvm::StringRef> tag = op.getBundleTag()) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond, *tag,
+                                                      adaptor.getBundleArgs());
+  } else {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond);
+  }
   return mlir::success();
 }
 
@@ -856,18 +861,6 @@ mlir::LogicalResult CIRToLLVMAssumeSepStorageOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(
       op, cond, mlir::LLVM::AssumeSeparateStorageTag{}, adaptor.getPtr1(),
       adaptor.getPtr2());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMAssumeDereferenceableOpLowering::matchAndRewrite(
-    cir::AssumeDereferenceableOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  auto cond = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                             rewriter.getI1Type(), 1);
-  mlir::LLVM::AssumeOp::create(
-      rewriter, op.getLoc(), cond, "dereferenceable",
-      mlir::ValueRange{adaptor.getPointer(), adaptor.getSize()});
-  rewriter.eraseOp(op);
   return mlir::success();
 }
 
