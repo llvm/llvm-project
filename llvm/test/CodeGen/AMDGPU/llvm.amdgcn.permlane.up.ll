@@ -4,836 +4,452 @@
 ; RUN: llc -global-isel=0 -amdgpu-load-store-vectorizer=0 -mtriple=amdgcn -mcpu=gfx1310 < %s | FileCheck -check-prefixes=GFX13,GFX13-SDAG %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-load-store-vectorizer=0 -mtriple=amdgcn -mcpu=gfx1310 < %s | FileCheck -check-prefixes=GFX13,GFX13-GISEL %s
 
-define amdgpu_kernel void @v_permlane_up_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
+define i32 @v_permlane_up_b32_vss(i32 %src0, i32 %src1, i32 %src2) {
 ; GFX1250-LABEL: v_permlane_up_b32_vss:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s3, s6
-; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-LABEL: v_permlane_up_b32_vss:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-NEXT:    s_load_b32 s4, s[4:5], 0x34 nv
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s3, s4
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-NEXT:    s_endpgm
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane.up(i32 %src0, i32 %src1, i32 %src2)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
+  ret i32 %v
 }
 
-define amdgpu_kernel void @v_permlane_up_b32_vii(ptr addrspace(1) %out, i32 %src0) {
+define i32 @v_permlane_up_b32_vii(i32 %src0) {
 ; GFX1250-LABEL: v_permlane_up_b32_vii:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
-; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-LABEL: v_permlane_up_b32_vii:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-NEXT:    s_endpgm
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane.up(i32 %src0, i32 1, i32 2)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
+  ret i32 %v
 }
 
-define amdgpu_kernel void @v_permlane_up_b32_vll(ptr addrspace(1) %out, i32 %src0) {
+define i32 @v_permlane_up_b32_vll(i32 %src0) {
 ; GFX1250-LABEL: v_permlane_up_b32_vll:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-NEXT:    s_movk_i32 s2, 0x64
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s2, 0x66
-; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-NEXT:    s_movk_i32 s0, 0x64
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, 0x66
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-LABEL: v_permlane_up_b32_vll:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-NEXT:    s_movk_i32 s2, 0x64
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s2, 0x66
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-NEXT:    s_endpgm
+; GFX13-NEXT:    s_movk_i32 s0, 0x64
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, 0x66
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane.up(i32 %src0, i32 100, i32 102)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
+  ret i32 %v
 }
 
-define amdgpu_kernel void @v_permlane_up_b32_vvv(ptr addrspace(1) %out, i32 %src0) {
-; GFX1250-SDAG-LABEL: v_permlane_up_b32_vvv:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX1250-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v1, v1, s3, s2
-; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-SDAG-NEXT:    s_endpgm
+define i32 @v_permlane_up_b32_vvv(i32 %src0) {
+; GFX1250-LABEL: v_permlane_up_b32_vvv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v1, 0x3ff, v31
+; GFX1250-NEXT:    v_bfe_u32 v2, v31, 10, 10
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: v_permlane_up_b32_vvv:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX1250-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s3, s4
-; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX13-SDAG-LABEL: v_permlane_up_b32_vvv:
-; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX13-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX13-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v1, v1, s3, s2
-; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_endpgm
-;
-; GFX13-GISEL-LABEL: v_permlane_up_b32_vvv:
-; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX13-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s3, s4
-; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_endpgm
+; GFX13-LABEL: v_permlane_up_b32_vvv:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_and_b32_e32 v1, 0x3ff, v31
+; GFX13-NEXT:    v_bfe_u32 v2, v31, 10, 10
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
   %v = call i32 @llvm.amdgcn.permlane.up(i32 %src0, i32 %tidx, i32 %tidy)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
+  ret i32 %v
 }
 
-define amdgpu_kernel void @v_permlane_up_f32_vss(ptr addrspace(1) %out, float %src0, i32 %src1, i32 %src2) {
+define float @v_permlane_up_f32_vss(float %src0, i32 %src1, i32 %src2) {
 ; GFX1250-LABEL: v_permlane_up_f32_vss:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s3, s6
-; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-LABEL: v_permlane_up_f32_vss:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-NEXT:    s_load_b32 s4, s[4:5], 0x34 nv
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s3, s4
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-NEXT:    s_endpgm
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call float @llvm.amdgcn.permlane.up(float %src0, i32 %src1, i32 %src2)
-  store float %v, ptr addrspace(1) %out
-  ret void
+  ret float %v
 }
 
-define amdgpu_kernel void @v_permlane_up_f32_vii(ptr addrspace(1) %out, float %src0) {
+define float @v_permlane_up_f32_vii(float %src0) {
 ; GFX1250-LABEL: v_permlane_up_f32_vii:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
-; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-LABEL: v_permlane_up_f32_vii:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-NEXT:    s_endpgm
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call float @llvm.amdgcn.permlane.up(float %src0, i32 1, i32 2)
-  store float %v, ptr addrspace(1) %out
-  ret void
+  ret float %v
 }
 
-define amdgpu_kernel void @v_permlane_up_f32_vll(ptr addrspace(1) %out, float %src0) {
+define float @v_permlane_up_f32_vll(float %src0) {
 ; GFX1250-LABEL: v_permlane_up_f32_vll:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-NEXT:    s_movk_i32 s2, 0x64
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s2, 0x66
-; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-NEXT:    s_movk_i32 s0, 0x64
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, 0x66
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-LABEL: v_permlane_up_f32_vll:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-NEXT:    s_movk_i32 s2, 0x64
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s2, 0x66
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-NEXT:    s_endpgm
+; GFX13-NEXT:    s_movk_i32 s0, 0x64
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, 0x66
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call float @llvm.amdgcn.permlane.up(float %src0, i32 100, i32 102)
-  store float %v, ptr addrspace(1) %out
-  ret void
+  ret float %v
 }
 
-define amdgpu_kernel void @v_permlane_up_f32_vvv(ptr addrspace(1) %out, float %src0) {
-; GFX1250-SDAG-LABEL: v_permlane_up_f32_vvv:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX1250-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v1, v1, s3, s2
-; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-SDAG-NEXT:    s_endpgm
+define float @v_permlane_up_f32_vvv(float %src0) {
+; GFX1250-LABEL: v_permlane_up_f32_vvv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v1, 0x3ff, v31
+; GFX1250-NEXT:    v_bfe_u32 v2, v31, 10, 10
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: v_permlane_up_f32_vvv:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX1250-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s3, s4
-; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX13-SDAG-LABEL: v_permlane_up_f32_vvv:
-; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX13-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX13-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v1, v1, s3, s2
-; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-SDAG-NEXT:    s_endpgm
-;
-; GFX13-GISEL-LABEL: v_permlane_up_f32_vvv:
-; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX13-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s3, s4
-; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-GISEL-NEXT:    s_endpgm
+; GFX13-LABEL: v_permlane_up_f32_vvv:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_and_b32_e32 v1, 0x3ff, v31
+; GFX13-NEXT:    v_bfe_u32 v2, v31, 10, 10
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
   %v = call float @llvm.amdgcn.permlane.up(float %src0, i32 %tidx, i32 %tidy)
-  store float %v, ptr addrspace(1) %out
-  ret void
+  ret float %v
 }
 
-define amdgpu_kernel void @v_permlane_up_i64_vss(ptr addrspace(1) %out, i64 %src0, i32 %src1, i32 %src2) {
-; GFX1250-SDAG-LABEL: v_permlane_up_i64_vss:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_clause 0x1
-; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s6, s7
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s6, s7
-; GFX1250-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_endpgm
+define i64 @v_permlane_up_i64_vss(i64 %src0, i32 %src1, i32 %src2) {
+; GFX1250-LABEL: v_permlane_up_i64_vss:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX1250-NEXT:    v_permlane_up_b32 v1, v1, s0, s1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: v_permlane_up_i64_vss:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_clause 0x1
-; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s6, s7
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s6, s7
-; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX13-SDAG-LABEL: v_permlane_up_i64_vss:
-; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34 nv
-; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s4, s5
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s4, s5
-; GFX13-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX13-SDAG-NEXT:    s_endpgm
-;
-; GFX13-GISEL-LABEL: v_permlane_up_i64_vss:
-; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34 nv
-; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s4, s5
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s4, s5
-; GFX13-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX13-GISEL-NEXT:    s_endpgm
+; GFX13-LABEL: v_permlane_up_i64_vss:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX13-NEXT:    v_permlane_up_b32 v1, v1, s0, s1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call i64 @llvm.amdgcn.permlane.up(i64 %src0, i32 %src1, i32 %src2)
-  store i64 %v, ptr addrspace(1) %out
-  ret void
+  ret i64 %v
 }
 
-define amdgpu_kernel void @v_permlane_up_i64_vii(ptr addrspace(1) %out, i64 %src0) {
-; GFX1250-SDAG-LABEL: v_permlane_up_i64_vii:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v1, v0, 1, 2
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v0, v2, 1, 2
-; GFX1250-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_endpgm
+define i64 @v_permlane_up_i64_vii(i64 %src0) {
+; GFX1250-LABEL: v_permlane_up_i64_vii:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
+; GFX1250-NEXT:    v_permlane_up_b32 v1, v1, 1, 2
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: v_permlane_up_i64_vii:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v1, v1, 1, 2
-; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX13-SDAG-LABEL: v_permlane_up_i64_vii:
-; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v1, v0, 1, 2
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v0, v2, 1, 2
-; GFX13-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX13-SDAG-NEXT:    s_endpgm
-;
-; GFX13-GISEL-LABEL: v_permlane_up_i64_vii:
-; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v1, v1, 1, 2
-; GFX13-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX13-GISEL-NEXT:    s_endpgm
+; GFX13-LABEL: v_permlane_up_i64_vii:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
+; GFX13-NEXT:    v_permlane_up_b32 v1, v1, 1, 2
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call i64 @llvm.amdgcn.permlane.up(i64 %src0, i32 1, i32 2)
-  store i64 %v, ptr addrspace(1) %out
-  ret void
+  ret i64 %v
 }
 
-define amdgpu_kernel void @v_permlane_up_i64_vll(ptr addrspace(1) %out, i64 %src0) {
-; GFX1250-SDAG-LABEL: v_permlane_up_i64_vll:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1250-SDAG-NEXT:    s_movk_i32 s2, 0x64
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s2, 0x66
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s2, 0x66
-; GFX1250-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_endpgm
+define i64 @v_permlane_up_i64_vll(i64 %src0) {
+; GFX1250-LABEL: v_permlane_up_i64_vll:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_movk_i32 s0, 0x64
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, 0x66
+; GFX1250-NEXT:    v_permlane_up_b32 v1, v1, s0, 0x66
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: v_permlane_up_i64_vll:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1250-GISEL-NEXT:    s_movk_i32 s2, 0x64
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s2, 0x66
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s2, 0x66
-; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX13-SDAG-LABEL: v_permlane_up_i64_vll:
-; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-SDAG-NEXT:    s_movk_i32 s2, 0x64
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s2, 0x66
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s2, 0x66
-; GFX13-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX13-SDAG-NEXT:    s_endpgm
-;
-; GFX13-GISEL-LABEL: v_permlane_up_i64_vll:
-; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX13-GISEL-NEXT:    s_movk_i32 s2, 0x64
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s2, 0x66
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s2, 0x66
-; GFX13-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX13-GISEL-NEXT:    s_endpgm
+; GFX13-LABEL: v_permlane_up_i64_vll:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_movk_i32 s0, 0x64
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, 0x66
+; GFX13-NEXT:    v_permlane_up_b32 v1, v1, s0, 0x66
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call i64 @llvm.amdgcn.permlane.up(i64 %src0, i32 100, i32 102)
-  store i64 %v, ptr addrspace(1) %out
-  ret void
+  ret i64 %v
 }
 
-define amdgpu_kernel void @v_permlane_up_i64_vvv(ptr addrspace(1) %out, i64 %src0) {
-; GFX1250-SDAG-LABEL: v_permlane_up_i64_vvv:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX1250-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v2, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s4, s5
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s4, s5
-; GFX1250-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_endpgm
+define i64 @v_permlane_up_i64_vvv(i64 %src0) {
+; GFX1250-LABEL: v_permlane_up_i64_vvv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
+; GFX1250-NEXT:    v_bfe_u32 v3, v31, 10, 10
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX1250-NEXT:    v_permlane_up_b32 v1, v1, s0, s1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: v_permlane_up_i64_vvv:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX1250-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s4, s5
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s4, s5
-; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX13-SDAG-LABEL: v_permlane_up_i64_vvv:
-; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX13-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v2, s2
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s4, s5
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s4, s5
-; GFX13-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX13-SDAG-NEXT:    s_endpgm
-;
-; GFX13-GISEL-LABEL: v_permlane_up_i64_vvv:
-; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX13-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s4, s5
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s4, s5
-; GFX13-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX13-GISEL-NEXT:    s_endpgm
+; GFX13-LABEL: v_permlane_up_i64_vvv:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
+; GFX13-NEXT:    v_bfe_u32 v3, v31, 10, 10
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX13-NEXT:    v_permlane_up_b32 v1, v1, s0, s1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
   %v = call i64 @llvm.amdgcn.permlane.up(i64 %src0, i32 %tidx, i32 %tidy)
-  store i64 %v, ptr addrspace(1) %out
-  ret void
+  ret i64 %v
 }
 
-define amdgpu_kernel void @v_permlane_up_f64_vss(ptr addrspace(1) %out, double %src0, i32 %src1, i32 %src2) {
-; GFX1250-SDAG-LABEL: v_permlane_up_f64_vss:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_clause 0x1
-; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s6, s7
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s6, s7
-; GFX1250-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_endpgm
+define double @v_permlane_up_f64_vss(double %src0, i32 %src1, i32 %src2) {
+; GFX1250-LABEL: v_permlane_up_f64_vss:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX1250-NEXT:    v_permlane_up_b32 v1, v1, s0, s1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: v_permlane_up_f64_vss:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_clause 0x1
-; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s6, s7
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s6, s7
-; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX13-SDAG-LABEL: v_permlane_up_f64_vss:
-; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34 nv
-; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s4, s5
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s4, s5
-; GFX13-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX13-SDAG-NEXT:    s_endpgm
-;
-; GFX13-GISEL-LABEL: v_permlane_up_f64_vss:
-; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34 nv
-; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s4, s5
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s4, s5
-; GFX13-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX13-GISEL-NEXT:    s_endpgm
+; GFX13-LABEL: v_permlane_up_f64_vss:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX13-NEXT:    v_permlane_up_b32 v1, v1, s0, s1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call double @llvm.amdgcn.permlane.up(double %src0, i32 %src1, i32 %src2)
-  store double %v, ptr addrspace(1) %out
-  ret void
+  ret double %v
 }
 
-define amdgpu_kernel void @v_permlane_up_f64_vii(ptr addrspace(1) %out, double %src0) {
-; GFX1250-SDAG-LABEL: v_permlane_up_f64_vii:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v1, v0, 1, 2
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v0, v2, 1, 2
-; GFX1250-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_endpgm
+define double @v_permlane_up_f64_vii(double %src0) {
+; GFX1250-LABEL: v_permlane_up_f64_vii:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
+; GFX1250-NEXT:    v_permlane_up_b32 v1, v1, 1, 2
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: v_permlane_up_f64_vii:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v1, v1, 1, 2
-; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX13-SDAG-LABEL: v_permlane_up_f64_vii:
-; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v1, v0, 1, 2
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v0, v2, 1, 2
-; GFX13-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX13-SDAG-NEXT:    s_endpgm
-;
-; GFX13-GISEL-LABEL: v_permlane_up_f64_vii:
-; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v1, v1, 1, 2
-; GFX13-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX13-GISEL-NEXT:    s_endpgm
+; GFX13-LABEL: v_permlane_up_f64_vii:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, 1, 2
+; GFX13-NEXT:    v_permlane_up_b32 v1, v1, 1, 2
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call double @llvm.amdgcn.permlane.up(double %src0, i32 1, i32 2)
-  store double %v, ptr addrspace(1) %out
-  ret void
+  ret double %v
 }
 
-define amdgpu_kernel void @v_permlane_up_f64_vll(ptr addrspace(1) %out, double %src0) {
-; GFX1250-SDAG-LABEL: v_permlane_up_f64_vll:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1250-SDAG-NEXT:    s_movk_i32 s2, 0x64
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s2, 0x66
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s2, 0x66
-; GFX1250-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_endpgm
+define double @v_permlane_up_f64_vll(double %src0) {
+; GFX1250-LABEL: v_permlane_up_f64_vll:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_movk_i32 s0, 0x64
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, 0x66
+; GFX1250-NEXT:    v_permlane_up_b32 v1, v1, s0, 0x66
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: v_permlane_up_f64_vll:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1250-GISEL-NEXT:    s_movk_i32 s2, 0x64
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s2, 0x66
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s2, 0x66
-; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX13-SDAG-LABEL: v_permlane_up_f64_vll:
-; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s3
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-SDAG-NEXT:    s_movk_i32 s2, 0x64
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s2, 0x66
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s2, 0x66
-; GFX13-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX13-SDAG-NEXT:    s_endpgm
-;
-; GFX13-GISEL-LABEL: v_permlane_up_f64_vll:
-; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX13-GISEL-NEXT:    s_movk_i32 s2, 0x64
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s2, 0x66
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s2, 0x66
-; GFX13-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX13-GISEL-NEXT:    s_endpgm
+; GFX13-LABEL: v_permlane_up_f64_vll:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_movk_i32 s0, 0x64
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, 0x66
+; GFX13-NEXT:    v_permlane_up_b32 v1, v1, s0, 0x66
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %v = call double @llvm.amdgcn.permlane.up(double %src0, i32 100, i32 102)
-  store double %v, ptr addrspace(1) %out
-  ret void
+  ret double %v
 }
 
-define amdgpu_kernel void @v_permlane_up_f64_vvv(ptr addrspace(1) %out, double %src0) {
-; GFX1250-SDAG-LABEL: v_permlane_up_f64_vvv:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX1250-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v2, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s4, s5
-; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s4, s5
-; GFX1250-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_endpgm
+define double @v_permlane_up_f64_vvv(double %src0) {
+; GFX1250-LABEL: v_permlane_up_f64_vvv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
+; GFX1250-NEXT:    v_bfe_u32 v3, v31, 10, 10
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX1250-NEXT:    v_permlane_up_b32 v1, v1, s0, s1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: v_permlane_up_f64_vvv:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX1250-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s4, s5
-; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s4, s5
-; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX13-SDAG-LABEL: v_permlane_up_f64_vvv:
-; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX13-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v2, s2
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v1, v0, s4, s5
-; GFX13-SDAG-NEXT:    v_permlane_up_b32 v0, v2, s4, s5
-; GFX13-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
-; GFX13-SDAG-NEXT:    s_endpgm
-;
-; GFX13-GISEL-LABEL: v_permlane_up_f64_vvv:
-; GFX13-GISEL:       ; %bb.0:
-; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX13-GISEL-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v0, v0, s4, s5
-; GFX13-GISEL-NEXT:    v_permlane_up_b32 v1, v1, s4, s5
-; GFX13-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX13-GISEL-NEXT:    s_endpgm
+; GFX13-LABEL: v_permlane_up_f64_vvv:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
+; GFX13-NEXT:    v_bfe_u32 v3, v31, 10, 10
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_permlane_up_b32 v0, v0, s0, s1
+; GFX13-NEXT:    v_permlane_up_b32 v1, v1, s0, s1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
   %v = call double @llvm.amdgcn.permlane.up(double %src0, i32 %tidx, i32 %tidy)
-  store double %v, ptr addrspace(1) %out
-  ret void
+  ret double %v
 }
 
 ; does not work for GISEL
