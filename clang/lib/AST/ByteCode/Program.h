@@ -54,6 +54,8 @@ public:
     }
   }
 
+  const Context &getContext() const { return Ctx; }
+
   /// Marshals a native pointer to an ID for embedding in bytecode.
   unsigned getOrCreateNativePointer(const void *Ptr);
 

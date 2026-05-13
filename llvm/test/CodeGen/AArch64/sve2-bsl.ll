@@ -314,14 +314,11 @@ entry:
   ret <vscale x 4 x i32> %t3
 }
 
-; NOT (a) = NBSL (a, a, a).
-; We don't have a pattern for this right now because the tied register
-; constraint can lead to worse code gen.
+; NOT (a) = NBSL (a, a, a) = SUBR (a, -1).
 define <vscale x 2 x i64> @not(<vscale x 2 x i64> %0) #0 {
 ; CHECK-LABEL: not:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
   %2 = xor <vscale x 2 x i64> %0, splat (i64 -1)
   ret <vscale x 2 x i64> %2

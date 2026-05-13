@@ -1625,7 +1625,7 @@ template <class T> class TypedMDOperandIterator {
   MDNode::op_iterator I = nullptr;
 
 public:
-  using iterator_category = std::input_iterator_tag;
+  using iterator_category = std::forward_iterator_tag;
   using value_type = T *;
   using difference_type = std::ptrdiff_t;
   using pointer = void;

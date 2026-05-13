@@ -173,6 +173,10 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   return Requested;
 }
 
+bool AMDGPUSubtarget::isSingleWavefrontWorkgroup(const Function &F) const {
+  return getFlatWorkGroupSizes(F).second <= getWavefrontSize();
+}
+
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
     std::pair<unsigned, unsigned> RequestedWavesPerEU,
     std::pair<unsigned, unsigned> FlatWorkGroupSizes, unsigned LDSBytes) const {

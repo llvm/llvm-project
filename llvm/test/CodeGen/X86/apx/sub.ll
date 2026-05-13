@@ -1259,3 +1259,222 @@ entry:
   store i64 %sub, ptr %a
   ret void
 }
+
+define fastcc void @fold_with_physical_reg(ptr %arg0, i64 %arg1, ptr %arg2, i1 %arg3) nounwind {
+; NDD-LABEL: fold_with_physical_reg:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    pushq %rbp # encoding: [0x55]
+; NDD-NEXT:    movq %rsp, %rbp # encoding: [0x48,0x89,0xe5]
+; NDD-NEXT:    pushq %r15 # encoding: [0x41,0x57]
+; NDD-NEXT:    pushq %r14 # encoding: [0x41,0x56]
+; NDD-NEXT:    pushq %r13 # encoding: [0x41,0x55]
+; NDD-NEXT:    pushq %r12 # encoding: [0x41,0x54]
+; NDD-NEXT:    pushq %rbx # encoding: [0x53]
+; NDD-NEXT:    subq $24, %rsp # encoding: [0x48,0x83,0xec,0x18]
+; NDD-NEXT:    movl %ecx, %r14d # encoding: [0x41,0x89,0xce]
+; NDD-NEXT:    movq %rdx, %rbx # encoding: [0x48,0x89,0xd3]
+; NDD-NEXT:    movq %rsi, %r12 # encoding: [0x49,0x89,0xf4]
+; NDD-NEXT:    movq %rdi, %r13 # encoding: [0x49,0x89,0xfd]
+; NDD-NEXT:    leaq 15(%rsi), %rax # encoding: [0x48,0x8d,0x46,0x0f]
+; NDD-NEXT:    andq $-16, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xe0,0xf0]
+; NDD-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; NDD-NEXT:    # encoding: [0x48,0x89,0x45,0xd0]
+; NDD-NEXT:    .p2align 4
+; NDD-NEXT:  .LBB50_1: # %bb1
+; NDD-NEXT:    # =>This Loop Header: Depth=1
+; NDD-NEXT:    # Child Loop BB50_2 Depth 2
+; NDD-NEXT:    movq %rsp, %rax # encoding: [0x48,0x89,0xe0]
+; NDD-NEXT:    subq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
+; NDD-NEXT:    # encoding: [0x48,0x2b,0x45,0xd0]
+; NDD-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; NDD-NEXT:    # encoding: [0x48,0x89,0x45,0xc8]
+; NDD-NEXT:    movq %rax, %rsp # encoding: [0x48,0x89,0xc4]
+; NDD-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
+; NDD-NEXT:    .p2align 4
+; NDD-NEXT:  .LBB50_2: # %bb2
+; NDD-NEXT:    # Parent Loop BB50_1 Depth=1
+; NDD-NEXT:    # => This Inner Loop Header: Depth=2
+; NDD-NEXT:    xorps %xmm0, %xmm0 # encoding: [0x0f,0x57,0xc0]
+; NDD-NEXT:    movq %r13, %rdi # encoding: [0x4c,0x89,0xef]
+; NDD-NEXT:    xorl %esi, %esi # encoding: [0x31,0xf6]
+; NDD-NEXT:    xorl %edx, %edx # encoding: [0x31,0xd2]
+; NDD-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; NDD-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; NDD-NEXT:    # encoding: [0x48,0x8b,0x45,0xc8]
+; NDD-NEXT:    movq $0, (%rax,%r15,8) # encoding: [0x4a,0xc7,0x04,0xf8,0x00,0x00,0x00,0x00]
+; NDD-NEXT:    movq $0, (%rbx) # encoding: [0x48,0xc7,0x03,0x00,0x00,0x00,0x00]
+; NDD-NEXT:    testb $1, %r14b # encoding: [0x41,0xf6,0xc6,0x01]
+; NDD-NEXT:    movq %r12, %r15 # encoding: [0x4d,0x89,0xe7]
+; NDD-NEXT:    je .LBB50_2 # encoding: [0x74,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
+; NDD-NEXT:    jmp .LBB50_1 # encoding: [0xeb,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB50_1, kind: FK_PCRel_1
+;
+; IMMONLY-LABEL: fold_with_physical_reg:
+; IMMONLY:       # %bb.0: # %entry
+; IMMONLY-NEXT:    pushq %rbp # encoding: [0x55]
+; IMMONLY-NEXT:    movq %rsp, %rbp # encoding: [0x48,0x89,0xe5]
+; IMMONLY-NEXT:    pushq %r15 # encoding: [0x41,0x57]
+; IMMONLY-NEXT:    pushq %r14 # encoding: [0x41,0x56]
+; IMMONLY-NEXT:    pushq %r13 # encoding: [0x41,0x55]
+; IMMONLY-NEXT:    pushq %r12 # encoding: [0x41,0x54]
+; IMMONLY-NEXT:    pushq %rbx # encoding: [0x53]
+; IMMONLY-NEXT:    subq $24, %rsp # encoding: [0x48,0x83,0xec,0x18]
+; IMMONLY-NEXT:    movl %ecx, %r14d # encoding: [0x41,0x89,0xce]
+; IMMONLY-NEXT:    movq %rdx, %rbx # encoding: [0x48,0x89,0xd3]
+; IMMONLY-NEXT:    movq %rsi, %r12 # encoding: [0x49,0x89,0xf4]
+; IMMONLY-NEXT:    movq %rdi, %r13 # encoding: [0x49,0x89,0xfd]
+; IMMONLY-NEXT:    leaq 15(%rsi), %rax # encoding: [0x48,0x8d,0x46,0x0f]
+; IMMONLY-NEXT:    andq $-16, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xe0,0xf0]
+; IMMONLY-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; IMMONLY-NEXT:    # encoding: [0x48,0x89,0x45,0xd0]
+; IMMONLY-NEXT:    .p2align 4
+; IMMONLY-NEXT:  .LBB50_1: # %bb1
+; IMMONLY-NEXT:    # =>This Loop Header: Depth=1
+; IMMONLY-NEXT:    # Child Loop BB50_2 Depth 2
+; IMMONLY-NEXT:    movq %rsp, %rax # encoding: [0x48,0x89,0xe0]
+; IMMONLY-NEXT:    subq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
+; IMMONLY-NEXT:    # encoding: [0x48,0x2b,0x45,0xd0]
+; IMMONLY-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; IMMONLY-NEXT:    # encoding: [0x48,0x89,0x45,0xc8]
+; IMMONLY-NEXT:    movq %rax, %rsp # encoding: [0x48,0x89,0xc4]
+; IMMONLY-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
+; IMMONLY-NEXT:    .p2align 4
+; IMMONLY-NEXT:  .LBB50_2: # %bb2
+; IMMONLY-NEXT:    # Parent Loop BB50_1 Depth=1
+; IMMONLY-NEXT:    # => This Inner Loop Header: Depth=2
+; IMMONLY-NEXT:    xorps %xmm0, %xmm0 # encoding: [0x0f,0x57,0xc0]
+; IMMONLY-NEXT:    movq %r13, %rdi # encoding: [0x4c,0x89,0xef]
+; IMMONLY-NEXT:    xorl %esi, %esi # encoding: [0x31,0xf6]
+; IMMONLY-NEXT:    xorl %edx, %edx # encoding: [0x31,0xd2]
+; IMMONLY-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
+; IMMONLY-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; IMMONLY-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; IMMONLY-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; IMMONLY-NEXT:    # encoding: [0x48,0x8b,0x45,0xc8]
+; IMMONLY-NEXT:    movq $0, (%rax,%r15,8) # encoding: [0x4a,0xc7,0x04,0xf8,0x00,0x00,0x00,0x00]
+; IMMONLY-NEXT:    movq $0, (%rbx) # encoding: [0x48,0xc7,0x03,0x00,0x00,0x00,0x00]
+; IMMONLY-NEXT:    testb $1, %r14b # encoding: [0x41,0xf6,0xc6,0x01]
+; IMMONLY-NEXT:    movq %r12, %r15 # encoding: [0x4d,0x89,0xe7]
+; IMMONLY-NEXT:    je .LBB50_2 # encoding: [0x74,A]
+; IMMONLY-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
+; IMMONLY-NEXT:    jmp .LBB50_1 # encoding: [0xeb,A]
+; IMMONLY-NEXT:    # fixup A - offset: 1, value: .LBB50_1, kind: FK_PCRel_1
+;
+; MEM-LABEL: fold_with_physical_reg:
+; MEM:       # %bb.0: # %entry
+; MEM-NEXT:    pushq %rbp # encoding: [0x55]
+; MEM-NEXT:    movq %rsp, %rbp # encoding: [0x48,0x89,0xe5]
+; MEM-NEXT:    pushq %r15 # encoding: [0x41,0x57]
+; MEM-NEXT:    pushq %r14 # encoding: [0x41,0x56]
+; MEM-NEXT:    pushq %r13 # encoding: [0x41,0x55]
+; MEM-NEXT:    pushq %r12 # encoding: [0x41,0x54]
+; MEM-NEXT:    pushq %rbx # encoding: [0x53]
+; MEM-NEXT:    subq $24, %rsp # encoding: [0x48,0x83,0xec,0x18]
+; MEM-NEXT:    movl %ecx, %r14d # encoding: [0x41,0x89,0xce]
+; MEM-NEXT:    movq %rdx, %rbx # encoding: [0x48,0x89,0xd3]
+; MEM-NEXT:    movq %rsi, %r12 # encoding: [0x49,0x89,0xf4]
+; MEM-NEXT:    movq %rdi, %r13 # encoding: [0x49,0x89,0xfd]
+; MEM-NEXT:    leaq 15(%rsi), %rax # encoding: [0x48,0x8d,0x46,0x0f]
+; MEM-NEXT:    andq $-16, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xe0,0xf0]
+; MEM-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; MEM-NEXT:    # encoding: [0x48,0x89,0x45,0xd0]
+; MEM-NEXT:    .p2align 4
+; MEM-NEXT:  .LBB50_1: # %bb1
+; MEM-NEXT:    # =>This Loop Header: Depth=1
+; MEM-NEXT:    # Child Loop BB50_2 Depth 2
+; MEM-NEXT:    subq {{[-0-9]+}}(%r{{[sb]}}p), %rsp, %rax # 8-byte Folded Reload
+; MEM-NEXT:    # encoding: [0x62,0xf4,0xfc,0x18,0x2b,0x65,0xd0]
+; MEM-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; MEM-NEXT:    # encoding: [0x48,0x89,0x45,0xc8]
+; MEM-NEXT:    movq %rax, %rsp # encoding: [0x48,0x89,0xc4]
+; MEM-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
+; MEM-NEXT:    .p2align 4
+; MEM-NEXT:  .LBB50_2: # %bb2
+; MEM-NEXT:    # Parent Loop BB50_1 Depth=1
+; MEM-NEXT:    # => This Inner Loop Header: Depth=2
+; MEM-NEXT:    xorps %xmm0, %xmm0 # encoding: [0x0f,0x57,0xc0]
+; MEM-NEXT:    movq %r13, %rdi # encoding: [0x4c,0x89,0xef]
+; MEM-NEXT:    xorl %esi, %esi # encoding: [0x31,0xf6]
+; MEM-NEXT:    xorl %edx, %edx # encoding: [0x31,0xd2]
+; MEM-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
+; MEM-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; MEM-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; MEM-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; MEM-NEXT:    # encoding: [0x48,0x8b,0x45,0xc8]
+; MEM-NEXT:    movq $0, (%rax,%r15,8) # encoding: [0x4a,0xc7,0x04,0xf8,0x00,0x00,0x00,0x00]
+; MEM-NEXT:    movq $0, (%rbx) # encoding: [0x48,0xc7,0x03,0x00,0x00,0x00,0x00]
+; MEM-NEXT:    testb $1, %r14b # encoding: [0x41,0xf6,0xc6,0x01]
+; MEM-NEXT:    movq %r12, %r15 # encoding: [0x4d,0x89,0xe7]
+; MEM-NEXT:    je .LBB50_2 # encoding: [0x74,A]
+; MEM-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
+; MEM-NEXT:    jmp .LBB50_1 # encoding: [0xeb,A]
+; MEM-NEXT:    # fixup A - offset: 1, value: .LBB50_1, kind: FK_PCRel_1
+;
+; NF-LABEL: fold_with_physical_reg:
+; NF:       # %bb.0: # %entry
+; NF-NEXT:    pushq %rbp # encoding: [0x55]
+; NF-NEXT:    movq %rsp, %rbp # encoding: [0x48,0x89,0xe5]
+; NF-NEXT:    pushq %r15 # encoding: [0x41,0x57]
+; NF-NEXT:    pushq %r14 # encoding: [0x41,0x56]
+; NF-NEXT:    pushq %r13 # encoding: [0x41,0x55]
+; NF-NEXT:    pushq %r12 # encoding: [0x41,0x54]
+; NF-NEXT:    pushq %rbx # encoding: [0x53]
+; NF-NEXT:    subq $24, %rsp # encoding: [0x48,0x83,0xec,0x18]
+; NF-NEXT:    movl %ecx, %r14d # encoding: [0x41,0x89,0xce]
+; NF-NEXT:    movq %rdx, %rbx # encoding: [0x48,0x89,0xd3]
+; NF-NEXT:    movq %rsi, %r12 # encoding: [0x49,0x89,0xf4]
+; NF-NEXT:    movq %rdi, %r13 # encoding: [0x49,0x89,0xfd]
+; NF-NEXT:    leaq 15(%rsi), %rax # encoding: [0x48,0x8d,0x46,0x0f]
+; NF-NEXT:    andq $-16, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xe0,0xf0]
+; NF-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; NF-NEXT:    # encoding: [0x48,0x89,0x45,0xd0]
+; NF-NEXT:    .p2align 4
+; NF-NEXT:  .LBB50_1: # %bb1
+; NF-NEXT:    # =>This Loop Header: Depth=1
+; NF-NEXT:    # Child Loop BB50_2 Depth 2
+; NF-NEXT:    movq %rsp, %rax # encoding: [0x48,0x89,0xe0]
+; NF-NEXT:    subq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
+; NF-NEXT:    # encoding: [0x48,0x2b,0x45,0xd0]
+; NF-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; NF-NEXT:    # encoding: [0x48,0x89,0x45,0xc8]
+; NF-NEXT:    movq %rax, %rsp # encoding: [0x48,0x89,0xc4]
+; NF-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
+; NF-NEXT:    .p2align 4
+; NF-NEXT:  .LBB50_2: # %bb2
+; NF-NEXT:    # Parent Loop BB50_1 Depth=1
+; NF-NEXT:    # => This Inner Loop Header: Depth=2
+; NF-NEXT:    xorps %xmm0, %xmm0 # encoding: [0x0f,0x57,0xc0]
+; NF-NEXT:    movq %r13, %rdi # encoding: [0x4c,0x89,0xef]
+; NF-NEXT:    xorl %esi, %esi # encoding: [0x31,0xf6]
+; NF-NEXT:    xorl %edx, %edx # encoding: [0x31,0xd2]
+; NF-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
+; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NF-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; NF-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; NF-NEXT:    # encoding: [0x48,0x8b,0x45,0xc8]
+; NF-NEXT:    movq $0, (%rax,%r15,8) # encoding: [0x4a,0xc7,0x04,0xf8,0x00,0x00,0x00,0x00]
+; NF-NEXT:    movq $0, (%rbx) # encoding: [0x48,0xc7,0x03,0x00,0x00,0x00,0x00]
+; NF-NEXT:    testb $1, %r14b # encoding: [0x41,0xf6,0xc6,0x01]
+; NF-NEXT:    movq %r12, %r15 # encoding: [0x4d,0x89,0xe7]
+; NF-NEXT:    je .LBB50_2 # encoding: [0x74,A]
+; NF-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
+; NF-NEXT:    jmp .LBB50_1 # encoding: [0xeb,A]
+; NF-NEXT:    # fixup A - offset: 1, value: .LBB50_1, kind: FK_PCRel_1
+entry:
+  br label %bb1
+
+bb1:                                              ; preds = %bb2, %entry
+  %alloc = alloca i8, i64 %arg1, align 16
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %bb1
+  %phi = phi i64 [ 0, %bb1 ], [ %arg1, %bb2 ]
+  %call = call fastcc ptr null(ptr %arg0, ptr null, ptr null, ptr null, float 0.000000e+00)
+  %gep = getelementptr ptr, ptr %alloc, i64 %phi
+  store ptr null, ptr %gep, align 8
+  store ptr null, ptr %arg2, align 8
+  br i1 %arg3, label %bb1, label %bb2
+}

@@ -120,6 +120,103 @@ TEST_P(MCPlusBuilderTester, AliasSmallerX0) {
                  /*OnlySmaller=*/true);
 }
 
+TEST_P(MCPlusBuilderTester, AArch64_createLoadImmediate) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // mov  x0, 0x0001000100010001 --> orr x0, xzr, 0x0001000100010001
+  auto Insts1 = BC->MIB->createLoadImmediate(AArch64::X0, 0x0001000100010001);
+  ASSERT_EQ(Insts1.size(), 1U);
+  ASSERT_EQ(Insts1[0].getOpcode(), AArch64::ORRXri);
+  ASSERT_EQ(Insts1[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts1[0].getOperand(1).getReg(), AArch64::XZR);
+  ASSERT_EQ(Insts1[0].getOperand(2).getImm(), 32);
+
+  // mov  w0, #0x00030003 --> orr w0, wzr, 0x00030003
+  auto Insts2 = BC->MIB->createLoadImmediate(AArch64::W0, 0x00030003);
+  ASSERT_EQ(Insts2.size(), 1U);
+  ASSERT_EQ(Insts2[0].getOpcode(), AArch64::ORRWri);
+  ASSERT_EQ(Insts2[0].getOperand(0).getReg(), AArch64::W0);
+  ASSERT_EQ(Insts2[0].getOperand(1).getReg(), AArch64::WZR);
+  ASSERT_EQ(Insts2[0].getOperand(2).getImm(), 33);
+
+  // mov  x0, #-16  --> movn x0, #15
+  auto Insts3 = BC->MIB->createLoadImmediate(AArch64::X0, 0xfffffffffffffff0);
+  ASSERT_EQ(Insts3.size(), 1U);
+  ASSERT_EQ(Insts3[0].getOpcode(), AArch64::MOVNXi);
+  ASSERT_EQ(Insts3[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts3[0].getOperand(1).getImm(), 15);
+  ASSERT_EQ(Insts3[0].getOperand(2).getImm(), 0);
+
+  // mov  w0, #-1 --> movn  w0, #0
+  auto Insts4 = BC->MIB->createLoadImmediate(AArch64::W0, 0xffffffff);
+  ASSERT_EQ(Insts4.size(), 1U);
+  ASSERT_EQ(Insts4[0].getOpcode(), AArch64::MOVNWi);
+  ASSERT_EQ(Insts4[0].getOperand(0).getReg(), AArch64::W0);
+  ASSERT_EQ(Insts4[0].getOperand(1).getImm(), 0);
+  ASSERT_EQ(Insts4[0].getOperand(2).getImm(), 0);
+
+  // mov    x0, #0x1
+  // movk   x0, #0x2, lsl #16
+  auto Insts5 = BC->MIB->createLoadImmediate(AArch64::X0, 0x00020001);
+  ASSERT_EQ(Insts5.size(), 2U);
+  ASSERT_EQ(Insts5[0].getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(Insts5[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts5[0].getOperand(1).getImm(), 1);
+  ASSERT_EQ(Insts5[0].getOperand(2).getImm(), 0);
+  ASSERT_EQ(Insts5[1].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts5[1].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts5[1].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts5[1].getOperand(2).getImm(), 2);
+  ASSERT_EQ(Insts5[1].getOperand(3).getImm(), 16);
+
+  // mov    x0, #0x1
+  // movk   x0, #0x2, lsl #16
+  // movk   x0, #0x3, lsl #32
+  auto Insts6 = BC->MIB->createLoadImmediate(AArch64::X0, 0x000300020001);
+  ASSERT_EQ(Insts6.size(), 3U);
+  ASSERT_EQ(Insts6[0].getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(Insts6[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[0].getOperand(1).getImm(), 1);
+  ASSERT_EQ(Insts6[0].getOperand(2).getImm(), 0);
+  ASSERT_EQ(Insts6[1].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts6[1].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[1].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[1].getOperand(2).getImm(), 2);
+  ASSERT_EQ(Insts6[1].getOperand(3).getImm(), 16);
+  ASSERT_EQ(Insts6[2].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts6[2].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[2].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[2].getOperand(2).getImm(), 3);
+  ASSERT_EQ(Insts6[2].getOperand(3).getImm(), 32);
+
+  // mov    x0, #0x1
+  // movk   x0, #0x2, lsl #16
+  // movk   x0, #0x3, lsl #32
+  // movk   x0, #0x4, lsl #48
+  auto Insts7 = BC->MIB->createLoadImmediate(AArch64::X0, 0x0004000300020001);
+  ASSERT_EQ(Insts7.size(), 4U);
+  ASSERT_EQ(Insts7[0].getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(Insts7[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[0].getOperand(1).getImm(), 1);
+  ASSERT_EQ(Insts7[0].getOperand(2).getImm(), 0);
+  ASSERT_EQ(Insts7[1].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts7[1].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[1].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[1].getOperand(2).getImm(), 2);
+  ASSERT_EQ(Insts7[1].getOperand(3).getImm(), 16);
+  ASSERT_EQ(Insts7[2].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts7[2].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[2].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[2].getOperand(2).getImm(), 3);
+  ASSERT_EQ(Insts7[2].getOperand(3).getImm(), 32);
+  ASSERT_EQ(Insts7[3].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts7[3].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[3].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[3].getOperand(2).getImm(), 4);
+  ASSERT_EQ(Insts7[3].getOperand(3).getImm(), 48);
+}
+
 TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();

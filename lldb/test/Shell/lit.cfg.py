@@ -176,6 +176,12 @@ if config.objc_gnustep_dir:
 if config.have_dia_sdk:
     config.available_features.add("diasdk")
 
+if platform.system() == "Windows":
+    # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
+    # escape sequences into the output stream, which breaks tests that check
+    # for specific stdout/stderr content.
+    config.environment["LLDB_LAUNCH_FLAG_USE_PIPES"] = "1"
+
 # NetBSD permits setting dbregs either if one is root
 # or if user_set_dbregs is enabled
 can_set_dbregs = True

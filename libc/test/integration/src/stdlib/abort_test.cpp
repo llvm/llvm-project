@@ -9,7 +9,7 @@
 #include "src/signal/signal.h"
 #include "src/stdlib/_Exit.h"
 #include "src/stdlib/abort.h"
-#include "src/stdlib/linux/abort_utils.h"
+#include "src/stdlib/abort_utils.h"
 #include "src/sys/wait/waitpid.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fork.h"

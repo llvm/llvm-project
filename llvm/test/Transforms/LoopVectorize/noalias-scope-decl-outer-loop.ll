@@ -63,7 +63,6 @@ exit:
   ret void
 }
 
-declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.mustprogress"}
