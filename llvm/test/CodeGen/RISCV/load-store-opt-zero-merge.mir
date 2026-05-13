@@ -23,15 +23,13 @@ body: |
     ; RV32-LABEL: name: merge_sb_sb_to_sh
     ; RV32: liveins: $x10
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: SB $x0, $x10, 0 :: (store (s8), align 2)
-    ; RV32-NEXT: SB $x0, $x10, 1 :: (store (s8))
+    ; RV32-NEXT: SH $x0, $x10, 0 :: (store (s8), align 2), (store (s8))
     ; RV32-NEXT: PseudoRET
     ;
     ; RV64-LABEL: name: merge_sb_sb_to_sh
     ; RV64: liveins: $x10
     ; RV64-NEXT: {{  $}}
-    ; RV64-NEXT: SB $x0, $x10, 0 :: (store (s8), align 2)
-    ; RV64-NEXT: SB $x0, $x10, 1 :: (store (s8))
+    ; RV64-NEXT: SH $x0, $x10, 0 :: (store (s8), align 2), (store (s8))
     ; RV64-NEXT: PseudoRET
     SB $x0, $x10, 0 :: (store (s8), align 2)
     SB $x0, $x10, 1 :: (store (s8))
@@ -46,15 +44,13 @@ body: |
     ; RV32-LABEL: name: merge_sh_sh_to_sw
     ; RV32: liveins: $x10
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: SH $x0, $x10, 0 :: (store (s16), align 4)
-    ; RV32-NEXT: SH $x0, $x10, 2 :: (store (s16))
+    ; RV32-NEXT: SW $x0, $x10, 0 :: (store (s16), align 4), (store (s16))
     ; RV32-NEXT: PseudoRET
     ;
     ; RV64-LABEL: name: merge_sh_sh_to_sw
     ; RV64: liveins: $x10
     ; RV64-NEXT: {{  $}}
-    ; RV64-NEXT: SH $x0, $x10, 0 :: (store (s16), align 4)
-    ; RV64-NEXT: SH $x0, $x10, 2 :: (store (s16))
+    ; RV64-NEXT: SW $x0, $x10, 0 :: (store (s16), align 4), (store (s16))
     ; RV64-NEXT: PseudoRET
     SH $x0, $x10, 0 :: (store (s16), align 4)
     SH $x0, $x10, 2 :: (store (s16))
@@ -75,7 +71,7 @@ body: |
     ; RV64-LABEL: name: merge_sw_sw_to_sd
     ; RV64: liveins: $x10
     ; RV64-NEXT: {{  $}}
-    ; RV64-NEXT: MIPS_SWP $x0, $x0, $x10, 0 :: (store (s32), align 8), (store (s32))
+    ; RV64-NEXT: SD $x0, $x10, 0 :: (store (s32), align 8), (store (s32))
     ; RV64-NEXT: PseudoRET
     SW $x0, $x10, 0 :: (store (s32), align 8)
     SW $x0, $x10, 4 :: (store (s32))

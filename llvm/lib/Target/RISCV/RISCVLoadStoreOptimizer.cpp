@@ -14,13 +14,11 @@
 // Post-allocation Zilsd decomposition: Fixes invalid LD/SD instructions if
 // register allocation didn't provide suitable consecutive registers.
 //
-// NOTE: The AArch64LoadStoreOpt pass performs additional optimizations such as
-// merging zero store instructions, promoting loads that read directly from a
-// preceding store, and merging base register updates with load/store
-// instructions (via pre-/post-indexed addressing). These advanced
-// transformations are not yet implemented in the RISC-V pass but represent
-// potential future enhancements for further optimizing RISC-V memory
-// operations.
+// This pass also implements:
+//   - Zero Store Merging: Merges adjacent stores of zero into wider stores
+//
+// NOTE: Pre/post-indexed addressing optimizations from AArch64 are not
+// implemented as RISC-V uses a different addressing model.
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,6 +37,9 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-load-store-opt"
 #define RISCV_LOAD_STORE_OPT_NAME "RISC-V Load / Store Optimizer"
 
+STATISTIC(NumPairCreated, "Number of load/store pair instructions generated");
+STATISTIC(NumZeroStoresPromoted, "Number of narrow zero stores promoted");
+
 // The LdStLimit limits number of instructions how far we search for load/store
 // pairs.
 static cl::opt<unsigned> LdStLimit("riscv-load-store-scan-limit", cl::init(128),
@@ -47,6 +48,45 @@ STATISTIC(NumLD2LW, "Number of LD instructions split back to LW");
 STATISTIC(NumSD2SW, "Number of SD instructions split back to SW");
 
 namespace {
+
+static bool isPromotableZeroStoreInst(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  return (Opc == RISCV::SW || Opc == RISCV::SB || Opc == RISCV::SH ||
+          Opc == RISCV::SD) &&
+         MI.getOperand(0).getReg() == RISCV::X0;
+}
+
+static std::optional<unsigned> getMatchingWideOpcode(unsigned Opc,
+                                                     bool IsRV64) {
+  switch (Opc) {
+  default:
+    return std::nullopt;
+  case RISCV::SB:
+    return RISCV::SH;
+  case RISCV::SH:
+    return RISCV::SW;
+  case RISCV::SW:
+    // SW can only be widened to SD on RV64
+    if (IsRV64)
+      return RISCV::SD;
+    return std::nullopt;
+  }
+}
+
+static int getMemScale(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case RISCV::SB:
+    return 1;
+  case RISCV::SH:
+    return 2;
+  case RISCV::SW:
+    return 4;
+  case RISCV::SD:
+    return 8;
+  }
+}
 
 struct RISCVLoadStoreOpt : public MachineFunctionPass {
   static char ID;
@@ -68,6 +108,9 @@ struct RISCVLoadStoreOpt : public MachineFunctionPass {
   // Find and pair load/store instructions.
   bool tryToPairLdStInst(MachineBasicBlock::iterator &MBBI);
 
+  // Find and merge zero store instructions.
+  bool tryToMergeZeroStInst(MachineBasicBlock::iterator &MBBI);
+
   // Convert load/store pairs to single instructions.
   bool tryConvertToLdStPair(MachineBasicBlock::iterator First,
                             MachineBasicBlock::iterator Second);
@@ -83,7 +126,13 @@ struct RISCVLoadStoreOpt : public MachineFunctionPass {
   // with the current instruction into a load/store pair.
   // Return the matching instruction if one is found, else MBB->end().
   MachineBasicBlock::iterator findMatchingInsn(MachineBasicBlock::iterator I,
-                                               bool &MergeForward);
+                                               bool &MergeForward,
+                                               bool FindNarrowMerge);
+
+  // Merge the two instructions indicated into a wider narrow store instruction.
+  MachineBasicBlock::iterator
+  mergeNarrowZeroStores(MachineBasicBlock::iterator I,
+                        MachineBasicBlock::iterator MergeMI, bool MergeForward);
 
   MachineBasicBlock::iterator
   mergePairedInsns(MachineBasicBlock::iterator I,
@@ -129,6 +178,13 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
 
       for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
            MBBI != E;) {
+        // Try zero store merging
+        if (isPromotableZeroStoreInst(*MBBI) && tryToMergeZeroStInst(MBBI)) {
+          MadeChange = true;
+          continue;
+        }
+
+        // Try load/store pairing
         if (TII->isPairableLdStInstOpc(MBBI->getOpcode()) &&
             tryToPairLdStInst(MBBI))
           MadeChange = true;
@@ -175,8 +231,10 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   // Look ahead for a pairable instruction.
   MachineBasicBlock::iterator E = MI.getParent()->end();
   bool MergeForward;
-  MachineBasicBlock::iterator Paired = findMatchingInsn(MBBI, MergeForward);
+  MachineBasicBlock::iterator Paired =
+      findMatchingInsn(MBBI, MergeForward, /*FindNarrowMerge=*/false);
   if (Paired != E) {
+    ++NumPairCreated;
     MBBI = mergePairedInsns(MBBI, Paired, MergeForward);
     return true;
   }
@@ -479,6 +537,48 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
   return true;
 }
 
+// Merge adjacent zero stores into a wider store.
+bool RISCVLoadStoreOpt::tryToMergeZeroStInst(
+    MachineBasicBlock::iterator &MBBI) {
+  assert(isPromotableZeroStoreInst(*MBBI) && "Expected narrow zero store.");
+  MachineInstr &MI = *MBBI;
+  MachineBasicBlock::iterator E = MI.getParent()->end();
+
+  // Don't merge volatile stores
+  if (MI.hasOrderedMemoryRef())
+    return false;
+
+  // Don't optimize frame setup/destroy instructions (stack spills)
+  if (MI.getFlag(MachineInstr::FrameSetup) ||
+      MI.getFlag(MachineInstr::FrameDestroy))
+    return false;
+
+  // Skip if there is no wider store on this target (e.g. SW on RV32).
+  // FIXME: With Zilsd on RV32, two SWs could be merged using SD via a
+  // register pair.
+  if (!getMatchingWideOpcode(MI.getOpcode(), STI->is64Bit()))
+    return false;
+
+  // Look ahead up to LdStLimit instructions for a mergeable instruction.
+  bool MergeForward;
+  MachineBasicBlock::iterator MergeMI =
+      findMatchingInsn(MBBI, MergeForward, /*FindNarrowMerge=*/true);
+  if (MergeMI != E) {
+    MachineInstr &LowerMI =
+        MI.getOperand(2).getImm() <= MergeMI->getOperand(2).getImm() ? MI
+                                                                     : *MergeMI;
+    Align RequiredAlign(getMemScale(MI) * 2);
+    if (!STI->enableUnalignedScalarMem() &&
+        (*LowerMI.memoperands_begin())->getAlign() < RequiredAlign)
+      return false;
+
+    ++NumZeroStoresPromoted;
+    MBBI = mergeNarrowZeroStores(MBBI, MergeMI, MergeForward);
+    return true;
+  }
+  return false;
+}
+
 bool RISCVLoadStoreOpt::tryConvertToMIPSLdStPair(
     MachineFunction *MF, MachineBasicBlock::iterator First,
     MachineBasicBlock::iterator Second) {
@@ -569,11 +669,15 @@ static bool mayAlias(MachineInstr &MIa,
 // liveness, and potential scheduling hazards.
 MachineBasicBlock::iterator
 RISCVLoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
-                                    bool &MergeForward) {
+                                    bool &MergeForward, bool FindNarrowMerge) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator MBBI = I;
   MachineInstr &FirstMI = *I;
   MBBI = next_nodbg(MBBI, E);
+
+  // Only handle immediate offsets
+  if (!FirstMI.getOperand(2).isImm())
+    return E;
 
   bool MayLoad = FirstMI.mayLoad();
   Register Reg = FirstMI.getOperand(0).getReg();
@@ -581,6 +685,7 @@ RISCVLoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   int64_t Offset = FirstMI.getOperand(2).getImm();
   int64_t OffsetStride = (*FirstMI.memoperands_begin())->getSize().getValue();
 
+  bool IsPromotableZeroStore = isPromotableZeroStoreInst(FirstMI);
   MergeForward = false;
 
   // Track which register units have been modified and used between the first
@@ -600,18 +705,51 @@ RISCVLoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
     if (!MI.isTransient())
       ++Count;
 
-    if (MI.getOpcode() == FirstMI.getOpcode() &&
-        TII->isLdStSafeToPair(MI, TRI)) {
+    // For narrow merges, we need to check for matching zero stores
+    // For regular pairing, check for matching opcode and pairable instructions
+    bool IsCandidate = false;
+    if (FindNarrowMerge) {
+      // Require same opcode so that two SBs merge to SH, two SHs to SW, etc.
+      IsCandidate = IsPromotableZeroStore && isPromotableZeroStoreInst(MI) &&
+                    MI.getOpcode() == FirstMI.getOpcode();
+    } else {
+      IsCandidate = MI.getOpcode() == FirstMI.getOpcode() &&
+                    TII->isLdStSafeToPair(MI, TRI);
+    }
+
+    if (IsCandidate) {
+      // Only handle immediate offsets
+      if (!MI.getOperand(2).isImm()) {
+        LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
+                                          TRI);
+        if (MI.mayLoadOrStore())
+          MemInsns.push_back(&MI);
+        continue;
+      }
+
       Register MIBaseReg = MI.getOperand(1).getReg();
       int64_t MIOffset = MI.getOperand(2).getImm();
+      int64_t MIOffsetStride = FindNarrowMerge ? getMemScale(MI) : OffsetStride;
 
       if (BaseReg == MIBaseReg) {
-        if ((Offset != MIOffset + OffsetStride) &&
-            (Offset + OffsetStride != MIOffset)) {
-          LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
-                                            TRI);
-          MemInsns.push_back(&MI);
-          continue;
+        // For narrow merges, check if offsets are adjacent
+        if (FindNarrowMerge) {
+          if ((Offset != MIOffset + MIOffsetStride) &&
+              (Offset + OffsetStride != MIOffset)) {
+            LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
+                                              UsedRegUnits, TRI);
+            MemInsns.push_back(&MI);
+            continue;
+          }
+        } else {
+          // For regular pairing
+          if ((Offset != MIOffset + OffsetStride) &&
+              (Offset + OffsetStride != MIOffset)) {
+            LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
+                                              UsedRegUnits, TRI);
+            MemInsns.push_back(&MI);
+            continue;
+          }
         }
 
         // If the destination register of one load is the same register or a
@@ -677,6 +815,75 @@ RISCVLoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
       MemInsns.push_back(&MI);
   }
   return E;
+}
+
+// Merge two adjacent zero stores into a single wider store.
+MachineBasicBlock::iterator
+RISCVLoadStoreOpt::mergeNarrowZeroStores(MachineBasicBlock::iterator I,
+                                         MachineBasicBlock::iterator MergeMI,
+                                         bool MergeForward) {
+  assert(isPromotableZeroStoreInst(*I) && isPromotableZeroStoreInst(*MergeMI) &&
+         "Expected promotable zero stores.");
+
+  MachineBasicBlock::iterator E = I->getParent()->end();
+  MachineBasicBlock::iterator NextI = next_nodbg(I, E);
+  // If NextI is the second of the two instructions to be merged, we need
+  // to skip one further. Either way we merge will invalidate the iterator,
+  // and we don't need to scan the new instruction, as it's a pairwise
+  // instruction, which we're not considering for further action anyway.
+  if (NextI == MergeMI)
+    NextI = next_nodbg(NextI, E);
+
+  // Only handle immediate offsets
+  if (!I->getOperand(2).isImm() || !MergeMI->getOperand(2).isImm())
+    return NextI;
+
+  unsigned Opc = I->getOpcode();
+
+  // Insert our new wider store after whichever of the two stores
+  // MergeForward indicates.
+  MachineBasicBlock::iterator InsertionPoint = MergeForward ? MergeMI : I;
+  // Also based on MergeForward is from where we copy the base register operand
+  // so we get the flags compatible with the input code.
+  const MachineOperand &BaseRegOp =
+      MergeForward ? MergeMI->getOperand(1) : I->getOperand(1);
+
+  // RISC-V uses byte offsets; use the lower offset for the wider store.
+  int64_t IOffset = I->getOperand(2).getImm();
+  int64_t MIOffset = MergeMI->getOperand(2).getImm();
+  int64_t OffsetImm = std::min(IOffset, MIOffset);
+
+  // Get the wider opcode
+  std::optional<unsigned> NewOpcodeOpt =
+      getMatchingWideOpcode(Opc, STI->is64Bit());
+  if (!NewOpcodeOpt)
+    return NextI; // Can't widen this instruction
+
+  unsigned NewOpcode = *NewOpcodeOpt;
+
+  // Construct the new instruction.
+  DebugLoc DL = I->getDebugLoc();
+  MachineBasicBlock *MBB = I->getParent();
+  MachineInstrBuilder MIB;
+  MIB = BuildMI(*MBB, InsertionPoint, DL, TII->get(NewOpcode))
+            .addReg(RISCV::X0)
+            .add(BaseRegOp)
+            .addImm(OffsetImm)
+            .cloneMergedMemRefs({&*I, &*MergeMI})
+            .setMIFlags(I->mergeFlagsWith(*MergeMI));
+
+  LLVM_DEBUG(dbgs() << "Creating wider store. Replacing instructions:\n    ");
+  LLVM_DEBUG(I->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "    ");
+  LLVM_DEBUG(MergeMI->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "  with instruction:\n    ");
+  LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "\n");
+
+  // Erase the old instructions.
+  I->eraseFromParent();
+  MergeMI->eraseFromParent();
+  return NextI;
 }
 
 MachineBasicBlock::iterator
