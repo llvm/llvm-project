@@ -739,15 +739,13 @@ public:
   static bool gotoTargetsLabelInRegion(cir::GotoOp gotoOp,
                                        mlir::Region &region) {
     llvm::StringRef targetLabel = gotoOp.getLabel();
-    bool found = false;
-    region.walk([&](cir::LabelOp labelOp) {
-      if (labelOp.getLabel() == targetLabel) {
-        found = true;
-        return mlir::WalkResult::interrupt();
-      }
-      return mlir::WalkResult::advance();
-    });
-    return found;
+    return region
+        .walk([&](cir::LabelOp labelOp) {
+          if (labelOp.getLabel() == targetLabel)
+            return mlir::WalkResult::interrupt();
+          return mlir::WalkResult::advance();
+        })
+        .wasInterrupted();
   }
 
   // Collect all operations that exit a cleanup scope body. Return, goto, break,
@@ -780,12 +778,13 @@ public:
         exits.emplace_back(terminator, nextId++);
     }
 
-    // Helper to decide whether a goto needs to be treated as an exit from
-    // the cleanup scope being flattened. If the goto targets a label inside
-    // the cleanup body region, control stays within the cleanup and we leave
-    // the goto in place.
-    auto gotoExitsCleanup = [&](cir::GotoOp gotoOp) {
-      return !gotoTargetsLabelInRegion(gotoOp, cleanupBodyRegion);
+    // Helper to decide whether an op is a goto that needs to be treated as an
+    // exit from the cleanup scope being flattened. If op is a goto and targets
+    // a label inside the cleanup body region, control stays within the cleanup
+    // and we leave the goto in place.
+    auto isGotoThatExitsCleanup = [&](mlir::Operation *op) {
+      auto gotoOp = dyn_cast<cir::GotoOp>(op);
+      return gotoOp && !gotoTargetsLabelInRegion(gotoOp, cleanupBodyRegion);
     };
 
     // Lambda to walk a loop and collect only returns and gotos.
@@ -796,9 +795,8 @@ public:
       loopOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
         if (isa<cir::ReturnOp>(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
-        } else if (auto gotoOp = dyn_cast<cir::GotoOp>(nestedOp)) {
-          if (gotoExitsCleanup(gotoOp))
-            exits.emplace_back(gotoOp, nextId++);
+        } else if (isGotoThatExitsCleanup(nestedOp)) {
+          exits.emplace_back(nestedOp, nextId++);
         }
         return mlir::WalkResult::advance();
       });
@@ -824,9 +822,8 @@ public:
           return mlir::WalkResult::skip();
         } else if (isa<cir::ReturnOp, cir::ContinueOp>(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
-        } else if (auto gotoOp = dyn_cast<cir::GotoOp>(nestedOp)) {
-          if (gotoExitsCleanup(gotoOp))
-            exits.emplace_back(gotoOp, nextId++);
+        } else if (isGotoThatExitsCleanup(nestedOp)) {
+          exits.emplace_back(nestedOp, nextId++);
         }
         return mlir::WalkResult::advance();
       });
@@ -847,9 +844,8 @@ public:
           exits.emplace_back(op, nextId++);
         } else if (isa<cir::ContinueOp, cir::ReturnOp>(op)) {
           exits.emplace_back(op, nextId++);
-        } else if (auto gotoOp = dyn_cast<cir::GotoOp>(op)) {
-          if (gotoExitsCleanup(gotoOp))
-            exits.emplace_back(gotoOp, nextId++);
+        } else if (isGotoThatExitsCleanup(op)) {
+          exits.emplace_back(op, nextId++);
         } else if (isa<cir::CleanupScopeOp>(op)) {
           // Recurse into nested cleanup's body region.
           collectExitsInCleanup(cast<cir::CleanupScopeOp>(op).getBodyRegion(),
