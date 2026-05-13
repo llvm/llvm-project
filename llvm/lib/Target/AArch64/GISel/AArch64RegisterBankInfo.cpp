@@ -989,6 +989,17 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
              nullptr}),
         /*NumOperands=*/2);
   }
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE: {
+    LLT ValTy = MRI.getType(MI.getOperand(0).getReg());
+    // Pointer loads/stores are always mapped to GPRs.
+    if (ValTy.isPointer())
+      return getInstructionMapping(
+          DefaultMappingID, /*Cost=*/1,
+          getValueMapping(PMI_FirstGPR, TypeSize::getFixed(64)),
+          /*NumOperands=*/2);
+    break;
+  }
   default:
     break;
   }
