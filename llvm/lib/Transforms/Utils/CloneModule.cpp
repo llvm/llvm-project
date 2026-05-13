@@ -119,17 +119,13 @@ std::unique_ptr<Module> llvm::CloneModule(
     // Defer setting the resolver function until after functions are cloned.
     if (!ShouldCloneDefinition(&I)) {
       // An ifunc also cannot act as an external reference, so we need to create
-      // either a function or a global variable depending on the value type.
+      // a function depending on the value type.
       GlobalValue *GV;
-      if (I.getValueType()->isFunctionTy())
-        GV = Function::Create(cast<FunctionType>(I.getValueType()),
-                              GlobalValue::ExternalLinkage, I.getAddressSpace(),
-                              I.getName(), New.get());
-      else
-        GV = new GlobalVariable(*New, I.getValueType(), false,
-                                GlobalValue::ExternalLinkage, nullptr,
-                                I.getName(), nullptr, I.getThreadLocalMode(),
-                                I.getType()->getAddressSpace());
+      assert(I.getValueType()->isFunctionTy() &&
+             "IFunc resolver must be function type!");
+      GV = Function::Create(cast<FunctionType>(I.getValueType()),
+                            GlobalValue::ExternalLinkage, I.getAddressSpace(),
+                            I.getName(), New.get());
       VMap[&I] = GV;
       continue;
     }

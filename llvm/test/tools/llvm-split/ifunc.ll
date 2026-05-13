@@ -2,7 +2,6 @@
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
 
-
 ; CHECK0-DAG: declare void @foo_a.ifunc()
 ; CHECK1-DAG: @foo_a.ifunc = ifunc void (), ptr @foo_a.resolver
 
