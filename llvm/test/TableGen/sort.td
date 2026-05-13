@@ -2,11 +2,6 @@
 // RUN: not llvm-tblgen -DERROR_NONLIST %s 2>&1 | FileCheck --check-prefix=ERROR_NONLIST %s
 // RUN: not llvm-tblgen -DERROR_KEYTYPE %s 2>&1 | FileCheck --check-prefix=ERROR_KEYTYPE %s
 
-defvar EmptyStrings = []<string>;
-defvar EmptyInts = []<int>;
-defvar Creatures = ["cephalopod", "axolotl", "dragonfly", "barracuda"];
-defvar Nums = [5, 2, 8, 1, 3];
-
 // Sort an already-sorted list — should be a no-op.
 // CHECK-LABEL: def idempotent
 // CHECK:   already = ["a", "b", "c"];
@@ -45,6 +40,10 @@ def single {
 // CHECK:   sorted_ints = [1, 2, 3, 5, 8];
 // CHECK:   sorted_empty_strings = [];
 // CHECK:   sorted_empty_ints = [];
+defvar EmptyStrings = []<string>;
+defvar Creatures = ["cephalopod", "axolotl", "dragonfly", "barracuda"];
+defvar EmptyInts = []<int>;
+defvar Nums = [5, 2, 8, 1, 3];
 def sorted {
   list<string> sorted_strings = !sort(item, Creatures, item);
   list<int> sorted_ints = !sort(n, Nums, n);
@@ -54,17 +53,17 @@ def sorted {
 
 #ifdef ERROR_NONLIST
 // Dag is not a valid second argument.
-// ERROR_NONLIST: !sort must have a list argument
 def myop;
 defvar mydag = (myop);
 def err_nonlist {
+  // ERROR_NONLIST: sort.td:[[@LINE+1]]:38: error: !sort must have a list argument
   list<string> bad = !sort(x, mydag, !cast<string>(x));
 }
 #endif
 
 #ifdef ERROR_KEYTYPE
 // Key that cannot be resolved to int or string leaves the op unfolded.
-// ERROR_KEYTYPE: could not be fully resolved
+// ERROR_KEYTYPE: sort.td:[[@LINE+1]]:5: error: Initializer of 'bad' in 'err_keytype' could not be fully resolved
 def err_keytype {
   list<Thing> bad = !sort(t, Things, t);
 }

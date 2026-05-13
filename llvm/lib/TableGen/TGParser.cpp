@@ -2708,28 +2708,29 @@ const Init *TGParser::ParseOperationListComprehension(Record *CurRec,
     return nullptr;
   }
 
-  const RecTy *OutType = InEltType;
-  if (Operation == tgtok::XForEach && !IsDAG) {
-    const auto *RHSt = dyn_cast<TypedInit>(RHS);
-    if (!RHSt) {
-      TokError("could not get type of !foreach result expression");
-      return nullptr;
-    }
-    OutType = RHSt->getType()->getListTy();
-  } else if (Operation == tgtok::XFilter || Operation == tgtok::XSort) {
-    OutType = InEltType->getListTy();
-  }
-
+  const RecTy *OutType;
   TernOpInit::TernaryOp Opc;
   switch (Operation) {
   case tgtok::XForEach:
     Opc = TernOpInit::FOREACH;
+    if (IsDAG) {
+      OutType = InEltType;
+    } else {
+      const auto *RHSt = dyn_cast<TypedInit>(RHS);
+      if (!RHSt) {
+        TokError("could not get type of !foreach result expression");
+        return nullptr;
+      }
+      OutType = RHSt->getType()->getListTy();
+    }
     break;
   case tgtok::XFilter:
     Opc = TernOpInit::FILTER;
+    OutType = InEltType->getListTy();
     break;
   case tgtok::XSort:
     Opc = TernOpInit::SORT;
+    OutType = InEltType->getListTy();
     break;
   default:
     llvm_unreachable("unexpected token");
