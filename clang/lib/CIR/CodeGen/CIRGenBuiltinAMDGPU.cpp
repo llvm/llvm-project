@@ -211,10 +211,9 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_rcpf:
   case AMDGPU::BI__builtin_amdgcn_rcph:
   case AMDGPU::BI__builtin_amdgcn_rcp_bf16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    mlir::Value src = emitScalarExpr(expr->getArg(0));
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "amdgcn.rcp",
+                                       src.getType(), mlir::ValueRange{src});
   }
   case AMDGPU::BI__builtin_amdgcn_sqrt:
   case AMDGPU::BI__builtin_amdgcn_sqrtf:
