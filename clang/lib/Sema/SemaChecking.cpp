@@ -3928,6 +3928,17 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinCountedByRef(TheCall))
       return ExprError();
     break;
+
+  case Builtin::BIfeclearexcept:
+  case Builtin::BIferaiseexcept:
+  case Builtin::BIfetestexcept:
+  case Builtin::BIfegetround:
+  case Builtin::BIfesetround:
+    if (TheCall->getFPFeaturesInEffect(getLangOpts()).getExceptionMode() ==
+        LangOptions::FPE_Ignore) {
+      Diag(TheCall->getBeginLoc(), diag::warn_fe_access_without_fenv_access)
+          << FDecl->getName() << TheCall->getSourceRange();
+    }
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))

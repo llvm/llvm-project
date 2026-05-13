@@ -4599,6 +4599,31 @@ def BlockObjectDispose : LibBuiltin<"blocks.h"> {
 }
 // FIXME: Also declare NSConcreteGlobalBlock and NSConcreteStackBlock.
 
+def FeClearExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feclearexcept"];
+  let Prototype = "int(int)";
+}
+
+def FeRaiseExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feraiseexcept"];
+  let Prototype = "int(int)";
+}
+
+def FeTestExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fetestexcept"];
+  let Prototype = "int(int)";
+}
+
+def FeGetRound : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetround"];
+  let Prototype = "int()";
+}
+
+def FeSetRound : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetround"];
+  let Prototype = "int(int)";
+}
+
 def __Addressof : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__addressof"];
   let Attributes = [FunctionWithoutBuiltinPrefix, NoThrow, Const,
