@@ -6167,10 +6167,9 @@ char SROALegacyPass::ID = 0;
 
 FunctionPass *llvm::createSROAPass(bool PreserveCFG,
                                    bool CanonicalizeStructToVector) {
-  return new SROALegacyPass(
-      SROAOptions(PreserveCFG ? SROAOptions::PreserveCFG
-                              : SROAOptions::ModifyCFG,
-                  CanonicalizeStructToVector));
+  return new SROALegacyPass(SROAOptions(PreserveCFG ? SROAOptions::PreserveCFG
+                                                    : SROAOptions::ModifyCFG,
+                                        CanonicalizeStructToVector));
 }
 
 INITIALIZE_PASS_BEGIN(SROALegacyPass, "sroa",
