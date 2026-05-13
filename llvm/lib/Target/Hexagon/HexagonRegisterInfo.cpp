@@ -206,9 +206,9 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
     Reserved.set(Reg);
 
   static const MCPhysReg RRegs[] = {
-      Hexagon::R16, Hexagon::R17, Hexagon::R18,
-      Hexagon::R19, Hexagon::R20, Hexagon::R21, Hexagon::R22, Hexagon::R23,
-      Hexagon::R24, Hexagon::R25, Hexagon::R26, Hexagon::R27, Hexagon::R28};
+      Hexagon::R16, Hexagon::R17, Hexagon::R18, Hexagon::R19, Hexagon::R20,
+      Hexagon::R21, Hexagon::R22, Hexagon::R23, Hexagon::R24, Hexagon::R25,
+      Hexagon::R26, Hexagon::R27, Hexagon::R28};
   const auto &HST = MF.getSubtarget<HexagonSubtarget>();
   for (unsigned i = 0; i < std::size(RRegs); ++i)
     if (HST.isRRegReserved(i + 16))
