@@ -1935,8 +1935,45 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
       builder.setInsertionPoint(noProtoCallOp);
 
       // Patch call type with the real function type.
-      cir::CallOp realCallOp = builder.createCallOp(
-          noProtoCallOp.getLoc(), newFn, noProtoCallOp.getOperands());
+      cir::FuncType newFnType = newFn.getFunctionType();
+      mlir::OperandRange callOperands = noProtoCallOp.getOperands();
+      bool returnTypeMatches =
+          newFnType.hasVoidReturn()
+              ? noProtoCallOp.getNumResults() == 0
+              : noProtoCallOp.getNumResults() == 1 &&
+                    noProtoCallOp.getResultTypes().front() ==
+                        newFnType.getReturnType();
+      bool typesMatch = !newFn.getNoProto() && returnTypeMatches &&
+                        callOperands.size() == newFnType.getNumInputs();
+      for (unsigned i = 0, e = newFnType.getNumInputs(); typesMatch && i != e;
+           ++i) {
+        if (callOperands[i].getType() != newFnType.getInput(i))
+          typesMatch = false;
+      }
+
+      cir::CallOp realCallOp;
+      if (typesMatch) {
+        // Patch call type with the real function type.
+        realCallOp =
+            builder.createCallOp(noProtoCallOp.getLoc(), newFn, callOperands);
+      } else {
+        // Build an indirect call whose function-pointer signature matches
+        // the existing call site.
+        cir::FuncType origFnType = oldFn.getFunctionType();
+        cir::FuncType callFnType =
+            origFnType.isVarArg()
+                ? cir::FuncType::get(origFnType.getInputs(),
+                                     origFnType.getReturnType(),
+                                     /*isVarArg=*/false)
+                : origFnType;
+        mlir::Value addr = cir::GetGlobalOp::create(
+            builder, noProtoCallOp.getLoc(), cir::PointerType::get(newFnType),
+            newFn.getSymName());
+        mlir::Value casted =
+            builder.createBitcast(addr, cir::PointerType::get(callFnType));
+        realCallOp = builder.createIndirectCallOp(
+            noProtoCallOp.getLoc(), casted, callFnType, callOperands);
+      }
 
       // Replace old no proto call with fixed call.
       noProtoCallOp.replaceAllUsesWith(realCallOp);

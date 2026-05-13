@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float fadd(double x, double y) {
+LIBC_INLINE LIBC_CONSTEXPR float fadd(double x, double y) {
   return fputil::generic::add<float>(x, y);
 }
 
