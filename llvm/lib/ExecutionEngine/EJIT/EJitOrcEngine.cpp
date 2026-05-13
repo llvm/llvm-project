@@ -34,6 +34,8 @@ struct EJitOrcEngine::Impl {
   /// User-registered symbols (functions + globals) for bare-metal.
   /// Populated via ejit_register_symbol() / addUserSymbol().
   std::map<std::string, void *> userSymbols;
+  /// If non-empty, dump JIT-optimized IR to this directory.
+  std::string dumpJITDir;
 };
 
 EJitOrcEngine::EJitOrcEngine() : P(std::make_unique<Impl>()) {}
@@ -46,6 +48,7 @@ EJitOrcEngine::Create(const Config &config,
   auto engine = std::unique_ptr<EJitOrcEngine>(new EJitOrcEngine());
   engine->P->periodReg = &periodReg;
   engine->P->runtimeState = &runtimeState;
+  engine->P->dumpJITDir = config.dumpJITDir;
 
   // Use compile-time target triple when set (e.g. for ARM embedded),
   // otherwise detect the host architecture.
@@ -115,6 +118,16 @@ EJitOrcEngine::Create(const Config &config,
           //    Cost-based inliner handles small index-wrapper functions.
           opt.runInline(M);
 
+          // Dump pre-optimization IR if configured.
+          if (!engine->P->dumpJITDir.empty() && ctx) {
+            std::string path = engine->P->dumpJITDir + "/" +
+                               ctx->fnName + "_" + ctx->cacheKey + "_pre.ll";
+            std::error_code EC;
+            llvm::raw_fd_ostream OS(path, EC);
+            if (!EC)
+              M.print(OS, nullptr);
+          }
+
           // 4. First EJitStructFieldPass: replace ejit_may_const loads
           //    before the optimization pipeline so SCCP/ADCE can propagate
           //    the resulting constants.
@@ -137,6 +150,17 @@ EJitOrcEngine::Create(const Config &config,
                 structField.run(F, opt.getFAM());
           }
           opt.runInstCombine(M);
+
+          // Dump post-optimization IR if configured.
+          if (!engine->P->dumpJITDir.empty() && ctx) {
+            std::string path = engine->P->dumpJITDir + "/" +
+                               ctx->fnName + "_" +
+                               ctx->cacheKey + "_opt.ll";
+            std::error_code EC;
+            llvm::raw_fd_ostream OS(path, EC);
+            if (!EC)
+              M.print(OS, nullptr);
+          }
         });
         return std::move(TSM);
       });

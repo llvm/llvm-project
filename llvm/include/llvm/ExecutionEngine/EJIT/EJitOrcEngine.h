@@ -24,6 +24,7 @@ class EJitRuntimeState;
 
 struct SpecializationContext {
   std::string fnName;
+  std::string cacheKey;  // for dump filenames
   struct DimInfo {
     std::string periodName;
     uint8_t cellIdx;

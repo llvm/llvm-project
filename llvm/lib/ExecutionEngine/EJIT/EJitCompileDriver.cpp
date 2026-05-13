@@ -65,6 +65,7 @@ void *EJitCompileDriver::getOrCompile(
   // Build specialization context
   SpecializationContext ctx;
   ctx.fnName = funcName;
+  ctx.cacheKey = cacheKey;
   ctx.optLevel = config_.optLevel;
   for (unsigned i = 0; i < count; ++i)
     ctx.dimensions.push_back({dims[i].first, dims[i].second});

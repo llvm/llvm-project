@@ -79,6 +79,7 @@ ALL_TESTS=(
   ejit_attr_test
   ejit_complex_test
   ejit_config_api_test
+  ejit_dump_test
   ejit_external_idx_test
   ejit_jit_verify_test
   ejit_lifecycle_test
@@ -104,6 +105,7 @@ TEST_ARGS[ejit_trace_test]="0"
 TEST_ARGS[ejit_attr_test]="0"
 TEST_ARGS[ejit_config_api_test]="0"
 TEST_ARGS[ejit_perf_bench]="0 1"
+TEST_ARGS[ejit_dump_test]="0 3"
 TEST_ARGS[ejit_ptr_period_test]="0 1 3"
 
 if [[ ${#SELECTED[@]} -eq 0 ]]; then

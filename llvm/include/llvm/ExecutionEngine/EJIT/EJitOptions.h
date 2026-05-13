@@ -11,6 +11,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace llvm {
 namespace ejit {
@@ -27,6 +28,9 @@ struct Config {
   size_t maxCacheSize = 32 * 1024 * 1024;
   size_t maxSingleFuncSize = 512 * 1024;
   bool enableLogger = true;
+  /// If non-empty, dump JIT-optimized LLVM IR (.ll) to this directory.
+  /// One file per specialization, named <funcName>_<cacheKey>.ll.
+  std::string dumpJITDir;
 };
 
 } // namespace ejit

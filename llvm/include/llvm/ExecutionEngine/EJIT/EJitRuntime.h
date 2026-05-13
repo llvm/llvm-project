@@ -83,6 +83,8 @@ typedef struct {
   size_t maxCacheEntries;
   size_t maxCacheSize;
   bool enableLogger;
+  /// If non-NULL, dump JIT-optimized LLVM IR (.ll) to this directory.
+  const char *dumpJITDir;
 } ejit_config_t;
 
 typedef struct {
