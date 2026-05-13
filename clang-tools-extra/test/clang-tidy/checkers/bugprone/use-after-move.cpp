@@ -1790,3 +1790,20 @@ void Run() {
   db6.Query();
 }
 } // namespace custom_reinitialization
+
+namespace GH62206 {
+  struct Base {
+
+  };
+
+  struct Derived: public Base {
+    using Base::operator=;
+  };
+
+  void foo() {
+    Base b;
+    Derived d;
+    std::move(d);
+    d = b; // Should not warn
+  }
+}
