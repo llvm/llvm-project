@@ -6,7 +6,7 @@ declare <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8>, <16 x i8>, i8)
 define <16 x i8> @test_const_splat_on_const_matrix(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_const_splat_on_const_matrix:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,8,4,2,1,0,0,0,0,8,4,2,1,0]
 ; CHECK-NEXT:    retq
   %and = and <16 x i8> %src, splat(i8 15)
   %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> <i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 -128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 -128>, i8 0)
@@ -16,7 +16,7 @@ define <16 x i8> @test_const_splat_on_const_matrix(<16 x i8> %src) nounwind {
 define <32 x i8> @test_const_splat_on_const_matrix256(<32 x i8> %src) nounwind {
 ; CHECK-LABEL: test_const_splat_on_const_matrix256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,0,0,8,4,2,1,0,0,0,0,8,4,2,1,0,0,0,0,8,4,2,1,0,0,0,0,8,4,2,1,0]
 ; CHECK-NEXT:    retq
   %and = and <32 x i8> %src, splat(i8 15)
   %gfni = call <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8> %and, <32 x i8> <i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 -128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 -128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 -128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 -128>, i8 0)
@@ -27,7 +27,7 @@ define <32 x i8> @test_const_splat_on_const_matrix256(<32 x i8> %src) nounwind {
 define <16 x i8> @test_const_splat_alternative_const_matrix(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_const_splat_alternative_const_matrix:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,1,5,5,21,21,85,85,1,1,5,5,21,21,85,85]
 ; CHECK-NEXT:    retq
   %and = and <16 x i8> %src, splat(i8 85)
   %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> <i8 1, i8 3, i8 7, i8 15, i8 31, i8 63, i8 127, i8 255, i8 1, i8 3, i8 7, i8 15, i8 31, i8 63, i8 127, i8 255>, i8 0)
@@ -37,7 +37,7 @@ define <16 x i8> @test_const_splat_alternative_const_matrix(<16 x i8> %src) noun
 define <16 x i8> @test_const_splat_on_const_matrix_nonzero_imm(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_const_splat_on_const_matrix_nonzero_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,8,4,2,1,0,0,0,0,8,4,2,1,0]
 ; CHECK-NEXT:    retq
   %and = and <16 x i8> %src, splat(i8 15)
   %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> <i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 -128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 -128>, i8 127)
@@ -93,7 +93,7 @@ define <16 x i8> @test_const_splat_on_const_matrix_multi_use(<16 x i8> %src) nou
 ; CHECK-LABEL: test_const_splat_on_const_matrix_multi_use:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,0,8,4,2,1,0,0,0,0,8,4,2,1,0]
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %and = and <16 x i8> %src, splat(i8 15)
@@ -109,7 +109,7 @@ define <16 x i8> @test_var_splat_on_const_matrix_multi_use(<16 x i8> %src, i8 %s
 ; CHECK-NEXT:    vmovd %edi, %xmm1
 ; CHECK-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128]
 ; CHECK-NEXT:    vpxor %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %inlo = insertelement <16 x i8> poison, i8 %scalar, i64 0
@@ -153,7 +153,7 @@ define <16 x i8> @test_const_splat16_on_const_matrix(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_const_splat16_on_const_matrix:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128]
 ; CHECK-NEXT:    retq
   %splat = bitcast <8 x i16> splat(i16 1) to <16 x i8>
   %and = and <16 x i8> %src, %splat
@@ -168,7 +168,7 @@ define <16 x i8> @test_var_splat16_on_const_matrix(<16 x i8> %src, i16 %scalar) 
 ; CHECK-NEXT:    vmovd %edi, %xmm1
 ; CHECK-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128]
 ; CHECK-NEXT:    retq
   %inlo = insertelement <8 x i16> poison, i16 %scalar, i64 0
   %varsplat16 = shufflevector <8 x i16> %inlo, <8 x i16> poison, <8 x i32> zeroinitializer
