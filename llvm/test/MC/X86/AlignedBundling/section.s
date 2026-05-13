@@ -5,6 +5,8 @@
 # RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %t/two-sections.s
 # RUN: llvm-mc -filetype=obj -triple x86_64 %t/section-alignment.s -o - \
 # RUN:   | llvm-readobj --sections - | FileCheck %t/section-alignment.s
+# RUN: llvm-mc -filetype=obj -triple x86_64 %t/data-section-alignment.s -o - \
+# RUN:   | llvm-readobj --sections - | FileCheck %t/data-section-alignment.s
 
 ## Test two different executable sections with bundling.
 #--- two-sections.s
@@ -47,3 +49,26 @@
 # CHECK-LABEL: Name: text2
 # CHECK-NOT: Name
 # CHECK: AddressAlignment: 32
+
+## Test that bundle alignment is only applied to executable sections.
+#--- data-section-alignment.s
+  .bundle_align_mode 5
+  .text
+  imull $17, %ebx, %ebp
+# CHECK-LABEL: Name: .text
+# CHECK-NOT: Name
+# CHECK: AddressAlignment: 32
+
+  .section .init_array,"aw"
+  .p2align 3
+  .quad 0
+# CHECK-LABEL: Name: .init_array
+# CHECK-NOT: Name
+# CHECK: AddressAlignment: 8
+
+  .section .data.rel.ro,"aw"
+  .p2align 3
+  .quad 0
+# CHECK-LABEL: Name: .data.rel.ro
+# CHECK-NOT: Name
+# CHECK: AddressAlignment: 8
