@@ -1570,7 +1570,6 @@ struct TypeHierarchyItem {
   /// The kind of this item.
   SymbolKind kind;
 
-
   /// More detail for this item, e.g. the signature of a function.
   std::optional<std::string> detail;
 

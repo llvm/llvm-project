@@ -503,19 +503,22 @@ TEST(CallHierarchy, MultiFileCpp) {
                   IsDeclaration ? oFromRanges()
                                 : oFromRanges(Caller3C.range("Caller2")))));
 
-    auto OutgoingLevel2 = outgoingCalls(OutgoingLevel1[1].to, Index.get(), &AST);
+    auto OutgoingLevel2 =
+        outgoingCalls(OutgoingLevel1[1].to, Index.get(), &AST);
     ASSERT_THAT(OutgoingLevel2,
                 ElementsAre(AllOf(
                     to(AllOf(withName("caller1"), withDetail("nsa::caller1"))),
                     oFromRanges(Caller2C.range("A"), Caller2C.range("B")))));
 
-    auto OutgoingLevel3 = outgoingCalls(OutgoingLevel2[0].to, Index.get(), &AST);
+    auto OutgoingLevel3 =
+        outgoingCalls(OutgoingLevel2[0].to, Index.get(), &AST);
     ASSERT_THAT(
         OutgoingLevel3,
         ElementsAre(AllOf(to(AllOf(withName("callee"), withDetail("callee"))),
                           oFromRanges(Caller1C.range()))));
 
-    auto OutgoingLevel4 = outgoingCalls(OutgoingLevel3[0].to, Index.get(), &AST);
+    auto OutgoingLevel4 =
+        outgoingCalls(OutgoingLevel3[0].to, Index.get(), &AST);
     EXPECT_THAT(OutgoingLevel4, IsEmpty());
   };
 
@@ -798,9 +801,9 @@ TEST(CallHierarchy, HierarchyOnVarWithoutReferenceTagsSupport) {
                                       /*ComputeReferenceTags=*/false);
   ASSERT_FALSE(IncomingLevel1.empty());
   EXPECT_THAT(IncomingLevel1,
-              ElementsAre(AllOf(from(Field(&CallHierarchyItem::name, "caller")),
-                                from(Field(&CallHierarchyItem::referenceTags,
-                                           IsEmpty())))));
+              ElementsAre(AllOf(
+                  from(Field(&CallHierarchyItem::name, "caller")),
+                  from(Field(&CallHierarchyItem::referenceTags, IsEmpty())))));
 }
 
 TEST(CallHierarchy, HierarchyOnClassMemberWithWriteReference) {
@@ -893,9 +896,9 @@ TEST(CallHierarchy, HierarchyOnVarWithCompoundAssignmentReference) {
   ASSERT_FALSE(IncomingLevel1.empty());
   EXPECT_THAT(
       IncomingLevel1,
-      UnorderedElementsAre(AllOf(from(AllOf(
-          withName("caller"),
-          withReferenceTags(ReferenceTag::Write, ReferenceTag::Read))))));
+      UnorderedElementsAre(AllOf(from(
+          AllOf(withName("caller"),
+                withReferenceTags(ReferenceTag::Write, ReferenceTag::Read))))));
 }
 
 TEST(CallHierarchy, HierarchyOnHeaderVarWithWriteReference) {
@@ -921,10 +924,11 @@ TEST(CallHierarchy, HierarchyOnHeaderVarWithWriteReference) {
   ASSERT_THAT(Items, ElementsAre(withName("var")));
   auto IncomingLevel1 = incomingCalls(Items[0], Index.get(), AST);
   ASSERT_FALSE(IncomingLevel1.empty());
-  EXPECT_THAT(IncomingLevel1,
-              ElementsAre(AllOf(from(AllOf(
-                  withName("caller"),
-                  withReferenceTags(ReferenceTag::Write))))));
+  EXPECT_THAT(
+      IncomingLevel1,
+      ElementsAre(AllOf(from(
+          AllOf(withName("caller"), withReferenceTags(ReferenceTag::Write))))));
+}
 
 TEST(CallHierarchy, OutgoingFieldWithReadReference) {
   Annotations Source(R"cpp(

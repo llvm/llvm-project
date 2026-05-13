@@ -340,9 +340,8 @@ TEST_F(LSPTest, IncomingCallsWithReferenceTagsSupport) {
   auto From = *FirstCall["from"].getAsObject();
 
   EXPECT_EQ(From["name"], "caller");
-  EXPECT_EQ(From["referenceTags"],
-            llvm::json::Value(llvm::json::Array{static_cast<int>(
-                ReferenceTag::Write)}));
+  EXPECT_EQ(From["referenceTags"], llvm::json::Value(llvm::json::Array{
+                                       static_cast<int>(ReferenceTag::Write)}));
 }
 
 TEST_F(LSPTest, IncomingCallsWithoutReferenceTagsSupport) {
@@ -356,9 +355,9 @@ TEST_F(LSPTest, IncomingCallsWithoutReferenceTagsSupport) {
   Client.didOpen("foo.cpp", Code.code());
   auto Items = Client
                    .call("textDocument/prepareCallHierarchy",
-                         llvm::json::Object{{
-                             "textDocument", Client.documentID("foo.cpp")},
-                                            {"position", Code.point()}})
+                         llvm::json::Object{
+                             {"textDocument", Client.documentID("foo.cpp")},
+                             {"position", Code.point()}})
                    .takeValue();
   auto FirstItem = (*Items.getAsArray())[0];
   auto Calls = Client

@@ -1928,14 +1928,13 @@ static std::vector<ReferenceTag> analyseParameterUsage(const FunctionDecl *FD,
 /// Visitor that determines read/write access patterns for a set of variables
 /// in a single traversal of a function body.  This avoids the O(N * body_size)
 /// cost of calling analyseParameterUsage once per variable.
-class BulkVarUsageVisitor
-    : public RecursiveASTVisitor<BulkVarUsageVisitor> {
+class BulkVarUsageVisitor : public RecursiveASTVisitor<BulkVarUsageVisitor> {
 public:
   /// Per-symbol result: (hasRead, hasWrite).
   llvm::DenseMap<SymbolID, std::pair<bool, bool>> Usage;
 
-  BulkVarUsageVisitor(llvm::ArrayRef<std::pair<SymbolID, const ValueDecl *>>
-                          Targets) {
+  BulkVarUsageVisitor(
+      llvm::ArrayRef<std::pair<SymbolID, const ValueDecl *>> Targets) {
     for (const auto &[ID, VD] : Targets)
       Usage.try_emplace(ID, false, false);
   }
@@ -2688,8 +2687,7 @@ static const NamedDecl *getNamedDeclFromSymbol(const Symbol &Sym,
     const auto &SM = AST.getSourceManager();
     auto CurLoc = sourceLocationInMainFile(SM, SymLoc->range.start);
     if (CurLoc) {
-      auto Decls =
-          getDeclAtPosition(const_cast<ParsedAST &>(AST), *CurLoc, {});
+      auto Decls = getDeclAtPosition(const_cast<ParsedAST &>(AST), *CurLoc, {});
       if (!Decls.empty())
         return Decls[0];
     } else {
@@ -2793,7 +2791,8 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
                   llvm::consumeError(RefLoc.takeError());
                   continue;
                 }
-                for (const NamedDecl *AtPos : getDeclAtPosition(AST, *RefLoc, {})) {
+                for (const NamedDecl *AtPos :
+                     getDeclAtPosition(AST, *RefLoc, {})) {
                   if (const auto *Resolved =
                           llvm::dyn_cast<clang::ValueDecl>(AtPos)) {
                     VD = Resolved;
@@ -2957,8 +2956,8 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
         [&](ReferenceLoc Ref) {
           if (Ref.IsDecl)
             return;
-          auto Loc = makeLocation(AST->getASTContext(), Ref.NameLoc,
-                                  Item.uri.file());
+          auto Loc =
+              makeLocation(AST->getASTContext(), Ref.NameLoc, Item.uri.file());
           if (!Loc)
             return;
           for (const Decl *D : Ref.Targets) {
@@ -3020,8 +3019,7 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
       Position Best{INT_MAX, INT_MAX};
       for (const auto &R : Ranges)
         if (R.start.line < Best.line ||
-            (R.start.line == Best.line &&
-             R.start.character < Best.character))
+            (R.start.line == Best.line && R.start.character < Best.character))
           Best = R.start;
       return Best;
     };

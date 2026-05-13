@@ -918,8 +918,7 @@ void ClangdServer::incomingCalls(
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::incomingCalls(Item, Index, InpAST->AST,
-                             ComputeReferenceTags));
+    CB(clangd::incomingCalls(Item, Index, InpAST->AST, ComputeReferenceTags));
   };
   WorkScheduler->runWithAST("Incoming Calls", File, std::move(Action));
 }
@@ -941,12 +940,12 @@ void ClangdServer::outgoingCalls(
   if (!ComputeReferenceTags) {
     // Fast path: reference tags are not requested, so no AST is needed.
     // Dispatch as an index-only task to avoid unnecessary parse latency.
-    WorkScheduler->run("Outgoing Calls", "",
-                       [Item, CB = std::move(CB), this]() mutable {
-                         CB(clangd::outgoingCalls(Item, Index,
-                                                  /*AST=*/nullptr,
-                                                  /*ComputeReferenceTags=*/false));
-                       });
+    WorkScheduler->run(
+        "Outgoing Calls", "", [Item, CB = std::move(CB), this]() mutable {
+          CB(clangd::outgoingCalls(Item, Index,
+                                   /*AST=*/nullptr,
+                                   /*ComputeReferenceTags=*/false));
+        });
     return;
   }
   auto Action = [Item, CB = std::move(CB),
