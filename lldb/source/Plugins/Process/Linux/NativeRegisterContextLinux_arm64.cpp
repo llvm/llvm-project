@@ -286,7 +286,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
   uint64_t sve_vg;
   std::vector<uint8_t> sve_reg_non_live;
 
-  if (IsGPR(reg)) {
+  if (GetRegisterInfo().IsGPR(reg)) {
     error = ReadGPR();
     if (error.Fail())
       return error;
@@ -295,7 +295,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     assert(offset < GetGPRSize());
     src = (uint8_t *)GetGPRBuffer() + offset;
 
-  } else if (IsFPR(reg)) {
+  } else if (GetRegisterInfo().IsFPR(reg)) {
     if (m_sve_state == SVEState::Disabled ||
         m_sve_state == SVEState::StreamingFPSIMD) {
       // FP registers come from the FP register set when:
@@ -345,7 +345,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       assert(offset < GetSVEBufferSize());
       src = (uint8_t *)GetSVEBuffer() + offset;
     }
-  } else if (IsTLS(reg)) {
+  } else if (GetRegisterInfo().IsTLSReg(reg)) {
     error = ReadTLS();
     if (error.Fail())
       return error;
@@ -353,7 +353,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     offset = reg_info->byte_offset - GetRegisterInfo().GetTLSOffset();
     assert(offset < GetTLSBufferSize());
     src = (uint8_t *)GetTLSBuffer() + offset;
-  } else if (IsSVE(reg)) {
+  } else if (GetRegisterInfo().IsSVEReg(reg)) {
     if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
       return Status::FromErrorString("SVE disabled or not supported");
 
@@ -431,7 +431,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
         src = (uint8_t *)GetSVEBuffer() + offset;
       }
     }
-  } else if (IsPAuth(reg)) {
+  } else if (GetRegisterInfo().IsPAuthReg(reg)) {
     error = ReadPAuthMask();
     if (error.Fail())
       return error;
@@ -439,7 +439,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     offset = reg_info->byte_offset - GetRegisterInfo().GetPAuthOffset();
     assert(offset < GetPACMaskSize());
     src = (uint8_t *)GetPACMask() + offset;
-  } else if (IsMTE(reg)) {
+  } else if (GetRegisterInfo().IsMTEReg(reg)) {
     error = ReadMTEControl();
     if (error.Fail())
       return error;
@@ -447,7 +447,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
     assert(offset < GetMTEControlSize());
     src = (uint8_t *)GetMTEControl() + offset;
-  } else if (IsSME(reg)) {
+  } else if (GetRegisterInfo().IsSMEReg(reg)) {
     if (GetRegisterInfo().IsSMERegZA(reg)) {
       error = ReadZAHeader();
       if (error.Fail())
@@ -494,7 +494,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       assert(offset < GetSMEPseudoBufferSize());
       src = (uint8_t *)GetSMEPseudoBuffer() + offset;
     }
-  } else if (IsFPMR(reg)) {
+  } else if (GetRegisterInfo().IsFPMRReg(reg)) {
     error = ReadFPMR();
     if (error.Fail())
       return error;
@@ -502,7 +502,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     offset = reg_info->byte_offset - GetRegisterInfo().GetFPMROffset();
     assert(offset < GetFPMRBufferSize());
     src = (uint8_t *)GetFPMRBuffer() + offset;
-  } else if (IsGCS(reg)) {
+  } else if (GetRegisterInfo().IsGCSReg(reg)) {
     error = ReadGCS();
     if (error.Fail())
       return error;
@@ -510,7 +510,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     offset = reg_info->byte_offset - GetRegisterInfo().GetGCSOffset();
     assert(offset < GetGCSBufferSize());
     src = (uint8_t *)GetGCSBuffer() + offset;
-  } else if (IsPOE(reg)) {
+  } else if (GetRegisterInfo().IsPOEReg(reg)) {
     error = ReadPOE();
     if (error.Fail())
       return error;
@@ -547,7 +547,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
   uint32_t offset = LLDB_INVALID_INDEX32;
   std::vector<uint8_t> sve_reg_non_live;
 
-  if (IsGPR(reg)) {
+  if (GetRegisterInfo().IsGPR(reg)) {
     error = ReadGPR();
     if (error.Fail())
       return error;
@@ -557,7 +557,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteGPR();
-  } else if (IsFPR(reg)) {
+  } else if (GetRegisterInfo().IsFPR(reg)) {
     if (m_sve_state == SVEState::Disabled ||
         m_sve_state == SVEState::StreamingFPSIMD) {
       // SVE is not present, or we only have it in streaming mode and are
@@ -610,7 +610,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
       return WriteAllSVE();
     }
-  } else if (IsSVE(reg)) {
+  } else if (GetRegisterInfo().IsSVEReg(reg)) {
     if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown) {
       return Status::FromErrorString("SVE disabled or not supported");
     } else if (m_sve_state == SVEState::StreamingFPSIMD) {
@@ -727,7 +727,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
         return WriteAllSVE();
       }
     }
-  } else if (IsMTE(reg)) {
+  } else if (GetRegisterInfo().IsMTEReg(reg)) {
     error = ReadMTEControl();
     if (error.Fail())
       return error;
@@ -738,7 +738,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteMTEControl();
-  } else if (IsTLS(reg)) {
+  } else if (GetRegisterInfo().IsTLSReg(reg)) {
     error = ReadTLS();
     if (error.Fail())
       return error;
@@ -749,7 +749,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteTLS();
-  } else if (IsSME(reg)) {
+  } else if (GetRegisterInfo().IsSMEReg(reg)) {
     if (GetRegisterInfo().IsSMERegZA(reg)) {
       error = ReadZA();
       if (error.Fail())
@@ -776,7 +776,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     } else
       return Status::FromErrorString(
           "Writing to SVG or SVCR is not supported.");
-  } else if (IsFPMR(reg)) {
+  } else if (GetRegisterInfo().IsFPMRReg(reg)) {
     error = ReadFPMR();
     if (error.Fail())
       return error;
@@ -787,7 +787,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteFPMR();
-  } else if (IsGCS(reg)) {
+  } else if (GetRegisterInfo().IsGCSReg(reg)) {
     error = ReadGCS();
     if (error.Fail())
       return error;
@@ -798,7 +798,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteGCS();
-  } else if (IsPOE(reg)) {
+  } else if (GetRegisterInfo().IsPOEReg(reg)) {
     error = ReadPOE();
     if (error.Fail())
       return error;
@@ -1302,52 +1302,6 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
   }
 
   return error;
-}
-
-bool NativeRegisterContextLinux_arm64::IsGPR(unsigned reg) const {
-  if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm64::GPRegSet)
-    return true;
-  return false;
-}
-
-bool NativeRegisterContextLinux_arm64::IsFPR(unsigned reg) const {
-  if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm64::FPRegSet)
-    return true;
-  return false;
-}
-
-bool NativeRegisterContextLinux_arm64::IsSVE(unsigned reg) const {
-  return GetRegisterInfo().IsSVEReg(reg);
-}
-
-bool NativeRegisterContextLinux_arm64::IsSME(unsigned reg) const {
-  return GetRegisterInfo().IsSMEReg(reg);
-}
-
-bool NativeRegisterContextLinux_arm64::IsPAuth(unsigned reg) const {
-  return GetRegisterInfo().IsPAuthReg(reg);
-}
-
-bool NativeRegisterContextLinux_arm64::IsMTE(unsigned reg) const {
-  return GetRegisterInfo().IsMTEReg(reg);
-}
-
-bool NativeRegisterContextLinux_arm64::IsTLS(unsigned reg) const {
-  return GetRegisterInfo().IsTLSReg(reg);
-}
-
-bool NativeRegisterContextLinux_arm64::IsFPMR(unsigned reg) const {
-  return GetRegisterInfo().IsFPMRReg(reg);
-}
-
-bool NativeRegisterContextLinux_arm64::IsGCS(unsigned reg) const {
-  return GetRegisterInfo().IsGCSReg(reg);
-}
-
-bool NativeRegisterContextLinux_arm64::IsPOE(unsigned reg) const {
-  return GetRegisterInfo().IsPOEReg(reg);
 }
 
 llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
