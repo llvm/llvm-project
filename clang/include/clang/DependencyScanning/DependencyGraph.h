@@ -12,7 +12,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -26,10 +25,6 @@ struct PrebuiltModuleDep {
   std::string ModuleName;
   std::string PCMFile;
   std::string ModuleMapFile;
-
-  explicit PrebuiltModuleDep(const serialization::ModuleFile *MF)
-      : ModuleName(MF->ModuleName), PCMFile(MF->FileName.str()),
-        ModuleMapFile(MF->ModuleMapPath) {}
 };
 
 /// This is used to identify a specific module.
