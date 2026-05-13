@@ -326,6 +326,11 @@ class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrag<
 def mfma_f32_16x16x128_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4>;
 def mfma_f32_32x32x64_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4>;
 
+def cvt_from_fp8 : PatFrag<(ops node:$src),
+                           (convert_from_arbitrary_fp node:$src, Float8E4M3FN)>;
+def cvt_from_bf8 : PatFrag<(ops node:$src),
+                           (convert_from_arbitrary_fp node:$src, Float8E5M2)>;
+
 //===----------------------------------------------------------------------===//
 // ValueType helpers
 //===----------------------------------------------------------------------===//

@@ -711,11 +711,6 @@ class Cvt_F32_F8_Pat<SDPatternOperator node, int index,
     (inst_sdwa 0, $src, 0, 0, index)
 >;
 
-def cvt_from_fp8 : PatFrag<(ops node:$src),
-                           (convert_from_arbitrary_fp node:$src, Float8E4M3FN)>;
-def cvt_from_bf8 : PatFrag<(ops node:$src),
-                           (convert_from_arbitrary_fp node:$src, Float8E5M2)>;
-
 let SubtargetPredicate = HasFP8ConversionInsts in {
 let OtherPredicates = [HasCvtFP8VOP1Bug] in {
   def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
@@ -738,7 +733,7 @@ foreach Index = [1, 2, 3] in {
 }
 } // End OtherPredicates = [HasSDWA]
 
-let OtherPredicates = [HasOCPFP8ConversionInsts, HasSDWA] in {
+let OtherPredicates = [HasOCPFP8ConversionInsts, isGFX9Only] in {
   def : GCNPat<(f32 (cvt_from_fp8 i32:$src)), (V_CVT_F32_FP8_e32 $src)>;
   def : GCNPat<(f32 (cvt_from_bf8 i32:$src)), (V_CVT_F32_BF8_e32 $src)>;
 }
@@ -792,7 +787,8 @@ def V_CVT_F16_F8_True16_Profile : VOP3_Profile_True16<V_CVT_F16_F8_Profile>;
 def V_CVT_F16_F8_Fake16_Profile : VOP3_Profile_Fake16<V_CVT_F16_F8_Profile>;
 }
 
-let SubtargetPredicate = isGFX11Plus, OtherPredicates = [HasFP8ConversionInsts],
+let SubtargetPredicate = isGFX11Plus,
+    OtherPredicates = [HasFP8ConversionInsts, HasOCPFP8ConversionInsts],
     mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
   let SubtargetPredicate = isGFX11PlusNot12_50 in
     defm V_CVT_F32_FP8_OP_SEL    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>, cvt_from_fp8>;
