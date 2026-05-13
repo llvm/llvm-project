@@ -1384,7 +1384,7 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp_module:
       case tok::pp___preprocessed_module:
       case tok::pp___preprocessed_import: {
-        Diag(Result, diag::err_embedded_directive)<< IK << DirectiveSpelling;
+        Diag(Result, diag::err_embedded_directive) << IK << DirectiveSpelling;
         Diag(*ArgMacro, diag::note_macro_expansion_here)
             << ArgMacro->getIdentifierInfo();
         DiscardUntilEndOfDirective();
@@ -1395,8 +1395,7 @@ void Preprocessor::HandleDirective(Token &Result) {
       }
     }
 
-    Diag(Result, diag::warn_embedded_directive)
-        << IK << DirectiveSpelling;
+    Diag(Result, diag::warn_embedded_directive) << IK << DirectiveSpelling;
   }
 
   // Temporarily enable macro expansion if set so
