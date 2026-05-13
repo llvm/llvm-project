@@ -21,11 +21,14 @@
 !-----------------------------------------
 ! FLANG FRONTEND (flang -fc1)
 !-----------------------------------------
-! NOTE: %flang_cc1 the default intrinsics path always has higher priority than
-!       -fintrinsic-modules-path added here. Accidentally using
-!       ieee_arithmetic/iso_fortran_env from the Inputs/ directory will trigger
-!       an error (e.g. when the default intrinsics dir is empty).
-!       Requires the intrinsic modules to be available.
+! NOTE: With %flang_fc1 includes -fintrinsic-modules-path which makes intrinsic
+!       modules have higher priority than any -fintrinsic-modules-path added
+!       manually. This is in contrast to the driver (%flang) which adds the
+!       default intrinsic module dirs to the end of the -fc1 command line.
+!       These commands assume the intrinsic modules are found in those default
+!       search paths. Accidentally using ieee_arithmetic/iso_fortran_env from
+!       the Inputs/ directory will trigger an error (e.g. when the default
+!       intrinsics dir is empty).
 
 ! RUN:     %flang_fc1 -fsyntax-only -cpp %s -DINTRINSICS_DEFAULT
 ! RUN: not %flang_fc1 -fsyntax-only -cpp %s -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTONE 2>&1 | FileCheck %s --check-prefix=NOINPUTONE
