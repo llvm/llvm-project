@@ -1,8 +1,9 @@
 // To create the covmapping for this file on Linux, copy this file to /tmp
 // cd into /tmp. Use llvm-cov convert-for-testing to extract the covmapping.
 // This test is Windows-only. It checks that all paths, which are generated
-// in the index and source coverage reports, are native path. For example,
-// on Windows all '/' are converted to '\'.
+// in the index and source coverage reports, are native paths. For example,
+// on Windows all '/' are converted to the native separator, the direction
+// of which is controlled by LLVM_WINDOWS_PREFER_FORWARD_SLASH.
 // REQUIRES: system-windows
 
 // RUN: llvm-profdata merge %S/Inputs/double_dots.proftext -o %t.profdata
