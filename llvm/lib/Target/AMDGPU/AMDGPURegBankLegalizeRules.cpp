@@ -2468,39 +2468,46 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
         MI.getMF()->getInfo<SIMachineFunctionInfo>();
     return Info->selectAGPRFormMFMA(MinNumRegsRequired);
   });
-  Predicate needVGPR = !needAGPR;
 
   bool HasGFX90AInsts = ST->hasGFX90AInsts();
-  addRulesForIOpcs(
-      {amdgcn_mfma_f32_32x32x1f32,       amdgcn_mfma_f32_16x16x1f32,
-       amdgcn_mfma_f32_4x4x1f32,         amdgcn_mfma_f32_32x32x2f32,
-       amdgcn_mfma_f32_16x16x4f32,       amdgcn_mfma_f32_32x32x4f16,
-       amdgcn_mfma_f32_16x16x4f16,       amdgcn_mfma_f32_4x4x4f16,
-       amdgcn_mfma_f32_32x32x8f16,       amdgcn_mfma_f32_16x16x16f16,
-       amdgcn_mfma_i32_32x32x4i8,        amdgcn_mfma_i32_16x16x4i8,
-       amdgcn_mfma_i32_4x4x4i8,          amdgcn_mfma_i32_32x32x8i8,
-       amdgcn_mfma_i32_16x16x16i8,       amdgcn_mfma_f32_32x32x2bf16,
-       amdgcn_mfma_f32_16x16x2bf16,      amdgcn_mfma_f32_4x4x2bf16,
-       amdgcn_mfma_f32_32x32x4bf16,      amdgcn_mfma_f32_16x16x8bf16,
-       amdgcn_mfma_f32_32x32x4bf16_1k,   amdgcn_mfma_f32_16x16x4bf16_1k,
-       amdgcn_mfma_f32_4x4x4bf16_1k,     amdgcn_mfma_f32_32x32x8bf16_1k,
-       amdgcn_mfma_f32_16x16x16bf16_1k,  amdgcn_mfma_f64_16x16x4f64,
-       amdgcn_mfma_f64_4x4x4f64,         amdgcn_mfma_i32_16x16x32_i8,
-       amdgcn_mfma_i32_32x32x16_i8,      amdgcn_mfma_f32_16x16x8_xf32,
-       amdgcn_mfma_f32_32x32x4_xf32,     amdgcn_mfma_f32_16x16x32_bf8_bf8,
-       amdgcn_mfma_f32_16x16x32_bf8_fp8, amdgcn_mfma_f32_16x16x32_fp8_bf8,
-       amdgcn_mfma_f32_16x16x32_fp8_fp8, amdgcn_mfma_f32_32x32x16_bf8_bf8,
-       amdgcn_mfma_f32_32x32x16_bf8_fp8, amdgcn_mfma_f32_32x32x16_fp8_bf8,
-       amdgcn_mfma_f32_32x32x16_fp8_fp8})
+
+  // On gfx90a+ both AGPR-form and VGPR-form exists
+  addRulesForIOpcs({amdgcn_mfma_f32_32x32x1f32,  amdgcn_mfma_f32_16x16x1f32,
+                    amdgcn_mfma_f32_4x4x1f32,    amdgcn_mfma_f32_32x32x2f32,
+                    amdgcn_mfma_f32_16x16x4f32,  amdgcn_mfma_f32_32x32x4f16,
+                    amdgcn_mfma_f32_16x16x4f16,  amdgcn_mfma_f32_4x4x4f16,
+                    amdgcn_mfma_f32_32x32x8f16,  amdgcn_mfma_f32_16x16x16f16,
+                    amdgcn_mfma_i32_32x32x4i8,   amdgcn_mfma_i32_16x16x4i8,
+                    amdgcn_mfma_i32_4x4x4i8,     amdgcn_mfma_i32_32x32x8i8,
+                    amdgcn_mfma_i32_16x16x16i8,  amdgcn_mfma_f32_32x32x2bf16,
+                    amdgcn_mfma_f32_16x16x2bf16, amdgcn_mfma_f32_4x4x2bf16,
+                    amdgcn_mfma_f32_32x32x4bf16, amdgcn_mfma_f32_16x16x8bf16})
       .Any({{DivAnyTy},
             {{AgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy}}},
            !HasGFX90AInsts)
-      .Any({{{DivAnyTy}, needVGPR},
+      .Any({{{DivAnyTy}, !needAGPR},
             {{VgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, VgprAnyTy}}},
            HasGFX90AInsts)
       .Any({{{DivAnyTy}, needAGPR},
             {{AgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy}}},
            HasGFX90AInsts);
+
+  // gfx90a+ only MFMAs
+  addRulesForIOpcs(
+      {amdgcn_mfma_f32_32x32x4bf16_1k, amdgcn_mfma_f32_16x16x4bf16_1k,
+       amdgcn_mfma_f32_4x4x4bf16_1k, amdgcn_mfma_f32_32x32x8bf16_1k,
+       amdgcn_mfma_f32_16x16x16bf16_1k, amdgcn_mfma_f64_16x16x4f64,
+       amdgcn_mfma_f64_4x4x4f64, amdgcn_mfma_i32_16x16x32_i8,
+       amdgcn_mfma_i32_32x32x16_i8, amdgcn_mfma_f32_16x16x8_xf32,
+       amdgcn_mfma_f32_32x32x4_xf32, amdgcn_mfma_f32_16x16x32_bf8_bf8,
+       amdgcn_mfma_f32_16x16x32_bf8_fp8, amdgcn_mfma_f32_16x16x32_fp8_bf8,
+       amdgcn_mfma_f32_16x16x32_fp8_fp8, amdgcn_mfma_f32_32x32x16_bf8_bf8,
+       amdgcn_mfma_f32_32x32x16_bf8_fp8, amdgcn_mfma_f32_32x32x16_fp8_bf8,
+       amdgcn_mfma_f32_32x32x16_fp8_fp8})
+      .Any({{{DivAnyTy}, !needAGPR},
+            {{VgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, VgprAnyTy}}})
+      .Any({{{DivAnyTy}, needAGPR},
+            {{AgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy}}});
 
   addRulesForIOpcs(
       {amdgcn_smfmac_f32_16x16x32_f16, amdgcn_smfmac_f32_32x32x16_f16,
@@ -2511,7 +2518,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
        amdgcn_smfmac_f32_32x32x32_bf8_bf8, amdgcn_smfmac_f32_32x32x32_bf8_fp8,
        amdgcn_smfmac_f32_32x32x32_fp8_bf8, amdgcn_smfmac_f32_32x32x32_fp8_fp8})
       .Any(
-          {{{DivAnyTy}, needVGPR},
+          {{{DivAnyTy}, !needAGPR},
            {{VgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, VgprAnyTy, VgprAnyTy}}})
       .Any({{{DivAnyTy}, needAGPR},
             {{AgprAnyTy},
