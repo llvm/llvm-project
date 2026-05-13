@@ -1659,13 +1659,11 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
       return ConstantPointerNull::get(VTy);
   }
 
-  if (isa<ConstantByte>(V))
-    return ConstantByte::get(V->getContext(), EC,
-                             cast<ConstantByte>(V)->getValue());
+  if (auto *CB = dyn_cast<ConstantByte>(V))
+    return ConstantByte::get(V->getContext(), EC, CB->getValue());
 
-  if (isa<ConstantFP>(V))
-    return ConstantFP::get(V->getContext(), EC,
-                           cast<ConstantFP>(V)->getValue());
+  if (auto *CFP = dyn_cast<ConstantFP>(V))
+    return ConstantFP::get(V->getContext(), EC, CFP->getValue());
 
   if (!EC.isScalable()) {
     // Maintain special handling of zero.
