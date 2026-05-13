@@ -273,7 +273,7 @@ entry:
 ; The input s12 and early-clobber output s[10:11] have distinct live ranges.
 
 ; GCN-DEBUG-LABEL: test_early_clobber_tuple
-; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 8
+; GCN-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 9
 ; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
 
 ; GENERIC-DEBUG-LABEL: test_early_clobber_tuple

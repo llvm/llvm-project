@@ -18,8 +18,8 @@
 #define LLVM_LIB_TARGET_AMDGPU_GCNREGPRESSURE_H
 
 #include "GCNSubtarget.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include <algorithm>
 #include <array>
@@ -132,19 +132,20 @@ struct GCNRegPressure {
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
 
-  /// Increment pressure for a physical register.
-  void inc(MCRegister Reg, const MachineRegisterInfo &MRI) {
-    adjustPhysRegPressure(Reg, /*IsAdd=*/true, MRI);
+  /// Increment pressure for a physical register unit.
+  void inc(MCRegUnit Unit, const SIRegisterInfo &SRI) {
+    adjustPhysUnitPressure(Unit, /*IsAdd=*/true, SRI);
   }
 
-  /// Decrement pressure for a physical register.
-  void dec(MCRegister Reg, const MachineRegisterInfo &MRI) {
-    adjustPhysRegPressure(Reg, /*IsAdd=*/false, MRI);
+  /// Decrement pressure for a physical register unit.
+  void dec(MCRegUnit Unit, const SIRegisterInfo &SRI) {
+    adjustPhysUnitPressure(Unit, /*IsAdd=*/false, SRI);
   }
 
 private:
-  void adjustPhysRegPressure(MCRegister Reg, bool IsAdd,
-                             const MachineRegisterInfo &MRI);
+  static unsigned pressureSetToRegKind(unsigned PSetID);
+  void adjustPhysUnitPressure(MCRegUnit Unit, bool IsAdd,
+                              const SIRegisterInfo &SRI);
 
 public:
   bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
@@ -337,70 +338,21 @@ public:
 
 protected:
   const LiveIntervals &LIS;
+  mutable const MachineRegisterInfo *MRI = nullptr;
+  const SIRegisterInfo *SRI = nullptr;
 
   LiveRegSet VirtLiveRegs;
 
-  // Physical register liveness: Units provides O(1) unit-level alias checks,
-  // Regs tracks which register names contributed to pressure for cheap
-  // reconstruction. Both must be kept in sync.
+  // Physical register liveness tracked at the register-unit level.
+  // Each bit corresponds to a register unit. This avoids aliasing issues
+  // since overlapping physical registers share the same underlying units.
   //
-  // Known limitations:
-  // 1. Aliasing can cause physical register pressure to be over-counted.
-  //    Regs tracks exact register names, so overlapping tuples are not
-  //    recognized as related. This can manifest in three ways:
-  //    a) A def of a super-register fails to kill a live sub-register in
-  //       Regs, leaving over-counted pressure above the def.
-  //    b) Two overlapping registers both added to Regs cause shared units
-  //       to be over-counted in pressure.
-  //    c) A def of a sub-register cannot partially kill a live
-  //       super-register in Regs, leaving over-counted pressure when only part
-  //       of it should remain.
-  // 2. Physical register live-in/live-out is not modeled. reset()
-  //    initializes CurPressure from virtual registers only and clears
-  //    PhysLiveRegs. Physical registers that are live through a region
-  //    without being used are invisible, leading to under-counted pressure.
-  struct PhysicalRegLiveness {
-    LiveRegUnits Units;
-    SmallDenseSet<MCRegister, 16> Regs;
-
-    PhysicalRegLiveness() = delete;
-    explicit PhysicalRegLiveness(const TargetRegisterInfo &TRI) {
-      Units.init(TRI);
-    }
-
-    void clear() {
-      Units.clear();
-      Regs.clear();
-    }
-    const BitVector &getBitVector() const { return Units.getBitVector(); }
-
-    void add(MCRegister Reg) {
-      Units.addReg(Reg);
-      Regs.insert(Reg);
-    }
-    void remove(MCRegister Reg) {
-      Regs.erase(Reg);
-      Units.removeReg(Reg);
-      restoreSharedUnits();
-    }
-    void remove(const BitVector &KilledUnits, MCRegister Reg) {
-      Regs.erase(Reg);
-      Units.removeUnits(KilledUnits);
-      restoreSharedUnits();
-    }
-
-  private:
-    // When a register is removed, its regunits are also removed. But
-    // because of aliasing, some of those regunits may be shared with
-    // other registers still in Regs. This restores those shared regunits.
-    void restoreSharedUnits() {
-      for (MCRegister R : Regs)
-        Units.addReg(R);
-    }
-  };
-  mutable const MachineRegisterInfo *MRI = nullptr;
-  const SIRegisterInfo *SRI = nullptr;
-  PhysicalRegLiveness PhysLiveRegs;
+  // Known limitation:
+  // Physical register live-in/live-out is not modeled. reset()
+  // initializes CurPressure from virtual registers only and clears
+  // PhysLiveRegUnits. Physical registers that are live through a region
+  // without being used are invisible, leading to under-counted pressure.
+  BitVector PhysLiveRegUnits;
 
   GCNRegPressure CurPressure, MaxPressure;
 
@@ -413,7 +365,7 @@ protected:
   GCNRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &MRI)
       : LIS(LIS), MRI(&MRI),
         SRI(static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo())),
-        PhysLiveRegs(*SRI) {
+        PhysLiveRegUnits(SRI->getNumRegUnits()) {
     setPhysRegTracking();
   }
 
@@ -432,25 +384,20 @@ protected:
   // Check if a register unit is live at a given slot index per LIS.
   bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
 
-  // Check if any register unit of Reg is not currently live in PhysLiveRegs.
-  bool isAnyRegUnitNotLive(MCRegister Reg) const;
-
-  // Reconstruct physical register pressure from PhysLiveRegs.Regs.
+  // Construct physical register pressure from PhysLiveRegUnits.
   GCNRegPressure constructPhysRegPressure() const;
 
-  // Check if Reg has any killed units at the given slot index.
-  bool checkRegKilled(MCRegister Reg, SlotIndex SI) const;
+  // Add units of Reg that are not already live. Increases Pressure for each
+  // newly live unit.
+  void addUnitsAndIncPressure(MCRegister Reg, GCNRegPressure &Pressure);
 
-  // Check if Reg has any killed units and erase them from PhysLiveRegs.
-  bool eraseKilledUnits(MCRegister Reg, SlotIndex SI);
+  // Remove all live units of Reg. Decreases Pressure for each removed unit.
+  void removeUnitsAndDecPressure(MCRegister Reg, GCNRegPressure &Pressure);
 
-  // Erase all live units of Reg from PhysLiveRegs.
-  // Returns true if any unit was live (and thus erased).
-  bool eraseAllLiveUnits(MCRegister Reg);
-
-  // Insert units of Reg into PhysLiveRegs if not already live.
-  // Returns true if any unit was newly inserted.
-  bool insertIfNotLive(MCRegister Reg);
+  // Remove units of Reg that are currently live but killed at SI.
+  // Decreases Pressure for each killed unit.
+  void removeKilledUnitsAndDecPressure(MCRegister Reg, SlotIndex SI,
+                                       GCNRegPressure &Pressure);
 
 public:
   // Enable physical register tracking only if both GCNTrackers and

@@ -54,11 +54,10 @@ body:             |
 ...
 
 # Aliasing: $sgpr10_sgpr11 is defined, then $sgpr11 (a sub-register) is used.
-# The upward tracker adds $sgpr11 to the tracker when processing the use.
-# When receding past the def of $sgpr10_sgpr11, the tracker looks for
-# $sgpr10_sgpr11 by exact name and does not find it (only $sgpr11 is
-# there), so no pressure decrement occurs. This verifies the known aliasing
-# over-count: pressure from $sgpr11 persists above the def of $sgpr10_sgpr11.
+# Unit-level tracking correctly handles this: the upward tracker adds
+# $sgpr11's unit when processing the use, and when receding past the def of
+# $sgpr10_sgpr11, it finds and removes $sgpr11's unit, correctly decrementing
+# pressure.
 ---
 name:  aliased_physreg_tuple_def_subreg_use
 tracksRegLiveness: true
@@ -69,12 +68,10 @@ body:             |
   ; RPU: bb.0:
   ; RPU:   SGPR  VGPR
   ;
-  ; The def of $sgpr10_sgpr11 should kill $sgpr11, but the tracker
-  ; matches by exact register name and only finds $sgpr11, not
-  ; $sgpr10_sgpr11. So $sgpr11 pressure (1 SGPR) persists above the def,
-  ; giving 3 SGPRs instead of the ideal 2. This is the known aliasing
-  ; over-count.
+  ; The def of $sgpr10_sgpr11 correctly kills $sgpr11's unit via
+  ; unit-level tracking, reducing SGPR pressure from 3 to 2.
   ;
+  ; RPU:   2     1
   ; RPU:   3     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
   ; RPU:   3     1
   ; RPU:   3     1      %3:sreg_32 = COPY $sgpr11
@@ -84,8 +81,9 @@ body:             |
   ; RPU-NOPHYS:   SGPR  VGPR
   ;
   ; Without physreg tracking, no physical register pressure is counted,
-  ; so the INLINEASM shows only 2 SGPRs.
+  ; so the INLINEASM shows no changes in pressure.
   ;
+  ; RPU-NOPHYS:   2     1
   ; RPU-NOPHYS:   2     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
   ; RPU-NOPHYS:   2     1
   ; RPU-NOPHYS:   3     1      %3:sreg_32 = COPY $sgpr11
@@ -94,11 +92,13 @@ body:             |
   ; RPD: bb.0:
   ; RPD:   SGPR  VGPR
   ;
-  ; Downward tracker: the INLINEASM def adds $sgpr10_sgpr11 (2 SGPRs) to
-  ; the tracker. At the COPY, the tracker is not able to find
-  ; $sgpr11 (only $sgpr10_sgpr11 is there), so no decrement occurs.
-  ; The tuple pressure (2 SGPRs) persists, and %3 adds 1 more → 5 SGPRs.
+  ; Downward tracker: the INLINEASM def adds $sgpr10_sgpr11 (2 units =
+  ; 2 SGPRs). At the COPY use of $sgpr11, the corresponding reg-unit
+  ; is not found in the cached live ranges, so it conservatively keeps
+  ; the unit live. The virtual register def leads to the increase in
+  ; pressure from 4 to 5.
   ;
+  ; RPD:   2     1
   ; RPD:   4     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
   ; RPD:   4     1
   ; RPD:   5     1      %3:sreg_32 = COPY $sgpr11
@@ -107,6 +107,10 @@ body:             |
   ; RPD-NOPHYS: bb.0:
   ; RPD-NOPHYS:   SGPR  VGPR
   ;
+  ; Without physreg tracking, no physical register pressure is counted,
+  ; so the INLINEASM shows no changes in pressure.
+  ;
+  ; RPD-NOPHYS:   2     1
   ; RPD-NOPHYS:   2     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
   ; RPD-NOPHYS:   2     1
   ; RPD-NOPHYS:   3     1      %3:sreg_32 = COPY $sgpr11
