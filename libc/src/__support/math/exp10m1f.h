@@ -104,7 +104,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS_HI>
 
 } // namespace exp10m1f_internal
 
-LIBC_INLINE LIBC_CONSTEXPR float exp10m1f(float x) {
+LIBC_INLINE constexpr float exp10m1f(float x) {
   using namespace exp10m1f_internal;
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
