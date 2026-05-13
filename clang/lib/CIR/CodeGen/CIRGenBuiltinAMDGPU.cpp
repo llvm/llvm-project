@@ -91,6 +91,16 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
   return res;
 }
 
+// Emit an intrinsic that has 1 float or double operand, and 1 integer.
+static mlir::Value emitFPIntBuiltin(CIRGenFunction &cgf, const CallExpr *e,
+                                    llvm::StringRef intrinsicName) {
+  mlir::Value src0 = cgf.emitScalarExpr(e->getArg(0));
+  mlir::Value src1 = cgf.emitScalarExpr(e->getArg(1));
+  return cgf.getBuilder().emitIntrinsicCallOp(cgf.getLoc(e->getExprLoc()),
+                                              intrinsicName, src0.getType(),
+                                              mlir::ValueRange{src0, src1});
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                                       const CallExpr *expr) {
@@ -202,10 +212,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_trig_preop:
   case AMDGPU::BI__builtin_amdgcn_trig_preopf: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitFPIntBuiltin(*this, expr, "amdgcn.trig.preop");
   }
   case AMDGPU::BI__builtin_amdgcn_rcp:
   case AMDGPU::BI__builtin_amdgcn_rcpf:
