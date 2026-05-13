@@ -5564,10 +5564,10 @@ requiresBuiltinLaunderImpl(const ASTContext &Context, QualType Ty,
   if (const auto *Arr = Context.getAsArrayType(Ty))
     Ty = Context.getBaseElementType(Arr);
 
-  if (const auto *AttrTy = getAs<AttributedType>(Ty))
-    Ty = Ty.getModifiedType();
+  if (const auto *AttrTy = Ty->getAs<AttributedType>())
+    Ty = AttrTy->getModifiedType();
 
-  assert(Ty->isCompleteType() &&
+  assert(!Ty->isIncompleteType() &&
          "Incomplete types cannot be evaluated for laundering");
 
   const auto *Record = Ty->getAsCXXRecordDecl();
