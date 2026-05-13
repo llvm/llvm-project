@@ -297,7 +297,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({i64, v16i8, v8i16, v4i32})
       .lower();
 
-  getActionDefinitionsBuilder(G_SMULFIX).lower();
+  getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX}).lower();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
       .legalFor({v8i8, v16i8, v4i16, v8i16, v2i32, v4i32})
@@ -863,7 +863,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
       .legalFor({{v8i8, v8i16}, {v4i16, v4i32}, {v2i32, v2i64}})
-      .clampNumElements(0, v2s32, v2s32);
+      .clampNumElements(0, v2s32, v2s32)
+      .lower();
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})

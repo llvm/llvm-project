@@ -16,7 +16,7 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(i32) = COPY $w0
     %1:_(i32) = COPY $w1
-    %2:_(i32) = G_SMULFIX %0, %1, 0
+    %2:_(i32) = G_UMULFIX %0, %1, 0
     $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
@@ -32,16 +32,16 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 15
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(i64) = G_SEXT [[COPY]](i32)
-    ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(i64) = G_SEXT [[COPY1]](i32)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i64) = G_MUL [[SEXT]], [[SEXT1]]
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[MUL]], [[C]](i64)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[ASHR]](i64)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY]](i32)
+    ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(i64) = G_ZEXT [[COPY1]](i32)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i64) = G_MUL [[ZEXT]], [[ZEXT1]]
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i64) = G_LSHR [[MUL]], [[C]](i64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[LSHR]](i64)
     ; CHECK-NEXT: $w0 = COPY [[TRUNC]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(i32) = COPY $w0
     %1:_(i32) = COPY $w1
-    %2:_(i32) = G_SMULFIX %0, %1, 15
+    %2:_(i32) = G_UMULFIX %0, %1, 15
     $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
@@ -57,12 +57,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 15
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 63
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[COPY]], [[C1]](i64)
-    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(i64) = G_ASHR [[COPY1]], [[C1]](i64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i64) = G_MUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(i64) = G_MUL [[ASHR]], [[COPY1]]
-    ; CHECK-NEXT: [[MUL2:%[0-9]+]]:_(i64) = G_MUL [[COPY]], [[ASHR1]]
+    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(i64) = G_MUL [[C1]], [[COPY1]]
+    ; CHECK-NEXT: [[MUL2:%[0-9]+]]:_(i64) = G_MUL [[COPY]], [[C1]]
     ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(i64) = G_UMULH [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(i64) = G_ADD [[MUL1]], [[MUL2]]
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(i64) = G_ADD [[ADD]], [[UMULH]]
@@ -74,7 +72,7 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(i64) = COPY $x0
     %1:_(i64) = COPY $x1
-    %2:_(i64) = G_SMULFIX %0, %1, 15
+    %2:_(i64) = G_UMULFIX %0, %1, 15
     $x0 = COPY %2(i64)
     RET_ReallyLR implicit $x0
 ...
@@ -92,23 +90,23 @@ body:             |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i32>), [[UV1:%[0-9]+]]:_(<2 x i32>) = G_UNMERGE_VALUES [[COPY]](<4 x i32>)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV]](<2 x i32>)
-    ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV1]](<2 x i32>)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV]](<2 x i32>)
+    ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV1]](<2 x i32>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x i32>), [[UV3:%[0-9]+]]:_(<2 x i32>) = G_UNMERGE_VALUES [[COPY1]](<4 x i32>)
-    ; CHECK-NEXT: [[SEXT2:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV2]](<2 x i32>)
-    ; CHECK-NEXT: [[SEXT3:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV3]](<2 x i32>)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<2 x i64>) = G_MUL [[SEXT]], [[SEXT2]]
-    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(<2 x i64>) = G_MUL [[SEXT1]], [[SEXT3]]
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<2 x i64>) = G_ASHR [[MUL]], [[BUILD_VECTOR]](<2 x i64>)
-    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(<2 x i64>) = G_ASHR [[MUL1]], [[BUILD_VECTOR]](<2 x i64>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[ASHR]](<2 x i64>)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[ASHR1]](<2 x i64>)
+    ; CHECK-NEXT: [[ZEXT2:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV2]](<2 x i32>)
+    ; CHECK-NEXT: [[ZEXT3:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV3]](<2 x i32>)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<2 x i64>) = G_MUL [[ZEXT]], [[ZEXT2]]
+    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(<2 x i64>) = G_MUL [[ZEXT1]], [[ZEXT3]]
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<2 x i64>) = G_LSHR [[MUL]], [[BUILD_VECTOR]](<2 x i64>)
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(<2 x i64>) = G_LSHR [[MUL1]], [[BUILD_VECTOR]](<2 x i64>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[LSHR]](<2 x i64>)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[LSHR1]](<2 x i64>)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i32>) = G_CONCAT_VECTORS [[TRUNC]](<2 x i32>), [[TRUNC1]](<2 x i32>)
     ; CHECK-NEXT: $q0 = COPY [[CONCAT_VECTORS]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x i32>) = COPY $q0
     %1:_(<4 x i32>) = COPY $q1
-    %2:_(<4 x i32>) = G_SMULFIX %0, %1, 2
+    %2:_(<4 x i32>) = G_UMULFIX %0, %1, 2
     $q0 = COPY %2(<4 x i32>)
     RET_ReallyLR implicit $q0
 ...
@@ -126,23 +124,23 @@ body:             |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 15
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i32>), [[UV1:%[0-9]+]]:_(<2 x i32>) = G_UNMERGE_VALUES [[COPY]](<4 x i32>)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV]](<2 x i32>)
-    ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV1]](<2 x i32>)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV]](<2 x i32>)
+    ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV1]](<2 x i32>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x i32>), [[UV3:%[0-9]+]]:_(<2 x i32>) = G_UNMERGE_VALUES [[COPY1]](<4 x i32>)
-    ; CHECK-NEXT: [[SEXT2:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV2]](<2 x i32>)
-    ; CHECK-NEXT: [[SEXT3:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV3]](<2 x i32>)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<2 x i64>) = G_MUL [[SEXT]], [[SEXT2]]
-    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(<2 x i64>) = G_MUL [[SEXT1]], [[SEXT3]]
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<2 x i64>) = G_ASHR [[MUL]], [[BUILD_VECTOR]](<2 x i64>)
-    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(<2 x i64>) = G_ASHR [[MUL1]], [[BUILD_VECTOR]](<2 x i64>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[ASHR]](<2 x i64>)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[ASHR1]](<2 x i64>)
+    ; CHECK-NEXT: [[ZEXT2:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV2]](<2 x i32>)
+    ; CHECK-NEXT: [[ZEXT3:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV3]](<2 x i32>)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<2 x i64>) = G_MUL [[ZEXT]], [[ZEXT2]]
+    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(<2 x i64>) = G_MUL [[ZEXT1]], [[ZEXT3]]
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<2 x i64>) = G_LSHR [[MUL]], [[BUILD_VECTOR]](<2 x i64>)
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(<2 x i64>) = G_LSHR [[MUL1]], [[BUILD_VECTOR]](<2 x i64>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[LSHR]](<2 x i64>)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[LSHR1]](<2 x i64>)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i32>) = G_CONCAT_VECTORS [[TRUNC]](<2 x i32>), [[TRUNC1]](<2 x i32>)
     ; CHECK-NEXT: $q0 = COPY [[CONCAT_VECTORS]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x i32>) = COPY $q0
     %1:_(<4 x i32>) = COPY $q1
-    %2:_(<4 x i32>) = G_SMULFIX %0, %1, 15
+    %2:_(<4 x i32>) = G_UMULFIX %0, %1, 15
     $q0 = COPY %2(<4 x i32>)
     RET_ReallyLR implicit $q0
 ...
@@ -159,23 +157,23 @@ body:             |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 31
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i32>), [[UV1:%[0-9]+]]:_(<2 x i32>) = G_UNMERGE_VALUES [[COPY]](<4 x i32>)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV]](<2 x i32>)
-    ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV1]](<2 x i32>)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV]](<2 x i32>)
+    ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV1]](<2 x i32>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x i32>), [[UV3:%[0-9]+]]:_(<2 x i32>) = G_UNMERGE_VALUES [[COPY1]](<4 x i32>)
-    ; CHECK-NEXT: [[SEXT2:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV2]](<2 x i32>)
-    ; CHECK-NEXT: [[SEXT3:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[UV3]](<2 x i32>)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<2 x i64>) = G_MUL [[SEXT]], [[SEXT2]]
-    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(<2 x i64>) = G_MUL [[SEXT1]], [[SEXT3]]
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<2 x i64>) = G_ASHR [[MUL]], [[BUILD_VECTOR]](<2 x i64>)
-    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(<2 x i64>) = G_ASHR [[MUL1]], [[BUILD_VECTOR]](<2 x i64>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[ASHR]](<2 x i64>)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[ASHR1]](<2 x i64>)
+    ; CHECK-NEXT: [[ZEXT2:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV2]](<2 x i32>)
+    ; CHECK-NEXT: [[ZEXT3:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[UV3]](<2 x i32>)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<2 x i64>) = G_MUL [[ZEXT]], [[ZEXT2]]
+    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(<2 x i64>) = G_MUL [[ZEXT1]], [[ZEXT3]]
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<2 x i64>) = G_LSHR [[MUL]], [[BUILD_VECTOR]](<2 x i64>)
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(<2 x i64>) = G_LSHR [[MUL1]], [[BUILD_VECTOR]](<2 x i64>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[LSHR]](<2 x i64>)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[LSHR1]](<2 x i64>)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i32>) = G_CONCAT_VECTORS [[TRUNC]](<2 x i32>), [[TRUNC1]](<2 x i32>)
     ; CHECK-NEXT: $q0 = COPY [[CONCAT_VECTORS]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x i32>) = COPY $q0
     %1:_(<4 x i32>) = COPY $q1
-    %2:_(<4 x i32>) = G_SMULFIX %0, %1, 31
+    %2:_(<4 x i32>) = G_UMULFIX %0, %1, 31
     $q0 = COPY %2(<4 x i32>)
     RET_ReallyLR implicit $q0
 ...
