@@ -8,11 +8,10 @@
 define float @max_after_fmul(float %a, float %b) {
 ; CHECK-LABEL: max_after_fmul:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fmul s0, s0, s1
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    fcsel s0, s0, s1, gt
 ; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fmaxnm s0, s0, s2
 ; CHECK-NEXT:    fcmp s0, s1
 ; CHECK-NEXT:    fcsel s0, s0, s1, mi
 ; CHECK-NEXT:    ret
@@ -29,10 +28,9 @@ entry:
 define float @max_after_fadd(float %a, float %b) {
 ; CHECK-LABEL: max_after_fadd:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    fcsel s0, s0, s1, gt
+; CHECK-NEXT:    fmaxnm s0, s0, s2
 ; CHECK-NEXT:    ret
 entry:
   %add = fadd float %a, %b
@@ -45,10 +43,9 @@ entry:
 define double @max_after_fmul_f64(double %a, double %b) {
 ; CHECK-LABEL: max_after_fmul_f64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fmul d0, d0, d1
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    fcsel d0, d0, d1, gt
+; CHECK-NEXT:    fmaxnm d0, d0, d2
 ; CHECK-NEXT:    ret
 entry:
   %mul = fmul double %a, %b
@@ -91,8 +88,7 @@ define float @min_after_fmul(float %a, float %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmul s0, s0, s1
 ; CHECK-NEXT:    fmov s1, #1.00000000
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    fcsel s0, s0, s1, mi
+; CHECK-NEXT:    fminnm s0, s0, s1
 ; CHECK-NEXT:    ret
 entry:
   %mul = fmul float %a, %b
@@ -133,10 +129,9 @@ entry:
 define float @nsz_on_setcc_only(float %a, float %b) {
 ; CHECK-LABEL: nsz_on_setcc_only:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fmul s0, s0, s1
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    fcsel s0, s0, s1, gt
+; CHECK-NEXT:    fmaxnm s0, s0, s2
 ; CHECK-NEXT:    ret
 entry:
   %mul = fmul float %a, %b
@@ -149,10 +144,9 @@ entry:
 define float @max_oge(float %a, float %b) {
 ; CHECK-LABEL: max_oge:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fmul s0, s0, s1
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    fcsel s0, s0, s1, ge
+; CHECK-NEXT:    fmaxnm s0, s0, s2
 ; CHECK-NEXT:    ret
 entry:
   %mul = fmul float %a, %b
@@ -167,8 +161,7 @@ define float @min_ole(float %a, float %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmul s0, s0, s1
 ; CHECK-NEXT:    fmov s1, #1.00000000
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    fcsel s0, s0, s1, ls
+; CHECK-NEXT:    fminnm s0, s0, s1
 ; CHECK-NEXT:    ret
 entry:
   %mul = fmul float %a, %b
