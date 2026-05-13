@@ -190,6 +190,9 @@ public:
   cir::MethodAttr buildVirtualMethodAttr(cir::MethodType methodTy,
                                          const CXXMethodDecl *md) override;
 
+  mlir::Attribute emitMemberPointerConversion(const CastExpr *e,
+                                              mlir::Attribute src) override;
+
   Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
                                 mlir::Value numElements, const CXXNewExpr *e,
                                 QualType elementType) override;
@@ -2398,6 +2401,81 @@ CIRGenItaniumCXXABI::buildVirtualMethodAttr(cir::MethodType methodTy,
 
   return cir::MethodAttr::get(methodTy, vtableOffset);
 }
+
+/// Returns the non-virtual base-class offset (in CharUnits) accumulated
+/// while walking the path of a member-pointer cast.  Mirrors classic
+/// CodeGen's CodeGenModule::computeNonVirtualBaseClassOffset.
+static CharUnits
+computeNonVirtualBaseClassOffset(const ASTContext &astContext,
+                                 const CXXRecordDecl *derivedClass,
+                                 CastExpr::path_const_iterator pathBegin,
+                                 CastExpr::path_const_iterator pathEnd) {
+  CharUnits offset = CharUnits::Zero();
+  const CXXRecordDecl *rd = derivedClass;
+  for (auto it = pathBegin; it != pathEnd; ++it) {
+    const CXXBaseSpecifier *base = *it;
+    assert(!base->isVirtual() && "virtual base in member-pointer cast path");
+    const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
+    const auto *baseDecl = base->getType()->castAsCXXRecordDecl();
+    offset += layout.getBaseClassOffset(baseDecl);
+    rd = baseDecl;
+  }
+  return offset;
+}
+
+mlir::Attribute
+CIRGenItaniumCXXABI::emitMemberPointerConversion(const CastExpr *e,
+                                                 mlir::Attribute src) {
+  assert(e->getCastKind() == CK_DerivedToBaseMemberPointer ||
+         e->getCastKind() == CK_BaseToDerivedMemberPointer ||
+         e->getCastKind() == CK_ReinterpretMemberPointer);
+
+  // Member function pointers go through a different ABI representation
+  // (a {fnptr, this_adjustment} struct in Itanium); cast handling for them
+  // is not yet implemented here.
+  if (mlir::isa<cir::MethodAttr>(src)) {
+    cgm.errorNYI(e->getBeginLoc(),
+                 "emitMemberPointerConversion for member function pointer");
+    return {};
+  }
+
+  auto dataMember = mlir::cast<cir::DataMemberAttr>(src);
+  auto destTy = mlir::cast<cir::DataMemberType>(cgm.convertType(e->getType()));
+
+  // Under Itanium, reinterprets don't change representation; just retype.
+  if (e->getCastKind() == CK_ReinterpretMemberPointer) {
+    if (dataMember.isNullPtr())
+      return cgm.getBuilder().getNullDataMemberAttr(destTy);
+    return cir::DataMemberAttr::get(destTy, *dataMember.getOffset());
+  }
+
+  // Null member-pointer maps to null member-pointer.
+  if (dataMember.isNullPtr())
+    return cgm.getBuilder().getNullDataMemberAttr(destTy);
+
+  // Compute the non-virtual base-class offset adjustment from the cast's
+  // path.  For both cast directions the path is walked starting from the
+  // derived class (the "Derived MP" side); the sign of the adjustment is
+  // chosen below.
+  QualType derivedType = (e->getCastKind() == CK_DerivedToBaseMemberPointer)
+                             ? e->getSubExpr()->getType()
+                             : e->getType();
+  const CXXRecordDecl *derivedClass =
+      derivedType->castAs<MemberPointerType>()->getMostRecentCXXRecordDecl();
+  CharUnits adjustment = computeNonVirtualBaseClassOffset(
+      cgm.getASTContext(), derivedClass, e->path_begin(), e->path_end());
+
+  if (adjustment.isZero())
+    return cir::DataMemberAttr::get(destTy, *dataMember.getOffset());
+
+  int64_t srcOffset = *dataMember.getOffset();
+  int64_t adj = adjustment.getQuantity();
+  int64_t destOffset = (e->getCastKind() == CK_DerivedToBaseMemberPointer)
+                           ? srcOffset - adj
+                           : srcOffset + adj;
+  return cir::DataMemberAttr::get(destTy, destOffset);
+}
+
 /// The Itanium ABI always places an offset to the complete object
 /// at entry -2 in the vtable.
 void CIRGenItaniumCXXABI::emitVirtualObjectDelete(

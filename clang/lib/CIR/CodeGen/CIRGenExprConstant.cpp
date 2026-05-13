@@ -933,11 +933,21 @@ public:
     switch (e->getCastKind()) {
     case CK_ToUnion:
     case CK_AddressSpaceConversion:
-    case CK_ReinterpretMemberPointer:
-    case CK_DerivedToBaseMemberPointer:
-    case CK_BaseToDerivedMemberPointer:
       cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCastExpr");
       return {};
+
+    case CK_ReinterpretMemberPointer:
+      // Under Itanium, a reinterpret of a member pointer is a no-op on the
+      // underlying representation -- just re-emit with the destination type.
+      return emitter.tryEmitPrivate(subExpr, destType);
+
+    case CK_DerivedToBaseMemberPointer:
+    case CK_BaseToDerivedMemberPointer: {
+      mlir::Attribute src = emitter.tryEmitPrivate(subExpr, subExpr->getType());
+      if (!src)
+        return {};
+      return cgm.getCXXABI().emitMemberPointerConversion(e, src);
+    }
 
     case CK_LValueToRValue:
     case CK_AtomicToNonAtomic:
@@ -1907,13 +1917,15 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     if (!memberDecl)
       return builder.getZeroInitAttr(cgm.convertType(destType));
 
-    if (value.isMemberPointerToDerivedMember()) {
-      cgm.errorNYI(
-          "ConstExprEmitter::tryEmitPrivate member pointer to derived member");
-      return {};
-    }
-
     if (auto const *cxxDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
+      // Member function pointers with a derived-member path adjustment use
+      // a different ABI representation (this-adjustment in a separate
+      // field of the {fnptr, adj} struct); not yet supported here.
+      if (value.isMemberPointerToDerivedMember()) {
+        cgm.errorNYI(
+            "member function pointer to derived member with path adjustment");
+        return {};
+      }
       auto ty = mlir::cast<cir::MethodType>(cgm.convertType(destType));
       if (cxxDecl->isVirtual())
         return cgm.getCXXABI().buildVirtualMethodAttr(ty, cxxDecl);
@@ -1929,6 +1941,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     const ASTContext &astContext = cgm.getASTContext();
     CharUnits offset =
         astContext.toCharUnitsFromBits(astContext.getFieldOffset(fieldDecl));
+    if (value.isMemberPointerToDerivedMember())
+      offset += astContext.getMemberPointerPathAdjustment(value);
     return builder.getDataMemberAttr(cirTy, offset);
   }
   case APValue::LValue:
