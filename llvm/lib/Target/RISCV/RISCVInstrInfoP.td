@@ -2258,6 +2258,16 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprPairGprPair<riscv_asub, PASUB_DW, v2i32>;
   def : PatGprPairGprPair<riscv_asubu, PASUBU_DW, v2i32>;
 
+  // 8-bit absolute difference patterns
+  def : Pat<(v8i8 (abs GPRPair:$rs1)), (PABD_DB GPRPair:$rs1, (v8i8 X0_Pair))>;
+  def : PatGprPairGprPair<abds, PABD_DB, v8i8>;
+  def : PatGprPairGprPair<abdu, PABDU_DB, v8i8>;
+
+  // 16-bit absolute difference patterns
+  def : Pat<(v4i16 (abs GPRPair:$rs1)), (PABD_DH GPRPair:$rs1, (v4i16 X0_Pair))>;
+  def : PatGprPairGprPair<abds, PABD_DH, v4i16>;
+  def : PatGprPairGprPair<abdu, PABDU_DH, v4i16>;
+
   // [s|u]min/[s|u]max patterns
   def : PatGprPairGprPair<smin, PMIN_DB, v8i8>;
   def : PatGprPairGprPair<umin, PMINU_DB, v8i8>;
