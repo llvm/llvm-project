@@ -47,7 +47,7 @@
 // constexpr qualified or not.
 #if LIBC_ENABLE_CONSTEXPR &&                                                   \
     (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED ||                                 \
-     (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||      \
+     (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 1100)) ||     \
      (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 900))
 #define LIBC_HAS_CONSTANT_EVALUATION
 #define LIBC_CONSTEXPR constexpr

@@ -40,7 +40,7 @@ LIBC_INLINE LIBC_CONSTEXPR void inline_copy(const char *from, char *to) {
 // This implementation of bit_cast requires trivially-constructible To, to avoid
 // UB in the implementation.
 template <typename To, typename From>
-LIBC_INLINE static constexpr cpp::enable_if_t<
+LIBC_INLINE LIBC_CONSTEXPR static cpp::enable_if_t<
     (sizeof(To) == sizeof(From)) &&
         cpp::is_trivially_constructible<To>::value &&
         cpp::is_trivially_copyable<To>::value &&
@@ -61,13 +61,13 @@ bit_cast(const From &from) {
 
 // The following simple bit copy from a smaller type to maybe-larger type.
 template <typename To, typename From>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    (sizeof(To) >= sizeof(From)) &&
-        cpp::is_trivially_constructible<To>::value &&
-        cpp::is_trivially_copyable<To>::value &&
-        cpp::is_trivially_copyable<From>::value,
-    void>
-bit_copy(const From &from, To &to) {
+LIBC_INLINE LIBC_CONSTEXPR
+    cpp::enable_if_t<(sizeof(To) >= sizeof(From)) &&
+                         cpp::is_trivially_constructible<To>::value &&
+                         cpp::is_trivially_copyable<To>::value &&
+                         cpp::is_trivially_copyable<From>::value,
+                     void>
+    bit_copy(const From &from, To &to) {
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);
   inline_copy<sizeof(From)>(src, dst);
