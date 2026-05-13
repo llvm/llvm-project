@@ -423,6 +423,8 @@ defm V_PERM_B32 : VOP3Inst <"v_perm_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMD
 
 def VOPProfileMQSAD : VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP> {
   let HasModifiers = 0;
+  // Src2 only accepts VGPRs
+  let Src2RC64 = getVregSrcForVT<v4i32>.ret;
 }
 
 let SubtargetPredicate = isGFX7Plus in {
