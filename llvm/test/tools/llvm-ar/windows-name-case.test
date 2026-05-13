@@ -54,8 +54,7 @@ EMPTY: !<thin>
 # RUN: llvm-ar dN 2 %t/delete-count.a foo.txt
 # RUN: llvm-ar t %t/delete-count.a | FileCheck %s --check-prefix=DELETE-SECOND
 # RUN: llvm-ar dN 1 %t/delete-count.a FOO.TXT
-# RUN: llvm-ar t %t/delete-count.a | FileCheck %s --check-prefix=DELETE-EMPTY --allow-empty
+# RUN: llvm-ar t %t/delete-count.a | count 0
 
 # DELETE-SECOND: foo.txt
 # DELETE-SECOND-NOT: FOO.TXT
-# DELETE-EMPTY-NOT: foo.txt
