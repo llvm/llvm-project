@@ -880,9 +880,8 @@ public:
                                         remote_file_path.c_str(), size);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendErrorWithFormatv(
-            "failed to get file size of {0} (remote)",
-            remote_file_path.c_str());
+        result.AppendErrorWithFormatv("failed to get file size of {0} (remote)",
+                                      remote_file_path.c_str());
       }
     } else {
       result.AppendError("no platform currently selected\n");
