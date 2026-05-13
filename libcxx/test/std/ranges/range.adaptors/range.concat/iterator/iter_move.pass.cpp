@@ -98,7 +98,7 @@ constexpr bool test() {
     static_assert(noexcept(std::ranges::iter_move(std::declval<Iter>())));
     static_assert(noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
-    auto it                            = cv.begin();
+    auto it                              = cv.begin();
     std::same_as<int&&> decltype(auto) x = std::ranges::iter_move(it);
     assert(x == 1);
   }
@@ -120,7 +120,7 @@ constexpr bool test() {
     static_assert(noexcept(std::ranges::iter_move(std::declval<Iter>())));
     static_assert(noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
-    auto it                            = cv.begin();
+    auto it                              = cv.begin();
     std::same_as<int&&> decltype(auto) x = std::ranges::iter_move(it);
     assert(x == 1);
   }
@@ -144,7 +144,7 @@ constexpr bool test() {
     static_assert(!noexcept(std::ranges::iter_move(std::declval<Iter>())));
     static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
-    auto it                            = cv.begin();
+    auto it                              = cv.begin();
     std::same_as<int&&> decltype(auto) x = std::ranges::iter_move(it);
     assert(x == 1);
   }
