@@ -2009,7 +2009,6 @@ and non-0 as true.
     The size of a DAG is the number of arguments; the operator does not count.
 
 ``!sort(``\ *var*\ ``,`` *list*\ ``,`` *key*\ ``)``
-
     This operator creates a new ``list`` containing the same elements as *list*
     but in sorted order. To determine the order, TableGen binds the variable
     *var* to each element and evaluates the *key* expression, which presumably
