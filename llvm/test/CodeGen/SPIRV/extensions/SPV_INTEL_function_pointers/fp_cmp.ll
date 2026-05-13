@@ -7,10 +7,13 @@
 ; CHECK: OpName %[[F1:.*]] "f1"
 ; CHECK: OpName %[[ARG:.*]] "arg"
 
+; CHECK: %[[TyI8:.*]] = OpTypeInt 8 0
+; CHECK: %[[TyArgPtr:.*]] = OpTypePointer CodeSectionINTEL %[[TyI8]]
 ; CHECK: %[[TyBool:.*]] = OpTypeBool
 ; CHECK: %[[TyFnPtr:.*]] = OpTypePointer CodeSectionINTEL %{{.*}}
 ; CHECK: %[[F1Ptr:.*]] = OpConstantFunctionPointerINTEL %[[TyFnPtr]] %[[F1]]
 
+; CHECK: %[[ARG]] = OpFunctionParameter %[[TyArgPtr]]
 ; CHECK: %[[ArgCast:.*]] = OpBitcast %[[TyFnPtr]] %[[ARG]]
 ; CHECK: OpPtrEqual %[[TyBool]] %[[F1Ptr]] %[[ArgCast]]
 
