@@ -930,7 +930,8 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     if (context.targetCharacteristics().ieeeFeatures().test(
             IeeeFeature::Rounding)) {
       if (auto mode{GetRoundingMode(args[0])}) {
-        return Expr<T>{mode != common::RoundingMode::TiesAwayFromZero};
+        return Expr<T>{mode >= common::RoundingMode::ToZero &&
+            mode < common::RoundingMode::TiesAwayFromZero};
       }
     }
   } else if (name == "__builtin_ieee_support_sqrt") {
