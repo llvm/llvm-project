@@ -2958,9 +2958,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (!ConstNode)
       break;
 
+    bool IsDoubleWide = Subtarget->isPExtPackedDoubleType(VT);
+
     if (ConstNode->isZero()) {
+      MCPhysReg X0Reg = IsDoubleWide ? RISCV::X0_Pair : RISCV::X0;
       SDValue New =
-          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, VT);
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, X0Reg, VT);
       ReplaceNode(Node, New.getNode());
       return;
     }
@@ -2969,7 +2972,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
 
     // Use LI for all ones since it can be compressed to c.li.
-    if (Val.isAllOnes()) {
+    if (Val.isAllOnes() && !IsDoubleWide) {
       SDNode *NewNode = CurDAG->getMachineNode(
           RISCV::ADDI, DL, VT, CurDAG->getRegister(RISCV::X0, VT),
           CurDAG->getAllOnesConstant(DL, XLenVT, /*IsTarget=*/true));
@@ -2988,13 +2991,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     unsigned Opc = 0;
     if (EltSize == 8) {
-      Opc = RISCV::PLI_B;
-    } else if (isInt<10>(Imm)) {
-      Opc = EltSize == 32 ? RISCV::PLI_W : RISCV::PLI_H;
+      Opc = IsDoubleWide ? RISCV::PLI_DB : RISCV::PLI_B;
+    } else if (EltSize == 16 && isInt<10>(Imm)) {
+      Opc = IsDoubleWide ? RISCV::PLI_DH : RISCV::PLI_H;
+    } else if (!IsDoubleWide && EltSize == 32 && isInt<10>(Imm)) {
+      Opc = RISCV::PLI_W;
     } else if (EltSize == 16 && isShiftedInt<10, 6>(Imm)) {
-      Opc = RISCV::PLUI_H;
+      Opc = IsDoubleWide ? RISCV::PLUI_DH : RISCV::PLUI_H;
       Imm = Imm >> 6;
-    } else if (EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
+    } else if (!IsDoubleWide && EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
       Opc = RISCV::PLUI_W;
       Imm = Imm >> 22;
     }
