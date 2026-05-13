@@ -17,11 +17,11 @@
 using namespace mlir;
 
 namespace {
-/// One step in a view chain, leaf-first. `inputElemType` is the elemType
-/// of the slot one step closer to root; `outputElemType` is the elemType
+/// One step in a view chain, leaf-first. `inputElemType` is the elem type
+/// of the slot one step closer to root; `outputElemType` is the elem type
 /// this step exposes.
 struct ViewStep {
-  PromotableOpInterface view;
+  PromotableAliaserInterface view;
   Type inputElemType;
   Type outputElemType;
 };
@@ -46,16 +46,16 @@ static bool walkPromotableSlotViewChain(Value value, const MemorySlot &rootSlot,
   while (current != rootSlot.ptr) {
     if (!seen.insert(current).second)
       return false;
-    auto promotable =
-        dyn_cast_or_null<PromotableOpInterface>(current.getDefiningOp());
-    if (!promotable)
+    auto aliaser =
+        dyn_cast_or_null<PromotableAliaserInterface>(current.getDefiningOp());
+    if (!aliaser)
       return false;
-    std::optional<PromotableSlotView> info = promotable.getPromotableSlotView();
+    std::optional<PromotableSlotView> info = aliaser.getPromotableSlotView();
     if (!info || info->view.ptr != current)
       return false;
     if (!aliasElemType)
       aliasElemType = info->view.elemType;
-    chainOut.push_back(ViewStep{promotable, /*inputElemType=*/Type{},
+    chainOut.push_back(ViewStep{aliaser, /*inputElemType=*/Type{},
                                 /*outputElemType=*/info->view.elemType});
     current = info->slotPointerOperand;
   }
@@ -98,7 +98,8 @@ Value mlir::convertSlotValueToViewValue(Value slotValue, Value viewPtr,
   Value current = slotValue;
   // Root-to-leaf walk: reverse the leaf-first chain.
   for (ViewStep &step : llvm::reverse(chain)) {
-    current = step.view.convertSlotValue(current, step.outputElemType, builder);
+    current = step.view.projectSlotValueToViewValue(
+        current, step.outputElemType, builder);
     if (!current)
       return {};
   }
@@ -106,14 +107,33 @@ Value mlir::convertSlotValueToViewValue(Value slotValue, Value viewPtr,
 }
 
 Value mlir::convertViewValueToSlotValue(Value viewValue, Value viewPtr,
+                                        Value rootReachingDef,
                                         const MemorySlot &rootSlot,
                                         OpBuilder &builder) {
   SmallVector<ViewStep> chain;
   if (!walkPromotableSlotViewChain(viewPtr, rootSlot, chain, /*out=*/nullptr))
     return {};
-  Value current = viewValue;
-  for (ViewStep &step : chain) {
-    current = step.view.convertSlotValue(current, step.inputElemType, builder);
+
+  // Project `rootReachingDef` down to each step's input level so the
+  // per-step projector can use it (needed for partial subviews; full views
+  // ignore it). The chain is leaf-first, so `chain.back()` is root-most
+  // (its input is `rootSlot.elemType`) and `chain.front()` is leaf-most.
+  SmallVector<Value> perStepReachingDef(chain.size());
+  Value current = rootReachingDef;
+  for (int i = static_cast<int>(chain.size()) - 1; i >= 0; --i) {
+    perStepReachingDef[i] = current;
+    current = chain[i].view.projectSlotValueToViewValue(
+        current, chain[i].outputElemType, builder);
+    if (!current)
+      return {};
+  }
+
+  // Walk leaf-to-root, combining `viewValue` with the projected reaching
+  // definition at each step.
+  current = viewValue;
+  for (size_t i = 0; i < chain.size(); ++i) {
+    current = chain[i].view.projectViewValueToSlotValue(
+        current, chain[i].inputElemType, perStepReachingDef[i], builder);
     if (!current)
       return {};
   }

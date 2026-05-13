@@ -568,12 +568,13 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
           reachingDef = getOrCreateDefaultValue();
         Value reachingDefAtStore = reachingDef;
         if (slot.ptr != viewSlot.ptr) {
-          // The store sees the slot at `viewSlot.elemType`; convert the
+          // The store sees the slot at `viewSlot.elemType`; project the
           // reaching definition (at root elem type) before handing it to
           // `getStored`.
           reachingDefAtStore = convertSlotValueToViewValue(
               reachingDef, viewSlot.ptr, slot, builder);
-          assert(reachingDefAtStore && "convertSlotValue contract violation");
+          assert(reachingDefAtStore &&
+                 "projectSlotValueToViewValue contract violation");
         }
         Value stored =
             memOp.getStored(viewSlot, builder, reachingDefAtStore, dataLayout);
@@ -581,12 +582,12 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
                          "new definition of the slot");
         // `replacedValuesMap` keeps `stored` at `viewSlot.elemType` for
         // `visitReplacedValues`; the new reaching definition is tracked at
-        // the root slot's elem type, so convert `stored` back.
+        // the root slot's elem type, so project `stored` back.
         replacedValuesMap[memOp] = stored;
         if (viewSlot.ptr != slot.ptr) {
-          stored =
-              convertViewValueToSlotValue(stored, viewSlot.ptr, slot, builder);
-          assert(stored && "convertSlotValue contract violation");
+          stored = convertViewValueToSlotValue(stored, viewSlot.ptr,
+                                               reachingDef, slot, builder);
+          assert(stored && "projectViewValueToSlotValue contract violation");
         }
         reachingDef = stored;
       }
@@ -793,12 +794,12 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
       MemorySlot viewSlot = getOpViewSlot(toPromote, slot).value_or(slot);
       Value reachingDefAtBlockingUse = reachingDef;
       if (viewSlot.ptr != slot.ptr) {
-        // Convert the reaching definition to `viewSlot.elemType` to match
+        // Project the reaching definition to `viewSlot.elemType` to match
         // what `toPromoteMemOp` sees.
         reachingDefAtBlockingUse = convertSlotValueToViewValue(
             reachingDef, viewSlot.ptr, slot, builder);
         assert(reachingDefAtBlockingUse &&
-               "convertSlotValue contract violation");
+               "projectSlotValueToViewValue contract violation");
       }
       if (toPromoteMemOp.removeBlockingUses(
               viewSlot, blockingUsesMap[toPromote], builder,

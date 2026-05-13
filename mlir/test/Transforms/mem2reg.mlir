@@ -186,9 +186,9 @@ func.func @poison_insertion_point(%val: f64) {
 
 // Verifies that mem2reg promotes a memory slot whose stores and loads are
 // reached through a transparent view operation that exposes itself via
-// PromotableOpInterface::getPromotableSlotView. The conditional store on
-// the view in ^bb1 must be discovered as a defining block, otherwise the
-// merge point at ^bb2 would not get a block argument and the promotion
+// PromotableAliaserInterface::getPromotableSlotView. The conditional store
+// on the view in ^bb1 must be discovered as a defining block, otherwise
+// the merge point at ^bb2 would not get a block argument and the promotion
 // would silently drop the conditional update.
 
 // CHECK-LABEL: func.func @promotable_through_view
@@ -219,9 +219,10 @@ func.func @promotable_through_view(%a: i32, %cond: i1) -> i32 {
 
 // Type-changing transparent view: the store and load see the slot at f32
 // while the underlying allocation is at i32. mem2reg materialises an
-// `unrealized_conversion_cast` (the view op's `convertSlotValue`) at the
-// store (f32 → i32 to update the reaching def at the slot's elem type) and
-// at the load (i32 → f32 to feed the load's f32 result type).
+// `unrealized_conversion_cast` (the view op's `projectViewValueToSlotValue`)
+// at the store (f32 → i32 to update the reaching def at the slot's elem
+// type) and at the load (i32 → f32 via `projectSlotValueToViewValue` to feed
+// the load's f32 result type).
 
 // CHECK-LABEL: func.func @promotable_through_cast_view
 // CHECK-SAME: (%[[A:.*]]: f32) -> f32
@@ -242,9 +243,10 @@ func.func @promotable_through_cast_view(%a: f32) -> f32 {
 
 // Same as above with a conditional store across blocks. The merge-point
 // block argument is at the root slot's element type (i32), and the
-// `convertSlotValue` casts are inserted at the store sites (f32 → i32) so
-// the merge argument can carry the conditional update; the load site
-// inserts the inverse cast (i32 → f32) for its result.
+// `projectViewValueToSlotValue` casts are inserted at the store sites
+// (f32 → i32) so the merge argument can carry the conditional update; the
+// load site inserts the inverse cast (i32 → f32) for its result via
+// `projectSlotValueToViewValue`.
 
 // CHECK-LABEL: func.func @promotable_through_cast_view_blocks
 // CHECK-SAME: (%[[A:.*]]: f32, %[[COND:.*]]: i1) -> f32

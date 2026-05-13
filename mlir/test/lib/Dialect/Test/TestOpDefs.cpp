@@ -1816,12 +1816,23 @@ DeletionKind TestTransparentCastView::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
-Value TestTransparentCastView::convertSlotValue(Value value, Type targetType,
-                                                OpBuilder &builder) {
+Value TestTransparentCastView::projectSlotValueToViewValue(Value value,
+                                                           Type targetType,
+                                                           OpBuilder &builder) {
   if (value.getType() == targetType)
     return value;
   return UnrealizedConversionCastOp::create(builder, getLoc(), targetType,
                                             value)
+      .getResult(0);
+}
+
+Value TestTransparentCastView::projectViewValueToSlotValue(
+    Value viewValue, Type targetType, Value /*reachingDef*/,
+    OpBuilder &builder) {
+  if (viewValue.getType() == targetType)
+    return viewValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(), targetType,
+                                            viewValue)
       .getResult(0);
 }
 
