@@ -266,7 +266,8 @@ Status ProcessElfCore::DoLoadCore() {
         // loader requires the main executable so that it can extract the
         // DT_DEBUG key/value pair from the dynamic section and get the list
         // of shared libraries.
-        auto exe_header = GetNTFileEntryForExecutableELFHeader();
+        std::optional<NT_FILE_Entry> exe_header =
+            GetNTFileEntryForExecutableELFHeader();
         if (exe_header) {
           if (llvm::Expected<lldb::ModuleSP> module_sp_or_err =
                   ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
@@ -331,7 +332,9 @@ bool ProcessElfCore::GetMainExecutableModuleSpec(ModuleSpec &exe_spec) {
   exe_spec.GetArchitecture() = GetTarget().GetArchitecture();
 
   // Find the NT_FILE_Entry for the main executable's ELF header.
-  if (auto exe_header = GetNTFileEntryForExecutableELFHeader()) {
+  std::optional<NT_FILE_Entry> exe_header =
+      GetNTFileEntryForExecutableELFHeader();
+  if (exe_header) {
     exe_spec.GetFileSpec() = CreateFileSpecFromPath(exe_header->path);
     exe_spec.GetUUID() = FindModuleUUID(exe_header->path);
   }
@@ -1189,6 +1192,16 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
   return true;
 }
 
+/// Find the NT_FILE entry that contains an address.
+std::optional<ProcessElfCore::NT_FILE_Entry>
+ProcessElfCore::GetNTFileEntryContainingAddress(lldb::addr_t addr) {
+  for (const NT_FILE_Entry &file_entry : m_nt_file_entries) {
+    if (file_entry.start <= addr && addr < file_entry.end)
+      return file_entry;
+  }
+  return std::nullopt;
+}
+
 std::optional<ProcessElfCore::NT_FILE_Entry>
 ProcessElfCore::GetNTFileEntryForExecutableELFHeader() {
   /// This method will search for the first NT_FILE entry that contains the
@@ -1210,19 +1223,19 @@ ProcessElfCore::GetNTFileEntryForExecutableELFHeader() {
   // the NT_FILE entry that contains this address and this will locate the main
   // executable's mapping that contains the ELF header.
   AuxVector aux_vector(m_auxv);
-  if (auto phdr_addr = aux_vector.GetAuxValue(AuxVector::AUXV_AT_PHDR)) {
-    for (const NT_FILE_Entry &file_entry : m_nt_file_entries) {
-      if (file_entry.start <= *phdr_addr && *phdr_addr < file_entry.end)
-        return file_entry;
-    }
+  if (std::optional<uint64_t> opt_value =
+          aux_vector.GetAuxValue(AuxVector::AUXV_AT_PHDR)) {
+    if (std::optional<NT_FILE_Entry> nt =
+            GetNTFileEntryContainingAddress(*opt_value))
+      return *nt;
   }
   // Fall back to trying to find the first NT_FILE entry that contains the entry
   // point address.
-  if (auto phdr_addr = aux_vector.GetAuxValue(AuxVector::AUXV_AT_ENTRY)) {
-    for (const NT_FILE_Entry &file_entry : m_nt_file_entries) {
-      if (file_entry.start <= *phdr_addr && *phdr_addr < file_entry.end)
-        return file_entry;
-    }
+  if (std::optional<uint64_t> opt_value =
+          aux_vector.GetAuxValue(AuxVector::AUXV_AT_ENTRY)) {
+    if (std::optional<NT_FILE_Entry> nt =
+            GetNTFileEntryContainingAddress(*opt_value))
+      return *nt;
   }
   return std::nullopt;
 }

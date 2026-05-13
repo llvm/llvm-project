@@ -189,6 +189,9 @@ private:
   llvm::Error parseOpenBSDNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
   llvm::Error parseLinuxNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
 
+  /// Find the NT_FILE entry that contains an address.
+  std::optional<NT_FILE_Entry>
+  GetNTFileEntryContainingAddress(lldb::addr_t addr);
   /// Intelligently find the NT_FILE entry for the executable's ELF header.
   std::optional<NT_FILE_Entry> GetNTFileEntryForExecutableELFHeader();
 };
