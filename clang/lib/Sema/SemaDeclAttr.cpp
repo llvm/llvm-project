@@ -4434,9 +4434,8 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
     ParamIdents[0] = &Context.Idents.get(SpecialEntity);
     ParamLocs[0] = AL.getRange().getEnd();
     SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::Invalid);
-    auto *CapturedBy =
-        LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N,
-                                      IsStandaloneSpecial, AL);
+    auto *CapturedBy = LifetimeCaptureByAttr::Create(
+        Context, FakeParamIndices.data(), N, IsStandaloneSpecial, AL);
     CapturedBy->setArgs(ParamIdents, ParamLocs);
     return CapturedBy;
   }
@@ -4475,9 +4474,8 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
   if (!IsValid)
     return nullptr;
   SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::Invalid);
-  auto *CapturedBy =
-      LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N,
-                                    IsStandaloneSpecial, AL);
+  auto *CapturedBy = LifetimeCaptureByAttr::Create(
+      Context, FakeParamIndices.data(), N, IsStandaloneSpecial, AL);
   CapturedBy->setArgs(ParamIdents, ParamLocs);
   return CapturedBy;
 }
@@ -4535,9 +4533,10 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
       if (It == NameIdxMapping.end()) {
         auto Loc = CapturedBy->getArgLocs()[I];
         if (!HasImplicitThisParam && Name == "this") {
-          unsigned DiagID = CapturedBy->getIsStandaloneSpecial()
-                                ? diag::err_capture_by_this_attr_without_implicit_this
-                                : diag::err_capture_by_implicit_this_not_available;
+          unsigned DiagID =
+              CapturedBy->getIsStandaloneSpecial()
+                  ? diag::err_capture_by_this_attr_without_implicit_this
+                  : diag::err_capture_by_implicit_this_not_available;
           Diag(Loc, DiagID) << Loc;
         } else
           Diag(Loc, diag::err_capture_by_attribute_argument_unknown)
