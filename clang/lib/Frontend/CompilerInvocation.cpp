@@ -5468,8 +5468,15 @@ IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 clang::createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
-  return createVFSFromOverlayFiles(CI.getHeaderSearchOpts().VFSOverlayFiles,
-                                   Diags, std::move(BaseFS));
+  auto VFS = createVFSFromOverlayFiles(CI.getHeaderSearchOpts().VFSOverlayFiles,
+                                       Diags, std::move(BaseFS));
+  // Always wrap the returned VFS in an OverlayFileSystem to ensure that
+  // initialization paths not using CompilerInstance (such as ASTUnit/libclang)
+  // maintain a consistent VFS stack capable of dynamic overlay injections.
+  if (llvm::isa<llvm::vfs::OverlayFileSystem>(VFS.get()))
+    return VFS;
+  return llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+      std::move(VFS));
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem> clang::createVFSFromOverlayFiles(
