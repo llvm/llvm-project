@@ -1550,9 +1550,8 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     Function *GCRelocateDecl = It->second;
 
     // only specify a debug name if we can give a useful one
-    CallInst *Reloc = Builder.CreateCall(
-        GCRelocateDecl, {StatepointToken, BaseIdx, LiveIdx},
-        suffixed_name_or(LiveVariables[i], ".relocated", ""));
+    Builder.CreateCall(GCRelocateDecl, {StatepointToken, BaseIdx, LiveIdx},
+                       suffixed_name_or(LiveVariables[i], ".relocated", ""));
   }
 }
 
