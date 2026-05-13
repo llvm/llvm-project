@@ -2419,7 +2419,7 @@ The AMDGPU backend supports the following calling conventions:
                                      Arguments are passed in SGPRs, starting at s0, if they have the ``inreg``
                                      attribute, and in VGPRs otherwise, starting at v8. Using more SGPRs or VGPRs
                                      than available in the subtarget is not allowed.  On subtargets that use
-                                     a scratch buffer descriptor (as opposed to ``scratch_{load,store}_**`` instructions),
+                                     a scratch buffer descriptor (as opposed to ``scratch_{load,store}_*`` instructions),
                                      the scratch buffer descriptor is passed in s[48:51]. This limits the
                                      SGPR / ``inreg`` arguments to the equivalent of 48 dwords; using more
                                      than that is not allowed.
