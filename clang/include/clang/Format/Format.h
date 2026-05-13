@@ -2481,8 +2481,9 @@ struct FormatStyle {
   };
 
   /// The function declaration/definition return type breaking style to use.
-  /// To have identifier macros (e.g. ``__always_inline``) treated as
-  /// specifiers, add them to ``AttributeMacros``.
+  /// Trailing return types (``auto f() -> T``) are not affected. To have
+  /// identifier macros (e.g. ``__always_inline``) treated as specifiers,
+  /// add them to ``AttributeMacros``.
   /// \version 23
   BreakBeforeReturnTypeStyle BreakBeforeReturnType;
 

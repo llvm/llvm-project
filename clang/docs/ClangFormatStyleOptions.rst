@@ -3698,8 +3698,9 @@ the configuration (without a prefix: ``Auto``).
 
 **BreakBeforeReturnType** (``BreakBeforeReturnTypeStyle``) :versionbadge:`clang-format 23` :ref:`¶ <BreakBeforeReturnType>`
   The function declaration/definition return type breaking style to use.
-  To have identifier macros (e.g. ``__always_inline``) treated as
-  specifiers, add them to ``AttributeMacros``.
+  Trailing return types (``auto f() -> T``) are not affected. To have
+  identifier macros (e.g. ``__always_inline``) treated as specifiers,
+  add them to ``AttributeMacros``.
 
   Possible values:
 

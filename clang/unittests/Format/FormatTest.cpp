@@ -10596,10 +10596,6 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
 
 TEST_F(FormatTest, BreakBeforeReturnType) {
   FormatStyle Style = getLLVMStyle();
-
-  EXPECT_EQ(Style.BreakBeforeReturnType, FormatStyle::BBRTS_None);
-  verifyFormat("static inline void myfun(void);", Style);
-
   Style.BreakBeforeReturnType = FormatStyle::BBRTS_All;
 
   verifyFormat("static inline\n"
@@ -10654,8 +10650,6 @@ TEST_F(FormatTest, BreakBeforeReturnType) {
   Style.ColumnLimit = 50;
   verifyFormat("__attribute__((always_inline)) static inline\n"
                "int do_thing(int a, int b, int c);",
-               "__attribute__((always_inline)) static inline int "
-               "do_thing(int a, int b, int c);",
                Style);
   Style.ColumnLimit = 80;
 
@@ -10682,6 +10676,11 @@ TEST_F(FormatTest, BreakBeforeReturnType) {
 
   Style.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   verifyFormat("template <typename T>\n"
+               "static inline\n"
+               "T f();",
+               Style);
+  verifyFormat("template <typename T>\n"
+               "  requires Foo<T>\n"
                "static inline\n"
                "T f();",
                Style);

@@ -4096,10 +4096,17 @@ static FormatToken *findReturnTypeStart(const AnnotatedLine &Line) {
     Tok = Opener->MatchingParen->Next;
   }
 
+  if (Tok && Tok->is(TT_RequiresClause)) {
+    while (Tok && !Tok->ClosesRequiresClause)
+      Tok = Tok->Next;
+    if (Tok)
+      Tok = Tok->Next;
+  }
+
   while (Tok) {
     if (isReturnTypePrefixSpecifier(*Tok) ||
-        Tok->isOneOf(tok::kw___attribute, tok::kw___declspec) ||
-        Tok->is(TT_AttributeMacro)) {
+        Tok->isOneOf(tok::kw___attribute, tok::kw___declspec,
+                     TT_AttributeMacro)) {
       auto *Next = Tok->Next;
       if (Next && Next->is(tok::l_paren) && Next->MatchingParen)
         Tok = Next->MatchingParen->Next;
@@ -4238,9 +4245,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
       mustBreakBeforeReturnType(Line)) {
     if (auto *ReturnTypeStart = findReturnTypeStart(Line);
         ReturnTypeStart && ReturnTypeStart != FirstNonComment &&
-        ReturnTypeStart->isNot(TT_FunctionDeclarationName) &&
-        ReturnTypeStart->isNot(TT_CtorDtorDeclName) &&
-        ReturnTypeStart->isNot(tok::tilde)) {
+        ReturnTypeStart->isNoneOf(TT_FunctionDeclarationName,
+                                  TT_CtorDtorDeclName, tok::tilde)) {
       ReturnTypeStart->MustBreakBefore = true;
       Line.ReturnTypeWrapped = true;
     }
