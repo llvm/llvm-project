@@ -8,7 +8,7 @@
 
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 
-#include "llvm/ADT/SmallPtrSet.h"
+#include "mlir/Analysis/SliceWalk.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "mlir/Interfaces/MemorySlotOpInterfaces.cpp.inc"
@@ -34,31 +34,29 @@ struct ViewStep {
 static bool walkPromotableSlotViewChain(Value value, const MemorySlot &rootSlot,
                                         SmallVectorImpl<ViewStep> &chainOut,
                                         Type *outViewElemType) {
-  if (value == rootSlot.ptr) {
-    if (outViewElemType)
-      *outViewElemType = rootSlot.elemType;
-    return true;
-  }
-
-  Value current = value;
   Type aliasElemType{};
-  llvm::SmallPtrSet<Value, 4> seen;
-  while (current != rootSlot.ptr) {
-    if (!seen.insert(current).second)
-      return false;
+  bool reachedRoot = false;
+  WalkContinuation result = walkSlice(value, [&](Value current) {
+    if (current == rootSlot.ptr) {
+      reachedRoot = true;
+      return WalkContinuation::skip();
+    }
     auto aliaser =
         dyn_cast_or_null<PromotableAliaserInterface>(current.getDefiningOp());
     if (!aliaser)
-      return false;
+      return WalkContinuation::interrupt();
     std::optional<PromotableSlotView> info = aliaser.getPromotableSlotView();
     if (!info || info->view.ptr != current)
-      return false;
+      return WalkContinuation::interrupt();
     if (!aliasElemType)
       aliasElemType = info->view.elemType;
     chainOut.push_back(ViewStep{aliaser, /*inputElemType=*/Type{},
                                 /*outputElemType=*/info->view.elemType});
-    current = info->aliasedSlotPointerOperand;
-  }
+    return WalkContinuation::advanceTo(info->aliasedSlotPointerOperand);
+  });
+
+  if (result.wasInterrupted() || !reachedRoot)
+    return false;
 
   // Fill in each step's `inputElemType` from the previous step's output
   // (or `rootSlot.elemType` for the root-most step).
