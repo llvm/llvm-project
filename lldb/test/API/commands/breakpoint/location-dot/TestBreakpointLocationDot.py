@@ -10,11 +10,12 @@ class TestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.c")
         )
 
-        self.assertTrue(bp.FindLocationByID(1).IsEnabled())
+        self.assertEqual(bp.GetNumLocations(), 1)
+        self.assertTrue(bp.GetLocationAtIndex(0).IsEnabled())
         self.expect("breakpoint disable .", startstr="1 breakpoints disabled.")
-        self.assertFalse(bp.FindLocationByID(1).IsEnabled())
+        self.assertFalse(bp.GetLocationAtIndex(0).IsEnabled())
         self.expect("breakpoint enable .", startstr="1 breakpoints enabled.")
-        self.assertTrue(bp.FindLocationByID(1).IsEnabled())
+        self.assertTrue(bp.GetLocationAtIndex(0).IsEnabled())
 
     def test_delete(self):
         self.build()
@@ -26,7 +27,8 @@ class TestCase(TestBase):
             "breakpoint delete .",
             startstr="0 breakpoints deleted; 1 breakpoint locations disabled",
         )
-        self.assertFalse(bp.FindLocationByID(1).IsEnabled())
+        self.assertEqual(bp.GetNumLocations(), 1)
+        self.assertFalse(bp.GetLocationAtIndex(0).IsEnabled())
 
     def test_error_not_breakpoint_stop(self):
         self.build()
@@ -34,7 +36,8 @@ class TestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.c")
         )
 
-        self.assertTrue(bp.FindLocationByID(1).IsEnabled())
+        self.assertEqual(bp.GetNumLocations(), 1)
+        self.assertTrue(bp.GetLocationAtIndex(0).IsEnabled())
         thread.StepOver()
         self.assertNotEqual(thread.stop_reason, lldb.eStopReasonBreakpoint)
         self.expect(
@@ -42,7 +45,7 @@ class TestCase(TestBase):
             error=True,
             startstr="error: current thread is not stopped at a breakpoint",
         )
-        self.assertTrue(bp.FindLocationByID(1).IsEnabled())
+        self.assertTrue(bp.GetLocationAtIndex(0).IsEnabled())
 
     def test_error_no_process(self):
         self.build()
