@@ -19,8 +19,11 @@ config.test_format = lit.formats.ShTest()
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [".cl", ".test"]
 
-# Exclude certain directories from test discovery
-config.excludes = ["CMakeLists.txt"]
+# Exclude certain directories and files from test discovery
+config.excludes = [
+    "CMakeLists.txt",
+    "update_libclc_tests.py",
+]
 
 # test_source_root: The root path where tests are located.
 # For per-target tests, this is the target's test directory.
@@ -33,15 +36,18 @@ config.target_triple = config.libclc_target
 
 supported_test_architectures = ["amdgcn", "amdgpu"]
 
+config.targets = set()
+
 
 def calculate_arch_features(arch_string):
     features = []
     for arch in arch_string.split():
         if (
             arch.lower() in supported_test_architectures
-            and config.libclc_arch.lower() in supported_test_architectures
+            and config.libclc_target_arch.lower() in supported_test_architectures
         ):
             features.append(arch.lower() + "-registered-target")
+            config.targets.add(arch.upper())
     return features
 
 
@@ -57,8 +63,8 @@ config.substitutions.extend(
     [
         ("%library_dir", config.libclc_library_dir),
         ("%target", config.libclc_target),
-        ("%cpu", config.libclc_cpu),
-        ("%check_prefix", config.libclc_arch.upper()),
+        ("%cpu", config.libclc_target_cpu),
+        ("%check_prefix", config.libclc_target_arch.upper()),
     ]
 )
 

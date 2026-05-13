@@ -1,9 +1,9 @@
 set(LLVM_TOOLS_DIR ${LLVM_TOOLS_BINARY_DIR})
 
-if(ARCH STREQUAL amdgcn)
-  set(LIBCLC_CPU "gfx900")
+if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_AMDGPU)
+  set(LIBCLC_TARGET_CPU "gfx900")
 else()
-  set(LIBCLC_CPU "")
+  set(LIBCLC_TARGET_CPU "")
 endif()
 
 configure_lit_site_cfg(

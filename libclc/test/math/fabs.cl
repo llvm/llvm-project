@@ -6,7 +6,7 @@
 // AMDGCN-LABEL: define hidden noundef float @test_float(
 // AMDGCN-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[CALL:%.*]] = tail call fastcc float @llvm.fabs.f32(float noundef [[X]]) #[[ATTR2:[0-9]+]]
+// AMDGCN-NEXT:    [[CALL:%.*]] = tail call float @llvm.fabs.f32(float noundef [[X]]) #[[ATTR2:[0-9]+]]
 // AMDGCN-NEXT:    ret float [[CALL]]
 //
 float test_float(float x) {

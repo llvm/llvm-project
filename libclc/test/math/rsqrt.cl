@@ -8,8 +8,8 @@
 // AMDGCN-LABEL: define hidden noundef half @test_half(
 // AMDGCN-SAME: half noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = tail call contract half @llvm.sqrt.f16(half [[X]]), !fpmath [[META12:![0-9]+]]
-// AMDGCN-NEXT:    [[TMP1:%.*]] = fdiv contract half 1.000000e+00, [[TMP0]], !fpmath [[META13:![0-9]+]]
+// AMDGCN-NEXT:    [[TMP0:%.*]] = tail call contract half @llvm.sqrt.f16(half [[X]]), !fpmath [[META11:![0-9]+]]
+// AMDGCN-NEXT:    [[TMP1:%.*]] = fdiv contract half 1.000000e+00, [[TMP0]], !fpmath [[META12:![0-9]+]]
 // AMDGCN-NEXT:    ret half [[TMP1]]
 //
 half test_half(half x) {
@@ -19,8 +19,8 @@ half test_half(half x) {
 // AMDGCN-LABEL: define hidden noundef float @test_float(
 // AMDGCN-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.sqrt.f32(float [[X]]), !fpmath [[META14:![0-9]+]]
-// AMDGCN-NEXT:    [[TMP1:%.*]] = fdiv contract float 1.000000e+00, [[TMP0]], !fpmath [[META15:![0-9]+]]
+// AMDGCN-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.sqrt.f32(float [[X]]), !fpmath [[META13:![0-9]+]]
+// AMDGCN-NEXT:    [[TMP1:%.*]] = fdiv contract float 1.000000e+00, [[TMP0]], !fpmath [[META14:![0-9]+]]
 // AMDGCN-NEXT:    ret float [[TMP1]]
 //
 float test_float(float x) {
@@ -38,8 +38,8 @@ double test_double(double x) {
   return rsqrt(x);
 }
 //.
-// AMDGCN: [[META12]] = !{float 1.500000e+00}
-// AMDGCN: [[META13]] = !{float 1.000000e+00}
-// AMDGCN: [[META14]] = !{float 3.000000e+00}
-// AMDGCN: [[META15]] = !{float 2.500000e+00}
+// AMDGCN: [[META11]] = !{float 1.500000e+00}
+// AMDGCN: [[META12]] = !{float 1.000000e+00}
+// AMDGCN: [[META13]] = !{float 3.000000e+00}
+// AMDGCN: [[META14]] = !{float 2.500000e+00}
 //.
