@@ -263,12 +263,10 @@ void GCNPreRAOptimizationsImpl::hintTrue16Copy(const MachineInstr &MI) {
 }
 
 bool GCNPreRAOptimizationsImpl::optimizeBVHStack(MachineInstr &MI) {
-  SmallVector<Register> UseRegs;
+  SmallVector<Register, 2> UseRegs;
 
-  // Find all BVH sources for this DS_BVH_STACK instruction.
-  for (MachineOperand &Use : MI.uses()) {
-    if (!Use.isReg() || Use.isImplicit())
-      continue;
+  // Find BVH sources for this DS_BVH_STACK instruction.
+  auto CheckUse = [&](MachineOperand &Use) {
     Register Reg = Use.getReg();
     for (const MachineInstr &Src : MRI->def_instructions(Reg)) {
       if (!SIInstrInfo::isImage(Src))
@@ -281,7 +279,9 @@ bool GCNPreRAOptimizationsImpl::optimizeBVHStack(MachineInstr &MI) {
       UseRegs.push_back(Reg);
       break;
     }
-  }
+  };
+  CheckUse(*TII->getNamedOperand(MI, AMDGPU::OpName::data0));
+  CheckUse(*TII->getNamedOperand(MI, AMDGPU::OpName::data1));
 
   if (UseRegs.empty())
     return false;
