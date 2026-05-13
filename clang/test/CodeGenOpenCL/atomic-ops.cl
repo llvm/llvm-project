@@ -344,10 +344,9 @@ int test_volatile(volatile atomic_int *i) {
   // CHECK-LABEL: @test_volatile
   // CHECK:      %[[i_addr:.*]] = alloca ptr
   // CHECK-NEXT: %[[atomicdst:.*]] = alloca i32
-  // CHECK-NEXT: %[[i_addr_ascast:.*]] = addrspacecast ptr addrspace(5) %[[i_addr]] to ptr
   // CHECK-NEXT: %[[atomicdst_ascast:.*]] = addrspacecast ptr addrspace(5) %[[atomicdst]] to ptr
-  // CHECK-NEXT: store ptr %i, ptr %[[i_addr_ascast]]
-  // CHECK-NEXT: %[[addr:.*]] = load ptr, ptr %[[i_addr_ascast]]
+  // CHECK-NEXT: store ptr %i, ptr addrspace(5) %[[i_addr]]
+  // CHECK-NEXT: %[[addr:.*]] = load ptr, ptr addrspace(5) %[[i_addr]]
   // CHECK-NEXT: %[[res:.*]] = load atomic volatile i32, ptr %[[addr]] syncscope("workgroup") seq_cst, align 4{{$}}
   // CHECK-NEXT: store i32 %[[res]], ptr %[[atomicdst_ascast]]
   // CHECK-NEXT: %[[retval:.*]] = load i32, ptr %[[atomicdst_ascast]]
