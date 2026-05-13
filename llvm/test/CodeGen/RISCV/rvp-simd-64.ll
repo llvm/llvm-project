@@ -1038,8 +1038,7 @@ define <2 x i32> @test_pabs_w(<2 x i32> %a) {
 define <4 x i16> @test_pabs_h(<4 x i16> %a) {
 ; RV32-LABEL: test_pabs_h:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pneg.dh a2, a0
-; RV32-NEXT:    pmax.dh a0, a0, a2
+; RV32-NEXT:    pabs.dh a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pabs_h:
@@ -1053,8 +1052,7 @@ define <4 x i16> @test_pabs_h(<4 x i16> %a) {
 define <8 x i8> @test_pabs_b(<8 x i8> %a) {
 ; RV32-LABEL: test_pabs_b:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pneg.db a2, a0
-; RV32-NEXT:    pmax.db a0, a0, a2
+; RV32-NEXT:    pabs.db a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pabs_b:
@@ -1114,9 +1112,7 @@ define <2 x i32> @test_pdifu_w(<2 x i32> %a, <2 x i32> %b) {
 define <4 x i16> @test_pdif_h(<4 x i16> %a, <4 x i16> %b) {
 ; RV32-LABEL: test_pdif_h:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmin.dh a4, a0, a2
-; RV32-NEXT:    pmax.dh a0, a0, a2
-; RV32-NEXT:    psub.dh a0, a0, a4
+; RV32-NEXT:    pabd.dh a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pdif_h:
@@ -1134,9 +1130,7 @@ define <4 x i16> @test_pdif_h(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i16> @test_pdifu_h(<4 x i16> %a, <4 x i16> %b) {
 ; RV32-LABEL: test_pdifu_h:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pminu.dh a4, a0, a2
-; RV32-NEXT:    pmaxu.dh a0, a0, a2
-; RV32-NEXT:    psub.dh a0, a0, a4
+; RV32-NEXT:    pabdu.dh a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pdifu_h:
@@ -1153,9 +1147,7 @@ define <4 x i16> @test_pdifu_h(<4 x i16> %a, <4 x i16> %b) {
 define <8 x i8> @test_pdif_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_pdif_b:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmin.db a4, a0, a2
-; RV32-NEXT:    pmax.db a0, a0, a2
-; RV32-NEXT:    psub.db a0, a0, a4
+; RV32-NEXT:    pabd.db a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pdif_b:
@@ -1172,9 +1164,7 @@ define <8 x i8> @test_pdif_b(<8 x i8> %a, <8 x i8> %b) {
 define <8 x i8> @test_pdifu_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_pdifu_b:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pminu.db a4, a0, a2
-; RV32-NEXT:    pmaxu.db a0, a0, a2
-; RV32-NEXT:    psub.db a0, a0, a4
+; RV32-NEXT:    pabdu.db a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pdifu_b:
