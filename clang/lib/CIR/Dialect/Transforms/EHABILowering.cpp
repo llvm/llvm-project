@@ -35,6 +35,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/TargetParser/Triple.h"
@@ -627,8 +628,10 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
       mlir::cast<cir::PointerType>(paramAddr.getType());
 
   if (op.getKind() == cir::InitCatchKind::Reference) {
-    builder.setInsertionPoint(op);
+    assert(!MissingFeatures::winSizeOfUnwindException());
     constexpr unsigned headerSize = 32;
+
+    builder.setInsertionPoint(op);
     auto index = cir::ConstantOp::create(
         builder, loc, cir::IntAttr::get(u32Type, headerSize));
     auto exnObj =
