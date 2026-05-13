@@ -114,7 +114,7 @@ This enables use cases like:
 - Taint tracking
 
 Instrumentation Filtering
-----------------
+-------------------------
 
 The Instrumentor provides fine-grained control over what gets instrumented:
 
