@@ -2633,7 +2633,7 @@ define i8 @sub_of_adds_2xz_multiuse(i8 %x, i8 %y, i8 %z) {
 
 define i8 @sub_of_adds_2xz_nsw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sub_of_adds_2xz_nsw(
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %xz = add nsw i8 %x, %z
@@ -2644,7 +2644,7 @@ define i8 @sub_of_adds_2xz_nsw(i8 %x, i8 %y, i8 %z) {
 
 define i8 @sub_of_adds_2xz_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sub_of_adds_2xz_nuw(
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %xz = add nuw i8 %x, %z
