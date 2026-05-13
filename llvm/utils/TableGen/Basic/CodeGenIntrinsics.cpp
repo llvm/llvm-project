@@ -285,13 +285,13 @@ void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
           continue;
 
         unsigned SuffixSize = OverloadName.size() + 1 + Suffix0.size();
-        // Read the subordinate's allowlist annotation. The annotation
+        // Read the subordinate's exemption annotation. The annotation
         // stores the *record name* of the dominator (e.g. "int_foo"),
         // not the mangled name (`OverloadName == Overloaded->Name`,
         // which is "llvm.foo"). The comparison must therefore use
         // `Overloaded->TheDef->getName()`.
         StringRef Allow = Int.TheDef->getValueAsString("KnownOverloadConflict");
-        if (!Allow.empty() && Allow == Overloaded->TheDef->getName())
+        if (Allow == Overloaded->TheDef->getName())
           continue;
 
         // If suffix looks like mangling suffix, flag it as an error.
@@ -303,8 +303,8 @@ void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
         PrintNote(Overloaded->TheDef->getLoc(),
                   "Overloaded intrinsic `" + OverloadName + "` defined here");
         PrintNote(Int.TheDef->getLoc(),
-                  "if intentional, add `let KnownOverloadConflict = \"xxx\" "
-                  "in` to this intrinsic's definition");
+                  "if intentional, set `KnownOverloadConflict = \"" +
+                      Overloaded->TheDef->getName() + "\"`");
         continue;
       }
 
