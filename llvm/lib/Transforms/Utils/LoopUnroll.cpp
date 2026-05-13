@@ -850,7 +850,8 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
   } else {
     // The polynomial is too complex for a simple formula, and uniform branch
     // weights have been selected, so bisect.
-    double ProbMin, ProbMax, ProbPrev;
+    double ProbMin = -1, ProbMax = -1; // Inits expected to be unused.
+    double ProbPrev = -1;              // Inits expected to be unused.
     auto TryProb = [&](double Prob) {
       ProbPrev = Prob;
       double FreqDelta = ComputeFreq(Prob) - FreqDesired;
@@ -867,6 +868,8 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     // them.  To place a hard upper limit on the search time, stop bisecting
     // when Prob stops changing (ProbDelta) by much (ProbPrec).
     if (TryProb(0.) < 0 && TryProb(1.) > 0) {
+      assert(ProbMin == 0 && ProbMax == 1 &&
+             "expected probability bounds to be initialized");
       const double ProbPrec = 1e-12;
       double Prob, ProbDelta;
       do {
