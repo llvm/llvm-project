@@ -722,6 +722,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 
   SymbolSourceMap symbols;
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, objects, "LINEAR");
   CheckCrayPointee(objects, "LINEAR", false);
   GetSymbolsInObjectList(objects, symbols);
   CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_linear);
