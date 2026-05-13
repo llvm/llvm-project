@@ -192,3 +192,20 @@ template <class... Types> static const bool inheritance_relocatability_matches_b
 static_assert(multiple_inheritance_is_relocatable<S4, S5> == multiple_inheritance_is_relocatable<S5, S4>);
 static_assert(inheritance_relocatability_matches_bases_v<S4, S5>);
 static_assert(inheritance_relocatability_matches_bases_v<S5, S4>);
+
+// P3074: ptrauth-qualified pointer members in unions.
+// These should be trivially constructible and destructible — they're just
+// unions of pointers regardless of signing scheme.
+union PtrauthCanBeIrksome {
+  int *p;
+  int *__ptrauth(1,0,1) ptrauth_forever;
+};
+static_assert(__is_trivially_constructible(PtrauthCanBeIrksome));
+static_assert(__is_trivially_destructible(PtrauthCanBeIrksome));
+
+union PtrauthCanBeIrksomeEspWithAddressDiscrimination {
+  int *p;
+  int *__ptrauth(1,1,1) ptrauth_forever;
+};
+static_assert(__is_trivially_constructible(PtrauthCanBeIrksomeEspWithAddressDiscrimination));
+static_assert(__is_trivially_destructible(PtrauthCanBeIrksomeEspWithAddressDiscrimination));
