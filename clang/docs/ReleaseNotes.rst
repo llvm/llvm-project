@@ -587,6 +587,8 @@ Bug Fixes to C++ Support
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
+- Fix a problem where a substitution failure when evaluating a type requirement
+  could directly make the program ill-formed.
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
   when used inside decltype in the return type. (#GH180460)
