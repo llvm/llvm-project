@@ -1327,7 +1327,7 @@ define <2 x i32> @test_pli_w() {
 ; RV32-LABEL: test_pli_w:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a0, -256
-; RV32-NEXT:    pmv.dws a0, a0
+; RV32-NEXT:    li a1, -256
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pli_w:
@@ -1393,7 +1393,7 @@ define <2 x i32> @test_plui_w() {
 ; RV32-LABEL: test_plui_w:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, 76800
-; RV32-NEXT:    pmv.dws a0, a0
+; RV32-NEXT:    lui a1, 76800
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_plui_w:
@@ -1407,7 +1407,7 @@ define <2 x i32> @test_plui_w_negative() {
 ; RV32-LABEL: test_plui_w_negative:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, 825344
-; RV32-NEXT:    pmv.dws a0, a0
+; RV32-NEXT:    lui a1, 825344
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_plui_w_negative:

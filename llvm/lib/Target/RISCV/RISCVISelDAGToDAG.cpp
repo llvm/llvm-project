@@ -3011,6 +3011,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
 
+    // Use buildGPRPair for v2i32 on RV32.
+    if (!Subtarget->is64Bit() && VT == MVT::v2i32) {
+      SDValue Pair = buildGPRPair(CurDAG, DL, VT, Node->getOperand(0),
+                                  Node->getOperand(0));
+      ReplaceNode(Node, Pair.getNode());
+      return;
+    }
+
     break;
   }
   case ISD::BUILD_VECTOR: {

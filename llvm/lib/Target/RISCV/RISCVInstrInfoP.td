@@ -2289,8 +2289,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
             (PADD_DBS (v8i8 X0_Pair), GPR:$rs2)>;
   def : Pat<(v4i16 (splat_vector (XLenVT GPR:$rs2))),
             (PADD_DHS (v4i16 X0_Pair), GPR:$rs2)>;
-  def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))),
-            (PADD_DWS (v2i32 X0_Pair), GPR:$rs2)>;
+  // v2i32 handled with buildGPRPair in RISCVISelDAGToDAG.cpp
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
