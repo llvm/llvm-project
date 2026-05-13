@@ -366,6 +366,10 @@ public:
   }
 
   bool useLoadStackGuardNode(const Module &M) const override;
+  bool useStackGuardMixCookie() const override;
+  SDValue emitStackGuardMixCookie(SelectionDAG &DAG, SDValue Val,
+                                  const SDLoc &DL,
+                                  bool FailureBB) const override;
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
 
