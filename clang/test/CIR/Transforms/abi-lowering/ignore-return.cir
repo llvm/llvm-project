@@ -4,7 +4,9 @@
 // Ignore'd return: the rewriter changes the function's return type to void,
 // drops the operand from every cir.return, and at call sites issues a void
 // call.  Any remaining uses of the original (non-void) call result get
-// rewritten to load from a fresh alloca so the IR stays well-typed.
+// replaced with a poison constant of the original return type so the IR
+// stays well-typed without pretending we have a real value at the ABI
+// boundary.
 
 !s32i = !cir.int<s, 32>
 
@@ -37,12 +39,11 @@ module attributes {
   }
 
   // Caller's own return is also classified Ignore, so its return type is
-  // also void.  The use of @callee's result becomes a load from a freshly
-  // allocated slot (the returned-but-ignored value is never observable).
+  // also void.  The use of @callee's result becomes a poison constant (the
+  // returned-but-ignored value is never observable).
   // CHECK:      cir.func{{.*}} @caller_uses_result()
   // CHECK:        cir.call @callee() : () -> ()
-  // CHECK:        cir.alloca !s32i
-  // CHECK:        cir.load
+  // CHECK:        cir.const #cir.poison : !s32i
   // CHECK:        cir.return
 
 }

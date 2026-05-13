@@ -549,13 +549,6 @@ module so it can query type sizes and alignments through MLIR's
 ``DataLayout``.  When the attribute is missing, the pass emits a
 diagnostic and fails rather than silently using a default layout.
 
-The pass places any temporary allocas it needs (for argument coercion,
-sret slots, etc.) directly in the function entry block, so it does not
-rely on a subsequent ``cir-hoist-allocas`` run to position them
-correctly.  This invariant means ``cir-hoist-allocas`` may run either
-before or after ``cir-call-conv-lowering`` without changing observable
-behavior.
-
 The pass takes one of two driver modes via pass options:
 
 - ``target=<name>`` selects a real ABI target.  The first supported value

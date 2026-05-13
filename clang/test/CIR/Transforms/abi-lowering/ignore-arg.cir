@@ -2,8 +2,9 @@
 // RUN:   | FileCheck %s
 
 // Ignore'd argument: the rewriter drops it from both the function signature
-// and call sites.  Body uses of the arg get rewritten to load from a fresh
-// alloca so the IR stays well-typed.
+// and call sites.  Body uses of the arg (if any) get replaced with a
+// poison constant so the IR stays well-typed without pretending we have a
+// real value at the ABI boundary.
 
 !s32i = !cir.int<s, 32>
 

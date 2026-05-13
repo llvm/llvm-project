@@ -202,8 +202,14 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
     target ABI's calling convention requirements (extension attributes, struct
     coercion, sret/byval indirect passing, struct flattening, etc.).
 
-    The pass requires a `dlti.dl_spec` attribute on the module so it can query
-    the data layout for sizes and alignments.
+    Requirements on the input IR:
+
+    - All C++-specific CIR types must already be lowered to ABI-relevant
+      shapes.  In particular, member pointers and method types must have
+      been rewritten by `CXXABILowering` so that the pass sees only the
+      final ABI representation of each value.
+    - The module must carry a `dlti.dl_spec` attribute so the classifier
+      can query type sizes and alignments.
 
     Two driver modes select how each function's classification is computed:
 
@@ -217,11 +223,6 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
       depending on a real ABI target.
 
     Exactly one of the two options must be set.
-
-    Pipeline position: this pass runs after `CXXABILowering` (so member
-    pointers and similar C++ types are already lowered) and after
-    `HoistAllocas` is unnecessary because this pass places its own temporary
-    allocas in the entry block.
   }];
   let constructor = "mlir::createCallConvLoweringPass()";
   let dependentDialects = ["cir::CIRDialect"];

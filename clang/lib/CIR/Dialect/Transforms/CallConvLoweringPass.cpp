@@ -121,8 +121,9 @@ void CallConvLoweringPass::runOnOperation() {
   DataLayout dl(module);
   CIRABIRewriteContext rewriteCtx(module);
 
-  // Pre-compute classifications for every cir.func so that call-site
-  // rewriting can find them (call site uses callee's classification).
+  // Phase 1: classify every cir.func.  No IR mutation happens here, so
+  // running this as a single up-front walk lets later phases consult any
+  // function's classification regardless of visitation order.
   llvm::MapVector<cir::FuncOp, FunctionClassification> classifications;
   bool anyFailed = false;
   module.walk([&](cir::FuncOp f) {
@@ -138,33 +139,42 @@ void CallConvLoweringPass::runOnOperation() {
     return;
   }
 
+  // Phase 2: build a callee -> callers index.  A single module walk gives
+  // us every direct call to each cir.func; we use this in phase 3 to
+  // rewrite a function and all of its call sites together.  Indirect or
+  // unresolved callees are silently skipped (they cannot be ABI-rewritten
+  // without knowing the callee's classification).
+  llvm::DenseMap<cir::FuncOp, SmallVector<cir::CallOp>> callers;
+  module.walk([&](cir::CallOp c) {
+    if (cir::FuncOp callee = lookupCallee(c, module))
+      callers[callee].push_back(c);
+  });
+
+  // Phase 3: rewrite each function together with every direct call to
+  // it.  By the time we move on to function F+1, F's signature and every
+  // direct call to F have already been brought into alignment, and
+  // F+1..FN are still in their original (mutually consistent) form, so
+  // the IR is verifier-clean at every outer-iteration boundary.
+  //
+  // There is still a brief inner window where F's signature has been
+  // rewritten but its callers have not yet caught up -- the MLIR
+  // rewriter API gives us no way to mutate both sides of a call
+  // atomically.  No verifier runs inside the pass, and at pass exit the
+  // module is verifier-clean.  Fusing the inner loop here is what keeps
+  // the invalid window per-function rather than module-wide.
   OpBuilder rewriter(ctx);
-
-  // Rewrite call sites first, while functions still have their original
-  // signatures.  This avoids any chance of us reading a partially-rewritten
-  // signature and matching args against the wrong classification.
-  SmallVector<cir::CallOp> calls;
-  module.walk([&](cir::CallOp c) { calls.push_back(c); });
-  for (cir::CallOp call : calls) {
-    cir::FuncOp callee = lookupCallee(call, module);
-    if (!callee)
-      continue;
-    auto it = classifications.find(callee);
-    if (it == classifications.end())
-      continue;
-    if (failed(rewriteCtx.rewriteCallSite(call, it->second, rewriter))) {
-      signalPassFailure();
-      return;
-    }
-  }
-
-  // Now rewrite each function definition.
   for (auto &kv : classifications) {
-    if (failed(rewriteCtx.rewriteFunctionDefinition(kv.first, kv.second,
-                                                    rewriter))) {
+    cir::FuncOp func = kv.first;
+    const FunctionClassification &fc = kv.second;
+    if (failed(rewriteCtx.rewriteFunctionDefinition(func, fc, rewriter))) {
       signalPassFailure();
       return;
     }
+    for (cir::CallOp call : callers.lookup(func))
+      if (failed(rewriteCtx.rewriteCallSite(call, fc, rewriter))) {
+        signalPassFailure();
+        return;
+      }
   }
 }
 
