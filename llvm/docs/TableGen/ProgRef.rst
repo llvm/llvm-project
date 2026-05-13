@@ -2019,6 +2019,8 @@ and non-0 as true.
 
     For example, to sort a list of records by their ``Name`` field::
 
+    .. code-block:: text
+
       list<Thing> sorted = !sort(t, Things, t.Name);
 
 ``!sra(``\ *a*\ ``,`` *count*\ ``)``
