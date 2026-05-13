@@ -25,6 +25,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
@@ -673,16 +674,16 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
       SC_Extern, /*UsesFPIntrin=*/false, /*isInlineSpecified=*/false,
       /*hasWrittenPrototype=*/true);
 
-  static const char *const ParamNames[] = {"dest", "value", "original_value"};
+  constexpr const char *ParamNames[] = {"dest", "value", "original_value"};
   SmallVector<ParmVarDecl *, 3> ParmDecls;
-  for (unsigned I = 0, E = ParamTypes.size(); I != E; ++I) {
-    IdentifierInfo &PII =
-        AST.Idents.get(ParamNames[I], tok::TokenKind::identifier);
+  unsigned I = 0;
+  for (auto [ParamType, ParamName] : llvm::zip(ParamTypes, ParamNames)) {
+    IdentifierInfo &PII = AST.Idents.get(ParamName, tok::TokenKind::identifier);
     ParmVarDecl *Parm = ParmVarDecl::Create(
-        AST, FD, SourceLocation(), SourceLocation(), &PII, ParamTypes[I],
-        AST.getTrivialTypeSourceInfo(ParamTypes[I], SourceLocation()), SC_None,
+        AST, FD, SourceLocation(), SourceLocation(), &PII, ParamType,
+        AST.getTrivialTypeSourceInfo(ParamType, SourceLocation()), SC_None,
         nullptr);
-    Parm->setScopeInfo(0, I);
+    Parm->setScopeInfo(0, I++);
     ParmDecls.push_back(Parm);
   }
   FD->setParams(ParmDecls);
