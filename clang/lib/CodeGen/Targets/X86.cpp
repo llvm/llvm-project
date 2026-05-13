@@ -760,18 +760,18 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
   const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (RT) {
     CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
-    if (RAA == CGCXXABI::RAA_Indirect) {
+    if (RAA == CGCXXABI::RAA_Indirect)
       return getIndirectResult(Ty, false, State);
-    } else if (State.IsDelegateCall) {
+    if (State.IsDelegateCall) {
       // Avoid having different alignments on delegate call args by always
       // setting the alignment to 4, which is what we do for inallocas.
       ABIArgInfo Res = getIndirectResult(Ty, false, State);
       Res.setIndirectAlign(CharUnits::fromQuantity(4));
       return Res;
-    } else if (RAA == CGCXXABI::RAA_DirectInMemory) {
+    }
+    if (RAA == CGCXXABI::RAA_DirectInMemory)
       // The field index doesn't matter, we'll fix it up later.
       return ABIArgInfo::getInAlloca(/*FieldIndex=*/0);
-    }
   }
 
   // Regcall uses the concept of a homogenous vector aggregate, similar
@@ -3377,13 +3377,13 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
           (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())) {
         FreeSSERegs -= NumElts;
         return ABIArgInfo::getDirect();
-      } else if (IsReturnType) {
+      }
+      if (IsReturnType)
         return ABIArgInfo::getExpand();
-      } else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
+      if (!Ty->isBuiltinType() && !Ty->isVectorType())
         // HVAs are delayed and reclassified in the 2nd step.
         return ABIArgInfo::getIndirect(Align, getNaturalAddrSpace(Ty),
                                        /*ByVal=*/false);
-      }
     }
   }
 

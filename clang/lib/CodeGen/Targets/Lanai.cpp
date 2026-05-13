@@ -89,11 +89,10 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
   const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (RT) {
     CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
-    if (RAA == CGCXXABI::RAA_Indirect) {
+    if (RAA == CGCXXABI::RAA_Indirect)
       return getIndirectResult(Ty, /*ByVal=*/false, State);
-    } else if (RAA == CGCXXABI::RAA_DirectInMemory) {
+    if (RAA == CGCXXABI::RAA_DirectInMemory)
       return getNaturalIndirect(Ty, /*ByVal=*/true);
-    }
   }
 
   if (isAggregateTypeForABI(Ty)) {
