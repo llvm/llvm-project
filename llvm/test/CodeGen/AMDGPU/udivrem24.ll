@@ -891,7 +891,6 @@ define amdgpu_kernel void @no_udiv24_u24_u23_i32(ptr addrspace(1) %out, ptr addr
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @udiv25_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: udiv25_i32:
 ; SI:       ; %bb.0:
@@ -1010,7 +1009,6 @@ define amdgpu_kernel void @udiv25_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @test_no_udiv24_i32_1(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: test_no_udiv24_i32_1:
 ; SI:       ; %bb.0:
@@ -1129,7 +1127,6 @@ define amdgpu_kernel void @test_no_udiv24_i32_1(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @test_no_udiv24_i32_2(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: test_no_udiv24_i32_2:
 ; SI:       ; %bb.0:
@@ -1562,7 +1559,6 @@ define amdgpu_kernel void @urem24_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @urem25_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: urem25_i32:
 ; SI:       ; %bb.0:
@@ -1673,7 +1669,6 @@ define amdgpu_kernel void @urem25_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @test_no_urem24_i32_1(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: test_no_urem24_i32_1:
 ; SI:       ; %bb.0:
@@ -1784,7 +1779,6 @@ define amdgpu_kernel void @test_no_urem24_i32_1(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @test_no_urem24_i32_2(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: test_no_urem24_i32_2:
 ; SI:       ; %bb.0:
