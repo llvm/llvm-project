@@ -115,22 +115,47 @@ def SignlessLikeVariadic : TEST_Op<"signless_like_variadic"> {
 //===----------------------------------------------------------------------===//
 
 // Produce a builtin `!token` value.
-def TestTokenProduceOp : TEST_Op<"token.produce"> {
+def TestTokenProduceOp : TEST_Op<"token.produce", [TokenProducerTrait]> {
+  let results = (outs Token:$token);
+  let assemblyFormat = "attr-dict";
+}
+
+// Produce a builtin `!token` value without the required producer trait.
+def TestTokenProduceWithoutTraitOp
+    : TEST_Op<"token.produce_without_trait"> {
   let results = (outs Token:$token);
   let assemblyFormat = "attr-dict";
 }
 
 // Consume a builtin `!token` value (token-only operand).
-def TestTokenConsumeOp : TEST_Op<"token.consume"> {
+def TestTokenConsumeOp : TEST_Op<"token.consume", [TokenConsumerTrait]> {
+  let arguments = (ins Token:$token);
+  let assemblyFormat = "$token attr-dict";
+}
+
+// Consume a builtin `!token` value without the required consumer trait.
+def TestTokenConsumeWithoutTraitOp
+    : TEST_Op<"token.consume_without_trait"> {
   let arguments = (ins Token:$token);
   let assemblyFormat = "$token attr-dict";
 }
 
 // Op that uses the default `AnyType` predicate. Tokens are excluded by
 // default and should be rejected by the verifier when passed here.
-def TestTokenAnyTypeOp : TEST_Op<"token.any_type"> {
+def TestTokenAnyTypeOp : TEST_Op<"token.any_type", [TokenConsumerTrait]> {
   let arguments = (ins AnyType:$value);
   let assemblyFormat = "$value attr-dict `:` type($value)";
+}
+
+// Op whose region entry blocks may produce builtin `!token` values.
+def TestTokenRegionOp : TEST_Op<"token.region", [TokenProducerTrait]> {
+  let regions = (region AnyRegion:$body);
+}
+
+// Op whose regions do not opt in to producing builtin `!token` values.
+def TestTokenRegionWithoutTraitOp
+    : TEST_Op<"token.region_without_trait"> {
+  let regions = (region AnyRegion:$body);
 }
 
 //===----------------------------------------------------------------------===//
