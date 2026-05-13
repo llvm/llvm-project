@@ -45,7 +45,7 @@ struct olGetEventElapsedTimeTest : OffloadQueueTest {
     } Args{Mem};
 
     ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                  &LaunchArgs));
+                                  &LaunchArgs, nullptr));
   }
 
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;

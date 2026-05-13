@@ -263,6 +263,22 @@ class LitConfig(object):
         self._write_message("fatal", message)
         sys.exit(2)
 
+    def run_command_cached(self, cmd, allow_failure=False, **kwargs):
+        """
+        Run a command with subprocess.run, with a cache global to this llvm-lit invocation
+        If allow_failure is True, lit_config.fatal will be invoked if the command fails.
+        All additional kwargs are passed to subprocess.run
+        """
+        if type(cmd) is list:
+            cmd = tuple(cmd)
+            return lit.util.runCommandCached(self, cmd, allow_failure, **kwargs)
+        elif type(cmd) is str:
+            return lit.util.runCommandCached(self, cmd, allow_failure, **kwargs)
+        else:
+            raise ValueError(
+                f"runCommandCached expected list or str, got {type(cmd)}: {cmd}"
+            )
+
 
 @enum.unique
 class DiagnosticLevel(enum.IntEnum):

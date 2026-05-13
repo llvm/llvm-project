@@ -554,6 +554,11 @@ def PPCbctrl_load_toc : SDNode<"PPCISD::BCTRL_LOAD_TOC",
                                [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                 SDNPVariadic]>;
 
+def PPCbl_load_toc : SDNode<"PPCISD::BL_LOAD_TOC",
+                            SDTypeProfile<0, 1, []>,
+                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                            SDNPVariadic]>;
+
 // The variants that implicitly define rounding mode for calls with
 // strictfp semantics.
 def PPCcall_rm  : SDNode<"PPCISD::CALL_RM", SDT_PPCCall,
@@ -572,6 +577,10 @@ def PPCbctrl_load_toc_rm : SDNode<"PPCISD::BCTRL_LOAD_TOC_RM",
                                   SDTypeProfile<0, 1, []>,
                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                    SDNPVariadic]>;
+def PPCbl_load_toc_rm : SDNode<"PPCISD::BL_LOAD_TOC_RM",
+                            SDTypeProfile<0, 1, []>,
+                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                            SDNPVariadic]>;
 
 // Return with a glue operand, matched by 'blr'
 def PPCretglue   : SDNode<"PPCISD::RET_GLUE", SDTNone,
@@ -1862,6 +1871,25 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
 
 }
 
+let Predicates = [IsAIX] in {
+  let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+      Defs = [LR, R2], Uses = [RM, R1], RST = 2, RA = 1, D = 20 in {
+  def BL_LWZinto_toc : IForm_and_DForm_1<18, 0, 1, 32,
+                     (outs), (ins calltarget:$LI),
+                     "bl $LI\n\tlwz 2, 20(1)", IIC_BrB,
+                      []>, Requires<[IsPPC32]>;
+  }
+
+  let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+      Defs = [LR, R2, RM], Uses = [RM, R1], RST = 2, RA = 1, D = 20 in {
+    def BL_LWZinto_toc_RM :
+      IForm_and_DForm_1<18, 0, 1, 32,
+        (outs), (ins calltarget:$LI),
+        "bl $LI\n\tlwz 2, 20(1)", IIC_BrB,
+        []>, Requires<[IsPPC32]>;
+  }
+}
+
 let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Defs = [LR, R2, RM], Uses = [CTR, RM], RST = 2 in {
   def BCTRL_LWZinto_toc_RM:
@@ -2011,18 +2039,37 @@ def : Pat<(int_ppc_dcbtst_with_hint xoaddr:$dst, i32:$TH),
 // clean this up in PPCMIPeephole with calls to
 // PPCInstrInfo::convertToImmediateForm() but we should probably not emit them
 // in the first place.
-foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
-              "umin"] in {
-  foreach bitsz = [8, 16, 32] in {
-    defvar pseudo = "ATOMIC_LOAD_"#!toupper(op)#"_I"#bitsz;
-    defvar pat = !cast<PatFrag>(!tolower(pseudo));
-    let Defs = [CR0] in
-      def pseudo : PPCCustomInserterPseudo<
-          (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
-          "#" # NAME,[]>;
-    def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
-            (!cast<Instruction>(pseudo) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>;
+
+// For each operation, 2 pseudo instructions are generated. Which one is matched
+// depends on the size and and if the word-part feature is available.
+// For example for operation AND, ATOMIC_LOAD_AND_NOWP is only matched for sizes
+// 8 and 16 bit if the word part feature is not available. In all other cases,
+// ATOMIC_LOAD_AND is matched.
+foreach op = ["load_add", "load_sub", "load_and", "load_or", "load_xor",
+              "load_nand", "load_min", "load_max", "load_umax", "load_umin",
+              "swap"] in {
+  defvar atomic_load = "ATOMIC_"#!toupper(op);
+  defvar atomic_load_nowp = "ATOMIC_"#!toupper(op)#"_NOWP";
+  let Defs = [CR0] in {
+    def atomic_load : PPCCustomInserterPseudo<
+        (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
+        "#" # NAME,[]>;
+    def atomic_load_nowp : PPCCustomInserterPseudo<
+        (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
+        "#" # NAME,[]>;
   }
+
+  foreach bitsz = [8, 16] in {
+    defvar pat = !cast<PatFrag>(!tolower(atomic_load)#"_i"#bitsz);
+    def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
+            (!cast<Instruction>(atomic_load) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>,
+            Requires<[HasPartwordAtomics]>;
+    def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
+            (!cast<Instruction>(atomic_load_nowp) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>;
+  }
+  defvar pat = !cast<PatFrag>(!tolower(atomic_load)#"_i32");
+  def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
+          (!cast<Instruction>(atomic_load) memrr:$ptr, 4, gprc:$incr)>;
 }
 
 foreach bitsz = [8, 16, 32] in {
@@ -2034,17 +2081,6 @@ foreach bitsz = [8, 16, 32] in {
       "#" # NAME,[]>;
   def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$old, gprc:$new)),
           (!cast<Instruction>(pseudo) memrr:$ptr, gprc:$old, gprc:$new)>;
-}
-
-foreach bitsz = [8, 16, 32] in {
-  defvar pseudo = "ATOMIC_SWAP_I"#bitsz;
-  defvar pat = !cast<PatFrag>(!tolower(pseudo));
-  let Defs = [CR0] in
-    def pseudo : PPCCustomInserterPseudo<
-      (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$new),
-      "#" # NAME,[]>;
-  def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$new)),
-          (!cast<Instruction>(pseudo) memrr:$ptr, !div(bitsz, 8), gprc:$new)>;
 }
 
 def : Pat<(PPCatomicCmpSwap_8 ForceXForm:$ptr, i32:$old, i32:$new),
@@ -2087,10 +2123,10 @@ def LWAT : X_RD5_RS5_IM5<31, 582, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_no
            Requires<[IsISA3_0]>,
            RegConstraint<"$RSTi = $RST">;
 
-let hasExtraSrcRegAllocReq = 1, mayLoad = 1,
-       mayStore = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in
-def LWAT_CSNE : X_RD5_RS5_IM5<31, 582, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, u5imm:$RB),
-                         "lwat $RST, $RA, $RB", IIC_LdStLoad>,
+let hasExtraSrcRegAllocReq = 1, mayLoad = 1, mayStore = 1,
+       isCodeGenOnly = 1, hasNoSchedulingInfo = 1, RB = 16 in
+def LWAT_CSNE : X_RD5_RS5_IM5<31, 582, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA),
+                         "lwat $RST, $RA, 16", IIC_LdStLoad>,
            Requires<[IsISA3_0]>;
 
 def LWAT_PSEUDO : PPCCustomInserterPseudo<
@@ -3387,6 +3423,14 @@ def : Pat<(PPCcall_nop (i32 mcsym:$dst)),
 def : Pat<(PPCcall_nop (i32 texternalsym:$dst)),
           (BL_NOP texternalsym:$dst)>;
 
+let Predicates = [IsAIX] in {
+  def : Pat<(PPCbl_load_toc (i32 texternalsym:$dst)),
+            (BL_LWZinto_toc texternalsym:$dst)>;
+
+  def : Pat<(PPCbl_load_toc_rm (i32 texternalsym:$dst)),
+            (BL_LWZinto_toc_RM texternalsym:$dst)>;
+}
+
 def : Pat<(PPCcall_rm (i32 mcsym:$dst)),
           (BL_RM mcsym:$dst)>;
 
@@ -3395,6 +3439,7 @@ def : Pat<(PPCcall_nop_rm (i32 mcsym:$dst)),
 
 def : Pat<(PPCcall_nop_rm (i32 texternalsym:$dst)),
           (BL_NOP_RM texternalsym:$dst)>;
+
 
 def : Pat<(PPCtc_return (i32 tglobaladdr:$dst),  imm:$imm),
           (TCRETURNdi tglobaladdr:$dst, imm:$imm)>;

@@ -1,6 +1,6 @@
 Checks: [
   "-*",
-  "hicpp-uppercase-literal-suffix",
-  "hicpp-use-auto",
-  "hicpp-use-emplace",
+  "modernize-use-auto",
+  "modernize-use-emplace",
+  "modernize-use-nullptr",
 ]

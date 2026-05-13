@@ -3578,6 +3578,10 @@ defm modules_reduced_bmi : BoolOption<"f", "modules-reduced-bmi",
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;
 
+def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
+
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Embed the contents of all files read by this compilation into "
@@ -5972,6 +5976,12 @@ def mxcoff_roptr : Flag<["-"], "mxcoff-roptr">, Group<m_Group>,
   Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Place constant objects with relocatable address values in the RO data section and add -bforceimprw to the linker flags (AIX only)">;
 def mno_xcoff_roptr : Flag<["-"], "mno-xcoff-roptr">, Group<m_Group>, TargetSpecific;
+def maix_use_ptrgl : Flag<["-"], "maix-use-ptrgl">, Group<m_Group>,
+  Flags<[TargetSpecific]>,
+  HelpText<"Use ._ptrgl routine for indirect calls (AIX only)">;
+def mnoaix_use_ptrgl : Flag<["-"], "mno-aix-use-ptrgl">, Group<m_Group>, TargetSpecific,
+  HelpText<"Emit indirect calls inline (AIX only) (default)">;
+
 
 let Flags = [TargetSpecific] in {
 def mvx : Flag<["-"], "mvx">, Group<m_Group>;

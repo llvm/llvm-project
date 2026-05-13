@@ -77,6 +77,9 @@ Makes programs 10x faster by doing Special New Thing.
 
   * Special values for infinities and NaNs, including NaN payloads, are added.
 
+* The standard textual output for floating-point literals is changed to take
+  advantage of the new floating-point literals formats.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -114,6 +117,13 @@ Makes programs 10x faster by doing Special New Thing.
   * Added ``create_symlink``, which always creates a symbolic link. On windows
     this may fail if symlink permissions are not available.
   * Added ``readlink``, which reads the target of a symbolic link.
+
+* Bitcode libraries can now implement compiler-managed library functions
+  (libcalls) without causing incorrect API manipulation or undefined references
+  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
+  there are still issues with invalid compiler reasoning about some functions
+  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
+  distributed ThinLTO. 
 
 ### Changes to building LLVM
 
@@ -191,6 +201,9 @@ Makes programs 10x faster by doing Special New Thing.
   Reordering Structured Data) extension.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 * Support for the experimental `XRivosVisni` vendor extension has been removed.
+* Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
+* Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
+* Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
 
 ### Changes to the WebAssembly Backend
 
@@ -218,6 +231,20 @@ Makes programs 10x faster by doing Special New Thing.
   or ``LLVMSetOperand`` to access successors.
 
 ### Changes to the CodeGen infrastructure
+
+* Renamed ISD::CTLZ_ZERO_UNDEF to ISD::CTLZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+* Renamed ISD::CTTZ_ZERO_UNDEF to ISD::CTTZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+### Changes to the GlobalISel infrastructure
+
+* Renamed G_CTLZ_ZERO_UNDEF to G_CTLZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
+
+* Renamed G_CTTZ_ZERO_UNDEF to G_CTTZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
 
 ### Changes to the Metadata Info
 

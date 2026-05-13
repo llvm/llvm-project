@@ -1134,7 +1134,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lowerFor({S64, S16, V2S16});
   }
 
+  if (ST.hasPackedFP32Ops())
+    FSubActions.lowerFor({V2S32}).clampMaxNumElements(0, S32, 2);
+
   FSubActions
+    .clampMaxNumElements(0, S16, 2)
     .scalarize(0)
     .clampScalar(0, S32, S64);
 
@@ -1205,9 +1209,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // clang-format off
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
     .legalFor({{S32, S32}, {S32, S64}})
+    .legalFor(ST.has16BitInsts(),{{S16, S16}})
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+
+  // If available, widen width <16 to i16, intead of i32 so v_cvt_i16/u16_f16 can be used.
   if (ST.has16BitInsts())
-    FPToISat.legalFor({{S16, S16}});
+    FPToISat.minScalarIf(typeIs(1, S16), 0, S16);
 
   FPToISat.minScalar(1, S32);
   FPToISat.minScalar(0, S32)
@@ -1373,7 +1380,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .custom();
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
-  getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+  getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
       .legalFor({{S32, S32}, {S32, S64}})
       .customIf(scalarNarrowerThan(1, 32))
       .clampScalar(0, S32, S32)
@@ -1382,7 +1389,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0, 32)
       .widenScalarToNextPow2(1, 32);
 
-  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON)
       .legalFor({{S32, S32}, {S32, S64}})
       .clampScalar(0, S32, S32)
       .clampScalar(1, S32, S64)
@@ -2321,8 +2328,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeCTLZ_CTTZ(MI, MRI, B);
   case TargetOpcode::G_CTLS:
     return legalizeCTLS(MI, MRI, B);
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
-    return legalizeCTLZ_ZERO_UNDEF(MI, MRI, B);
+  case TargetOpcode::G_CTLZ_ZERO_POISON:
+    return legalizeCTLZ_ZERO_POISON(MI, MRI, B);
   case TargetOpcode::G_STACKSAVE:
     return legalizeStackSave(MI, B);
   case TargetOpcode::G_GET_FPENV:
@@ -4655,7 +4662,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
 }
 
 // Legalize ctlz/cttz to ffbh/ffbl instead of the default legalization to
-// ctlz/cttz_zero_undef. This allows us to fix up the result for the zero input
+// ctlz/cttz_zero_poison. This allows us to fix up the result for the zero input
 // case with a single min instruction instead of a compare+select.
 bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
@@ -4675,9 +4682,9 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI,
-                                                  MachineRegisterInfo &MRI,
-                                                  MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_POISON(MachineInstr &MI,
+                                                   MachineRegisterInfo &MRI,
+                                                   MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(Src);
