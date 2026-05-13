@@ -71,7 +71,7 @@ dumpDXContainer(MemoryBufferRef Source) {
       break;
     }
     case dxbc::PartType::ILDN: {
-      std::optional<DXContainer::ILDNData> DebugName = Container.getDebugName();
+      std::optional<dxbc::ILDNData> DebugName = Container.getDebugName();
       assert(DebugName && "Since we are iterating and found a ILDN part, this "
                           "should never not have a value");
       NewPart.DebugName = DXContainerYAML::DebugName{

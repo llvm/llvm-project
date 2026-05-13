@@ -249,7 +249,7 @@ TEST(DXCFile, ParseILDNPart) {
   DXContainer C =
       llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
   EXPECT_EQ(C.getHeader().PartCount, 1u);
-  const std::optional<object::DXContainer::ILDNData> &ILDN = C.getDebugName();
+  const std::optional<dxbc::ILDNData> &ILDN = C.getDebugName();
   EXPECT_TRUE(ILDN.has_value());
   dxbc::DebugNameHeader Header = ILDN->first;
   EXPECT_EQ(Header.Flags, 0u);

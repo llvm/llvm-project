@@ -818,6 +818,8 @@ struct DebugNameHeader {
 
 static_assert(sizeof(DebugNameHeader) == 4, "DebugNameHeader size incorrect.");
 
+using ILDNData = std::pair<DebugNameHeader, StringRef>;
+
 } // namespace dxbc
 } // namespace llvm
 

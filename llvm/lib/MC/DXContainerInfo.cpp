@@ -8,7 +8,6 @@
 
 #include "llvm/MC/DXContainerInfo.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/Object/DXContainer.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include <type_traits>
 
