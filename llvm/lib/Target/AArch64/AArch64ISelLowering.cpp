@@ -21029,6 +21029,98 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performFpToSIntToFPCombineNEON(SelectionDAG &DAG, SDLoc DL,
+                                              EVT VT, unsigned int IntBits,
+                                              SDValue FPSrc) {
+  unsigned FrintOpc;
+
+  if (IntBits == 32)
+    FrintOpc = Intrinsic::aarch64_neon_frint32z;
+  else if (IntBits == 64)
+    FrintOpc = Intrinsic::aarch64_neon_frint64z;
+  else
+    return SDValue();
+
+  auto IsNEONVT = [](EVT VT) {
+    return VT == MVT::v2f32 || VT == MVT::v4f32 || VT == MVT::v2f64;
+  };
+
+  if (!IsNEONVT(VT))
+    return SDValue();
+
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                     DAG.getTargetConstant(FrintOpc, DL, MVT::i64), FPSrc);
+}
+
+static SDValue performFpToSIntToFPCombineSVE(SelectionDAG &DAG, SDLoc DL,
+                                             EVT VT, unsigned int IntBits,
+                                             SDValue FPSrc, SDNodeFlags Flags) {
+  unsigned FrintOpc;
+
+  if (IntBits == 64)
+    FrintOpc = AArch64ISD::FTRUNC64_MERGE_PASSTHRU;
+  else if (IntBits == 32)
+    FrintOpc = AArch64ISD::FTRUNC32_MERGE_PASSTHRU;
+  else
+    return SDValue();
+
+  EVT ContainerVT =
+      VT.isFixedLengthVector() ? getContainerForFixedLengthVector(DAG, VT) : VT;
+
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  SDValue Val = VT.isFixedLengthVector()
+                    ? convertToScalableVector(DAG, ContainerVT, FPSrc)
+                    : FPSrc;
+
+  SDValue Res = DAG.getNode(FrintOpc, DL, ContainerVT, Pg, Val,
+                            DAG.getPOISON(ContainerVT), Flags);
+
+  return VT.isFixedLengthVector() ? convertFromScalableVector(DAG, VT, Res)
+                                  : Res;
+}
+
+// Combine (sint_to_fp (fp_to_sint (x) )) to FRINT*X instructions
+static SDValue performFpToSIntToFPCombine(SDNode *N, SelectionDAG &DAG,
+                                          const AArch64Subtarget *Subtarget,
+                                          const AArch64TargetLowering &TLI) {
+  SDValue Op(N, 0);
+  assert(Op.getOpcode() == ISD::SINT_TO_FP && "Expected sint_to_fp combine");
+
+  EVT VT = Op.getValueType();
+  if (!VT.isVector())
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  // Only combine if the first opcode is fp_to_sint with a single use
+  if (Src.getOpcode() != ISD::FP_TO_SINT || !Src.hasOneUse())
+    return SDValue();
+
+  SDValue FPSrc = Src.getOperand(0);
+  // The source FP type must match the result type
+  if (FPSrc.getValueType() != VT)
+    return SDValue();
+
+  unsigned IntBits = Src.getValueType().getVectorElementType().getSizeInBits();
+
+  if (VT.isFixedLengthVector() && Subtarget->isNeonAvailable() &&
+      Subtarget->hasFRInt3264()) {
+    if (SDValue Res =
+            performFpToSIntToFPCombineNEON(DAG, DL, VT, IntBits, FPSrc))
+      return Res;
+  }
+
+  if (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSVE2p2()) {
+    if (VT.isScalableVector() ||
+        (VT.isFixedLengthVector() &&
+         TLI.useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())))
+      return performFpToSIntToFPCombineSVE(DAG, DL, VT, IntBits, FPSrc,
+                                           Op->getFlags());
+  }
+
+  return SDValue();
+}
+
 // Given a tree of and/or(csel(0, 1, cc0), csel(0, 1, cc1)), we may be able to
 // convert to csel(ccmp(.., cc0)), depending on cc1:
 
@@ -29720,6 +29812,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MUL:
     return performMulCombine(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
+    if (auto R = performFpToSIntToFPCombine(N, DAG, Subtarget, *this))
+      return R;
+    return performIntToFpCombine(N, DAG, DCI, Subtarget);
   case ISD::UINT_TO_FP:
     return performIntToFpCombine(N, DAG, DCI, Subtarget);
   case ISD::FP_TO_SINT:
