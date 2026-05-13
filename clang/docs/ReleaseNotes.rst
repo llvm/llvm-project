@@ -765,6 +765,8 @@ clang-format
 - Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyAndAttached`` for LLVM style.
 - Add ``BreakFunctionDeclarationParameters`` option to always break before function
   declaration parameters.
+- Add ``EnumAssignments`` option to ``AlignConsecutiveAssignments`` for aligning
+  enum assignments without affecting other assignments.
 
 libclang
 --------

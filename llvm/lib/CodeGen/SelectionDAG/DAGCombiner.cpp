@@ -11428,6 +11428,24 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     }
   }
 
+  // fold (sra (add nsw X, C), D) -> (add nsw (sra X, D), C s>> D)
+  // when C has D trailing zeros (so C s>> D is exact).
+  if (N1C && N0.hasOneUse() && N0.getOpcode() == ISD::ADD &&
+      N0->getFlags().hasNoSignedWrap()) {
+    if (ConstantSDNode *AddC = isConstOrConstSplat(N0.getOperand(1))) {
+      const APInt &ShAmt = N1C->getAPIntValue();
+      const APInt &AddVal = AddC->getAPIntValue();
+      if (ShAmt.ult(AddVal.countr_zero())) {
+        SDNodeFlags ShiftFlags = N->getFlags();
+        SDValue NewSra =
+            DAG.getNode(ISD::SRA, DL, VT, N0.getOperand(0), N1, ShiftFlags);
+        SDValue NewC = DAG.getConstant(AddVal.ashr(ShAmt), DL, VT);
+        SDNodeFlags AddFlags = N0->getFlags();
+        return DAG.getNode(ISD::ADD, DL, VT, NewSra, NewC, AddFlags);
+      }
+    }
+  }
+
   // Simplify, based on bits shifted out of the LHS.
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
@@ -11692,6 +11710,24 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
                                  LastElt);
         return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT), DL,
                                   VT);
+      }
+    }
+  }
+
+  // fold (srl (add nuw X, C), D) -> (add nuw (srl X, D), C u>> D)
+  // when C has D trailing zeros (so C >> D is exact).
+  if (N1C && N0.hasOneUse() && N0.getOpcode() == ISD::ADD &&
+      N0->getFlags().hasNoUnsignedWrap()) {
+    if (ConstantSDNode *AddC = isConstOrConstSplat(N0.getOperand(1))) {
+      const APInt &ShAmt = N1C->getAPIntValue();
+      const APInt &AddVal = AddC->getAPIntValue();
+      if (ShAmt.ult(AddVal.countr_zero())) {
+        SDNodeFlags ShiftFlags = N->getFlags();
+        SDValue NewSrl =
+            DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), N1, ShiftFlags);
+        SDValue NewC = DAG.getConstant(AddVal.lshr(ShAmt), DL, VT);
+        SDNodeFlags AddFlags = N0->getFlags();
+        return DAG.getNode(ISD::ADD, DL, VT, NewSrl, NewC, AddFlags);
       }
     }
   }
@@ -12278,8 +12314,8 @@ SDValue DAGCombiner::foldCTLZToCTLS(SDValue Src, const SDLoc &DL) {
   bool NeedAdd = true;
 
   SDValue X;
-  if (sd_match(Src, m_OneUse(m_Or(m_OneUse(m_Shl(m_Value(X), m_SpecificInt(1))),
-                                  m_SpecificInt(1))))) {
+  if (sd_match(Src,
+               m_OneUse(m_Or(m_OneUse(m_Shl(m_Value(X), m_One())), m_One())))) {
     NeedAdd = false;
     Src = X;
   }

@@ -17,3 +17,9 @@ breaks build of llvm
 breaks windows build
 [cmake] Refactor DIA SDK detection into FindDIASDK module (#160354)
 ---
+Breaks comgr build
+Reland "[Clang][CodeGen] Report when an alias points to an incompatible target" (#195550)
+---
+breaks smoke tests clang-313307_simple_spmd
+[clang] use QualType addrspace when making an alloca (#181390) (
+---
