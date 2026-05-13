@@ -28,9 +28,9 @@
 
 EMPTY: !<thin>
 
-# File instance counting should respect Windows case-insensitive name matching.
-# Otherwise, if you have foo.txt and FOO.TXT, "-N 2 foo.txt" fails because
-# file is not found.
+## File instance counting should respect Windows case-insensitive name matching.
+## Otherwise, if you have foo.txt and FOO.TXT, "-N 2 foo.txt" fails because
+## file is not found.
 
 # RUN: rm -f %t/count-case.a 
 # RUN: mkdir -p %t/a %t/b
