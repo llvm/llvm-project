@@ -32,8 +32,9 @@ CIRGenFunction::AutoVarEmission
 CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
                                   mlir::OpBuilder::InsertPoint ip) {
   QualType ty = d.getType();
-  if (ty.getAddressSpace() != LangAS::Default)
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: address space");
+  assert(
+      ty.getAddressSpace() == LangAS::Default ||
+      (ty.getAddressSpace() == LangAS::opencl_private && getLangOpts().OpenCL));
 
   mlir::Location loc = getLoc(d.getSourceRange());
   bool nrvo =
