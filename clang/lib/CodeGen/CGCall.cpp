@@ -5233,15 +5233,30 @@ llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
                                                  const llvm::Twine &name) {
   llvm::CallInst *call = Builder.CreateCall(
       callee, args, getBundlesForFunclet(callee.getCallee()), name);
-  // Intrinsics must use CallingConv::C; only apply the runtime CC to
-  // non-intrinsic callees.
-  if (auto *F = dyn_cast<llvm::Function>(callee.getCallee());
-      !F || !F->isIntrinsic())
-    call->setCallingConv(getRuntimeCC());
+  call->setCallingConv(getRuntimeCC());
 
   if (CGM.shouldEmitConvergenceTokens() && call->isConvergent())
     return cast<llvm::CallInst>(addConvergenceControlToken(call));
   return call;
+}
+
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::FunctionCallee Callee,
+                                                   const llvm::Twine &Name) {
+  return EmitIntrinsicCall(Callee, {}, Name);
+}
+
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::FunctionCallee Callee,
+                                                   ArrayRef<llvm::Value *> Args,
+                                                   const llvm::Twine &Name) {
+  assert(dyn_cast<llvm::Function>(Callee.getCallee()) &&
+         cast<llvm::Function>(Callee.getCallee())->isIntrinsic() &&
+         "EmitIntrinsicCall called with non-intrinsic callee");
+  llvm::CallInst *Call = Builder.CreateCall(
+      Callee, Args, getBundlesForFunclet(Callee.getCallee()), Name);
+
+  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
+    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
+  return Call;
 }
 
 /// Emits a call or invoke to the given noreturn runtime function.
