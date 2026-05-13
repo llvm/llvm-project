@@ -26,7 +26,7 @@ namespace std {
 
 int main(int, char**) {
   std::stacktrace_entry entry;
-  std::cout << entry << '\n';
+  std::cout << std::to_string(entry) << '\n';
   auto src = entry.source_file();
   assert(src.empty());
 

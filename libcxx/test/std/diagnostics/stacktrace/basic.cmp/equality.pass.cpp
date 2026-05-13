@@ -29,7 +29,7 @@ TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace c(size_t skip = 0) { return b(s
 int main(int, char**) {
   std::stacktrace st0;
   std::cout << "st0: " << st0.size() << '\n';
-  std::cout << st0 << '\n';
+  std::cout << std::to_string(st0) << '\n';
 
   static_assert(noexcept(st0 == st0));
   static_assert(noexcept(st0 != st0));
@@ -37,18 +37,18 @@ int main(int, char**) {
 
   std::stacktrace st1 = a();
   std::cout << "st1: " << st0.size() << '\n';
-  std::cout << st1 << '\n';
+  std::cout << std::to_string(st1) << '\n';
   assert(st1 != st0);
 
   std::stacktrace st2 = b();
   std::cout << "st2: " << st0.size() << '\n';
-  std::cout << st2 << '\n';
+  std::cout << std::to_string(st2) << '\n';
   assert(st2 != st1);
   assert(st2 != st0);
 
   std::stacktrace st3 = c();
   std::cout << "st3: " << st0.size() << '\n';
-  std::cout << st3 << '\n';
+  std::cout << std::to_string(st3) << '\n';
   assert(st3 != st0);
   assert(st3 != st1);
   assert(st3 != st2);

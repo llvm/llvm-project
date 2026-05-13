@@ -32,9 +32,9 @@ TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace_entry func2() { return std::sta
 
 int main(int, char**) {
   auto entry1 = func1();
-  std::cout << entry1 << '\n';
+  std::cout << std::to_string(entry1) << '\n';
   auto entry2 = func2();
-  std::cout << entry2 << '\n';
+  std::cout << std::to_string(entry2) << '\n';
 
   static_assert(noexcept(entry1 == entry2));
   static_assert(noexcept(entry1 != entry2));
