@@ -216,8 +216,7 @@ NormalFloat<long double>::init_from_bits(FPBits<long double> bits) {
   }
 }
 
-template <>
-LIBC_INLINE constexpr NormalFloat<long double>::operator long double() const {
+template <> LIBC_INLINE NormalFloat<long double>::operator long double() const {
   using LDBits = FPBits<long double>;
   int biased_exponent = exponent + LDBits::EXP_BIAS;
   // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
