@@ -1237,11 +1237,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case RISCVISD::BuildGPRPair:
-  case RISCVISD::BuildPairF64: {
+  case RISCVISD::BuildPairF64:
+  case RISCVISD::BuildPairGPRVec: {
     if (Opcode == RISCVISD::BuildPairF64 && !Subtarget->hasStdExtZdinx())
       break;
 
-    assert((!Subtarget->is64Bit() || Opcode == RISCVISD::BuildGPRPair) &&
+    assert((!Subtarget->is64Bit() || Opcode != RISCVISD::BuildPairF64) &&
            "BuildPairF64 only handled here on rv32i_zdinx");
 
     SDValue N =
@@ -1250,9 +1251,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case RISCVISD::SplitGPRPair:
-  case RISCVISD::SplitF64: {
+  case RISCVISD::SplitF64:
+  case RISCVISD::SplitGPRVec: {
     if (Subtarget->hasStdExtZdinx() || Opcode != RISCVISD::SplitF64) {
-      assert((!Subtarget->is64Bit() || Opcode == RISCVISD::SplitGPRPair) &&
+      assert((!Subtarget->is64Bit() || Opcode != RISCVISD::SplitF64) &&
              "SplitF64 only handled here on rv32i_zdinx");
 
       if (!SDValue(Node, 0).use_empty()) {
@@ -1271,9 +1273,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-
-    assert(Opcode != RISCVISD::SplitGPRPair &&
-           "SplitGPRPair should already be handled");
 
     if (!Subtarget->hasStdExtZfa())
       break;
@@ -3009,6 +3008,49 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     break;
   }
+  case ISD::BUILD_VECTOR: {
+    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::v2i32) {
+      SDValue Pair = buildGPRPair(CurDAG, DL, VT, Node->getOperand(0),
+                                  Node->getOperand(1));
+      ReplaceNode(Node, Pair.getNode());
+      return;
+    }
+    break;
+  }
+  case ISD::CONCAT_VECTORS: {
+    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit() &&
+        (VT == MVT::v4i16 || VT == MVT::v8i8)) {
+      assert(Node->getNumOperands() == 2);
+      SDValue Lo = Node->getOperand(0);
+      SDValue Hi = Node->getOperand(1);
+      SDValue Pair = buildGPRPair(CurDAG, DL, VT, Lo, Hi);
+      ReplaceNode(Node, Pair.getNode());
+      return;
+    }
+    break;
+  }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit()) {
+      MVT SrcVT = Node->getOperand(0).getSimpleValueType();
+      if (VT == MVT::i32 && SrcVT == MVT::v2i32) {
+        auto *IdxC = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+        if (!IdxC)
+          break;
+        unsigned Idx = IdxC->getZExtValue();
+        if (Idx > 1)
+          break;
+
+        unsigned SubRegIdx =
+            Idx == 0 ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+        SDValue Src = Node->getOperand(0);
+        SDValue Extract =
+            CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, Src);
+        ReplaceNode(Node, Extract.getNode());
+        return;
+      }
+    }
+    break;
+  }
   case ISD::SCALAR_TO_VECTOR:
     if (Subtarget->hasStdExtP()) {
       MVT SrcVT = Node->getOperand(0).getSimpleValueType();
@@ -3092,6 +3134,22 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue V = Node->getOperand(0);
     auto Idx = Node->getConstantOperandVal(1);
     MVT InVT = V.getSimpleValueType();
+
+    // Handle P-extension extract_subvector for v2i16 from v4i16 and v4i8 from
+    // v8i8
+    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit() &&
+        ((InVT == MVT::v4i16 && VT == MVT::v2i16) ||
+         (InVT == MVT::v8i8 && VT == MVT::v4i8))) {
+      unsigned NumElts = VT.getVectorNumElements();
+      if (Idx != 0 && Idx != NumElts)
+        break;
+
+      unsigned SubRegIdx = Idx == 0 ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+      SDValue Extract = CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, V);
+      ReplaceNode(Node, Extract.getNode());
+      return;
+    }
+
     SDLoc DL(V);
 
     const RISCVTargetLowering &TLI = *Subtarget->getTargetLowering();
