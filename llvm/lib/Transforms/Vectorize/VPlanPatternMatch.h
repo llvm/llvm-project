@@ -295,7 +295,8 @@ private:
   /// Helper to check if predicate \p P holds on all tuple elements in Ops using
   /// the provided index sequence.
   template <typename Fn, std::size_t... Is>
-  bool all_of_tuple_elements(std::index_sequence<Is...>, Fn P) const {
+  bool all_of_tuple_elements(std::index_sequence<Is...>,
+                             [[maybe_unused]] Fn P) const {
     return (P(std::get<Is>(Ops), Is) && ...);
   }
 };
