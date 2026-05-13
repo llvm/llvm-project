@@ -50,6 +50,8 @@ consequence:
 
 3. A token cannot constant-fold. No constant of token type exists.
 
+4. Use of a token is side-effect free: a token user follows the usual `isTriviallyDead()` rules.
+
 These properties mirror what LLVM IR already documents for its own
 [`token` type](https://llvm.org/docs/LangRef.html#token-type).
 
