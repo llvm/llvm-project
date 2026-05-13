@@ -402,7 +402,7 @@ func.func @cast_away_masked_transfer_read_leading_one_dims(%arg0: memref<1x4x8x1
 func.func @cast_away_transfer_read_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>) -> vector<1x1xf16> {
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0. : f16
-  // CHECK: vector.shape_cast %{{.+}} : vector<1xf16> to vector<1x1xf16>
+  // CHECK: vector.shape_cast %{{.+}} : vector<f16> to vector<1x1xf16>
   %0 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %f0 {in_bounds = [true, true]} : memref<1x1x1x1xf16>, vector<1x1xf16>
   return %0: vector<1x1xf16>
 }
@@ -472,7 +472,7 @@ func.func @cast_away_masked_transfer_write_leading_one_dims(%arg0: memref<1x4x8x
 // CHECK-LABEL: func @cast_away_transfer_write_leading_one_dims_one_element
 func.func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>, %arg1: vector<1x1xf16>) {
   %c0 = arith.constant 0 : index
-  // CHECK: vector.shape_cast %{{.+}} : vector<1x1xf16> to vector<1xf16>
+  // CHECK: vector.shape_cast %{{.+}} : vector<1x1xf16> to vector<f16>
   vector.transfer_write %arg1, %arg0[%c0, %c0, %c0, %c0] {in_bounds = [true, true]} : vector<1x1xf16>, memref<1x1x1x1xf16>
   return
 }
@@ -552,6 +552,19 @@ func.func @cast_away_elementwise_leading_one_dims(
 func.func @cast_away_insert_leading_one_dims_scalar(%s: f32, %v: vector<1x1x4xf32>) -> vector<1x1x4xf32> {
   %0 = vector.insert %s, %v [0, 0, 0] : f32 into vector<1x1x4xf32>
   return %0: vector<1x1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @cast_away_insert_leading_one_dims_scalar_0d_dest
+//  CHECK-SAME: (%[[S:.+]]: f32, %[[V:.+]]: vector<1x1xf32>)
+//       CHECK:   %[[DST_CAST:.+]] = vector.shape_cast %[[V]] : vector<1x1xf32> to vector<f32>
+//       CHECK:   %[[INSERT:.+]] = vector.insert %[[S]], %[[DST_CAST]] [] : f32 into vector<f32>
+//       CHECK:   %[[RESULT_CAST:.+]] = vector.shape_cast %[[INSERT]] : vector<f32> to vector<1x1xf32>
+//       CHECK:   return %[[RESULT_CAST]]
+func.func @cast_away_insert_leading_one_dims_scalar_0d_dest(%s: f32, %v: vector<1x1xf32>) -> vector<1x1xf32> {
+  %0 = vector.insert %s, %v [0, 0] : f32 into vector<1x1xf32>
+  return %0: vector<1x1xf32>
 }
 
 // -----
@@ -724,6 +737,16 @@ func.func @cast_away_constant_mask() -> vector<1x1x8x2x1xi1> {
 
 // -----
 
+// CHECK-LABEL:   func.func @cast_away_constant_mask_all_unit_dims() -> vector<1x1xi1> {
+// CHECK:           %[[MASK:.*]] = arith.constant dense<true> : vector<1x1xi1>
+// CHECK:           return %[[MASK]] : vector<1x1xi1>
+func.func @cast_away_constant_mask_all_unit_dims() -> vector<1x1xi1> {
+  %0 = vector.constant_mask [1, 1] : vector<1x1xi1>
+  return %0: vector<1x1xi1>
+}
+
+// -----
+
 // CHECK-LABEL:   func.func @drop_unit_dims_scalar_cond_select(
 // CHECK:           arith.select {{.*}} : vector<16xi1>
 func.func @drop_unit_dims_scalar_cond_select(%cond: i1, %arg0: vector<1x16xi1>, %arg1: vector<1x16xi1>) -> vector<1x16xi1> {
@@ -740,6 +763,17 @@ func.func @drop_unit_dims_scalar_cond_select(%cond: i1, %arg0: vector<1x16xi1>, 
 func.func @cast_away_load_leading_one_dims(%base: memref<8x16xf32>, %i: index, %j: index) -> vector<1x4xf32> {
   %0 = vector.load %base[%i, %j] : memref<8x16xf32>, vector<1x4xf32>
   return %0 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @cast_away_load_all_unit_dims
+// CHECK:         %[[L:.+]] = vector.load %{{.*}}[%{{.*}}] : memref<1xf32>, vector<f32>
+// CHECK:         %[[B:.+]] = vector.shape_cast %[[L]] : vector<f32> to vector<1xf32>
+// CHECK:         return %[[B]] : vector<1xf32>
+func.func @cast_away_load_all_unit_dims(%base: memref<1xf32>, %i: index) -> vector<1xf32> {
+  %0 = vector.load %base[%i] : memref<1xf32>, vector<1xf32>
+  return %0 : vector<1xf32>
 }
 
 // -----
@@ -805,6 +839,16 @@ func.func @cast_away_store_leading_one_dims(%val: vector<1x4xf32>, %base: memref
 
 // -----
 
+// CHECK-LABEL: func.func @cast_away_store_all_unit_dims
+// CHECK:         %[[V:.+]] = vector.shape_cast %{{.*}} : vector<1xf32> to vector<f32>
+// CHECK:         vector.store %[[V]], %{{.*}}[%{{.*}}] : memref<1xf32>, vector<f32>
+func.func @cast_away_store_all_unit_dims(%val: vector<1xf32>, %base: memref<1xf32>, %i: index) {
+  vector.store %val, %base[%i] : memref<1xf32>, vector<1xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func.func @cast_away_store_leading_one_dims_scalable
 // CHECK:         %[[V:.+]] = vector.shape_cast %{{.*}} : vector<1x[4]xf32> to vector<[4]xf32>
 // CHECK:         vector.store %[[V]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>, vector<[4]xf32>
@@ -845,4 +889,34 @@ func.func @cast_away_compressstore_leading_one_dims(%base: memref<16xf32>, %i: i
 func.func @cast_away_scatter_leading_one_dims(%base: memref<16xf32>, %i: index, %idx: vector<1x4xi32>, %mask: vector<1x4xi1>, %val: vector<1x4xf32>) {
   vector.scatter %base[%i] [%idx], %mask, %val : memref<16xf32>, vector<1x4xi32>, vector<1x4xi1>, vector<1x4xf32>
   return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_cast_memory_ops_to_0d
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   vector.maskedload {{.*}} : memref<16xf32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   vector.expandload {{.*}} : memref<16xf32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   vector.gather {{.*}} : memref<16xf32>, vector<1xi32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   vector.maskedstore {{.*}} : memref<16xf32>, vector<1xi1>, vector<1xf32>
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   vector.compressstore {{.*}} : memref<16xf32>, vector<1xi1>, vector<1xf32>
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   vector.scatter {{.*}} : memref<16xf32>, vector<1xi32>, vector<1xi1>, vector<1xf32>
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   return
+func.func @negative_cast_memory_ops_to_0d(
+    %base: memref<16xf32>, %i: index, %idx: vector<1xi32>,
+    %mask: vector<1xi1>, %pass: vector<1xf32>, %val: vector<1xf32>)
+    -> (vector<1xf32>, vector<1xf32>, vector<1xf32>) {
+  %0 = vector.maskedload %base[%i], %mask, %pass : memref<16xf32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+  %1 = vector.expandload %base[%i], %mask, %pass : memref<16xf32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+  %2 = vector.gather %base[%i] [%idx], %mask, %pass : memref<16xf32>, vector<1xi32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+  vector.maskedstore %base[%i], %mask, %val : memref<16xf32>, vector<1xi1>, vector<1xf32>
+  vector.compressstore %base[%i], %mask, %val : memref<16xf32>, vector<1xi1>, vector<1xf32>
+  vector.scatter %base[%i] [%idx], %mask, %val : memref<16xf32>, vector<1xi32>, vector<1xi1>, vector<1xf32>
+  return %0, %1, %2 : vector<1xf32>, vector<1xf32>, vector<1xf32>
 }
