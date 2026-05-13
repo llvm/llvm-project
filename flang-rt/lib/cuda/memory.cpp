@@ -32,7 +32,7 @@ struct Memcpy2DLayout {
 
 // Get cudaMemcpy2D layout information if both descriptors have equal element
 // counts and regular positive-stride layouts. Returns a nullopt otherwise to
-// fallback on the runtime assignment. 
+// fallback on the runtime assignment.
 static std::optional<Memcpy2DLayout> GetMemcpy2DLayout(
     const Descriptor &desc, std::size_t widthBytes) {
   if (desc.rank() == 0 || desc.Elements() == 0) {
