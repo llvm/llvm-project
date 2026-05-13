@@ -1538,7 +1538,9 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
    FeatureMqsadInsts, FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
-   FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureInstCacheLineSize128,
+   FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   FeatureWMMA256bInsts
   ]
 >;
 
@@ -1564,7 +1566,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
-   FeatureFlatSignedOffset, FeatureInstCacheLineSize128
+   FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
+   FeatureWMMA256bInsts
   ]
 >;
 
@@ -1592,7 +1595,8 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
-   FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   FeatureWMMA256bInsts
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -1965,6 +1969,7 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeatureRequiredExportPriority,
      FeatureDot5Insts,
      FeatureWMMA256bInsts,
+   FeatureWavefrontSize32,
      FeatureDX10ClampAndIEEEMode])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
@@ -1975,6 +1980,7 @@ def FeatureISAVersion11_0_Common : FeatureSet<
      FeaturePrivEnabledTrap2NopBug,
      FeatureDot5Insts,
      FeatureWMMA256bInsts,
+   FeatureWavefrontSize32,
      FeatureDX10ClampAndIEEEMode])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
@@ -2001,6 +2007,7 @@ def FeatureISAVersion11_5_Common : FeatureSet<
      FeatureRequiredExportPriority,
      FeatureDot5Insts,
      FeatureWMMA256bInsts,
+   FeatureWavefrontSize32,
      FeatureDX10ClampAndIEEEMode])>;
 
 def FeatureISAVersion11_5_0 : FeatureSet<
@@ -2028,6 +2035,8 @@ def FeatureISAVersion11_7_Common : FeatureSet<
      FeatureFP8ConversionInsts,
      FeatureDot11Insts,
      FeatureWMMA128bInsts,
+   FeatureWMMA256bInsts,
+   FeatureWavefrontSize32,
      FeatureSWMMACGfx1200Insts,
      FeatureIEEEMinimumMaximumInsts,
      FeatureMinimum3Maximum3F32,
@@ -2063,6 +2072,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
    FeatureWMMA128bInsts,
+   FeatureWMMA256bInsts,
+   FeatureWavefrontSize32,
    FeatureSWMMACGfx1200Insts,
    FeatureIEEEMinimumMaximumInsts,
    FeaturePackedTID,
