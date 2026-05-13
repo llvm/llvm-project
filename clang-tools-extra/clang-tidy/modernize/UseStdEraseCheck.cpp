@@ -14,7 +14,6 @@
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include <cassert>
