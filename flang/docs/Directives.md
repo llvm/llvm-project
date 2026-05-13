@@ -32,9 +32,8 @@ A list of non-standard directives supported by Flang
   The letter (M) disables matching of the actual argument's CUDA storage
   (managed/unified) against the dummy's. Combined with a `device`-typed dummy,
   this is most often used to mark a specific as an overload discriminator in
-  host modules that pair host- and device-typed specifics (the cuBLAS V2
-  module's host-pointer-mode and device-pointer-mode wrappers are a canonical
-  example). Under `-gpu=mem:unified` or `-gpu=mem:managed` the compiler
+  host modules that pair host- and device-typed specifics for the same
+  routine. Under `-gpu=mem:unified` or `-gpu=mem:managed` the compiler
   normally relaxes host-to-device attribute mismatches so that an unattributed
   host actual may bind to a device dummy; placing (M) on that dummy opts it
   out of that relaxation. Actuals with an explicit `device`, `managed`, or
