@@ -4402,25 +4402,16 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Context, AL, EncodingIndices.data(), EncodingIndices.size()));
 }
 
-static StringRef getLifetimeCaptureBySpecialEntity(const ParsedAttr &AL) {
-  switch (AL.getSemanticSpelling()) {
-  case LifetimeCaptureByAttr::GNU_lifetime_capture_by_this:
-  case LifetimeCaptureByAttr::CXX11_clang_lifetime_capture_by_this:
-    return "this";
-  case LifetimeCaptureByAttr::GNU_lifetime_capture_by_global:
-  case LifetimeCaptureByAttr::CXX11_clang_lifetime_capture_by_global:
-    return "global";
-  case LifetimeCaptureByAttr::GNU_lifetime_capture_by_unknown:
-  case LifetimeCaptureByAttr::CXX11_clang_lifetime_capture_by_unknown:
-    return "unknown";
-  default:
-    return "";
-  }
-}
-
 LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
                                                         StringRef ParamName) {
-  StringRef SpecialEntity = getLifetimeCaptureBySpecialEntity(AL);
+  StringRef AttrName = AL.getAttrName()->getName();
+  StringRef SpecialEntity;
+  if (AttrName == "lifetime_capture_by_this")
+    SpecialEntity = "this";
+  else if (AttrName == "lifetime_capture_by_global")
+    SpecialEntity = "global";
+  else if (AttrName == "lifetime_capture_by_unknown")
+    SpecialEntity = "unknown";
 
   if (!SpecialEntity.empty() && AL.getNumArgs() != 0) {
     Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 0;
