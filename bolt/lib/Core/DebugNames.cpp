@@ -13,7 +13,9 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
 #include <cstdint>
+#include <limits>
 #include <optional>
+#include <tuple>
 
 namespace llvm {
 namespace bolt {
@@ -64,6 +66,39 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
   }
 }
 
+void DWARF5AcceleratorTable::preAllocateUnits(DWARFContext &DwCtx) {
+  // Collect all DWO IDs in deterministic order (by CU offset in .debug_info).
+  // This is single-threaded, called before parallel process.
+  for (const auto &CU : DwCtx.compile_units()) {
+    if (std::optional<uint64_t> DWOId = CU->getDWOId()) {
+      uint32_t Idx = CUList.size();
+      CUList.push_back(BADCUOFFSET);
+      CUOffsetsToPatch[*DWOId] = Idx;
+      DWOIdToCUIndex[*DWOId] = Idx;
+    }
+  }
+  for (const auto &CU : DwCtx.compile_units()) {
+    std::optional<uint64_t> DWOId = CU->getDWOId();
+    if (!DWOId)
+      continue;
+    std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
+    if (!DWOCU || !*DWOCU)
+      continue;
+    DWARFContext &DWOCtx = (*DWOCU)->getContext();
+    // check dwo_types_section_units for DWARF4 type units in DWO.
+    for (const auto &TU : DWOCtx.dwo_units()) {
+      if (!TU->isTypeUnit())
+        continue;
+      const uint64_t TUHash = cast<DWARFTypeUnit>(TU.get())->getTypeHash();
+      if (!TUHashToIndexMap.count(TUHash)) {
+        TUHashToIndexMap.insert({TUHash, ForeignTUList.size()});
+        ForeignTUList.push_back(TUHash);
+      }
+    }
+  }
+  Preallocated = true;
+}
+
 void DWARF5AcceleratorTable::setCurrentUnit(DWARFUnit &Unit,
                                             const uint64_t UnitStartOffset) {
   CurrentUnit = nullptr;
@@ -79,10 +114,33 @@ void DWARF5AcceleratorTable::setCurrentUnit(DWARFUnit &Unit,
   }
 }
 
+void DWARF5AcceleratorTable::addCrossCUDie(DWARFUnit *Unit, const DIE *Die) {
+  std::lock_guard<std::mutex> Lock(CrossCUDiesMutex);
+  CrossCUDies.insert({Die->getOffset(), {Unit, Die}});
+}
+std::optional<std::pair<DWARFUnit *, const DIE *>>
+DWARF5AcceleratorTable::getCrossCUDie(uint64_t Offset) {
+  std::lock_guard<std::mutex> Lock(CrossCUDiesMutex);
+  auto Iter = CrossCUDies.find(Offset);
+  if (Iter == CrossCUDies.end())
+    return std::nullopt;
+  return Iter->second;
+}
+
 void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
                                      const std::optional<uint64_t> &DWOID) {
-  constexpr uint32_t BADCUOFFSET = 0xBADBAD;
   StrSection = Unit.getStringSection();
+  if (Preallocated) {
+    if (!Unit.isTypeUnit() && !DWOID) {
+      CUList.push_back(CurrentUnitOffset);
+    }
+    if (Unit.isTypeUnit() && !DWOID) {
+      LocalTUList.push_back(CurrentUnitOffset);
+    }
+    // For DWO CUs and TUs, slots are already preallocated.
+    return;
+  }
+
   if (Unit.isTypeUnit()) {
     if (DWOID) {
       // We adding an entry for a DWO TU. The DWO CU might not have any entries,
@@ -234,6 +292,11 @@ uint32_t DWARF5AcceleratorTable::getUnitID(const DWARFUnit &Unit,
     }
     return LocalTUList.size() - 1;
   }
+  if (Preallocated && DWOID) {
+    auto Iter = DWOIdToCUIndex.find(*DWOID);
+    assert(Iter != DWOIdToCUIndex.end() && "DWO ID not preallocated");
+    return Iter->second;
+  }
   return CUList.size() - 1;
 }
 
@@ -329,15 +392,15 @@ DWARF5AcceleratorTable::processReferencedDie(
     if (!Value)
       return std::nullopt;
     if (Value.getForm() == dwarf::DW_FORM_ref_addr) {
-      auto Iter = CrossCUDies.find(Value.getDIEInteger().getValue());
-      if (Iter == CrossCUDies.end()) {
+      auto CrossCUEntry = getCrossCUDie(Value.getDIEInteger().getValue());
+      if (!CrossCUEntry) {
         BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
                      "referenced DIE in CrossCUDies for "
                   << Twine::utohexstr(Value.getDIEInteger().getValue())
                   << ".\n";
         return std::nullopt;
       }
-      return Iter->second;
+      return CrossCUEntry;
     }
     const DIEEntry &DIEENtry = Value.getDIEEntry();
     return {{&Unit, &DIEENtry.getEntry()}};
@@ -475,7 +538,25 @@ void DWARF5AcceleratorTable::finalize() {
     for (HashData *H : Bucket)
       llvm::stable_sort(H->Values, [](const BOLTDWARF5AccelTableData *LHS,
                                       const BOLTDWARF5AccelTableData *RHS) {
-        return LHS->getDieOffset() < RHS->getDieOffset();
+        // Sort entries by (DieOffset, CompileUnitID, TypeUnitID) to ensure
+        // deterministic output order across multi-threaded processing runs.
+        const auto GetCompileUnitKey =
+            [](const BOLTDWARF5AccelTableData *Entry) -> unsigned {
+          if (Entry->getSecondUnitID())
+            return *Entry->getSecondUnitID();
+          if (!Entry->isTU())
+            return Entry->getUnitID();
+          return std::numeric_limits<unsigned>::max();
+        };
+        const auto GetTypeUnitKey =
+            [](const BOLTDWARF5AccelTableData *Entry) -> unsigned {
+          return Entry->isTU() ? Entry->getUnitID()
+                               : std::numeric_limits<unsigned>::max();
+        };
+        return std::make_tuple(LHS->getDieOffset(), GetCompileUnitKey(LHS),
+                               GetTypeUnitKey(LHS)) <
+               std::make_tuple(RHS->getDieOffset(), GetCompileUnitKey(RHS),
+                               GetTypeUnitKey(RHS));
       });
   }
 

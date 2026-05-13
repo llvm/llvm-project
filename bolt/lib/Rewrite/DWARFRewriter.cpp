@@ -250,8 +250,9 @@ private:
     const uint64_t TypeSignature = cast<DWARFTypeUnit>(Unit).getTypeHash();
     DIE *TypeDIE = DIEBldr->getTypeDIE(Unit);
     const DIEBuilder::DWARFUnitInfo &UI = DIEBldr->getUnitInfoByDwarfUnit(Unit);
+    const uint64_t TypeDIEOffset = TypeDIE ? TypeDIE->getOffset() : 0;
     GDBIndexSection.addGDBTypeUnitEntry(
-        {UI.UnitOffset, TypeSignature, TypeDIE->getOffset()});
+        {UI.UnitOffset, TypeSignature, TypeDIEOffset});
     if (Unit.getVersion() < 5) {
       // Switch the section to .debug_types section.
       std::unique_ptr<MCStreamer> &MS = Asm.OutStreamer;
@@ -265,7 +266,7 @@ private:
 
     emitCommonHeader(Unit, UnitDIE, DwarfVersion);
     Asm.OutStreamer->emitIntValue(TypeSignature, sizeof(TypeSignature));
-    Asm.emitDwarfLengthOrOffset(TypeDIE ? TypeDIE->getOffset() : 0);
+    Asm.emitDwarfLengthOrOffset(TypeDIEOffset);
   }
 
   void emitUnitHeader(DWARFUnit &Unit, DIE &UnitDIE) {
@@ -579,6 +580,41 @@ static CUPartitionVector partitionCUs(DWARFContext &DwCtx) {
   return Vec;
 }
 
+static std::unordered_map<uint64_t, std::string>
+getDWONameMap(DWARFContext &DwCtx) {
+  const size_t Size =
+      std::distance(DwCtx.compile_units().begin(), DwCtx.compile_units().end());
+  std::unordered_map<uint64_t, std::string> DWOIDToNameMap(Size);
+  std::unordered_map<std::string, uint32_t> NameToIndexMap(Size);
+  for (const std::unique_ptr<DWARFUnit> &CU : DwCtx.compile_units()) {
+    std::optional<uint64_t> DWOID = CU->getDWOId();
+    if (!DWOID)
+      continue;
+
+    const DWARFDie UnitDIE = CU->getUnitDIE();
+    auto DWONameAttr =
+        UnitDIE.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name});
+
+    // Skip invalid (broken) skeleton units that have a DWOId but lack
+    // DW_AT_dwo_name / DW_AT_GNU_dwo_name. 
+    if (!CU->isDWOUnit() && !DWONameAttr)
+      continue;
+
+    std::string DWOName = dwarf::toString(DWONameAttr, "");
+    if (DWOName.empty())
+      continue;
+
+    if (!opts::DwarfOutputPath.empty()) {
+      DWOName = std::string(sys::path::filename(DWOName));
+      uint32_t &Index = NameToIndexMap[DWOName];
+      DWOName.append(std::to_string(Index));
+      ++Index;
+    }
+    DWOName.append(".dwo");
+    DWOIDToNameMap.emplace(*DWOID, std::move(DWOName));
+  }
+  return DWOIDToNameMap;
+}
 void DWARFRewriter::updateDebugInfo() {
   ErrorOr<BinarySection &> DebugInfo = BC.getUniqueSectionByName(".debug_info");
   if (!DebugInfo)
@@ -648,18 +684,30 @@ void DWARFRewriter::updateDebugInfo() {
 
   DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
                                          *StrWriter);
+  if (DebugNamesTable.isCreated())
+    DebugNamesTable.preAllocateUnits(*BC.DwCtx);
+  std::unordered_map<uint64_t, std::string> DWOToNameMap =
+      getDWONameMap(*BC.DwCtx);
   GDBIndex GDBIndexSection(BC);
+  if (!opts::DwarfOutputPath.empty()) {
+    if (std::error_code EC =
+            sys::fs::create_directories(opts::DwarfOutputPath)) {
+      BC.errs() << "BOLT-ERROR: could not create directory '"
+                << opts::DwarfOutputPath << "': " << EC.message() << '\n';
+      return;
+    }
+  }
   auto processSplitCU = [&](DWARFUnit &Unit, DWARFUnit &SplitCU,
                             DebugRangesSectionWriter &TempRangesSectionWriter,
                             DebugAddrWriter &AddressWriter,
                             const std::string &DWOName,
-                            const std::optional<std::string> &DwarfOutputPath,
                             DIEBuilder &DWODIEBuilder) {
     DWODIEBuilder.buildDWOUnit(SplitCU);
     DebugStrOffsetsWriter DWOStrOffstsWriter(BC);
     DebugStrWriter DWOStrWriter((SplitCU).getContext(), true);
-    DWODIEBuilder.updateDWONameCompDirForTypes(
-        DWOStrOffstsWriter, DWOStrWriter, SplitCU, DwarfOutputPath, DWOName);
+    DWODIEBuilder.updateDWONameCompDirForTypes(DWOStrOffstsWriter, DWOStrWriter,
+                                               SplitCU, opts::DwarfOutputPath,
+                                               DWOName);
     DebugLoclistWriter DebugLocDWoWriter(Unit, Unit.getVersion(), true,
                                          AddressWriter);
 
@@ -744,12 +792,11 @@ void DWARFRewriter::updateDebugInfo() {
       DebugRangesSectionWriter &TempRangesSectionWriter =
           CU->getVersion() >= 5 ? *RangeListsWritersByCU[*DWOId].get()
                                 : *LegacyRangesWritersByCU[*DWOId].get();
-      std::optional<std::string> DwarfOutputPath =
-          opts::DwarfOutputPath.empty()
-              ? std::nullopt
-              : std::optional<std::string>(opts::DwarfOutputPath.c_str());
-      std::string DWOName = DIEBlder.updateDWONameCompDir(
-          *StrOffstsWriter, *StrWriter, *CU, DwarfOutputPath, std::nullopt);
+      auto NameIt = DWOToNameMap.find(*DWOId);
+      assert(NameIt != DWOToNameMap.end() && "DWO ID not found in name map");
+      auto DWOName = NameIt->second;
+      DIEBlder.updateDWONameCompDir(*StrOffstsWriter, *StrWriter, *CU,
+                                    opts::DwarfOutputPath, DWOName);
       auto DWODIEBuilderPtr = std::make_unique<DIEBuilder>(
           BC, &(**SplitCU).getContext(), DebugNamesTable, CU);
       DIEBuilder &DWODIEBuilder =
@@ -761,9 +808,9 @@ void DWARFRewriter::updateDebugInfo() {
       // loop, dereferencing CU/SplitCU in the call to processSplitCU means it
       // will dereference a different variable than the one intended, causing a
       // seg fault.
-      ThreadPool.async([&, DwarfOutputPath, DWOName, CU, SplitCU] {
+      ThreadPool.async([&, DWOName, CU, SplitCU] {
         processSplitCU(*CU, **SplitCU, TempRangesSectionWriter, AddressWriter,
-                       DWOName, DwarfOutputPath, DWODIEBuilder);
+                       DWOName, DWODIEBuilder);
       });
     }
     ThreadPool.wait();
@@ -1407,8 +1454,7 @@ void DWARFRewriter::updateLineTableOffsets(const MCAssembler &Asm) {
     if (!StmtOffset)
       continue;
 
-    const uint64_t LineTableOffset =
-        Asm.getSymbolOffset(*Label);
+    const uint64_t LineTableOffset = Asm.getSymbolOffset(*Label);
     DebugLineOffsetMap[*StmtOffset] = LineTableOffset;
     assert(DbgInfoSection && ".debug_info section must exist");
     LineTablePatchMap[CU.get()] = LineTableOffset;
