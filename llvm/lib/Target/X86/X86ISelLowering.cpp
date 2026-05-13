@@ -62138,6 +62138,9 @@ static SDValue combineKSHIFT(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Reassociates AND by splat to other operand when profitable.
+// Equivalent as removing the same bit within each matrix's row acts like the
+// corresponding source bit is zero.
 static SDValue combineAndOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
                                                 SelectionDAG &DAG, EVT VT) {
   using namespace SDPatternMatch;
@@ -62146,9 +62149,9 @@ static SDValue combineAndOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
   APInt Imm, SplatVal, ConstUndef;
   SmallVector<APInt> ConstEltBits;
 
-  // Removing the same bit within each matrix's row effectively treats the
-  // corresponding source bit like it is set to zero
   // TODO: Add reverse fold when X is constant
+  // Fold GF2P8AFFINEQB(x & Splat(C), M, Imm)
+  //  --> GF2P8AFFINEQB(x, M & Splat(C), Imm)
   if (sd_match(N, m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(AndOp), m_Value(Y),
                               m_ConstInt(Imm))) &&
       sd_match(AndOp, m_And(m_Value(X), m_Value(SplatOp))) &&
