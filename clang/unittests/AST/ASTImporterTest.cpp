@@ -4099,6 +4099,40 @@ TEST_P(ASTImporterOptionSpecificTestBase,
                               unless(classTemplatePartialSpecializationDecl()))));
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportTemplateParamObjectDecl) {
+  const char *Code = R"(
+    struct A { int x, y; };
+    template<A> struct S1 {};
+    template<A, int> struct S2 {};
+    S1<A{1, 2}> s1;
+    S2<A{1, 2}, 3> s2;
+  )";
+  Decl *TU = getTuDecl(Code, Lang_CXX20, "input.cc");
+
+  auto *FromFirstSpec =
+      FirstDeclMatcher<ClassTemplateSpecializationDecl>().match(
+          TU, classTemplateSpecializationDecl());
+  auto *FromLastSpec = LastDeclMatcher<ClassTemplateSpecializationDecl>().match(
+      TU, classTemplateSpecializationDecl());
+  auto *FromFirstParamObject = dyn_cast<TemplateParamObjectDecl>(
+      FromFirstSpec->getTemplateArgs().get(0).getAsDecl());
+  auto *FromLastParamObject = dyn_cast<TemplateParamObjectDecl>(
+      FromLastSpec->getTemplateArgs().get(0).getAsDecl());
+  ASSERT_TRUE(FromFirstParamObject);
+  ASSERT_EQ(FromFirstParamObject, FromLastParamObject);
+
+  auto *ToFirstSpec = Import(FromFirstSpec, Lang_CXX20);
+  EXPECT_TRUE(ToFirstSpec);
+  auto *ToLastSpec = Import(FromLastSpec, Lang_CXX20);
+  EXPECT_TRUE(ToLastSpec);
+  auto *ToFirstParamObject = dyn_cast<TemplateParamObjectDecl>(
+      ToFirstSpec->getTemplateArgs().get(0).getAsDecl());
+  auto *ToLastParamObject = dyn_cast<TemplateParamObjectDecl>(
+      ToLastSpec->getTemplateArgs().get(0).getAsDecl());
+  EXPECT_NE(FromFirstParamObject, ToFirstParamObject);
+  EXPECT_EQ(ToFirstParamObject, ToLastParamObject);
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase,
        InitListExprValueKindShouldBeImported) {
   Decl *TU = getTuDecl(

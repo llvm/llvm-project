@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=X64
 
 ;; Use cttz to test if we properly prove never-zero. There is a very
-;; simple transform from cttz -> cttz_zero_undef if its operand is
+;; simple transform from cttz -> cttz_zero_poison if its operand is
 ;; known never zero.
 
 define i32 @or_known_nonzero(i32 %x) {

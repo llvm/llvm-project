@@ -30,7 +30,6 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::hoistPredicatedLoads
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::sinkPredicatedStores
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::truncateToMinimalBitwidths
-; CHECK: VPlan for loop in 'foo' after removeRedundantCanonicalIVs
 ; CHECK: VPlan for loop in 'foo' after removeRedundantInductionCasts
 ; CHECK: VPlan for loop in 'foo' after reassociateHeaderMask
 ; CHECK: VPlan for loop in 'foo' after simplifyRecipes
@@ -44,7 +43,6 @@
 ; CHECK: VPlan for loop in 'foo' after removeBranchOnConst
 ; CHECK: VPlan for loop in 'foo' after removeDeadRecipes
 ; CHECK: VPlan for loop in 'foo' after createAndOptimizeReplicateRegions
-; CHECK: VPlan for loop in 'foo' after hoistInvariantLoads
 ; CHECK: VPlan for loop in 'foo' after mergeBlocksIntoPredecessors
 ; CHECK: VPlan for loop in 'foo' after licm
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimize

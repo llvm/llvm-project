@@ -483,7 +483,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     // Sequence initialization of the imported module before that of the current
     // module, if any.
     Context.addModuleInitializer(ModuleScopes.back().Module, Import);
-    Mod->Imports.insert(Interface); // As if we imported it.
+    Mod->Imports.push_back(Interface); // As if we imported it.
     // Also save this as a shortcut to checking for decls in the interface
     ThePrimaryInterface = Interface;
     // If we made an implicit import of the module interface, then return the
@@ -710,7 +710,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     if (ExportLoc.isValid() || getEnclosingExportDecl(Import))
       getCurrentModule()->Exports.emplace_back(Mod, false);
     else
-      getCurrentModule()->Imports.insert(Mod);
+      getCurrentModule()->Imports.push_back(Mod);
   }
 
   HadImportedNamedModules = true;

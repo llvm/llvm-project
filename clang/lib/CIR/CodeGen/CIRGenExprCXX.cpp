@@ -366,7 +366,7 @@ static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
     assert(stores.size() == 1 && "Expected only one store");
     assert(stores[0].first == CharUnits::Zero() &&
            "Expected store to begin at offset zero");
-    CIRGenBuilderTy builder = cgf.getBuilder();
+    CIRGenBuilderTy &builder = cgf.getBuilder();
     mlir::Location loc = cgf.getLoc(base->getBeginLoc());
     builder.createStore(loc, builder.getConstant(loc, nullConstantForBase),
                         destPtr);
@@ -1816,9 +1816,15 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   }
 
   // Pass the alignment if the delete function has an align_val_t parameter.
-  if (isAlignedAllocation(params.Alignment))
-    cgm.errorNYI(deleteFD->getSourceRange(),
-                 "emitDeleteCall: aligned allocation");
+  if (isAlignedAllocation(params.Alignment)) {
+    QualType alignValType = *paramTypeIter++;
+    CharUnits deleteTypeAlign =
+        getContext().toCharUnitsFromBits(getContext().getTypeAlignIfKnown(
+            deleteTy, /*NeedsPreferredAlignment=*/true));
+    cir::ConstantOp align = builder.getConstInt(
+        *currSrcLoc, convertType(alignValType), deleteTypeAlign.getQuantity());
+    deleteArgs.add(RValue::get(align), alignValType);
+  }
 
   assert(paramTypeIter == deleteFTy->param_type_end() &&
          "unknown parameter to usual delete function");
