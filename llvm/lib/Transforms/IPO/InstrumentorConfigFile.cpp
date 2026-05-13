@@ -20,8 +20,20 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 #include <string>
+
+using namespace llvm;
+
+static Expected<std::unique_ptr<MemoryBuffer>>
+setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
+  auto BufferOrErr = Filename.str() == "-" ? MemoryBuffer::getSTDIN()
+                                           : FS.getBufferForFile(Filename);
+  if (std::error_code EC = BufferOrErr.getError())
+    return errorCodeToError(EC);
+  return std::move(BufferOrErr.get());
+}
 
 namespace llvm {
 namespace instrumentor {
@@ -96,16 +108,15 @@ void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
 }
 
 bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
-                        LLVMContext &Ctx) {
+                        LLVMContext &Ctx, vfs::FileSystem &FS) {
   if (InputFile.empty())
     return true;
 
-  std::error_code EC;
-  auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(InputFile);
-  if (std::error_code EC = BufferOrErr.getError()) {
+  auto BufferOrErr = setupMemoryBuffer(InputFile, FS);
+  if (Error E = BufferOrErr.takeError()) {
     Ctx.diagnose(DiagnosticInfoInstrumentation(
         Twine("failed to open instrumentor configuration file for reading: ") +
-            EC.message(),
+            toString(std::move(E)),
         DS_Warning));
     return false;
   }

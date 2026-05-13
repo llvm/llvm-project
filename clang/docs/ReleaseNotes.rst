@@ -177,6 +177,11 @@ C Language Changes
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Implemented the type-specific C2y ``<stdbit.h>`` rotate functions with constexpr
+  evaluation support:
+  ``stdc_rotate_left_{uc,us,ui,ul,ull}`` and
+  ``stdc_rotate_right_{uc,us,ui,ul,ull}``.
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
@@ -495,6 +500,10 @@ Improvements to Clang's diagnostics
 - Fixed false positive host-device mismatch errors in discarded `if constexpr` branches for CUDA/HIP;
   such calls are now correctly skipped.
 
+- Clang now errors when a function declaration aliases a variable or vice versa. (#GH195550)
+
+- Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -566,6 +575,8 @@ Bug Fixes to C++ Support
 - Clang now rejects constant template parameters with block pointer types, since these are not implemented anyway and would lead to crashes. (#GH189247)
 - Fixed a crash on error recovery when dealing with invalid templates. (#GH183075)
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
+- Concepts appearing in the require-clause of a member function no longer have access to non-public members of that class,
+  or to a current class object. (#GH115838) (#GH194803)
 - We no longer caches invalid variable specializations. (#GH132592)
 - Fixed an incorrect template argument deduction when matching packs of template
   template parameters when one of its parameters is also a pack. (#GH181166)
@@ -754,6 +765,8 @@ clang-format
 - Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyAndAttached`` for LLVM style.
 - Add ``BreakFunctionDeclarationParameters`` option to always break before function
   declaration parameters.
+- Add ``EnumAssignments`` option to ``AlignConsecutiveAssignments`` for aligning
+  enum assignments without affecting other assignments.
 
 libclang
 --------
