@@ -48,20 +48,6 @@ void TextDiagnosticBuffer::HandleDiagnostic(
 
   llvm::SmallString<100> buf;
   info.FormatDiagnostic(buf);
-
-  // This function dealing with diagnostics emitted directly through the
-  // diagnostic engine, e.g. in CompilerInvocation. With -Werror any warning
-  // emitted there would become an error, and prevented any part of compilation
-  // from happening. In case of OpenMP, this would cause the warning about an
-  // incomplete implementation to completely skip the compilation, which is
-  // undesirable.
-  // Downgrade -Werror'ed warnings back to warnings to avoid this situation.
-  const clang::DiagnosticsEngine &diags = *info.getDiags();
-  if (level == clang::DiagnosticsEngine::Error) {
-    if (!diags.getDiagnosticIDs()->isDefaultMappingAsError(info.getID()))
-      level = clang::DiagnosticsEngine::Warning;
-  }
-
   llvm::raw_svector_ostream os(buf);
   printWarningOption(os, level, info);
 
