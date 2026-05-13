@@ -2021,30 +2021,36 @@ let SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1 in {
                                                       int_amdgcn_ashr_pk_u8_i32>;
 } // End SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1
 
-class AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0>: GCNPat<
+multiclass AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0> {
+ defvar Inst = (inst 0, VSrc_b32:$src0, 0, VSrc_b32:$src1, 0, VSrc_b32:$src2, 0);
+
+ def : GCNPat<
     (i32 (or (i32 (shl (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))), (i32 8))),
              (i32 (and (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))), (i32 255))))),
-    (true16HelperReg32FromSrc16<true16> (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 ))
->;
+    !if(true16, (true16Lo16ToReg32 Inst), Inst)>;
+}
 
-class AshrPkU8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0>: GCNPat<
+multiclass AshrPkU8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0> {
+  defvar Inst = (inst 0, VSrc_b32:$src0, 0, VSrc_b32:$src1, 0, VSrc_b32:$src2, 0);
+
+  def : GCNPat<
     (i32 (or (i32 (shl (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))), (i32 8))),
              (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))),
-    (true16HelperReg32FromSrc16<true16> (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 ))
->;
+    !if(true16, (true16Lo16ToReg32 Inst), Inst)>;
+}
 
 let SubtargetPredicate = HasAshrPkInsts, True16Predicate = NotHasTrue16BitInsts in {
-  def : AshrPkI8Pat<V_ASHR_PK_I8_I32_e64, -128, 127>;
-  def : AshrPkU8Pat<V_ASHR_PK_U8_I32_e64, 0, 255>;
+  defm : AshrPkI8Pat<V_ASHR_PK_I8_I32_e64, -128, 127>;
+  defm : AshrPkU8Pat<V_ASHR_PK_U8_I32_e64, 0, 255>;
 }
 
 let SubtargetPredicate = HasAshrPkInsts, True16Predicate = UseFakeTrue16Insts in {
-  def : AshrPkI8Pat<V_ASHR_PK_I8_I32_fake16_e64, -128, 127>;
-  def : AshrPkU8Pat<V_ASHR_PK_U8_I32_fake16_e64, 0, 255>;
+  defm : AshrPkI8Pat<V_ASHR_PK_I8_I32_fake16_e64, -128, 127>;
+  defm : AshrPkU8Pat<V_ASHR_PK_U8_I32_fake16_e64, 0, 255>;
 }
 let SubtargetPredicate = HasAshrPkInsts, True16Predicate = UseRealTrue16Insts in {
-  def : AshrPkI8Pat<V_ASHR_PK_I8_I32_t16_e64, -128, 127, 1>;
-  def : AshrPkU8Pat<V_ASHR_PK_U8_I32_t16_e64, 0, 255, 1>;
+  defm : AshrPkI8Pat<V_ASHR_PK_I8_I32_t16_e64, -128, 127, 1>;
+  defm : AshrPkU8Pat<V_ASHR_PK_U8_I32_t16_e64, 0, 255, 1>;
 }
 
 let SubtargetPredicate = isGFX13Plus in {
