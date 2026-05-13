@@ -953,12 +953,11 @@ private:
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
-  uint32_t
-  getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
-                         uint32_t ThreadLimitClause[3]) const override {
+  uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
+                                  uint32_t UserThreadLimit[3]) const override {
     assert(!isBareMode() && "bare kernel should not call this function");
 
-    assert(ThreadLimitClause[1] == 1 && ThreadLimitClause[2] == 1 &&
+    assert(UserThreadLimit[1] == 1 && UserThreadLimit[2] == 1 &&
            "Multi dimensional launch not supported yet.");
 
     // Honor OMP_TEAMS_THREAD_LIMIT environment variable and
@@ -968,9 +967,8 @@ private:
       if (TeamsThreadLimitEnvVar > 0)
         return std::min(static_cast<int32_t>(ConstWGSize),
                         TeamsThreadLimitEnvVar);
-      if ((ThreadLimitClause[0] > 0) && (ThreadLimitClause[0] != (uint32_t)-1))
-        return std::min(static_cast<uint32_t>(ConstWGSize),
-                        ThreadLimitClause[0]);
+      if ((UserThreadLimit[0] > 0) && (UserThreadLimit[0] != (uint32_t)-1))
+        return std::min(static_cast<uint32_t>(ConstWGSize), UserThreadLimit[0]);
       return ConstWGSize;
     }
 
@@ -978,9 +976,9 @@ private:
       if (TeamsThreadLimitEnvVar > 0 &&
           TeamsThreadLimitEnvVar <= static_cast<int32_t>(ConstWGSize))
         return llvm::omp::getBlockSizeAsPowerOfTwo(TeamsThreadLimitEnvVar);
-      if (ThreadLimitClause[0] > 0 && ThreadLimitClause[0] != (uint32_t)-1 &&
-          ThreadLimitClause[0] <= static_cast<uint32_t>(ConstWGSize))
-        return llvm::omp::getBlockSizeAsPowerOfTwo(ThreadLimitClause[0]);
+      if (UserThreadLimit[0] > 0 && UserThreadLimit[0] != (uint32_t)-1 &&
+          UserThreadLimit[0] <= static_cast<uint32_t>(ConstWGSize))
+        return llvm::omp::getBlockSizeAsPowerOfTwo(UserThreadLimit[0]);
       uint32_t BlockSizeOverride = GenericDevice.getOMPXXteamBlockSize();
       if (BlockSizeOverride > 0 &&
           BlockSizeOverride <= static_cast<int32_t>(ConstWGSize))
@@ -990,11 +988,11 @@ private:
       return ConstWGSize;
     }
 
-    if (ThreadLimitClause[0] > 0 && isGenericMode()) {
-      if (ThreadLimitClause[0] == (uint32_t)-1)
-        ThreadLimitClause[0] = PreferredNumThreads;
+    if (UserThreadLimit[0] > 0 && isGenericMode()) {
+      if (UserThreadLimit[0] == (uint32_t)-1)
+        UserThreadLimit[0] = PreferredNumThreads;
       else
-        ThreadLimitClause[0] += GenericDevice.getWarpSize();
+        UserThreadLimit[0] += GenericDevice.getWarpSize();
     }
 
     // Limit number of threads taking into consideration the user
@@ -1004,13 +1002,14 @@ private:
       CurrentMaxNumThreads = std::min(
           static_cast<uint32_t>(TeamsThreadLimitEnvVar), CurrentMaxNumThreads);
 
-    return std::min(CurrentMaxNumThreads, (ThreadLimitClause[0] > 0)
-                                              ? ThreadLimitClause[0]
+    return std::min(CurrentMaxNumThreads, (UserThreadLimit[0] > 0)
+                                              ? UserThreadLimit[0]
                                               : PreferredNumThreads);
   }
   uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
                                  uint32_t UserNumBlocks[3],
-                                 uint64_t LoopTripCount, uint32_t &NumThreads,
+                                 uint64_t LoopTripCount,
+                                 uint32_t &EffectiveNumThreads,
                                  bool IsNumThreadsFromUser) const override {
     assert(!isBareMode() && "bare kernel should not call this function");
 
@@ -1025,12 +1024,12 @@ private:
 
     if (isNoLoopMode()) {
       return LoopTripCount > 0 ? getNumGroupsFromThreadsAndTripCount(
-                                     LoopTripCount, NumThreads)
+                                     LoopTripCount, EffectiveNumThreads)
                                : 1;
     }
 
     uint64_t NumWavesInGroup =
-        (NumThreads - 1) / GenericDevice.getWarpSize() + 1;
+        (EffectiveNumThreads - 1) / GenericDevice.getWarpSize() + 1;
 
     if (isBigJumpLoopMode()) {
       int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
@@ -1038,8 +1037,8 @@ private:
       // Cannot assert a non-zero tripcount. Instead, launch with 1 team if the
       // tripcount is indeed zero.
       if (LoopTripCount > 0)
-        NumGroups =
-            getNumGroupsFromThreadsAndTripCount(LoopTripCount, NumThreads);
+        NumGroups = getNumGroupsFromThreadsAndTripCount(LoopTripCount,
+                                                        EffectiveNumThreads);
 
       // Honor OMP_NUM_TEAMS environment variable for BigJumpLoop kernel type.
       if (NumTeamsEnvVar > 0 && static_cast<uint32_t>(NumTeamsEnvVar) <=
@@ -1082,8 +1081,8 @@ private:
       // based on occupancy value.
       if (OMPX_BigJumpLoopOccupancyBasedOpt && NumTeamsEnvVar == 0 &&
           UserNumBlocks[0] == 0) {
-        return std::min(NumGroups, OptimizeNumTeamsBaseOccupancy(GenericDevice,
-                                                                 NumThreads));
+        return std::min(NumGroups, OptimizeNumTeamsBaseOccupancy(
+                                       GenericDevice, EffectiveNumThreads));
       }
       return std::min(NumGroups,
                       static_cast<uint64_t>(GenericDevice.getBlockLimit()));
@@ -1128,7 +1127,7 @@ private:
           (MaxOccupancy * llvm::omp::amdgpu_arch::SIMDPerCU >=
            llvm::omp::xteam_red::DesiredWavesPerCU)) {
         uint64_t newNumTeams =
-            OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads);
+            OptimizeNumTeamsBaseOccupancy(GenericDevice, EffectiveNumThreads);
         return std::min(newNumTeams, MaxNumGroups);
       }
 
@@ -1150,15 +1149,15 @@ private:
         // is low
         uint64_t NumGroupsFromTripCount = 1;
         if (LoopTripCount > 0)
-          NumGroupsFromTripCount =
-              getNumGroupsFromThreadsAndTripCount(LoopTripCount, NumThreads);
+          NumGroupsFromTripCount = getNumGroupsFromThreadsAndTripCount(
+              LoopTripCount, EffectiveNumThreads);
 
         // Compute desired number of groups in the absence of user input
         // based on a factor controlled by an integer env-var.
         // Note that the upper bound is MaxNumGroups.
         uint32_t AdjustFactor =
             GenericDevice.getOMPXAdjustNumTeamsForXteamRedSmallBlockSize();
-        if (NumThreads > 0 && AdjustFactor > 0) {
+        if (EffectiveNumThreads > 0 && AdjustFactor > 0) {
           uint64_t DesiredNumGroups = NumGroups;
           if (AdjustFactor == 1) {
             DesiredNumGroups =
@@ -1208,7 +1207,7 @@ private:
         // parallel for [simd]`. We launch so many teams so that each thread
         // will execute one iteration of the loop. round up to the nearest
         // integer
-        TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
+        TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
       } else {
         assert((isGenericMode() || isGenericSPMDMode()) &&
                "Unexpected execution mode!");
@@ -1230,8 +1229,9 @@ private:
 
     if (isSPMDMode() && OMPX_SPMDOccupancyBasedOpt && NumTeamsEnvVar == 0 &&
         UserNumBlocks[0] == 0) {
-      return std::min(TripCountNumBlocks,
-                      OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads));
+      return std::min(
+          TripCountNumBlocks,
+          OptimizeNumTeamsBaseOccupancy(GenericDevice, EffectiveNumThreads));
     }
 
     auto getAdjustedDefaultNumBlocks =
@@ -1270,9 +1270,9 @@ private:
     // Occupancy-based setting overrides block reuse.
     if (OMPX_GenericSPMDOccupancyBasedOpt && NumTeamsEnvVar == 0 &&
         UserNumBlocks[0] == 0) {
-      PreferredNumBlocks =
-          std::min(PreferredNumBlocks,
-                   OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads));
+      PreferredNumBlocks = std::min(
+          PreferredNumBlocks,
+          OptimizeNumTeamsBaseOccupancy(GenericDevice, EffectiveNumThreads));
     } else if (GenericDevice.getReuseBlocksForHighTripCount()) {
       // If the loops are long running we rather reuse blocks than spawn too
       // many.
@@ -1296,8 +1296,8 @@ private:
         GenericDevice.getOMPXGenericSpmdUseSmallBlockSize()) {
       uint64_t TmpPreferredNumBlocks = PreferredNumBlocks << 1;
       while (TmpPreferredNumBlocks <= LoopTripCount &&
-             NumThreads > GenericDevice.getWarpSize()) {
-        NumThreads >>= 1;
+             EffectiveNumThreads > GenericDevice.getWarpSize()) {
+        EffectiveNumThreads >>= 1;
         PreferredNumBlocks = TmpPreferredNumBlocks;
         TmpPreferredNumBlocks <<= 1;
       }
