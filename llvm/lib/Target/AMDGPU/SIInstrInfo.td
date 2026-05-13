@@ -3566,10 +3566,10 @@ def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Key = ["OpX", "OpY", "SubTgt", "VOPD3"];
 }
 
-def true16Lo16ToReg32 : OutPatFrag<(ops node:$op),
+def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
   (REG_SEQUENCE VGPR_32, $op, lo16, (i16 (IMPLICIT_DEF)), hi16)>;
 
-def true16Hi16ToReg32 : OutPatFrag<(ops node:$op),
+def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
   (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
 
 include "SIInstructions.td"

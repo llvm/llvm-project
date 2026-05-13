@@ -2027,7 +2027,7 @@ multiclass AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0> {
  def : GCNPat<
     (i32 (or (i32 (shl (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))), (i32 8))),
              (i32 (and (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))), (i32 255))))),
-    !if(true16, (true16Lo16ToReg32 Inst), Inst)>;
+    !if(true16, (lo16_to_vgpr32 Inst), Inst)>;
 }
 
 multiclass AshrPkU8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0> {
@@ -2036,7 +2036,7 @@ multiclass AshrPkU8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0> {
   def : GCNPat<
     (i32 (or (i32 (shl (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))), (i32 8))),
              (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))),
-    !if(true16, (true16Lo16ToReg32 Inst), Inst)>;
+    !if(true16, (lo16_to_vgpr32 Inst), Inst)>;
 }
 
 let SubtargetPredicate = HasAshrPkInsts, True16Predicate = NotHasTrue16BitInsts in {
