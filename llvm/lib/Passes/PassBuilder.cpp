@@ -1431,7 +1431,8 @@ Expected<SROAOptions> parseSROAOptions(StringRef Params) {
   SROAOptions Result(SROAOptions::ModifyCFG);
   bool SawCFGOption = false;
   while (!Params.empty()) {
-    auto [ParamName, RemainingParams] = Params.split(';');
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
 
     if (ParamName == "modify-cfg") {
       if (SawCFGOption)
