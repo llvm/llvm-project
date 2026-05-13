@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/wint_t.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/ferror.h"
@@ -29,10 +30,19 @@ TEST_F(LlvmLibcFgetwsTest, ReadWideString) {
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
+#if WCHAR_MAX > 0xFFFF
   // Write UTF-8 bytes for: "Hello, ¢€𐍈 world!\n"
   constexpr unsigned char CONTENT[] = {
       'H',  'e',  'l',  'l',  'o', ',', ' ', 0xC2, 0xA2, 0xE2, 0x82, 0xAC,
       0xF0, 0x90, 0x8D, 0x88, ' ', 'w', 'o', 'r',  'l',  'd',  '!',  '\n'};
+  constexpr const wchar_t *EXPECTED_STR = L"Hello, ¢€𐍈 world!\n";
+#else
+  // Write UTF-8 bytes for: "Hello, ¢ world!\n"
+  constexpr unsigned char CONTENT[] = {'H', 'e',  'l',  'l', 'o', ',',
+                                       ' ', 0xC2, 0xA2, ' ', 'w', 'o',
+                                       'r', 'l',  'd',  '!', '\n'};
+  constexpr const wchar_t *EXPECTED_STR = L"Hello, ¢ world!\n";
+#endif
   ASSERT_EQ(LIBC_NAMESPACE::fwrite(CONTENT, 1, sizeof(CONTENT), file),
             sizeof(CONTENT));
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
@@ -45,7 +55,7 @@ TEST_F(LlvmLibcFgetwsTest, ReadWideString) {
   wchar_t *result = LIBC_NAMESPACE::fgetws(buffer, 50, file);
   ASSERT_FALSE(result == nullptr);
   EXPECT_EQ(result, buffer);
-  EXPECT_EQ(LIBC_NAMESPACE::wcscmp(buffer, L"Hello, ¢€𐍈 world!\n"), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::wcscmp(buffer, EXPECTED_STR), 0);
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }

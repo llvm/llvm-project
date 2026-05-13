@@ -42,9 +42,8 @@ LLVM_LIBC_FUNCTION(wchar_t *, fgetws,
 
   wchar_t *result = ws;
   int chars_read = 0;
-  wchar_t c = L'\0';
 
-  for (; chars_read < count - 1 && c != '\n'; ++chars_read) {
+  for (wchar_t c = L'\0'; chars_read < count - 1 && c != '\n'; ++chars_read) {
     auto read_res = f->read_unlocked(&c, 1);
     if (read_res.has_error()) {
       libc_errno = read_res.error;

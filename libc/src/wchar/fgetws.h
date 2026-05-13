@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation header for the fgetws function, which
-/// reads a wide-character string from a file.
+/// This file contains the prototype for the fgetws function, which reads a
+/// wide-character string from a file.
 ///
 //===----------------------------------------------------------------------===//
 
