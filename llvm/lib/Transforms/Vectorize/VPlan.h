@@ -4044,21 +4044,20 @@ protected:
 #endif
 };
 
-/// CastInfo helper for casting from a recipe superclass (e.g. VPRecipeBase,
-/// VPUser) to a mixin class that is not part of the VPRecipeBase class
-/// hierarchy (e.g. VPPhiAccessors, VPIRMetadata).
+/// CastInfo helper for casting from VPRecipeBase to a mixin class that is not
+/// part of the VPRecipeBase class hierarchy (e.g. VPPhiAccessors,
+/// VPIRMetadata).
 namespace vpdetail {
-template <class VPMixin, class From, class... RecipeTys>
-struct VPMixinCast
-    : public DefaultDoCastIfPossible<VPMixin *, From *,
-                                     VPMixinCast<VPMixin, From, RecipeTys...>> {
+template <typename VPMixin, typename... RecipeTys>
+struct CastInfoMixinImpl
+    : public DefaultDoCastIfPossible<VPMixin *, VPRecipeBase *,
+                                     CastInfoMixinImpl<VPMixin, RecipeTys...>> {
   static_assert((std::is_base_of_v<VPMixin, RecipeTys> && ...),
                 "Each type in RecipeTys must derive from VPMixin");
-  static bool isPossible(From *R) { return isa<RecipeTys...>(R); }
-  static VPMixin *doCast(From *R) {
-    VPMixin *Out = nullptr;
+  static bool isPossible(VPRecipeBase *R) { return isa<RecipeTys...>(R); }
+  static VPMixin *doCast(VPRecipeBase *R) {
+    VPMixin *Out;
     (void)((Out = dyn_cast<RecipeTys>(R)) || ...);
-    assert(Out && "Illegal recipe for cast");
     return Out;
   }
   static VPMixin *castFailed() { return nullptr; }
@@ -4068,8 +4067,8 @@ struct VPMixinCast
 /// Support casting from VPRecipeBase -> VPPhiAccessors.
 template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase *>
-    : vpdetail::VPMixinCast<VPPhiAccessors, VPRecipeBase, VPPhi, VPIRPhi,
-                            VPWidenPHIRecipe, VPHeaderPHIRecipe> {};
+    : vpdetail::CastInfoMixinImpl<VPPhiAccessors, VPPhi, VPIRPhi,
+                                  VPWidenPHIRecipe, VPHeaderPHIRecipe> {};
 
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
@@ -4084,10 +4083,10 @@ struct CastInfo<VPPhiAccessors, VPRecipeBase>
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>
-    : vpdetail::VPMixinCast<
-          VPIRMetadata, VPRecipeBase, VPInstruction, VPWidenRecipe,
-          VPWidenCastRecipe, VPWidenIntrinsicRecipe, VPWidenCallRecipe,
-          VPReplicateRecipe, VPInterleaveBase, VPWidenMemoryRecipe> {};
+    : vpdetail::CastInfoMixinImpl<VPIRMetadata, VPInstruction, VPWidenRecipe,
+                                  VPWidenCastRecipe, VPWidenIntrinsicRecipe,
+                                  VPWidenCallRecipe, VPReplicateRecipe,
+                                  VPInterleaveBase, VPWidenMemoryRecipe> {};
 
 template <>
 struct CastInfo<VPIRMetadata, const VPRecipeBase *>
