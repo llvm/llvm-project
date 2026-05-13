@@ -1161,8 +1161,9 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   // If this is a global TLS variable (that is, declared at namespace scope), we
   // have to emit the guard variable here.
   bool needsTlsGuard = op.getDynTlsRefs() && op.getDynTlsRefs()->getGuardName();
+  cir::IfOp guardIf;
   if (needsTlsGuard) {
-    cir::IfOp guardIf = buildGlobalTlsGuardCheck(
+    guardIf = buildGlobalTlsGuardCheck(
         builder, op.getLoc(),
         getOrCreateStaticLocalDeclGuardAddress(
             builder, op, op.getDynTlsRefs()->getGuardName().getValue(),
@@ -1190,8 +1191,10 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   }
 
   // If we're actually in the 'if' above, create a yield.
-  if (needsTlsGuard)
+  if (needsTlsGuard) {
+    builder.setInsertionPointToEnd(&guardIf.getThenRegion().back());
     cir::YieldOp::create(builder, op.getLoc());
+  }
 
   // Replace cir.yield with cir.return
   builder.setInsertionPointToEnd(entryBB);
@@ -1751,15 +1754,14 @@ LoweringPreparePass::createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
   builder.setInsertionPointToStart(mlirModule.getBody());
 
   // The TLS Guard is always an Int8Ty.
-  auto guardTy = builder.getSIntNTy(8);
-  cir::GlobalOp g = cir::GlobalOp::create(builder, loc, "__tls_guard", guardTy);
+  cir::IntType guardTy = builder.getSIntNTy(8);
+  auto g = cir::GlobalOp::create(builder, loc, "__tls_guard", guardTy);
   g.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
       builder.getContext(), cir::GlobalLinkageKind::InternalLinkage));
   g.setAlignment(clang::CharUnits::One().getAsAlign().value());
   // At the moment, we only have implementation for this mode, as it is the
   // default.  At one point we might need to load this mode from the module.
   g.setTlsModel(TLS_Model::GeneralDynamic);
-  // g.setDSOLocal(
   g.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
   return g;
 }
@@ -1779,7 +1781,7 @@ cir::IfOp LoweringPreparePass::buildGlobalTlsGuardCheck(
   mlir::Value guardLoad =
       builder.createAlignedLoad(loc, getGuardValue, *guard.getAlignment());
   auto zero = builder.getConstantInt(loc, builder.getSIntNTy(8), 0);
-  auto compare =
+  cir::CmpOp compare =
       builder.createCompare(loc, cir::CmpOpKind::eq, guardLoad, zero);
   return cir::IfOp::create(
       builder, loc, compare,
@@ -1809,7 +1811,7 @@ void LoweringPreparePass::buildCXXGlobalTlsFunc() {
 
   // Emit the body of the guarded spot.
   builder.setInsertionPointToEnd(&ifOperation.getThenRegion().front());
-  for (auto initFunc : globalThreadLocalInitializers)
+  for (cir::FuncOp initFunc : globalThreadLocalInitializers)
     builder.createCallOp(loc, initFunc, {});
   cir::YieldOp::create(builder, loc);
 
