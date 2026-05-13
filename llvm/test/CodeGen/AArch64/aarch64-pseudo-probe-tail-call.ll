@@ -1,13 +1,12 @@
 ; Verify that pseudo-probe call probes on tail call is not considered dangling
 ; Source:
 ; int bar(int);
-; int foo(int x) {
+; int foo_tail(int x) {
 ;   # entry probe
 ;   # direct call probe
 ;   return bar(x); // tail call probe is dropped
 ; }
 
-; REQUIRES: aarch64-registered-target
 ; RUN: llc -mtriple=arm64-apple-macos -stop-after=pseudo-probe-inserter %s -o - | FileCheck %s
 
 ; CHECK-LABEL: name: foo_tail
