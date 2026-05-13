@@ -329,7 +329,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
 
   // Build the constant map with frame size in pointer-sized units.
   uint64_t PtrSize = DL.getPointerSize();
-  Value *FrameMap = GetFrameMap(F, FrameSize / PtrSize);
+  Value *FrameMap = GetFrameMap(F, FrameSize / PtrSize - 2);
 
   // Build the shadow stack entry at the very start of the function.
   BasicBlock::iterator IP = F.getEntryBlock().begin();
