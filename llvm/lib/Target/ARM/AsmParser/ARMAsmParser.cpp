@@ -1179,7 +1179,8 @@ public:
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;
     int64_t Value = CE->getValue();
-    return ((Value & 3) == 0) && Value >= N && Value <= M;
+    return (((Value & 3) == 0) && Value >= N && Value <= M) ||
+           Value == std::numeric_limits<int32_t>::min();
   }
   template<int64_t N, int64_t M>
   bool isImmediateS2() const {
