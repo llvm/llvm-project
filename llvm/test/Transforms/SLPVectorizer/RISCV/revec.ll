@@ -228,7 +228,7 @@ define i32 @test5() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_END47:%.*]]
 ; CHECK:       for.end47:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <8 x double> [ <double 0x7FF8000000000000, double 0x7FF8000000000000, double 0.000000e+00, double 0.000000e+00, double 0x7FF8000000000000, double 0x7FF8000000000000, double 0.000000e+00, double 0.000000e+00>, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <8 x double> [ <double +qnan, double +qnan, double 0.000000e+00, double 0.000000e+00, double +qnan, double +qnan, double 0.000000e+00, double 0.000000e+00>, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

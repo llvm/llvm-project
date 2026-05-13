@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// clang-format off
 // LLDB Python header must be included first
 #include "lldb-python.h"
+//clang-format on
 
 #include "Interfaces/ScriptInterpreterPythonInterfaces.h"
 #include "PythonDataObjects.h"
@@ -300,8 +302,13 @@ void ScriptInterpreterPython::Initialize() {
   setenv("PYTHONMALLOC", "malloc", /*overwrite=*/true);
 #endif
 
+  // When the plugin is a separate shared library, the SWIG wrapper lives in
+  // the plugin library, so the path helper that redirects lookups back to
+  // liblldb is unnecessary.
+#if !LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS
   HostInfo::SetSharedLibraryDirectoryHelper(
       ScriptInterpreterPython::SharedLibraryDirectoryHelper);
+#endif
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(),
       lldb::eScriptLanguagePython, ScriptInterpreterPythonImpl::CreateInstance,

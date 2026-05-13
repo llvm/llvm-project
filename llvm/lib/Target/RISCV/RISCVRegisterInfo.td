@@ -273,6 +273,12 @@ def XLenFVT : ValueTypeByHwMode<[RV64],
                                 [f64]>;
 def XLenPairFVT : ValueTypeByHwMode<[RV32],
                                     [f64]>;
+def XLenPairVecI8VT : ValueTypeByHwMode<[RV32],
+                                        [v8i8]>;
+def XLenPairVecI16VT : ValueTypeByHwMode<[RV32],
+                                         [v4i16]>;
+def XLenPairVecI32VT : ValueTypeByHwMode<[RV32],
+                                         [v2i32]>;
 
 // P extension
 def XLenVecI8VT : ValueTypeByHwMode<[RV32, RV64],
@@ -436,7 +442,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
 }
 
 let RegInfos = XLenPairRI, CopyCost = 2 in {
-def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
+def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT, XLenPairVecI16VT, XLenPairVecI32VT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
     X28_X29, X30_X31,
@@ -445,9 +451,9 @@ def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
     X0_Pair, X2_X3, X4_X5
 )>;
 
-def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
+def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT, XLenPairVecI16VT, XLenPairVecI32VT], 64, (sub GPRPair, X0_Pair)>;
 
-def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
+def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT, XLenPairVecI16VT, XLenPairVecI32VT], 64, (add
   X10_X11, X12_X13, X14_X15, X8_X9
 )>;
 } // let RegInfos = XLenPairRI, CopyCost = 2

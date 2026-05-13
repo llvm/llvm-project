@@ -2,10 +2,14 @@ RUN: dsymutil --linker classic -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x
 RUN: dsymutil --linker classic -update %t.dSYM
 RUN: llvm-dwarfdump -apple-types -apple-objc %t.dSYM | FileCheck %s
 
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.dSYM
+RUN: dsymutil --linker parallel -update %t.dSYM
+RUN: llvm-dwarfdump -apple-types -apple-objc %t.dSYM | FileCheck %s
+
 CHECK: .apple_types contents:
 CHECK: Hash 0x2b5e6 [
 CHECK-NEXT:    Name@0x145 {
-CHECK-NEXT:      String: 0x00000066 "A"
+CHECK-NEXT:      String: 0x{{[0-9a-f]+}} "A"
 CHECK-NEXT:      Data 0 [
 CHECK-NEXT:        Atom[0]: 0x0000012d
 CHECK-NEXT:        Atom[1]: 0x0013
@@ -18,7 +22,7 @@ CHECK-NEXT:  ]
 CHECK: .apple_objc contents:
 CHECK: Hash 0x2b5e6
 CHECK-NEXT: Name@0x38 {
-CHECK-NEXT:   String: 0x00000066 "A"
+CHECK-NEXT:   String: 0x{{[0-9a-f]+}} "A"
 CHECK-NEXT:   Data 0 [
 CHECK-NEXT:     Atom[0]: 0x00000027
 CHECK-NEXT:   ]
@@ -28,10 +32,8 @@ CHECK-NEXT:   ]
 CHECK-NEXT: }
 CHECK: Hash 0x3fa0f4b5
 CHECK-NEXT: Name@0x4c {
-CHECK-NEXT:   String: 0x0000009d "A(Category)"
+CHECK-NEXT:   String: 0x{{[0-9a-f]+}} "A(Category)"
 CHECK-NEXT:   Data 0 [
 CHECK-NEXT:     Atom[0]: 0x0000007a
 CHECK-NEXT:   ]
 CHECK-NEXT: }
-
-## FIXME: Support --linker parallel
