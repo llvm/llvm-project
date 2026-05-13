@@ -775,15 +775,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::CTTZ, MVT::v4i32, Custom);
     setOperationAction(ISD::CTTZ, MVT::v2i64, Custom);
 
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v8i8, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v4i16, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v2i32, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v1i64, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v8i8, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v4i16, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v2i32, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v1i64, Custom);
 
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v16i8, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v8i16, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v4i32, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v2i64, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v16i8, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v8i16, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v4i32, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v2i64, Custom);
 
     for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
       setOperationAction(ISD::MULHS, VT, Expand);
@@ -1025,7 +1025,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   if (!Subtarget->hasV5TOps() || Subtarget->isThumb1Only()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, LibCall);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, LibCall);
   }
 
   // @llvm.readcyclecounter requires the Performance Monitors extension.
@@ -6285,7 +6285,7 @@ static SDValue LowerCTTZ(SDNode *N, SelectionDAG &DAG,
     }
 
     if ((ElemTy == MVT::i16 || ElemTy == MVT::i32) &&
-        (N->getOpcode() == ISD::CTTZ_ZERO_UNDEF)) {
+        (N->getOpcode() == ISD::CTTZ_ZERO_POISON)) {
       // Compute with: cttz(x) = (width - 1) - ctlz(lsb), if x != 0
       unsigned NumBits = ElemTy.getSizeInBits();
       SDValue WidthMinus1 =
@@ -10466,7 +10466,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRL_PARTS:
   case ISD::SRA_PARTS:     return LowerShiftRightParts(Op, DAG);
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
+  case ISD::CTTZ_ZERO_POISON: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
   case ISD::SETCC:         return LowerVSETCC(Op, DAG, Subtarget);
   case ISD::SETCCCARRY:    return LowerSETCCCARRY(Op, DAG);
