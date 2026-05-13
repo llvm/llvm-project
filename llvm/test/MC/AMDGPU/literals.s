@@ -1986,14 +1986,12 @@ v_add_f64 v[0:1], v[0:1], lit(1)
 // GFX89: v_add_f64 v[0:1], v[0:1], lit(0x1)      ; encoding: [0x00,0x00,0x80,0xd2,0x00,0xff,0x01,0x00]
 // SICI: v_add_f64 v[0:1], v[0:1], lit(0x1)      ; encoding: [0x00,0x00,0xc8,0xd2,0x00,0xff,0x01,0x00]
 
-// FIXME: Forced lit() encoding is not preserved after disasm
 v_add_f64 v[0:1], v[0:1], lit(1.0)
-// GFX11: v_add_f64 v[0:1], v[0:1], lit(0x3ff00000)      ; encoding: [0x00,0x00,0x27,0xd7,0x00,0xff,0x01,0x02,0x00,0x00,0xf0,0x3f]
-// GFX12: v_add_f64_e64 v[0:1], v[0:1], lit(0x3ff00000)  ; encoding: [0x00,0x00,0x02,0xd5,0x00,0xff,0x01,0x02,0x00,0x00,0xf0,0x3f]
-// GFX1250-ASM: v_add_f64_e64 v[0:1], v[0:1], lit(0x3ff00000) ; encoding: [0x00,0x00,0x02,0xd5,0x00,0xff,0x01,0x02,0x00,0x00,0xf0,0x3f]
-// GFX1250-DIS: v_add_f64_e64 v[0:1], v[0:1], 1.0       ; encoding: [0x00,0x00,0x02,0xd5,0x00,0xe5,0x01,0x02]
-// NOGFX89: :[[@LINE-5]]:31: error: literal operands are not supported
-// NOSICI: :[[@LINE-6]]:31: error: literal operands are not supported
+// NOGFX11: :[[@LINE-1]]:31: error: invalid operand for instruction
+// NOGFX12: :[[@LINE-2]]:31: error: invalid operand for instruction
+// NOGFX1250: :[[@LINE-3]]:31: error: invalid operand for instruction
+// NOGFX89: :[[@LINE-4]]:31: error: invalid operand for instruction
+// NOSICI: :[[@LINE-5]]:31: error: invalid operand for instruction
 
 v_add_f64 v[0:1], v[0:1], lit64(1.0)
 // NOGFX11: :[[@LINE-1]]:27: error: lit64 is not supported on this GPU
