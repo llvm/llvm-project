@@ -125,6 +125,9 @@ Makes programs 10x faster by doing Special New Thing.
   in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
   distributed ThinLTO. 
 
+* ``APInt::sqrt`` (square root rounded to nearest integer) has been replaced
+  with ``APInt::isqrt`` (floor of square root).
+
 ### Changes to building LLVM
 
 ### Changes to TableGen
