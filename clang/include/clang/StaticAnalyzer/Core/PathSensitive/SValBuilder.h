@@ -42,7 +42,7 @@ class CXXRecordDecl;
 class DeclaratorDecl;
 class FunctionDecl;
 class LocationContext;
-class StackFrameContext;
+class StackFrame;
 class Stmt;
 
 namespace ento {
@@ -391,12 +391,10 @@ public:
   }
 
   /// Return a memory region for the 'this' object reference.
-  loc::MemRegionVal getCXXThis(const CXXMethodDecl *D,
-                               const StackFrameContext *SFC);
+  loc::MemRegionVal getCXXThis(const CXXMethodDecl *D, const StackFrame *SF);
 
   /// Return a memory region for the 'this' object reference.
-  loc::MemRegionVal getCXXThis(const CXXRecordDecl *D,
-                               const StackFrameContext *SFC);
+  loc::MemRegionVal getCXXThis(const CXXRecordDecl *D, const StackFrame *SF);
 };
 
 SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,

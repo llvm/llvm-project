@@ -1,7 +1,8 @@
-# RUN: dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s
-# RUN: dsymutil -q -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s --check-prefix QUIET
+# RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s
+# RUN: dsymutil --linker classic -q -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s --check-prefix QUIET
 
 # RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s
+# RUN: dsymutil --linker parallel -q -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s --check-prefix QUIET
 
 ---
 triple:          'thumbv7-apple-darwin'

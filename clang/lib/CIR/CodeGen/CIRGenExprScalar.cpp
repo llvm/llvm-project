@@ -272,8 +272,7 @@ public:
                                convertType(e->getType()), e->getPackLength());
   }
   mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: pseudo object");
-    return {};
+    return cgf.emitPseudoObjectRValue(e).getValue();
   }
   mlir::Value VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -2776,10 +2775,10 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
 
   // OpenCL: If the condition is a vector, we can treat this condition like
   // the select function.
-  if ((cgf.getLangOpts().OpenCL && condType->isVectorType()) ||
-      condType->isExtVectorType()) {
+  if (cgf.getLangOpts().OpenCL &&
+      (condType->isVectorType() || condType->isExtVectorType())) {
     assert(!cir::MissingFeatures::vectorType());
-    cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
+    cgf.cgm.errorNYI(e->getSourceRange(), "OpenCL vector ternary op");
   }
 
   if (condType->isVectorType() || condType->isSveVLSBuiltinType()) {
