@@ -230,7 +230,6 @@ TEST(DependencyScanner, ScanDepsWithFS) {
 
   DependencyScanningServiceOptions Opts;
   Opts.MakeVFS = [&] { return VFS; };
-  Opts.Format = ScanningOutputFormat::Make;
   DependencyScanningService Service(std::move(Opts));
   DependencyScanningTool ScanTool(Service);
 
@@ -290,7 +289,6 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
 
   DependencyScanningServiceOptions Opts;
   Opts.MakeVFS = [&] { return InterceptFS; };
-  Opts.Format = ScanningOutputFormat::Make;
   DependencyScanningService Service(std::move(Opts));
   DependencyScanningTool ScanTool(Service);
 

@@ -1840,6 +1840,11 @@ let Predicates = [HasStdExtP, IsRV32] in {
 // Codegen patterns
 //===----------------------------------------------------------------------===//
 
+// Pattern class for GPRPair operations
+class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
+    : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
+          (Inst GPRPair:$rs1, GPRPair:$rs2)>;
+
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
 
@@ -1936,6 +1941,23 @@ def IncImm : SDNodeXForm<imm, [{
     return CurDAG->getTargetConstant(N->getZExtValue() + 1, SDLoc(N),
                                      N->getValueType(0));
 }]>;
+
+def SDT_RISCVBuildPairGPRVec : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                    SDTCisVT<1, i32>,
+                                                    SDTCisSameAs<1, 2>]>;
+def SDT_RISCVSplitGPRVec : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
+                                                SDTCisSameAs<0, 1>,
+                                                SDTCisVec<2>]>;
+
+// These nodes are used to handle 64-bit vector arguments and returns on RV32.
+// One side is a pair of i32 GPRs, the other is a 64-bit vector.
+// TOD: We might be able to use 32-bit vectors with concat_vectors/build_vector
+// and extract_subvector/extract_vectorelt instead. Using custom nodes prevents
+// 64-bit vector aithmetic operations in our lit tests from being split until
+// we can tune some generic combines.
+def RISCVBuildPairGPRVec : RVSDNode<"BuildPairGPRVec",
+                                    SDT_RISCVBuildPairGPRVec>;
+def RISCVSplitGPRVec     : RVSDNode<"SplitGPRVec", SDT_RISCVSplitGPRVec>;
 
 let Predicates = [HasStdExtP] in {
 
@@ -2187,6 +2209,68 @@ let Predicates = [HasStdExtP, IsRV32] in {
   // Build vector patterns
   def : Pat<(v2i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (PACK GPR:$a, GPR:$b)>;
+
+  // Basic 8-bit arithmetic patterns
+  def : PatGprPairGprPair<add, PADD_DB, v8i8>;
+  def : PatGprPairGprPair<sub, PSUB_DB, v8i8>;
+
+  // Basic 16-bit arithmetic patterns
+  def : PatGprPairGprPair<add, PADD_DH, v4i16>;
+  def : PatGprPairGprPair<sub, PSUB_DH, v4i16>;
+
+  // Basic 32-bit arithmetic patterns
+  def : PatGprPairGprPair<add, PADD_DW, v2i32>;
+  def : PatGprPairGprPair<sub, PSUB_DW, v2i32>;
+
+  // 8-bit saturating add/sub patterns
+  def : PatGprPairGprPair<saddsat, PSADD_DB, v8i8>;
+  def : PatGprPairGprPair<uaddsat, PSADDU_DB, v8i8>;
+  def : PatGprPairGprPair<ssubsat, PSSUB_DB, v8i8>;
+  def : PatGprPairGprPair<usubsat, PSSUBU_DB, v8i8>;
+
+  // 16-bit saturating add/sub patterns
+  def : PatGprPairGprPair<saddsat, PSADD_DH, v4i16>;
+  def : PatGprPairGprPair<uaddsat, PSADDU_DH, v4i16>;
+  def : PatGprPairGprPair<ssubsat, PSSUB_DH, v4i16>;
+  def : PatGprPairGprPair<usubsat, PSSUBU_DH, v4i16>;
+
+  // 32-bit saturating add/sub patterns
+  def : PatGprPairGprPair<saddsat, PSADD_DW, v2i32>;
+  def : PatGprPairGprPair<uaddsat, PSADDU_DW, v2i32>;
+  def : PatGprPairGprPair<ssubsat, PSSUB_DW, v2i32>;
+  def : PatGprPairGprPair<usubsat, PSSUBU_DW, v2i32>;
+
+  // 8-bit averaging patterns
+  def : PatGprPairGprPair<avgfloors, PAADD_DB, v8i8>;
+  def : PatGprPairGprPair<avgflooru, PAADDU_DB, v8i8>;
+  def : PatGprPairGprPair<riscv_asub, PASUB_DB, v8i8>;
+  def : PatGprPairGprPair<riscv_asubu, PASUBU_DB, v8i8>;
+
+  // 16-bit averaging patterns
+  def : PatGprPairGprPair<avgfloors, PAADD_DH, v4i16>;
+  def : PatGprPairGprPair<avgflooru, PAADDU_DH, v4i16>;
+  def : PatGprPairGprPair<riscv_asub, PASUB_DH, v4i16>;
+  def : PatGprPairGprPair<riscv_asubu, PASUBU_DH, v4i16>;
+
+  // 32-bit averaging patterns
+  def : PatGprPairGprPair<avgfloors, PAADD_DW, v2i32>;
+  def : PatGprPairGprPair<avgflooru, PAADDU_DW, v2i32>;
+  def : PatGprPairGprPair<riscv_asub, PASUB_DW, v2i32>;
+  def : PatGprPairGprPair<riscv_asubu, PASUBU_DW, v2i32>;
+
+  // [s|u]min/[s|u]max patterns
+  def : PatGprPairGprPair<smin, PMIN_DB, v8i8>;
+  def : PatGprPairGprPair<umin, PMINU_DB, v8i8>;
+  def : PatGprPairGprPair<smin, PMIN_DH, v4i16>;
+  def : PatGprPairGprPair<umin, PMINU_DH, v4i16>;
+  def : PatGprPairGprPair<smin, PMIN_DW, v2i32>;
+  def : PatGprPairGprPair<umin, PMINU_DW, v2i32>;
+  def : PatGprPairGprPair<smax, PMAX_DB, v8i8>;
+  def : PatGprPairGprPair<umax, PMAXU_DB, v8i8>;
+  def : PatGprPairGprPair<smax, PMAX_DH, v4i16>;
+  def : PatGprPairGprPair<umax, PMAXU_DH, v4i16>;
+  def : PatGprPairGprPair<smax, PMAX_DW, v2i32>;
+  def : PatGprPairGprPair<umax, PMAXU_DW, v2i32>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
