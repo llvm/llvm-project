@@ -83,7 +83,26 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
 
 Pointer Program::getPtrGlobal(unsigned Idx) const {
   assert(Idx < Globals.size());
-  return Pointer(Globals[Idx]->block());
+
+  Block *B = Globals[Idx]->block();
+
+  // Force de-serialization of a redeclaration that might initialize this
+  // global.
+  if (B->getDescriptor()->getMetadataSize() != 0 &&
+      B->getBlockDesc<GlobalInlineDescriptor>().InitState !=
+          GlobalInitState::Initialized) {
+    if (const VarDecl *VD = B->getDescriptor()->asVarDecl()) {
+      const VarDecl *MD = VD->getMostRecentDecl();
+      if (MD != VD && MD->hasInit() && !MD->getInit()->isValueDependent()) {
+        MD->evaluateValue();
+        // Note that we need to get Globals[Idx] here again since the code block
+        // above might've actually changed what global Idx points to.
+        return Pointer(Globals[Idx]->block());
+      }
+    }
+  }
+
+  return Pointer(B);
 }
 
 UnsignedOrNone Program::getGlobal(const ValueDecl *VD) {

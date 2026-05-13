@@ -59,6 +59,8 @@ public:
 
 protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
+  EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+              InterpStack &Stk);
 
   virtual ~EvalEmitter();
 
