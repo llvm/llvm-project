@@ -1085,7 +1085,8 @@ class DpasMxToXeVMPattern : public OpConversionPattern<xegpu::DpasMxOp> {
     auto ctxt = rewriter.getContext();
     auto aTy = op.getA().getType();
     auto bTy = op.getB().getType();
-    auto resultType = cast<VectorType>(op.getType());
+    auto resVecTy =
+        cast<VectorType>(getTypeConverter()->convertType(op.getType()));
 
     auto chipStr = xegpu::getChipStr(op);
     if (!chipStr)
@@ -1099,16 +1100,16 @@ class DpasMxToXeVMPattern : public OpConversionPattern<xegpu::DpasMxOp> {
 
     xevm::ElemType precATy = encodePrecision(aTy.getElementType());
     xevm::ElemType precBTy = encodePrecision(bTy.getElementType());
-    Value c = op.getAcc();
+    Value c = adaptor.getAcc();
     if (!c) {
-      auto elementTy = resultType.getElementType();
+      auto elementTy = resVecTy.getElementType();
       Attribute initValueAttr;
       if (isa<FloatType>(elementTy))
         initValueAttr = FloatAttr::get(elementTy, 0.0);
       else
         initValueAttr = IntegerAttr::get(elementTy, 0);
       c = arith::ConstantOp::create(
-          rewriter, loc, DenseElementsAttr::get(resultType, initValueAttr));
+          rewriter, loc, DenseElementsAttr::get(resVecTy, initValueAttr));
     }
 
     Value aVec = adaptor.getA();
@@ -1125,24 +1126,17 @@ class DpasMxToXeVMPattern : public OpConversionPattern<xegpu::DpasMxOp> {
           rewriter, loc,
           VectorType::get(bVecTy.getNumElements() / 2, rewriter.getI8Type()),
           bVec);
-    auto cvecty = cast<VectorType>(c.getType());
-    xevm::ElemType precCTy = encodePrecision(cvecty.getElementType());
-    xevm::ElemType precDTy = encodePrecision(resultType.getElementType());
-    VectorType cNty =
-        VectorType::get(cvecty.getNumElements(), cvecty.getElementType());
-    if (cvecty != cNty)
-      c = vector::ShapeCastOp::create(rewriter, loc, cNty, c);
+    auto cVecTy = cast<VectorType>(c.getType());
+    xevm::ElemType precCTy = encodePrecision(cVecTy.getElementType());
+    xevm::ElemType precDTy = encodePrecision(resVecTy.getElementType());
     Value scaleA = adaptor.getScaleA();
     Value scaleB = adaptor.getScaleB();
     Value dpasMxRes = xevm::MMAMxOp::create(
-        rewriter, loc, cNty, aVec, bVec, scaleA, scaleB, c,
-        xevm::MMAShapeAttr::get(ctxt, cvecty.getNumElements(), executionSize,
+        rewriter, loc, resVecTy, aVec, bVec, scaleA, scaleB, c,
+        xevm::MMAShapeAttr::get(ctxt, cVecTy.getNumElements(), executionSize,
                                 systolicDepth *
                                     getNumOperandsPerDword(precATy)),
         xevm::MMATypesAttr::get(ctxt, precDTy, precATy, precBTy, precCTy));
-    if (cvecty != cNty)
-      dpasMxRes =
-          vector::ShapeCastOp::create(rewriter, loc, resultType, dpasMxRes);
     rewriter.replaceOp(op, dpasMxRes);
     return success();
   }
