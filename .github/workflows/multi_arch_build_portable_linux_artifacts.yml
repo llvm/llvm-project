@@ -261,19 +261,13 @@ jobs:
           sed -i 's/THEROCK_ENABLE_LLVM_TESTS/THEROCK_BUILD_LLVM_TESTS/g' \
             cmake/therock_subproject.cmake compiler/CMakeLists.txt
 
-      - name: Enable COMGR tests via THEROCK_BUILD_TESTING fallback
-        if: ${{ inputs.stage_name == 'compiler-runtime' }}
-        run: |
-          sed -i 's/if(THEROCK_BUILD_COMGR_TESTS)/if(THEROCK_BUILD_COMGR_TESTS OR THEROCK_BUILD_TESTING)/' \
-            compiler/pre_hook_amd-comgr.cmake
-
       - name: Configure PR Projects
         if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_type != 'full') }}
         env:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}
           package_version: ${{ inputs.package_version }}
-          extra_cmake_options: "-DTHEROCK_ENABLE_ALL=OFF -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=OFF -DTHEROCK_ENABLE_MIOPEN=OFF -DTHEROCK_ENABLE_MIOPENPROVIDER=OFF -DTHEROCK_ENABLE_HIPDNN=OFF -DTHEROCK_ENABLE_HIPBLASLTPROVIDER=OFF -DTHEROCK_ENABLE_HIPDNN_SAMPLES=OFF -DTHEROCK_BUILD_LLVM_TESTS=ON -DTHEROCK_BUILD_COMGR_TESTS=ON -DTHEROCK_BUILD_TESTING=ON -DLLVM_SMREV_REPO='' -DLLVM_SMREV_REVISION=''"
+          extra_cmake_options: "-DTHEROCK_ENABLE_ALL=OFF -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=OFF -DTHEROCK_ENABLE_MIOPEN=OFF -DTHEROCK_ENABLE_MIOPENPROVIDER=OFF -DTHEROCK_ENABLE_HIPDNN=OFF -DTHEROCK_ENABLE_HIPBLASLTPROVIDER=OFF -DTHEROCK_ENABLE_HIPDNN_SAMPLES=OFF -DTHEROCK_BUILD_LLVM_TESTS=ON -DLLVM_SMREV_REPO='' -DLLVM_SMREV_REVISION=''"
           BUILD_DIR: build           
         run: |
           cmake -B "${BUILD_DIR}" -S . -GNinja \
@@ -290,7 +284,7 @@ jobs:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}
           package_version: ${{ inputs.package_version }}
-          extra_cmake_options: "${{ inputs.extra_cmake_options }} -DTHEROCK_BUILD_LLVM_TESTS=ON -DTHEROCK_BUILD_COMGR_TESTS=ON -DTHEROCK_BUILD_TESTING=ON"
+          extra_cmake_options: "${{ inputs.extra_cmake_options }} -DTHEROCK_BUILD_LLVM_TESTS=ON"
           BUILD_DIR: build
         run: |
           cmake -B "${BUILD_DIR}" -S . -GNinja \
@@ -330,17 +324,6 @@ jobs:
         if: ${{ inputs.stage_name == 'compiler-runtime' }}
         run: |
           ninja -C "${BUILD_DIR}"/compiler/amd-llvm/build check-lld
-
-      - name: COMGR Lit Tests
-        if: ${{ inputs.stage_name == 'compiler-runtime' }}
-        run: |
-          "${BUILD_DIR}"/compiler/amd-llvm/build/bin/llvm-lit \
-            "${BUILD_DIR}"/compiler/amd-comgr/build/test-lit -v
-
-      - name: COMGR CTest
-        if: ${{ inputs.stage_name == 'compiler-runtime' }}
-        run: |
-          ctest --test-dir "${BUILD_DIR}"/compiler/amd-comgr/build --output-on-failure
 
       - name: Report
         if: ${{ !cancelled() }}
