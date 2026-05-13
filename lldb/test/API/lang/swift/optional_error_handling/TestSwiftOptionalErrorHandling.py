@@ -8,7 +8,6 @@ class TestSwiftOptionalErrorHandling(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @expectedFailureWindows
     def test(self):
         """Test that errors are surfaced"""
         self.build()

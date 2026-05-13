@@ -7,7 +7,6 @@ class TestExpressionOpenResilientClass(TestBase):
     NO_DEBUG_INFO_TEST = True
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test(self):
         """Tests calling an open resilient function"""
         self.build()
