@@ -4588,15 +4588,15 @@ func.func @target_data_map_iterated_invalid_delete(%lb : index, %ub : index,
 
 // -----
 
-func.func @target_map_iterated_invalid_delete(%lb : index, %ub : index,
-                                              %st : index,
-                                              %addr : !llvm.ptr) {
+func.func @target_map_iterated_unsupported(%lb : index, %ub : index,
+                                           %st : index,
+                                           %addr : !llvm.ptr) {
   %mapv = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
   %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(delete) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
-  // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
+  // expected-error @below {{'map_iterated' is not yet supported on 'omp.target' without target-region capture bindings}}
   omp.target map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%mapv -> %arg0 : !llvm.ptr) {
     omp.terminator
   }

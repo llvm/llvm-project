@@ -2610,6 +2610,11 @@ LogicalResult TargetOp::verify() {
                                       getHasDeviceAddrVars())))
     return failure();
 
+  if (!getMapIterated().empty())
+    return emitOpError()
+           << "'map_iterated' is not yet supported on 'omp.target' without "
+              "target-region capture bindings";
+
   if (failed(verifyMapClause(*this, getMapVars(), getMapIterated())))
     return failure();
 
