@@ -34,10 +34,6 @@ function(_get_common_test_compile_options output_var c_test flags)
       endif()
     endif()
 
-    if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
-      list(APPEND compile_options "-DLIBC_EXPERIMENTAL_ENTRYPOINTS")
-    endif()
-
     if(LIBC_COMPILER_HAS_FIXED_POINT)
       list(APPEND compile_options "-ffixed-point")
     endif()
