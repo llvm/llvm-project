@@ -1805,7 +1805,9 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   Register AddrReg = MI.getOperand(0).getReg();
   Register OpReg = MI.getOperand(1).getReg();
 
-  assert (AddrReg != OpReg && "Scratch register for stack guard address blocked by operand register.");
+  assert(
+      AddrReg != OpReg &&
+      "Scratch register for stack guard address blocked by operand register.");
 
   // Emit an appropriate pseudo for the guard type, which loads the address of
   // said guard into the scratch register AddrReg.
