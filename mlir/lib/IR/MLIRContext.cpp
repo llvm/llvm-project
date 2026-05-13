@@ -380,7 +380,9 @@ void MLIRContext::registerActionHandler(HandlerTy handler) {
   getImpl().actionHandler = std::move(handler);
 }
 
-const MLIRContext::HandlerTy &MLIRContext::getActionHandler() { return getImpl().actionHandler; }
+const MLIRContext::HandlerTy &MLIRContext::getActionHandler() {
+  return getImpl().actionHandler;
+}
 
 /// Dispatch the provided action to the handler if any, or just execute it.
 void MLIRContext::executeActionInternal(function_ref<void()> actionFn,
