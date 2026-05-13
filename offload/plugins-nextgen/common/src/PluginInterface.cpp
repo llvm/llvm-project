@@ -331,13 +331,14 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   llvm::SmallVector<void *, 16> Args;
   llvm::SmallVector<void *, 16> Ptrs;
 
-  uint32_t NumThreads[3] = {KernelArgs.ThreadLimit[0],
-                            KernelArgs.ThreadLimit[1],
-                            KernelArgs.ThreadLimit[2]};
-  uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
-                           KernelArgs.NumTeams[2]};
+  uint32_t EffectiveNumThreads[3] = {KernelArgs.UserThreadLimit[0],
+                                     KernelArgs.UserThreadLimit[1],
+                                     KernelArgs.UserThreadLimit[2]};
+  uint32_t EffectiveNumBlocks[3] = {KernelArgs.UserNumBlocks[0],
+                                    KernelArgs.UserNumBlocks[1],
+                                    KernelArgs.UserNumBlocks[2]};
   auto DynBlockMemConfOrErr =
-      prepareBlockMemory(GenericDevice, KernelArgs, NumBlocks[0]);
+      prepareBlockMemory(GenericDevice, KernelArgs, EffectiveNumBlocks[0]);
   if (!DynBlockMemConfOrErr)
     return DynBlockMemConfOrErr.takeError();
 
@@ -415,26 +416,30 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
     auto [Teams, Threads] =
         KernelRecord->getLaunchParamsForKernel(*this, GenericDevice);
-    NumBlocks[0] = Teams;
-    NumThreads[0] = Threads;
+    EffectiveNumBlocks[0] = Teams;
+    EffectiveNumThreads[0] = Threads;
   } else if (!isBareMode()) {
-    NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
+    EffectiveNumThreads[0] =
+        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads);
 
     std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(
-        GenericDevice, NumThreads[0], KernelArgs.Tripcount,
-        KernelArgs.ThreadLimit);
+        GenericDevice, EffectiveNumThreads[0], KernelArgs.Tripcount,
+        KernelArgs.UserThreadLimit);
     if (AdjustInfo.first)
-      NumThreads[0] = AdjustInfo.second;
+      EffectiveNumThreads[0] = AdjustInfo.second;
 
-    NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
-                                NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
+    EffectiveNumBlocks[0] = getEffectiveNumBlocks(
+        GenericDevice, EffectiveNumBlocks, KernelArgs.Tripcount,
+        EffectiveNumThreads[0], KernelArgs.UserThreadLimit[0] > 0);
   }
 
   // Get achieved occupancy for this kernel.
-  computeAchievedOccupancy(GenericDevice, NumThreads[0], NumBlocks[0]);
+  computeAchievedOccupancy(GenericDevice, EffectiveNumThreads[0],
+                           EffectiveNumBlocks[0]);
 
-  if (auto Err = printLaunchInfo(GenericDevice, KernelArgs, NumThreads,
-                                 NumBlocks, MultiDeviceLB, MultiDeviceUB))
+  if (auto Err =
+          printLaunchInfo(GenericDevice, KernelArgs, EffectiveNumThreads,
+                          EffectiveNumBlocks, MultiDeviceLB, MultiDeviceUB))
     return Err;
 
   RecordReplayTy::HandleTy RRHandle;
@@ -446,8 +451,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
     // Record the kernel prologue data before kernel launch.
     auto RRHandleOrErr = RecordReplay->recordPrologue(
-        *this, KernelArgs, KernelExtraArgs, LaunchParams, NumBlocks, NumThreads,
-        DynBlockMemConf.NativeSize);
+        *this, KernelArgs, KernelExtraArgs, LaunchParams, EffectiveNumBlocks,
+        EffectiveNumThreads, DynBlockMemConf.NativeSize);
     if (!RRHandleOrErr)
       return RRHandleOrErr.takeError();
     RRHandle = *RRHandleOrErr;
@@ -455,11 +460,11 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
   if (GenericDevice.Plugin.getProfiler())
     GenericDevice.Plugin.getProfiler()->handlePreKernelLaunch(
-        &GenericDevice, NumBlocks, AsyncInfoWrapper);
+        &GenericDevice, EffectiveNumBlocks, AsyncInfoWrapper);
 
-  if (auto Err = launchImpl(GenericDevice, NumThreads, NumBlocks,
-                            DynBlockMemConf.NativeSize, KernelArgs, LaunchParams,
-                            AsyncInfoWrapper))
+  if (auto Err = launchImpl(GenericDevice, EffectiveNumThreads,
+                            EffectiveNumBlocks, DynBlockMemConf.NativeSize,
+                            KernelArgs, LaunchParams, AsyncInfoWrapper))
     return Err;
 
   if (RecordReplay) {
@@ -508,7 +513,8 @@ GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   return KernelLaunchParamsTy{sizeof(void *) * NumArgs, &Args[0], &Ptrs[0]};
 }
 
-uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
+uint32_t
+GenericKernelTy::getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
                                         uint32_t ThreadLimitClause[3]) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
@@ -527,24 +533,23 @@ uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
                                      : PreferredNumThreads);
 }
 
-uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
-                                       uint32_t NumTeamsClause[3],
-                                       uint64_t LoopTripCount,
-                                       uint32_t &NumThreads,
-                                       bool IsNumThreadsFromUser) const {
+uint32_t GenericKernelTy::getEffectiveNumBlocks(
+    GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks[3],
+    uint64_t LoopTripCount, uint32_t &NumThreads,
+    bool IsNumThreadsFromUser) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
-  assert(NumTeamsClause[1] == 1 && NumTeamsClause[2] == 1 &&
+  assert(UserNumBlocks[1] == 1 && UserNumBlocks[2] == 1 &&
          "Multi dimensional launch not supported yet.");
 
-  if (NumTeamsClause[0] > 0) {
+  if (UserNumBlocks[0] > 0) {
     // TODO: We need to honor any value and consequently allow more than the
     // block limit. For this we might need to start multiple kernels or let the
     // blocks start again until the requested number has been started.
-    return std::min(NumTeamsClause[0], GenericDevice.getBlockLimit());
+    return std::min(UserNumBlocks[0], GenericDevice.getBlockLimit());
   }
 
-  // Return the number of teams required to cover the loop iterations.
+  // Return the number of blocks required to cover the loop iterations.
   if (isNoLoopMode())
     return LoopTripCount > 0 ? (((LoopTripCount - 1) / NumThreads) + 1) : 1;
 
@@ -553,10 +558,10 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
   if (LoopTripCount > 0) {
     if (isSPMDMode()) {
       // We have a combined construct, i.e. `target teams distribute
-      // parallel for [simd]`. We launch so many teams so that each thread
+      // parallel for [simd]`. We launch so many blocks so that each thread
       // will execute one iteration of the loop; rounded up to the nearest
-      // integer. However, if that results in too few teams, we artificially
-      // reduce the thread count per team to increase the outer parallelism.
+      // integer. However, if that results in too few blocks, we artificially
+      // reduce the thread count per block to increase the outer parallelism.
       auto MinThreads = GenericDevice.getMinThreadsForLowTripCountLoop();
       MinThreads = std::min(MinThreads, NumThreads);
 
@@ -564,13 +569,13 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
       [[maybe_unused]] auto OldNumThreads = NumThreads;
       if (LoopTripCount >= DefaultNumBlocks * NumThreads ||
           IsNumThreadsFromUser) {
-        // Enough parallelism for teams and threads.
+        // Enough parallelism for blocks and threads.
         TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
         assert(IsNumThreadsFromUser ||
                TripCountNumBlocks >= DefaultNumBlocks &&
                    "Expected sufficient outer parallelism.");
       } else if (LoopTripCount >= DefaultNumBlocks * MinThreads) {
-        // Enough parallelism for teams, limit threads.
+        // Enough parallelism for blocks, limit threads.
 
         // This case is hard; for now, we force "full warps":
         // First, compute a thread count assuming DefaultNumBlocks.
@@ -585,7 +590,7 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                "Expected sufficient inner parallelism.");
         TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
       } else {
-        // Not enough parallelism for teams and threads, limit both.
+        // Not enough parallelism for blocks and threads, limit both.
         NumThreads = std::min(NumThreads, MinThreads);
         TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
       }
@@ -598,7 +603,7 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
       assert((isGenericMode() || isGenericSPMDMode()) &&
              "Unexpected execution mode!");
       // If we reach this point, then we have a non-combined construct, i.e.
-      // `teams distribute` with a nested `parallel for` and each team is
+      // `teams distribute` with a nested `parallel for` and each block is
       // assigned one iteration of the `distribute` loop. E.g.:
       //
       // #pragma omp target teams distribute
@@ -607,7 +612,7 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
       //   for(...) {}
       // }
       //
-      // Threads within a team will execute the iterations of the `parallel`
+      // Threads within a block will execute the iterations of the `parallel`
       // loop.
       TripCountNumBlocks = LoopTripCount;
     }

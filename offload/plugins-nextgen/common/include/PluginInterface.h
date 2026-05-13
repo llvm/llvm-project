@@ -599,18 +599,21 @@ private:
     return std::make_pair(false, BlockSize);
   }
 
-  /// Get the number of threads and blocks for the kernel based on the
-  /// user-defined threads and block clauses.
-  virtual uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
-                                 uint32_t ThreadLimitClause[3]) const;
+  /// Get the effective number of threads for the kernel based on the
+  /// user-defined number of threads.
+  virtual uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
+                                          uint32_t ThreadLimitClause[3]) const;
 
+  /// Get the effective number of blocks for the kernel based on the
+  /// user-defined number of blocks and the loop trip count.
   /// The number of threads \p NumThreads can be adjusted by this method.
   /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
   /// thread_limit clause.
-  virtual
-  uint32_t getNumBlocks(GenericDeviceTy &GenericDevice,
-                        uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
-                        uint32_t &NumThreads, bool IsNumThreadsFromUser) const;
+  virtual uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
+                                         uint32_t UserNumBlocks[3],
+                                         uint64_t LoopTripCount,
+                                         uint32_t &NumThreads,
+                                         bool IsNumThreadsFromUser) const;
 
   /// The kernel name.
   std::string Name;
