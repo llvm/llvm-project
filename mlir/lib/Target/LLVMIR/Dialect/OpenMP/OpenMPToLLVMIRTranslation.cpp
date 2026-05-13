@@ -388,7 +388,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.hasThreadLimitMultiDim())
       result = todo("thread_limit with multi-dimensional values");
   };
-  auto checkMapIteratorModifier = [&todo](auto op, LogicalResult &result) {
+  auto checkMap = [&todo](auto op, LogicalResult &result) {
     if (!op.getMapIterated().empty())
       result = todo("map/motion clause with iterator modifier");
   };
@@ -470,23 +470,21 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp>([&](auto op) {
         checkDepend(op, result);
-        checkMapIteratorModifier(op, result);
+        checkMap(op, result);
       })
       .Case([&](omp::TargetUpdateOp op) {
         checkDepend(op, result);
-        checkMapIteratorModifier(op, result);
+        checkMap(op, result);
       })
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
         checkBare(op, result);
         checkInReduction(op, result);
-        checkMapIteratorModifier(op, result);
+        checkMap(op, result);
         checkThreadLimit(op, result);
       })
-      .Case([&](omp::TargetDataOp op) { checkMapIteratorModifier(op, result); })
-      .Case([&](omp::DeclareMapperInfoOp op) {
-        checkMapIteratorModifier(op, result);
-      })
+      .Case([&](omp::TargetDataOp op) { checkMap(op, result); })
+      .Case([&](omp::DeclareMapperInfoOp op) { checkMap(op, result); })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
         // checked above.

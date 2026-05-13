@@ -1015,8 +1015,8 @@ omp.declare_mapper @my_mapper_iterated : !llvm.struct<"my_iter_type", (i32)> {
     %decl_map_info = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"my_iter_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
     omp.yield(%decl_map_info : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
-  // CHECK: omp.declare_mapper.info map_entries(%[[IT]] : !omp.iterated<!llvm.ptr>)
-  omp.declare_mapper.info map_entries(%it : !omp.iterated<!llvm.ptr>)
+  // CHECK: omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+  omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
 }
 
 // CHECK-LABEL: func @wsloop_reduction
@@ -4052,8 +4052,8 @@ func.func @omp_target_update_map_iterated(%lb : index, %ub : index, %step : inde
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
 
-  // CHECK: omp.target_update map_entries(%[[MAP]], %[[IT]] : !llvm.ptr, !omp.iterated<!llvm.ptr>)
-  omp.target_update map_entries(%map, %it : !llvm.ptr, !omp.iterated<!llvm.ptr>)
+  // CHECK: omp.target_update map_entries(%[[MAP]] : !llvm.ptr) map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+  omp.target_update map_entries(%map : !llvm.ptr) map_iterated(%it : !omp.iterated<!llvm.ptr>)
   return
 }
 
@@ -4070,8 +4070,8 @@ func.func @omp_target_enter_data_map_iterated(%lb : index, %ub : index, %step : 
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
 
-  // CHECK: omp.target_enter_data map_entries(%[[IT]] : !omp.iterated<!llvm.ptr>)
-  omp.target_enter_data map_entries(%it : !omp.iterated<!llvm.ptr>) {}
+  // CHECK: omp.target_enter_data map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+  omp.target_enter_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
   return
 }
 
@@ -4088,8 +4088,8 @@ func.func @omp_target_exit_data_map_iterated(%lb : index, %ub : index, %step : i
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
 
-  // CHECK: omp.target_exit_data map_entries(%[[IT]] : !omp.iterated<!llvm.ptr>)
-  omp.target_exit_data map_entries(%it : !omp.iterated<!llvm.ptr>) {}
+  // CHECK: omp.target_exit_data map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+  omp.target_exit_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
   return
 }
 
@@ -4106,8 +4106,8 @@ func.func @omp_target_data_map_iterated(%lb : index, %ub : index, %step : index,
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
 
-  // CHECK: omp.target_data map_entries(%{{.*}}, %[[IT]] : !llvm.ptr, !omp.iterated<!llvm.ptr>)
-  omp.target_data map_entries(%map, %it : !llvm.ptr, !omp.iterated<!llvm.ptr>) {}
+  // CHECK: omp.target_data map_entries(%{{.*}} : !llvm.ptr) map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+  omp.target_data map_entries(%map : !llvm.ptr) map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
   return
 }
 
@@ -4125,11 +4125,11 @@ func.func @omp_target_map_iterated(%lb : index, %ub : index, %step : index,
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
 
-  // CHECK: omp.target map_entries(%[[MAP]] -> %{{.*}} : !llvm.ptr) {
+  // CHECK: omp.target map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] -> %{{.*}} : !llvm.ptr) {
   // CHECK:   omp.terminator
-  // CHECK: } map_iterated_entries(%[[IT]] : !omp.iterated<!llvm.ptr>)
-  omp.target map_entries(%map -> %arg0 : !llvm.ptr) {
+  // CHECK: }
+  omp.target map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
     omp.terminator
-  } map_iterated_entries(%it : !omp.iterated<!llvm.ptr>)
+  }
   return
 }

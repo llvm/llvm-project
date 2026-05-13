@@ -506,7 +506,7 @@ llvm.func @target_enter_data_map_iterator(%addr : !llvm.ptr) {
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_enter_data operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target_enter_data}}
-  omp.target_enter_data map_entries(%it : !omp.iterated<!llvm.ptr>) {}
+  omp.target_enter_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
   llvm.return
 }
 
@@ -522,7 +522,7 @@ llvm.func @target_exit_data_map_iterator(%addr : !llvm.ptr) {
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_exit_data operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target_exit_data}}
-  omp.target_exit_data map_entries(%it : !omp.iterated<!llvm.ptr>) {}
+  omp.target_exit_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
   llvm.return
 }
 
@@ -538,7 +538,7 @@ llvm.func @target_update_map_iterator(%addr : !llvm.ptr) {
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_update operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target_update}}
-  omp.target_update map_entries(%it : !omp.iterated<!llvm.ptr>)
+  omp.target_update map_iterated(%it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
 
@@ -554,7 +554,7 @@ llvm.func @target_data_map_iterator(%addr : !llvm.ptr) {
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_data operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target_data}}
-  omp.target_data map_entries(%it : !omp.iterated<!llvm.ptr>) {}
+  omp.target_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
   llvm.return
 }
 
@@ -571,9 +571,9 @@ llvm.func @target_map_iterator(%addr : !llvm.ptr) {
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target map_entries(%map -> %arg0 : !llvm.ptr) {
+  omp.target map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
     omp.terminator
-  } map_iterated_entries(%it : !omp.iterated<!llvm.ptr>)
+  }
   llvm.return
 }
 
@@ -590,7 +590,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
       omp.yield(%m : !llvm.ptr)
     } -> !omp.iterated<!llvm.ptr>
     // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.declare_mapper.info operation}}
-    omp.declare_mapper.info map_entries(%it : !omp.iterated<!llvm.ptr>)
+    omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
   }
 
   llvm.func @target_data_mapper_iterator(%addr : !llvm.ptr) {

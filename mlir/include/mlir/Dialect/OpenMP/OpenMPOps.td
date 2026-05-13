@@ -1657,13 +1657,13 @@ def TargetOp : OpenMP_Op<"target", traits = [
                        bool *hostEvalTripCount = nullptr);
   }] # clausesExtraClassDeclaration;
 
-  let assemblyFormat = clausesAssemblyFormat#[{
+  let assemblyFormat = clausesAssemblyFormat # [{
+    ( `map_iterated` `(` $map_iterated^ `:` type($map_iterated) `)` )?
     custom<TargetOpRegion>(
         $region, $has_device_addr_vars, type($has_device_addr_vars),
         $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
         type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
-        $map_vars, type($map_vars), $map_iterated, type($map_iterated),
-        $private_vars, type($private_vars),
+        $map_vars, type($map_vars), $private_vars, type($private_vars),
         $private_syms, $private_needs_barrier, $private_maps) attr-dict
   }];
 
@@ -2134,6 +2134,9 @@ def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info",
     This Op is used to capture the map information related to it's
     parent DeclareMapperOp.
   }] # clausesDescription;
+
+  let builders = [OpBuilder<(
+      ins CArg<"const DeclareMapperInfoOperands &">:$clauses)>];
 
   let extraClassDeclaration = [{
     // Override BlockArgOpenMPOpInterface method because `map` clauses have no

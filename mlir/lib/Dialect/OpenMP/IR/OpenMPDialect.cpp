@@ -1310,8 +1310,6 @@ static ParseResult parseTargetOpRegion(
     DenseBoolArrayAttr &inReductionByref, ArrayAttr &inReductionSyms,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapVars,
     SmallVectorImpl<Type> &mapTypes,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapIterated,
-    SmallVectorImpl<Type> &mapIteratedTypes,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
     UnitAttr &privateNeedsBarrier, DenseI64ArrayAttr &privateMaps) {
@@ -1324,25 +1322,7 @@ static ParseResult parseTargetOpRegion(
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier, &privateMaps);
 
-  if (parseBlockArgRegion(parser, region, args))
-    return failure();
-
-  // Parse optional map_iterated_entries (not block args).
-  if (succeeded(parser.parseOptionalKeyword("map_iterated_entries"))) {
-    if (parser.parseLParen() || parser.parseCommaSeparatedList([&]() {
-          OpAsmParser::UnresolvedOperand operand;
-          Type ty;
-          if (parser.parseOperand(operand) || parser.parseColonType(ty))
-            return failure();
-          mapIterated.push_back(operand);
-          mapIteratedTypes.push_back(ty);
-          return success();
-        }) ||
-        parser.parseRParen())
-      return failure();
-  }
-
-  return success();
+  return parseBlockArgRegion(parser, region, args);
 }
 
 static ParseResult parseInReductionPrivateRegion(
@@ -1595,9 +1575,8 @@ static void printTargetOpRegion(
     ValueRange hostEvalVars, TypeRange hostEvalTypes,
     ValueRange inReductionVars, TypeRange inReductionTypes,
     DenseBoolArrayAttr inReductionByref, ArrayAttr inReductionSyms,
-    ValueRange mapVars, TypeRange mapTypes, ValueRange mapIterated,
-    TypeRange mapIteratedTypes, ValueRange privateVars, TypeRange privateTypes,
-    ArrayAttr privateSyms, UnitAttr privateNeedsBarrier,
+    ValueRange mapVars, TypeRange mapTypes, ValueRange privateVars,
+    TypeRange privateTypes, ArrayAttr privateSyms, UnitAttr privateNeedsBarrier,
     DenseI64ArrayAttr privateMaps) {
   AllRegionPrintArgs args;
   args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
@@ -1608,17 +1587,6 @@ static void printTargetOpRegion(
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier, privateMaps);
   printBlockArgRegion(p, op, region, args);
-
-  // Print map_iterated_entries if present (not block args).
-  if (!mapIterated.empty()) {
-    p << " map_iterated_entries(";
-    llvm::interleaveComma(llvm::zip(mapIterated, mapIteratedTypes), p,
-                          [&](auto t) {
-                            auto [val, ty] = t;
-                            p << val << " : " << ty;
-                          });
-    p << ")";
-  }
 }
 
 static void printInReductionPrivateRegion(
@@ -2256,56 +2224,6 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
   }
 }
 
-/// map-entry-list ::= map-entry
-///                  | map-entry-list `,` map-entry
-/// map-entry ::= ssa-id `:` type
-///             | ssa-id `:` iterated-type
-static ParseResult
-parseMapEntryList(OpAsmParser &parser,
-                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapVars,
-                  SmallVectorImpl<Type> &mapVarTypes,
-                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapIterated,
-                  SmallVectorImpl<Type> &mapIteratedTypes) {
-  // Parse all operands first, then all types in grouped format:
-  //   %v1, %v2 : type1, type2
-  SmallVector<OpAsmParser::UnresolvedOperand> operands;
-  SmallVector<Type> types;
-  if (parser.parseOperandList(operands) || parser.parseColonTypeList(types))
-    return failure();
-  if (operands.size() != types.size())
-    return parser.emitError(parser.getNameLoc(),
-                            "expected same number of operands and types");
-  // Split iterator handles from regular map locators.
-  for (unsigned i = 0, e = operands.size(); i < e; ++i) {
-    if (llvm::isa<mlir::omp::IteratedType>(types[i])) {
-      mapIterated.push_back(operands[i]);
-      mapIteratedTypes.push_back(types[i]);
-    } else {
-      mapVars.push_back(operands[i]);
-      mapVarTypes.push_back(types[i]);
-    }
-  }
-  return success();
-}
-
-/// Print map_entries list with both plain and iterated entries.
-static void printMapEntryList(OpAsmPrinter &p, Operation *op,
-                              OperandRange mapVars, TypeRange mapVarTypes,
-                              OperandRange mapIterated,
-                              TypeRange mapIteratedTypes) {
-  // Print all operands, then all types in grouped format:
-  //   %v1, %v2 : type1, type2
-  llvm::interleaveComma(mapVars, p, [&](Value v) { p << v; });
-  if (!mapVars.empty() && !mapIterated.empty())
-    p << ", ";
-  llvm::interleaveComma(mapIterated, p, [&](Value v) { p << v; });
-  p << " : ";
-  llvm::interleaveComma(mapVarTypes, p, [&](Type t) { p << t; });
-  if (!mapVarTypes.empty() && !mapIteratedTypes.empty())
-    p << ", ";
-  llvm::interleaveComma(mapIteratedTypes, p, [&](Type t) { p << t; });
-}
-
 static ParseResult parseMembersIndex(OpAsmParser &parser,
                                      ArrayAttr &membersIdx) {
   SmallVector<Attribute> values, memberIdxs;
@@ -2426,10 +2344,9 @@ static LogicalResult verifyMapInfoForMapClause(
     }
 
     if (!to && !from && !attach) {
-      return emitError(
-          op->getLoc(),
-          "at least one of to or from or attach map types must be "
-          "specified, other map types are not permitted");
+      return emitError(op->getLoc(),
+                       "at least one of to or from or attach map types must be "
+                       "specified, other map types are not permitted");
     }
 
     auto updateVar = mapInfoOp.getVarPtr();
@@ -3555,6 +3472,12 @@ LogicalResult DistributeOp::verifyRegions() {
 //===----------------------------------------------------------------------===//
 // DeclareMapperOp / DeclareMapperInfoOp
 //===----------------------------------------------------------------------===//
+
+void DeclareMapperInfoOp::build(OpBuilder &builder, OperationState &state,
+                                const DeclareMapperInfoOperands &clauses) {
+  DeclareMapperInfoOp::build(builder, state, clauses.mapVars,
+                             clauses.mapIterated);
+}
 
 LogicalResult DeclareMapperInfoOp::verify() {
   return verifyMapClause(*this, getMapVars(), getMapIterated());

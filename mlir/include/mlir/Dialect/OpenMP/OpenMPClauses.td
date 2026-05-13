@@ -910,9 +910,8 @@ class OpenMP_MapClauseSkip<
   // define entry block arguments. Otherwise, it must be printed and parsed
   // together with the corresponding region.
   let optAssemblyFormat = [{
-    `map_entries` `(`
-      custom<MapEntryList>($map_vars, type($map_vars),
-                           $map_iterated, type($map_iterated)) `)`
+    `map_entries` `(` $map_vars `:` type($map_vars) `)` |
+    `map_iterated` `(` $map_iterated `:` type($map_iterated) `)`
   }];
 
   let description = [{

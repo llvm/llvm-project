@@ -292,9 +292,9 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
       captureKind, declareOp.getType(0),
       /*partialMap=*/true);
 
-  clauseMapVars.emplace_back(mapOp);
-  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseMapVars,
-      /*map_iterated=*/{});
+  mlir::omp::DeclareMapperInfoOperands clauseOps;
+  clauseOps.mapVars.emplace_back(mapOp);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps);
   return mlir::FlatSymbolRefAttr::get(firOpBuilder.getContext(), mapperNameStr);
 }
 } // namespace Fortran::utils::openmp
