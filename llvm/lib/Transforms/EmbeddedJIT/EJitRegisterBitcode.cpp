@@ -77,8 +77,11 @@ static void computeTransitiveClosure(
 /// Run a lightweight optimization pipeline on the extracted bitcode module
 /// to reduce JIT compilation pressure. InstCombine folds constant chains,
 /// Mem2Reg promotes allocas, and SimplifyCFG cleans up dead branches.
+#ifdef NDEBUG
+// Release build: run pre-optimization on extracted bitcode to reduce
+// JIT compilation pressure. (Debug/shared builds skip this due to
+// cyclic link dependency: LLVMPasses <-> LLVMEmbeddedJIT.)
 static void preOptimizeBitcode(Module &M) {
-  // Analysis managers registered once per module
   PassBuilder PB;
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -90,14 +93,11 @@ static void preOptimizeBitcode(Module &M) {
   PB.registerModuleAnalyses(MAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  // Step 1: AlwaysInline — expand alwaysinline callees at AOT time.
   {
     ModulePassManager MPM;
     MPM.addPass(AlwaysInlinerPass());
     MPM.run(M, MAM);
   }
-
-  // Step 2: Mem2Reg — promote allocas to SSA.
   {
     FunctionPassManager FPM;
     FPM.addPass(PromotePass());
@@ -105,8 +105,6 @@ static void preOptimizeBitcode(Module &M) {
       if (!F.isDeclaration())
         FPM.run(F, FAM);
   }
-
-  // Step 3: InstCombine — fold expanded chains.
   {
     FunctionPassManager FPM;
     FPM.addPass(InstCombinePass());
@@ -114,8 +112,11 @@ static void preOptimizeBitcode(Module &M) {
       if (!F.isDeclaration())
         FPM.run(F, FAM);
   }
-
 }
+#else
+// Debug/shared build: skip pre-optimization. Same passes run at JIT time.
+static void preOptimizeBitcode(Module &) {}
+#endif
 
 static std::string extractAndSerialize(Module &M,
     const SetVector<Function *> &Funcs,
