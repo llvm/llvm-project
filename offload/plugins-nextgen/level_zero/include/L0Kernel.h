@@ -60,25 +60,11 @@ struct KernelPropertiesTy {
   uint32_t NumKernelArgs = 0;
   std::unique_ptr<uint32_t[]> ArgSizes;
 
-  /// Cached input parameters used in the previous launch.
-  int32_t NumTeams = -1;
-  int32_t ThreadLimit = -1;
-
   /// Cached parameters used in the previous launch.
   ze_kernel_indirect_access_flags_t IndirectAccessFlags =
       std::numeric_limits<decltype(IndirectAccessFlags)>::max();
-  uint32_t GroupSizes[3] = {0, 0, 0};
-  ze_group_count_t GroupCounts{0, 0, 0};
 
   std::mutex Mtx;
-
-  /// Check if we can reuse group parameters.
-  bool reuseGroupParams(const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
-                        uint32_t *GroupSizesOut, L0LaunchEnvTy &KEnv) const;
-
-  /// Update cached group parameters.
-  void cacheGroupParams(const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
-                        const uint32_t *GroupSizesIn, L0LaunchEnvTy &KEnv);
 };
 
 struct L0LaunchEnvTy {
@@ -101,10 +87,6 @@ class L0KernelTy : public GenericKernelTy {
   ze_kernel_handle_t zeKernel;
   // Kernel Properties.
   mutable KernelPropertiesTy Properties;
-
-  void decideKernelGroupArguments(L0DeviceTy &Device, uint32_t NumTeams,
-                                  uint32_t ThreadLimit, uint32_t *GroupSizes,
-                                  L0LaunchEnvTy &KEnv) const;
 
   Error buildKernel(L0ProgramTy &Program);
   Error readKernelProperties(L0ProgramTy &Program);
@@ -143,10 +125,6 @@ public:
   }
 
   ze_kernel_handle_t getZeKernel() const { return zeKernel; }
-
-  Error getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
-                       int32_t ThreadLimit, uint32_t *GroupSizes,
-                       L0LaunchEnvTy &KEnv) const;
 };
 
 } // namespace llvm::omp::target::plugin
