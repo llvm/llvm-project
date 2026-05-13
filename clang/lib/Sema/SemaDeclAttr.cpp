@@ -4402,40 +4402,48 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Context, AL, EncodingIndices.data(), EncodingIndices.size()));
 }
 
+static StringRef getLifetimeCaptureBySpecialEntity(const ParsedAttr &AL) {
+  switch (AL.getSemanticSpelling()) {
+  case LifetimeCaptureByAttr::GNU_lifetime_capture_by_this:
+  case LifetimeCaptureByAttr::CXX11_clang_lifetime_capture_by_this:
+    return "this";
+  case LifetimeCaptureByAttr::GNU_lifetime_capture_by_global:
+  case LifetimeCaptureByAttr::CXX11_clang_lifetime_capture_by_global:
+    return "global";
+  case LifetimeCaptureByAttr::GNU_lifetime_capture_by_unknown:
+  case LifetimeCaptureByAttr::CXX11_clang_lifetime_capture_by_unknown:
+    return "unknown";
+  default:
+    return "";
+  }
+}
+
 LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
                                                         StringRef ParamName) {
-  StringRef AttrName = AL.getAttrName()->getName();
-  StringRef SpecialEntity;
-  if (AttrName == "lifetime_capture_by_this")
-    SpecialEntity = "this";
-  else if (AttrName == "lifetime_capture_by_global")
-    SpecialEntity = "global";
-  else if (AttrName == "lifetime_capture_by_unknown")
-    SpecialEntity = "unknown";
-  bool IsStandaloneSpecial = !SpecialEntity.empty();
+  StringRef SpecialEntity = getLifetimeCaptureBySpecialEntity(AL);
 
-  if (IsStandaloneSpecial && AL.getNumArgs() != 0) {
+  if (!SpecialEntity.empty() && AL.getNumArgs() != 0) {
     Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 0;
     return nullptr;
   }
 
   // Atleast one capture by is required.
-  if (!IsStandaloneSpecial && AL.getNumArgs() == 0) {
+  if (SpecialEntity.empty() && AL.getNumArgs() == 0) {
     Diag(AL.getLoc(), diag::err_capture_by_attribute_no_entity)
         << AL.getRange();
     return nullptr;
   }
-  unsigned N = IsStandaloneSpecial ? 1 : AL.getNumArgs();
+  unsigned N = SpecialEntity.empty() ? AL.getNumArgs() : 1;
   auto ParamIdents =
       MutableArrayRef<IdentifierInfo *>(new (Context) IdentifierInfo *[N], N);
   auto ParamLocs =
       MutableArrayRef<SourceLocation>(new (Context) SourceLocation[N], N);
-  if (IsStandaloneSpecial) {
+  if (!SpecialEntity.empty()) {
     ParamIdents[0] = &Context.Idents.get(SpecialEntity);
     ParamLocs[0] = AL.getRange().getEnd();
-    SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::Invalid);
-    auto *CapturedBy = LifetimeCaptureByAttr::Create(
-        Context, FakeParamIndices.data(), N, IsStandaloneSpecial, AL);
+    int FakeParamIndices[] = {LifetimeCaptureByAttr::Invalid};
+    auto *CapturedBy =
+        LifetimeCaptureByAttr::Create(Context, FakeParamIndices, 1, AL);
     CapturedBy->setArgs(ParamIdents, ParamLocs);
     return CapturedBy;
   }
@@ -4474,8 +4482,8 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
   if (!IsValid)
     return nullptr;
   SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::Invalid);
-  auto *CapturedBy = LifetimeCaptureByAttr::Create(
-      Context, FakeParamIndices.data(), N, IsStandaloneSpecial, AL);
+  auto *CapturedBy =
+      LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N, AL);
   CapturedBy->setArgs(ParamIdents, ParamLocs);
   return CapturedBy;
 }
@@ -4534,7 +4542,7 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
         auto Loc = CapturedBy->getArgLocs()[I];
         if (!HasImplicitThisParam && Name == "this") {
           unsigned DiagID =
-              CapturedBy->getIsStandaloneSpecial()
+              CapturedBy->isStandaloneSpecial()
                   ? diag::err_capture_by_this_attr_without_implicit_this
                   : diag::err_capture_by_implicit_this_not_available;
           Diag(Loc, DiagID) << Loc;
@@ -4544,7 +4552,7 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
         continue;
       }
       if ((Name == "unknown" || Name == "global") &&
-          !CapturedBy->getIsStandaloneSpecial())
+          !CapturedBy->isStandaloneSpecial())
         DisallowReservedParams(Name);
       CapturedBy->setParamIdx(I, It->second);
     }

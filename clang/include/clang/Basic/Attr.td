@@ -2141,9 +2141,14 @@ def LifetimeCaptureBy : DeclOrTypeAttr {
                    Clang<"lifetime_capture_by_global", 0>,
                    Clang<"lifetime_capture_by_unknown", 0>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
-  let Args = [VariadicParamOrParamIdxArgument<"Params">,
-              DefaultBoolArgument<"IsStandaloneSpecial", /*default=*/0,
-                                  /*fake=*/1>];
+  let Args = [VariadicParamOrParamIdxArgument<"Params">];
+  let Accessors = [Accessor<"isThis", [Clang<"lifetime_capture_by_this", 0>]>,
+                   Accessor<"isGlobal", [Clang<"lifetime_capture_by_global", 0>]>,
+                   Accessor<"isUnknown", [Clang<"lifetime_capture_by_unknown", 0>]>,
+                   Accessor<"isStandaloneSpecial",
+                            [Clang<"lifetime_capture_by_this", 0>,
+                             Clang<"lifetime_capture_by_global", 0>,
+                             Clang<"lifetime_capture_by_unknown", 0>]>];
   let Documentation = [LifetimeCaptureByDocs];
   let AdditionalMembers = [{
 private:

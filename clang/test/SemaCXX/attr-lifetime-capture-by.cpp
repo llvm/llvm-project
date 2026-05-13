@@ -22,6 +22,7 @@ void nonMember(
                                                 x7)]], // expected-error {{'lifetime_capture_by' argument references itself}}
     const int &x8 [[clang::lifetime_capture_by(global)]], // expected-warning {{'lifetime_capture_by(global)' is deprecated; use 'lifetime_capture_by_global' instead}}
     const int &x9 [[clang::lifetime_capture_by(unknown)]], // expected-warning {{'lifetime_capture_by(unknown)' is deprecated; use 'lifetime_capture_by_unknown' instead}}
+    const int &x10 [[clang::lifetime_capture_by_global(s)]], // expected-error {{'clang::lifetime_capture_by_global' attribute takes no arguments}}
     const int &test_memory_leak[[clang::lifetime_capture_by(x1,x2, x3, x4, x5, x6, x7, x8, x9)]],
     const S& u
   )

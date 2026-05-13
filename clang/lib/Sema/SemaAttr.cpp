@@ -332,8 +332,8 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
       if (PVD->getType()->isReferenceType() &&
           lifetimes::isGslPointerType(PVD->getType().getNonReferenceType())) {
         int CaptureByThis[] = {LifetimeCaptureByAttr::This};
-        PVD->addAttr(LifetimeCaptureByAttr::CreateImplicit(
-            Context, CaptureByThis, 1, /*IsStandaloneSpecial=*/false));
+        PVD->addAttr(
+            LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
       }
     }
   };
