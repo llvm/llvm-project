@@ -70,6 +70,15 @@ dumpDXContainer(MemoryBufferRef Source) {
               DXIL->second, DXIL->second + DXIL->first.Bitcode.Size)};
       break;
     }
+    case dxbc::PartType::ILDN: {
+      std::optional<DXContainer::ILDNData> DebugName = Container.getDebugName();
+      assert(DebugName && "Since we are iterating and found a ILDN part, this "
+                          "should never not have a value");
+      NewPart.DebugName = DXContainerYAML::DebugName{
+          DebugName->first.Flags, DebugName->first.NameLength,
+          DebugName->second.str()};
+      break;
+    }
     case dxbc::PartType::SFI0: {
       std::optional<uint64_t> Flags = Container.getShaderFeatureFlags();
       // Omit the flags in the YAML if they are missing or zero.
