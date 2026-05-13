@@ -178,9 +178,8 @@ TEST(MemoryCUFTest, CUFDataTransferDescDescLeadingSlice) {
     }
   }
 
-  std::int32_t *devStorage{
-      static_cast<std::int32_t *>(RTNAME(CUFMemAlloc)(sizeof(hostStorage),
-          kMemTypeDevice, __FILE__, __LINE__))};
+  std::int32_t *devStorage{static_cast<std::int32_t *>(RTNAME(CUFMemAlloc)(
+      sizeof(hostStorage), kMemTypeDevice, __FILE__, __LINE__))};
   ASSERT_NE(devStorage, nullptr);
   cudaMemset(devStorage, 0xff, sizeof(hostStorage));
 

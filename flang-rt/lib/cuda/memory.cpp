@@ -30,9 +30,9 @@ struct Memcpy2DLayout {
   std::size_t pitchBytes;
 };
 
-// Get cudaMemcpy2D layout information if both descriptors have equal element
-// counts and regular positive-stride layouts. Returns a nullopt otherwise to
-// fallback on the runtime assignment.
+// Get cudaMemcpy2D layout information for a descriptor that can be represented
+// as fixed-pitch rows of widthBytes. Returns nullopt for layouts that need the
+// general runtime assignment path.
 static std::optional<Memcpy2DLayout> GetMemcpy2DLayout(
     const Descriptor &desc, std::size_t widthBytes) {
   if (desc.rank() == 0 || desc.Elements() == 0) {
@@ -84,6 +84,8 @@ static std::optional<Memcpy2DLayout> GetMemcpy2DLayout(
   return layout;
 }
 
+// Collect candidate row widths from the descriptor's leading contiguous
+// dimensions, starting with one element.
 static int GetContiguousLeadingBytes(
     const Descriptor &desc, std::size_t *bytes) {
   const auto elemBytes = desc.ElementBytes();
@@ -109,6 +111,8 @@ static int GetContiguousLeadingBytes(
   return count;
 }
 
+// Choose the largest row width that is contiguous in both descriptors, so
+// leading-dimension slices can be copied as wider cudaMemcpy2D rows.
 static std::size_t GetMemcpy2DWidthBytes(
     const Descriptor &dst, const Descriptor &src) {
   std::size_t dstBytes[maxRank + 1];
@@ -125,6 +129,8 @@ static std::size_t GetMemcpy2DWidthBytes(
   return 0;
 }
 
+// Try to use cudaMemcpy2D for a memcpy of two descriptors, returning true if
+// successful. False if the 2D data transfer is not possible.
 static bool DoMemcpy2D(const Descriptor &dst, const Descriptor &src,
     cudaMemcpyKind kind, const char *sourceFile, int sourceLine) {
   if (dst.ElementBytes() != src.ElementBytes() ||
