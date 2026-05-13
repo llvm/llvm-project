@@ -268,15 +268,16 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
 
 def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
   let description = [{
-    Describes an operation that produces a transparent alias of a memory slot
-    reached through one of its operands. Mem2Reg walks chains of such aliases
-    to project slot values across them, allowing the load/store operations on
-    the alias to be promoted as if they accessed the underlying slot directly.
+    Describes an operation that creates a transparent alias of a memory slot
+    accessed through one of its operands. Mem2Reg traverses chains of these
+    aliases to project slot values across them. This allows load and store
+    operations on the alias to be promoted as if they were directly accessing
+    the underlying slot.
 
-    An alias is still a blocking use of the underlying slot pointer, so the
-    operation must also implement `PromotableOpInterface` or
-    `PromotableMemOpInterface` so that mem2reg can remove the alias once the
-    slot has been promoted.
+    Since an alias remains a blocking use of the underlying slot pointer, the
+    operation must also implement either `PromotableOpInterface` or
+    `PromotableMemOpInterface`. This ensures that mem2reg can remove the alias
+    after the slot has been promoted.
   }];
   let cppNamespace = "::mlir";
 
@@ -291,17 +292,17 @@ def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
 
   let methods = [
     InterfaceMethod<[{
-        Describes this operation as a transparent view of a memory slot
-        reached through one of its operands.
+        Returns a view of a parent memory slot (accessed via
+        `aliasedSlotPointerOperand`) as a new memory slot. The pointer to this
+        new slot must be a result of the current operation, and its element
+        type may differ from the parent's.
 
-        The returned `view.ptr` must be a result of this operation;
-        `view.elemType` is the type at which `view.ptr` aliases the slot
-        pointed to by `slotPointerOperand`, possibly different from the
-        underlying slot's element type.
-
-        Returning a view here implies the two projection methods below can
-        bridge between the slot pointer operand's element type and
-        `view.elemType`; if no such projection exists, return `std::nullopt`.
+        Providing a view requires implementing the two projection methods below
+        to bridge values between the parent's and the new slot's element types.
+        One method extracts the new slot's value from the parent's value, while
+        the other reconstructs the parent's value after a store to the new slot.
+        If these projections cannot be performed, this method should return
+        `std::nullopt`.
 
         No IR mutation is allowed in this method.
       }],
@@ -310,10 +311,11 @@ def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
       (ins)
     >,
     InterfaceMethod<[{
-        Builds a value of `targetType` from `value`, projecting the slot
-        pointer operand's element type down to the view's element type.
-        Mem2Reg calls this when a load on the view needs the slot value
-        materialized at the view's element type.
+        Constructs a value of `targetType` from the given `value`, projecting
+        the element type of the slot pointer operand down to the element type
+        of the view. Mem2Reg invokes this method when a load operation on the
+        view requires the slot value to be materialized with the view's
+        element type.
       }],
       "::mlir::Value",
       "projectSlotValueToViewValue",
@@ -327,15 +329,16 @@ def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Builds a value of `targetType` from `viewValue`, projecting the
-        view's element type back to the slot pointer operand's element type.
-        Mem2Reg calls this when a store on the view needs to update the
-        slot value at the slot pointer operand's element type.
+        Constructs a value of `targetType` from the given `viewValue`, projecting
+        the view's element type back to the element type of the slot pointer
+        operand. Mem2Reg invokes this method when a store operation on the view
+        needs to update the slot value using the element type of the slot
+        pointer operand.
 
-        `reachingDef` is the slot value at `targetType` immediately before
-        the store. For full views it can be ignored; for partial subviews
-        (e.g. one field of an aggregate) the result is built by inserting
-        `viewValue` into `reachingDef`.
+        The `reachingDef` parameter represents the slot value at `targetType`
+        immediately preceding the store. While it can be ignored for full views,
+        for partial subviews (such as a single field of an aggregate), the
+        result is constructed by inserting `viewValue` into `reachingDef`.
       }],
       "::mlir::Value",
       "projectViewValueToSlotValue",

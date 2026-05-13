@@ -57,7 +57,7 @@ static bool walkPromotableSlotViewChain(Value value, const MemorySlot &rootSlot,
       aliasElemType = info->view.elemType;
     chainOut.push_back(ViewStep{aliaser, /*inputElemType=*/Type{},
                                 /*outputElemType=*/info->view.elemType});
-    current = info->slotPointerOperand;
+    current = info->aliasedSlotPointerOperand;
   }
 
   // Fill in each step's `inputElemType` from the previous step's output
@@ -116,8 +116,8 @@ Value mlir::convertViewValueToSlotValue(Value viewValue, Value viewPtr,
 
   // Project `rootReachingDef` down to each step's input level so the
   // per-step projector can use it (needed for partial subviews; full views
-  // ignore it). The chain is leaf-first, so `chain.back()` is root-most
-  // (its input is `rootSlot.elemType`) and `chain.front()` is leaf-most.
+  // ignore it). The chain is leaf-first, so `chain.back()` is the root slot
+  // and `chain.front()` is the leaf view.
   SmallVector<Value> perStepReachingDef(chain.size());
   Value current = rootReachingDef;
   for (int i = static_cast<int>(chain.size()) - 1; i >= 0; --i) {

@@ -30,13 +30,13 @@ struct DestructurableMemorySlot : public MemorySlot {
   DenseMap<Attribute, Type> subelementTypes;
 };
 
-/// Description of a memory slot view produced by a
-/// `PromotableAliaserInterface` operation: `slotPointerOperand` is the slot
-/// pointer viewed by the op, `view.ptr` is the result aliasing it, and
-/// `view.elemType` is the type at which `view.ptr` aliases the underlying
-/// slot.
+/// Represent a memory slot view produced by a `PromotableAliaserInterface`
+/// operation.
 struct PromotableSlotView {
-  Value slotPointerOperand;
+  /// The slot pointer operand that is aliased by the view.
+  Value aliasedSlotPointerOperand;
+  /// The MemorySlot created by the operation that aliases the operand
+  /// MemorySlot.
   MemorySlot view;
 };
 
@@ -56,39 +56,31 @@ enum class DeletionKind {
 
 namespace mlir {
 
-/// Returns true if `value` is `rootSlot.ptr` or a transitive view of it,
-/// following `PromotableAliaserInterface::getPromotableSlotView` chains. The
-/// element type at which `value` aliases the slot is written to
-/// `*outViewElemType` (equal to `rootSlot.elemType` when the chain is empty).
+/// Returns true if `value` is `rootSlot.ptr` or a transitive view of it.
+/// If so, writes the element type of the alias to `*outViewElemType` (which
+/// defaults to `rootSlot.elemType` for the root pointer).
 bool isPromotableSlotView(Value value, const MemorySlot &rootSlot,
                           Type *outViewElemType = nullptr);
 
-/// Returns a MemorySlot whose `ptr` is the operand of `op` that is a
-/// (possibly transitive) view of `rootSlot.ptr`, with `elemType` equal to
-/// the type at which that operand aliases the slot. Mem2Reg uses this to
-/// hand each `PromotableMemOpInterface` op a slot description tailored to
-/// its slot pointer operand. Returns `nullopt` if no operand is a view of
-/// `rootSlot`.
+/// Returns a `MemorySlot` representing the operand of `op` that is a view of
+/// `rootSlot.ptr`, tailored with the view's element type. Returns `nullopt`
+/// if no operand is a view of `rootSlot`.
 std::optional<MemorySlot> getOpViewSlot(Operation *op,
                                         const MemorySlot &rootSlot);
 
-/// Converts `slotValue` (typed at `rootSlot.elemType`) to the type at which
-/// `viewPtr` aliases `rootSlot`, by chaining
-/// `PromotableAliaserInterface::projectSlotValueToViewValue` calls along
-/// the view chain root-to-leaf. Returns a null value if any step's projector
-/// fails.
+/// Projects `slotValue` (of `rootSlot.elemType`) down to the element type of
+/// `viewPtr` by chaining `projectSlotValueToViewValue` calls along the alias
+/// chain, from the original slot down to the view pointer. Returns a null
+/// value if any projection step fails.
 Value convertSlotValueToViewValue(Value slotValue, Value viewPtr,
                                   const MemorySlot &rootSlot,
                                   OpBuilder &builder);
 
-/// Inverse of `convertSlotValueToViewValue`: converts `viewValue` (typed at
-/// `viewPtr`'s view element type) back to `rootSlot.elemType` along the
-/// chain leaf-to-root, by chaining
-/// `PromotableAliaserInterface::projectViewValueToSlotValue` calls.
-/// `rootReachingDef` is the current slot value at `rootSlot.elemType`. It
-/// is projected down at each intermediate level to provide the
-/// reaching definition the per-step projector needs (e.g. for a partial
-/// subview that inserts `viewValue` into `reachingDef`).
+/// Projects `viewValue` back up to `rootSlot.elemType` by chaining
+/// `projectViewValueToSlotValue` calls backwards along the alias chain, from
+/// the view pointer up to the original slot. `rootReachingDef` provides the
+/// current slot value, which is projected down at each step to supply the
+/// required reaching definition (e.g., for partial subviews).
 Value convertViewValueToSlotValue(Value viewValue, Value viewPtr,
                                   Value rootReachingDef,
                                   const MemorySlot &rootSlot,
