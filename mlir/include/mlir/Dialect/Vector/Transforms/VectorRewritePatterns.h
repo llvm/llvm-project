@@ -20,6 +20,7 @@
 
 namespace mlir {
 class ConversionTarget;
+class DataFlowSolver;
 class RewritePatternSet;
 class TypeConverter;
 
@@ -394,15 +395,20 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
 /// Appends patterns for emulating vector operations over narrow types with ops
 /// over wider types. The `disableAtomicRMW` indicates whether to use a normal
 /// read-modify-write sequence instead of using `memref.generic_atomic_rmw` to
-/// perform subbyte storing. When `assumeAligned` is true, store offsets are
-/// assumed to be aligned to container element boundaries, so a store whose
-/// source vector fills whole container elements is emitted as a simple
-/// bitcast + store without checking the offset. Stores that are not divisible
-/// in size are rejected.
+/// perform subbyte storing. When `solver` is non-null, store offsets are
+/// queried against the `IntegerDivisibilityLattice` to decide whether to take
+/// the aligned fast path (bitcast + store) or fall through to the partial-
+/// store path:
+///   - If the lattice proves the dynamic offset is a multiple of the number
+///     of emulated elements per container element, take the fast path.
+///   - If the lattice proves it is *not* such a multiple, fall through to the
+///     partial-store path which is sound for any offset.
+///   - If the lattice is opaque or `solver` is null, take the fast path (this
+///     matches the legacy `assumeAligned=true` behavior).
 void populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns, bool disableAtomicRMW = false,
-    bool assumeAligned = false);
+    DataFlowSolver *solver = nullptr);
 
 /// Populates patterns for both MeMref flattening and Vector narrow type
 /// emulation.

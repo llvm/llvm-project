@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/DataFlow/IntegerDivisibilityAnalysis.h"
+#include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/NarrowTypeEmulationConverter.h"
@@ -33,16 +35,18 @@ using namespace mlir;
 
 /// Converts a memref::ReinterpretCastOp to the converted type. The result
 /// memref is linearized to a rank-1 byte view (or rank-0 if the source is
-/// rank-0). When `assumeAligned` is true, dynamic offsets are accepted under
-/// the alignment contract that the caller guarantees the offset is a multiple
-/// of `dstBits / srcBits`; statically-provable misalignment is rejected.
-/// When `assumeAligned` is false, dynamic offsets are rejected outright since
-/// divisibility cannot be proven from the IR alone.
+/// rank-0). When `solver` is non-null, the dynamic offset (if any) is checked
+/// against the `IntegerDivisibilityLattice`: if the lattice proves the offset
+/// is not a multiple of `dstBits / srcBits`, the pattern rejects via
+/// `notifyMatchFailure`; otherwise (proven multiple or opaque) the pattern
+/// proceeds. When `solver` is null the pattern always proceeds and relies on
+/// the caller's alignment contract. Statically-provable misalignment of the
+/// folded offset is still rejected below.
 static LogicalResult
 convertCastingOp(ConversionPatternRewriter &rewriter,
                  memref::ReinterpretCastOp::Adaptor adaptor,
                  memref::ReinterpretCastOp op, MemRefType newTy,
-                 bool assumeAligned) {
+                 DataFlowSolver *solver) {
   if (newTy == op.getType()) {
     return rewriter.notifyMatchFailure(
         op, "result type was not converted by narrow-type emulation");
@@ -74,14 +78,26 @@ convertCastingOp(ConversionPatternRewriter &rewriter,
         op, "result memref is not row-major contiguous");
   }
 
-  // Reject dynamic offsets unless the caller has opted into the alignment
-  // contract via `assumeAligned`. Without it we cannot prove the offset is a
-  // multiple of `dstBits / srcBits`.
-  if (!assumeAligned &&
-      llvm::is_contained(op.getStaticOffsets(), ShapedType::kDynamic)) {
-    return rewriter.notifyMatchFailure(
-        op, "dynamic offsets require assumeAligned=true to ensure the offset "
-            "is a multiple of dstBits / srcBits");
+  // For a dynamic offset, consult the divisibility lattice if a solver was
+  // provided. Three-state behavior:
+  //   - lattice proves `udiv % elementsPerByte == 0` (or is opaque): proceed.
+  //   - lattice proves `udiv > 1 && udiv % elementsPerByte != 0`: reject.
+  //   - solver == nullptr: proceed (legacy `assumeAligned=true` behavior).
+  int64_t elementsPerByte = dstBits / srcBits;
+  ArrayRef<int64_t> staticOffsets = op.getStaticOffsets();
+  if (solver && !staticOffsets.empty() &&
+      staticOffsets[0] == ShapedType::kDynamic) {
+    Value dynOffset = op.getOffsets()[0];
+    const dataflow::IntegerDivisibilityLattice *lattice =
+        solver->lookupState<dataflow::IntegerDivisibilityLattice>(dynOffset);
+    if (lattice && !lattice->getValue().isUninitialized()) {
+      uint64_t udiv = lattice->getValue().getValue().udiv();
+      if (udiv > 1 && udiv % elementsPerByte != 0) {
+        return rewriter.notifyMatchFailure(
+            op, "dynamic offset is provably not a multiple of "
+                "`dstBits / srcBits`");
+      }
+    }
   }
 
   Location loc = op.getLoc();
@@ -447,15 +463,15 @@ struct ConvertMemRefMemorySpaceCast final
 // ConvertMemRefReinterpretCast
 //===----------------------------------------------------------------------===//
 
-/// Forwards to `convertCastingOp`, which enforces all preconditions.
-/// `assumeAligned` is propagated from the populate entry point and controls
-/// acceptance of dynamic offsets.
+/// Forwards to `convertCastingOp`, which enforces all preconditions. The
+/// optional `solver` is forwarded so that dynamic offsets can be checked
+/// against the divisibility lattice.
 struct ConvertMemRefReinterpretCast final
     : OpConversionPattern<memref::ReinterpretCastOp> {
   ConvertMemRefReinterpretCast(const TypeConverter &typeConverter,
-                               MLIRContext *context, bool assumeAligned)
+                               MLIRContext *context, DataFlowSolver *solver)
       : OpConversionPattern<memref::ReinterpretCastOp>(typeConverter, context),
-        assumeAligned(assumeAligned) {}
+        solver(solver) {}
 
   LogicalResult
   matchAndRewrite(memref::ReinterpretCastOp op, OpAdaptor adaptor,
@@ -468,11 +484,11 @@ struct ConvertMemRefReinterpretCast final
           llvm::formatv("failed to convert memref type: {0}", op.getType()));
     }
 
-    return convertCastingOp(rewriter, adaptor, op, newTy, assumeAligned);
+    return convertCastingOp(rewriter, adaptor, op, newTy, solver);
   }
 
 private:
-  bool assumeAligned;
+  DataFlowSolver *solver;
 };
 
 //===----------------------------------------------------------------------===//
@@ -574,17 +590,18 @@ private:
 //===----------------------------------------------------------------------===//
 
 /// Emulating narrow ints on subview have limited support, supporting only
-/// static sizes and stride of 1. When `assumeAligned` is true, dynamic
-/// offsets are accepted under the alignment contract that the caller
-/// guarantees the offset is a multiple of `dstBits / srcBits`. Without that
-/// opt-in, dynamic offsets are rejected. Ideally, the subview should be
-/// folded away before running narrow type emulation, and this pattern should
-/// only run for cases that can't be folded.
+/// static sizes and stride of 1. When `solver` is non-null, each dynamic
+/// offset is queried against the `IntegerDivisibilityLattice`; if any dynamic
+/// offset is provably not a multiple of `dstBits / srcBits` the pattern is
+/// rejected. When `solver` is null, dynamic offsets are accepted under the
+/// caller's alignment contract. Ideally, the subview should be folded away
+/// before running narrow type emulation, and this pattern should only run
+/// for cases that can't be folded.
 struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
   ConvertMemRefSubview(const TypeConverter &typeConverter, MLIRContext *context,
-                       bool assumeAligned)
+                       DataFlowSolver *solver)
       : OpConversionPattern<memref::SubViewOp>(typeConverter, context),
-        assumeAligned(assumeAligned) {}
+        solver(solver) {}
 
   LogicalResult
   matchAndRewrite(memref::SubViewOp subViewOp, OpAdaptor adaptor,
@@ -627,14 +644,32 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
                                          "dynamic size is not supported");
     }
 
-    // Reject dynamic offsets unless the caller has opted into the alignment
-    // contract via `assumeAligned`.
-    if (!assumeAligned && llvm::is_contained(subViewOp.getStaticOffsets(),
-                                             ShapedType::kDynamic)) {
-      return rewriter.notifyMatchFailure(
-          subViewOp,
-          "dynamic offsets require assumeAligned=true to ensure the offset "
-          "is a multiple of dstBits / srcBits");
+    // For each dynamic offset, consult the divisibility lattice (if a solver
+    // was provided). Three-state behavior:
+    //   - lattice proves `udiv % elementsPerByte == 0` (or is opaque): proceed.
+    //   - lattice proves `udiv > 1 && udiv % elementsPerByte != 0`: reject.
+    //   - solver == nullptr: proceed (legacy `assumeAligned=true` behavior).
+    int64_t elementsPerByte = dstBits / srcBits;
+    if (solver) {
+      ArrayRef<int64_t> staticOffsets = subViewOp.getStaticOffsets();
+      ValueRange dynOffsets = subViewOp.getOffsets();
+      unsigned dynIdx = 0;
+      for (int64_t staticOff : staticOffsets) {
+        if (staticOff != ShapedType::kDynamic)
+          continue;
+        Value dynOffset = dynOffsets[dynIdx++];
+        const dataflow::IntegerDivisibilityLattice *lattice =
+            solver->lookupState<dataflow::IntegerDivisibilityLattice>(
+                dynOffset);
+        if (lattice && !lattice->getValue().isUninitialized()) {
+          uint64_t udiv = lattice->getValue().getValue().udiv();
+          if (udiv > 1 && udiv % elementsPerByte != 0) {
+            return rewriter.notifyMatchFailure(
+                subViewOp, "dynamic offset is provably not a multiple of "
+                           "`dstBits / srcBits`");
+          }
+        }
+      }
     }
 
     // Transform the offsets, sizes and strides according to the emulation.
@@ -666,7 +701,7 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
   }
 
 private:
-  bool assumeAligned;
+  DataFlowSolver *solver;
 };
 
 //===----------------------------------------------------------------------===//
@@ -726,7 +761,8 @@ struct ConvertMemRefExpandShape final
 
 void memref::populateMemRefNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns, bool disableAtomicRMW, bool assumeAligned) {
+    RewritePatternSet &patterns, bool disableAtomicRMW,
+    DataFlowSolver *solver) {
 
   // Populate `memref.*` conversion patterns.
   patterns
@@ -737,7 +773,7 @@ void memref::populateMemRefNarrowTypeEmulationPatterns(
            ConvertMemRefAssumeAlignment, ConvertMemRefMemorySpaceCast>(
           typeConverter, patterns.getContext());
   patterns.add<ConvertMemRefSubview, ConvertMemRefReinterpretCast>(
-      typeConverter, patterns.getContext(), assumeAligned);
+      typeConverter, patterns.getContext(), solver);
   patterns.insert<ConvertMemrefStore>(typeConverter, patterns.getContext(),
                                       disableAtomicRMW);
   memref::populateResolveExtractStridedMetadataPatterns(patterns);
@@ -763,53 +799,52 @@ static SmallVector<int64_t> getLinearizedShape(MemRefType ty, int srcBits,
 
 void memref::populateMemRefNarrowTypeEmulationConversions(
     arith::NarrowTypeEmulationConverter &typeConverter) {
-  typeConverter.addConversion(
-      [&typeConverter](MemRefType ty) -> std::optional<Type> {
-        Type elementType = ty.getElementType();
-        if (!elementType.isIntOrFloat())
-          return ty;
+  typeConverter.addConversion([&typeConverter](
+                                  MemRefType ty) -> std::optional<Type> {
+    Type elementType = ty.getElementType();
+    if (!elementType.isIntOrFloat())
+      return ty;
 
-        unsigned width = elementType.getIntOrFloatBitWidth();
-        unsigned loadStoreWidth = typeConverter.getLoadStoreBitwidth();
-        if (width >= loadStoreWidth)
-          return ty;
+    unsigned width = elementType.getIntOrFloatBitWidth();
+    unsigned loadStoreWidth = typeConverter.getLoadStoreBitwidth();
+    if (width >= loadStoreWidth)
+      return ty;
 
-        // Currently only handle innermost stride being 1, checking
-        SmallVector<int64_t> strides;
-        int64_t offset;
-        if (failed(ty.getStridesAndOffset(strides, offset)))
-          return nullptr;
-        if (!strides.empty() && strides.back() != 1)
-          return nullptr;
+    // Currently only handle innermost stride being 1, checking
+    SmallVector<int64_t> strides;
+    int64_t offset;
+    if (failed(ty.getStridesAndOffset(strides, offset)))
+      return nullptr;
+    if (!strides.empty() && strides.back() != 1)
+      return nullptr;
 
-        auto newElemTy = IntegerType::get(
-            ty.getContext(), loadStoreWidth,
-            elementType.isInteger()
-                ? cast<IntegerType>(elementType).getSignedness()
-                : IntegerType::SignednessSemantics::Signless);
-        if (!newElemTy)
-          return nullptr;
+    auto newElemTy = IntegerType::get(
+        ty.getContext(), loadStoreWidth,
+        elementType.isInteger() ? cast<IntegerType>(elementType).getSignedness()
+                                : IntegerType::SignednessSemantics::Signless);
+    if (!newElemTy)
+      return nullptr;
 
-        StridedLayoutAttr layoutAttr;
-        // If the offset is 0, we do not need a strided layout as the stride is
-        // 1, so we only use the strided layout if the offset is not 0.
-        if (offset != 0) {
-          if (offset == ShapedType::kDynamic) {
-            layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
-                                                ArrayRef<int64_t>{1});
-          } else {
-            // Check if the number of bytes are a multiple of the loadStoreWidth
-            // and if so, divide it by the loadStoreWidth to get the offset.
-            if ((offset * width) % loadStoreWidth != 0)
-              return std::nullopt;
-            offset = (offset * width) / loadStoreWidth;
+    StridedLayoutAttr layoutAttr;
+    // If the offset is 0, we do not need a strided layout as the stride is
+    // 1, so we only use the strided layout if the offset is not 0.
+    if (offset != 0) {
+      if (offset == ShapedType::kDynamic) {
+        layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
+                                            ArrayRef<int64_t>{1});
+      } else {
+        // Check if the number of bytes are a multiple of the loadStoreWidth
+        // and if so, divide it by the loadStoreWidth to get the offset.
+        if ((offset * width) % loadStoreWidth != 0)
+          return std::nullopt;
+        offset = (offset * width) / loadStoreWidth;
 
-            layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
-                                                ArrayRef<int64_t>{1});
-          }
-        }
+        layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
+                                            ArrayRef<int64_t>{1});
+      }
+    }
 
-        return MemRefType::get(getLinearizedShape(ty, width, loadStoreWidth),
-                               newElemTy, layoutAttr, ty.getMemorySpace());
-      });
+    return MemRefType::get(getLinearizedShape(ty, width, loadStoreWidth),
+                           newElemTy, layoutAttr, ty.getMemorySpace());
+  });
 }
