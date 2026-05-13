@@ -11,11 +11,12 @@
 
 #include "hdr/fcntl_macros.h" // For open flags
 #include "hdr/sys_auxv_macros.h" // For AT_ macros
+#include "hdr/sys_mman_macros.h" // For mmap flags
+#include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/callonce.h"
 
-#include <linux/mman.h>   // For mmap flags
 #include <linux/param.h>  // For EXEC_PAGESIZE
 #include <linux/prctl.h>  // For prctl
 #include <sys/syscall.h>  // For syscall numbers
@@ -82,20 +83,15 @@ LIBC_INLINE void Vector::initialize_unsafe(const Entry *auxv) {
 [[gnu::cold]]
 LIBC_INLINE void Vector::fallback_initialize_unsync() {
   constexpr size_t AUXV_MMAP_SIZE = FALLBACK_AUXV_ENTRIES * sizeof(Entry);
-#ifdef SYS_mmap2
-  constexpr int MMAP_SYSNO = SYS_mmap2;
-#else
-  constexpr int MMAP_SYSNO = SYS_mmap;
-#endif
-  long mmap_ret = syscall_impl<long>(MMAP_SYSNO, nullptr, AUXV_MMAP_SIZE,
-                                     PROT_READ | PROT_WRITE,
-                                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  ErrorOr<void *> mmap_ret =
+      linux_syscalls::mmap(nullptr, AUXV_MMAP_SIZE, PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   // We do not proceed if mmap fails.
-  if (!linux_utils::is_valid_mmap(mmap_ret))
+  if (!mmap_ret.has_value())
     return;
 
   // Initialize the auxv array with AT_NULL entries.
-  Entry *vector = reinterpret_cast<Entry *>(mmap_ret);
+  Entry *vector = static_cast<Entry *>(mmap_ret.value());
   for (size_t i = 0; i < FALLBACK_AUXV_ENTRIES; ++i) {
     vector[i].type = AT_NULL;
     vector[i].val = AT_NULL;
