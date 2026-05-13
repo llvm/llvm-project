@@ -2621,6 +2621,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         if (getCodeGenOpts().AssumeSaneOperatorNew &&
             (Kind == OO_New || Kind == OO_Array_New)) {
           RetAttrs.addAttribute(llvm::Attribute::NoAlias);
+          // FIXME: inaccessiblemem could cause issues if LTO makes the
+          // previously inaccessible memory accessible after linking.
           FuncAttrs.addMemoryAttr(
               llvm::MemoryEffects::inaccessibleOrErrnoMemOnly(
                   llvm::ModRefInfo::ModRef, llvm::ModRefInfo::Mod));
