@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s cppcoreguidelines-use-enum-class %t -- \
-// RUN: -config="{CheckOptions: {cppcoreguidelines-use-enum-class.IgnoreMacros: false}}" --
+// RUN: -config="{CheckOptions: {cppcoreguidelines-use-enum-class.IgnoreMacros: false}}"
 // RUN: %check_clang_tidy -std=c++11-or-later %s -check-suffixes=IGNORE-MACROS cppcoreguidelines-use-enum-class %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-use-enum-class.IgnoreMacros: true}}"
 
