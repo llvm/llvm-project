@@ -359,10 +359,6 @@ public:
 
   bool hasAtomicCSub() const { return HasGFX10_BEncoding; }
 
-  bool hasMTBUFInsts() const { return !hasGFX1250Insts(); }
-
-  bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
-
   bool hasExportInsts() const {
     return !hasGFX940Insts() && !hasGFX1250Insts();
   }
