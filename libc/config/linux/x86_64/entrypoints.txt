@@ -408,7 +408,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.setsid
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
-    libc.src.unistd.sysconf
     libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
@@ -1486,6 +1485,16 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # link.h entrypoints
     libc.src.link.dl_iterate_phdr
+  )
+endif()
+
+# Entrypoints with known-incomplete implementations. Only enabled when
+# LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS is ON.
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # unistd.h - incomplete: only handles _SC_PAGESIZE, _SC_NPROCESSORS_CONF,
+    # and _SC_NPROCESSORS_ONLN; returns EINVAL for all other _SC_* values.
+    libc.src.unistd.sysconf
   )
 endif()
 

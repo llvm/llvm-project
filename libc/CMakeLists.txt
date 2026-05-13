@@ -140,6 +140,14 @@ option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc"
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
+# Enable entrypoints that have known-incomplete implementations but are useful
+# for testing or development purposes. These are NOT suitable for production use
+# and are disabled by default. Examples include functions that only handle a
+# subset of their specified inputs (e.g. sysconf, which only handles a few
+# _SC_* constants). Enable this flag if you need to build with these entrypoints
+# for testing or if you are actively working on their implementation.
+option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
+  "Enable entrypoints with known-incomplete implementations (off by default)" OFF)
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
