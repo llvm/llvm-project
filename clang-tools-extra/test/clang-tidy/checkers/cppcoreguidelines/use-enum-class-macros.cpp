@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s cppcoreguidelines-use-enum-class %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-use-enum-class.IgnoreMacros: false}}" --
 // RUN: %check_clang_tidy -std=c++11-or-later %s -check-suffixes=IGNORE-MACROS cppcoreguidelines-use-enum-class %t -- \
-// RUN: -config="{CheckOptions: {cppcoreguidelines-use-enum-class.IgnoreMacros: true}}" --
+// RUN: -config="{CheckOptions: {cppcoreguidelines-use-enum-class.IgnoreMacros: true}}"
 
 enum UnscopedRegular { A, B, C };
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: enum 'UnscopedRegular' is unscoped, use 'enum class' instead
