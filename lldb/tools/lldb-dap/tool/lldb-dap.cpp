@@ -196,7 +196,8 @@ static llvm::Error LaunchClient(const llvm::opt::InputArgList &args) {
 ///       "user": number, "executable": string }, ... ]
 ///
 /// Fields other than `pid` are omitted if not available.
-static llvm::Error ListProcesses(const llvm::opt::InputArgList &args) {
+static llvm::Expected<llvm::json::Array>
+GetProcessArray(const llvm::opt::InputArgList &args) {
   llvm::StringRef platform_name = args.getLastArgValue(OPT_platform_name);
   llvm::StringRef platform_url = args.getLastArgValue(OPT_platform_url);
 
@@ -274,8 +275,7 @@ static llvm::Error ListProcesses(const llvm::opt::InputArgList &args) {
     array.push_back(std::move(entry));
   }
 
-  llvm::outs() << llvm::formatv("{0}\n", llvm::json::Value(std::move(array)));
-  return llvm::Error::success();
+  return array;
 }
 
 llvm::Error
@@ -802,11 +802,15 @@ int main(int argc, char *argv[]) {
   }
 
   if (input_args.hasArg(OPT_list_processes)) {
-    if (llvm::Error error = ListProcesses(input_args)) {
-      llvm::WithColor::error() << llvm::toString(std::move(error)) << '\n';
+    llvm::Expected<llvm::json::Array> arr_or_err = GetProcessArray(input_args);
+    if (!arr_or_err) {
+      llvm::WithColor::error()
+          << llvm::toString(arr_or_err.takeError()) << '\n';
       return EXIT_FAILURE;
     }
-    return EXIT_SUCCESS;
+    llvm::outs() << llvm::formatv("{0}\n",
+                                  llvm::json::Value(std::move(*arr_or_err)));
+    return EXIT_FAILURE;
   }
 
   ReplMode default_repl_mode = ReplMode::Auto;
