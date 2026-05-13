@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 /**
  * Context captured at debug-configuration-resolution time so that the
  * `lldb-dap.pickProcess` command (invoked later by VS Code's variable
- * substitution for `${command:PickProcess}`) can target the correct lldb-dap
+ * substitution for `${command:pickProcess}`) can target the correct lldb-dap
  * binary and platform.
  *
  * VS Code's command substitution does not pass the in-flight debug
@@ -11,7 +11,7 @@ import * as vscode from "vscode";
  * is:
  *
  *   1. `resolveDebugConfiguration(folder, config)`   → `set(...)`
- *   2. VS Code expands `${command:PickProcess}`      → `take()`
+ *   2. VS Code expands `${command:pickProcess}`      → `take()`
  *   3. `resolveDebugConfigurationWithSubstitutedVariables(...)`
  *
  * This is a single-slot singleton: we rely on VS Code serializing debug

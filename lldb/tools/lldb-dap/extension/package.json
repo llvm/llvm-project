@@ -416,7 +416,6 @@
           "swift"
         ],
         "variables": {
-          "PickProcess": "lldb-dap.pickProcess",
           "pickProcess": "lldb-dap.pickProcess"
         },
         "configurationAttributes": {
@@ -757,7 +756,6 @@
                   },
                   {
                     "enum": [
-                      "${command:PickProcess}",
                       "${command:pickProcess}"
                     ],
                     "description": "Use the LLDB DAP process picker to select a process to attach to."
@@ -987,7 +985,7 @@
               "type": "lldb-dap",
               "request": "attach",
               "name": "${1:Attach}",
-              "pid": "^\"\\${command:PickProcess}\""
+              "pid": "^\"\\${command:pickProcess}\""
             }
           },
           {

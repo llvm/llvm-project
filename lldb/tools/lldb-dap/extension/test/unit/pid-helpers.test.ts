@@ -40,16 +40,19 @@ suite("convertToInteger", function () {
 });
 
 suite("pidMayInvokePicker", function () {
-  test("matches both case spellings of the picker variable", function () {
-    assert.strictEqual(pidMayInvokePicker("${command:PickProcess}"), true);
+  test("matches ${command:pickProcess}", function () {
     assert.strictEqual(pidMayInvokePicker("${command:pickProcess}"), true);
   });
 
   test("matches when the variable is embedded in a larger string", function () {
     assert.strictEqual(
-      pidMayInvokePicker("prefix-${command:PickProcess}-suffix"),
+      pidMayInvokePicker("prefix-${command:pickProcess}-suffix"),
       true,
     );
+  });
+
+  test("is case-sensitive", function () {
+    assert.strictEqual(pidMayInvokePicker("${command:PickProcess}"), false);
   });
 
   test("does not match unrelated variables", function () {

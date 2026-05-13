@@ -168,7 +168,7 @@ export class LLDBDapConfigurationProvider
     }
 
     // Stash the in-flight configuration so that a subsequent
-    // ${command:PickProcess} substitution can target the right lldb-dap
+    // ${command:pickProcess} substitution can target the right lldb-dap
     // binary and platform. See pick-process-context.ts for details.
     if (pidMayInvokePicker(debugConfiguration.pid)) {
       setPickProcessContext({ folder, debugConfiguration });
@@ -184,7 +184,7 @@ export class LLDBDapConfigurationProvider
   ): Promise<vscode.DebugConfiguration | null | undefined> {
     try {
       // Convert "pid" to a number if it came in as a string (e.g. via the
-      // ${command:PickProcess} variable substitution).
+      // ${command:pickProcess} variable substitution).
       if ("pid" in debugConfiguration) {
         const pid = convertToInteger(debugConfiguration.pid);
         if (pid === undefined) {

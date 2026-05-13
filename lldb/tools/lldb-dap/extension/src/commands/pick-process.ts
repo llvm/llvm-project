@@ -45,7 +45,7 @@ interface ProcessQuickPick extends vscode.QuickPickItem {
 
 /**
  * Prompts the user to select a running process, enumerated by `lldb-dap
- * --list-processes`. When invoked as `${command:PickProcess}` from a
+ * --list-processes`. When invoked as `${command:pickProcess}` from a
  * launch.json the matching {@link PickProcessContext} stashed by
  * `resolveDebugConfiguration` lets us target the right lldb-dap binary and
  * platform (for remote attach).
@@ -86,8 +86,20 @@ export async function pickProcess(
     platformUrl: ctx?.debugConfiguration.platformUrl,
   });
 
+  let processes: Process[];
+  try {
+    processes = await tree.listAllProcesses();
+  } catch (error) {
+    logger.error(error as Error);
+    await vscode.window.showErrorMessage(
+      "Failed to list processes from lldb-dap.",
+      { modal: true, detail: describeExecError(error) },
+    );
+    return undefined;
+  }
+
   const selectedProcess = await vscode.window.showQuickPick<ProcessQuickPick>(
-    tree.listAllProcesses().then(toQuickPickItems),
+    toQuickPickItems(processes),
     {
       placeHolder: "Select a process to attach the debugger to",
       matchOnDescription: true,
@@ -95,6 +107,23 @@ export async function pickProcess(
     },
   );
   return selectedProcess?.processId.toString();
+}
+
+/**
+ * Extracts a user-visible message from an error raised by `execFile`.
+ * Node attaches `stderr` to the rejection; prefer that over the generic
+ * "Command failed" message so e.g. a bad --platform-url surfaces instead of
+ * silently failing.
+ */
+function describeExecError(error: unknown): string {
+  const stderr = (error as { stderr?: unknown } | undefined)?.stderr;
+  if (typeof stderr === "string" && stderr.trim() !== "") {
+    return stderr.trim();
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
 }
 
 export function toQuickPickItems(processes: Process[]): ProcessQuickPick[] {
