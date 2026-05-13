@@ -1926,7 +1926,10 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     auto cirTy = mlir::cast<cir::DataMemberType>(cgm.convertType(destType));
 
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
-    return builder.getDataMemberAttr(cirTy, fieldDecl->getFieldIndex());
+    const ASTContext &astContext = cgm.getASTContext();
+    CharUnits offset =
+        astContext.toCharUnitsFromBits(astContext.getFieldOffset(fieldDecl));
+    return builder.getDataMemberAttr(cirTy, offset);
   }
   case APValue::LValue:
     return ConstantLValueEmitter(*this, value, destType).tryEmit();

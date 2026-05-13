@@ -54,7 +54,6 @@ public:
   /// type. The returned constant is represented as an attribute as well.
   virtual mlir::TypedAttr
   lowerDataMemberConstant(cir::DataMemberAttr attr,
-                          const mlir::DataLayout &layout,
                           const mlir::TypeConverter &typeConverter) const = 0;
 
   /// Lower the given member function pointer constant to a constant of the ABI

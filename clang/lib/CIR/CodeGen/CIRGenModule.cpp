@@ -2194,8 +2194,10 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   // Otherwise, a member data pointer.
   auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
   const auto *fieldDecl = cast<FieldDecl>(decl);
-  return cir::ConstantOp::create(
-      builder, loc, builder.getDataMemberAttr(ty, fieldDecl->getFieldIndex()));
+  CharUnits offset =
+      astContext.toCharUnitsFromBits(astContext.getFieldOffset(fieldDecl));
+  return cir::ConstantOp::create(builder, loc,
+                                 builder.getDataMemberAttr(ty, offset));
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {

@@ -19,7 +19,7 @@ int Point::*ptr_none = nullptr;
 // OGCG: @ptr_none = global i64 -1
 
 int Point::*pt_member = &Point::z;
-// CIR-BEFORE: cir.global external @pt_member = #cir.data_member<2> : !cir.data_member<!s32i in !rec_Point>
+// CIR-BEFORE: cir.global external @pt_member = #cir.data_member<offset = 8> : !cir.data_member<!s32i in !rec_Point>
 // CIR-AFTER: cir.global external @pt_member = #cir.int<8> : !s64i
 // LLVM: @pt_member = global i64 8
 // OGCG: @pt_member = global i64 8
@@ -54,7 +54,7 @@ int Point::*pt_member_nested_region = test1();
 
 // CIR-BEFORE: cir.func {{.*}} @_Z5test1v() -> !cir.data_member<!s32i in !rec_Point> attributes {{{.*}}nothrow} {
 // CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>, ["__retval"]
-// CIR-BEFORE:   %[[MEMBER:.*]] = cir.const #cir.data_member<1> : !cir.data_member<!s32i in !rec_Point>
+// CIR-BEFORE:   %[[MEMBER:.*]] = cir.const #cir.data_member<offset = 4> : !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.store %[[MEMBER]], %[[RETVAL]] : !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>, !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.data_member<!s32i in !rec_Point>

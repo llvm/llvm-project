@@ -398,8 +398,7 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
                                          mlir::Attribute initVal) {
   if (mlir::isa<cir::DataMemberType>(ty)) {
     auto dataMemberVal = mlir::cast_if_present<cir::DataMemberAttr>(initVal);
-    return lowerModule->getCXXABI().lowerDataMemberConstant(dataMemberVal,
-                                                            layout, tc);
+    return lowerModule->getCXXABI().lowerDataMemberConstant(dataMemberVal, tc);
   }
   if (mlir::isa<cir::MethodType>(ty)) {
     auto methodVal = mlir::cast_if_present<cir::MethodAttr>(initVal);

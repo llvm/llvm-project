@@ -538,20 +538,22 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
   let parameters = (ins AttributeSelfTypeParameter<
                             "", "cir::DataMemberType">:$type,
                         OptionalParameter<
-                            "std::optional<unsigned>">:$member_index);
+                            "std::optional<int64_t>">:$offset);
   let description = [{
     A data member attribute is a literal attribute that represents a constant
     pointer-to-data-member value.
 
-    The `member_index` parameter represents the index of the pointed-to member
-    within its containing record. It is an optional parameter; lack of this
-    parameter indicates a null pointer-to-data-member value.
+    The `offset` parameter is the byte offset of the pointed-to member from
+    the start of its containing record.  It is an optional parameter; lack
+    of this parameter indicates a null pointer-to-data-member value.
 
     Example:
     ```
-    #ptr = #cir.data_member<1> : !cir.data_member<!s32i in !rec_22Point22>
+    #ptr = #cir.data_member<offset = 4>
+        : !cir.data_member<!s32i in !rec_22Point22>
 
-    #null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_22Point22>
+    #null = #cir.data_member<null>
+        : !cir.data_member<!s32i in !rec_22Point22>
     ```
   }];
 
@@ -560,8 +562,8 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
       return $_get(type.getContext(), type, std::nullopt);
     }]>,
     AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
-                                        "unsigned":$member_index), [{
-      return $_get(type.getContext(), type, member_index);
+                                        "int64_t":$offset), [{
+      return $_get(type.getContext(), type, offset);
     }]>,
   ];
 
@@ -571,12 +573,12 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
   let genVerifyDecl = 1;
 
   let assemblyFormat = [{
-    `<` ($member_index^):(`null`)? `>`
+    `<` (`offset` `=` $offset^):(`null`)? `>`
   }];
 
   let extraClassDeclaration = [{
     bool isNullPtr() const {
-      return !getMemberIndex().has_value();
+      return !getOffset().has_value();
     }
   }];
 }

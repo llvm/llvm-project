@@ -269,8 +269,8 @@ public:
   // ---------------------------
 
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
-                                        unsigned memberIndex) {
-    return cir::DataMemberAttr::get(ty, memberIndex);
+                                        clang::CharUnits offset) {
+    return cir::DataMemberAttr::get(ty, offset.getQuantity());
   }
 
   cir::DataMemberAttr getNullDataMemberAttr(cir::DataMemberType ty) {
