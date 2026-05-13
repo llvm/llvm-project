@@ -3341,11 +3341,7 @@ void JoinVals::pruneValues(JoinVals &Other,
             OtherV.ErasableImplicitDef && OtherV.Resolution == CR_Keep;
         // If the source is an erasable IMPLICIT_DEF, the pruned endpoint is
         // the next def boundary, not a real use — discard it.
-        if (EraseImpDef) {
-          LIS->pruneValue(LR, Def, nullptr);
-        } else {
-          LIS->pruneValue(LR, Def, &EndPoints);
-        }
+        LIS->pruneValue(LR, Def, EraseImpDef ? nullptr : &EndPoints);
         LLVM_DEBUG(dbgs() << "\t\tpruned all of " << printReg(Reg) << " at "
                           << Def << ": " << LR << '\n');
       }
