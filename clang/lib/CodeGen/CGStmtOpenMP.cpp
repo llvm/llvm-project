@@ -736,18 +736,6 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     if (ArgType->isVariablyModifiedType())
       ArgType = getCanonicalParamType(Ctx, ArgType);
 
-    // Set the IPD QualType for kernel args to be in device AS (1)
-    if (CapVar && CGM.getLangOpts().OpenMPIsTargetDevice && argsNeedAddrSpace &&
-        (Ctx.getTargetInfo().getTriple().isAMDGCN())) {
-      const clang::Type *ty = ArgType.getTypePtr();
-      if (ty->isAnyPointerType() || ty->isReferenceType()) {
-        clang::LangAS LLVM_AS = CapVar->getType().getAddressSpace();
-        if (LLVM_AS == LangAS::Default)
-          LLVM_AS = LangAS::cuda_device;
-        ArgType = Ctx.getAddrSpaceQualType(ArgType, LLVM_AS);
-      }
-    }
-
     VarDecl *Arg;
     if (CapVar && (CapVar->getTLSKind() != clang::VarDecl::TLS_None)) {
       Arg = ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr, FD->getLocation(),
