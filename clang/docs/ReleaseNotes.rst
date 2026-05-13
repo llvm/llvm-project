@@ -546,6 +546,7 @@ Bug Fixes in This Version
 - Fixed a crash when parsing invalid ``static_assert`` declarations with string-literal messages (#GH187690).
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
+- Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
