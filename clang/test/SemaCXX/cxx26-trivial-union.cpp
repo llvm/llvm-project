@@ -250,4 +250,14 @@ constexpr int constexpr_test() {
   return u.k;
 }
 static_assert(constexpr_test() == 42);
+
+// ===== Test 23: Ambiguous default ctor => dtor deleted =====
+// Multiple constructors with default arguments make default-initialization
+// ambiguous, so dtor is deleted per [class.dtor]p7 bullet 1.
+union U23 { // cxx26-note {{ambiguous}}
+  U23(int = 0);
+  U23(double = 0.0);
+  NonTrivialDtor nt;
+};
+U23 u23(42); // cxx26-error {{deleted}}
 #endif
