@@ -598,7 +598,8 @@ add_libc_test(
   SRCS
     fputws_test.cpp
   DEPENDS
-    libc.include.stdio
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
     libc.src.stdio.fopen
     libc.src.stdio.fclose
     libc.src.stdio.fread
