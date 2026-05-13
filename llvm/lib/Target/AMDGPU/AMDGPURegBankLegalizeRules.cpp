@@ -16,7 +16,6 @@
 #include "AMDGPURegBankLegalizeRules.h"
 #include "AMDGPUInstrInfo.h"
 #include "GCNSubtarget.h"
-#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -2458,17 +2457,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr32}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr32}});
 
-  // Predicates to check if we want to use the VGPR form or the AGPR form
-  // for an MFMA / SMFMAC intrinsic on gfx90a+.
-  Predicate needAGPR([](const MachineInstr &MI) -> bool {
-    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    unsigned MinNumRegsRequired = DstSize / 32;
-    const SIMachineFunctionInfo *Info =
-        MI.getMF()->getInfo<SIMachineFunctionInfo>();
-    return Info->selectAGPRFormMFMA(MinNumRegsRequired);
-  });
-
   bool HasGFX90AInsts = ST->hasGFX90AInsts();
 
   // On gfx90a+ both AGPR-form and VGPR-form exists
@@ -2485,11 +2473,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivAnyTy},
             {{AgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy}}},
            !HasGFX90AInsts)
-      .Any({{{DivAnyTy}, !needAGPR},
-            {{VgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, VgprAnyTy}}},
-           HasGFX90AInsts)
-      .Any({{{DivAnyTy}, needAGPR},
-            {{AgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy}}},
+      .Any({{DivAnyTy},
+            {{VgprOrAgprAnyTy},
+             {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy}}},
            HasGFX90AInsts);
 
   // gfx90a+ only MFMAs
@@ -2504,10 +2490,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
        amdgcn_mfma_f32_16x16x32_fp8_fp8, amdgcn_mfma_f32_32x32x16_bf8_bf8,
        amdgcn_mfma_f32_32x32x16_bf8_fp8, amdgcn_mfma_f32_32x32x16_fp8_bf8,
        amdgcn_mfma_f32_32x32x16_fp8_fp8})
-      .Any({{{DivAnyTy}, !needAGPR},
-            {{VgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, VgprAnyTy}}})
-      .Any({{{DivAnyTy}, needAGPR},
-            {{AgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy}}});
+      .Any({{DivAnyTy},
+            {{VgprOrAgprAnyTy},
+             {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy}}});
 
   addRulesForIOpcs(
       {amdgcn_smfmac_f32_16x16x32_f16, amdgcn_smfmac_f32_32x32x16_f16,
@@ -2517,12 +2502,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
        amdgcn_smfmac_f32_16x16x64_fp8_bf8, amdgcn_smfmac_f32_16x16x64_fp8_fp8,
        amdgcn_smfmac_f32_32x32x32_bf8_bf8, amdgcn_smfmac_f32_32x32x32_bf8_fp8,
        amdgcn_smfmac_f32_32x32x32_fp8_bf8, amdgcn_smfmac_f32_32x32x32_fp8_fp8})
-      .Any(
-          {{{DivAnyTy}, !needAGPR},
-           {{VgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, VgprAnyTy, VgprAnyTy}}})
-      .Any({{{DivAnyTy}, needAGPR},
-            {{AgprAnyTy},
-             {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy, VgprAnyTy}}});
+      .Any({{DivAnyTy},
+            {{VgprOrAgprAnyTy},
+             {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy, VgprAnyTy}}});
 
   // WMMA/SWMMAC intrinsics: all register operands map to VGPR.
   addRulesForIOpcs(

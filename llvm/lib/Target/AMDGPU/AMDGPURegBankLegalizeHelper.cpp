@@ -1900,6 +1900,19 @@ bool RegBankLegalizeHelper::applyMappingDst(
         B.buildCopy(Reg, NewAgprDst);
       break;
     }
+    case VgprOrAgprAnyTy: {
+      const auto *Info = MF.getInfo<SIMachineFunctionInfo>();
+      const unsigned NumRegs = Ty.getSizeInBits() / 32;
+      const RegisterBank *DstRB =
+          Info->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
+      if (RB == DstRB)
+        break;
+      Register NewDst = MRI.createVirtualRegister({DstRB, Ty});
+      Op.setReg(NewDst);
+      if (!MRI.use_nodbg_empty(Reg))
+        B.buildCopy(Reg, NewDst);
+      break;
+    }
     // uniform in vcc/vgpr: scalars, vectors and B-types
     case UniInVcc: {
       assert(Ty == S1);
@@ -2115,6 +2128,15 @@ bool RegBankLegalizeHelper::applyMappingSrc(
         auto CopyToAgpr = B.buildCopy({AgprRB, Ty}, Reg);
         Op.setReg(CopyToAgpr.getReg(0));
       }
+      break;
+    }
+    case VgprOrAgprAnyTy: {
+      const auto *Info = MF.getInfo<SIMachineFunctionInfo>();
+      const unsigned NumRegs = Ty.getSizeInBits() / 32;
+      const RegisterBank *SrcRB =
+          Info->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
+      if (RB != SrcRB)
+        Op.setReg(B.buildCopy({SrcRB, Ty}, Reg).getReg(0));
       break;
     }
     // sgpr waterfall, scalars, and vectors
