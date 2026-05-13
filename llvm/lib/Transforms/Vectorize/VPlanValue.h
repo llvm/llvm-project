@@ -278,14 +278,11 @@ struct VPConstantInt : public VPIRValue {
 /// A symbolic live-in VPValue, used for values like vector trip count, VF, and
 /// VFxUF.
 struct VPSymbolicValue : public VPValue {
-  VPSymbolicValue(Type *Ty) : VPValue(VPVSymbolicSC, nullptr), Ty(Ty) {}
+  VPSymbolicValue() : VPValue(VPVSymbolicSC, nullptr) {}
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSymbolicSC;
   }
-
-  /// Returns the scalar type of this symbolic value.
-  Type *getType() const { return Ty; }
 
   /// Returns true if this symbolic value has been materialized.
   bool isMaterialized() const { return Materialized; }
@@ -297,9 +294,6 @@ struct VPSymbolicValue : public VPValue {
   }
 
 private:
-  /// The scalar type of this symbolic value.
-  Type *Ty;
-
   /// Track whether this symbolic value has been materialized (replaced).
   /// After materialization, accessing users should trigger an assertion.
   bool Materialized = false;

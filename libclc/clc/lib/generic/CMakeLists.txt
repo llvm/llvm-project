@@ -1,4 +1,5 @@
-libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
+libclc_configure_source_list(CLC_GENERIC_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}
   async/clc_prefetch.cl
   atomic/clc_atomic_compare_exchange.cl
   atomic/clc_atomic_dec.cl
@@ -208,7 +209,7 @@ libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
   workitem/clc_get_sub_group_size.cl
 )
 
-libclc_set_source_options(-fapprox-func
+libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
   math/clc_native_cos.cl
   math/clc_native_divide.cl
   math/clc_native_exp.cl
@@ -225,10 +226,8 @@ libclc_set_source_options(-fapprox-func
   math/clc_native_tan.cl
   math/clc_div_fast.cl
   math/clc_recip_fast.cl
-  math/clc_sqrt_fast.cl
-)
+  math/clc_sqrt_fast.cl)
 
-libclc_set_source_options(-cl-fp32-correctly-rounded-divide-sqrt
+libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -cl-fp32-correctly-rounded-divide-sqrt
   math/clc_div_cr.cl
-  math/clc_sqrt_cr.cl
-)
+  math/clc_sqrt_cr.cl)

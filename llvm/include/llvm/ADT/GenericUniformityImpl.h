@@ -1292,18 +1292,17 @@ GenericUniformityInfo<ContextT>::getFunction() const {
 /// A default-constructed instance (no analysis computed) reports everything
 /// as uniform, which is conservatively correct for non-divergent targets.
 template <typename ContextT>
-bool GenericUniformityInfo<ContextT>::isDivergentAtDef(ConstValueRefT V) const {
+bool GenericUniformityInfo<ContextT>::isDivergent(ConstValueRefT V) const {
   return DA && DA->isDivergent(V);
 }
 
 template <typename ContextT>
-bool GenericUniformityInfo<ContextT>::isDivergentAtDef(
-    const InstructionT *I) const {
+bool GenericUniformityInfo<ContextT>::isDivergent(const InstructionT *I) const {
   return DA && DA->isDivergent(*I);
 }
 
 template <typename ContextT>
-bool GenericUniformityInfo<ContextT>::isDivergentAtUse(const UseT &U) const {
+bool GenericUniformityInfo<ContextT>::isDivergentUse(const UseT &U) const {
   return DA && DA->isDivergentUse(U);
 }
 

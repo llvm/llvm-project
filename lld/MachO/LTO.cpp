@@ -278,8 +278,7 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
   }
 
   if (!config->thinLTOCacheDir.empty())
-    check(
-        pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy, files));
+    pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy, files);
 
   std::vector<ObjFile *> ret;
   for (unsigned i = 0; i < maxTasks; ++i) {

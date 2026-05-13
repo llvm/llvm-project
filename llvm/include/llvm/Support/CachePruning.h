@@ -70,10 +70,8 @@ struct CachePruningPolicy {
 LLVM_ABI Expected<CachePruningPolicy>
 parseCachePruningPolicy(StringRef PolicyStr);
 
-/// Perform pruning using the supplied policy, returns true if pruning
+/// Peform pruning using the supplied policy, returns true if pruning
 /// occurred, i.e. if Policy.Interval was expired.
-///
-/// On failure, it returns an Expected with the Error.
 ///
 /// Check whether cache pruning happens using the supplied policy, adds a
 /// ThinLTO warning if cache_size_bytes or cache_size_files is too small for the
@@ -83,7 +81,7 @@ parseCachePruningPolicy(StringRef PolicyStr);
 /// As a safeguard against data loss if the user specifies the wrong directory
 /// as their cache directory, this function will ignore files not matching the
 /// pattern "llvmcache-*".
-LLVM_ABI Expected<bool>
+LLVM_ABI bool
 pruneCache(StringRef Path, CachePruningPolicy Policy,
            const std::vector<std::unique_ptr<MemoryBuffer>> &Files = {});
 } // namespace llvm

@@ -1,13 +1,12 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
 ; GCN-LABEL: {{^}}load.f32.1d:
 ; GFX9: image_load v0, v0, s[0:7] dmask:0x1 unorm a16
 ; GFX10: image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
-; GFX12PLUS: image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D a16
+; GFX12: image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D a16
 define amdgpu_ps <4 x float> @load.f32.1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -18,7 +17,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.v2f32.1d:
 ; GFX9: image_load v[0:1], v0, s[0:7] dmask:0x3 unorm a16
 ; GFX10: image_load v[0:1], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm a16
-; GFX12PLUS: image_load v[0:1], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
+; GFX12: image_load v[0:1], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 define amdgpu_ps <4 x float> @load.v2f32.1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -29,7 +28,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.v3f32.1d:
 ; GFX9: image_load v[0:2], v0, s[0:7] dmask:0x7 unorm a16
 ; GFX10: image_load v[0:2], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm a16
-; GFX12PLUS: image_load v[0:2], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D a16
+; GFX12: image_load v[0:2], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D a16
 define amdgpu_ps <4 x float> @load.v3f32.1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -40,7 +39,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.v4f32.1d:
 ; GFX9: image_load v[0:3], v0, s[0:7] dmask:0xf unorm a16
 ; GFX10: image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm a16
-; GFX12PLUS: image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D a16
+; GFX12: image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 define amdgpu_ps <4 x float> @load.v4f32.1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -51,7 +50,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.f32.2d:
 ; GFX9: image_load v0, v0, s[0:7] dmask:0x1 unorm a16
 ; GFX10: image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm a16
-; GFX12PLUS: image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
+; GFX12: image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 define amdgpu_ps <4 x float> @load.f32.2d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -63,7 +62,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.v2f32.2d:
 ; GFX9: image_load v[0:1], v0, s[0:7] dmask:0x3 unorm a16
 ; GFX10: image_load v[0:1], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm a16
-; GFX12PLUS: image_load v[0:1], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D a16
+; GFX12: image_load v[0:1], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D a16
 define amdgpu_ps <4 x float> @load.v2f32.2d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -75,7 +74,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.v3f32.2d:
 ; GFX9: image_load v[0:2], v0, s[0:7] dmask:0x7 unorm a16
 ; GFX10: image_load v[0:2], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D unorm a16
-; GFX12PLUS: image_load v[0:2], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D a16
+; GFX12: image_load v[0:2], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D a16
 define amdgpu_ps <4 x float> @load.v3f32.2d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -87,7 +86,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.v4f32.2d:
 ; GFX9: image_load v[0:3], v0, s[0:7] dmask:0xf unorm a16
 ; GFX10: image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm a16
-; GFX12PLUS: image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX12: image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 define amdgpu_ps <4 x float> @load.v4f32.2d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -99,7 +98,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.f32.3d:
 ; GFX9: image_load v0, v[0:1], s[0:7] dmask:0x1 unorm a16
 ; GFX10: image_load v0, v[0:1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D unorm a16
-; GFX12PLUS: image_load v0, [v0, v1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D a16
+; GFX12: image_load v0, [v0, v1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D a16
 define amdgpu_ps <4 x float> @load.f32.3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_lo, <2 x i16> %coords_hi) {
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0
@@ -112,7 +111,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.v2f32.3d:
 ; GFX9: image_load v[0:1], v[0:1], s[0:7] dmask:0x3 unorm a16
 ; GFX10: image_load v[0:1], v[0:1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm a16
-; GFX12PLUS: image_load v[0:1], [v0, v1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+; GFX12: image_load v[0:1], [v0, v1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 define amdgpu_ps <4 x float> @load.v2f32.3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_lo, <2 x i16> %coords_hi) {
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0
@@ -125,7 +124,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.v3f32.3d:
 ; GFX9: image_load v[0:2], v[0:1], s[0:7] dmask:0x7 unorm a16
 ; GFX10: image_load v[0:2], v[0:1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_3D unorm a16
-; GFX12PLUS: image_load v[0:2], [v0, v1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_3D a16
+; GFX12: image_load v[0:2], [v0, v1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_3D a16
 define amdgpu_ps <4 x float> @load.v3f32.3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_lo, <2 x i16> %coords_hi) {
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0
@@ -138,7 +137,7 @@ main_body:
 ; GCN-LABEL: {{^}}load.v4f32.3d:
 ; GFX9: image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm a16
 ; GFX10: image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16
-; GFX12PLUS: image_load v[0:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D a16
+; GFX12: image_load v[0:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D a16
 define amdgpu_ps <4 x float> @load.v4f32.3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_lo, <2 x i16> %coords_hi) {
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0

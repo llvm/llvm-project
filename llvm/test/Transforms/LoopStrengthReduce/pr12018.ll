@@ -35,6 +35,4 @@ declare ptr @_ZN8nsTArray4Hdr2Ev()
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !0 = !DILocalVariable(scope: !1)
-!1 = distinct !DISubprogram(type: !3)
-!2 = !{null}
-!3 = !DISubroutineType(types: !2)
+!1 = distinct !DISubprogram()

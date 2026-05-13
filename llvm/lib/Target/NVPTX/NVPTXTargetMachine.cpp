@@ -291,8 +291,7 @@ NVPTXTargetMachine::getPredicatedAddrSpace(const Value *V) const {
 
 void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
-    // Disable scalar PRE due to Register Pressure increase
-    addPass(createGVNPass(/*ScalarPRE=*/false));
+    addPass(createGVNPass());
   else
     addPass(createEarlyCSEPass());
 }

@@ -11,6 +11,4 @@ define void @blah() !dbg !3 {
 !llvm.dbg.cu = !{!1}
 !1 = distinct !DICompileUnit(file: !2, language: DW_LANG_C99)
 !2 = !DIFile(filename: "file.c", directory: "/path/to/dir")
-!3 = distinct !DISubprogram(name: "blah", file: !1, unit: !1, type: !5)
-!4 = !{null}
-!5 = !DISubroutineType(types: !4)
+!3 = distinct !DISubprogram(name: "blah", file: !1, unit: !1)

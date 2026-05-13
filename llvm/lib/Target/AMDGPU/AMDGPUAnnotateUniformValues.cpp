@@ -60,13 +60,13 @@ public:
 } // End anonymous namespace
 
 void AMDGPUAnnotateUniformValues::visitCondBrInst(CondBrInst &I) {
-  if (UA->isUniformAtDef(&I))
+  if (UA->isUniform(&I))
     setUniformMetadata(&I);
 }
 
 void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   Value *Ptr = I.getPointerOperand();
-  if (!UA->isUniformAtDef(Ptr))
+  if (!UA->isUniform(Ptr))
     return;
   Instruction *PtrI = dyn_cast<Instruction>(Ptr);
   if (PtrI)

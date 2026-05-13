@@ -5,11 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if (__APPLE__)
-char global_alt_stack[MINSIGSTKSZ];
-#else
 char global_alt_stack[4096 * 4];
-#endif
 
 int main() {
   stack_t altstack;

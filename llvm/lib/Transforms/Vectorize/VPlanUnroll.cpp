@@ -345,7 +345,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       VPBuilder Builder(VPR);
       const DataLayout &DL = Plan.getDataLayout();
       Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
-      Type *VFTy = Plan.getVF().getType();
+      Type *VFTy = TypeInfo.inferScalarType(&Plan.getVF());
       VPValue *VF = Builder.createScalarZExtOrTrunc(
           &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
       // VFxUF does not wrap, so VF * Part also cannot wrap.

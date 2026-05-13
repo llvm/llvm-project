@@ -87,6 +87,21 @@ static size_t WriteMemoryCallback(EmulateInstruction *instruction, void *baton,
   return length;
 }
 
+static Status SetSoftwareBreakpoint(lldb::addr_t bp_addr, unsigned bp_size,
+                                    NativeProcessProtocol &process) {
+  Status error;
+  error = process.SetBreakpoint(bp_addr, bp_size, /*hardware=*/false);
+
+  // If setting the breakpoint fails because pc is out of the address
+  // space, ignore it and let the debugee segfault.
+  if (error.GetError() == EIO || error.GetError() == EFAULT)
+    return Status();
+  if (error.Fail())
+    return error;
+
+  return Status();
+}
+
 Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
     NativeThreadProtocol &thread) {
   Status error;
@@ -107,37 +122,24 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
   emulator_up->SetWriteMemCallback(&WriteMemoryCallback);
   emulator_up->SetWriteRegCallback(&WriteRegisterCallback);
 
-  auto bp_locations_predictor =
+  auto bp_locaions_predictor =
       EmulateInstruction::CreateBreakpointLocationPredictor(
           std::move(emulator_up));
 
-  BreakpointLocations candidates =
-      bp_locations_predictor->GetBreakpointLocations(error);
+  auto bp_locations = bp_locaions_predictor->GetBreakpointLocations(error);
   if (error.Fail())
     return error;
 
-  for (addr_t bp_addr : candidates) {
-    if (process.HasSoftwareBreakpoint(bp_addr))
-      continue;
-    auto bp_size = bp_locations_predictor->GetBreakpointSize(bp_addr);
+  for (auto &&bp_addr : bp_locations) {
+    auto bp_size = bp_locaions_predictor->GetBreakpointSize(bp_addr);
     if (auto err = bp_size.takeError())
       return Status(toString(std::move(err)));
 
-    error = process.SetBreakpoint(bp_addr, *bp_size, /*hardware=*/false);
-
-    // If setting the breakpoint fails because pc is out of the address
-    // space, ignore it and let the debugee segfault.
-    if (error.GetError() == EIO || error.GetError() == EFAULT) {
-      error.Clear();
-      continue;
-    }
+    error = SetSoftwareBreakpoint(bp_addr, *bp_size, process);
     if (error.Fail())
       return error;
-
-    m_step_breakpoints.emplace(bp_addr);
   }
 
-  m_threads_stepping_with_breakpoint.emplace(thread.GetID(),
-                                             std::move(candidates));
+  m_threads_stepping_with_breakpoint.insert({thread.GetID(), bp_locations});
   return error;
 }

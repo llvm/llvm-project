@@ -283,16 +283,6 @@ LLVMInitializeAArch64Target() {
   initializeAArch64Arm64ECCallLoweringPass(PR);
 }
 
-bool AArch64TargetMachine::isGlobalISelOptNone() const {
-  const bool GlobalISelFlag =
-      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
-
-  return getOptLevel() == CodeGenOptLevel::None ||
-         (static_cast<unsigned>(getOptLevel()) >
-              static_cast<unsigned>(EnableGlobalISelAtO) &&
-          !GlobalISelFlag);
-}
-
 void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
 
 //===----------------------------------------------------------------------===//
@@ -595,6 +585,9 @@ public:
   bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
+
+private:
+  bool isGlobalISelOptNone() const;
 };
 
 } // end anonymous namespace
@@ -626,6 +619,21 @@ TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
+}
+
+// This function checks whether the opt level is explicitly set to none,
+// or whether GlobalISel was enabled due to SDAG encountering an optnone
+// function. If the opt level is greater than the level we automatically enable
+// globalisel at, and it wasn't enabled via CLI, we know that it must be because
+// of an optnone function.
+bool AArch64PassConfig::isGlobalISelOptNone() const {
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  return getOptLevel() == CodeGenOptLevel::None ||
+         (static_cast<unsigned>(getOptLevel()) >
+              getAArch64TargetMachine().getEnableGlobalISelAtO() &&
+          !GlobalISelFlag);
 }
 
 void AArch64PassConfig::addIRPasses() {
@@ -756,7 +764,7 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (getAArch64TargetMachine().isGlobalISelOptNone()) {
+  if (isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
     addPass(new Localizer());
   } else {
@@ -773,10 +781,8 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 }
 
 void AArch64PassConfig::addPreRegBankSelect() {
-  const bool IsGlobalISelOptNone =
-      getAArch64TargetMachine().isGlobalISelOptNone();
-  if (!IsGlobalISelOptNone) {
-    addPass(createAArch64PostLegalizerCombiner(IsGlobalISelOptNone));
+  if (!isGlobalISelOptNone()) {
+    addPass(createAArch64PostLegalizerCombiner(isGlobalISelOptNone()));
     if (EnableGISelLoadStoreOptPostLegal)
       addPass(new LoadStoreOpt());
   }
@@ -790,7 +796,7 @@ bool AArch64PassConfig::addRegBankSelect() {
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
-  if (!getAArch64TargetMachine().isGlobalISelOptNone())
+  if (!isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
   return false;
 }

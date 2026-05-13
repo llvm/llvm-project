@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// clang-format off
+// LLDB Python header must be included first
 #include "../lldb-python.h"
+//clang-format on
 
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/Log.h"

@@ -9,7 +9,6 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H
 
-#include "VPlan.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -46,6 +45,10 @@ struct VPCostContext;
 /// of the previously inferred types.
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
+  /// Type of the canonical induction variable. Used for all VPValues without
+  /// any underlying IR value (like the vector trip count or the backedge-taken
+  /// count).
+  Type *CanonicalIVTy;
   LLVMContext &Ctx;
   const DataLayout &DL;
 
@@ -57,8 +60,7 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
-  VPTypeAnalysis(const VPlan &Plan)
-      : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {}
+  VPTypeAnalysis(const VPlan &Plan);
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);

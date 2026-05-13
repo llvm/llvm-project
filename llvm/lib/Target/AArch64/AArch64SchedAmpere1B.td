@@ -26,8 +26,7 @@ def Ampere1BModel : SchedMachineModel {
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    PAUnsupported.F,
-                                                    [HasMOPS, HasMOPS_GO]);
+                                                    PAUnsupported.F);
 }
 
 let SchedModel = Ampere1BModel in {

@@ -1023,12 +1023,7 @@ def CIR_YieldOp : CIR_Op<"yield", [
 // BreakOp
 //===----------------------------------------------------------------------===//
 
-defvar CIR_LoopScopes = ["WhileOp", "DoWhileOp", "ForOp"];
-defvar CIR_BreakableScopes = !listconcat(CIR_LoopScopes, ["SwitchOp"]);
-
-def CIR_BreakOp : CIR_Op<"break", [
-  Terminator, AncestorOneOf<CIR_BreakableScopes>
-]> {
+def CIR_BreakOp : CIR_Op<"break", [Terminator]> {
   let summary = "C/C++ `break` statement equivalent";
   let description = [{
     The `cir.break` operation is used to cease the execution of the current loop
@@ -1036,6 +1031,7 @@ def CIR_BreakOp : CIR_Op<"break", [
     allowed within a breakable operations (loops and switches).
   }];
   let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -1043,9 +1039,7 @@ def CIR_BreakOp : CIR_Op<"break", [
 // ContinueOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ContinueOp : CIR_Op<"continue", [
-  Terminator, AncestorOneOf<CIR_LoopScopes>
-]> {
+def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
   let summary = "C/C++ `continue` statement equivalent";
   let description = [{
     The `cir.continue` operation is used to end execution of the current
@@ -1053,6 +1047,7 @@ def CIR_ContinueOp : CIR_Op<"continue", [
     It is only allowed within loop regions.
   }];
   let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -3851,8 +3846,7 @@ def CIR_FuncOp : CIR_Op<"func", [
 //===----------------------------------------------------------------------===//
 
 def CIR_LocalInitOp : CIR_Op<"local_init", [
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments,
-  HasAncestor<"FuncOp">
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, NoRegionArguments
 ]> {
   let summary = "initialize a static or thread local object";
   let description = [{
@@ -3907,6 +3901,7 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -4322,7 +4317,7 @@ def CIR_CoroBodyOp : CIR_Op<"coro.body", [
 //===----------------------------------------------------------------------===//
 
 def CIR_CoReturnOp : CIR_Op<"co_return", [
-  ReturnLike, Pure, Terminator, HasAncestor<"CoroBodyOp">
+  ReturnLike, Pure, Terminator
 ]> {
   let summary = "Coroutine return operation";
   let description = [{
@@ -4335,6 +4330,8 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
   let assemblyFormat = [{
     attr-dict
   }];
+
+  let hasVerifier = 1;
 
   let hasLLVMLowering = false;
 }
@@ -7212,7 +7209,7 @@ def CIR_TryOp : CIR_Op<"try",[
 // CatchParamOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"TryOp">]> {
+def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
   let summary = "Represents the catch clause formal parameter";
   let description = [{
     The `cir.catch_param` is used to retrieve the exception object inside

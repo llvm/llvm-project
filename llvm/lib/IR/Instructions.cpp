@@ -4360,9 +4360,7 @@ FCmpInst *FCmpInst::cloneImpl() const {
 }
 
 ICmpInst *ICmpInst::cloneImpl() const {
-  auto *Result = new ICmpInst(getPredicate(), Op<0>(), Op<1>());
-  Result->setSameSign(hasSameSign());
-  return Result;
+  return new ICmpInst(getPredicate(), Op<0>(), Op<1>());
 }
 
 ExtractValueInst *ExtractValueInst::cloneImpl() const {

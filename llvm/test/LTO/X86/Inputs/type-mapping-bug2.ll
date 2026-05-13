@@ -13,6 +13,4 @@ define i32 @c() !dbg !6 {
 !3 = !DIFile(filename: "f2", directory: "")
 !4 = !{!5}
 !5 = !DICompositeType(tag: DW_TAG_class_type, file: !3, flags: DIFlagFwdDecl, identifier: "SHARED")
-!6 = distinct !DISubprogram(unit: !2, type: !8)
-!7 = !{null}
-!8 = !DISubroutineType(types: !7)
+!6 = distinct !DISubprogram(unit: !2)

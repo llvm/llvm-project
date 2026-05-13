@@ -10985,14 +10985,6 @@ def warn_lifetime_safety_invalidation
     : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
-def warn_lifetime_safety_invalidated_field
-    : Warning<"%select{object whose reference|parameter which}0 escapes to a field is later invalidated">,
-      InGroup<LifetimeSafetyInvalidation>,
-      DefaultIgnore;
-def warn_lifetime_safety_invalidated_global
-    : Warning<"%select{object whose reference|parameter which}0 escapes to global or static storage is later invalidated">,
-      InGroup<LifetimeSafetyInvalidation>,
-      DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
     : Warning<"address of stack memory escapes to a field">,
@@ -11015,8 +11007,8 @@ def warn_lifetime_safety_dangling_global_moved
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
       DefaultIgnore;
 
-def warn_lifetime_safety_lifetimebound_violation
-    : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'|the implicit this parameter}0">,
+def warn_lifetime_safety_param_lifetimebound_violation
+    : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'}0">,
       InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 

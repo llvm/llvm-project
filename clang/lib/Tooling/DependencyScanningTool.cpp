@@ -357,14 +357,14 @@ llvm::Expected<TranslationUnitDeps>
 DependencyScanningTool::getModuleDependencies(
     StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
-    DependencyActionController &Controller) {
+    LookupModuleOutputCallback LookupModuleOutput) {
   auto MaybeCIWithContext = CompilerInstanceWithContext::initializeOrError(
-      *this, CWD, CommandLine, Controller);
+      *this, CWD, CommandLine, LookupModuleOutput);
   if (auto Error = MaybeCIWithContext.takeError())
     return Error;
 
   return MaybeCIWithContext->computeDependenciesByNameOrError(
-      ModuleName, AlreadySeen, Controller);
+      ModuleName, AlreadySeen, LookupModuleOutput);
 }
 
 static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
@@ -431,7 +431,12 @@ CompilerInstanceWithContext::initializeFromCommandline(
 llvm::Expected<CompilerInstanceWithContext>
 CompilerInstanceWithContext::initializeOrError(
     DependencyScanningTool &Tool, StringRef CWD,
-    ArrayRef<std::string> CommandLine, DependencyActionController &Controller) {
+    ArrayRef<std::string> CommandLine,
+    LookupModuleOutputCallback LookupModuleOutput) {
+  // It might seem wasteful to create fresh controller just for initializing the
+  // compiler instance, but repeated calls to computeDependenciesByNameOrError()
+  // do that as well, so this gets amortized.
+  CallbackActionController Controller(LookupModuleOutput);
   auto DiagPrinterWithOS =
       std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
 
@@ -447,8 +452,9 @@ CompilerInstanceWithContext::initializeOrError(
 llvm::Expected<TranslationUnitDeps>
 CompilerInstanceWithContext::computeDependenciesByNameOrError(
     StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
-    DependencyActionController &Controller) {
+    LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
+  CallbackActionController Controller(LookupModuleOutput);
   // We need to clear the DiagnosticOutput so that each by-name lookup
   // has a clean diagnostics buffer.
   DiagPrinterWithOS->DiagnosticOutput.clear();

@@ -51,7 +51,5 @@ entry:
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DISubprogram(name: "foo", type: !4)
-!2 = distinct !DISubprogram(name: "bar", type: !4)
-!3 = !{null}
-!4 = !DISubroutineType(types: !3)
+!1 = distinct !DISubprogram(name: "foo")
+!2 = distinct !DISubprogram(name: "bar")

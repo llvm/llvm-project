@@ -16,7 +16,6 @@
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -65,12 +64,10 @@ static bool isPrivilegedTPAccess(const MCInst &Inst) {
   return false;
 }
 
-MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
-  for (MCRegister Reg : {LFIAddrReg, LFIBaseReg, LFICtxReg}) {
-    if (mayModifyRegister(Inst, Reg))
-      return Reg;
-  }
-  return {};
+bool AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
+  return mayModifyRegister(Inst, LFIAddrReg) ||
+         mayModifyRegister(Inst, LFIBaseReg) ||
+         mayModifyRegister(Inst, LFICtxReg);
 }
 
 void AArch64MCLFIRewriter::emitInst(const MCInst &Inst, MCStreamer &Out,
@@ -219,9 +216,8 @@ void AArch64MCLFIRewriter::rewriteTPWrite(const MCInst &Inst, MCStreamer &Out,
 void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
                                          const MCSubtargetInfo &STI) {
   // Reserved register modification is an error.
-  if (MCRegister Reg = mayModifyReserved(Inst)) {
-    error(Inst, Twine("illegal modification of reserved LFI register ") +
-                    RegInfo->getName(Reg));
+  if (mayModifyReserved(Inst)) {
+    error(Inst, "illegal modification of reserved LFI register");
     return;
   }
 

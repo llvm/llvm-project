@@ -9133,6 +9133,12 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     }
   }
 
+  if (!NewVD->hasLocalStorage() && NewVD->hasAttr<BlocksAttr>()) {
+    Diag(NewVD->getLocation(), diag::err_block_on_nonlocal);
+    NewVD->setInvalidDecl();
+    return;
+  }
+
   if (!NewVD->hasLocalStorage() && T->isSizelessType() &&
       !T.isWebAssemblyReferenceType() && !T->isHLSLSpecificType()) {
     Diag(NewVD->getLocation(), diag::err_sizeless_nonlocal) << T;

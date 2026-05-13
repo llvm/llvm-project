@@ -1,4 +1,5 @@
-libclc_add_sources(${LIBCLC_OPENCL_TARGET} FILES
+libclc_configure_source_list(OPENCL_GENERIC_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}
   address_space/qualifier.cl
   async/async_work_group_copy.cl
   async/async_work_group_strided_copy.cl
@@ -226,7 +227,7 @@ libclc_add_sources(${LIBCLC_OPENCL_TARGET} FILES
   workitem/get_work_dim.cl
 )
 
-libclc_set_source_options(-fapprox-func
+libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
   math/native_cos.cl
   math/native_divide.cl
   math/native_exp.cl

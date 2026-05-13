@@ -12768,7 +12768,7 @@ private:
     case IRP_CALL_SITE_RETURNED: {
       const auto &CB = cast<CallBase>(getAnchorValue());
       return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-          &CB, /*MustPreserveOffset=*/false);
+          &CB, /*MustPreserveNullness=*/false);
     }
     case IRP_ARGUMENT: {
       const Function *F = getAssociatedFunction();
@@ -12903,7 +12903,7 @@ private:
 
     if (const auto *CB = dyn_cast<CallBase>(&getAnchorValue())) {
       if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-              CB, /*MustPreserveOffset=*/false)) {
+              CB, /*MustPreserveNullness=*/false)) {
         for (const Value *Arg : CB->args()) {
           if (!IsLocallyInvariantLoadIfPointer(*Arg))
             return indicatePessimisticFixpoint();
@@ -12949,7 +12949,7 @@ struct AAInvariantLoadPointerCallSiteReturned final
 
     const auto &CB = cast<CallBase>(getAnchorValue());
     if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-            &CB, /*MustPreserveOffset=*/false))
+            &CB, /*MustPreserveNullness=*/false))
       return AAInvariantLoadPointerImpl::initialize(A);
 
     if (F->onlyReadsMemory() && F->hasNoSync())

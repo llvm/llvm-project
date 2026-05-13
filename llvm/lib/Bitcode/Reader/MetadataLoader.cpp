@@ -446,7 +446,7 @@ class MetadataLoader::MetadataLoaderImpl {
 
   // Keep mapping of seens pair of old-style CU <-> SP, and update pointers to
   // point from SP to CU after a block is completly parsed.
-  std::vector<std::pair<DICompileUnit *, unsigned>> CUSubprograms;
+  std::vector<std::pair<DICompileUnit *, Metadata *>> CUSubprograms;
 
   /// Functions that need to be matched with subprograms when upgrading old
   /// metadata.
@@ -485,8 +485,7 @@ class MetadataLoader::MetadataLoaderImpl {
   /// Upgrade old-style CU <-> SP pointers to point from SP to CU.
   void upgradeCUSubprograms() {
     for (auto CU_SP : CUSubprograms)
-      if (auto *SPs =
-              dyn_cast_or_null<MDTuple>(MetadataList.lookup(CU_SP.second - 1)))
+      if (auto *SPs = dyn_cast_or_null<MDTuple>(CU_SP.second))
         for (auto &Op : SPs->operands())
           if (auto *SP = dyn_cast_or_null<DISubprogram>(Op))
             SP->replaceUnit(CU_SP.first);
@@ -1334,6 +1333,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return getMD(ID - 1);
     return nullptr;
   };
+  auto getMDOrNullWithoutPlaceholders = [&](unsigned ID) -> Metadata * {
+    if (ID)
+      return MetadataList.getMetadataFwdRef(ID - 1);
+    return nullptr;
+  };
   auto getMDString = [&](unsigned ID) -> MDString * {
     // This requires that the ID is not really a forward reference.  In
     // particular, the MDString must already have been resolved.
@@ -1971,8 +1975,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
 
     // Move the Upgrade the list of subprograms.
-    if (Record[11])
-      CUSubprograms.push_back({CU, Record[11]});
+    if (Metadata *SPs = getMDOrNullWithoutPlaceholders(Record[11]))
+      CUSubprograms.push_back({CU, SPs});
     break;
   }
   case bitc::METADATA_SUBPROGRAM: {

@@ -813,10 +813,8 @@ void WhitespaceManager::alignConsecutiveMacros() {
 }
 
 void WhitespaceManager::alignConsecutiveAssignments() {
-  if (!Style.AlignConsecutiveAssignments.Enabled &&
-      !Style.AlignConsecutiveAssignments.EnumAssignments) {
+  if (!Style.AlignConsecutiveAssignments.Enabled)
     return;
-  }
 
   AlignTokens(
       Style,
@@ -827,15 +825,6 @@ void WhitespaceManager::alignConsecutiveAssignments() {
 
         // Do not align on equal signs that are last on a line.
         if (&C != &Changes.back() && (&C + 1)->NewlinesBefore > 0)
-          return false;
-
-        // Align enum '=' when EnumAssignments is enabled.
-        if (Style.AlignConsecutiveAssignments.EnumAssignments &&
-            C.Tok->is(TT_EnumEqual)) {
-          return true;
-        }
-
-        if (!Style.AlignConsecutiveAssignments.Enabled)
           return false;
 
         // Do not align operator= overloads.

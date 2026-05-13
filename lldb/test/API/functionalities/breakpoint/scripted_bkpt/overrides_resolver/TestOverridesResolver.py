@@ -18,7 +18,6 @@ class TestOverridesResolver(TestBase):
         self.build()
         self.do_test(True)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_overrides_resolver_resolver_cmd(self):
         """Use facade breakpoints to emulate hitting some locations"""
         self.build()

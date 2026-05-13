@@ -76,7 +76,6 @@ namespace format {
   TYPE(DoWhile)                                                                \
   TYPE(ElseLBrace)                                                             \
   TYPE(ElseRBrace)                                                             \
-  TYPE(EnumEqual)                                                              \
   TYPE(EnumLBrace)                                                             \
   TYPE(EnumRBrace)                                                             \
   TYPE(EnumUnderlyingTypeColon)                                                \

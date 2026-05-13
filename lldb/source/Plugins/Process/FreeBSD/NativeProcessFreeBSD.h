@@ -27,7 +27,8 @@ namespace process_freebsd {
 /// for debugging.
 ///
 /// Changes in the inferior process state are broadcasted.
-class NativeProcessFreeBSD : public NativeProcessELF {
+class NativeProcessFreeBSD : public NativeProcessELF,
+                             private NativeProcessSoftwareSingleStep {
 public:
   class Manager : public NativeProcessProtocol::Manager {
   public:

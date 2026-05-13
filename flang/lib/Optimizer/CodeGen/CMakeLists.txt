@@ -6,7 +6,6 @@ add_flang_library(FIRCodeGen
   LLVMInsertChainFolder.cpp
   LowerRepackArrays.cpp
   PreCGRewrite.cpp
-  RematerializeFIRBoxOps.cpp
   TBAABuilder.cpp
   Target.cpp
   TargetRewrite.cpp

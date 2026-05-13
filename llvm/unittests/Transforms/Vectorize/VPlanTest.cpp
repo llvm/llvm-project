@@ -53,7 +53,7 @@ loop:
 
   Loop *L = LI->getLoopFor(LoopHeader);
   PredicatedScalarEvolution PSE(*SE, *L);
-  VPlan Plan(LoopHeader, IntegerType::get(*Ctx, 32));
+  VPlan Plan(LoopHeader);
   Argument *X = F->getArg(0);
   VPValue *Op = Plan.getOrAddLiveIn(X);
 

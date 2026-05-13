@@ -133,21 +133,11 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
   // just before the current PHI node.
   PHINode *scalarPHI = cast<PHINode>(InsertNewInstWith(
       PHINode::Create(EI.getType(), PN->getNumIncomingValues(), ""), PN->getIterator()));
-  // Scalarize each PHI operand. A switch may produce multiple edges from the
-  // same predecessor; reuse the scalar instruction for duplicate edges.
-  SmallDenseMap<BasicBlock *, Value *, 4> ScalarizedValues;
+  // Scalarize each PHI operand.
   for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
     Value *PHIInVal = PN->getIncomingValue(i);
     BasicBlock *inBB = PN->getIncomingBlock(i);
     Value *Elt = EI.getIndexOperand();
-
-    // Reuse scalar value for duplicate edges from the same predecessor.
-    if (Value *Existing = ScalarizedValues.lookup(inBB)) {
-      scalarPHI->addIncoming(Existing, inBB);
-      continue;
-    }
-
-    Value *ScalarVal;
     // If the operand is the PHI induction variable:
     if (PHIInVal == PHIUser) {
       // Scalarize the binary operation. One operand is the
@@ -163,9 +153,11 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
       // non-commutative operations.
       Value *FirstOp = (B0->getOperand(0) == PN) ? scalarPHI : Op;
       Value *SecondOp = (B0->getOperand(0) == PN) ? Op : scalarPHI;
-      ScalarVal = InsertNewInstWith(BinaryOperator::CreateWithCopiedFlags(
-                                        B0->getOpcode(), FirstOp, SecondOp, B0),
-                                    B0->getIterator());
+      Value *newPHIUser =
+          InsertNewInstWith(BinaryOperator::CreateWithCopiedFlags(
+                                B0->getOpcode(), FirstOp, SecondOp, B0),
+                            B0->getIterator());
+      scalarPHI->addIncoming(newPHIUser, inBB);
     } else {
       // Scalarize PHI input:
       Instruction *newEI = ExtractElementInst::Create(PHIInVal, Elt, "");
@@ -178,11 +170,10 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
         InsertPos = inBB->getFirstInsertionPt();
       }
 
-      ScalarVal = InsertNewInstWith(newEI, InsertPos);
-    }
+      InsertNewInstWith(newEI, InsertPos);
 
-    ScalarizedValues[inBB] = ScalarVal;
-    scalarPHI->addIncoming(ScalarVal, inBB);
+      scalarPHI->addIncoming(newEI, inBB);
+    }
   }
 
   for (auto *E : Extracts) {

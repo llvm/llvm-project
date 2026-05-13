@@ -598,16 +598,6 @@ bool RegisterInfoPOSIX_arm64::IsSMERegZT(unsigned reg) const {
          reg == m_sme_regnum_collection[3];
 }
 
-bool RegisterInfoPOSIX_arm64::IsGPR(unsigned reg) const {
-  return GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_arm64::GPRegSet;
-}
-
-bool RegisterInfoPOSIX_arm64::IsFPR(unsigned reg) const {
-  return GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_arm64::FPRegSet;
-}
-
 bool RegisterInfoPOSIX_arm64::IsPAuthReg(unsigned reg) const {
   return llvm::is_contained(pauth_regnum_collection, reg);
 }

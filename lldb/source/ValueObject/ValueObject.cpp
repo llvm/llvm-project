@@ -3338,8 +3338,7 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
     byte_size = temp.value();
 
   if (is_float) {
-    llvm::APSInt integer(byte_size * CHAR_BIT,
-                         !type.IsEnumerationIntegerTypeSigned());
+    llvm::APSInt integer(byte_size * CHAR_BIT, !type.IsSigned());
     bool is_exact;
     auto value_or_err = GetValueAsAPFloat();
     if (value_or_err) {
@@ -3351,15 +3350,15 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       if (status & llvm::APFloatBase::opInvalidOp)
         return ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            Status::FromErrorString("invalid cast from float to integer"));
+            Status::FromErrorStringWithFormat(
+                "invalid type cast detected: %s",
+                llvm::toString(value_or_err.takeError()).c_str()));
       return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                      "result");
     } else
       return ValueObjectConstResult::Create(
           exe_ctx.GetBestExecutionContextScope(),
-          Status::FromErrorStringWithFormatv(
-              "cannot get value as APFloat: {0}",
-              llvm::toString(value_or_err.takeError())));
+          Status::FromErrorString("cannot get value as APFloat"));
   } else {
     // Get the value as APSInt and extend or truncate it to the requested size.
     auto value_or_err = GetValueAsAPSInt();

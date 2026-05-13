@@ -493,7 +493,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
   if (LI.getAlign() < DL.getABITypeAlign(Ty))
     return false;
   // It should be uniform, i.e. a scalar load.
-  return UA.isUniformAtDef(&LI);
+  return UA.isUniform(&LI);
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {

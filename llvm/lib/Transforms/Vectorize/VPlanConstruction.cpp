@@ -78,9 +78,8 @@ class PlainCFGBuilder {
   void createVPInstructionsForVPBB(VPBasicBlock *VPBB, BasicBlock *BB);
 
 public:
-  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer, Type *IdxTy)
-      : TheLoop(Lp), LI(LI), LVer(LVer),
-        Plan(std::make_unique<VPlan>(Lp, IdxTy)) {}
+  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer)
+      : TheLoop(Lp), LI(LI), LVer(LVer), Plan(std::make_unique<VPlan>(Lp)) {}
 
   /// Build plain CFG for TheLoop and connect it to Plan's entry.
   std::unique_ptr<VPlan> buildPlainCFG();
@@ -636,7 +635,7 @@ std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
                              DebugLoc IVDL, PredicatedScalarEvolution &PSE,
                              LoopVersioning *LVer) {
-  PlainCFGBuilder Builder(TheLoop, &LI, LVer, InductionTy);
+  PlainCFGBuilder Builder(TheLoop, &LI, LVer);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
   simplifyLiveInsWithSCEV(*VPlan0, PSE);
@@ -1359,26 +1358,18 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
     if (match(&R, m_ExtractLastPart(m_VPValue(V))))
       NeedsPhi[V].push_back(&R);
 
-  // Insert phis for values coming past the end of the tail.
+  // Insert phis with a poison incoming value for past the end of the tail.
   Builder.setInsertPoint(Latch, Latch->begin());
   VPTypeAnalysis TypeInfo(Plan);
   for (const auto &[V, Users] : NeedsPhi) {
     if (isa<VPIRValue>(V))
       continue;
-    VPValue *TailVal =
+    // TODO: For reduction phis, use phi value instead of poison so we can
+    // remove the special casing for tail folding in
+    // LoopVectorizationPlanner::addReductionResultComputation
+    VPValue *Poison =
         Plan.getOrAddLiveIn(PoisonValue::get(TypeInfo.inferScalarType(V)));
-    VPIRFlags Flags;
-    assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
-           "Value used by more than two reduction phis?");
-    auto *RedIt = find_if(Users, IsaPred<VPReductionPHIRecipe>);
-    auto *RdxPhi =
-        RedIt != Users.end() ? cast<VPReductionPHIRecipe>(*RedIt) : nullptr;
-    if (RdxPhi && !RdxPhi->isInLoop()) {
-      TailVal = RdxPhi;
-      Flags = *RdxPhi;
-    }
-
-    VPInstruction *Phi = Builder.createScalarPhi({V, TailVal}, {}, "", Flags);
+    VPInstruction *Phi = Builder.createScalarPhi({V, Poison});
     for (VPUser *U : Users)
       U->replaceUsesOfWith(V, Phi);
   }

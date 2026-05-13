@@ -1,10 +1,7 @@
-# REQUIRES: webassembly-registered-target
+# REQUIRES: webassembly-registered-target, lld
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj %s -o %t.o -g
+# RUN: wasm-ld %t.o -o %t.wasm --no-entry --export=foo --export=bar
 # RUN: llvm-objdump -d --line-numbers %t.o | FileCheck --check-prefix=OBJ %s
-
-# line-numbers.yaml was created by linking this object and converting to YAML:
-#  wasm-ld %t.o -o %t.wasm --no-entry --export=foo --export=bar
-# RUN: yaml2obj %S/Inputs/line-numbers.yaml -o %t.wasm
 # RUN: llvm-objdump -d --line-numbers %t.wasm | FileCheck --check-prefix=LINKED %s
 
 # This test mirrors test/tools/llvm-symbolizer/wasm-basic.s and tests that line
@@ -28,23 +25,23 @@ bar:
 # OBJ:      <foo>:
 # OBJ-EMPTY:
 # OBJ-NEXT: ; foo():
-# OBJ-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-15]]
+# OBJ-NEXT: ; {{.*}}line-numbers.s:13
 # OBJ-NEXT:        3: 01            nop
-# OBJ-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-16]]
+# OBJ-NEXT: ; {{.*}}line-numbers.s:14
 # OBJ-NEXT:        4: 0f            return
-# OBJ-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-17]]
+# OBJ-NEXT: ; {{.*}}line-numbers.s:15
 # OBJ-NEXT:        5: 0b            end
 
 # OBJ:      <bar>:
 # OBJ-EMPTY:
 # OBJ-NEXT: ; bar():
-# OBJ-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-18]]
+# OBJ-NEXT: ; {{.*}}line-numbers.s:20
 # OBJ-NEXT:        8: 20 00         local.get 0
-# OBJ-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-19]]
+# OBJ-NEXT: ; {{.*}}line-numbers.s:21
 # OBJ-NEXT:        a: 01            nop
-# OBJ-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-20]]
+# OBJ-NEXT: ; {{.*}}line-numbers.s:22
 # OBJ-NEXT:        b: 0f            return
-# OBJ-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-21]]
+# OBJ-NEXT: ; {{.*}}line-numbers.s:23
 # OBJ-NEXT:        c: 0b            end
 
 
@@ -57,21 +54,21 @@ bar:
 # LINKED:      <foo>:
 # LINKED-EMPTY:
 # LINKED-NEXT: ; foo():
-# LINKED-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-44]]
-# LINKED-NEXT:        5c: 01            nop
-# LINKED-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-45]]
+# LINKED-NEXT: ; {{.*}}line-numbers.s:13
+# LINKED-NEXT:        44: 01            nop
+# LINKED-NEXT: ; {{.*}}line-numbers.s:14
 # LINKED-NEXT:        {{.*}}: 0f            return
-# LINKED-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-46]]
+# LINKED-NEXT: ; {{.*}}line-numbers.s:15
 # LINKED-NEXT:        {{.*}}: 0b            end
 
 # LINKED:      <bar>:
 # LINKED-EMPTY:
 # LINKED-NEXT: ; bar():
-# LINKED-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-47]]
-# LINKED-NEXT:        61: 20 00         local.get 0
-# LINKED-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-48]]
+# LINKED-NEXT: ; {{.*}}line-numbers.s:20
+# LINKED-NEXT:        49: 20 00         local.get 0
+# LINKED-NEXT: ; {{.*}}line-numbers.s:21
 # LINKED-NEXT:        {{.*}}: 01            nop
-# LINKED-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-49]]
+# LINKED-NEXT: ; {{.*}}line-numbers.s:22
 # LINKED-NEXT:        {{.*}}: 0f            return
-# LINKED-NEXT: ; {{.*}}line-numbers.s:[[#@LINE-50]]
+# LINKED-NEXT: ; {{.*}}line-numbers.s:23
 # LINKED-NEXT:        {{.*}}: 0b            end

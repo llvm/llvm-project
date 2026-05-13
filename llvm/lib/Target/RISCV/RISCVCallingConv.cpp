@@ -405,10 +405,6 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
       ValNo > 1)
     return true;
 
-  // Double wide packed types require 2 GPRs so we can only return 1 of them.
-  if (Subtarget.isPExtPackedDoubleType(LocVT) && IsRet && ValNo > 0)
-    return true;
-
   // AllowFPRForF16_F32 if targeting an FLEN>=32 ABI and the argument isn't
   // variadic.
   bool AllowFPRForF16_F32 = false;
@@ -528,12 +524,9 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
          "PendingLocs and PendingArgFlags out of sync");
 
   // Handle passing f64 on RV32D with a soft float ABI or when floating point
-  // registers are exhausted. Or 64-bit P extension vectors on RV32.
-  if (XLen == 32 &&
-      (LocVT == MVT::f64 || (Subtarget.isPExtPackedDoubleType(LocVT) &&
-                             !ArgFlags.isSplit() && PendingLocs.empty()))) {
-    assert(PendingLocs.empty() &&
-           "Can't lower f64 or P extension vector if it is split");
+  // registers are exhausted.
+  if (XLen == 32 && LocVT == MVT::f64) {
+    assert(PendingLocs.empty() && "Can't lower f64 if it is split");
     // Depending on available argument GPRS, f64 may be passed in a pair of
     // GPRs, split between a GPR and the stack, or passed completely on the
     // stack. LowerCall/LowerFormalArguments/LowerReturn must recognise these
@@ -561,8 +554,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
-  if ((LocVT.isScalarInteger() ||
-       (Subtarget.isPExtPackedType(LocVT) && LocVT.getSizeInBits() == XLen)) &&
+  if ((LocVT.isScalarInteger() || Subtarget.isPExtPackedType(LocVT)) &&
       ArgFlags.isSplitEnd() && PendingLocs.size() <= 1) {
     assert(PendingLocs.size() == 1 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
@@ -638,7 +630,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   // end of a split argument that must be passed indirectly.
   if (!PendingLocs.empty()) {
     assert(ArgFlags.isSplitEnd() && "Expected ArgFlags.isSplitEnd()");
-    assert(PendingLocs.size() > 1 && "Unexpected PendingLocs.size()");
+    assert(PendingLocs.size() > 2 && "Unexpected PendingLocs.size()");
 
     for (auto &It : PendingLocs) {
       if (Reg)

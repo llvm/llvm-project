@@ -58,26 +58,21 @@ public:
   const FunctionT &getFunction() const;
 
   /// Whether \p V is divergent at its definition.
-  bool isDivergentAtDef(ConstValueRefT V) const;
+  bool isDivergent(ConstValueRefT V) const;
 
-  /// Whether \p V is uniform/non-divergent at its definition.
-  bool isUniformAtDef(ConstValueRefT V) const { return !isDivergentAtDef(V); }
+  /// Whether \p V is uniform/non-divergent.
+  bool isUniform(ConstValueRefT V) const { return !isDivergent(V); }
 
   // Similar queries for InstructionT. These accept a pointer argument so that
   // in LLVM IR, they overload the equivalent queries for Value*. For example,
   // if querying whether a CondBrInst is divergent, it should not be treated as
   // a Value in LLVM IR.
-  bool isUniformAtDef(const InstructionT *I) const {
-    return !isDivergentAtDef(I);
-  };
-  bool isDivergentAtDef(const InstructionT *I) const;
+  bool isUniform(const InstructionT *I) const { return !isDivergent(I); };
+  bool isDivergent(const InstructionT *I) const;
 
-  /// \brief Whether \p U is divergent at its use. Uses of a uniform value can
-  /// be divergent.
-  bool isDivergentAtUse(const UseT &U) const;
-
-  /// \brief Whether \p U is uniform/non-divergent at its use.
-  bool isUniformAtUse(const UseT &U) const { return !isDivergentAtUse(U); }
+  /// \brief Whether \p U is divergent. Uses of a uniform value can be
+  /// divergent.
+  bool isDivergentUse(const UseT &U) const;
 
   bool hasDivergentTerminator(const BlockT &B);
 

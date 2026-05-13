@@ -110,7 +110,7 @@ public:
   llvm::Expected<dependencies::TranslationUnitDeps> getModuleDependencies(
       StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::DependencyActionController &Controller);
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
@@ -201,10 +201,10 @@ public:
   /// @param CWD The current working directory used during the scan.
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
-  static llvm::Expected<CompilerInstanceWithContext>
-  initializeOrError(DependencyScanningTool &Tool, StringRef CWD,
-                    ArrayRef<std::string> CommandLine,
-                    dependencies::DependencyActionController &Controller);
+  static llvm::Expected<CompilerInstanceWithContext> initializeOrError(
+      DependencyScanningTool &Tool, StringRef CWD,
+      ArrayRef<std::string> CommandLine,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   bool
   computeDependencies(StringRef ModuleName,
@@ -229,7 +229,7 @@ public:
   computeDependenciesByNameOrError(
       StringRef ModuleName,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::DependencyActionController &Controller);
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   // MaxNumOfQueries is the upper limit of the number of names the by-name
   // scanning API (computeDependencies) can support after a

@@ -91,57 +91,68 @@ private:
   bool m_za_header_is_valid;
   bool m_pac_mask_is_valid;
   bool m_tls_is_valid;
-  size_t m_tls_size = 0;
+  size_t m_tls_size;
   bool m_gcs_is_valid;
   bool m_poe_is_valid;
 
-  /// 64-bit general purpose registers.
-  struct user_pt_regs m_gpr_arm64{};
+  struct user_pt_regs m_gpr_arm64; // 64-bit general purpose registers.
 
-  /// Floating-point registers including extended register sets.
-  RegisterInfoPOSIX_arm64::FPU m_fpr{};
+  RegisterInfoPOSIX_arm64::FPU
+      m_fpr; // floating-point registers including extended register sets.
 
   SVEState m_sve_state = SVEState::Unknown;
-  struct sve::user_sve_header m_sve_header{};
+  struct sve::user_sve_header m_sve_header;
   std::vector<uint8_t> m_sve_ptrace_payload;
 
   sve::user_za_header m_za_header;
   std::vector<uint8_t> m_za_ptrace_payload;
 
-  bool m_refresh_hwdebug_info = true;
+  bool m_refresh_hwdebug_info;
 
   struct user_pac_mask {
-    uint64_t data_mask = 0;
-    uint64_t insn_mask = 0;
-  } m_pac_mask;
+    uint64_t data_mask;
+    uint64_t insn_mask;
+  };
 
-  uint64_t m_mte_ctrl_reg = 0;
+  struct user_pac_mask m_pac_mask;
+
+  uint64_t m_mte_ctrl_reg;
 
   struct sme_pseudo_regs {
-    uint64_t ctrl_reg = 0;
-    uint64_t svg_reg = 0;
-  } m_sme_pseudo_regs;
+    uint64_t ctrl_reg;
+    uint64_t svg_reg;
+  };
+
+  struct sme_pseudo_regs m_sme_pseudo_regs;
 
   struct tls_regs {
-    uint64_t tpidr_reg = 0;
+    uint64_t tpidr_reg;
     // Only valid when SME is present.
-    uint64_t tpidr2_reg = 0;
-  } m_tls_regs;
+    uint64_t tpidr2_reg;
+  };
+
+  struct tls_regs m_tls_regs;
 
   // SME2's ZT is a 512 bit register.
-  std::array<uint8_t, 64> m_zt_reg{};
+  std::array<uint8_t, 64> m_zt_reg;
 
-  uint64_t m_fpmr_reg = 0;
+  uint64_t m_fpmr_reg;
 
   struct poe_regs {
-    uint64_t por_el0_reg = 0;
-  } m_poe_regs;
+    uint64_t por_el0_reg;
+  };
+
+  struct poe_regs m_poe_regs;
 
   struct gcs_regs {
-    uint64_t features_enabled = 0;
-    uint64_t features_locked = 0;
-    uint64_t gcspr_e0 = 0;
+    uint64_t features_enabled;
+    uint64_t features_locked;
+    uint64_t gcspr_e0;
   } m_gcs_regs;
+
+  bool IsGPR(unsigned reg) const;
+
+  bool IsFPR(unsigned reg) const;
 
   Status ReadAllSVE();
 
@@ -191,6 +202,15 @@ private:
   Status ReadPOE();
 
   Status WritePOE();
+
+  bool IsSVE(unsigned reg) const;
+  bool IsSME(unsigned reg) const;
+  bool IsPAuth(unsigned reg) const;
+  bool IsMTE(unsigned reg) const;
+  bool IsTLS(unsigned reg) const;
+  bool IsFPMR(unsigned reg) const;
+  bool IsGCS(unsigned reg) const;
+  bool IsPOE(unsigned reg) const;
 
   uint64_t GetSVERegVG() { return m_sve_header.vl / 8; }
 

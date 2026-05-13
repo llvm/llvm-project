@@ -80,10 +80,11 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
                                    Function *TLIVecFunc) {
   IRBuilder<> IRBuilder(II);
   SmallVector<Value *> Args(II->args());
-  if (Info.isMasked()) {
+  if (auto OptMaskpos = Info.getParamIndexForOptionalMask()) {
     auto *MaskTy =
         VectorType::get(Type::getInt1Ty(II->getContext()), Info.Shape.VF);
-    Args.push_back(Constant::getAllOnesValue(MaskTy));
+    Args.insert(Args.begin() + OptMaskpos.value(),
+                Constant::getAllOnesValue(MaskTy));
   }
 
   // Preserve the operand bundles.

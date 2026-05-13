@@ -128,8 +128,7 @@ struct AffineLoadOpOfCollapseShapeOpFolder final
 
     SmallVector<Value> sourceIndices;
     memref::resolveSourceIndicesCollapseShape(
-        loadOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices,
-        /*startsInbounds=*/true);
+        loadOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices);
 
     rewriter.replaceOpWithNewOp<AffineLoadOp>(
         loadOp, collapseShapeOp.getViewSource(), sourceIndices);
@@ -213,8 +212,7 @@ struct AffineStoreOpOfCollapseShapeOpFolder final
 
     SmallVector<Value> sourceIndices;
     memref::resolveSourceIndicesCollapseShape(
-        storeOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices,
-        /*startsInbounds=*/true);
+        storeOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices);
 
     rewriter.replaceOpWithNewOp<AffineStoreOp>(
         storeOp, storeOp.getValueToStore(), collapseShapeOp.getViewSource(),

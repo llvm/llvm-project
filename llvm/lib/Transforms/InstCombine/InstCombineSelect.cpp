@@ -2256,9 +2256,9 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
   auto Flipped = getFlippedStrictnessPredicateAndConstant(Predicate, C1);
 
   auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
-    return IsIntrinsic
-               ? ConstantFoldBinaryIntrinsic(Opcode, LHS, RHS, LHS->getType())
-               : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
+    return IsIntrinsic ? ConstantFoldBinaryIntrinsic(Opcode, LHS, RHS,
+                                                     LHS->getType(), nullptr)
+                       : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
   };
 
   if (C3 == FoldBinaryOpOrIntrinsic(C1, C2)) {
@@ -2326,10 +2326,10 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
 
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
-  if (!((Pred == ICmpInst::ICMP_EQ && match(TrueVal, m_Zero()) &&
-         match(FalseVal, m_SignMask())) ||
-        (Pred == ICmpInst::ICMP_NE && match(TrueVal, m_SignMask()) &&
-         match(FalseVal, m_Zero()))))
+  if (!(Pred == ICmpInst::ICMP_EQ &&
+        (match(TrueVal, m_Zero()) && match(FalseVal, m_SignMask()))) ||
+      (Pred == ICmpInst::ICMP_NE &&
+       (match(TrueVal, m_SignMask()) && match(FalseVal, m_Zero()))))
     return nullptr;
 
   auto *Ty = A->getType();
@@ -4423,11 +4423,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *FalseVal = SI.getFalseValue();
   Type *SelType = SI.getType();
 
-  FastMathFlags FMF;
-  if (auto *FPMO = dyn_cast_if_present<FPMathOperator>(&SI))
-    FMF = FPMO->getFastMathFlags();
-
-  if (Value *V = simplifySelectInst(CondVal, TrueVal, FalseVal, FMF,
+  if (Value *V = simplifySelectInst(CondVal, TrueVal, FalseVal,
                                     SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);
 
@@ -5087,7 +5083,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // TODO: preserve FMF flags
   auto FoldSelectWithAndOrCond = [&](bool IsAnd, Value *A,
                                      Value *B) -> Instruction * {
-    if (Value *V = simplifySelectInst(B, TrueVal, FalseVal, FMF,
+    if (Value *V = simplifySelectInst(B, TrueVal, FalseVal,
                                       SQ.getWithInstruction(&SI))) {
       Value *NewTrueVal = IsAnd ? V : TrueVal;
       Value *NewFalseVal = IsAnd ? FalseVal : V;

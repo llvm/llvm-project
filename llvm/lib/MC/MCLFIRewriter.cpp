@@ -13,19 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCLFIRewriter.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 
 using namespace llvm;
 
-void MCLFIRewriter::error(const MCInst &Inst, const Twine &Msg) {
+void MCLFIRewriter::error(const MCInst &Inst, const char Msg[]) {
   Ctx.reportError(Inst.getLoc(), Msg);
-}
-
-void MCLFIRewriter::warning(const MCInst &Inst, const Twine &Msg) {
-  Ctx.reportWarning(Inst.getLoc(), Msg);
 }
 
 bool MCLFIRewriter::isCall(const MCInst &Inst) const {

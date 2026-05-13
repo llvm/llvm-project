@@ -25,7 +25,6 @@ class MCInst;
 class MCSubtargetInfo;
 class MCStreamer;
 class MCSymbol;
-class Twine;
 
 class MCLFIRewriter {
 private:
@@ -41,8 +40,7 @@ public:
                 std::unique_ptr<MCInstrInfo> &&II)
       : Ctx(Ctx), InstInfo(std::move(II)), RegInfo(std::move(RI)) {}
 
-  LLVM_ABI void error(const MCInst &Inst, const Twine &Msg);
-  LLVM_ABI void warning(const MCInst &Inst, const Twine &Msg);
+  LLVM_ABI void error(const MCInst &Inst, const char Msg[]);
 
   void disable() { Enabled = false; }
   void enable() { Enabled = true; }
