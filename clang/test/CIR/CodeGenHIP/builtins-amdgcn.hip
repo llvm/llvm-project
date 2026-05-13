@@ -73,7 +73,7 @@ __device__ void test_ds_swizzle(int* out, int a) {
 }
 
 // CIR-LABEL: @_Z12test_rsq_f32Pff
-// CIR: cir.llvm.intrinsic "amdgcn.rsq" {{.*}} : (!cir.float) -> !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.rsq" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z12test_rsq_f32Pff
 // LLVM: call{{.*}} float @llvm.amdgcn.rsq.f32(float %{{.*}})
 __device__ void test_rsq_f32(float* out, float a)
@@ -82,7 +82,7 @@ __device__ void test_rsq_f32(float* out, float a)
 }
 
 // CIR-LABEL: @_Z12test_rsq_f64Pdd
-// CIR: cir.llvm.intrinsic "amdgcn.rsq" {{.*}} : (!cir.double) -> !cir.double
+// CIR: cir.call_llvm_intrinsic "amdgcn.rsq" {{.*}} : (!cir.double) -> !cir.double
 // LLVM: define{{.*}} void @_Z12test_rsq_f64Pdd
 // LLVM: call{{.*}} double @llvm.amdgcn.rsq.f64(double %{{.*}})
 __device__ void test_rsq_f64(double* out, double a) {
@@ -90,7 +90,7 @@ __device__ void test_rsq_f64(double* out, double a) {
 }
 
 // CIR-LABEL: @_Z18test_rsq_clamp_f32Pff
-// CIR: cir.llvm.intrinsic "amdgcn.rsq.clamp" {{.*}} : (!cir.float) -> !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.rsq.clamp" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z18test_rsq_clamp_f32Pff
 // LLVM: call{{.*}} float @llvm.amdgcn.rsq.clamp.f32(float %{{.*}})
 __device__ void test_rsq_clamp_f32(float* out, float a)
@@ -99,7 +99,7 @@ __device__ void test_rsq_clamp_f32(float* out, float a)
 }
 
 // CIR-LABEL: @_Z18test_rsq_clamp_f64Pdd
-// CIR: cir.llvm.intrinsic "amdgcn.rsq.clamp" {{.*}} : (!cir.double) -> !cir.double
+// CIR: cir.call_llvm_intrinsic "amdgcn.rsq.clamp" {{.*}} : (!cir.double) -> !cir.double
 // LLVM: define{{.*}} void @_Z18test_rsq_clamp_f64Pdd
 // LLVM: call{{.*}} double @llvm.amdgcn.rsq.clamp.f64(double %{{.*}})
 __device__ void test_rsq_clamp_f64(double* out, double a) {
