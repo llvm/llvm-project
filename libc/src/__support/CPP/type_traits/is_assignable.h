@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// \file
 // This file contains a free-standing implementation of is_assignable
 // type trait.
 //
