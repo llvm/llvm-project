@@ -729,6 +729,27 @@ public:
     CleanupExit(mlir::Operation *op, int id) : exitOp(op), destinationId(id) {}
   };
 
+  // Determine whether a goto operation transfers control to a label that
+  // exists somewhere inside the given region (or any of its nested regions).
+  // Label names are unique within a function, so finding a matching cir.label
+  // inside the region implies that the goto definitely targets that label and
+  // therefore stays within the region. If no match is found, the goto either
+  // exits the region or its target is unknown; in either case the caller must
+  // treat it as exiting the region.
+  static bool gotoTargetsLabelInRegion(cir::GotoOp gotoOp,
+                                       mlir::Region &region) {
+    llvm::StringRef targetLabel = gotoOp.getLabel();
+    bool found = false;
+    region.walk([&](cir::LabelOp labelOp) {
+      if (labelOp.getLabel() == targetLabel) {
+        found = true;
+        return mlir::WalkResult::interrupt();
+      }
+      return mlir::WalkResult::advance();
+    });
+    return found;
+  }
+
   // Collect all operations that exit a cleanup scope body. Return, goto, break,
   // and continue can all require branches through the cleanup region. When a
   // loop is encountered, only return and goto are collected because break and
@@ -739,9 +760,11 @@ public:
   // any return, goto, break, or continue from the nested cleanup will also
   // branch through the outer cleanup.
   //
-  // Note that goto statements may not necessarily exit the cleanup scope, but
-  // for now we conservatively assume that they do. We'll need more nuanced
-  // handling of that when multi-exit flattening is implemented.
+  // A goto is only treated as an exit if its target label is not somewhere
+  // inside the cleanup body region. Gotos whose target label is within the
+  // cleanup body stay inside the cleanup scope and need no special handling
+  // during flattening; they are simply inlined along with the rest of the
+  // body region.
   //
   // This function assigns unique destination IDs to each exit, which are
   // used when multi-exit cleanup scopes are flattened.
@@ -757,14 +780,26 @@ public:
         exits.emplace_back(terminator, nextId++);
     }
 
+    // Helper to decide whether a goto needs to be treated as an exit from
+    // the cleanup scope being flattened. If the goto targets a label inside
+    // the cleanup body region, control stays within the cleanup and we leave
+    // the goto in place.
+    auto gotoExitsCleanup = [&](cir::GotoOp gotoOp) {
+      return !gotoTargetsLabelInRegion(gotoOp, cleanupBodyRegion);
+    };
+
     // Lambda to walk a loop and collect only returns and gotos.
     // Break and continue inside loops are handled by the loop itself.
     // Loops don't require special handling for nested switch or cleanup scopes
     // because break and continue never branch out of the loop.
     auto collectExitsInLoop = [&](mlir::Operation *loopOp) {
       loopOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
-        if (isa<cir::ReturnOp, cir::GotoOp>(nestedOp))
+        if (isa<cir::ReturnOp>(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
+        } else if (auto gotoOp = dyn_cast<cir::GotoOp>(nestedOp)) {
+          if (gotoExitsCleanup(gotoOp))
+            exits.emplace_back(gotoOp, nextId++);
+        }
         return mlir::WalkResult::advance();
       });
     };
@@ -787,8 +822,11 @@ public:
         } else if (isa<cir::LoopOpInterface>(nestedOp)) {
           collectExitsInLoop(nestedOp);
           return mlir::WalkResult::skip();
-        } else if (isa<cir::ReturnOp, cir::GotoOp, cir::ContinueOp>(nestedOp)) {
+        } else if (isa<cir::ReturnOp, cir::ContinueOp>(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
+        } else if (auto gotoOp = dyn_cast<cir::GotoOp>(nestedOp)) {
+          if (gotoExitsCleanup(gotoOp))
+            exits.emplace_back(gotoOp, nextId++);
         }
         return mlir::WalkResult::advance();
       });
@@ -807,8 +845,11 @@ public:
         // the nested cleanup.
         if (!ignoreBreak && isa<cir::BreakOp>(op)) {
           exits.emplace_back(op, nextId++);
-        } else if (isa<cir::ContinueOp, cir::ReturnOp, cir::GotoOp>(op)) {
+        } else if (isa<cir::ContinueOp, cir::ReturnOp>(op)) {
           exits.emplace_back(op, nextId++);
+        } else if (auto gotoOp = dyn_cast<cir::GotoOp>(op)) {
+          if (gotoExitsCleanup(gotoOp))
+            exits.emplace_back(gotoOp, nextId++);
         } else if (isa<cir::CleanupScopeOp>(op)) {
           // Recurse into nested cleanup's body region.
           collectExitsInCleanup(cast<cir::CleanupScopeOp>(op).getBodyRegion(),
@@ -972,15 +1013,14 @@ public:
           return mlir::success();
         })
         .Case<cir::GotoOp>([&](auto gotoOp) {
-          // Correct goto handling requires determining whether the goto
-          // branches out of the cleanup scope or stays within it.
-          // Although the goto necessarily exits the cleanup scope in the
-          // case where it is the only exit from the scope, it is left
-          // as unimplemented for now so that it can be generalized when
-          // multi-exit flattening is implemented.
+          // Gotos that target a label within the cleanup body region are
+          // filtered out by collectExits and never reach this code, so any
+          // goto that does reach here transfers control out of the cleanup
+          // scope. Branching out of a cleanup scope through a goto isn't
+          // yet supported.
           cir::UnreachableOp::create(rewriter, loc);
-          return gotoOp.emitError(
-              "goto in cleanup scope is not yet implemented");
+          return gotoOp.emitError("goto out of cleanup scope is not yet "
+                                  "implemented");
         })
         .Default([&](mlir::Operation *op) {
           cir::UnreachableOp::create(rewriter, loc);
