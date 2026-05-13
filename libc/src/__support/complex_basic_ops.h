@@ -21,7 +21,7 @@ template <typename T> LIBC_INLINE constexpr T conjugate(T c) {
   return cpp::bit_cast<T>(c_c);
 }
 
-template <typename T> LIBC_INLINE constexpr T project(T c) {
+template <typename T> LIBC_INLINE LIBC_CONSTEXPR T project(T c) {
   using real_t = make_real_t<T>;
   Complex<real_t> c_c = cpp::bit_cast<Complex<real_t>>(c);
   if (fputil::FPBits<real_t>(c_c.real).is_inf() ||

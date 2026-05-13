@@ -52,13 +52,7 @@ bool ObjCLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
 bool ObjCLanguageRuntime::AddClass(ObjCISA isa,
                                    const ClassDescriptorSP &descriptor_sp,
                                    const char *class_name) {
-  if (isa != 0) {
-    m_isa_to_descriptor[isa] = descriptor_sp;
-    // class_name is assumed to be valid
-    m_hash_to_isa_map.insert(std::make_pair(llvm::djbHash(class_name), isa));
-    return true;
-  }
-  return false;
+  return AddClass(isa, descriptor_sp, llvm::djbHash(class_name));
 }
 
 void ObjCLanguageRuntime::AddToMethodCache(lldb::addr_t class_addr,

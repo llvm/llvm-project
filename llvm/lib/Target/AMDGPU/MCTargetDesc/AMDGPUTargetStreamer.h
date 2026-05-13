@@ -11,7 +11,10 @@
 
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUPALMetadata.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCStreamer.h"
+#include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -26,6 +29,27 @@ struct MCKernelDescriptor;
 namespace HSAMD {
 struct Metadata;
 }
+
+struct FuncInfo {
+  uint32_t NumSGPR = 0;
+  uint32_t NumArchVGPR = 0;
+  uint32_t NumAccVGPR = 0;
+  uint32_t PrivateSegmentSize = 0;
+  bool UsesVCC = false;
+  bool UsesFlatScratch = false;
+  bool HasDynStack = false;
+
+  MCSymbol *Sym = nullptr;
+};
+
+struct InfoSectionData {
+  SmallVector<FuncInfo, 8> Funcs;
+  SmallVector<std::pair<MCSymbol *, MCSymbol *>, 4> Uses;
+  SmallVector<std::pair<MCSymbol *, MCSymbol *>, 8> Calls;
+  SmallVector<std::pair<MCSymbol *, std::string>, 4> IndirectCalls;
+  SmallVector<std::pair<MCSymbol *, std::string>, 4> TypeIds;
+};
+
 } // namespace AMDGPU
 
 class AMDGPUTargetStreamer : public MCTargetStreamer {
@@ -104,6 +128,8 @@ public:
                              const MCExpr *ReserveVCC,
                              const MCExpr *ReserveFlatScr) {}
 
+  virtual void emitAMDGPUInfo(const AMDGPU::InfoSectionData &Data) {}
+
   static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
 
@@ -168,6 +194,8 @@ public:
                              const MCExpr *NextVGPR, const MCExpr *NextSGPR,
                              const MCExpr *ReserveVCC,
                              const MCExpr *ReserveFlatScr) override;
+
+  void emitAMDGPUInfo(const AMDGPU::InfoSectionData &Data) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
@@ -221,6 +249,8 @@ public:
                              const MCExpr *NextVGPR, const MCExpr *NextSGPR,
                              const MCExpr *ReserveVCC,
                              const MCExpr *ReserveFlatScr) override;
+
+  void emitAMDGPUInfo(const AMDGPU::InfoSectionData &Data) override;
 };
 }
 #endif

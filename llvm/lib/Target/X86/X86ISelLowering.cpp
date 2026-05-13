@@ -23759,7 +23759,7 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
       return false;
 
     SDValue Src = I->getOperand(0);
-    DenseMap<SDValue, APInt>::iterator M = SrcOpMap.find(Src);
+    auto M = SrcOpMap.find(Src);
     if (M == SrcOpMap.end()) {
       VT = Src.getValueType();
       // Quit if not the same type.
@@ -32954,6 +32954,13 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     // use a cmpxchg loop.
     return AtomicExpansionKind::CmpXChg;
   }
+}
+
+TargetLowering::AtomicExpansionKind
+X86TargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
+  if (LI->getType()->getScalarType()->isFloatingPointTy())
+    return AtomicExpansionKind::CastToInteger;
+  return AtomicExpansionKind::None;
 }
 
 LoadInst *
@@ -61197,8 +61204,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
 
     // See if were inserting into a zero vXi1 vector and the subvector was
     // bitcast from a gpr that could be zero-extended directly.
-    if (IsI1Vector && TLI.isTypeLegal(OpVT)) {
-      SDValue SubInt = peekThroughBitcasts(SubVec);
+    if (IsI1Vector && TLI.isTypeLegal(OpVT) && SubVec.hasOneUse()) {
+      SDValue SubInt = peekThroughOneUseBitcasts(SubVec);
       EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VecNumElts);
       if (TLI.isTypeLegal(IntVT) && SubInt.getValueType().isScalarInteger()) {
         SubInt = DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, SubInt);

@@ -19214,7 +19214,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       if (User && User->hasOneUse() &&
           isa<LoadInst, StoreInst>(User->user_back())) {
         Type *LocalTy = getValueType(User->user_back());
-        if (!UserScalarTy) {
+        if (!UserScalarTy && !isa<ScalableVectorType>(LocalTy)) {
           UserScalarTy = LocalTy;
         } else if (UserScalarTy != LocalTy) {
           AllUsersGEPSWithStoresLoads = false;
@@ -28756,7 +28756,8 @@ public:
       // original scalar identity operations on matched horizontal reductions).
       IsSupportedHorRdxIdentityOp =
           RK == ReductionOrdering::Unordered && RdxKind != RecurKind::Mul &&
-          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd;
+          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd &&
+          (!SLPReVec || !Candidates.front()->getType()->isVectorTy());
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
@@ -29363,7 +29364,7 @@ public:
           IgnoreList.insert(Op);
 
       V.buildTree(VL, IgnoreList);
-      if (V.isTreeTinyAndNotFullyVectorizable(false)) {
+      if (V.isTreeTinyAndNotFullyVectorizable(/*ForReduction=*/true)) {
         V.analyzedReductionVals(VL);
         return false;
       }
@@ -29424,28 +29425,21 @@ public:
       return true;
     };
 
-    // Phase 1: front-anchored — try [0, W), shrinking W.
-    // Phase 2: back-anchored  — try [N-W, N), shrinking W.
-    // We try one side fully before the other to limit compile time.
+    // Interleaved window search - for each width W (shrinking),
+    // try front-anchored [0, W) then back-anchored [N-W, N).
     unsigned N = Candidates.size();
-    for (bool FromFront : {true, false}) {
-      ReduxWidth = N;
-      if (!VectorizeNonPowerOf2 || !has_single_bit(ReduxWidth + 1))
-        ReduxWidth = GetVectorFactor(ReduxWidth);
-      ReduxWidth = std::min(ReduxWidth, MaxElts);
+    ReduxWidth = N;
+    if (!VectorizeNonPowerOf2 || !has_single_bit(ReduxWidth + 1))
+      ReduxWidth = GetVectorFactor(ReduxWidth);
+    ReduxWidth = std::min(ReduxWidth, MaxElts);
 
-      while (ReduxWidth >= ReductionLimit) {
-        unsigned Start = FromFront ? 0 : N - ReduxWidth;
-        if (!FromFront && Start == 0) {
-          ShrinkReduxWidth();
-          continue;
-        }
-        if (TryWindow(Start, ReduxWidth))
-          break;
-        ShrinkReduxWidth();
-      }
-      if (SuccessRoot)
+    while (ReduxWidth >= ReductionLimit) {
+      if (TryWindow(0, ReduxWidth))
         break;
+      unsigned BackStart = N - ReduxWidth;
+      if (BackStart != 0 && TryWindow(BackStart, ReduxWidth))
+        break;
+      ShrinkReduxWidth();
     }
 
     if (!SuccessRoot) {
@@ -29868,6 +29862,8 @@ private:
           // res = vv
           break;
         case RecurKind::Sub:
+        case RecurKind::FSub:
+        case RecurKind::FAddChainWithSubs:
         case RecurKind::AddChainWithSubs:
         case RecurKind::Mul:
         case RecurKind::FMul:
@@ -30024,6 +30020,8 @@ private:
       // res = vv
       return VectorizedValue;
     case RecurKind::Sub:
+    case RecurKind::FSub:
+    case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
@@ -30127,6 +30125,8 @@ private:
       return Builder.CreateFMul(VectorizedValue, Scale);
     }
     case RecurKind::Sub:
+    case RecurKind::FSub:
+    case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
