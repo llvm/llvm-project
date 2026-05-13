@@ -1166,7 +1166,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     // SSE2 can use basic vector unrolling.
     // SSE41 can use PHMINPOS to perform v16i8/v8i16 minmax reductions.
-    for (auto VT : {MVT::v16i8, MVT::v8i16}) {
+    // Fallback to ReplaceNodeResults for vXi64 reductions on 32-bit targets.
+    for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::i64}) {
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
@@ -1421,15 +1422,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (auto VT : { MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Legal);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Legal);
-    }
-
-    // Allow v4i32/v2i64 minmax reductions with SSE41 vector comparison,
-    // select and minmax handling.
-    for (auto VT : { MVT::v4i32, MVT::v2i64 }) {
-      setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
     }
 
     // SSE41 also has vector sign/zero extending loads, PMOV[SZ]X
@@ -29680,6 +29672,7 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(Op);
 
   if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
@@ -29697,6 +29690,14 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
   // Expand 128-bit shuffle tree + reduction binops.
   unsigned NumSrcElts = SrcVT.getVectorNumElements();
   for (unsigned NumElts = NumSrcElts; NumElts != 1; NumElts /= 2) {
+    // SSE only - scalarize the last 2 elements if the vector binop isn't legal.
+    if (NumElts == 2 && !Subtarget.hasAVX() &&
+        !TLI.isOperationLegal(BinOp, SrcVT) && TLI.isTypeLegal(ExtractVT)) {
+      return DAG.getNode(BinOp, DL, ExtractVT,
+                         DAG.getExtractVectorElt(DL, ExtractVT, Src, 0),
+                         DAG.getExtractVectorElt(DL, ExtractVT, Src, 1));
+    }
+
     SmallVector<int, 16> Mask(NumSrcElts, -1);
     std::iota(Mask.begin(), Mask.begin() + (NumElts / 2), NumElts / 2);
     SDValue Upper =
@@ -35332,6 +35333,15 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
       Results.push_back(Res);
     }
+    return;
+  }
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN: {
+    assert(N->getValueType(0) == MVT::i64 && "Unexpected vector reduction");
+    if (SDValue Res = LowerMINMAX_REDUCE(SDValue(N, 0), Subtarget, DAG))
+      Results.push_back(Res);
     return;
   }
   case ISD::FP_TO_SINT_SAT:
@@ -47106,10 +47116,6 @@ static SDValue createPSADBW(SelectionDAG &DAG, SDValue N0, SDValue N1,
 // ISD::VECREDUCE_SMIN/SMAX/UMIN/UMAX.
 static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
-  EVT ExtractVT = Extract->getValueType(0);
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(ExtractVT))
-    return SDValue();
-
   // Check for SMAX/SMIN/UMAX/UMIN horizontal reduction patterns.
   ISD::NodeType BinOp;
   SDValue Src = DAG.matchBinOpReduction(
@@ -47139,7 +47145,7 @@ static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
     llvm_unreachable("Unexpected reduction");
   }
 
-  return DAG.getNode(RdxOp, SDLoc(Extract), ExtractVT, Src);
+  return DAG.getNode(RdxOp, SDLoc(Extract), Extract->getValueType(0), Src);
 }
 
 // Attempt to replace an all_of/any_of/parity style horizontal reduction with a MOVMSK.
