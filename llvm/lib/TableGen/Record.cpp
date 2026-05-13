@@ -2732,7 +2732,7 @@ std::string CondOpInit::getAsString() const {
 }
 
 const Init *CondOpInit::getBit(unsigned Bit) const {
-  if (getType() == BitRecTy::get(getRecordKeeper()))
+  if (isa<BitRecTy>(getType()))
     return this;
   return VarBitInit::get(this, Bit);
 }
