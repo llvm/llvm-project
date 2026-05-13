@@ -21,8 +21,8 @@ define void @widget(i1 %c) gc "statepoint-example" {
 ; CHECK-NEXT:    [[TMP12_BASE:%.*]] = phi ptr addrspace(1) [ [[BASE_EE]], [[BB7]] ], [ [[BASE_EE]], [[BB9]] ], !is_base_value !0
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr addrspace(1) [ [[TMP8]], [[BB7]] ], [ [[TMP10]], [[BB9]] ]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @snork, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 undef), "gc-live"(ptr addrspace(1) [[TMP12_BASE]], ptr addrspace(1) [[TMP12]]) ]
-; CHECK-NEXT:    [[TMP12_BASE_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP12_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 1)
+; CHECK-NEXT:    [[TMP12_BASE_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP12_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 1)
 ; CHECK-NEXT:    br label [[BB15]]
 ; CHECK:       bb15:
 ; CHECK-NEXT:    [[TMP16_BASE:%.*]] = phi ptr addrspace(1) [ [[BASE_EE]], [[BB9]] ], [ [[TMP12_BASE_RELOCATED]], [[BB11]] ], !is_base_value !0
@@ -30,15 +30,15 @@ define void @widget(i1 %c) gc "statepoint-example" {
 ; CHECK-NEXT:    br i1 [[C]], label [[BB17:%.*]], label [[BB20:%.*]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN1:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @snork, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 undef), "gc-live"(ptr addrspace(1) [[TMP16_BASE]], ptr addrspace(1) [[TMP16]]) ]
-; CHECK-NEXT:    [[TMP16_BASE_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN1]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP16_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN1]], i32 0, i32 1)
+; CHECK-NEXT:    [[TMP16_BASE_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN1]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP16_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN1]], i32 0, i32 1)
 ; CHECK-NEXT:    br label [[BB20]]
 ; CHECK:       bb20:
 ; CHECK-DAG:    [[DOT05:%.*]] = phi ptr addrspace(1) [ [[TMP16_BASE_RELOCATED]], [[BB17]] ], [ [[TMP16_BASE]], [[BB15]] ]
 ; CHECK-DAG:    [[DOT0:%.*]] = phi ptr addrspace(1) [ [[TMP16_RELOCATED]], [[BB17]] ], [ [[TMP16]], [[BB15]] ]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN2:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void (ptr addrspace(1))) @foo, i32 1, i32 0, ptr addrspace(1) [[DOT0]], i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[DOT05]], ptr addrspace(1) [[DOT0]]) ]
-; CHECK-NEXT:    [[TMP16_BASE_RELOCATED3:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN2]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP16_RELOCATED4:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN2]], i32 0, i32 1)
+; CHECK-NEXT:    [[TMP16_BASE_RELOCATED3:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN2]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP16_RELOCATED4:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN2]], i32 0, i32 1)
 ; CHECK-NEXT:    ret void
 ;
 bb6:                                              ; preds = %bb3
