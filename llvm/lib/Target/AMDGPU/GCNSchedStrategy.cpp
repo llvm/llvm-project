@@ -2257,7 +2257,7 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
 
 void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
     ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands) {
-  for (auto &[MI, OriginalOpcode] : RewriteCands) {
+  for (auto [MI, OriginalOpcode] : RewriteCands) {
     assert(TII->isMAI(*MI));
     const TargetRegisterClass *ADefRC =
         DAG.MRI.getRegClass(MI->getOperand(0).getReg());
@@ -2389,7 +2389,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   unsigned AGPRThreshold = MaxVectorRegs.second;
   unsigned CombinedThreshold = ST.getMaxNumVGPRs(MF);
 
-  // Reset the classes that were changed to AGPR for better RB analysis.
+  // Reset the classes that were changed to AGPR for better register bank analysis.
   // We must do rewriting after copy-insertion, as some defs of the register
   // may require VGPR.  Additionally, if we bail out and don't perform the
   // rewrite then these need to be restored anyway.
@@ -2542,7 +2542,7 @@ bool RewriteMFMAFormStage::rewrite(
   DenseMap<unsigned, DenseMap<Register, SmallPtrSet<MachineOperand *, 8>>>
       ReachingUseTracker;
 
-  for (auto &[MI, OriginalOpcode] : RewriteCands) {
+  for (auto [MI, OriginalOpcode] : RewriteCands) {
     int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
     if (ReplacementOp == -1)
       continue;
@@ -2675,19 +2675,16 @@ bool RewriteMFMAFormStage::rewrite(
 
           // If this reaching def was the last MI in the region, update the
           // region boundaries.
-          DenseMap<MachineInstr *, unsigned>::iterator LMI =
-              LastMIToRegion.find(RD);
-          if (LMI != LastMIToRegion.end()) {
-            unsigned UpdateRegion = LMI->second;
-            DAG.Regions[UpdateRegion].second = VGPRCopy;
-            LastMIToRegion.erase(RD);
+          if (auto LMI = LastMIToRegion.find(RD);
+              LMI != LastMIToRegion.end()) {
+            DAG.Regions[LMI->second].second = VGPRCopy;
+            LastMIToRegion.erase(LMI);
             // If RD was also the first MI of the next region, update that
             // region's start boundary to keep the two sides in sync.
-            DenseMap<MachineInstr *, unsigned>::iterator FMI =
-                FirstMIToRegion.find(RD);
-            if (FMI != FirstMIToRegion.end()) {
+            if (auto FMI = FirstMIToRegion.find(RD);
+                FMI != FirstMIToRegion.end()) {
               DAG.Regions[FMI->second].first = VGPRCopy;
-              FirstMIToRegion.erase(RD);
+              FirstMIToRegion.erase(FMI);
             }
           }
         }
@@ -2697,7 +2694,10 @@ bool RewriteMFMAFormStage::rewrite(
     DenseSet<MachineOperand *> &DstRegSet = ReplaceMap[DstReg];
 
     // Collect same-block uses; defer cross-block uses to ReachingUseTracker.
+    // Track the earliest use position in the same pass to avoid a second scan.
     SmallVector<MachineOperand *, 4> SameBlockUses;
+    MachineOperand *Earliest = nullptr;
+    SlotIndex EarliestPt;
     for (MachineOperand *RU : DstReachingUseCopies) {
       MachineBasicBlock *RUBlock = RU->getParent()->getParent();
       if (RUBlock != MI->getParent()) {
@@ -2705,21 +2705,16 @@ bool RewriteMFMAFormStage::rewrite(
         continue;
       }
       SameBlockUses.push_back(RU);
+      SlotIndex Pt = DAG.LIS->getInstructionIndex(*RU->getParent());
+      if (!Earliest || SlotIndex::isEarlierInstr(Pt, EarliestPt)) {
+        EarliestPt = Pt;
+        Earliest = RU;
+      }
     }
 
     // One COPY for all same-block uses, placed before the earliest use to
     // minimise the live range of the bridging VGPR.
-    if (!SameBlockUses.empty()) {
-      MachineOperand *Earliest = SameBlockUses[0];
-      SlotIndex EarliestPt =
-          DAG.LIS->getInstructionIndex(*Earliest->getParent());
-      for (MachineOperand *RU : SameBlockUses) {
-        SlotIndex Pt = DAG.LIS->getInstructionIndex(*RU->getParent());
-        if (SlotIndex::isEarlierInstr(Pt, EarliestPt)) {
-          EarliestPt = Pt;
-          Earliest = RU;
-        }
-      }
+    if (Earliest) {
       const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
       const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
       Register SameBlockNewUseReg = DAG.MRI.createVirtualRegister(VGPRRC);
@@ -2731,16 +2726,14 @@ bool RewriteMFMAFormStage::rewrite(
               .addUse(DstReg, {}, 0);
       DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
       // If the earliest use was the first MI of a region, update the boundary.
-      DenseMap<MachineInstr *, unsigned>::iterator FI =
-          FirstMIToRegion.find(UseInst);
-      if (FI != FirstMIToRegion.end()) {
+      if (auto FI = FirstMIToRegion.find(UseInst);
+          FI != FirstMIToRegion.end()) {
         DAG.Regions[FI->second].first = VGPRCopy;
         FirstMIToRegion.erase(FI);
         // If UseInst was also the exclusive end of the preceding region, update
         // that region's end boundary to keep the two sides in sync.
-        DenseMap<MachineInstr *, unsigned>::iterator LMI =
-            LastMIToRegion.find(UseInst);
-        if (LMI != LastMIToRegion.end()) {
+        if (auto LMI = LastMIToRegion.find(UseInst);
+            LMI != LastMIToRegion.end()) {
           DAG.Regions[LMI->second].second = VGPRCopy;
           LastMIToRegion.erase(LMI);
         }
@@ -2789,19 +2782,16 @@ bool RewriteMFMAFormStage::rewrite(
 
       // If this UseInst was the first MI in the region, update the region
       // boundaries.
-      DenseMap<MachineInstr *, unsigned>::iterator FI =
-          FirstMIToRegion.find(UseInst);
-      if (FI != FirstMIToRegion.end()) {
-        unsigned UpdateRegion = FI->second;
-        DAG.Regions[UpdateRegion].first = VGPRCopy;
-        FirstMIToRegion.erase(UseInst);
+      if (auto FI = FirstMIToRegion.find(UseInst);
+          FI != FirstMIToRegion.end()) {
+        DAG.Regions[FI->second].first = VGPRCopy;
+        FirstMIToRegion.erase(FI);
         // If UseInst was also the exclusive end of the preceding region, update
         // that region's end boundary to keep the two sides in sync.
-        DenseMap<MachineInstr *, unsigned>::iterator LMI =
-            LastMIToRegion.find(UseInst);
-        if (LMI != LastMIToRegion.end()) {
+        if (auto LMI = LastMIToRegion.find(UseInst);
+            LMI != LastMIToRegion.end()) {
           DAG.Regions[LMI->second].second = VGPRCopy;
-          LastMIToRegion.erase(UseInst);
+          LastMIToRegion.erase(LMI);
         }
       }
 
