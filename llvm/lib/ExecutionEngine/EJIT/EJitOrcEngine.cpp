@@ -106,10 +106,8 @@ EJitOrcEngine::Create(const Config &config,
           // 2. InstCombine: fold constant chains from substituted params
           opt.runInstCombine(M);
 
-          // 3. Inline: expand callees so StructFieldPass can trace GEP chains
-          opt.runInline(M);
-
-          // 4. First EJitStructFieldPass: replace ejit_may_const loads
+          // 3. First EJitStructFieldPass: replace ejit_may_const loads
+          //    (Inlining already done in AOT preOptimizeBitcode by PASS1)
           //    before the optimization pipeline so SCCP/ADCE can propagate
           //    the resulting constants.
           {
@@ -119,12 +117,11 @@ EJitOrcEngine::Create(const Config &config,
                 structField.run(F, opt.getFAM());
           }
 
-          // 5. Run the standard optimization pipeline at the configured level.
-          //    L3 LoopFullUnroll may expose new constant-index GEP chains.
+          // 4. Run the standard optimization pipeline at the configured level.
           opt.runOptimizationPipeline(M, ctx->optLevel);
 
-          // 6. Second EJitStructFieldPass + InstCombine: catch loads that
-          //    became constant-indexed after loop unrolling (L3) or inlining.
+          // 5. Second EJitStructFieldPass + InstCombine: catch loads exposed
+          //    after loop unrolling (L3) or constant folding.
           {
             EJitStructFieldPass structField(periodReg);
             for (Function &F : M.functions())

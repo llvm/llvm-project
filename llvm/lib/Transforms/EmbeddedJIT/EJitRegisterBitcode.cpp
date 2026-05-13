@@ -88,15 +88,19 @@ static void preOptimizeBitcode(Module &M) {
   PB.registerModuleAnalyses(MAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  // Step 1: AlwaysInline — expand alwaysinline callees so PASS6 can trace
-  // GEP chains through them at JIT time.
+  // Step 1: Inline — expand callees at AOT time. After JIT parameter
+  // substitution, the inlined code's GEP indices become constants and
+  // PASS6 can trace through them. AlwaysInline first, then cost-based
+  // inliner for small index-wrapper functions.
   {
     ModulePassManager MPM;
     MPM.addPass(AlwaysInlinerPass());
+    MPM.addPass(PB.buildModuleInlinerPipeline(
+        llvm::OptimizationLevel::O2, ThinOrFullLTOPhase::None));
     MPM.run(M, MAM);
   }
 
-  // Step 2: Mem2Reg — promote allocas to SSA for cleaner IR.
+  // Step 2: Mem2Reg — promote allocas from inlined code to SSA.
   {
     FunctionPassManager FPM;
     FPM.addPass(PromotePass());
@@ -105,7 +109,7 @@ static void preOptimizeBitcode(Module &M) {
         FPM.run(F, FAM);
   }
 
-  // Step 3: InstCombine — fold zext/GEP/bitcast chains from inlined code.
+  // Step 3: InstCombine — fold expanded chains.
   {
     FunctionPassManager FPM;
     FPM.addPass(InstCombinePass());
@@ -114,7 +118,7 @@ static void preOptimizeBitcode(Module &M) {
         FPM.run(F, FAM);
   }
 
-  // Step 4: SimplifyCFG — clean up dead branches after inlining.
+  // Step 4: SimplifyCFG — clean up dead branches.
   {
     FunctionPassManager FPM;
     FPM.addPass(SimplifyCFGPass());

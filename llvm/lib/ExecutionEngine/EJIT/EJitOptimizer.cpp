@@ -78,18 +78,6 @@ void EJitOptimizer::runInstCombine(Module &M) {
       FPM.run(F, FAM_);
 }
 
-void EJitOptimizer::runInline(Module &M) {
-  // Build an inliner pipeline: AlwaysInline for explicit annotations,
-  // then cost-based inliner for small index-wrapper functions so PASS6
-  // can trace GEP chains through them.
-  PassBuilder PB;
-  ModulePassManager MPM;
-  MPM.addPass(AlwaysInlinerPass());
-  MPM.addPass(PB.buildModuleInlinerPipeline(
-      llvm::OptimizationLevel::O2, ThinOrFullLTOPhase::None));
-  MPM.run(M, MAM_);
-}
-
 void EJitOptimizer::runOptimizationPipeline(Module &M,
                                             OptimizationLevel level) {
   // L1: SCCP + ADCE + SimplifyCFG
