@@ -21,9 +21,9 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 #include "clang/CIR/MissingFeatures.h"
 
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -1005,59 +1005,6 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
 // The Pass
 //===----------------------------------------------------------------------===//
 
-// The applyPartialConversion function traverses blocks in the dominance order,
-// so it does not lower and operations that are not reachachable from the
-// operations passed in as arguments. Since we do need to lower such code in
-// order to avoid verification errors occur, we cannot just pass the module op
-// to applyPartialConversion. We must build a set of unreachable ops and
-// explicitly add them, along with the module, to the vector we pass to
-// applyPartialConversion.
-//
-// For instance, this CIR code:
-//
-//    cir.func @foo(%arg0: !s32i) -> !s32i {
-//      %4 = cir.cast int_to_bool %arg0 : !s32i -> !cir.bool
-//      cir.if %4 {
-//        %5 = cir.const #cir.int<1> : !s32i
-//        cir.return %5 : !s32i
-//      } else {
-//        %5 = cir.const #cir.int<0> : !s32i
-//       cir.return %5 : !s32i
-//      }
-//      cir.return %arg0 : !s32i
-//    }
-//
-// contains an unreachable return operation (the last one). After the CXXABI
-// pass it will be placed into the unreachable block.  This will error because
-// it will have not converted the types in the block, making the legalizer fail.
-//
-// In the future we may want to get rid of this function and use a DCE pass or
-// something similar. But for now we need to guarantee the absence of the
-// dialect verification errors. Note: We do the same in LowerToLLVM as well,
-// this is a striaght copy/paste including most of the comment. We might wi sh
-// to combine these if we don't want to do a DCE pass/etc.
-static void collectUnreachable(mlir::Operation *parent,
-                               llvm::SmallVector<mlir::Operation *> &ops) {
-  // For every region under `parent`, find the blocks unreachable from the
-  // entry via a forward CFG traversal and collect their ops.
-  llvm::df_iterator_default_set<mlir::Block *, 16> reachable;
-  parent->walk([&](mlir::Region *region) {
-    // Empty regions have no blocks; single-block regions have only the
-    // entry, which is trivially reachable. Either way, nothing to collect.
-    if (region->empty() || region->hasOneBlock())
-      return;
-    reachable.clear();
-    for (mlir::Block *blk : llvm::depth_first_ext(&region->front(), reachable))
-      (void)blk;
-    for (mlir::Block &blk : *region) {
-      if (reachable.contains(&blk))
-        continue;
-      for (mlir::Operation &op : blk)
-        ops.push_back(&op);
-    }
-  });
-}
-
 void CXXABILoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
   mlir::MLIRContext *ctx = mod.getContext();
@@ -1087,7 +1034,7 @@ void CXXABILoweringPass::runOnOperation() {
 
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(mod);
-  collectUnreachable(mod, ops);
+  cir::collectUnreachable(mod, ops);
 
   if (failed(mlir::applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
