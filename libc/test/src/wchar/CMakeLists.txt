@@ -576,7 +576,6 @@ add_libc_test(
   SRCS
     fgetwc_test.cpp
   DEPENDS
-    libc.include.stdio
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.hdr.wchar_macros
