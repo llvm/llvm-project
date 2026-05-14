@@ -14,16 +14,15 @@
 #include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
+#include "clang/CodeGen/ModuleLinker.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
@@ -78,16 +77,7 @@ class CIRGenConsumer : public clang::ASTConsumer {
   const FrontendOptions &FEOptions;
   CodeGenOptions &CGO;
 
-  // TODO(cir): This is a 1:1 copy from OG Codegen, we might need to find a way
-  // to share this
-  struct LinkModule {
-    std::unique_ptr<llvm::Module> module;
-    bool propagateAttrs;
-    bool internalize;
-    unsigned linkFlags;
-  };
-
-  SmallVector<LinkModule, 4> linkModules;
+  SmallVector<::clang::LinkModule, 4> linkModules;
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
@@ -179,7 +169,7 @@ public:
       }
 
       llvm::LLVMContext LLVMCtx;
-      if (loadLinkModules(LLVMCtx))
+      if (clang::loadLinkModules(CI, LLVMCtx, linkModules))
         return;
 
       std::unique_ptr<llvm::Module> LLVMModule =
@@ -198,55 +188,21 @@ public:
     }
   }
 
-  bool loadLinkModules(llvm::LLVMContext &llvmCtx) {
-    if (!linkModules.empty())
-      return false;
-
-    for (const CodeGenOptions::BitcodeFileToLink &F :
-         CI.getCodeGenOpts().LinkBitcodeFiles) {
-      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BCBuf =
-          CI.getFileManager().getBufferForFile(F.Filename);
-      if (!BCBuf) {
-        CI.getDiagnostics().Report(diag::err_cannot_open_file)
-            << F.Filename << BCBuf.getError().message();
-        linkModules.clear();
-        return true;
-      }
-
-      llvm::Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
-          llvm::getOwningLazyBitcodeModule(std::move(*BCBuf), llvmCtx);
-      if (!ModuleOrErr) {
-        llvm::handleAllErrors(
-            ModuleOrErr.takeError(), [&](llvm::ErrorInfoBase &EIB) {
-              CI.getDiagnostics().Report(diag::err_cannot_open_file)
-                  << F.Filename << EIB.message();
-            });
-        linkModules.clear();
-        return true;
-      }
-
-      linkModules.push_back({std::move(ModuleOrErr.get()), F.PropagateAttrs,
-                             F.Internalize, F.LinkFlags});
-    }
-
-    return false;
-  }
-
   bool linkInModules(llvm::Module &M) {
     for (auto &LM : linkModules) {
-      assert(LM.module && "LinkModule does not actually have a module");
+      assert(LM.Module && "LinkModule does not actually have a module");
 
       bool Err;
-      if (LM.internalize) {
+      if (LM.Internalize) {
         Err = llvm::Linker::linkModules(
-            M, std::move(LM.module), LM.linkFlags,
+            M, std::move(LM.Module), LM.LinkFlags,
             [](llvm::Module &M, const llvm::StringSet<> &GVS) {
               llvm::internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
                 return !GV.hasName() || (GVS.count(GV.getName()) == 0);
               });
             });
       } else {
-        Err = llvm::Linker::linkModules(M, std::move(LM.module), LM.linkFlags);
+        Err = llvm::Linker::linkModules(M, std::move(LM.Module), LM.LinkFlags);
       }
 
       if (Err)
