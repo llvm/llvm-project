@@ -284,9 +284,9 @@ def relaxed_c_loc : Flag<["-"], "frelaxed-c-loc-checks">, Group<f_Group>,
   HelpText<"Allow a data object or function pointer as the C_LOC() argument">,
   DocBrief<[{
     Allow a data object or function pointer as the C_LOC() argument
-    (not just pointers/targets). The compiler cannot reason about aliases
-    created through non-target non-pointer arguments and may generate
-    incorrect code if such aliases are used in Fortran code.}]>;
+    (not just pointers/targets). The compiler will not reason about aliases
+    created through non-target non-pointer arguments and code generated
+    using such aliases may exhibit unexpected behavior.}]>;
 
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
