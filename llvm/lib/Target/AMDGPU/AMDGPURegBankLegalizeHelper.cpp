@@ -1428,18 +1428,18 @@ bool RegBankLegalizeHelper::lowerBitReplicateToVALU(MachineInstr &MI) {
   // 0x00-0x03 = src byte N, 0x0C = zero byte
   // e.g. 0x134C3A92 -> Hi: [0013][004C], Lo: [003A][0092]
   auto Zero = B.buildConstant(VgprRB_S32, 0);
-  Register LoByteSpread =
-      B.buildIntrinsic(Intrinsic::amdgcn_perm, {VgprRB_S32})
-          .addUse(Zero.getReg(0))
-          .addUse(Src)
-          .addUse(B.buildConstant(VgprRB_S32, 0x0C010C00).getReg(0))
-          .getReg(0);
-  Register HiByteSpread =
-      B.buildIntrinsic(Intrinsic::amdgcn_perm, {VgprRB_S32})
-          .addUse(Zero.getReg(0))
-          .addUse(Src)
-          .addUse(B.buildConstant(VgprRB_S32, 0x0C030C02).getReg(0))
-          .getReg(0);
+  auto LoSel = B.buildConstant(VgprRB_S32, 0x0C010C00);
+  auto HiSel = B.buildConstant(VgprRB_S32, 0x0C030C02);
+  Register LoByteSpread = B.buildIntrinsic(Intrinsic::amdgcn_perm, {VgprRB_S32})
+                              .addUse(Zero.getReg(0))
+                              .addUse(Src)
+                              .addUse(LoSel.getReg(0))
+                              .getReg(0);
+  Register HiByteSpread = B.buildIntrinsic(Intrinsic::amdgcn_perm, {VgprRB_S32})
+                              .addUse(Zero.getReg(0))
+                              .addUse(Src)
+                              .addUse(HiSel.getReg(0))
+                              .getReg(0);
 
   // Spread masks: each keeps the low N bits of every 2N-bit group, clearing
   // the garbage left by the shift+OR.
