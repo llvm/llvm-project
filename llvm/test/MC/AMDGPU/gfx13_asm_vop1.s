@@ -694,7 +694,7 @@ v_cvt_f16_i16 v5.l, -1
 
 v_cvt_f16_i16 v5.l, 0.5
 // GFX13-ASM: v_cvt_f16_i16_e32 v5.l, 0.5             ; encoding: [0xf0,0xa2,0x0a,0x7e]
-// GFX13-DIS: v_cvt_f16_i16_e32 v5.l, 0x3800          ; encoding: [0xff,0xa2,0x0a,0x7e,0x00,0x38,0x00,0x00]
+// GFX13-DIS: v_cvt_f16_i16_e32 v5.l, 0x3800          ; encoding: [0xf0,0xa2,0x0a,0x7e]
 
 v_cvt_f16_i16 v5.l, src_scc
 // GFX13: v_cvt_f16_i16_e32 v5.l, src_scc         ; encoding: [0xfd,0xa2,0x0a,0x7e]
@@ -740,7 +740,7 @@ v_cvt_f16_u16 v5.l, -1
 
 v_cvt_f16_u16 v5.l, 0.5
 // GFX13-ASM: v_cvt_f16_u16_e32 v5.l, 0.5             ; encoding: [0xf0,0xa0,0x0a,0x7e]
-// GFX13-DIS: v_cvt_f16_u16_e32 v5.l, 0x3800          ; encoding: [0xff,0xa0,0x0a,0x7e,0x00,0x38,0x00,0x00]
+// GFX13-DIS: v_cvt_f16_u16_e32 v5.l, 0x3800          ; encoding: [0xf0,0xa0,0x0a,0x7e]
 
 v_cvt_f16_u16 v5.l, src_scc
 // GFX13: v_cvt_f16_u16_e32 v5.l, src_scc         ; encoding: [0xfd,0xa0,0x0a,0x7e]
@@ -1449,7 +1449,7 @@ v_cvt_i32_i16 v5, -1
 
 v_cvt_i32_i16 v5, 0.5
 // GFX13-ASM: v_cvt_i32_i16_e32 v5, 0.5               ; encoding: [0xf0,0xd4,0x0a,0x7e]
-// GFX13-DIS: v_cvt_i32_i16_e32 v5, 0x3800            ; encoding: [0xff,0xd4,0x0a,0x7e,0x00,0x38,0x00,0x00]
+// GFX13-DIS: v_cvt_i32_i16_e32 v5, 0x3800            ; encoding: [0xf0,0xd4,0x0a,0x7e]
 
 v_cvt_i32_i16 v5, src_scc
 // GFX13: v_cvt_i32_i16_e32 v5, src_scc           ; encoding: [0xfd,0xd4,0x0a,0x7e]
@@ -1849,7 +1849,7 @@ v_cvt_u32_u16 v5, -1
 
 v_cvt_u32_u16 v5, 0.5
 // GFX13-ASM: v_cvt_u32_u16_e32 v5, 0.5               ; encoding: [0xf0,0xd6,0x0a,0x7e]
-// GFX13-DIS: v_cvt_u32_u16_e32 v5, 0x3800            ; encoding: [0xff,0xd6,0x0a,0x7e,0x00,0x38,0x00,0x00]
+// GFX13-DIS: v_cvt_u32_u16_e32 v5, 0x3800            ; encoding: [0xf0,0xd6,0x0a,0x7e]
 
 v_cvt_u32_u16 v5, src_scc
 // GFX13: v_cvt_u32_u16_e32 v5, src_scc           ; encoding: [0xfd,0xd6,0x0a,0x7e]
@@ -2885,7 +2885,7 @@ v_not_b16 v5.l, -1
 
 v_not_b16 v5.l, 0.5
 // GFX13-ASM: v_not_b16_e32 v5.l, 0.5                 ; encoding: [0xf0,0xd2,0x0a,0x7e]
-// GFX13-DIS: v_not_b16_e32 v5.l, 0x3800              ; encoding: [0xff,0xd2,0x0a,0x7e,0x00,0x38,0x00,0x00]
+// GFX13-DIS: v_not_b16_e32 v5.l, 0x3800              ; encoding: [0xf0,0xd2,0x0a,0x7e]
 
 v_not_b16 v5.l, src_scc
 // GFX13: v_not_b16_e32 v5.l, src_scc             ; encoding: [0xfd,0xd2,0x0a,0x7e]

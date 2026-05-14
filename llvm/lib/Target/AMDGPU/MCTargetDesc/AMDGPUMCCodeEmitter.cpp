@@ -223,7 +223,10 @@ static uint32_t getLit32Encoding(uint32_t Val, const MCSubtargetInfo &STI) {
 }
 
 static uint32_t getLit16IntEncoding(uint32_t Val, const MCSubtargetInfo &STI) {
-  return getLit32Encoding(Val, STI);
+  uint32_t Enc32 = getLit32Encoding(Val, STI);
+  if (Enc32 != 255)
+    return Enc32;
+  return getLit16Encoding(Val, STI);
 }
 
 static uint32_t getLit64Encoding(const MCInstrDesc &Desc, uint64_t Val,

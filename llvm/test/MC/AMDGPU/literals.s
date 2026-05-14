@@ -452,7 +452,7 @@ v_not_b16 v5.l, 1.0
 // GFX11: v_not_b16_e32 v5.l, 1.0                 ; encoding: [0xf2,0xd2,0x0a,0x7e]
 // GFX12: v_not_b16_e32 v5.l, 1.0                 ; encoding: [0xf2,0xd2,0x0a,0x7e]
 // GFX1250-ASM: v_not_b16_e32 v5.l, 1.0                 ; encoding: [0xf2,0xd2,0x0a,0x7e]
-// GFX1250-DIS: v_not_b16_e32 v5.l, 0x3c00              ; encoding: [0xff,0xd2,0x0a,0x7e,0x00,0x3c,0x00,0x00]
+// GFX1250-DIS: v_not_b16_e32 v5.l, 0x3c00              ; encoding: [0xf2,0xd2,0x0a,0x7e]
 // NOCI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (bonaire): v_not_b16
 // NOGFX9: :[[@LINE-6]]:1: error: instruction not supported on this GPU (gfx900): v_not_b16
 // NOSI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tahiti): v_not_b16
