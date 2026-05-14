@@ -231,6 +231,11 @@ what to add to your calendar invite.
      - Every 2nd Tuesday of the month
      - `gcal <https://calendar.google.com/calendar/u/0?cid=YWZjNzhmMzE4MDNlNTAyNGY1NmE1MDIyODY0YTYwZmJmYzRjYTEwNTE1NmUxODA2NzBkYTliY2ZhYTVkNjk0NUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
+   * - Clang Static Analysis Working Group
+     - Every 2 weeks on Tuesdays
+     - `ics <https://calendar.google.com/calendar/ical/9c23f3a54dbb4fbac3801c50094fc43118a37c186f5c65b2898cd0fc251c8610%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0?cid=OWMyM2YzYTU0ZGJiNGZiYWMzODAxYzUwMDk0ZmM0MzExOGEzN2MxODZmNWM2NWIyODk4Y2QwZmMyNTFjODYxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting notes <https://docs.google.com/document/d/1ijI8pWeyidmhFOd5Ndgvr5AziZwrMCbt2oUehv8qHmw/edit?usp=sharing>`__
 
 
 For event owners, our Discord bot also supports sending automated announcements
