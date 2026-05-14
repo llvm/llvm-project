@@ -1161,9 +1161,14 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
       case wasm::WASM_SYMBOL_TYPE_DATA:
         writeString(Sym.Name);
         if ((Sym.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
-          encodeULEB128(Sym.DataRef.Segment, W->OS);
-          encodeULEB128(Sym.DataRef.Offset, W->OS);
-          encodeULEB128(Sym.DataRef.Size, W->OS);
+          if ((Sym.Flags & wasm::WASM_SYMBOL_BINDING_MASK) == wasm::WASM_SYMBOL_BINDING_COMMON) {
+            encodeULEB128(Sym.CommonRef.Size, W->OS);
+            W->OS << char(Sym.CommonRef.Alignment);
+          } else {
+            encodeULEB128(Sym.DataRef.Segment, W->OS);
+            encodeULEB128(Sym.DataRef.Offset, W->OS);
+            encodeULEB128(Sym.DataRef.Size, W->OS);
+          }
         }
         break;
       case wasm::WASM_SYMBOL_TYPE_SECTION: {
@@ -1789,9 +1794,11 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       Flags |= wasm::WASM_SYMBOL_BINDING_WEAK;
     if (WS.isHidden())
       Flags |= wasm::WASM_SYMBOL_VISIBILITY_HIDDEN;
-    if (!WS.isExternal() && WS.isDefined())
+    if (WS.isCommon())
+      Flags |= wasm::WASM_SYMBOL_BINDING_COMMON;
+    else if (!WS.isExternal() && WS.isDefined())
       Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
-    if (WS.isUndefined())
+    if (WS.isUndefined() && !WS.isCommon())
       Flags |= wasm::WASM_SYMBOL_UNDEFINED;
     if (WS.isNoStrip()) {
       Flags |= wasm::WASM_SYMBOL_NO_STRIP;
@@ -1813,6 +1820,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     if (!WS.isData()) {
       assert(WasmIndices.contains(&WS));
       Info.ElementIndex = WasmIndices.find(&WS)->second;
+    } else if (WS.isCommon()) {
+      Info.CommonRef.Size = WS.getCommonSize();
+      Info.CommonRef.Alignment = Log2(WS.getCommonAlignment().valueOrOne());
     } else if (WS.isDefined()) {
       assert(DataLocations.contains(&WS));
       Info.DataRef = DataLocations.find(&WS)->second;

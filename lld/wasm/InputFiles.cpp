@@ -675,6 +675,12 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
     return symtab->addDefinedFunction(name, flags, this, func);
   }
   case WASM_SYMBOL_TYPE_DATA: {
+    if ((flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_COMMON) {
+      assert(!sym.isBindingLocal());
+      auto size = sym.Info.CommonRef.Size;
+      auto alignment = sym.Info.CommonRef.Alignment;
+      return symtab->addCommon(name, flags, this, size, alignment);
+    }
     InputChunk *seg = segments[sym.Info.DataRef.Segment];
     auto offset = sym.Info.DataRef.Offset;
     auto size = sym.Info.DataRef.Size;

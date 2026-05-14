@@ -55,6 +55,8 @@ public:
   Symbol *addSharedData(StringRef name, uint32_t flags, InputFile *file);
   Symbol *addSharedTag(StringRef name, uint32_t flags, InputFile *file,
                        const WasmSignature *sig);
+  Symbol *addCommon(StringRef name, uint32_t flags, InputFile *file,
+                    uint64_t size, uint32_t alignment);
   Symbol *addDefinedFunction(StringRef name, uint32_t flags, InputFile *file,
                              InputFunction *function);
   Symbol *addDefinedData(StringRef name, uint32_t flags, InputFile *file,

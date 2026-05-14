@@ -180,13 +180,6 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
 }
 
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
-  if (GV->hasCommonLinkage()) {
-    OutContext.reportError(SMLoc(),
-                           "common symbols are not yet implemented for Wasm: " +
-                               getSymbol(GV)->getName());
-    return;
-  }
-
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
     AsmPrinter::emitGlobalVariable(GV);
     return;

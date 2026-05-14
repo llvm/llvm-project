@@ -73,6 +73,9 @@ uint32_t InputChunk::getSize() const {
     }
   }
 
+  if (const auto *sis = dyn_cast<SyntheticInputSegment>(this))
+    return sis->getSize();
+
   return data().size();
 }
 
@@ -91,6 +94,9 @@ void InputChunk::writeTo(uint8_t *buf) const {
     ms->builder.write(buf + outSecOff);
     // Apply relocations
     ms->relocate(buf + outSecOff);
+    return;
+  } else if (const auto *sis = dyn_cast<SyntheticInputSegment>(this)) {
+    sis->writeTo(buf);
     return;
   }
 
@@ -384,6 +390,10 @@ void InputFunction::writeCompressed(uint8_t *buf) const {
   LLVM_DEBUG(dbgs() << "  write final chunk: " << chunkSize << "\n");
   memcpy(buf, lastRelocEnd, chunkSize);
   LLVM_DEBUG(dbgs() << "  total: " << (buf + chunkSize - orig) << "\n");
+}
+
+void SyntheticInputSegment::writeTo(uint8_t *buf) const {
+  memset(buf + outSecOff, 0, size);
 }
 
 uint64_t InputChunk::getChunkOffset(uint64_t offset) const {
