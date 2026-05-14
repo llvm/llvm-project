@@ -1,17 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
+// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
-
-// A CharacterLiteral '\xFF' has AST type `int` and value 4294967295
-// (0xFFFFFFFF; the byte 0xFF reinterpreted as an unsigned 32-bit value).
-// Lowering it to an APInt must allow implicit truncation, mirroring
-// classic CodeGen's VisitCharacterLiteral.  Without that, constructing
-// `APInt(32, 4294967295, /*isSigned=*/true)` would trip the
-// `isIntN(...) && "Value is not an N-bit signed value"` assertion in
-// LLVM's APInt.h.  Regression test for that path.
+// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 void high_byte_to_signed_char(void) {
   signed char c = '\xFF';

@@ -247,8 +247,7 @@ public:
   mlir::Value VisitCharacterLiteral(const CharacterLiteral *e) {
     mlir::Type ty = cgf.convertType(e->getType());
     // Character literals are always stored in an unsigned (even for signed
-    // char), so allow implicit truncation here.  Mirrors classic CodeGen
-    // in CGExprScalar.cpp's VisitCharacterLiteral.
+    // char), so allow implicit truncation here.
     auto intTy = mlir::cast<cir::IntTypeInterface>(ty);
     llvm::APInt apValue(intTy.getWidth(), e->getValue(),
                         /*isSigned=*/false, /*implicitTrunc=*/true);
