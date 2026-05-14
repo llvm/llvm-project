@@ -2106,25 +2106,25 @@ def AMinusC1PlusC2: GICombineRule<
 
 // with the manual implementation of the helper it works
 // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
-// def SubSmaxSub: GICombineRule<
-//    (defs root:$root, build_fn_matchinfo:$matchinfo),
-//    (match (G_SUB $sub, 0, $A),
-//           (G_SMAX $max, $A, $sub),
-//           (G_SUB $root, 0, $max):$root, 
-//           [{ return Helper.matchFoldSubSmaxSub(*${root}, ${matchinfo}); }]),
-//    (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+def SubSmaxSub: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_SUB $sub, 0, $A),
+          (G_SMAX $max, $A, $sub),
+          (G_SUB $root, 0, $max):$root, 
+          [{ return Helper.matchFoldSubSmaxSub(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
       
 // otherwise it crashes
 // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
-def SubSmaxSub: GICombineRule<
-   (defs root:$root),
-   (match (G_SUB $sub, 0, $A),
-          (G_SMAX $max, $A, $sub),
-          (G_SUB $root, 0, $max),
-          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
-                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
-   (apply (G_SUB $sub1, 0, $A), 
-          (G_SMIN $root, $A, $sub1))>;
+// def SubSmaxSub: GICombineRule<
+//    (defs root:$root),
+//    (match (G_SUB $sub, 0, $A),
+//           (G_SMAX $max, $A, $sub),
+//           (G_SUB $root, 0, $max),
+//           [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+//                     MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+//    (apply (G_SUB $sub1, 0, $A), 
+//           (G_SMIN $root, $A, $sub1))>;
               
 // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
 def SubUmaxSub: GICombineRule<
