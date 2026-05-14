@@ -1,7 +1,7 @@
 # EJitRegisterBitcodePass 设计文档
 
-**版本**: 1.1
-**日期**: 2026-04-29
+**版本**: 1.2
+**日期**: 2026-05-14
 **关联**: SPEC4.md, PLAN4.md
 **类型**: AOT Module Pass
 **顺序**: 早期 AOT Pipeline — 标准优化之前
@@ -10,13 +10,15 @@
 
 ## 1. 概述
 
-EJitRegisterBitcodePass 负责从编译单元中提取所有 `ejit_entry` 标记的函数及其传递依赖（调用的内部函数），序列化为 LLVM Bitcode，并将 Bitcode 数据嵌入到最终可执行文件的独立段中。运行时 JIT 编译器按需加载这些 Bitcode 进行特化编译。
+EJitRegisterBitcodePass 负责从编译单元中提取所有 `ejit_entry` 标记的函数及其传递依赖（调用的内部函数），序列化为 LLVM Bitcode，并将 Bitcode 数据嵌入到最终可执行文件的独立段中。在序列化前，对提取的 bitcode 运行轻量优化管线（`preOptimizeBitcode`），减少 JIT 编译时的开销和内存压力。运行时 JIT 编译器按需加载这些 Bitcode 进行特化编译。
 
 ### 1.1 核心职责
 
 - 识别所有带 `!ejit.metadata` 且包含 `!{"ejit_entry"}` 子节点的函数
 - 构建函数依赖图的传递闭包（被这些函数调用的所有内部函数）
 - 将选中函数及必要符号提取到独立的 LLVM Module
+- **对提取的 bitcode 运行 AOT 预优化**（§1.4）
+- **自动扫描外部符号并生成 `ejit_register_symbol` 调用**（§1.3）
 - 序列化为 Bitcode 字节数组
 - 在原始 Module 中创建全局变量存储 Bitcode 数据
 - 生成运行时注册调用，将 Bitcode 指针/大小注册到运行时
@@ -33,20 +35,33 @@ EJitRegisterBitcodePass 负责从编译单元中提取所有 `ejit_entry` 标记
 
 ### 1.3 为什么必须在标准优化之前执行
 
-PASS6 (JIT 端) 通过 `load` 指令上的 `!ejit.may_const` metadata 识别可特化的访存操作。标准优化 Pipeline (SROA、InstCombine、GVN 等) 会在其运行过程中丢弃部分 metadata：
+PASS1 必须在 O2/O3 标准优化之前运行，原因：
 
-| 优化 Pass | 对 `!ejit.may_const` metadata 的影响 |
-|-----------|-------------------------------------|
-| SROA | struct 拆分为标量后，load 指令被替换为 extractvalue，metadata 丢失 |
-| InstCombine | GEP 合并、load 折叠后旧指令被删除，metadata 随之消失 |
-| GVN | 冗余 load 消除后，剩余 load 可能不携带 metadata |
-| Mem2Reg | alloca+load/store 升级为 SSA，中间层的 load metadata 丢失 |
+1. **Wapper 必须在 bitcode 提取前**：PASS3 (WrapperGen) 插入 `ejit_compile_or_get` 调用和 wrapper 块。如果 PASS1 提取含 wrapper 的 bitcode，JIT 会编译 wrapper 自身导致无限递归。
+2. **提取闭包**：PASS1 需要在优化前识别完整的函数闭包（内联前），以保证所有被调用的辅助函数都包含在 bitcode 中。
 
-若本 Pass 在标准优化之后执行，提取的 bitcode 中大量 `!ejit.may_const` metadata 已经丢失，PASS6 无法识别任何可特化的 load，JIT 特化机制空转。
+`!ejit.may_const` metadata 的保留通过两个机制保证：
+- **LLVM 层面**：`MD_ejit_may_const` 注册为固定 metadata kind，`copyMetadataForLoad()` 在 switch 中显式保留，覆盖 InstCombine、SROA、Mem2Reg 等所有使用该函数的 Pass。
+- **GV-level 元数据回退**：Clang CodeGen 在 GV 的 `!ejit.metadata` 中输出 `ejit_may_const_field` 字节偏移。`preOptimizeBitcode` 中 `reAnnotateMayConst` 步骤从 GV metadata 恢复被 Pass 新建 load 丢失的 per-load metadata。
 
-**解决方案**：本 Pass 作为独立的**早期 Pass** 注册在标准优化 Pipeline 之前，提取原始 IR（Clang CodeGen 刚输出的、metadata 完整的 Module）。提取后的 bitcode 嵌入 `@__ejit_bitcode` 全局变量，即使后续优化修改了 IR，已嵌入的 bitcode 不受影响。
+### 1.4 AOT 预优化 (preOptimizeBitcode)
 
-**为什么 bitcode 不需要优化过的 IR**：JIT 编译时从原始 IR 出发，先替换常量（参数+字段），再运行自己的优化 Pipeline（SCCP、DCE、Inline、CFGSimplify）。AOT 优化对 JIT 路径无益——JIT 的优化效果来自常量特化后的分支折叠和死代码消除，而非 AOT 阶段的通用优化。
+提取 bitcode 后、序列化前，对 bitcode 模块运行轻量优化管线，减少 JIT 编译时的开销和内存压力：
+
+```
+AlwaysInline → ModuleInliner(O2) → Mem2Reg → EarlyCSE+InstCombine → SimplifyCFG → reAnnotateMayConst
+```
+
+| 步骤 | 说明 |
+|------|------|
+| AlwaysInline | 展开 `__attribute__((always_inline))` 函数 |
+| ModuleInliner(O2) | cost-based 内联小函数（Index 封装函数等） |
+| Mem2Reg | alloca → SSA，消除内存访问 |
+| EarlyCSE + InstCombine | 公共子表达式消除 + 常量折叠 |
+| SimplifyCFG | 扁平化分支、合并基本块 |
+| reAnnotateMayConst | 从 GV metadata 恢复可能丢失的 `!ejit.may_const` |
+
+> **NDEBUG 守卫**：debug 构建（共享库）跳过预优化，避免 `LLVMPasses ↔ LLVMEmbeddedJIT` 循环链接依赖。同一套 Pass 在 JIT 管线中运行。
 
 ---
 

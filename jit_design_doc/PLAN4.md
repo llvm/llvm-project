@@ -581,7 +581,7 @@ JIT Pipeline (ejit_compile_or_get 内部执行):
 
 | Pass 名称               | 类型          | 职责                                           |
 | --------------------- | ----------- | -------------------------------------------- |
-| `EJitRegisterBitcode` | Module Pass | 在标准优化前提取 ejit_entry 函数 bitcode，确保 `!ejit.may_const` metadata 完整 |
+| `EJitRegisterBitcode` | Module Pass | 提取 ejit_entry 函数 bitcode，运行 AOT 预优化（Inline+Mem2Reg+EarlyCSE+InstCombine+SimplifyCFG），`!ejit.may_const` 由固定 metadata kind + copyMetadataForLoad 白名单 + GV offset 回退三重保证，自动注册外部符号 |
 
 **PASS2-4 — AOT (非LTO: 优化前; LTO: 优化后)**:
 
