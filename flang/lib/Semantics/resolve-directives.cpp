@@ -2217,8 +2217,8 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
   // it is reachable during lowering regardless of the order in which the
   // owning unit and its referencing teams regions are lowered within this TU.
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    if (const parser::OmpObject * object{parser::omp::GetArgumentObject(arg)}) {
-      if (const Symbol * sym{omp::GetObjectSymbol(*object)}) {
+    if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
+      if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
         context_.SetOmpGroupprivateDeviceType(sym->GetUltimate(), deviceType);
       }
     }
