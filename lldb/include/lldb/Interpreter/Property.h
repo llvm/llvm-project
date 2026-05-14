@@ -11,9 +11,11 @@
 
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Flags.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private-types.h"
 
+#include <optional>
 #include <string>
 
 namespace lldb_private {
@@ -60,9 +62,10 @@ public:
 
   bool DumpQualifiedName(Stream &strm) const;
 
-  void DumpDescription(CommandInterpreter &interpreter, Stream &strm,
-                       uint32_t output_width,
-                       bool display_qualified_name) const;
+  void DumpDescription(
+      CommandInterpreter &interpreter, Stream &strm, uint32_t output_width,
+      bool display_qualified_name,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt) const;
 
   void SetValueChangedCallback(std::function<void()> callback);
 

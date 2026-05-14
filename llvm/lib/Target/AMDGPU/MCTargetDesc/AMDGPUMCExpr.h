@@ -135,6 +135,8 @@ LLVM_READONLY bool isLitExpr(const MCExpr *Expr);
 
 LLVM_READONLY int64_t getLitValue(const MCExpr *Expr);
 
+LLVM_READONLY AMDGPUMCExpr::VariantKind getExprKind(const MCExpr *Expr);
+
 } // end namespace AMDGPU
 } // end namespace llvm
 

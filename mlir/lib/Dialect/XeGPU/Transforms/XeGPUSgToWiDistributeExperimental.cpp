@@ -14,6 +14,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
@@ -61,34 +62,6 @@ static Value castValueTo(ConversionPatternRewriter &rewriter,
   return newOp.getResult(0);
 }
 
-/// Checks if all XeGPU anchor ops and vector results have valid layouts.
-static LogicalResult verifyLayouts(Operation *root) {
-  auto walkResult = root->walk([&](Operation *nestedOp) -> WalkResult {
-    if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(nestedOp)) {
-      auto layout = anchorOp.getAnchorLayout();
-      if (!layout) {
-        nestedOp->emitError("expected anchor layout attribute on operation");
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
-    }
-    // For each vector result, check if the op contains a result layout
-    // attribute.
-    for (OpResult result : nestedOp->getResults()) {
-      if (isa<VectorType>(result.getType())) {
-        auto layout = xegpu::getDistributeLayoutAttr(result);
-        if (!layout) {
-          nestedOp->emitError(
-              "expected result layout attribute on vector result");
-          return WalkResult::interrupt();
-        }
-      }
-    }
-    return WalkResult::advance();
-  });
-  return walkResult.wasInterrupted() ? failure() : success();
-}
-
 /// A vector::MultiDimReductionOp at subgroup level in expected form if, it has
 /// exactly 1 reduction dimension, it had valid result layout attribute, and
 /// result type can be distributed to lanes using the layout.
@@ -97,6 +70,9 @@ static bool isValidSubgroupMultiReductionOp(vector::MultiDimReductionOp op) {
   // If no layout, not valid.
   if (!resLayout || !resLayout.isForSubgroup())
     return false;
+  // Scalar result (e.g., vector<32xf32> to f32) is valid.
+  if (op.getType().isIntOrFloat())
+    return op.getReductionDims().size() == 1;
   VectorType resTy = dyn_cast<VectorType>(op.getType());
   if (!resTy)
     return false;
@@ -258,14 +234,12 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
   LogicalResult
   matchAndRewrite(xegpu::DpasOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // llvm::errs() << "DpasOpPattern matchAndRewrite called\n";
     // Check if the op has A, B and CD layouts attached.
     auto layoutA = cast<xegpu::LayoutAttr>(op.getLayoutAAttr());
     auto layoutB = cast<xegpu::LayoutAttr>(op.getLayoutBAttr());
     auto layoutCd = cast<xegpu::LayoutAttr>(op.getLayoutCdAttr());
     if (!layoutA || !layoutB || !layoutCd)
       return failure();
-    // llvm::errs() << "tryning to calculate wi types for dpas op\n";
     auto wiResultTyOrFailure =
         xegpu::getDistributedVectorType(op.getType(), layoutCd);
     auto wiATypeOrFailure =
@@ -283,6 +257,38 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
       return rewriter.notifyMatchFailure(
           op, "unable to compute expected workitem vector type for DpasOp from "
               "lane layout");
+
+    // Validate bit widths match uArch packed format requirements
+    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    if (uArch) {
+      const auto *uArchInstruction =
+          dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(
+              uArch->getInstruction(
+                  xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
+      if (uArchInstruction) {
+        auto wiAType = wiATypeOrFailure.value();
+        auto wiBType = wiBTypeOrFailure.value();
+        // Calculate total packed bit width = element bit width * vector size
+        unsigned aPackedBitWidth =
+            wiAType.getElementTypeBitWidth() * wiAType.getNumElements();
+        unsigned bPackedBitWidth =
+            wiBType.getElementTypeBitWidth() * wiBType.getNumElements();
+        unsigned expectedABitSize = uArchInstruction->getPackedFormatBitSizeA();
+        unsigned expectedBBitSize = uArchInstruction->getPackedFormatBitSizeB();
+
+        if (aPackedBitWidth % expectedABitSize != 0)
+          return rewriter.notifyMatchFailure(
+              op,
+              "A operand packed bit width must be a multiple of uArch packed "
+              "format requirement");
+        if (bPackedBitWidth % expectedBBitSize != 0)
+          return rewriter.notifyMatchFailure(
+              op,
+              "B operand packed bit width must be a multiple of uArch packed "
+              "format requirement");
+      }
+    }
+
     auto newOp = xegpu::DpasOp::create(
         rewriter, op->getLoc(), wiResultTyOrFailure.value(),
         castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getLhs()),
@@ -599,16 +605,29 @@ struct SgToWiMultiDimReduction
             op, "only unit leading dimensions are supported for "
                 "multi_reduction with rank > 2");
     }
-    if (isReductionLaneLocal(op)) {
-      auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
-      VectorType resVecTy = dyn_cast<VectorType>(op.getType());
-      auto resDistVecTyOrFailure =
-          getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
-      // For lane local reduction, simply create a new MultiDimReductionOp using
-      // adaptor operands and the new result type.
-      result = vector::MultiDimReductionOp::create(
-          rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
-          adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
+    // Handle scalar result: full reduction of a distributed vector to a
+    // scalar. First do a local vector reduction, then cross-lane shuffles.
+    if (op.getType().isIntOrFloat()) {
+      auto reductionDim = reductionDims[0];
+      VectorType origSourceType = op.getSourceVectorType();
+      int64_t reductionDimSize = origSourceType.getShape()[reductionDim];
+      // Local reduction to scalar, then cross-lane butterfly shuffles.
+      result =
+          xegpu::subgroupReduction(op.getLoc(), rewriter, adaptor.getSource(),
+                                   op.getKind(), reductionDimSize);
+      // Combine with accumulator if present.
+      if (adaptor.getAcc())
+        result = vector::makeArithReduction(rewriter, op.getLoc(), op.getKind(),
+                                            result, adaptor.getAcc());
+    } else if (isReductionLaneLocal(op)) {
+      // For lane-local reduction, lower to a sequence of vector.reduction ops
+      // over 1D slices extracted from the distributed source vector. This is
+      // required so we dont have 2D source vectors at xegpu-linearize.
+      auto reductionDim = reductionDims[0];
+      result = xegpu::lowerToVectorReductions(
+          cast<TypedValue<VectorType>>(adaptor.getSource()),
+          cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
+          reductionDim, op.getLoc(), rewriter);
     } else {
       auto reductionDim = reductionDims[0];
       VectorType sourceType = op.getSourceVectorType();
@@ -1496,14 +1515,21 @@ struct SgToWiConvertLayout
                   ConversionPatternRewriter &rewriter) const override {
     auto inputLayout = op.getInputLayoutAttr();
     auto targetLayout = op.getTargetLayoutAttr();
-    auto resShape = cast<VectorType>(op.getResult().getType()).getShape();
-    SmallVector<int64_t> resShapeVec(resShape.begin(), resShape.end());
+    Type valType = op.getResult().getType();
 
+    if (valType.isIntOrFloat()) {
+      rewriter.replaceOp(op, op.getSource());
+      return success();
+    }
+
+    auto resShape = cast<VectorType>(valType).getShape();
+    SmallVector<int64_t> resShapeVec(resShape.begin(), resShape.end());
     if (!inputLayout.isCompatibleWith(targetLayout, resShapeVec,
                                       xegpu::LayoutKind::Lane)) {
       return rewriter.notifyMatchFailure(
           op, "lowering incompatible convert_layout not yet supported");
     }
+
     rewriter.replaceOp(op, adaptor.getSource());
     return success();
   }
@@ -1519,15 +1545,13 @@ struct XeGPUSgToWiDistributeExperimentalPass
 
 void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
 
-  // Verify if all XeGPU anchor ops and vector ops have result layouts.
-  // TODO: This can be removed once the full layout refactoring is done.
+  // Recover temporary operand layouts for usage in patterns.
   Operation *root = getOperation();
-  if (failed(verifyLayouts(root))) {
-    LLVM_DEBUG(DBGS() << "XeGPUSgToWiDistributeExperimentalPass: layout "
-                         "verification failed\n");
+  if (!xegpu::recoverTemporaryLayouts(root)) {
     signalPassFailure();
     return;
   }
+
   // Collect existing UnrealizedConversionCastOps. These must be preserved.
   llvm::SmallSetVector<UnrealizedConversionCastOp, 8> existingCasts;
   root->walk(
@@ -1615,6 +1639,8 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
       }
     });
   }
+
+  xegpu::removeTemporaryLayoutAttrs(getOperation());
 }
 
 void xegpu::populateXeGPUSgToWiDistributeTypeConversions(

@@ -47,20 +47,20 @@ entry:
   %cmp1 = icmp sgt i32 %lim, 0
   br i1 %cmp1, label %loop1.preheader, label %exit
 
-loop1.preheader:                                  ; preds = %entry
+loop1.preheader:
   %cmp2 = icmp sgt i32 %count, 0
   %cmp4 = icmp slt i32 %count, 8
   br label %loop1.body
 
-loop1.body:                                       ; preds = %loop1.inc, %loop1.preheader
+loop1.body:
   %outer_i = phi i32 [ 0, %loop1.preheader ], [ %outer_i.1, %loop1.inc ]
   %inx.1 = phi i32 [ 0, %loop1.preheader ], [ %inx.2, %loop1.inc ]
   br i1 %cmp2, label %while.cond.preheader, label %loop1.inc
 
-while.cond.preheader:                             ; preds = %loop1.body
+while.cond.preheader:
   br i1 %cmp4, label %while.body, label %while.end
 
-while.body:                                       ; preds = %while.body, %while.cond.preheader
+while.body:
   %tmp = phi i32 [ %add3, %while.body ], [ %count, %while.cond.preheader ]
   %result.1 = phi i32 [ %add, %while.body ], [ %val, %while.cond.preheader ]
   %shr = ashr i32 %val, %tmp
@@ -69,7 +69,7 @@ while.body:                                       ; preds = %while.body, %while.
   %cmp3 = icmp slt i32 %add3, 8
   br i1 %cmp3, label %while.body, label %while.end
 
-while.end:                                        ; preds = %while.body, %while.cond.preheader
+while.end:
   %result.0.lcssa = phi i32 [ %val, %while.cond.preheader ], [ %add, %while.body ]
   %conv = trunc i32 %result.0.lcssa to i8
   %inc = add nsw i32 %inx.1, 1
@@ -78,13 +78,13 @@ while.end:                                        ; preds = %while.body, %while.
   store i8 %conv, ptr %arrayidx, align 1
   br label %loop1.inc
 
-loop1.inc:                                        ; preds = %while.end, %loop1.body
+loop1.inc:
   %inx.2 = phi i32 [ %inc, %while.end ], [ %inx.1, %loop1.body ]
   %outer_i.1 = add nuw nsw i32 %outer_i, 1
   %exitcond = icmp eq i32 %outer_i.1, %lim
   br i1 %exitcond, label %exit, label %loop1.body
 
-exit:                                             ; preds = %loop1.inc, %entry
+exit:
   ret void
 }
 
@@ -127,22 +127,22 @@ define i32 @NonZeroDivHoist(ptr nocapture readonly %ptr, i32 %start1, i32 %start
 entry:
   br label %for.cond
 
-for.cond:                                         ; preds = %for.end, %entry
+for.cond:
   %val.0 = phi i32 [ %start1, %entry ], [ %val.1.lcssa, %for.end ]
   %counter1.0 = phi i32 [ 1, %entry ], [ %inc9, %for.end ]
   %cmp = icmp ult i32 %counter1.0, 100
   br i1 %cmp, label %for.body, label %for.end10
 
-for.body:                                         ; preds = %for.cond
+for.body:
   %tmp = load i32, ptr %ptr, align 4
   %add = add i32 %tmp, %val.0
   %cmp224 = icmp ult i32 %start2, 10
   br i1 %cmp224, label %for.body3.lr.ph, label %for.end
 
-for.body3.lr.ph:                                  ; preds = %for.body
+for.body3.lr.ph:
   br label %for.body3
 
-for.body3:                                        ; preds = %for.body3, %for.body3.lr.ph
+for.body3:
   %index.027 = phi i32 [ 0, %for.body3.lr.ph ], [ %add4, %for.body3 ]
   %val.126 = phi i32 [ %add, %for.body3.lr.ph ], [ %add7, %for.body3 ]
   %counter2.025 = phi i32 [ %start2, %for.body3.lr.ph ], [ %inc, %for.body3 ]
@@ -156,16 +156,16 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %cmp2 = icmp ult i32 %inc, 10
   br i1 %cmp2, label %for.body3, label %for.cond1.for.end_crit_edge
 
-for.cond1.for.end_crit_edge:                      ; preds = %for.body3
+for.cond1.for.end_crit_edge:
   %split = phi i32 [ %add7, %for.body3 ]
   br label %for.end
 
-for.end:                                          ; preds = %for.cond1.for.end_crit_edge, %for.body
+for.end:
   %val.1.lcssa = phi i32 [ %split, %for.cond1.for.end_crit_edge ], [ %add, %for.body ]
   %inc9 = add i32 %counter1.0, 1
   br label %for.cond
 
-for.end10:                                        ; preds = %for.cond
+for.end10:
   %val.0.lcssa = phi i32 [ %val.0, %for.cond ]
   ret i32 %val.0.lcssa
 }
@@ -188,22 +188,22 @@ define i32 @ZeroDivNoHoist(ptr nocapture readonly %ptr, i32 %start1, i32 %start2
 entry:
   br label %for.cond
 
-for.cond:                                         ; preds = %for.end, %entry
+for.cond:
   %val.0 = phi i32 [ %start1, %entry ], [ %val.1.lcssa, %for.end ]
   %counter1.0 = phi i32 [ %start1, %entry ], [ %inc9, %for.end ]
   %cmp = icmp ult i32 %counter1.0, 100
   br i1 %cmp, label %for.body, label %for.end10
 
-for.body:                                         ; preds = %for.cond
+for.body:
   %tmp = load i32, ptr %ptr, align 4
   %add = add i32 %tmp, %val.0
   %cmp224 = icmp ult i32 %start2, 10
   br i1 %cmp224, label %for.body3.lr.ph, label %for.end
 
-for.body3.lr.ph:                                  ; preds = %for.body
+for.body3.lr.ph:
   br label %for.body3
 
-for.body3:                                        ; preds = %for.body3, %for.body3.lr.ph
+for.body3:
   %index.027 = phi i32 [ 0, %for.body3.lr.ph ], [ %add4, %for.body3 ]
   %val.126 = phi i32 [ %add, %for.body3.lr.ph ], [ %add7, %for.body3 ]
   %counter2.025 = phi i32 [ %start2, %for.body3.lr.ph ], [ %inc, %for.body3 ]
@@ -217,16 +217,16 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %cmp2 = icmp ult i32 %inc, 10
   br i1 %cmp2, label %for.body3, label %for.cond1.for.end_crit_edge
 
-for.cond1.for.end_crit_edge:                      ; preds = %for.body3
+for.cond1.for.end_crit_edge:
   %split = phi i32 [ %add7, %for.body3 ]
   br label %for.end
 
-for.end:                                          ; preds = %for.cond1.for.end_crit_edge, %for.body
+for.end:
   %val.1.lcssa = phi i32 [ %split, %for.cond1.for.end_crit_edge ], [ %add, %for.body ]
   %inc9 = add i32 %counter1.0, 1
   br label %for.cond
 
-for.end10:                                        ; preds = %for.cond
+for.end10:
   %val.0.lcssa = phi i32 [ %val.0, %for.cond ]
   ret i32 %val.0.lcssa
 }
@@ -250,22 +250,22 @@ define i32 @DivBy16Hoist(ptr nocapture readonly %ptr, i32 %start1, i32 %start2) 
 entry:
   br label %for.cond
 
-for.cond:                                         ; preds = %for.end, %entry
+for.cond:
   %val.0 = phi i32 [ %start1, %entry ], [ %val.1.lcssa, %for.end ]
   %counter1.0 = phi i32 [ %start1, %entry ], [ %inc9, %for.end ]
   %cmp = icmp ult i32 %counter1.0, 100
   br i1 %cmp, label %for.body, label %for.end10
 
-for.body:                                         ; preds = %for.cond
+for.body:
   %tmp = load i32, ptr %ptr, align 4
   %add = add i32 %tmp, %val.0
   %cmp224 = icmp ult i32 %start2, 10
   br i1 %cmp224, label %for.body3.lr.ph, label %for.end
 
-for.body3.lr.ph:                                  ; preds = %for.body
+for.body3.lr.ph:
   br label %for.body3
 
-for.body3:                                        ; preds = %for.body3, %for.body3.lr.ph
+for.body3:
   %index.027 = phi i32 [ 0, %for.body3.lr.ph ], [ %add4, %for.body3 ]
   %val.126 = phi i32 [ %add, %for.body3.lr.ph ], [ %add7, %for.body3 ]
   %counter2.025 = phi i32 [ %start2, %for.body3.lr.ph ], [ %inc, %for.body3 ]
@@ -279,16 +279,16 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %cmp2 = icmp ult i32 %inc, 10
   br i1 %cmp2, label %for.body3, label %for.cond1.for.end_crit_edge
 
-for.cond1.for.end_crit_edge:                      ; preds = %for.body3
+for.cond1.for.end_crit_edge:
   %split = phi i32 [ %add7, %for.body3 ]
   br label %for.end
 
-for.end:                                          ; preds = %for.cond1.for.end_crit_edge, %for.body
+for.end:
   %val.1.lcssa = phi i32 [ %split, %for.cond1.for.end_crit_edge ], [ %add, %for.body ]
   %inc9 = add i32 %counter1.0, 1
   br label %for.cond
 
-for.end10:                                        ; preds = %for.cond
+for.end10:
   %val.0.lcssa = phi i32 [ %val.0, %for.cond ]
   ret i32 %val.0.lcssa
 }
@@ -310,22 +310,22 @@ define i32 @DivBy17Hoist(ptr nocapture readonly %ptr, i32 %start1, i32 %start2) 
 entry:
   br label %for.cond
 
-for.cond:                                         ; preds = %for.end, %entry
+for.cond:
   %val.0 = phi i32 [ %start1, %entry ], [ %val.1.lcssa, %for.end ]
   %counter1.0 = phi i32 [ %start1, %entry ], [ %inc9, %for.end ]
   %cmp = icmp ult i32 %counter1.0, 100
   br i1 %cmp, label %for.body, label %for.end10
 
-for.body:                                         ; preds = %for.cond
+for.body:
   %tmp = load i32, ptr %ptr, align 4
   %add = add i32 %tmp, %val.0
   %cmp224 = icmp ult i32 %start2, 10
   br i1 %cmp224, label %for.body3.lr.ph, label %for.end
 
-for.body3.lr.ph:                                  ; preds = %for.body
+for.body3.lr.ph:
   br label %for.body3
 
-for.body3:                                        ; preds = %for.body3, %for.body3.lr.ph
+for.body3:
   %index.027 = phi i32 [ 0, %for.body3.lr.ph ], [ %add4, %for.body3 ]
   %val.126 = phi i32 [ %add, %for.body3.lr.ph ], [ %add7, %for.body3 ]
   %counter2.025 = phi i32 [ %start2, %for.body3.lr.ph ], [ %inc, %for.body3 ]
@@ -339,16 +339,16 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %cmp2 = icmp ult i32 %inc, 10
   br i1 %cmp2, label %for.body3, label %for.cond1.for.end_crit_edge
 
-for.cond1.for.end_crit_edge:                      ; preds = %for.body3
+for.cond1.for.end_crit_edge:
   %split = phi i32 [ %add7, %for.body3 ]
   br label %for.end
 
-for.end:                                          ; preds = %for.cond1.for.end_crit_edge, %for.body
+for.end:
   %val.1.lcssa = phi i32 [ %split, %for.cond1.for.end_crit_edge ], [ %add, %for.body ]
   %inc9 = add i32 %counter1.0, 1
   br label %for.cond
 
-for.end10:                                        ; preds = %for.cond
+for.end10:
   %val.0.lcssa = phi i32 [ %val.0, %for.cond ]
   ret i32 %val.0.lcssa
 }

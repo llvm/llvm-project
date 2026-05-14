@@ -16,7 +16,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE bfloat16 floorbf16(bfloat16 x) { return fputil::floor(x); }
+LIBC_INLINE LIBC_CONSTEXPR bfloat16 floorbf16(bfloat16 x) {
+  return fputil::floor(x);
+}
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

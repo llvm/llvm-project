@@ -351,6 +351,12 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-functionpadmin:" + v);
   }
 
+  if (auto *a = args.getLastArg(OPT_native_def)) {
+    StringRef v = a->getValue();
+    if (!v.empty())
+      add("-defarm64native:" + v);
+  }
+
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
     add("-WX");
   else
@@ -573,10 +579,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   for (auto *a : args) {
     switch (a->getOption().getID()) {
     case OPT_INPUT:
-      if (StringRef(a->getValue()).ends_with_insensitive(".def"))
+      if (StringRef(a->getValue()).ends_with_insensitive(".def")) {
         add("-def:" + StringRef(a->getValue()));
-      else
+        if (args.getLastArgValue(OPT_m) == "arm64xpe" &&
+            !args.hasArg(OPT_native_def))
+          add("-defarm64native:" + StringRef(a->getValue()));
+      } else {
         add(prefix + StringRef(a->getValue()));
+      }
       break;
     case OPT_l:
       add(prefix +

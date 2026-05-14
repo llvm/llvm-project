@@ -244,7 +244,14 @@ public:
   }
 
   /// Set location information used by debugging information.
-  void SetCurrentDebugLocation(DebugLoc L) {
+  void SetCurrentDebugLocation(const DebugLoc &L) {
+    // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
+    // to include optional introspection data for use in Debugify.
+    StoredDL = L;
+  }
+
+  /// Set location information used by debugging information.
+  void SetCurrentDebugLocation(DebugLoc &&L) {
     // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
     // to include optional introspection data for use in Debugify.
     StoredDL = std::move(L);
@@ -889,11 +896,11 @@ public:
 
   /// Create an assume intrinsic call that allows the optimizer to
   /// assume that the provided condition will be true.
-  ///
-  /// The optional argument \p OpBundles specifies operand bundles that are
-  /// added to the call instruction.
-  LLVM_ABI CallInst *
-  CreateAssumption(Value *Cond, ArrayRef<OperandBundleDef> OpBundles = {});
+  LLVM_ABI CallInst *CreateAssumption(Value *Cond);
+
+  /// Create an assume intrinsic call that allows the optimizer to
+  /// assume that the provided operand bundles hold.
+  LLVM_ABI CallInst *CreateAssumption(ArrayRef<OperandBundleDef> OpBundles);
 
   /// Create a llvm.experimental.noalias.scope.decl intrinsic call.
   LLVM_ABI Instruction *CreateNoAliasScopeDeclaration(Value *Scope);
@@ -1011,13 +1018,15 @@ public:
                                         Value *RHS, FMFSource FMFSource = {},
                                         const Twine &Name = "");
 
-  /// Create a call to intrinsic \p ID with \p Args, mangled using \p Types. If
-  /// \p FMFSource is provided, copy fast-math-flags from that instruction to
-  /// the intrinsic.
-  LLVM_ABI CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Type *> Types,
+  /// Create a call to intrinsic \p ID with \p Args, mangled using
+  /// \p OverloadTypes. If \p FMFSource is provided, copy fast-math-flags from
+  /// that instruction to the intrinsic.
+  LLVM_ABI CallInst *CreateIntrinsic(Intrinsic::ID ID,
+                                     ArrayRef<Type *> OverloadTypes,
                                      ArrayRef<Value *> Args,
                                      FMFSource FMFSource = {},
-                                     const Twine &Name = "");
+                                     const Twine &Name = "",
+                                     ArrayRef<OperandBundleDef> OpBundles = {});
 
   /// Create a call to intrinsic \p ID with \p RetTy and \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
@@ -1033,6 +1042,12 @@ public:
   CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Args,
                             FMFSource FMFSource = {}, const Twine &Name = "") {
     return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name);
+  }
+
+  /// Create call to the fabs intrinsic.
+  CallInst *CreateFAbs(Value *V, FMFSource FMFSource = {},
+                       const Twine &Name = "") {
+    return CreateUnaryIntrinsic(Intrinsic::fabs, V, FMFSource, Name);
   }
 
   /// Create call to the minnum intrinsic.
@@ -1622,6 +1637,10 @@ public:
     return Accum;
   }
 
+  Value *CreateDisjointOr(Value *LHS, Value *RHS, const Twine &Name = "") {
+    return CreateOr(LHS, RHS, Name, true);
+  }
+
   Value *CreateXor(Value *LHS, Value *RHS, const Twine &Name = "") {
     if (Value *V = Folder.FoldBinOp(Instruction::Xor, LHS, RHS))
       return V;
@@ -1745,6 +1764,18 @@ public:
     Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
     if (isa<FPMathOperator>(BinOp))
       setFPAttrs(BinOp, FPMathTag, FMFSource.get(FMF));
+    return Insert(BinOp, Name);
+  }
+
+  Value *CreateNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                           bool IsNUW, bool IsNSW, const Twine &Name = "") {
+    if (Value *V = Folder.FoldNoWrapBinOp(Opc, LHS, RHS, IsNUW, IsNSW))
+      return V;
+    Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
+    if (IsNUW)
+      BinOp->setHasNoUnsignedWrap(IsNUW);
+    if (IsNSW)
+      BinOp->setHasNoSignedWrap(IsNSW);
     return Insert(BinOp, Name);
   }
 
@@ -1872,6 +1903,16 @@ public:
     return Insert(new AllocaInst(Ty, AddrSpace, ArraySize, AllocaAlign), Name);
   }
 
+  CallInst *CreateStructuredAlloca(Type *BaseType, const Twine &Name = "") {
+    const DataLayout &DL = BB->getDataLayout();
+    PointerType *PtrTy = DL.getAllocaPtrType(Context);
+    CallInst *Output =
+        CreateIntrinsic(Intrinsic::structured_alloca, {PtrTy}, {}, {}, Name);
+    Output->addRetAttr(
+        Attribute::get(getContext(), Attribute::ElementType, BaseType));
+    return Output;
+  }
+
   /// Provided to resolve 'CreateLoad(Ty, Ptr, "...")' correctly, instead of
   /// converting the string to 'bool' for the isVolatile parameter.
   LoadInst *CreateLoad(Type *Ty, Value *Ptr, const char *Name) {
@@ -1941,13 +1982,15 @@ public:
   AtomicRMWInst *CreateAtomicRMW(AtomicRMWInst::BinOp Op, Value *Ptr,
                                  Value *Val, MaybeAlign Align,
                                  AtomicOrdering Ordering,
-                                 SyncScope::ID SSID = SyncScope::System) {
+                                 SyncScope::ID SSID = SyncScope::System,
+                                 bool Elementwise = false) {
     if (!Align) {
       const DataLayout &DL = BB->getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
     }
 
-    return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
+    return Insert(
+        new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise));
   }
 
   CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
@@ -2769,7 +2812,7 @@ public:
   /// specified alignment.
   LLVM_ABI CallInst *CreateAlignmentAssumption(const DataLayout &DL,
                                                Value *PtrValue,
-                                               unsigned Alignment,
+                                               uint64_t Alignment,
                                                Value *OffsetValue = nullptr);
 
   /// Create an assume intrinsic call that represents an alignment
@@ -2786,10 +2829,14 @@ public:
                                                Value *Alignment,
                                                Value *OffsetValue = nullptr);
 
-  /// Create an assume intrinsic call that represents an dereferencable
+  /// Create an assume intrinsic call that represents a dereferencable
   /// assumption on the provided pointer.
   LLVM_ABI CallInst *CreateDereferenceableAssumption(Value *PtrValue,
                                                      Value *SizeValue);
+
+  /// Create an assume intrinsic call that represents a nonnull assumption on
+  /// the provided pointer.
+  LLVM_ABI CallInst *CreateNonnullAssumption(Value *PtrValue);
 };
 
 /// This provides a uniform API for creating instructions and inserting

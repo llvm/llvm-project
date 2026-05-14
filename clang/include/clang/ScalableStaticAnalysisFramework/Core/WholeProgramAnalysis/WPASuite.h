@@ -26,6 +26,8 @@
 namespace clang::ssaf {
 
 class AnalysisDriver;
+class SerializationFormat;
+class TestFixture;
 
 /// Bundles the EntityIdTable (moved from the LUSummary) and the analysis
 /// results produced by one AnalysisDriver::run() call, keyed by AnalysisName.
@@ -34,6 +36,8 @@ class AnalysisDriver;
 /// are self-contained in one object.
 class WPASuite {
   friend class AnalysisDriver;
+  friend class SerializationFormat;
+  friend class TestFixture;
 
   EntityIdTable IdTable;
   std::map<AnalysisName, std::unique_ptr<AnalysisResult>> Data;
@@ -43,7 +47,7 @@ class WPASuite {
 public:
   /// Returns the EntityIdTable that maps EntityId values to their symbolic
   /// names.
-  const EntityIdTable &idTable() const { return IdTable; }
+  const EntityIdTable &getIdTable() const { return IdTable; }
 
   /// Returns true if a result for \p ResultT is present.
   template <typename ResultT> [[nodiscard]] bool contains() const {

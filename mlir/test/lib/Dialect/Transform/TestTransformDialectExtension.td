@@ -22,6 +22,32 @@ include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 
+def TestTransformSingleBlockNormalForm
+    : AttrDef<Transform_Dialect, "TestSingleBlockNormalForm",
+              [DeclareAttrInterfaceMethods<
+                  NormalFormAttrInterface, ["checkOperation"]>]> {
+  let description = [{
+    Normal form checking that the regions of the payload operation have a single
+    block.
+  }];
+  let parameters = (ins "BoolAttr":$check_nested);
+  let mnemonic = "test_single_block_normal_form";
+  let assemblyFormat = "`<` `nested` $check_nested `>`";
+}
+
+def TestTransformCountingNormalForm
+    : AttrDef<Transform_Dialect, "TestCountingNormalForm",
+              [DeclareAttrInterfaceMethods<
+                  NormalFormAttrInterface, ["checkOperation"]>]> {
+  let description = [{
+    Normal form that always succeeds and updates a counter attribute on an
+    operation every time the check runs.
+  }];
+  let parameters = (ins);
+  let mnemonic = "test_counting_normal_form";
+  let assemblyFormat = "";
+}
+
 def TestTransformTestDialectHandleType
   : TypeDef<Transform_Dialect, "TestDialectOp",
       [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {

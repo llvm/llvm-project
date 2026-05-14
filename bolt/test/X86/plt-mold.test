@@ -3,4 +3,4 @@
 
 ## Check that llvm-bolt correctly parses PLT created by mold linker.
 ## The only call instruction in main() should be a call to printf() in PLT.
-CHECK:  callq "printf$plt
+CHECK:  callq printf@PLT

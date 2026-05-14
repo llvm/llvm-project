@@ -107,6 +107,26 @@ public:
     return Error::success();
   }
 
+  bool isFast(FastMathFlags Flags) {
+    // HLSL Fast Math doesn't enable AllowContract flag; This can be
+    // removed when we enable it in the future.
+    return Flags.allowReassoc() && Flags.noNaNs() && Flags.noInfs() &&
+           Flags.noSignedZeros() && Flags.allowReciprocal() &&
+           Flags.approxFunc();
+  }
+
+  void setDxPrecise(CallInst *CI) {
+    const StringRef Key = "dx.precise";
+    Module *M = CI->getModule();
+
+    LLVMContext &Ctx = M->getContext();
+    MDNode *One =
+        llvm::MDNode::get(Ctx, ConstantAsMetadata::get(ConstantInt::get(
+                                   llvm::Type::getInt32Ty(Ctx), 1)));
+
+    CI->setMetadata(Key, One);
+  }
+
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
@@ -135,6 +155,10 @@ public:
           OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
       if (Error E = OpCall.takeError())
         return E;
+
+      if (isa<FPMathOperator>(CI) &&
+          !isFast(cast<FPMathOperator>(CI)->getFastMathFlags()))
+        setDxPrecise(*OpCall);
 
       if (isa<StructType>(CI->getType())) {
         if (Error E = replaceNamedStructUses(CI, *OpCall))
@@ -251,23 +275,35 @@ public:
     if (isa<llvm::Constant>(IndexOp))
       return false;
 
-    SmallVector<Value *> WorkList;
-    WorkList.push_back(IndexOp);
+    SmallVector<Value *, 16> Worklist;
+    SmallPtrSet<Value *, 16> Visited;
+    Worklist.push_back(IndexOp);
 
-    while (!WorkList.empty()) {
-      Value *V = WorkList.pop_back_val();
-      if (auto *CI = dyn_cast<CallInst>(V)) {
-        if (CI->getCalledFunction()->getIntrinsicID() ==
-            Intrinsic::dx_resource_nonuniformindex)
+    while (!Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+
+      if (isa<llvm::Constant>(V))
+        continue;
+
+      if (!Visited.insert(V).second)
+        continue;
+
+      if (auto *CI = dyn_cast<CallInst>(V))
+        if (CI->getIntrinsicID() == Intrinsic::dx_resource_nonuniformindex)
           return true;
+
+      // If it's a PHI node, check ALL incoming values —
+      // taint from ANY predecessor counts
+      if (auto *Phi = dyn_cast<PHINode>(V)) {
+        for (Value *Incoming : Phi->incoming_values())
+          Worklist.push_back(Incoming);
+        continue;
       }
-      if (auto *U = llvm::dyn_cast<llvm::User>(V)) {
-        for (llvm::Value *Op : U->operands()) {
-          if (isa<llvm::Constant>(Op))
-            continue;
-          WorkList.push_back(Op);
-        }
-      }
+
+      if (auto *Inst = dyn_cast<Instruction>(V))
+        if (Inst->getNumOperands() > 0 && !Inst->isTerminator())
+          for (Value *Op : Inst->operands())
+            Worklist.push_back(Op);
     }
     return false;
   }
@@ -548,6 +584,60 @@ public:
       if (Error E = OpCall.takeError())
         return E;
       if (Error E = replaceResRetUses(CI, *OpCall, HasCheckBit))
+        return E;
+
+      return Error::success();
+    });
+  }
+
+  // Copies `Src` into `Args` starting at `ArgIdx`. If `Src` is a vector, its
+  // elements are extracted and stored in consecutive slots; otherwise `Src`
+  // is stored directly. At most `MaxElements` elements are expected.
+  static void extractElementsIntoArgs(IRBuilder<> &IRB,
+                                      MutableArrayRef<Value *> Args,
+                                      unsigned ArgIdx, Value *Src,
+                                      unsigned MaxElements) {
+    Type *Ty = Src->getType();
+    if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+      unsigned Count = VecTy->getNumElements();
+      assert(Count <= MaxElements && "Expected at most 3 elements in vector");
+      for (unsigned I = 0; I < Count; ++I)
+        Args[ArgIdx + I] = IRB.CreateExtractElement(Src, uint64_t(I));
+    } else {
+      Args[ArgIdx] = Src;
+    }
+  }
+
+  [[nodiscard]] bool lowerTextureLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(1);
+      Value *MipLevel = CI->getArgOperand(2);
+      Value *Offsets = CI->getArgOperand(3);
+
+      Type *OldTy = CI->getType();
+      Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
+
+      Value *Undef = UndefValue::get(Int32Ty);
+      std::array<Value *, 8> Args{Handle, MipLevel, Undef, Undef,
+                                  Undef,  Undef,    Undef, Undef};
+
+      // Copy coordinates and offsets into Args.
+      extractElementsIntoArgs(IRB, Args, 2, Coords, 3);
+      if (auto *C = dyn_cast<Constant>(Offsets); !C || !C->isNullValue())
+        extractElementsIntoArgs(IRB, Args, 5, Offsets, 3);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::TextureLoad, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
         return E;
 
       return Error::success();
@@ -967,6 +1057,9 @@ public:
         break;
       case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
+        break;
+      case Intrinsic::dx_resource_load_level:
+        HasErrors |= lowerTextureLoad(F);
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);

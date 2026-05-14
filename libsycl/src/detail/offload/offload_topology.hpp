@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the OffloadTopology class, which is
+/// used to iterate over liboffload platforms and devices.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_OFFLOAD_TOPOLOGY
 #define _LIBSYCL_OFFLOAD_TOPOLOGY

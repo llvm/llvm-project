@@ -34,7 +34,8 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
 WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() = default; // anchor.
 
 WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
-                                           const MCTargetOptions &Options) {
+                                           const MCTargetOptions &Options)
+    : MCAsmInfoWasm(Options) {
   CodePointerSize = CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;
 
   // TODO: What should MaxInstLength be?

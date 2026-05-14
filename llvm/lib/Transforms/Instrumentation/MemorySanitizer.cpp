@@ -2616,10 +2616,63 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
-  void visitFPToSIInst(CastInst &I) { handleShadowOr(I); }
-  void visitFPToUIInst(CastInst &I) { handleShadowOr(I); }
-  void visitSIToFPInst(CastInst &I) { handleShadowOr(I); }
-  void visitUIToFPInst(CastInst &I) { handleShadowOr(I); }
+  /// Handle LLVM and NEON vector convert intrinsics.
+  ///
+  /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
+  ///       i32       @llvm.aarch64.neon.fcvtms.i32.f64    (double)
+  ///       <2 x i32> @fptoui (<2 x float>)
+  ///       i64       @llvm.fptosi.sat.i64.f64(double)
+  ///
+  /// Note that the size of input/output elements can differ e.g.,
+  ///       double    @sitofp(i32)
+  /// but the number of elements must be the same.
+  ///
+  /// For conversions to or from fixed-point, there is a trailing argument to
+  /// indicate the fixed-point precision:
+  /// - <4 x float> llvm.aarch64.neon.vcvtfxs2fp.v4f32.v4i32(<4 x i32>,   i32)
+  /// - <4 x i32>   llvm.aarch64.neon.vcvtfp2fxu.v4i32.v4f32(<4 x float>, i32)
+  ///
+  /// For x86 SSE vector convert intrinsics, see
+  /// handleSSEVectorConvertIntrinsic().
+  void handleGenericVectorConvertIntrinsic(Instruction &I, bool FixedPoint) {
+    [[maybe_unused]] unsigned NumArgs = I.getNumOperands();
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      NumArgs = CI->arg_size();
+
+    if (FixedPoint) {
+      assert(NumArgs == 2);
+      Value *Precision = I.getOperand(1);
+      insertCheckShadowOf(Precision, &I);
+    } else {
+      assert(NumArgs == 1);
+    }
+
+    IRBuilder<> IRB(&I);
+    Value *S0 = getShadow(&I, 0);
+
+    /// For scalars:
+    /// Since they are converting from floating-point to integer, the output is
+    /// - fully uninitialized if *any* bit of the input is uninitialized
+    /// - fully ininitialized if all bits of the input are ininitialized
+    /// We apply the same principle on a per-field basis for vectors.
+    Value *OutShadow = IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)),
+                                      getShadowTy(&I));
+    setShadow(&I, OutShadow);
+    setOriginForNaryOp(I);
+  }
+
+  void visitFPToSIInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitFPToUIInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitSIToFPInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitUIToFPInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
   void visitFPExtInst(CastInst &I) { handleShadowOr(I); }
   void visitFPTruncInst(CastInst &I) { handleShadowOr(I); }
 
@@ -3558,43 +3611,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OutputShadow = IRB.CreateSExt(OutputShadow, getShadowTy(Src), "_mscz_os");
 
     setShadow(&I, OutputShadow);
-    setOriginForNaryOp(I);
-  }
-
-  /// Handle Arm NEON vector convert intrinsics.
-  ///
-  /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
-  ///      i32        @llvm.aarch64.neon.fcvtms.i32.f64    (double)
-  ///
-  /// For conversions to or from fixed-point, there is a trailing argument to
-  /// indicate the fixed-point precision:
-  /// - <4 x float> llvm.aarch64.neon.vcvtfxs2fp.v4f32.v4i32(<4 x i32>,   i32)
-  /// - <4 x i32>   llvm.aarch64.neon.vcvtfp2fxu.v4i32.v4f32(<4 x float>, i32)
-  ///
-  /// For x86 SSE vector convert intrinsics, see
-  /// handleSSEVectorConvertIntrinsic().
-  void handleNEONVectorConvertIntrinsic(IntrinsicInst &I, bool FixedPoint) {
-    if (FixedPoint)
-      assert(I.arg_size() == 2);
-    else
-      assert(I.arg_size() == 1);
-
-    IRBuilder<> IRB(&I);
-    Value *S0 = getShadow(&I, 0);
-
-    if (FixedPoint) {
-      Value *Precision = I.getOperand(1);
-      insertCheckShadowOf(Precision, &I);
-    }
-
-    /// For scalars:
-    /// Since they are converting from floating-point to integer, the output is
-    /// - fully uninitialized if *any* bit of the input is uninitialized
-    /// - fully ininitialized if all bits of the input are ininitialized
-    /// We apply the same principle on a per-field basis for vectors.
-    Value *OutShadow = IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)),
-                                      getShadowTy(&I));
-    setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
   }
 
@@ -5070,7 +5086,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                     ConstantInt::get(IRB.getInt32Ty(), 0));
   }
 
-  // Handle llvm.x86.avx512.mask.pmov{,s,us}.*.512
+  // Handle llvm.x86.avx512.mask.pmov{,s,us}.*.{128,256,512}
   //
   // e.g., call <16 x i8> @llvm.x86.avx512.mask.pmov.qb.512
   //         (<8 x i64>, <16 x i8>, i8)
@@ -5104,10 +5120,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         cast<FixedVectorType>(WriteThrough->getType())->getNumElements();
     assert(ANumElements == OutputNumElements ||
            ANumElements * 2 == OutputNumElements);
+    // N.B. some PMOV{,S,US} instructions have a 4x or even 8x ratio in the
+    //      number of elements e.g.,
+    //      <16 x i8> @llvm.x86.avx512.mask.pmovs.qb.256
+    //                    (<4 x i64>, <16 x i8>, i8)
+    //      <16 x i8> @llvm.x86.avx512.mask.pmovs.qb.128
+    //                    (<2 x i64>, <16 x i8>, i8)
+    // However, we currently handle those elsewhere.
 
     assert(Mask->getType()->isIntegerTy());
-    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
     insertCheckShadowOf(Mask, &I);
+
+    // The mask has 1 bit per element of A, but a minimum of 8 bits.
+    if (Mask->getType()->getScalarSizeInBits() == 8 && OutputNumElements < 8)
+      Mask = IRB.CreateTrunc(Mask, Type::getIntNTy(*MS.C, OutputNumElements));
+    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
 
     assert(I.getType() == WriteThrough->getType());
 
@@ -5851,6 +5878,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // The result of llvm.is.constant() is always defined.
       setShadow(&I, getCleanShadow(&I));
       setOrigin(&I, getCleanOrigin());
+      break;
+
+    // The non-saturating versions are handled by visitFPTo[US]IInst().
+    //
+    // N.B. some platform-specific intrinsics, such as AArch64 fcvtz[us], are
+    //      lowered to these cross-platform intrinsics.
+    case Intrinsic::fptosi_sat:
+    case Intrinsic::fptoui_sat:
+      handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
 
     default:
@@ -6679,58 +6715,142 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // AVX512 PMOV: Packed MOV, with truncation
     // Precisely handled by applying the same intrinsic to the shadow
+    case Intrinsic::x86_avx512_mask_pmov_dw_128:
+    case Intrinsic::x86_avx512_mask_pmov_db_128:
+    case Intrinsic::x86_avx512_mask_pmov_qb_128:
+    case Intrinsic::x86_avx512_mask_pmov_qw_128:
+    case Intrinsic::x86_avx512_mask_pmov_qd_128:
+    case Intrinsic::x86_avx512_mask_pmov_wb_128:
+    case Intrinsic::x86_avx512_mask_pmov_dw_256:
+    case Intrinsic::x86_avx512_mask_pmov_db_256:
+    case Intrinsic::x86_avx512_mask_pmov_qb_256:
+    case Intrinsic::x86_avx512_mask_pmov_qw_256:
     case Intrinsic::x86_avx512_mask_pmov_dw_512:
     case Intrinsic::x86_avx512_mask_pmov_db_512:
     case Intrinsic::x86_avx512_mask_pmov_qb_512:
     case Intrinsic::x86_avx512_mask_pmov_qw_512: {
-      // Intrinsic::x86_avx512_mask_pmov_{qd,wb}_512 were removed in
+      // Intrinsic::x86_avx512_mask_pmov_{qd,wb}_{256,512} were removed in
       // f608dc1f5775ee880e8ea30e2d06ab5a4a935c22
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
                                         /*trailingVerbatimArgs=*/1);
       break;
     }
 
-    // AVX512 PMVOV{S,US}: Packed MOV, with signed/unsigned saturation
+    // AVX512 PMOV{S,US}: Packed MOV, with signed/unsigned saturation
     // Approximately handled using the corresponding truncation intrinsic
     // TODO: improve handleAVX512VectorDownConvert to precisely model saturation
     case Intrinsic::x86_avx512_mask_pmovs_dw_512:
     case Intrinsic::x86_avx512_mask_pmovus_dw_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_dw_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
+
+    case Intrinsic::x86_avx512_mask_pmovs_dw_256:
+    case Intrinsic::x86_avx512_mask_pmovus_dw_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_dw_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_dw_128:
+    case Intrinsic::x86_avx512_mask_pmovus_dw_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_dw_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
 
     case Intrinsic::x86_avx512_mask_pmovs_db_512:
     case Intrinsic::x86_avx512_mask_pmovus_db_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_db_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
+
+    case Intrinsic::x86_avx512_mask_pmovs_db_256:
+    case Intrinsic::x86_avx512_mask_pmovus_db_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_db_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_db_128:
+    case Intrinsic::x86_avx512_mask_pmovus_db_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_db_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qb_512:
     case Intrinsic::x86_avx512_mask_pmovus_qb_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_qb_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
+
+    case Intrinsic::x86_avx512_mask_pmovs_qb_256:
+    case Intrinsic::x86_avx512_mask_pmovus_qb_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qb_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qb_128:
+    case Intrinsic::x86_avx512_mask_pmovus_qb_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qb_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qw_512:
     case Intrinsic::x86_avx512_mask_pmovus_qw_512: {
       handleIntrinsicByApplyingToShadow(I,
                                         Intrinsic::x86_avx512_mask_pmov_qw_512,
-                                        /* trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1);
       break;
     }
 
+    case Intrinsic::x86_avx512_mask_pmovs_qw_256:
+    case Intrinsic::x86_avx512_mask_pmovus_qw_256:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qw_256,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qw_128:
+    case Intrinsic::x86_avx512_mask_pmovus_qw_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qw_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qd_128:
+    case Intrinsic::x86_avx512_mask_pmovus_qd_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qd_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_wb_128:
+    case Intrinsic::x86_avx512_mask_pmovus_wb_128:
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_wb_128,
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmovs_qd_256:
+    case Intrinsic::x86_avx512_mask_pmovus_qd_256:
+    case Intrinsic::x86_avx512_mask_pmovs_wb_256:
+    case Intrinsic::x86_avx512_mask_pmovus_wb_256:
     case Intrinsic::x86_avx512_mask_pmovs_qd_512:
     case Intrinsic::x86_avx512_mask_pmovus_qd_512:
     case Intrinsic::x86_avx512_mask_pmovs_wb_512:
     case Intrinsic::x86_avx512_mask_pmovus_wb_512: {
-      // Since Intrinsic::x86_avx512_mask_pmov_{qd,wb}_512 do not exist, we
-      // cannot use handleIntrinsicByApplyingToShadow. Instead, we call the
+      // Since Intrinsic::x86_avx512_mask_pmov_{qd,wb}_{256,512} do not exist,
+      // we cannot use handleIntrinsicByApplyingToShadow. Instead, we call the
       // slow-path handler.
       handleAVX512VectorDownConvert(I);
       break;
@@ -7069,7 +7189,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Vector Conversions Between Half-Precision and Single-Precision
     case Intrinsic::aarch64_neon_vcvthf2fp:
     case Intrinsic::aarch64_neon_vcvtfp2hf:
-      handleNEONVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+      handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
 
     // Vector Conversions Between Fixed-Point and Floating-Point
@@ -7077,7 +7197,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_vcvtfp2fxs:
     case Intrinsic::aarch64_neon_vcvtfxu2fp:
     case Intrinsic::aarch64_neon_vcvtfp2fxu:
-      handleNEONVectorConvertIntrinsic(I, /*FixedPoint=*/true);
+      handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/true);
       break;
 
     // TODO: bfloat conversions

@@ -1281,6 +1281,7 @@ void ASTStmtReader::VisitInitListExpr(InitListExpr *E) {
     for (unsigned I = 0; I != NumInits; ++I)
       E->updateInit(Record.getContext(), I, Record.readSubExpr());
   }
+  E->InitListExprBits.IsExplicit = Record.readBool();
 }
 
 void ASTStmtReader::VisitDesignatedInitExpr(DesignatedInitExpr *E) {
@@ -1787,6 +1788,7 @@ void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 void ASTStmtReader::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
   E->CXXOperatorCallExprBits.OperatorKind = Record.readInt();
+  E->CXXOperatorCallExprBits.IsReversed = Record.readInt();
   E->BeginLoc = Record.readSourceLocation();
 }
 
@@ -2526,6 +2528,10 @@ void ASTStmtReader::VisitOMPCanonicalLoopSequenceTransformationDirective(
 }
 
 void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPSplitDirective(OMPSplitDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
@@ -3684,6 +3690,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
              "Reverse directive has no clauses");
       S = OMPReverseDirective::CreateEmpty(Context, NumLoops);
+      break;
+    }
+
+    case STMT_OMP_SPLIT_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPSplitDirective::CreateEmpty(Context, NumClauses, NumLoops);
       break;
     }
 
