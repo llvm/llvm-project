@@ -17,6 +17,7 @@
 // operator-=(x, n)
 
 #include <array>
+#include <cassert>
 #include <concepts>
 #include <functional>
 #include <list>

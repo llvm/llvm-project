@@ -11,6 +11,7 @@
 // constexpr explicit concat_view(Views... views)
 
 #include <array>
+#include <cassert>
 #include <ranges>
 
 #include "../range_adaptor_types.h"
