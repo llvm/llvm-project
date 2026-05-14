@@ -410,10 +410,7 @@ class VectorType;
                                              unsigned Depth) const override;
 
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
-                          const MachineFunction &MF) const override {
-      // Do not merge to larger than i32.
-      return (MemVT.getSizeInBits() <= 32);
-    }
+                          const MachineFunction &MF) const override;
 
     bool isCheapToSpeculateCttz(Type *Ty) const override;
     bool isCheapToSpeculateCtlz(Type *Ty) const override;

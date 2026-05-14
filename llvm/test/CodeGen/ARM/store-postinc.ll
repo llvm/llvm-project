@@ -808,10 +808,11 @@ define ptr @i128_0(ptr %p, i128 %v) {
 ;
 ; CHECK-ARM-LABEL: i128_0:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    ldm sp, {r1, r12}
-; CHECK-ARM-NEXT:    stm r0, {r2, r3}
-; CHECK-ARM-NEXT:    str r1, [r0, #8]
-; CHECK-ARM-NEXT:    str r12, [r0, #12]
+; CHECK-ARM-NEXT:    vldr d16, [sp]
+; CHECK-ARM-NEXT:    mov r1, r3
+; CHECK-ARM-NEXT:    str r2, [r0]
+; CHECK-ARM-NEXT:    str r1, [r0, #4]
+; CHECK-ARM-NEXT:    vstr d16, [r0, #8]
 ; CHECK-ARM-NEXT:    bx lr
   store i128 %v, ptr %p, align 16
   ret ptr %p
@@ -842,10 +843,9 @@ define ptr @i128_3(ptr %p, i128 %v) {
 ; CHECK-ARM-LABEL: i128_3:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r2, [r0, #3]!
-; CHECK-ARM-NEXT:    ldm sp, {r1, r12}
+; CHECK-ARM-NEXT:    vldr d16, [sp]
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
-; CHECK-ARM-NEXT:    str r1, [r0, #8]
-; CHECK-ARM-NEXT:    str r12, [r0, #12]
+; CHECK-ARM-NEXT:    vstr d16, [r0, #8]
 ; CHECK-ARM-NEXT:    bx lr
   %o = getelementptr inbounds i8, ptr %p, i32 3
   store i128 %v, ptr %o, align 16
@@ -876,10 +876,9 @@ define ptr @i128_4(ptr %p, i128 %v) {
 ; CHECK-ARM-LABEL: i128_4:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r2, [r0, #4]!
-; CHECK-ARM-NEXT:    ldm sp, {r1, r12}
+; CHECK-ARM-NEXT:    vldr d16, [sp]
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
-; CHECK-ARM-NEXT:    str r1, [r0, #8]
-; CHECK-ARM-NEXT:    str r12, [r0, #12]
+; CHECK-ARM-NEXT:    vstr d16, [r0, #8]
 ; CHECK-ARM-NEXT:    bx lr
   %o = getelementptr inbounds i8, ptr %p, i32 4
   store i128 %v, ptr %o, align 16
@@ -910,10 +909,9 @@ define ptr @i128_8(ptr %p, i128 %v) {
 ; CHECK-ARM-LABEL: i128_8:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r2, [r0, #8]!
-; CHECK-ARM-NEXT:    ldm sp, {r1, r12}
+; CHECK-ARM-NEXT:    vldr d16, [sp]
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
-; CHECK-ARM-NEXT:    str r1, [r0, #8]
-; CHECK-ARM-NEXT:    str r12, [r0, #12]
+; CHECK-ARM-NEXT:    vstr d16, [r0, #8]
 ; CHECK-ARM-NEXT:    bx lr
   %o = getelementptr inbounds i8, ptr %p, i32 8
   store i128 %v, ptr %o, align 16
@@ -944,10 +942,9 @@ define ptr @i128_16(ptr %p, i128 %v) {
 ; CHECK-ARM-LABEL: i128_16:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r2, [r0, #16]!
-; CHECK-ARM-NEXT:    ldm sp, {r1, r12}
+; CHECK-ARM-NEXT:    vldr d16, [sp]
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
-; CHECK-ARM-NEXT:    str r1, [r0, #8]
-; CHECK-ARM-NEXT:    str r12, [r0, #12]
+; CHECK-ARM-NEXT:    vstr d16, [r0, #8]
 ; CHECK-ARM-NEXT:    bx lr
   %o = getelementptr inbounds i8, ptr %p, i32 16
   store i128 %v, ptr %o, align 16
@@ -977,11 +974,12 @@ define ptr @i128_m1(ptr %p, i128 %v) {
 ;
 ; CHECK-ARM-LABEL: i128_m1:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    str r2, [r0, #-1]!
-; CHECK-ARM-NEXT:    ldm sp, {r1, r12}
-; CHECK-ARM-NEXT:    str r3, [r0, #4]
-; CHECK-ARM-NEXT:    str r1, [r0, #8]
-; CHECK-ARM-NEXT:    str r12, [r0, #12]
+; CHECK-ARM-NEXT:    vldr d16, [sp]
+; CHECK-ARM-NEXT:    mvn r1, #7
+; CHECK-ARM-NEXT:    str r3, [r0, #3]
+; CHECK-ARM-NEXT:    add r0, r0, #7
+; CHECK-ARM-NEXT:    vst1.32 {d16}, [r0:64], r1
+; CHECK-ARM-NEXT:    str r2, [r0]
 ; CHECK-ARM-NEXT:    bx lr
   %o = getelementptr inbounds i8, ptr %p, i32 -1
   store i128 %v, ptr %o, align 16
@@ -1011,10 +1009,11 @@ define ptr @i128_m4(ptr %p, i128 %v) {
 ;
 ; CHECK-ARM-LABEL: i128_m4:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    ldm sp, {r1, r12}
-; CHECK-ARM-NEXT:    str r3, [r0]
-; CHECK-ARM-NEXT:    stmib r0, {r1, r12}
-; CHECK-ARM-NEXT:    str r2, [r0, #-4]!
+; CHECK-ARM-NEXT:    vldr d16, [sp]
+; CHECK-ARM-NEXT:    mvn r1, #7
+; CHECK-ARM-NEXT:    str r3, [r0], #4
+; CHECK-ARM-NEXT:    vst1.32 {d16}, [r0:64], r1
+; CHECK-ARM-NEXT:    str r2, [r0]
 ; CHECK-ARM-NEXT:    bx lr
   %o = getelementptr inbounds i8, ptr %p, i32 -4
   store i128 %v, ptr %o, align 16

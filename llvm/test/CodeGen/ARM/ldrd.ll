@@ -189,8 +189,10 @@ define ptr @strd_postupdate_inc(ptr %p0, i32 %v0, i32 %v1) "frame-pointer"="none
 }
 
 ; CHECK-LABEL: ldrd_strd_aa:{{.*$}}
-; NORMAL: ldrd [[TMP1:r[0-9]]], [[TMP2:r[0-9]]],
-; NORMAL: strd [[TMP1]], [[TMP2]],
+; Aligned i32x2 load+store may lower as GPR ldrd/strd (e.g. Cortex-M3) or as a
+; 64-bit VFP memop pair (vldr/vstr) on cores with NEON.
+; NORMAL-DAG: {{ldrd|vldr}}
+; NORMAL-DAG: {{strd|vstr}}
 ; CONSERVATIVE-NOT: ldrd
 ; CONSERVATIVE-NOT: strd
 ; CHECK: bx lr

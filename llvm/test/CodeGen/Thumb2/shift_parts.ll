@@ -240,16 +240,27 @@ entry:
 %struct.b = type { i184 }
 
 define void @lsll_256bit_shift(ptr nocapture %x) local_unnamed_addr #0 {
-; CHECK-LABEL: lsll_256bit_shift:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    str r1, [r0, #16]
-; CHECK-NEXT:    strd r1, r1, [r0, #8]
-; CHECK-NEXT:    strd r1, r1, [r0]
-; CHECK-NEXT:    ldrb r1, [r0, #23]
-; CHECK-NEXT:    lsls r1, r1, #24
-; CHECK-NEXT:    str r1, [r0, #20]
-; CHECK-NEXT:    bx lr
+; CHECK-MVE-LABEL: lsll_256bit_shift:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    movs r1, #0
+; CHECK-MVE-NEXT:    vmov.i32 q0, #0x0
+; CHECK-MVE-NEXT:    str r1, [r0, #16]
+; CHECK-MVE-NEXT:    vstrw.32 q0, [r0]
+; CHECK-MVE-NEXT:    ldrb r1, [r0, #23]
+; CHECK-MVE-NEXT:    lsls r1, r1, #24
+; CHECK-MVE-NEXT:    str r1, [r0, #20]
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: lsll_256bit_shift:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    movs r1, #0
+; CHECK-NON-MVE-NEXT:    str r1, [r0, #16]
+; CHECK-NON-MVE-NEXT:    strd r1, r1, [r0, #8]
+; CHECK-NON-MVE-NEXT:    strd r1, r1, [r0]
+; CHECK-NON-MVE-NEXT:    ldrb r1, [r0, #23]
+; CHECK-NON-MVE-NEXT:    lsls r1, r1, #24
+; CHECK-NON-MVE-NEXT:    str r1, [r0, #20]
+; CHECK-NON-MVE-NEXT:    bx lr
 entry:
   %bf.load = load i192, ptr %x, align 8
   %bf.clear4 = and i192 %bf.load, -24519928653854221733733552434404946937899825954937634816

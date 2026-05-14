@@ -2211,27 +2211,29 @@ define void @test_fmuladd(ptr %p, ptr %q, ptr %r) #0 {
 ; and extractelement have these extra loads and stores.
 define void @test_insertelement(ptr %p, ptr %q, i32 %i) #0 {
 ; CHECK-VFP-LABEL: test_insertelement:
-; CHECK-VFP:         .save {r4, r5, r11, lr}
-; CHECK-VFP-NEXT:    push {r4, r5, r11, lr}
+; CHECK-VFP:         .save {r11, lr}
+; CHECK-VFP-NEXT:    push {r11, lr}
 ; CHECK-VFP-NEXT:    .pad #8
 ; CHECK-VFP-NEXT:    sub sp, sp, #8
 ; CHECK-VFP-NEXT:    and r2, r2, #3
-; CHECK-VFP-NEXT:    mov r3, sp
-; CHECK-VFP-NEXT:    ldrd r4, r5, [r1]
-; CHECK-VFP-NEXT:    orr r2, r3, r2, lsl #1
-; CHECK-VFP-NEXT:    ldrh r0, [r0]
-; CHECK-VFP-NEXT:    stm sp, {r4, r5}
-; CHECK-VFP-NEXT:    strh r0, [r2]
+; CHECK-VFP-NEXT:    mov r12, #2
+; CHECK-VFP-NEXT:    mov r3, r1
+; CHECK-VFP-NEXT:    vld1.16 {d16}, [r3:64], r12
+; CHECK-VFP-NEXT:    lsl r2, r2, #1
+; CHECK-VFP-NEXT:    ldrh r12, [r0]
+; CHECK-VFP-NEXT:    mov r0, sp
+; CHECK-VFP-NEXT:    vst1.16 {d16}, [r0:64], r2
+; CHECK-VFP-NEXT:    strh r12, [r0]
 ; CHECK-VFP-NEXT:    ldrh r0, [sp, #6]
 ; CHECK-VFP-NEXT:    ldrh r2, [sp, #4]
-; CHECK-VFP-NEXT:    ldrh r3, [sp, #2]
-; CHECK-VFP-NEXT:    ldrh r5, [sp]
+; CHECK-VFP-NEXT:    ldrh r12, [sp, #2]
+; CHECK-VFP-NEXT:    ldrh lr, [sp]
 ; CHECK-VFP-NEXT:    strh r0, [r1, #6]
 ; CHECK-VFP-NEXT:    strh r2, [r1, #4]
-; CHECK-VFP-NEXT:    strh r3, [r1, #2]
-; CHECK-VFP-NEXT:    strh r5, [r1]
+; CHECK-VFP-NEXT:    strh r12, [r3]
+; CHECK-VFP-NEXT:    strh lr, [r1]
 ; CHECK-VFP-NEXT:    add sp, sp, #8
-; CHECK-VFP-NEXT:    pop {r4, r5, r11, pc}
+; CHECK-VFP-NEXT:    pop {r11, pc}
 ;
 ; CHECK-NOVFP-LABEL: test_insertelement:
 ; CHECK-NOVFP:         .save {r4, r5, r11, lr}
@@ -2265,20 +2267,33 @@ define void @test_insertelement(ptr %p, ptr %q, i32 %i) #0 {
 }
 
 define void @test_extractelement(ptr %p, ptr %q, i32 %i) #0 {
-; CHECK-ALL-LABEL: test_extractelement:
-; CHECK-ALL:         .save {r4, r5, r11, lr}
-; CHECK-ALL-NEXT:    push {r4, r5, r11, lr}
-; CHECK-ALL-NEXT:    .pad #8
-; CHECK-ALL-NEXT:    sub sp, sp, #8
-; CHECK-ALL-NEXT:    ldrd r4, r5, [r1]
-; CHECK-ALL-NEXT:    and r1, r2, #3
-; CHECK-ALL-NEXT:    mov r2, sp
-; CHECK-ALL-NEXT:    orr r1, r2, r1, lsl #1
-; CHECK-ALL-NEXT:    stm sp, {r4, r5}
-; CHECK-ALL-NEXT:    ldrh r1, [r1]
-; CHECK-ALL-NEXT:    strh r1, [r0]
-; CHECK-ALL-NEXT:    add sp, sp, #8
-; CHECK-ALL-NEXT:    pop {r4, r5, r11, pc}
+; CHECK-VFP-LABEL: test_extractelement:
+; CHECK-VFP:         .pad #8
+; CHECK-VFP-NEXT:    sub sp, sp, #8
+; CHECK-VFP-NEXT:    vldr d16, [r1]
+; CHECK-VFP-NEXT:    and r1, r2, #3
+; CHECK-VFP-NEXT:    mov r2, sp
+; CHECK-VFP-NEXT:    orr r1, r2, r1, lsl #1
+; CHECK-VFP-NEXT:    vstr d16, [sp]
+; CHECK-VFP-NEXT:    ldrh r1, [r1]
+; CHECK-VFP-NEXT:    strh r1, [r0]
+; CHECK-VFP-NEXT:    add sp, sp, #8
+; CHECK-VFP-NEXT:    bx lr
+;
+; CHECK-NOVFP-LABEL: test_extractelement:
+; CHECK-NOVFP:         .save {r4, r5, r11, lr}
+; CHECK-NOVFP-NEXT:    push {r4, r5, r11, lr}
+; CHECK-NOVFP-NEXT:    .pad #8
+; CHECK-NOVFP-NEXT:    sub sp, sp, #8
+; CHECK-NOVFP-NEXT:    ldrd r4, r5, [r1]
+; CHECK-NOVFP-NEXT:    and r1, r2, #3
+; CHECK-NOVFP-NEXT:    mov r2, sp
+; CHECK-NOVFP-NEXT:    orr r1, r2, r1, lsl #1
+; CHECK-NOVFP-NEXT:    stm sp, {r4, r5}
+; CHECK-NOVFP-NEXT:    ldrh r1, [r1]
+; CHECK-NOVFP-NEXT:    strh r1, [r0]
+; CHECK-NOVFP-NEXT:    add sp, sp, #8
+; CHECK-NOVFP-NEXT:    pop {r4, r5, r11, pc}
   %a = load <4 x half>, ptr %q, align 8
   %b = extractelement <4 x half> %a, i32 %i
   store half %b, ptr %p
