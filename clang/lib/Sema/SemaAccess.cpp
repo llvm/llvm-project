@@ -360,8 +360,7 @@ GetCanonicalFunctionProto(Sema &S, const FunctionDecl *FD) {
 }
 
 static const TemplateSpecializationType *
-GetCanonicalQualifierTemplateSpecializationType(Sema &S,
-                                                NestedNameSpecifier NNS) {
+GetQualifierClassTemplateSpecializationType(Sema &S, NestedNameSpecifier NNS) {
   if (!NNS)
     return nullptr;
 
@@ -372,7 +371,15 @@ GetCanonicalQualifierTemplateSpecializationType(Sema &S,
   if (const auto *ICNT = Ty->getAs<InjectedClassNameType>())
     Ty = ICNT->getDecl()->getCanonicalTemplateSpecializationType(S.Context);
 
-  return Ty->getAs<TemplateSpecializationType>();
+  const auto *TST = Ty->getAsNonAliasTemplateSpecializationType();
+  if (!TST)
+    return nullptr;
+
+  if (!isa_and_nonnull<ClassTemplateDecl>(
+          TST->getTemplateName().getAsTemplateDecl()))
+    return nullptr;
+
+  return TST;
 }
 
 static FunctionTemplateDecl *TryGetFunctionTemplateDecl(FunctionDecl *FD) {
@@ -739,7 +746,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   TemplateSpecCandidateSet *FailedTSC) {
   AccessResult OnFailure = AR_inaccessible;
   const auto *FriendTST =
-      GetCanonicalQualifierTemplateSpecializationType(S, Qualifier);
+      GetQualifierClassTemplateSpecializationType(S, Qualifier);
   if (!FriendTST)
     return MatchesFriend(S, EC, FriendCTD);
 
@@ -804,7 +811,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   FunctionTemplateDecl *FriendFTD,
                                   TemplateSpecCandidateSet *FailedTSC) {
   AccessResult OnFailure = AR_inaccessible;
-  const auto *FriendTST = GetCanonicalQualifierTemplateSpecializationType(
+  const auto *FriendTST = GetQualifierClassTemplateSpecializationType(
       S, FriendFTD->getTemplatedDecl()->getQualifier());
   if (!FriendTST)
     return OnFailure;
@@ -844,8 +851,8 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   FunctionDecl *FriendFD,
                                   TemplateSpecCandidateSet *FailedTSC) {
   AccessResult OnFailure = AR_inaccessible;
-  const auto *FriendTST = GetCanonicalQualifierTemplateSpecializationType(
-      S, FriendFD->getQualifier());
+  const auto *FriendTST =
+      GetQualifierClassTemplateSpecializationType(S, FriendFD->getQualifier());
   if (!FriendTST)
     return OnFailure;
 
@@ -921,7 +928,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!NNS)
     return OnFailure;
 
-  const auto *TST = GetCanonicalQualifierTemplateSpecializationType(S, NNS);
+  const auto *TST = GetQualifierClassTemplateSpecializationType(S, NNS);
   if (!TST)
     return OnFailure;
 
