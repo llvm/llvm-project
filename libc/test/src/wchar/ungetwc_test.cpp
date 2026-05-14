@@ -17,9 +17,12 @@
 #include "src/wchar/fgetwc.h"
 #include "src/wchar/fwide.h"
 #include "src/wchar/ungetwc.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcUngetwcTest, PushBackAndRead) {
+using LlvmLibcUngetwcTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcUngetwcTest, PushBackAndRead) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_push.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -40,6 +43,7 @@ TEST(LlvmLibcUngetwcTest, PushBackAndRead) {
 
   // Push back 'X'
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'X', file), static_cast<wint_t>(L'X'));
+  ASSERT_ERRNO_SUCCESS();
 
   // Read again -> should get 'X'
   EXPECT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'X'));
@@ -50,7 +54,7 @@ TEST(LlvmLibcUngetwcTest, PushBackAndRead) {
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
-TEST(LlvmLibcUngetwcTest, PushBackWEOF) {
+TEST_F(LlvmLibcUngetwcTest, PushBackWEOF) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_weof.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -62,11 +66,12 @@ TEST(LlvmLibcUngetwcTest, PushBackWEOF) {
 
   // Push back WEOF should do nothing and return WEOF
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(WEOF, file), static_cast<wint_t>(WEOF));
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
-TEST(LlvmLibcUngetwcTest, ByteModeFailure) {
+TEST_F(LlvmLibcUngetwcTest, ByteModeFailure) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_bytemode.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
@@ -77,11 +82,12 @@ TEST(LlvmLibcUngetwcTest, ByteModeFailure) {
 
   // Push back should fail
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'a', file), static_cast<wint_t>(WEOF));
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
-TEST(LlvmLibcUngetwcTest, OrientUnorientedStream) {
+TEST_F(LlvmLibcUngetwcTest, OrientUnorientedStream) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_orient.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
@@ -92,6 +98,7 @@ TEST(LlvmLibcUngetwcTest, OrientUnorientedStream) {
 
   // Push back a char
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'A', file), static_cast<wint_t>(L'A'));
+  ASSERT_ERRNO_SUCCESS();
 
   // Verify stream is now wide-oriented
   EXPECT_GT(LIBC_NAMESPACE::fwide(file, 0), 0);
@@ -99,7 +106,7 @@ TEST(LlvmLibcUngetwcTest, OrientUnorientedStream) {
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
-TEST(LlvmLibcUngetwcTest, ClearEofIndicator) {
+TEST_F(LlvmLibcUngetwcTest, ClearEofIndicator) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_cleareof.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -123,13 +130,14 @@ TEST(LlvmLibcUngetwcTest, ClearEofIndicator) {
 
   // ungetwc should clear EOF indicator
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'1', file), static_cast<wint_t>(L'1'));
+  ASSERT_ERRNO_SUCCESS();
   EXPECT_EQ(LIBC_NAMESPACE::feof(file), 0);
   EXPECT_EQ(LIBC_NAMESPACE::ferror(file), 0); // error remains unmodified
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
-TEST(LlvmLibcUngetwcTest, DiscardOnFilePositioning) {
+TEST_F(LlvmLibcUngetwcTest, DiscardOnFilePositioning) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_discard.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -149,6 +157,7 @@ TEST(LlvmLibcUngetwcTest, DiscardOnFilePositioning) {
 
   // Push back 'X'
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'X', file), static_cast<wint_t>(L'X'));
+  ASSERT_ERRNO_SUCCESS();
 
   // Seek to absolute position 1 (after '1') to discard pushed-back char
   EXPECT_EQ(LIBC_NAMESPACE::fseek(file, 1, SEEK_SET), 0);
@@ -159,7 +168,7 @@ TEST(LlvmLibcUngetwcTest, DiscardOnFilePositioning) {
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
-TEST(LlvmLibcUngetwcTest, LifoMultiplePushbacks) {
+TEST_F(LlvmLibcUngetwcTest, LifoMultiplePushbacks) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_lifo.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
@@ -167,8 +176,10 @@ TEST(LlvmLibcUngetwcTest, LifoMultiplePushbacks) {
 
   // Push back 'X' then 'Y'
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'X', file), static_cast<wint_t>(L'X'));
+  ASSERT_ERRNO_SUCCESS();
   // If multiple push-backs are supported, verify LIFO ordering
   wint_t second_push = LIBC_NAMESPACE::ungetwc(L'Y', file);
+  ASSERT_ERRNO_SUCCESS();
   if (second_push == static_cast<wint_t>(L'Y')) {
     EXPECT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'Y'));
     EXPECT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'X'));
@@ -180,7 +191,7 @@ TEST(LlvmLibcUngetwcTest, LifoMultiplePushbacks) {
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
-TEST(LlvmLibcUngetwcTest, PushbackAtStartOfFile) {
+TEST_F(LlvmLibcUngetwcTest, PushbackAtStartOfFile) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_start.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -197,6 +208,7 @@ TEST(LlvmLibcUngetwcTest, PushbackAtStartOfFile) {
 
   // Push back 'Z' at the very beginning without prior reads
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'Z', file), static_cast<wint_t>(L'Z'));
+  ASSERT_ERRNO_SUCCESS();
 
   // Read first char -> should be 'Z'
   EXPECT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'Z'));
@@ -207,7 +219,7 @@ TEST(LlvmLibcUngetwcTest, PushbackAtStartOfFile) {
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
-TEST(LlvmLibcUngetwcTest, PushbackMultibyteChars) {
+TEST_F(LlvmLibcUngetwcTest, PushbackMultibyteChars) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_multibyte.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -218,6 +230,7 @@ TEST(LlvmLibcUngetwcTest, PushbackMultibyteChars) {
   file = LIBC_NAMESPACE::fopen(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'¢', file), static_cast<wint_t>(L'¢'));
+  ASSERT_ERRNO_SUCCESS();
   EXPECT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'¢'));
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 
@@ -226,6 +239,7 @@ TEST(LlvmLibcUngetwcTest, PushbackMultibyteChars) {
   file = LIBC_NAMESPACE::fopen(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'€', file), static_cast<wint_t>(L'€'));
+  ASSERT_ERRNO_SUCCESS();
   EXPECT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'€'));
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 
@@ -233,7 +247,24 @@ TEST(LlvmLibcUngetwcTest, PushbackMultibyteChars) {
   file = LIBC_NAMESPACE::fopen(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
   EXPECT_EQ(LIBC_NAMESPACE::ungetwc(L'𐍈', file), static_cast<wint_t>(L'𐍈'));
+  ASSERT_ERRNO_SUCCESS();
   EXPECT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'𐍈'));
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 #endif
 }
+
+#if WCHAR_MAX > 0xFFFF
+TEST_F(LlvmLibcUngetwcTest, PushbackInvalidWchar) {
+  auto FILENAME =
+      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_invalid.test"));
+  ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
+  ASSERT_FALSE(file == nullptr);
+
+  // Try to push back an invalid wide character (0x12FFFF)
+  // It should fail and set errno to EILSEQ.
+  EXPECT_EQ(LIBC_NAMESPACE::ungetwc(0x12FFFF, file), static_cast<wint_t>(WEOF));
+  ASSERT_ERRNO_EQ(EILSEQ);
+
+  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+}
+#endif

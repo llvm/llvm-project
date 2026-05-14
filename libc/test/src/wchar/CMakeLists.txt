@@ -642,6 +642,7 @@ add_libc_test(
     libc.src.wchar.fgetwc
     libc.src.wchar.fwide
     libc.src.wchar.ungetwc
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
