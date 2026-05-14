@@ -122,7 +122,7 @@ std::unique_ptr<Module> llvm::CloneModule(
       // a function depending on the value type.
       GlobalValue *GV;
       assert(I.getValueType()->isFunctionTy() &&
-             "IFunc resolver must be function type!");
+             "ValueType of ifunc must be function type!");
       GV = Function::Create(cast<FunctionType>(I.getValueType()),
                             GlobalValue::ExternalLinkage, I.getAddressSpace(),
                             I.getName(), New.get());
