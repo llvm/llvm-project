@@ -406,6 +406,8 @@ public:
 
   bool SetShowInlineDiagnostics(bool);
 
+  uint64_t GetGuiMaxConsoleLines() const;
+
   bool LoadPlugin(const FileSpec &spec, Status &error);
 
   void RunIOHandlers();

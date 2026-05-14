@@ -160,8 +160,6 @@ FunctionImportGlobalProcessing::getPromotedName(const GlobalValue *SGV) {
       ImportIndex.getModuleHash(SGV->getParent()->getModuleIdentifier()));
 }
 
-
-
 GlobalValue::LinkageTypes
 FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
                                            bool DoPromote) {

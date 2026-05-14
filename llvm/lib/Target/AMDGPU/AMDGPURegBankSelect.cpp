@@ -111,7 +111,7 @@ public:
 
   const RegisterBank *getRegBankToAssign(Register Reg) {
     if (!isTemporalDivergenceCopy(Reg) &&
-        (MUI.isUniform(Reg) || ILMA.isS32S64LaneMask(Reg)))
+        (MUI.isUniformAtDef(Reg) || ILMA.isS32S64LaneMask(Reg)))
       return SgprRB;
     if (MRI.getType(Reg) == LLT::scalar(1))
       return VccRB;
