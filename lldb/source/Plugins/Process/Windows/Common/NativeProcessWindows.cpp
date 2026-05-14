@@ -462,7 +462,6 @@ NativeProcessWindows::OnDebugException(bool first_chance,
     SetState(eStateStopped, false);
   }
 
-  ExceptionResult result = ExceptionResult::SendToApplication;
   switch (record.GetExceptionCode()) {
   case DWORD(STATUS_SINGLE_STEP):
   case STATUS_WX86_SINGLE_STEP: {
@@ -597,11 +596,9 @@ NativeProcessWindows::OnDebugException(bool first_chance,
     // For non-breakpoints, give the application a chance to handle the
     // exception first.
     if (first_chance)
-      result = ExceptionResult::SendToApplication;
+      return ExceptionResult::SendToApplication;
     else
-      result = ExceptionResult::BreakInDebugger;
-
-    return result;
+      return ExceptionResult::BreakInDebugger;
   }
   }
 }
