@@ -12,6 +12,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/DependencyScanning/DependencyGraph.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
@@ -33,17 +34,6 @@ namespace dependencies {
 class DependencyActionController;
 class DependencyConsumer;
 class PrebuiltModuleASTAttrs;
-
-/// Modular dependency that has already been built prior to the dependency scan.
-struct PrebuiltModuleDep {
-  std::string ModuleName;
-  std::string PCMFile;
-  std::string ModuleMapFile;
-
-  explicit PrebuiltModuleDep(const serialization::ModuleFile *MF)
-      : ModuleName(MF->ModuleName), PCMFile(MF->FileName.str()),
-        ModuleMapFile(MF->ModuleMapPath) {}
-};
 
 /// Attributes loaded from AST files of prebuilt modules collected prior to
 /// ModuleDepCollector creation.
@@ -86,54 +76,6 @@ private:
   std::set<StringRef> ModuleFileDependents;
 };
 
-/// This is used to identify a specific module.
-struct ModuleID {
-  /// The name of the module. This may include `:` for C++20 module partitions,
-  /// or a header-name for C++20 header units.
-  std::string ModuleName;
-
-  /// The context hash of a module represents the compiler options that affect
-  /// the resulting command-line invocation.
-  ///
-  /// Modules with the same name and ContextHash but different invocations could
-  /// cause non-deterministic build results.
-  ///
-  /// Modules with the same name but a different \c ContextHash should be
-  /// treated as separate modules for the purpose of a build.
-  std::string ContextHash;
-
-  bool operator==(const ModuleID &Other) const {
-    return std::tie(ModuleName, ContextHash) ==
-           std::tie(Other.ModuleName, Other.ContextHash);
-  }
-
-  bool operator<(const ModuleID &Other) const {
-    return std::tie(ModuleName, ContextHash) <
-           std::tie(Other.ModuleName, Other.ContextHash);
-  }
-};
-
-/// P1689ModuleInfo - Represents the needed information of standard C++20
-/// modules for P1689 format.
-struct P1689ModuleInfo {
-  /// The name of the module. This may include `:` for partitions.
-  std::string ModuleName;
-
-  /// Optional. The source path to the module.
-  std::string SourcePath;
-
-  /// If this module is a standard c++ interface unit.
-  bool IsStdCXXModuleInterface = true;
-
-  enum class ModuleType {
-    NamedCXXModule
-    // To be supported
-    // AngleHeaderUnit,
-    // QuoteHeaderUnit
-  };
-  ModuleType Type = ModuleType::NamedCXXModule;
-};
-
 /// An output from a module compilation, such as the path of the module file.
 enum class ModuleOutputKind {
   /// The module file (.pcm). Required.
@@ -145,74 +87,6 @@ enum class ModuleOutputKind {
   DependencyTargets,
   /// The path of the serialized diagnostic file (.dia), if any.
   DiagnosticSerializationFile,
-};
-
-struct ModuleDeps {
-  /// The identifier of the module.
-  ModuleID ID;
-
-  /// Whether this is a "system" module.
-  bool IsSystem;
-
-  /// Whether this module is fully composed of file & module inputs from
-  /// locations likely to stay the same across the active development and build
-  /// cycle. For example, when all those input paths only resolve in Sysroot.
-  ///
-  /// External paths, as opposed to virtual file paths, are always used
-  /// for computing this value.
-  bool IsInStableDirectories;
-
-  /// Whether current working directory is ignored.
-  bool IgnoreCWD;
-
-  /// The path to the modulemap file which defines this module.
-  ///
-  /// This can be used to explicitly build this module. This file will
-  /// additionally appear in \c FileDeps as a dependency.
-  std::string ClangModuleMapFile;
-
-  /// A collection of absolute paths to module map files that this module needs
-  /// to know about. The ordering is significant.
-  std::vector<std::string> ModuleMapFileDeps;
-
-  /// A collection of prebuilt modular dependencies this module directly depends
-  /// on, not including transitive dependencies.
-  std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
-
-  /// A list of module identifiers this module directly depends on, not
-  /// including transitive dependencies.
-  ///
-  /// This may include modules with a different context hash when it can be
-  /// determined that the differences are benign for this compilation.
-  std::vector<ModuleID> ClangModuleDeps;
-
-  /// The set of libraries or frameworks to link against when
-  /// an entity from this module is used.
-  llvm::SmallVector<Module::LinkLibrary, 2> LinkLibraries;
-
-  /// Invokes \c Cb for all file dependencies of this module. Each provided
-  /// \c StringRef is only valid within the individual callback invocation.
-  void forEachFileDep(llvm::function_ref<void(StringRef)> Cb) const;
-
-  /// Get (or compute) the compiler invocation that can be used to build this
-  /// module. Does not include argv[0].
-  const std::vector<std::string> &getBuildArguments() const;
-
-private:
-  friend class ModuleDepCollector;
-  friend class ModuleDepCollectorPP;
-
-  /// The absolute directory path that is the base for relative paths
-  /// in \c FileDeps.
-  std::string FileDepsBaseDir;
-
-  /// A collection of paths to files that this module directly depends on, not
-  /// including transitive dependencies.
-  std::vector<std::string> FileDeps;
-
-  mutable std::variant<std::monostate, CowCompilerInvocation,
-                       std::vector<std::string>>
-      BuildInfo;
 };
 
 class ModuleDepCollector;
@@ -393,23 +267,5 @@ bool areOptionsInStableDir(const ArrayRef<StringRef> Directories,
 
 } // end namespace dependencies
 } // end namespace clang
-
-namespace llvm {
-inline hash_code hash_value(const clang::dependencies::ModuleID &ID) {
-  return hash_combine(ID.ModuleName, ID.ContextHash);
-}
-
-template <> struct DenseMapInfo<clang::dependencies::ModuleID> {
-  using ModuleID = clang::dependencies::ModuleID;
-  static inline ModuleID getEmptyKey() { return ModuleID{"", ""}; }
-  static inline ModuleID getTombstoneKey() {
-    return ModuleID{"~", "~"}; // ~ is not a valid module name or context hash
-  }
-  static unsigned getHashValue(const ModuleID &ID) { return hash_value(ID); }
-  static bool isEqual(const ModuleID &LHS, const ModuleID &RHS) {
-    return LHS == RHS;
-  }
-};
-} // namespace llvm
 
 #endif // LLVM_CLANG_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H

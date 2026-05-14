@@ -19,24 +19,13 @@
 using namespace clang;
 using namespace dependencies;
 
-void ModuleDeps::forEachFileDep(llvm::function_ref<void(StringRef)> Cb) const {
-  SmallString<0> PathBuf;
-  PathBuf.reserve(256);
-  for (StringRef FileDep : FileDeps) {
-    auto ResolvedFileDep =
-        ASTReader::ResolveImportedPath(PathBuf, FileDep, FileDepsBaseDir);
-    Cb(*ResolvedFileDep);
-  }
-}
-
-const std::vector<std::string> &ModuleDeps::getBuildArguments() const {
-  // FIXME: this operation is not thread safe and is expected to be called
-  // on a single thread. Otherwise it should be protected with a lock.
-  assert(!std::holds_alternative<std::monostate>(BuildInfo) &&
-         "Using uninitialized ModuleDeps");
-  if (const auto *CI = std::get_if<CowCompilerInvocation>(&BuildInfo))
-    BuildInfo = CI->getCC1CommandLine();
-  return std::get<std::vector<std::string>>(BuildInfo);
+static PrebuiltModuleDep
+createPrebuiltModuleDep(const serialization::ModuleFile *MF) {
+  PrebuiltModuleDep Dep;
+  Dep.ModuleName = MF->ModuleName;
+  Dep.PCMFile = MF->FileName.str();
+  Dep.ModuleMapFile = MF->ModuleMapPath;
+  return Dep;
 }
 
 void PrebuiltModuleASTAttrs::updateDependentsNotInStableDirs(
@@ -598,7 +587,7 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(*MFKey);
 
   if (MDC.isPrebuiltModule(MF))
-    MDC.DirectPrebuiltModularDeps.insert({MF, PrebuiltModuleDep{MF}});
+    MDC.DirectPrebuiltModularDeps.insert({MF, createPrebuiltModuleDep(MF)});
   else {
     MDC.DirectModularDeps.insert(MF);
     MDC.DirectImports.insert(Imported);
@@ -827,7 +816,7 @@ void ModuleDepCollectorPP::addAllModuleDeps(serialization::ModuleFile &MF,
   llvm::DenseSet<const Module *> Seen;
   for (serialization::ModuleFile *Import : MF.Imports) {
     if (MDC.isPrebuiltModule(Import)) {
-      MD.PrebuiltModuleDeps.emplace_back(Import);
+      MD.PrebuiltModuleDeps.push_back(createPrebuiltModuleDep(Import));
       if (MD.IsInStableDirectories) {
         auto It = MDC.PrebuiltModulesASTMap.find(
             MD.PrebuiltModuleDeps.back().PCMFile);

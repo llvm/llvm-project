@@ -555,7 +555,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  bool HasVecMulU64 = ST->hasVectorMulU64();
+  bool HasVecMulU64 = ST->hasVMulU64Inst();
   addRulesForGOpcs({G_MUL}, Standard)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
@@ -1537,6 +1537,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{UniInVgprS64}, {Vgpr64}})
       .Div(S64, {{Vgpr64}, {Vgpr64}});
 
+  addRulesForGOpcs({G_AMDGPU_GLOBAL_LOAD_MONITOR, G_AMDGPU_FLAT_LOAD_MONITOR},
+                   StandardB)
+      .Uni(B32, {{UniInVgprB32}, {SgprPtr64}})
+      .Div(B32, {{VgprB32}, {VgprPtr64}})
+      .Uni(B64, {{UniInVgprB64}, {SgprPtr64}})
+      .Div(B64, {{VgprB64}, {VgprPtr64}})
+      .Uni(B128, {{UniInVgprB128}, {SgprPtr64}})
+      .Div(B128, {{VgprB128}, {VgprPtr64}});
+
   using namespace Intrinsic;
 
   addRulesForIOpcs({returnaddress}).Any({{UniP0}, {{SgprP0}, {}}});
@@ -1695,10 +1704,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_permlane_bcast, amdgcn_permlane_up,
                     amdgcn_permlane_down, amdgcn_permlane_xor},
-                   Standard)
-      .Div(S32,
-           {{Vgpr32},
-            {IntrId, Vgpr32, SgprB32_ReadFirstLane, SgprB32_ReadFirstLane}});
+                   StandardB)
+      .Div(B32,
+           {{VgprB32},
+            {IntrId, VgprB32, SgprB32_ReadFirstLane, SgprB32_ReadFirstLane}});
 
   addRulesForIOpcs({amdgcn_permlane_idx_gen}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, SgprB32_ReadFirstLane}});

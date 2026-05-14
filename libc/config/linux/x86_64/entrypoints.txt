@@ -262,6 +262,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
+    libc.src.sys.mman.memfd_create
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
     libc.src.sys.mman.mlock2
@@ -303,6 +304,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.accept4
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
+    libc.src.sys.socket.getpeername
+    libc.src.sys.socket.getsockname
     libc.src.sys.socket.getsockopt
     libc.src.sys.socket.listen
     libc.src.sys.socket.recv
@@ -408,7 +411,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.setsid
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
-    libc.src.unistd.sysconf
     libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
@@ -1486,6 +1488,12 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # link.h entrypoints
     libc.src.link.dl_iterate_phdr
+  )
+endif()
+
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    libc.src.unistd.sysconf
   )
 endif()
 

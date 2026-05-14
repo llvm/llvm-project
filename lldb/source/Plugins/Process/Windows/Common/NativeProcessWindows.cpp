@@ -564,7 +564,20 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       return ExceptionResult::BreakInDebugger;
     }
 
-    [[fallthrough]];
+    {
+      // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
+      // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
+      // Stop the debugger and let the user decide what to do.
+      std::string desc =
+          formatv("Exception {0:x8} encountered at address {1:x8}",
+                  record.GetExceptionCode(), record.GetExceptionAddress())
+              .str();
+      StopThread(record.GetThreadID(), StopReason::eStopReasonException,
+                 std::move(desc));
+      SetState(eStateStopped, true);
+    }
+
+    return ExceptionResult::MaskException;
   default:
     LLDB_LOG(log,
              "Debugger thread reported exception {0:x} at address {1:x} "
