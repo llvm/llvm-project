@@ -105,7 +105,7 @@ public:
 
   void addAsNeededOption(llvm::opt::ArgStringList &CmdArgs,
                          bool as_needed) const override {
-    assert(!TC.getTriple().isOSAIX() &&
+    assert(!getTriple().isOSAIX() &&
            "AIX linker does not support any form of --as-needed option yet.");
   }
 

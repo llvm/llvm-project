@@ -39,7 +39,6 @@ public:
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
-  std::string getLinkerPath(const llvm::opt::ArgList &Args) const;
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
@@ -54,6 +53,12 @@ namespace toolchains {
 class LLVM_LIBRARY_VISIBILITY Solaris : public Generic_ELF {
 public:
   friend class tools::solaris::Linker;
+
+  struct LinkerChoice {
+    bool IsGnuLd;
+    StringRef PathToLinker;
+  };
+
   Solaris(const Driver &D, const llvm::Triple &Triple,
           const llvm::opt::ArgList &Args);
 
@@ -83,6 +88,7 @@ protected:
 
 private:
   bool isLinkerGnuLd() const;
+  LinkerChoice chooseLinker() const;
 };
 
 } // end namespace toolchains
