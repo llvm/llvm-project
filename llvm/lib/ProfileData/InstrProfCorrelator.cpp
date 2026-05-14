@@ -587,14 +587,13 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     for (const auto &Entry : CU->dies())
       MaybeAddProbe(DWARFDie(CU.get(), &Entry));
 
-  for (auto Iter = Probes.begin(); Iter != Probes.end(); ++Iter) {
-    InstrProfCorrelator::Probe &Probe = Iter->second.first;
+  for (const auto &[FunctionName, ProbeData] : Probes) {
+    const auto &[Probe, FunctionPtr] = ProbeData;
     if (Data)
       Data->Probes.push_back(Probe);
     else {
-      this->NamesVec.push_back(Probe.FunctionName);
-      uint64_t NameRef = IndexedInstrProf::ComputeHash(Probe.FunctionName);
-      IntPtrT FunctionPtr = Iter->second.second;
+      this->NamesVec.push_back(FunctionName);
+      uint64_t NameRef = IndexedInstrProf::ComputeHash(FunctionName);
       this->addDataProbe(NameRef, Probe.CFGHash, Probe.CounterOffset,
                          Probe.BitmapOffset, FunctionPtr, Probe.NumCounters,
                          Probe.NumBitmapBytes);
