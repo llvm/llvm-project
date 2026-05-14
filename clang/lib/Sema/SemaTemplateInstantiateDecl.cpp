@@ -4940,6 +4940,7 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
 bool TemplateDeclInstantiator::SubstTemplateParameterLists(
     ArrayRef<TemplateParameterList *> TPL,
     SmallVectorImpl<TemplateParameterList *> &InstTPL) {
+  LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
   for (TemplateParameterList *L : TPL) {
     TemplateParameterList *InstParams = SubstTemplateParams(L);
     if (!InstParams)
