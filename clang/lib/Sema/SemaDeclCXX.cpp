@@ -9995,9 +9995,8 @@ static bool ShouldDeleteNonTrivialUnionDestructor(Sema &S, CXXRecordDecl *RD,
   }
   if (!CtorOK) {
     if (Diagnose) {
-      auto *Ctor = SMOR.getMethod();
       S.Diag(RD->getLocation(), diag::note_deleted_dtor_default_ctor)
-          << RD << SMOR.getKind() << (Ctor && Ctor->isDeleted());
+          << RD << SMOR.getKind();
     }
     return true;
   }

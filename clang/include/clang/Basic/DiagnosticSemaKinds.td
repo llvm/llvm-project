@@ -6432,7 +6432,7 @@ def note_deleted_dtor_no_operator_delete : Note<
 def note_deleted_dtor_default_ctor : Note<
   "destructor of union %0 is implicitly deleted because "
   "%select{"
-  "%select{it has no default constructor|its default constructor is a deleted function}2|"
+  "its default constructor is a deleted function|"
   "overload resolution to default-initialize it is ambiguous|"
   "its default constructor is not trivial}1">;
 def note_deleted_special_member_class_subobject : Note<
