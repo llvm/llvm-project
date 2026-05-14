@@ -160,6 +160,7 @@ CudaVersion MaxVersionForOffloadArch(OffloadArch A) {
     return CudaVersion::CUDA_118;
   case OffloadArch::SM_101:
   case OffloadArch::SM_101a:
+  case OffloadArch::SM_101f:
     return CudaVersion::CUDA_129;
   default:
     return CudaVersion::NEW;
