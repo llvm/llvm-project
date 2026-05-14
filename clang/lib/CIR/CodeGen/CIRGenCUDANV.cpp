@@ -17,6 +17,7 @@
 #include "CIRGenModule.h"
 #include "mlir/IR/Operation.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -41,6 +42,14 @@ protected:
 
   // Map a kernel handle to the kernel stub.
   llvm::DenseMap<mlir::Operation *, mlir::Operation *> kernelStubs;
+
+  struct VarInfo {
+    mlir::Operation *var;
+    const VarDecl *d;
+    cir::CUDADeviceVarKind flags;
+  };
+  llvm::SmallVector<VarInfo, 16> deviceVars;
+
   // Mangle context for device.
   std::unique_ptr<MangleContext> deviceMC;
 
@@ -68,6 +77,7 @@ public:
 
   void handleVarRegistration(const VarDecl *vd, cir::GlobalOp var) override;
   void finalizeModule() override;
+  void handleGlobalReplace(cir::GlobalOp oldGV, cir::GlobalOp newGV) override;
 
   void internalizeDeviceSideVar(const VarDecl *d,
                                 cir::GlobalLinkageKind &linkage) override;
@@ -84,6 +94,11 @@ public:
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Variable, isExtern, isConstant,
                      vd->hasAttr<HIPManagedAttr>()));
+    deviceVars.push_back({
+        var.getOperation(),
+        vd,
+        cir::CUDADeviceVarKind::Variable,
+    });
   }
 };
 
@@ -454,6 +469,14 @@ void CIRGenNVCUDARuntime::handleVarRegistration(const VarDecl *vd,
   }
 }
 
+void CIRGenNVCUDARuntime::handleGlobalReplace(cir::GlobalOp oldGV,
+                                              cir::GlobalOp newGV) {
+  for (auto &info : deviceVars) {
+    if (info.var == oldGV.getOperation())
+      info.var = newGV.getOperation();
+  }
+}
+
 void CIRGenNVCUDARuntime::finalizeModule() {
   if (!cgm.getLangOpts().CUDAIsDevice)
     return;
@@ -468,20 +491,22 @@ void CIRGenNVCUDARuntime::finalizeModule() {
   //
   // Static device variables have been externalized at this point, therefore
   // variables with private or internal linkage need not be added.
-  for (auto globalOp : cgm.getModule().getOps<cir::GlobalOp>()) {
-    auto regAttr = globalOp->getAttrOfType<cir::CUDAVarRegistrationInfoAttr>(
-        cir::CUDAVarRegistrationInfoAttr::getMnemonic());
-    if (!regAttr)
+  for (auto &&info : deviceVars) {
+    auto var = mlir::dyn_cast_or_null<cir::GlobalOp>(info.var);
+    if (!var)
       continue;
-
-    auto kind = regAttr.getKind();
-    if (!globalOp.isDeclaration() &&
-        !cir::isLocalLinkage(globalOp.getLinkage()) &&
-        (kind == cir::CUDADeviceVarKind::Variable ||
-         kind == cir::CUDADeviceVarKind::Surface ||
-         kind == cir::CUDADeviceVarKind::Texture)) {
-      cgm.addCompilerUsedGlobal(mlir::dyn_cast<cir::CIRGlobalValueInterface>(
-          globalOp.getOperation()));
+    auto kind = info.flags;
+    bool isDecl = var.isDeclaration();
+    bool isLocalLinkage = cir::isLocalLinkage(var.getLinkage());
+    bool isVarOrSurfaceOrTexture = (kind == cir::CUDADeviceVarKind::Variable ||
+                                    kind == cir::CUDADeviceVarKind::Surface ||
+                                    kind == cir::CUDADeviceVarKind::Texture);
+    bool isUsed = info.d->isUsed();
+    bool hasUsedAttr = info.d->hasAttr<UsedAttr>();
+    if (!isDecl && !isLocalLinkage && isVarOrSurfaceOrTexture && isUsed &&
+        !hasUsedAttr) {
+      cgm.addCompilerUsedGlobal(
+          mlir::dyn_cast<cir::CIRGlobalValueInterface>(var.getOperation()));
     }
   }
 }

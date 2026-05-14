@@ -1060,6 +1060,8 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
   // erased) operation, which would leave them detached from the module.
   if (lastGlobalOp == oldGV)
     lastGlobalOp = newGV;
+  if (cudaRuntime)
+    cudaRuntime->handleGlobalReplace(oldGV, newGV);
   eraseGlobalSymbol(oldGV);
   oldGV.erase();
 }
@@ -1476,35 +1478,6 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
       getCUDARuntime().internalizeDeviceSideVar(vd, linkage);
     }
     getCUDARuntime().handleVarRegistration(vd, gv);
-  }
-
-  // Decorate CUDA shadow variables with the cu.shadow_name attribute so we know
-  // how to register them when lowering.
-  if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
-      (vd->hasAttr<CUDAConstantAttr>() || vd->hasAttr<CUDADeviceAttr>())) {
-    // Shadow variables and their properties must be registered with CUDA
-    // runtime. Skip Extern global variables, which will be registered in
-    // the TU where they are defined.
-    //
-    // Don't register a C++17 inline variable. The local symbol can be
-    // discarded and referencing a discarded local symbol from outside the
-    // comdat (__cuda_register_globals) is disallowed by the ELF spec.
-    //
-    // HIP managed variables need to be always recorded in device and host
-    // compilations for transformation.
-    //
-    // HIP managed variables and variables in CUDADeviceVarODRUsedByHost are
-    // added to llvm.compiler-used, therefore they are safe to be registered.
-    if ((!vd->hasExternalStorage() && !vd->isInline()) ||
-        getASTContext().CUDADeviceVarODRUsedByHost.contains(vd) ||
-        vd->hasAttr<HIPManagedAttr>()) {
-      auto shadowName = cudaRuntime->getDeviceSideName(cast<NamedDecl>(vd));
-      auto attr = cir::CUDAVarRegistrationInfoAttr::get(
-          &getMLIRContext(), shadowName, cir::CUDADeviceVarKind::Variable,
-          vd->hasDefinition(), vd->hasAttr<CUDAConstantAttr>(),
-          vd->hasAttr<HIPManagedAttr>());
-      gv->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(), attr);
-    }
   }
 
   // Set initializer and finalize emission

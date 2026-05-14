@@ -65,6 +65,8 @@ public:
   /// Returns function or variable name on device side even if the current
   /// compilation is for host.
   virtual std::string getDeviceSideName(const NamedDecl *nd) = 0;
+
+  virtual void handleGlobalReplace(cir::GlobalOp oldGV, cir::GlobalOp newGV) {}
 };
 
 CIRGenCUDARuntime *createNVCUDARuntime(CIRGenModule &cgm);
