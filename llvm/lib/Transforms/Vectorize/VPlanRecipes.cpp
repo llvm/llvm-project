@@ -2286,6 +2286,12 @@ static void printRecurKind(raw_ostream &OS, const RecurKind &Kind) {
   case RecurKind::FAdd:
     OS << "fadd";
     break;
+  case RecurKind::FAddChainWithSubs:
+    OS << "fadd-chain-with-subs";
+    break;
+  case RecurKind::FSub:
+    OS << "fsub";
+    break;
   case RecurKind::FMul:
     OS << "fmul";
     break;
