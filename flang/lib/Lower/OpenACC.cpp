@@ -3766,7 +3766,7 @@ getSingleAccDeclareMappingFlag(const Fortran::semantics::Symbol &ultimate) {
        }) {
     if (ultimate.test(f)) {
       assert(!found.has_value() &&
-          "more than one ACC DECLARE data-mapping flag on a symbol");
+             "more than one ACC DECLARE data-mapping flag on a symbol");
       found = f;
     }
   }
