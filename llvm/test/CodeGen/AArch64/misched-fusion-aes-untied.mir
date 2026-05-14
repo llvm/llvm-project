@@ -24,22 +24,51 @@
 # RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1b -misched-print-dags 2>&1 | FileCheck %s
 # RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=apple-m5 -misched-print-dags 2>&1 | FileCheck %s
 
-# Verify that untied AES pairs (where dest registers differ) are not being fused.
+# Verify that untied AES pairs are not being fused. Two forms are covered:
+#   * pre-RA: all virtual regs, second opcode is the untied AES[I]MCrr variant.
+#   * post-RA: all physical regs, AES[E|D] and AES[I]MCrr write distinct dests.
 
 ---
-name: func
+name: encode_vregs_untied
 body: |
   bb.0:
-    ; CHECK: SU(0): %0:fpr128 = AESErr undef $q0(tied-def 0), undef $q1
+    ; CHECK: SU(0): %0:fpr128 = AESErr undef %1:fpr128(tied-def 0), undef %2:fpr128
     ; CHECK: Successors:
     ; CHECK-NOT: SU({{.*}}): Ord  Latency=0 Cluster
     ; CHECK: SU(1): dead %1:fpr128 = AESMCrr %0:fpr128
-    %0:fpr128 = AESErr undef $q0, undef $q1
-    %1:fpr128 = AESMCrr %0
-
-    ; CHECK: SU(2): %2:fpr128 = AESDrr undef $q2(tied-def 0), undef $q3
+    %0:fpr128 = AESErr undef %3:fpr128, undef %2:fpr128
+    %3:fpr128 = AESMCrr %0
+...
+---
+name: decode_vregs_untied
+body: |
+  bb.0:
+    ; CHECK: SU(0): %0:fpr128 = AESDrr undef %1:fpr128(tied-def 0), undef %2:fpr128
     ; CHECK: Successors:
     ; CHECK-NOT: SU({{.*}}): Ord  Latency=0 Cluster
-    ; CHECK: SU(3): dead %3:fpr128 = AESIMCrr %2:fpr128
-    %2:fpr128 = AESDrr undef $q2, undef $q3
-    %3:fpr128 = AESIMCrr %2
+    ; CHECK: SU(1): dead %3:fpr128 = AESIMCrr %0:fpr128
+    %0:fpr128 = AESDrr undef %1:fpr128, undef %2:fpr128
+    %3:fpr128 = AESIMCrr %0
+...
+---
+name: encode_physregs_different_dest
+body: |
+  bb.0:
+    ; CHECK: SU(0): $q0 = AESErr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU({{.*}}): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): $q2 = AESMCrr $q0
+    $q0 = AESErr undef $q0, undef $q1
+    $q2 = AESMCrr $q0
+...
+---
+name: decode_physregs_different_dest
+body: |
+  bb.0:
+    ; CHECK: SU(0): $q0 = AESDrr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU({{.*}}): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): $q2 = AESIMCrr $q0
+    $q0 = AESDrr undef $q0, undef $q1
+    $q2 = AESIMCrr $q0
+...
