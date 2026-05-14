@@ -69,3 +69,17 @@ gpu.module @dpas_mx_e2m1 [#xevm.target<chip = "cri">] {
     gpu.return
   }
 }
+
+// -----
+
+// CHECK-LABEL: gpu.func @dpas_mx_no_acc
+gpu.module @dpas_mx_no_acc [#xevm.target<chip = "cri">] {
+  gpu.func @dpas_mx_no_acc(%a: vector<32xf4E2M1FN>, %b: vector<64xf4E2M1FN>,
+                         %scale_a: vector<2xf8E8M0FNU>, %scale_b: vector<2xf8E8M0FNU>) kernel {
+    // CHECK: %[[ACC:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
+    // CHECK: %{{.*}} = xevm.mma_mx %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[ACC]]
+    %res = xegpu.dpas_mx %a, %b scale_a = %scale_a scale_b = %scale_b :
+        vector<32xf4E2M1FN>, vector<64xf4E2M1FN>, vector<8xf32>, vector<2xf8E8M0FNU>, vector<2xf8E8M0FNU> -> vector<8xf32>
+    gpu.return
+  }
+}
