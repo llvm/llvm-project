@@ -132,7 +132,7 @@ entry:
 define i8 @mulv_v16i8(<16 x i8> %a) {
 ; CHECK-SD-LABEL: mulv_v16i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    umov w8, v0.b[1]
 ; CHECK-SD-NEXT:    umov w9, v0.b[0]
@@ -153,7 +153,7 @@ define i8 @mulv_v16i8(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: mulv_v16i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    mul v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    umov w9, v0.b[1]
@@ -180,7 +180,7 @@ define i8 @mulv_v32i8(<32 x i8> %a) {
 ; CHECK-SD-LABEL: mulv_v32i8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mul v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    umov w8, v0.b[1]
 ; CHECK-SD-NEXT:    umov w9, v0.b[0]
@@ -201,8 +201,8 @@ define i8 @mulv_v32i8(<32 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: mulv_v32i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    mul v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    mul v1.8b, v1.8b, v3.8b
 ; CHECK-GI-NEXT:    mul v0.8b, v0.8b, v1.8b
@@ -304,7 +304,7 @@ entry:
 define i16 @mulv_v8i16(<8 x i16> %a) {
 ; CHECK-SD-LABEL: mulv_v8i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    umov w8, v0.h[1]
 ; CHECK-SD-NEXT:    umov w9, v0.h[0]
@@ -317,7 +317,7 @@ define i16 @mulv_v8i16(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: mulv_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    mul v0.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
@@ -336,7 +336,7 @@ define i16 @mulv_v16i16(<16 x i16> %a) {
 ; CHECK-SD-LABEL: mulv_v16i16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    umov w8, v0.h[1]
 ; CHECK-SD-NEXT:    umov w9, v0.h[0]
@@ -349,8 +349,8 @@ define i16 @mulv_v16i16(<16 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: mulv_v16i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    mul v0.4h, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    mul v1.4h, v1.4h, v3.4h
 ; CHECK-GI-NEXT:    mul v0.4h, v0.4h, v1.4h
@@ -393,7 +393,7 @@ define i32 @mulv_v3i32(<3 x i32> %a) {
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    mov v1.s[3], w8
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    mul v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    mul v0.2s, v0.2s, v0.s[1]
 ; CHECK-NEXT:    fmov w0, s0
@@ -406,7 +406,7 @@ entry:
 define i32 @mulv_v4i32(<4 x i32> %a) {
 ; CHECK-SD-LABEL: mulv_v4i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
 ; CHECK-SD-NEXT:    fmov w0, s0
@@ -414,7 +414,7 @@ define i32 @mulv_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: mulv_v4i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    mul v0.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w9, s0
@@ -429,7 +429,7 @@ define i32 @mulv_v8i32(<8 x i32> %a) {
 ; CHECK-SD-LABEL: mulv_v8i32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mul v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
 ; CHECK-SD-NEXT:    fmov w0, s0
@@ -437,8 +437,8 @@ define i32 @mulv_v8i32(<8 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: mulv_v8i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    mul v0.2s, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    mul v0.2s, v0.2s, v1.2s

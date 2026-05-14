@@ -60,7 +60,7 @@ LIBC_INLINE_VAR constexpr FloatFloat ATAN_I[17] = {
 // For x = x_hi + x_lo, fully expand the polynomial and drop any terms less than
 //   ulp(x_hi^3 / 3) gives us:
 // P(x) ~ x_hi - x_hi^3/3 + x_lo * (1 - x_hi^2)
-LIBC_INLINE constexpr FloatFloat atan_eval(const FloatFloat &x) {
+LIBC_INLINE LIBC_CONSTEXPR FloatFloat atan_eval(const FloatFloat &x) {
   FloatFloat p;
   p.hi = x.hi;
   float x_hi_sq = x.hi * x.hi;
@@ -124,7 +124,7 @@ LIBC_INLINE constexpr FloatFloat atan_eval(const FloatFloat &x) {
 // > dirtyinfnorm(atan(x) - P, [-2^-5, 2^-5]);
 // 0x1.995...p-28.
 
-LIBC_INLINE constexpr float atan2f(float y, float x) {
+LIBC_INLINE LIBC_CONSTEXPR float atan2f(float y, float x) {
   using namespace atan2f_internal;
   using FPBits = typename fputil::FPBits<float>;
   constexpr float IS_NEG[2] = {1.0f, -1.0f};

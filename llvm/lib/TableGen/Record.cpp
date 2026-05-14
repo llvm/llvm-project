@@ -1788,6 +1788,57 @@ static const Init *FilterHelper(const Init *LHS, const Init *MHS,
   return nullptr;
 }
 
+static const Init *SortHelper(const Init *LHS, const Init *MHS, const Init *RHS,
+                              const RecTy *Type, const Record *CurRec) {
+  const auto *MHSl = dyn_cast<ListInit>(MHS);
+  if (!MHSl)
+    return nullptr;
+
+  RecordKeeper &RK = LHS->getRecordKeeper();
+  using KV = std::pair<const Init *, const Init *>;
+  SmallVector<KV, 8> KeyedList;
+
+  for (const Init *Item : MHSl->getElements()) {
+    const Init *Key = ItemApply(LHS, Item, RHS, CurRec);
+    if (!Key)
+      return nullptr;
+    KeyedList.emplace_back(Key, Item);
+  }
+
+  if (KeyedList.empty())
+    return ListInit::get({}, cast<ListRecTy>(Type)->getElementType());
+
+  // Determine key type from the first element; all keys must agree.
+  bool UseInt =
+      dyn_cast_or_null<IntInit>(KeyedList[0].first->convertInitializerTo(
+          IntRecTy::get(RK))) != nullptr;
+  for (auto &[Key, Item] : KeyedList) {
+    if (UseInt) {
+      if (!dyn_cast_or_null<IntInit>(
+              Key->convertInitializerTo(IntRecTy::get(RK))))
+        return nullptr;
+    } else {
+      if (!isa<StringInit>(Key))
+        return nullptr;
+    }
+  }
+
+  llvm::stable_sort(KeyedList, [&RK, UseInt](const KV &A, const KV &B) {
+    if (UseInt)
+      return cast<IntInit>(A.first->convertInitializerTo(IntRecTy::get(RK)))
+                 ->getValue() <
+             cast<IntInit>(B.first->convertInitializerTo(IntRecTy::get(RK)))
+                 ->getValue();
+    return cast<StringInit>(A.first)->getValue() <
+           cast<StringInit>(B.first)->getValue();
+  });
+
+  SmallVector<const Init *, 8> Result;
+  for (auto &[Key, Item] : KeyedList)
+    Result.push_back(Item);
+  return ListInit::get(Result, cast<ListRecTy>(Type)->getElementType());
+}
+
 const Init *TernOpInit::Fold(const Record *CurRec) const {
   RecordKeeper &RK = getRecordKeeper();
   switch (getOpcode()) {
@@ -1841,6 +1892,12 @@ const Init *TernOpInit::Fold(const Record *CurRec) const {
 
   case FILTER: {
     if (const Init *Result = FilterHelper(LHS, MHS, RHS, getType(), CurRec))
+      return Result;
+    break;
+  }
+
+  case SORT: {
+    if (const Init *Result = SortHelper(LHS, MHS, RHS, getType(), CurRec))
       return Result;
     break;
   }
@@ -2004,7 +2061,7 @@ const Init *TernOpInit::resolveReferences(Resolver &R) const {
   const Init *mhs = MHS->resolveReferences(R);
   const Init *rhs;
 
-  if (getOpcode() == FOREACH || getOpcode() == FILTER) {
+  if (getOpcode() == FOREACH || getOpcode() == FILTER || getOpcode() == SORT) {
     ShadowResolver SR(R);
     SR.addShadow(lhs);
     rhs = RHS->resolveReferences(SR);
@@ -2025,6 +2082,10 @@ std::string TernOpInit::getAsString() const {
   case DAG: Result = "!dag"; break;
   case FILTER: Result = "!filter"; UnquotedLHS = true; break;
   case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
+  case SORT:
+    Result = "!sort";
+    UnquotedLHS = true;
+    break;
   case IF: Result = "!if"; break;
   case RANGE:
     Result = "!range";
