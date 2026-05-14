@@ -38,16 +38,24 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
-VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
+VPIRValue *vputils::getVPIRValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
     return Plan.getOrAddLiveIn(E->getValue());
-  // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
-  // value. Otherwise the value may be defined in a loop and using it directly
-  // will break LCSSA form. The SCEV expansion takes care of preserving LCSSA
-  // form.
+  // For a SCEVUnknown wrapping an instruction, return nullptr since the value
+  // may be defined in a loop and using it directly will break LCSSA form.
   auto *U = dyn_cast<SCEVUnknown>(Expr);
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
+  return nullptr;
+}
+
+VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
+  // If SCEV expression can be represented as a live-in VPIRValue, use it
+  // directly without expanding.
+  if (auto *IRV = getVPIRValueForSCEVExpr(Plan, Expr))
+    return IRV;
+  // Otherwise use VPExpandSCEVRecipe to expand expression, which preserves
+  // LCSSA form for values defined in a loop.
   auto *Expanded = new VPExpandSCEVRecipe(Expr);
   VPBasicBlock *EntryVPBB = Plan.getEntry();
   auto Iter = EntryVPBB->getFirstNonPhi();

@@ -1149,16 +1149,9 @@ static VPValue *optimizeLatchExitInductionUser(
                                                m_SpecificLoop(L))))
     return nullptr;
 
-  VPValue *StartVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Start);
-  auto *StartIRV = dyn_cast<VPIRValue>(StartVPV);
-  if (!StartIRV) {
-    VPRecipeBase *Def = StartVPV->getDefiningRecipe();
-    assert(Def && "The value must be defined by VPExpandSCEVRecipe");
-    assert(StartVPV->getNumUsers() == 0 &&
-           "Newly created VPExpandSCEVRecipe should have no users");
-    Def->eraseFromParent();
+  auto *StartIRV = vputils::getVPIRValueForSCEVExpr(Plan, Start);
+  if (!StartIRV)
     return nullptr;
-  }
 
   Type *StartTy = StartIRV->getType();
   assert(StartTy->isIntOrPtrTy() && "The type must be SCEVable");
