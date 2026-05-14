@@ -60,7 +60,7 @@ private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
-  llvm::DenseSet<const ParmVarDecl *> VerifiedLiftimeboundEscapes;
+  llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
   const LiveOriginsAnalysis &LiveOrigins;
@@ -147,9 +147,10 @@ public:
       // field!
     };
     auto CheckImplicitThis = [&](const CXXMethodDecl *MD) {
-      if (!implicitObjectParamIsLifetimeBound(MD))
-        if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
-          AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
+      if (implicitObjectParamIsLifetimeBound(MD))
+        VerifiedLiftimeboundEscapes.insert(MD);
+      else if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+        AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
     };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
@@ -277,8 +278,20 @@ public:
               SemaHelper->reportInvalidatedField(InvalidatedPVD,
                                                  FieldEscape->getFieldDecl(),
                                                  Warning.InvalidatedByExpr);
-          } else if (isa<GlobalEscapeFact>(OEF)) {
-            // FIXME: Diagnose invalidated global escapes separately.
+          } else if (const auto *GlobalEscape =
+                         dyn_cast<GlobalEscapeFact>(OEF)) {
+            // Invalidated object escapes to global or static storage.
+            if (IssueExpr)
+              // Invalidated object on stack escapes to global or static
+              // storage.
+              SemaHelper->reportInvalidatedGlobal(IssueExpr,
+                                                  GlobalEscape->getGlobal(),
+                                                  Warning.InvalidatedByExpr);
+            else if (InvalidatedPVD)
+              // Invalidated parameter escapes to global or static storage.
+              SemaHelper->reportInvalidatedGlobal(InvalidatedPVD,
+                                                  GlobalEscape->getGlobal(),
+                                                  Warning.InvalidatedByExpr);
           } else if (isa<ReturnEscapeFact>(OEF)) {
             // FIXME: Diagnose invalidated return escapes separately.
           } else
@@ -385,6 +398,10 @@ public:
   void reportLifetimeboundViolations() {
     if (!isa<FunctionDecl>(FD))
       return;
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+        MD && getImplicitObjectParamLifetimeBoundAttr(MD) &&
+        !VerifiedLiftimeboundEscapes.contains(MD))
+      SemaHelper->reportLifetimeboundViolation(MD);
     for (const ParmVarDecl *PVD : cast<FunctionDecl>(FD)->parameters()) {
       if (!PVD->hasAttr<LifetimeBoundAttr>())
         continue;

@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double nearbyint(double x) {
+LIBC_INLINE LIBC_CONSTEXPR double nearbyint(double x) {
   return fputil::round_using_current_rounding_mode(x);
 }
 

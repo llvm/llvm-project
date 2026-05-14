@@ -37,6 +37,8 @@ define void @bar() !dbg !3 {
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, retainedTypes: !5)
 !2 = !DIFile(filename: "t.c", directory: "/path/to/dir")
 !3 = !{}
-!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !2, unit: !1)
+!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !2, unit: !1, type: !8)
 !5 = !{!6}
-!6 = !DISubprogram(name: "f5", scope: !1, file: !2, unit: !1, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+!6 = !DISubprogram(name: "f5", scope: !1, file: !2, unit: !1, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, type: !8)
+!7 = !{null}
+!8 = !DISubroutineType(types: !7)

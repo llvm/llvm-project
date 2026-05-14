@@ -1160,6 +1160,10 @@ public:
   /// Returns true if it is a OverflowBehaviorType of Trap kind.
   bool isTrapType() const;
 
+  /// Returns true if this type requires laundering by checking if it is a
+  /// dynamic class type, or contains a subobject which is a dynamic class type.
+  bool requiresBuiltinLaunder(const ASTContext &Context) const;
+
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
 

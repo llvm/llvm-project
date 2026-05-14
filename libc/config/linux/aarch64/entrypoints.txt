@@ -389,7 +389,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.setsid
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
-    libc.src.unistd.sysconf
     libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
@@ -1040,6 +1039,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_getthreadid_np
+    libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_key_create
     libc.src.pthread.pthread_key_delete
@@ -1262,6 +1263,12 @@ if(LLVM_LIBC_FULL_BUILD)
     # libc.src.wchar.putwc
     # libc.src.wchar.putwchar
     # libc.src.wchar.ungetwc
+  )
+endif()
+
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    libc.src.unistd.sysconf
   )
 endif()
 

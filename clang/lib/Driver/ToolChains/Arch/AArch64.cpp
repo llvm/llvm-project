@@ -137,8 +137,10 @@ aarch64::getAArch64TargetTuneCPU(const llvm::opt::ArgList &Args,
 }
 
 // Decode AArch64 features from string like +[no]featureA+[no]featureB+...
-static bool DecodeAArch64Features(const Driver &D, StringRef text,
-                                  llvm::AArch64::ExtensionSet &Extensions) {
+static bool
+DecodeAArch64Features(const Driver &D, StringRef text,
+                      llvm::AArch64::ExtensionSet &Extensions,
+                      std::optional<std::string> *InvalidArg = nullptr) {
   SmallVector<StringRef, 8> Split;
   text.split(Split, StringRef("+"), -1, false);
 
@@ -147,8 +149,11 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
       D.Diag(clang::diag::err_drv_no_neon_modifier);
       continue;
     }
-    if (!Extensions.parseModifier(Feature))
+    if (!Extensions.parseModifier(Feature)) {
+      if (InvalidArg)
+        InvalidArg->emplace(("+" + Feature).str());
       return false;
+    }
   }
 
   return true;
@@ -203,7 +208,8 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
 static bool
 getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
                                 const ArgList &Args,
-                                llvm::AArch64::ExtensionSet &Extensions) {
+                                llvm::AArch64::ExtensionSet &Extensions,
+                                std::optional<std::string> &InvalidArg) {
   std::string MarchLowerCase = March.lower();
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
@@ -212,13 +218,15 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
 
   const llvm::AArch64::ArchInfo *ArchInfo =
       llvm::AArch64::parseArch(Split.first);
-  if (!ArchInfo)
+  if (!ArchInfo) {
+    InvalidArg.emplace(Split.first.str());
     return false;
+  }
 
   Extensions.addArchDefaults(*ArchInfo);
 
   if ((Split.second.size() &&
-       !DecodeAArch64Features(D, Split.second, Extensions)))
+       !DecodeAArch64Features(D, Split.second, Extensions, &InvalidArg)))
     return false;
 
   return true;
@@ -253,6 +261,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
                                        bool ForAS, bool ForMultilib) {
   Arg *A;
   bool success = true;
+  std::optional<std::string> InvalidArg;
   llvm::StringRef WaMArch;
   llvm::AArch64::ExtensionSet Extensions;
   if (ForAS)
@@ -265,10 +274,11 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   // "-Xassembler -march" is detected. Otherwise it may return false
   // and causes Clang to error out.
   if (!WaMArch.empty())
-    success = getAArch64ArchFeaturesFromMarch(D, WaMArch, Args, Extensions);
+    success = getAArch64ArchFeaturesFromMarch(D, WaMArch, Args, Extensions,
+                                              InvalidArg);
   else if ((A = Args.getLastArg(options::OPT_march_EQ)))
-    success =
-        getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Extensions);
+    success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args,
+                                              Extensions, InvalidArg);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success =
         getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions);
@@ -277,7 +287,8 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
         D, getAArch64TargetCPUByTriple(Triple), Args, Extensions);
   else
     // Default to 'A' profile if the architecture is not specified.
-    success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
+    success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions,
+                                              InvalidArg);
 
   if (success && (A = Args.getLastArg(options::OPT_mtune_EQ)))
     success = getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args);
@@ -292,10 +303,14 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     auto Diag = D.Diag(diag::err_drv_unsupported_option_argument);
     // If "-Wa,-march=" is used, 'WaMArch' will contain the argument's value,
     // while 'A' is uninitialized. Only dereference 'A' in the other case.
-    if (!WaMArch.empty())
+    if (!WaMArch.empty() && InvalidArg)
+      Diag << "-march=" << *InvalidArg;
+    else if (!WaMArch.empty())
       Diag << "-march=" << WaMArch;
-    else
+    else if (!InvalidArg)
       Diag << A->getSpelling() << A->getValue();
+    else
+      Diag << A->getSpelling() << *InvalidArg;
   }
 
   // -mgeneral-regs-only disables all floating-point features.
