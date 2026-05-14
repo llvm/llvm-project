@@ -731,6 +731,10 @@ struct VectorContractToAMXDotProduct
       return rewriter.notifyMatchFailure(
           contractOp, "Only BF16/Int8/F8 lowering is supported.");
 
+    if (lhsTy.getElementType() != contractOp.getRhsType().getElementType())
+      return rewriter.notifyMatchFailure(
+          contractOp, "Contraction should have same lhs and rhs type.");
+
     VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
     if (!accTy)
       return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");

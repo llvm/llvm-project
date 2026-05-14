@@ -858,7 +858,7 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
-func.func @online_packing_int8_matmul_loop(%arg0: memref<64x256xf8E5M2>, %arg1: memref<256x128xf8E5M2>, %arg2: memref<64x128xf32>) -> memref<64x128xf32> {
+func.func @online_packing_f8E5M2_matmul_loop(%arg0: memref<64x256xf8E5M2>, %arg1: memref<256x128xf8E5M2>, %arg2: memref<64x128xf32>) -> memref<64x128xf32> {
   %c16 = arith.constant 16 : index
   %0 = ub.poison : f32
   %1 = ub.poison : f8E5M2
@@ -906,7 +906,7 @@ func.func @online_packing_int8_matmul_loop(%arg0: memref<64x256xf8E5M2>, %arg1: 
   return %alloc : memref<64x128xf32>
 }
 
-// CHECK-LABEL: @online_packing_int8_matmul_loop
+// CHECK-LABEL: @online_packing_f8E5M2_matmul_loop
 // CHECK-COUNT-4: x86.amx.tile_zero : !x86.amx.tile<16x16xf32>
 // CHECK: scf.for {{.*}} -> (!x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>) {
 // CHECK: vector.shuffle{{.*}}[0, 32, 64, 96, 1, 33, 65, 97, 2, 34, 66, 98, 3, 35, 67, 99, 8, 40, 72, 104, 9, 41, 73, 105, 10, 42, 74, 106, 11, 43, 75, 107, 16, 48, 80, 112, 17, 49, 81, 113, 18, 50, 82, 114, 19, 51, 83, 115, 24, 56, 88, 120, 25, 57, 89, 121, 26, 58, 90, 122, 27, 59, 91, 123] : vector<64xf8E5M2>, vector<64xf8E5M2>
