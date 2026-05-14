@@ -27,9 +27,12 @@
 ; RUN: FileCheck %s -input-file=%t.log -check-prefix=X64-Solaris
 ; RUN: not --crash llc < %s -mcpu=generic -mtriple=i686-freebsd 2> %t.log
 ; RUN: FileCheck %s -input-file=%t.log -check-prefix=X86-FreeBSD
+; RUN: not --crash llc < %s -mcpu=generic -mtriple=x86_64-pc-illumos 2> %t.log
+; RUN: FileCheck %s -input-file=%t.log -check-prefix=X64-Illumos
 
 ; X64-Solaris: Segmented stacks not supported on this platform
 ; X86-FreeBSD: Segmented stacks not supported on FreeBSD i386
+; X64-Illumos: Segmented stacks not supported on this platform
 
 ; Just to prevent the alloca from being optimized away
 declare void @dummy_use(ptr, i32)

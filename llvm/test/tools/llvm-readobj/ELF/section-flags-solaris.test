@@ -1,4 +1,4 @@
-## Here we test how Solaris specific flags are dumped.
+## Here we test how Solaris/Illumos specific flags are dumped.
 
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj -S %t.o | FileCheck %s

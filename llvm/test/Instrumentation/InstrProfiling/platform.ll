@@ -6,6 +6,7 @@
 ; RUN: opt < %s -mtriple=x86_64-scei-ps4 -passes=instrprof -S | FileCheck %s -check-prefixes=PS4,ELF
 ; RUN: opt < %s -mtriple=x86_64-sie-ps5 -passes=instrprof -S | FileCheck %s -check-prefixes=PS4,ELF
 ; RUN: opt < %s -mtriple=x86_64-pc-solaris -passes=instrprof -S | FileCheck %s -check-prefixes=SOLARIS,ELF
+; RUN: opt < %s -mtriple=x86_64-pc-illumos -passes=instrprof -S | FileCheck %s -check-prefixes=ILLUMOS,ELF
 ; RUN: opt < %s -mtriple=x86_64-pc-windows -passes=instrprof -S | FileCheck %s -check-prefix=WINDOWS
 ; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -passes=instrprof -S | FileCheck %s -check-prefix=AIX
 ; RUN: opt < %s -mtriple=arm-elf -passes=instrprof -S | FileCheck %s -check-prefix=BAREMETAL
@@ -44,6 +45,7 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; LINUX-NOT: define internal void @__llvm_profile_register_functions
 ; FREEBSD-NOT: define internal void @__llvm_profile_register_functions
 ; SOLARIS-NOT: define internal void @__llvm_profile_register_functions
+; ILLUMOS-NOT: define internal void @__llvm_profile_register_functions
 ; PS4-NOT: define internal void @__llvm_profile_register_functions
 ; WINDOWS-NOT: define internal void @__llvm_profile_register_functions
 ; AIX-NOT: define internal void @__llvm_profile_register_functions
@@ -56,6 +58,7 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; LINUX-NOT: define internal void @__llvm_profile_init
 ; FREEBSD-NOT: define internal void @__llvm_profile_init
 ; SOLARIS-NOT: define internal void @__llvm_profile_init
+; ILLUMOS-NOT: define internal void @__llvm_profile_init
 ; PS4-NOT: define internal void @__llvm_profile_init
 ; WINDOWS-NOT: define internal void @__llvm_profile_init
 ; AIX-NOT: define internal void @__llvm_profile_init

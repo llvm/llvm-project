@@ -1,4 +1,5 @@
 ; RUN: llc < %s -relocation-model=pic -mtriple=x86_64-pc-solaris2.11 | FileCheck %s -check-prefix=X64
+; RUN: llc < %s -relocation-model=pic -mtriple=x86_64-pc-illumos | FileCheck %s -check-prefix=X64
 ; RUN: llc < %s -relocation-model=pic -mtriple=i386-pc-solaris2.11 | FileCheck %s -check-prefix=X32
 ; PR1632
 

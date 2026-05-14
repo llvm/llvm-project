@@ -10,6 +10,7 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-netbsd | FileCheck %s -check-prefix=NETBSD-X86_64
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-apple-darwin8 | FileCheck %s -check-prefix=DARWIN-X86_64
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-solaris2.11 | FileCheck %s -check-prefix=SOLARIS-X86_64
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-illumos | FileCheck %s -check-prefix=ILLUMOS-X86_64
 
 define i32 @test() nounwind {
 entry:
@@ -31,6 +32,8 @@ entry:
 ; NETBSD-X86_64-NOT: subq	{{.*}}, %rsp
 ; SOLARIS-X86_64:     pushq %{{.*}}
 ; SOLARIS-X86_64-NOT: subq	{{.*}}, %rsp
+; ILLUMOS-X86_64:     pushq %{{.*}}
+; ILLUMOS-X86_64-NOT: subq	{{.*}}, %rsp
 ; KFREEBSD-X86_64:     pushq %{{.*}}
 ; KFREEBSD-X86_64-NOT: subq	{{.*}}, %rsp
 ; HURD-X86_64:       pushq %{{.*}}
