@@ -2,6 +2,7 @@
 
 declare void @escape(ptr)
 declare noalias ptr @malloc(i64)
+declare void @call()
 
 ; CHECK-LABEL: Function: alloca_no_escape:
 ; CHECK:  NoModRef:  Ptr: i32* %a	<->  %1 = atomicrmw add ptr %x, i32 1 monotonic, align 4
@@ -78,6 +79,32 @@ define void @alloca_escape_after(ptr %x) {
   store atomic i32 0, ptr %x release, align 4
 
   call void @escape(ptr %a)
+
+  ret void
+}
+
+; CHECK-LABEL: Function: alloca_escape_after_readonly:
+; CHECK:  Just Ref:  Ptr: i32* %a	<->  fence acq_rel
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  fence acq_rel
+; CHECK:  Just Ref:  Ptr: i32* %a	<->  %1 = atomicrmw add ptr %x, i32 1 acq_rel, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %1 = atomicrmw add ptr %x, i32 1 acq_rel, align 4
+; CHECK:  Just Ref:  Ptr: i32* %a	<->  %2 = cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %2 = cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic, align 4
+; CHECK:  Just Ref:  Ptr: i32* %a	<->  %3 = load atomic i32, ptr %x acquire, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %3 = load atomic i32, ptr %x acquire, align 4
+; CHECK:  Just Ref:  Ptr: i32* %a	<->  store atomic i32 0, ptr %x release, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  store atomic i32 0, ptr %x release, align 4
+define void @alloca_escape_after_readonly(ptr %x) {
+  %a = alloca i32
+  store i32 0, ptr %a
+
+  fence acq_rel
+  atomicrmw add ptr %x, i32 1 acq_rel
+  cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic
+  load atomic i32, ptr %x acquire, align 4
+  store atomic i32 0, ptr %x release, align 4
+
+  call void @escape(ptr captures(address, read_provenance) %a)
 
   ret void
 }
@@ -204,6 +231,40 @@ define ptr @malloc_escape_after(ptr %x) {
   cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic
   load atomic i32, ptr %x acquire, align 4
   store atomic i32 0, ptr %x release, align 4
+
+  ret ptr %a
+}
+
+; CHECK-LABEL: Function: inline_asm
+; CHECK:  Both ModRef:  Ptr: i32* %a	<->  call void asm sideeffect "", "~{memory}"()
+; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void asm sideeffect "", "~{memory}"() #0
+; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void asm sideeffect "", "~{memory}"() #1
+; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void asm sideeffect "", "~{memory}"() #2
+define ptr @inline_asm() {
+  %a = call ptr @malloc(i64 4)
+  store i32 0, ptr %a
+
+  call void asm sideeffect "", "~{memory}"()
+  call void asm sideeffect "", "~{memory}"() memory(read)
+  call void asm sideeffect "", "~{memory}"() memory(argmem: readwrite)
+  call void asm sideeffect "", "~{memory}"() nosync
+
+  ret ptr %a
+}
+
+; CHECK-LABEL: Function: arbitrary_call
+; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void @call()
+; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void @call() #0
+; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void @call() #1
+; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void @call() #2
+define ptr @arbitrary_call() {
+  %a = call ptr @malloc(i64 4)
+  store i32 0, ptr %a
+
+  call void @call()
+  call void @call() memory(read)
+  call void @call() memory(argmem: readwrite)
+  call void @call() nosync
 
   ret ptr %a
 }

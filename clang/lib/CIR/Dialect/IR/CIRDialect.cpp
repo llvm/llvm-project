@@ -373,25 +373,8 @@ LogicalResult cir::DeleteArrayOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// BreakOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::BreakOp::verify() {
-  if (!getOperation()->getParentOfType<LoopOpInterface>() &&
-      !getOperation()->getParentOfType<SwitchOp>())
-    return emitOpError("must be within a loop");
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // LocalInitOp
 //===----------------------------------------------------------------------===//
-
-LogicalResult cir::LocalInitOp::verify() {
-  if (!getOperation()->getParentOfType<FuncOp>())
-    return emitOpError("must be inside of a 'cir.func'");
-  return success();
-}
 
 LogicalResult
 cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
@@ -523,16 +506,6 @@ LogicalResult cir::ConstantOp::verify() {
 
 OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
   return getValue();
-}
-
-//===----------------------------------------------------------------------===//
-// ContinueOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::ContinueOp::verify() {
-  if (!getOperation()->getParentOfType<LoopOpInterface>())
-    return emitOpError("must be within a loop");
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3099,12 +3072,6 @@ mlir::ValueRange cir::AwaitOp::getSuccessorInputs(RegionSuccessor successor) {
 LogicalResult cir::AwaitOp::verify() {
   if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
-  return success();
-}
-
-LogicalResult cir::CoReturnOp::verify() {
-  if (!getOperation()->getParentOfType<CoroBodyOp>())
-    return emitOpError("must be inside a cir.coro.body");
   return success();
 }
 

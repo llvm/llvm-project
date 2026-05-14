@@ -87,7 +87,7 @@ LIBC_INLINE double poly_approx_d(double dx) {
 // Return expm1(dx) / dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - expm1(dx) | < 2^-101
-LIBC_INLINE constexpr DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
+LIBC_INLINE LIBC_CONSTEXPR DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
   // Taylor polynomial.
   constexpr DoubleDouble COEFFS[] = {
       {0, 0x1p0},                                      // 1
@@ -108,9 +108,9 @@ LIBC_INLINE constexpr DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // Return (exp(dx) - 1)/dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
-[[maybe_unused]] LIBC_INLINE constexpr Float128
+[[maybe_unused]] LIBC_INLINE LIBC_CONSTEXPR Float128
 poly_approx_f128(const Float128 &dx) {
-  constexpr Float128 COEFFS_128[]{
+  LIBC_CONSTEXPR Float128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
       {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/6
@@ -225,7 +225,7 @@ LIBC_INLINE DoubleDouble exp_double_double(double x, double kd,
 
 // Check for exceptional cases when
 // |x| <= 2^-53 or x < log(2^-54) or x >= 0x1.6232bdd7abcd3p+9
-LIBC_INLINE constexpr double set_exceptional(double x) {
+LIBC_INLINE LIBC_CONSTEXPR double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -279,7 +279,7 @@ LIBC_INLINE constexpr double set_exceptional(double x) {
 
 } // namespace expm1_internal
 
-LIBC_INLINE constexpr double expm1(double x) {
+LIBC_INLINE LIBC_CONSTEXPR double expm1(double x) {
   using namespace expm1_internal;
 
   using FPBits = typename fputil::FPBits<double>;
