@@ -26,24 +26,26 @@ llvm::SmallVector<OriginID> buildOriginFlowChain(
          "TargetLoan must be present in the initial propagation point");
 
   OriginID CurrOID = StartOID;
-  llvm::SmallVector<OriginID> AssignmentList;
+  llvm::SmallVector<OriginID> OriginFlowChain;
   llvm::ArrayRef<const Fact *> Facts = FactMgr.getBlockContaining(StartPoint);
 
   for (const Fact *F : llvm::reverse(Facts)) {
-    if (const auto *OFF = F->getAs<OriginFlowFact>()) {
-      const OriginID SrcOriginID = OFF->getSrcOriginID();
-      if (OFF->getDestOriginID() != CurrOID)
-        continue;
-      if (!hasLoanAtOrigin(SrcOriginID, TargetLoan, OFF))
-        continue;
-      AssignmentList.push_back(SrcOriginID);
-      CurrOID = SrcOriginID;
-    } else if (const auto *IF = F->getAs<IssueFact>()) {
+    if (const auto *IF = F->getAs<IssueFact>())
       if (IF->getLoanID() == TargetLoan)
-        return AssignmentList;
-    }
+        return OriginFlowChain;
+
+    const auto *OFF = F->getAs<OriginFlowFact>();
+    if (!OFF)
+      continue;
+    const OriginID SrcOriginID = OFF->getSrcOriginID();
+    if (OFF->getDestOriginID() != CurrOID)
+      continue;
+    if (!hasLoanAtOrigin(SrcOriginID, TargetLoan, OFF))
+      continue;
+    OriginFlowChain.push_back(SrcOriginID);
+    CurrOID = SrcOriginID;
   }
 
-  return AssignmentList;
+  return {};
 }
 } // namespace clang::lifetimes::internal

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_ANALYSES_ASSIGNMENTQUERY_H
-#define LLVM_CLANG_ANALYSIS_ANALYSES_ASSIGNMENTQUERY_H
+#ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_ORIGINFLOWCHAIN_H
+#define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_ORIGINFLOWCHAIN_H
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"

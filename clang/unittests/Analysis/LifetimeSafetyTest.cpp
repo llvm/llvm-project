@@ -212,7 +212,7 @@ public:
     std::optional<OriginID> StartOriginID = getOriginForDecl(StartOriginVar);
     std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
 
-    for (const LoanID &LID : EndLoanIDs) {
+    for (LoanID LID : EndLoanIDs) {
       const llvm::SmallVector<OriginID> OriginFlowChain = buildOriginFlowChain(
           Runner.getAnalysis().getFactManager(),
           Runner.getAnalysis().getLoanPropagation(),
@@ -1973,7 +1973,7 @@ TEST_F(LifetimeAnalysisTest, LambdaInitCaptureViewByValue) {
 }
 
 // ========================================================================= //
-//                    Tests for trackAssignmentHistory
+//                    Tests for buildOriginFlowChain
 // ========================================================================= //
 
 TEST_F(LifetimeAnalysisTest, BuildLinearOriginFlowChainInOneBlock) {
