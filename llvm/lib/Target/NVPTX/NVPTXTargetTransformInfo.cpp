@@ -652,6 +652,32 @@ unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
         return ADDRESS_SPACE_LOCAL;
     }
   }
+  if (int AS = getPointerLoadAddressSpace(V); AS != -1) {
+    return AS;
+  }
+  return -1;
+}
+
+int NVPTXTTIImpl::getPointerLoadAddressSpace(const Value *V) const {
+  const NVPTXTargetMachine &TM =
+      static_cast<const NVPTXTargetMachine &>(getTLI()->getTargetMachine());
+  if (TM.getDrvInterface() != NVPTX::CUDA)
+    return -1;
+
+  const auto *Load = dyn_cast<LoadInst>(V);
+  if (!Load)
+    return -1;
+
+  const Value *UO = getUnderlyingObject(Load->getPointerOperand());
+  if (const auto *Arg = dyn_cast<Argument>(UO)) {
+    if (!isKernelFunction(*Arg->getParent()) || !Arg->onlyReadsMemory())
+      return -1;
+    return ADDRESS_SPACE_GLOBAL;
+  }
+
+  // Follow chains like load(load(readonly %A)[i])[j].
+  if (const auto *PrevLoad = dyn_cast<LoadInst>(UO))
+    return getPointerLoadAddressSpace(PrevLoad);
 
   return -1;
 }

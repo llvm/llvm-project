@@ -212,6 +212,7 @@ public:
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const override;
   unsigned getAssumedAddrSpace(const Value *V) const override;
+  int getPointerLoadAddressSpace(const Value *V) const;
 
   void collectKernelLaunchBounds(
       const Function &F,
