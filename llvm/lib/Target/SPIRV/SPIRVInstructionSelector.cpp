@@ -1414,13 +1414,11 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
                                              bool setMIFlags, bool useMISrc,
                                              ArrayRef<Register> SrcRegs) const {
   if (!STI.canUseExtInstSet(
-          SPIRV::InstructionSet::InstructionSet::GLSL_std_450)) {
-    std::string DiagMsg;
-    raw_string_ostream OS(DiagMsg);
-    I.print(OS, true, false, false, false);
-    DiagMsg += " is only supported with the GLSL extended instruction set.";
-    return diagnoseUnsupported(I, DiagMsg);
-  }
+          SPIRV::InstructionSet::InstructionSet::GLSL_std_450))
+    return diagnoseUnsupported(
+        I,
+        "this instruction is only supported with the GLSL extended instruction "
+        "set.");
   return selectExtInst(ResVReg, ResType, I,
                        {{SPIRV::InstructionSet::GLSL_std_450, GLInst}},
                        setMIFlags, useMISrc, SrcRegs);
@@ -5189,13 +5187,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     MIB.constrainAllUses(TII, TRI, RBI);
     return true;
   }
-  default: {
-    std::string DiagMsg;
-    raw_string_ostream OS(DiagMsg);
-    I.print(OS);
-    DiagMsg = "Intrinsic selection not implemented: " + DiagMsg;
-    return diagnoseUnsupported(I, DiagMsg);
-  }
+  default:
+    return diagnoseUnsupported(I, "intrinsic selection not implemented.");
   }
   return true;
 }
@@ -6964,13 +6957,9 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
 
 bool SPIRVInstructionSelector::errorIfInstrOutsideShader(
     MachineInstr &I) const {
-  if (!STI.isShader()) {
-    std::string DiagMsg;
-    raw_string_ostream OS(DiagMsg);
-    I.print(OS, true, false, false, false);
-    DiagMsg += " is only supported in shaders.";
-    return diagnoseUnsupported(I, DiagMsg);
-  }
+  if (!STI.isShader())
+    return diagnoseUnsupported(
+        I, "this instruction is only supported in shaders.");
   return true;
 }
 
