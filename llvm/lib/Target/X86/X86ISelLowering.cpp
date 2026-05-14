@@ -24309,6 +24309,7 @@ static SDValue EmitTest(SDValue Op, X86::CondCode X86CC, const SDLoc &dl,
 static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
                        const SDLoc &dl, SelectionDAG &DAG,
                        const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   if (isNullConstant(Op1))
     return EmitTest(Op0, X86CC, dl, DAG, Subtarget);
 
@@ -24367,6 +24368,31 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
     CmpVT = MVT::i32;
     Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
     Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
+  }
+
+  // Try to shrink i32 unsigned compares to i8 or i16 when both operands'
+  // high bits are known zero and neither operand is a constant. Eligible
+  // i64 compares are shrunk to i32 above.
+  if (CmpVT == MVT::i32 && !isX86CCSigned(X86CC) &&
+      Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
+      !isa<ConstantSDNode>(Op0) && !isa<ConstantSDNode>(Op1)) {
+    auto BothOpsFit = [&](unsigned Bits) {
+      APInt Hi = APInt::getHighBitsSet(32, 32 - Bits);
+      return DAG.MaskedValueIsZero(Op0, Hi) && DAG.MaskedValueIsZero(Op1, Hi);
+    };
+    // Narrowing to i16 is only when this enables an (and x, 0xFFFF) in an
+    // operand to be removed downstream
+    auto IsI16Eliminable = [](SDValue Op) {
+      return sd_match(Op, m_And(m_Value(), m_SpecificInt(0xFFFF)));
+    };
+    if (BothOpsFit(8))
+      CmpVT = MVT::i8;
+    else if (BothOpsFit(16) && (IsI16Eliminable(Op0) || IsI16Eliminable(Op1)))
+      CmpVT = MVT::i16;
+    if (CmpVT != MVT::i32) {
+      Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
+      Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
+    }
   }
 
   // 0-x == y --> x+y == 0
