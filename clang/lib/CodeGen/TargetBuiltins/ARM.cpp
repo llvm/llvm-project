@@ -4915,7 +4915,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       Value *Pointer = EmitScalarExpr(E->getArg(0));
       Value *Mask = EmitScalarExpr(E->getArg(1));
 
-      Mask = Builder.CreateZExt(Mask, Int64Ty);
+      Mask = Builder.CreateZExtOrTrunc(Mask, Int64Ty);
       return Builder.CreateCall(CGM.getIntrinsic(MTEIntrinsicID),
                                 {Pointer, Mask});
     }
@@ -4931,7 +4931,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       Value *Pointer = EmitScalarExpr(E->getArg(0));
       Value *ExcludedMask = EmitScalarExpr(E->getArg(1));
 
-      ExcludedMask = Builder.CreateZExt(ExcludedMask, Int64Ty);
+      ExcludedMask = Builder.CreateZExtOrTrunc(ExcludedMask, Int64Ty);
       return Builder.CreateCall(
                        CGM.getIntrinsic(MTEIntrinsicID), {Pointer, ExcludedMask});
     }
