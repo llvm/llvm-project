@@ -28,11 +28,11 @@ inspect the definition of the token.
 
 ## Structural Contract
 
-A token use cannot be substituted with another token value: the use of a token
-points directly to a specific producer. Generic transformations must not alter
-or break this link. New uses of a token can be introduced safely. Operations
-must opt in to producing or consuming tokens with `TokenProducerTrait` and
-`TokenConsumerTrait`. As a consequence:
+Given a use of a token SSA value, its definition is guaranteed to be the
+semantic producer of the token. Generic transformations must preserve this
+invariant: they may not introduce a forwarding step between a use and its
+producer, nor retarget a use to a producer with different semantics. New
+uses of a token can be introduced safely. As a consequence:
 
 1. A token must not appear as a forwarded value, e.g.:
     * a forwarded result/operand of a `CallOpInterface` op,
@@ -44,15 +44,19 @@ must opt in to producing or consuming tokens with `TokenProducerTrait` and
     * the result of any op that selects or merges values it does not
       understand (e.g. `arith.select`).
 
-2. Given a use of a token SSA value, its definition is guaranteed to be the
-   semantic producer of the token.
+2. A token cannot constant-fold. No constant of token type exists.
 
-3. A token cannot constant-fold. No constant of token type exists.
+3. The presence of tokens has no effect on standard transformations such as
+   CSE, DCE or hoisting.
 
-4. Use of a token is side-effect free: a token user follows the usual `isTriviallyDead()` rules.
+4. Use of a token is side-effect free: a token user follows the usual
+   `isTriviallyDead()` rules.
 
 These properties mirror what LLVM IR already documents for its own
 [`token` type](https://llvm.org/docs/LangRef.html#token-type).
+
+Operations must opt in to producing or consuming tokens with
+`TokenProducerTrait` and `TokenConsumerTrait`.
 
 ## ODS Integration
 

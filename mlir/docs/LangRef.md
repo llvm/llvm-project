@@ -738,8 +738,15 @@ dialect types.
 
 The [builtin dialect](Dialects/Builtin.md) defines a set of types that are
 directly usable by any other dialect in MLIR. These types cover a range from
-primitive integer and floating-point types, function types,
-[tokens](Tokens.md), and more.
+primitive integer and floating-point types, function types, and more.
+
+A *token* is an SSA value of the builtin parameterless, opaque `token` type.
+It carries no runtime data. Intuitively, a token is a pointer to an operation
+(via its result) or to a region (via an entry block argument). Unlike regular
+SSA values, a token cannot be forwarded: its def-use chain cannot be obscured
+by ops with forwarding semantics such as `arith.select` or `cf.br`, so you can
+always walk back from any use of a token to *the* specific operation or region
+that produced it. See [Tokens](Tokens.md) for more details.
 
 ## Properties
 
