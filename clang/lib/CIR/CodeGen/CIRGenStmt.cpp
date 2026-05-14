@@ -919,8 +919,9 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
     // sure we handle all cases.
     assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
     // https://en.cppreference.com/w/cpp/language/for
-    // Given: 
-    // for ( init-statement condition ﻿(optional) ; expression ﻿(optional) ) statement
+    // Given:
+    // for ( init-statement condition ﻿(optional) ; expression ﻿(optional) )
+    // statement
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
         /*condBuilder=*/
