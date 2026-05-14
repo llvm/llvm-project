@@ -67,8 +67,7 @@ float64x2_t test_vfmaq_f64(float64x2_t a, float64x2_t b, float64x2_t c) {
   return vfmaq_f64(a, b, c);
 }
 
-// LLVM-LABEL: @test_vfmaq_lane_f32(
-// CIR-LABEL: @test_vfmaq_lane_f32(
+// ALL-LABEL: @test_vfmaq_lane_f32(
 float32x4_t test_vfmaq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t v) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.float>) [#cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i] : !cir.vector<4 x !cir.float>
 // CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
@@ -87,8 +86,7 @@ float32x4_t test_vfmaq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t v) {
   return vfmaq_lane_f32(a, b, v, 1);
 }
 
-// LLVM-LABEL: @test_vfmaq_lane_f64(
-// CIR-LABEL: @test_vfmaq_lane_f64(
+// ALL-LABEL: @test_vfmaq_lane_f64(
 float64x2_t test_vfmaq_lane_f64(float64x2_t a, float64x2_t b, float64x1_t v) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<1 x !cir.double>) [#cir.int<0> : !s32i, #cir.int<0> : !s32i] : !cir.vector<2 x !cir.double>
 // CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
@@ -108,29 +106,7 @@ float64x2_t test_vfmaq_lane_f64(float64x2_t a, float64x2_t b, float64x1_t v) {
   return vfmaq_lane_f64(a, b, v, 0);
 }
 
-// LLVM-LABEL: @test_vfmaq_lane_f32_0(
-// CIR-LABEL: @test_vfmaq_lane_f32_0(
-float32x4_t test_vfmaq_lane_f32_0(float32x4_t a, float32x4_t b,
-                                   float32x2_t v) {
-// CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.float>) [#cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i] : !cir.vector<4 x !cir.float>
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
-
-// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]], <4 x float> {{.*}} [[B:%.*]], <2 x float> {{.*}} [[V:%.*]]) {{.*}} {
-// LLVM:      [[A_I:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
-// LLVM-NEXT: [[B_I:%.*]] = bitcast <4 x float> [[B]] to <4 x i32>
-// LLVM-NEXT: [[V_I:%.*]] = bitcast <2 x float> [[V]] to <2 x i32>
-// LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <4 x i32> [[A_I]] to <16 x i8>
-// LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <4 x i32> [[B_I]] to <16 x i8>
-// LLVM-NEXT: [[V_BYTES:%.*]] = bitcast <2 x i32> [[V_I]] to <8 x i8>
-// LLVM:      [[V_CAST:%.*]] = bitcast <8 x i8> [[V_BYTES]] to <2 x float>
-// LLVM-NEXT: [[LANE:%.*]] = shufflevector <2 x float> [[V_CAST]], <2 x float> {{.*}}, <4 x i32> zeroinitializer
-// LLVM:      [[FMA:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> [[LANE]], <4 x float> %{{.*}})
-// LLVM:      ret <4 x float> [[FMA]]
-  return vfmaq_lane_f32(a, b, v, 0);
-}
-
-// LLVM-LABEL: @test_vfma_laneq_f32(
-// CIR-LABEL: @test_vfma_laneq_f32(
+// ALL-LABEL: @test_vfma_laneq_f32(
 float32x2_t test_vfma_laneq_f32(float32x2_t a, float32x2_t b, float32x4_t v) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<2 x !cir.float>
 // CIR: cir.call_llvm_intrinsic "fma" [[LANE]], %{{.*}}, %{{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
@@ -149,8 +125,7 @@ float32x2_t test_vfma_laneq_f32(float32x2_t a, float32x2_t b, float32x4_t v) {
   return vfma_laneq_f32(a, b, v, 3);
 }
 
-// LLVM-LABEL: @test_vfma_laneq_f64(
-// CIR-LABEL: @test_vfma_laneq_f64(
+// ALL-LABEL: @test_vfma_laneq_f64(
 float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b,
                                  float64x2_t v) {
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<2 x !cir.double>
@@ -173,8 +148,7 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b,
   return vfma_laneq_f64(a, b, v, 0);
 }
 
-// LLVM-LABEL: @test_vfma_laneq_f32_0(
-// CIR-LABEL: @test_vfma_laneq_f32_0(
+// ALL-LABEL: @test_vfma_laneq_f32_0(
 float32x2_t test_vfma_laneq_f32_0(float32x2_t a, float32x2_t b,
                                    float32x4_t v) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>) [#cir.int<0> : !s32i, #cir.int<0> : !s32i] : !cir.vector<2 x !cir.float>

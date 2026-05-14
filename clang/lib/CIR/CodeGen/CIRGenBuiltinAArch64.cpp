@@ -2583,9 +2583,12 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return emitCallMaybeConstrainedBuiltin(builder, loc, "fma", ty, fmaOps);
   }
   case NEON::BI__builtin_neon_vfma_laneq_v: {
+    // v1f64 fma should be mapped to Neon scalar f64 fma.
     if (ty.getElementType() == cgm.doubleTy) {
       mlir::Value addend = builder.createBitcast(ops[0], cgm.doubleTy);
       mlir::Value multiplicand = builder.createBitcast(ops[1], cgm.doubleTy);
+      // The laneq source operand is float64x2_t, so the source vector has two
+      // double lanes.
       cir::VectorType sourceTy = cir::VectorType::get(cgm.doubleTy, 2);
       mlir::Value laneSource = builder.createBitcast(ops[2], sourceTy);
       laneSource = builder.createExtractElement(
