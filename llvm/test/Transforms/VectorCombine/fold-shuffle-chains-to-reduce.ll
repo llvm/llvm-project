@@ -243,3 +243,23 @@ define i16 @test_partial_reduce_v16i16_v4i16_umin(<16 x i16> %a0) {
   %5 = extractelement <16 x i16> %4, i64 0
   ret i16 %5
 }
+
+; Negative test: partial reduction on non-power-of-2 vectors is rejected because
+; parity-based shuffle masks cause lane duplication in the reduction tree.
+define i32 @test_no_partial_reduce_v6i32_add(<6 x i32> %a) {
+; CHECK-LABEL: define i32 @test_no_partial_reduce_v6i32_add(
+; CHECK-SAME: <6 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <6 x i32> [[A]], <6 x i32> poison, <6 x i32> <i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[A1:%.*]] = add <6 x i32> [[A]], [[S1]]
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <6 x i32> [[A1]], <6 x i32> poison, <6 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[A2:%.*]] = add <6 x i32> [[A1]], [[S2]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <6 x i32> [[A2]], i64 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s1 = shufflevector <6 x i32> %a, <6 x i32> poison, <6 x i32> <i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison>
+  %a1 = add <6 x i32> %a, %s1
+  %s2 = shufflevector <6 x i32> %a1, <6 x i32> poison, <6 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %a2 = add <6 x i32> %a1, %s2
+  %r = extractelement <6 x i32> %a2, i64 0
+  ret i32 %r
+}

@@ -4129,7 +4129,11 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     } else {
       // Check if this is a partial reduction - the chain ended because
       // the source vector is not a recognized op/shuffle.
-      if (ShouldBeCallOrBinInst && VisitedCnt >= 1 && CI == PrevVecV[0]) {
+      // Reject non-power-of-2 vectors because parity-based masks cause
+      // lane duplication in the reduction tree, making the partial result
+      // not a simple subvector reduction.
+      if (ShouldBeCallOrBinInst && VisitedCnt >= 1 && CI == PrevVecV[0] &&
+          isPowerOf2_64(VecSize)) {
         IsPartialReduction = true;
         break;
       }
