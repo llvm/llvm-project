@@ -380,7 +380,7 @@ LIBC_INLINE LIBC_CONSTEXPR double exp2(double x) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // To multiply by 2^hi, a fast way is to simply add hi to the exponent
   // field.
-  int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+  int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
   double r =
       cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(exp_mid.hi + lo));
   return r;
@@ -391,7 +391,7 @@ LIBC_INLINE LIBC_CONSTEXPR double exp2(double x) {
   if (LIBC_LIKELY(upper == lower)) {
     // To multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+    int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
     return r;
   }
@@ -405,7 +405,7 @@ LIBC_INLINE LIBC_CONSTEXPR double exp2(double x) {
   if (LIBC_LIKELY(upper_dd == lower_dd)) {
     // To multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+    int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
     return r;
   }
