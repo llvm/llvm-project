@@ -19,7 +19,8 @@
 using namespace clang;
 using namespace dependencies;
 
-PrebuiltModuleDep createPrebuiltModuleDep(const serialization::ModuleFile *MF) {
+static PrebuiltModuleDep
+createPrebuiltModuleDep(const serialization::ModuleFile *MF) {
   PrebuiltModuleDep Dep;
   Dep.ModuleName = MF->ModuleName;
   Dep.PCMFile = MF->FileName.str();
