@@ -125,6 +125,9 @@ Makes programs 10x faster by doing Special New Thing.
   in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
   distributed ThinLTO. 
 
+* ``ConstantFP`` now supports vector types and is the canonical form returned by
+  ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
+
 ### Changes to building LLVM
 
 ### Changes to TableGen
@@ -271,6 +274,7 @@ Makes programs 10x faster by doing Special New Thing.
   example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
   command to run at the current location: `breakpoint command add -o 'p my_var' .`.
 * The `apropos` command now highlights matching keywords in its output when color is enabled.
+* The TUI mode (enabled with the `gui` command) now has a real-time console output pane. stdout / stderr messages get redirected to this pane when it is enabled.
 
 #### Deprecated APIs
 
