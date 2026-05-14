@@ -64,3 +64,67 @@ define i1 @fuse_zext_pos(ptr %word, i32 %position) nounwind {
   store i64 %res, ptr %word
   ret i1 %cmp
 }
+
+; Negative: bit positions differ, BTC and BT must both remain.
+define i1 @no_fuse_diff_pos_xor(ptr %word, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: no_fuse_diff_pos_xor:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    btcl %edx, %ecx
+; CHECK-NEXT:    btl %esi, %eax
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    movl %ecx, (%rdi)
+; CHECK-NEXT:    retq
+  %bita = shl i32 1, %a
+  %bitb = shl i32 1, %b
+  %ld = load i32, ptr %word
+  %res = xor i32 %ld, %bitb
+  %test = and i32 %ld, %bita
+  %cmp = icmp ne i32 %test, 0
+  store i32 %res, ptr %word
+  ret i1 %cmp
+}
+
+; Negative: bit positions differ, BTS and BT must both remain.
+define i1 @no_fuse_diff_pos_or(ptr %word, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: no_fuse_diff_pos_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    btsq %rdx, %rcx
+; CHECK-NEXT:    btq %rsi, %rax
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    movq %rcx, (%rdi)
+; CHECK-NEXT:    retq
+  %bita = shl i64 1, %a
+  %bitb = shl i64 1, %b
+  %ld = load i64, ptr %word
+  %res = or i64 %ld, %bitb
+  %test = and i64 %ld, %bita
+  %cmp = icmp ne i64 %test, 0
+  store i64 %res, ptr %word
+  ret i1 %cmp
+}
+
+; Negative: bit positions differ, BTR and BT must both remain.
+define i1 @no_fuse_diff_pos_and(ptr %word, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: no_fuse_diff_pos_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    btrq %rdx, %rcx
+; CHECK-NEXT:    btq %rsi, %rax
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    movq %rcx, (%rdi)
+; CHECK-NEXT:    retq
+  %bita = shl i64 1, %a
+  %bitb = shl i64 1, %b
+  %notb = xor i64 %bitb, -1
+  %ld = load i64, ptr %word
+  %res = and i64 %ld, %notb
+  %test = and i64 %ld, %bita
+  %cmp = icmp eq i64 %test, 0
+  store i64 %res, ptr %word
+  ret i1 %cmp
+}
