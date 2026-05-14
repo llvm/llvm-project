@@ -237,3 +237,55 @@ namespace test10 {
     }
   };
 }
+
+namespace test11 {
+  template <class> struct C;
+  template <class T> struct A {
+    template <class> struct B;
+  };
+  template <class T> struct D : A<T> {
+    using A<T>::B;
+  };
+
+  template <class T> struct C {
+    int n;
+    template <class U> friend struct D<T>::B;
+  };
+
+  template <> template <class U> struct A<int>::B {
+    static int f(C<int> &c) {
+      c.n = 0;
+      return 0;
+    }
+  };
+
+  int x = A<int>::B<void>::f(*new C<int>);
+}
+
+namespace test12 {
+  template <class T> struct A {
+    template <T> struct B {
+      static int f();
+    };
+  };
+
+  template <class T> struct C {
+    int n;
+    template <class U> template <U V> friend struct A<U>::B;
+  };
+
+  template <class T> template <T V> int A<T>::B<V>::f() {
+    C<T> c;
+    c.n = 0;
+    return 0;
+  }
+
+  int x = A<int>::B<0>::f();
+}
+
+namespace test13 {
+template <typename T> struct S {
+  template <typename> friend class T::template X<int>::Y;
+  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
+};
+}
