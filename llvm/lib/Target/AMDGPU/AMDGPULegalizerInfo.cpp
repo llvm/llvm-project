@@ -4633,7 +4633,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
-  if (ST.hasVectorMulU64() && Size == 64)
+  if (ST.hasVMulU64Inst() && Size == 64)
     return true;
 
   unsigned NumParts = Size / 32;

@@ -555,7 +555,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  bool HasVecMulU64 = ST->hasVectorMulU64();
+  bool HasVecMulU64 = ST->hasVMulU64Inst();
   addRulesForGOpcs({G_MUL}, Standard)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
