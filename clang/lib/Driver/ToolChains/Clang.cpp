@@ -9549,6 +9549,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fprofile_generate_EQ,
       OPT_fprofile_instr_generate,
       OPT_fprofile_instr_generate_EQ,
+      OPT_fcoverage_mapping,
+      OPT_fno_coverage_mapping,
+      OPT_fcoverage_compilation_dir_EQ,
+      OPT_ffile_compilation_dir_EQ,
+      OPT_fcoverage_prefix_map_EQ,
       OPT_fsanitize_EQ,
       OPT_fno_sanitize_EQ,
       OPT_fsanitize_minimal_runtime,
@@ -9561,11 +9566,17 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         TC.getCompilerRT(Args, "profile", ToolChain::FT_Static));
     // Don't forward profiling arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
+    // Coverage mapping flags require -fprofile-instr-generate, so drop them
+    // together to avoid a device cc1 diagnostic.
     if (!HasProfileRT &&
         (A->getOption().matches(OPT_fprofile_generate) ||
          A->getOption().matches(OPT_fprofile_generate_EQ) ||
          A->getOption().matches(OPT_fprofile_instr_generate) ||
-         A->getOption().matches(OPT_fprofile_instr_generate_EQ)))
+         A->getOption().matches(OPT_fprofile_instr_generate_EQ) ||
+         A->getOption().matches(OPT_fcoverage_mapping) ||
+         A->getOption().matches(OPT_fno_coverage_mapping) ||
+         A->getOption().matches(OPT_fcoverage_compilation_dir_EQ) ||
+         A->getOption().matches(OPT_fcoverage_prefix_map_EQ)))
       return false;
     auto HasUBSanRT = TC.getVFS().exists(
         TC.getCompilerRT(Args, "ubsan_minimal", ToolChain::FT_Static));
