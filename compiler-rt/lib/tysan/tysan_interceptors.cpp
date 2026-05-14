@@ -23,13 +23,13 @@
 #endif
 
 #if !SANITIZER_APPLE
-  #define TYSAN_INTERCEPT_FUNC(name)                                             \
-    do {                                                                         \
-      if (!INTERCEPT_FUNCTION(name))                                             \
-        VReport(1, "TypeSanitizer: failed to intercept '%s'\n", #name);          \
-    } while (0)
+#define TYSAN_INTERCEPT_FUNC(name)                                             \
+  do {                                                                         \
+    if (!INTERCEPT_FUNCTION(name))                                             \
+      VReport(1, "TypeSanitizer: failed to intercept '%s'\n", #name);          \
+  } while (0)
 #else
-  #define TYSAN_INTERCEPT_FUNC(name)
+#define TYSAN_INTERCEPT_FUNC(name)
 #endif
 
 #if SANITIZER_LINUX
