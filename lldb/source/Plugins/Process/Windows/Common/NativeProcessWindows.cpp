@@ -564,17 +564,19 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       return ExceptionResult::BreakInDebugger;
     }
 
-    // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
-    // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
-    // Stop the debugger and let the user decide what to do.
-    std::string desc =
-        formatv("Exception {0} encountered at address {1}",
-                llvm::format_hex(record.GetExceptionCode(), 8),
-                llvm::format_hex(record.GetExceptionAddress(), 8))
-            .str();
-    StopThread(record.GetThreadID(), StopReason::eStopReasonException,
-               std::move(desc));
-    SetState(eStateStopped, true);
+    {
+      // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
+      // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
+      // Stop the debugger and let the user decide what to do.
+      std::string desc =
+          formatv("Exception {0:x8} encountered at address {1:x8}",
+                  record.GetExceptionCode(), record.GetExceptionAddress())
+              .str();
+      StopThread(record.GetThreadID(), StopReason::eStopReasonException,
+                 std::move(desc));
+      SetState(eStateStopped, true);
+    }
+
     return ExceptionResult::MaskException;
   default:
     LLDB_LOG(log,
