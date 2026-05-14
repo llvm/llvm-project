@@ -57,13 +57,13 @@ def set_blocking(pipefd: int, blocking: bool):
 
     windll.kernel32.GetNamedPipeHandleStateW.restype = BOOL
     windll.kernel32.GetNamedPipeHandleStateW.argtypes = [
-        HANDLE,           # hNamedPipe
-        POINTER(DWORD),   # [optional] lpState
-        POINTER(DWORD),   # [optional] lpCurInstances
-        POINTER(DWORD),   # [optional] lpMaxCollectionCount
-        POINTER(DWORD),   # [optional] lpCollectDataTimeout
-        POINTER(c_wchar), # [optional] lpUserName
-        DWORD,            # nMaxUserNameSize
+        HANDLE,  # hNamedPipe
+        POINTER(DWORD),  # [optional] lpState
+        POINTER(DWORD),  # [optional] lpCurInstances
+        POINTER(DWORD),  # [optional] lpMaxCollectionCount
+        POINTER(DWORD),  # [optional] lpCollectDataTimeout
+        POINTER(c_wchar),  # [optional] lpUserName
+        DWORD,  # nMaxUserNameSize
     ]
     ok = windll.kernel32.GetNamedPipeHandleStateW(
         handle,
@@ -85,17 +85,17 @@ def set_blocking(pipefd: int, blocking: bool):
 
     windll.kernel32.SetNamedPipeHandleState.restype = BOOL
     windll.kernel32.SetNamedPipeHandleState.argtypes = [
-        HANDLE,         # hNamedPipe
-        POINTER(DWORD), # [optional] lpMode
-        POINTER(DWORD), # [optional] lpMaxCollectionCount
-        POINTER(DWORD), # [optional] lpCollectDataTimeout
+        HANDLE,  # hNamedPipe
+        POINTER(DWORD),  # [optional] lpMode
+        POINTER(DWORD),  # [optional] lpMaxCollectionCount
+        POINTER(DWORD),  # [optional] lpCollectDataTimeout
     ]
     ok = windll.kernel32.SetNamedPipeHandleState(
         handle,
         byref(mode),
         None,
         None,
-    );
+    )
     if not ok:
         raise WinError()
 
