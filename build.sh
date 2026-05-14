@@ -4,6 +4,7 @@
 #
 # Usage:
 #   ./build.sh debug   x86             # → build_debug_x86/
+#   ./build.sh debug   x86 --static    # → build_debug_x86_static/
 #   ./build.sh release x86             # → build_release_x86/
 #   ./build.sh release x86 minimal     # → build_release_x86_minimal/
 #   ./build.sh debug   aarch64         # → build_debug_aarch64/
@@ -13,6 +14,7 @@
 # Options:
 #   -c           configure only (skip build)
 #   -b           build only (skip configure)
+#   --static     debug build with static libs (for ejit_test with assertions)
 #   --no-ccache  disable ccache
 #   -h           show help
 #===----------------------------------------------------------------------===#
@@ -58,6 +60,8 @@ build_dir() {
   local type="$1" arch="$2" variant="${3:-default}"
   if [ "$variant" = "minimal" ]; then
     echo "${ROOT_DIR}/build_${type}_${arch}_minimal"
+  elif [ "$variant" = "static" ]; then
+    echo "${ROOT_DIR}/build_${type}_${arch}_static"
   else
     echo "${ROOT_DIR}/build_${type}_${arch}"
   fi
@@ -76,19 +80,32 @@ do_configure() {
   fi
 
   if [ "$type" = "debug" ]; then
-    log "Configuring: debug ${arch} → ${build_dir}"
-    # shellcheck disable=SC2086
-    cmake -S "${LLVM_SRC}" -B "${build_dir}" \
-      -G "Ninja" \
-      -DCMAKE_BUILD_TYPE=Debug \
-      -DBUILD_SHARED_LIBS=ON \
-      -DLLVM_OPTIMIZED_TABLEGEN=ON \
-      "-DLLVM_TARGETS_TO_BUILD=${target}" \
-      -DLLVM_ENABLE_PROJECTS="clang;lld" \
-      -DLLVM_USE_SPLIT_DWARF=ON \
-      -DCMAKE_C_COMPILER=clang \
-      -DCMAKE_CXX_COMPILER=clang++ \
-      ${ccache_opts}
+    if [ "$variant" = "static" ]; then
+      log "Configuring: debug ${arch} static → ${build_dir}"
+      cmake -S "${LLVM_SRC}" -B "${build_dir}" \
+        -G "Ninja" \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DLLVM_OPTIMIZED_TABLEGEN=ON \
+        "-DLLVM_TARGETS_TO_BUILD=${target}" \
+        -DLLVM_ENABLE_PROJECTS="clang;lld" \
+        -DCMAKE_C_COMPILER=clang \
+        -DCMAKE_CXX_COMPILER=clang++ \
+        ${ccache_opts}
+    else
+      log "Configuring: debug ${arch} → ${build_dir}"
+      cmake -S "${LLVM_SRC}" -B "${build_dir}" \
+        -G "Ninja" \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DBUILD_SHARED_LIBS=ON \
+        -DLLVM_OPTIMIZED_TABLEGEN=ON \
+        "-DLLVM_TARGETS_TO_BUILD=${target}" \
+        -DLLVM_ENABLE_PROJECTS="clang;lld" \
+        -DLLVM_USE_SPLIT_DWARF=ON \
+        -DCMAKE_C_COMPILER=clang \
+        -DCMAKE_CXX_COMPILER=clang++ \
+        ${ccache_opts}
+    fi
     return
   fi
 
@@ -140,8 +157,13 @@ do_build() {
 
   case "$type" in
     debug)
-      log "Building debug: ${build_dir}..."
-      ninja -C "${build_dir}" clang opt lld
+      if [ "$variant" = "static" ]; then
+        log "Building debug static: ${build_dir}..."
+        ninja -C "${build_dir}" clang LLVMEJIT lld
+      else
+        log "Building debug: ${build_dir}..."
+        ninja -C "${build_dir}" clang opt lld
+      fi
       ;;
     release)
       if [ "$variant" = "minimal" ]; then
@@ -168,11 +190,12 @@ shift 2 2>/dev/null || true
 while [[ $# -gt 0 ]]; do
   case "$1" in
     minimal) VARIANT="minimal" ;;
+    --static) VARIANT="static" ;;
     -c) DO_BUILD=false ;;
     -b) DO_CONFIGURE=false ;;
     --no-ccache) USE_CCACHE=false ;;
     -h|--help)
-      sed -n '2,15p' "$0"
+      sed -n '2,18p' "$0"
       exit 0
       ;;
     *) err "Unknown argument: $1"; exit 1 ;;

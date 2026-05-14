@@ -28,11 +28,16 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-# Auto-detect arch from available release build dirs
+# Auto-detect arch from available build dirs (prefer release, fallback to debug-static)
 find_build_dir() {
   local arch="$1"
-  local dir="${ROOT_DIR}/build_release_${arch}"
-  if [[ -d "${dir}" ]]; then echo "${dir}"; return 0; fi
+  for dir in \
+    "${ROOT_DIR}/build_release_${arch}" \
+    "${ROOT_DIR}/build_debug_${arch}_static"; do
+    if [[ -d "${dir}" && -f "${dir}/lib/libLLVMEJIT.a" ]]; then
+      echo "${dir}"; return 0
+    fi
+  done
   return 1
 }
 
@@ -42,13 +47,17 @@ if [[ -z "${ARCH}" ]]; then
     if [[ -n "${BUILD_DIR}" ]]; then ARCH="$a"; break; fi
   done
   if [[ -z "${ARCH}" ]]; then
-    echo "ERROR: no release build found. Run: ../build.sh release x86"
+    echo "ERROR: no build with static libs found."
+    echo "  Run: ../build.sh release x86"
+    echo "    or ../build.sh debug x86 --static"
     exit 1
   fi
 else
   BUILD_DIR=$(find_build_dir "${ARCH}" || true)
   if [[ -z "${BUILD_DIR}" ]]; then
-    echo "ERROR: build_release_${ARCH} not found. Run: ../build.sh release ${ARCH}"
+    echo "ERROR: no static-lib build for ${ARCH}."
+    echo "  Run: ../build.sh release ${ARCH}"
+    echo "    or ../build.sh debug ${ARCH} --static"
     exit 1
   fi
 fi
