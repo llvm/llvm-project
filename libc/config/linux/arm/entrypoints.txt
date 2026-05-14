@@ -219,7 +219,6 @@ if(LLVM_LIBC_FULL_BUILD)
     # search.h entrypoints
     libc.src.search.lfind
 
-
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp

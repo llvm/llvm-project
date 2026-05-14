@@ -1316,7 +1316,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.lsearch
     libc.src.search.remque
 
-
     # threads.h entrypoints
     libc.src.threads.call_once
     libc.src.threads.cnd_broadcast

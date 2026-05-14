@@ -1390,7 +1390,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.twalk
     libc.src.search.twalk_r
 
-
     # threads.h entrypoints
     libc.src.threads.call_once
     libc.src.threads.cnd_broadcast
