@@ -7311,6 +7311,9 @@ static void emitLoadScalarOpsFromVGPRLoop(
     }
   }
 
+  // Instructions AndSaveExecOpc and AndN2WrExecOpc that modify EXEC mask
+  // should have isTerminator=1 but terminators that define
+  // virtual registers are not supported.
   Register SaveExec;
   if (!UseNewExecInstructions) {
     SaveExec = MRI.createVirtualRegister(BoolXExecRC);
