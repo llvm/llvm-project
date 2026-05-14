@@ -2271,10 +2271,9 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
         if (!isa<Constant>(ArgVal)) {
           CleanupKind Cleanup = getARCCleanupKind();
           QualType Ty = TheExpr->getType();
-          RawAddress Alloca = RawAddress::invalid();
-          RawAddress Addr = CreateMemTemp(Ty, "os.log.arg", &Alloca);
+          RawAddress Alloca = CreateMemTempWithoutCast(Ty, "os.log.arg");
           ArgVal = EmitARCRetain(Ty, ArgVal);
-          Builder.CreateStore(ArgVal, Addr);
+          Builder.CreateStore(ArgVal, Alloca);
           pushLifetimeExtendedDestroy(Cleanup, Alloca, Ty,
                                       CodeGenFunction::destroyARCStrongPrecise,
                                       Cleanup & EHCleanup);
@@ -6343,7 +6342,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           getContext().getSizeType(), ArraySize, nullptr,
           ArraySizeModifier::Normal,
           /*IndexTypeQuals=*/0);
-      auto Tmp = CreateMemTemp(SizeArrayTy, "block_sizes");
+      auto Tmp = CreateMemTempWithoutCast(SizeArrayTy, "block_sizes");
       llvm::Value *TmpPtr = Tmp.getPointer();
       // The EmitLifetime* pair expect a naked Alloca as their last argument,
       // however for cases where the default AS is not the Alloca AS, Tmp is
@@ -6798,7 +6797,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // always just emit into it.
   TypeEvaluationKind EvalKind = getEvaluationKind(E->getType());
   if (EvalKind == TEK_Aggregate && ReturnValue.isNull()) {
-    Address DestPtr = CreateMemTemp(E->getType(), "agg.tmp");
+    Address DestPtr = CreateMemTempWithoutCast(E->getType(), "agg.tmp");
     ReturnValue = ReturnValueSlot(DestPtr, false);
   }
 
