@@ -1579,7 +1579,7 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
   // in ProtoBuf:
   //   optional int32 b = 2 [(foo_options) = {aaaaaaaaaaaaaaaaaaa: 123,
   //                                          bbbbbbbbbbbbbbbbbbbbbbbb:"baz"}];
-  // For Verilog, a quote following a brace is treated as an identifier.  And
+  // For Verilog, a quote preceding a brace is treated as an identifier.  And
   // Both braces and colons get annotated as TT_DictLiteral.  So we have to
   // check.
   if (Current.is(tok::identifier) && Current.Next &&

@@ -321,6 +321,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
   if (Subtarget.hasAVX10_2()) {
+    for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v32i8}) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
+    }
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v2i32, Custom);
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
@@ -22785,13 +22789,21 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
   EVT TmpVT = DstVT;
+  EVT SatVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
+
+  if (Subtarget.hasAVX10_2() && SrcVT.isVector() &&
+      SrcVT.getVectorElementType() == MVT::bf16 && SatVT == MVT::i8) {
+    MVT VecI16VT = SrcVT.getSimpleVT().changeVectorElementType(MVT::i16);
+    SDValue Res = DAG.getNode(IsSigned ? X86ISD::CVTTP2IBS : X86ISD::CVTTP2IUBS,
+                              dl, VecI16VT, Src);
+    return DAG.getNode(ISD::TRUNCATE, dl, DstVT, Res);
+  }
 
   // This code is only for floats and doubles. Fall back to generic code for
   // anything else.
   if (!isScalarFPTypeInSSEReg(SrcVT) || isBF16orSoftF16(SrcVT, Subtarget))
     return SDValue();
 
-  EVT SatVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
   unsigned SatWidth = SatVT.getScalarSizeInBits();
   unsigned DstWidth = DstVT.getScalarSizeInBits();
   unsigned TmpWidth = TmpVT.getScalarSizeInBits();
@@ -35343,7 +35355,16 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     SDValue Op = N->getOperand(0);
     EVT OpVT = Op.getValueType();
+    EVT SatVT = cast<VTSDNode>(N->getOperand(1))->getVT();
     SDValue Res;
+
+    if (VT == MVT::v8i8 && OpVT == MVT::v8bf16 && SatVT == MVT::i8) {
+      Res = DAG.getNode(IsSigned ? X86ISD::CVTTP2IBS : X86ISD::CVTTP2IUBS, dl,
+                        MVT::v8i16, Op);
+      Res = DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
+      Results.push_back(Res);
+      return;
+    }
 
     if (VT == MVT::v2i32 && OpVT == MVT::v2f64) {
       if (IsSigned)
