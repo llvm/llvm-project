@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck %s --check-prefix=LLVM --input-file=%t-cir.ll
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck %s --check-prefix=OGCG --input-file=%t.ll
+// RUN: FileCheck %s --check-prefix=LLVM --input-file=%t.ll
 
 bool test_add_overflow_uint_uint_uint(unsigned x, unsigned y, unsigned *res) {
   return __builtin_add_overflow(x, y, res);
@@ -20,8 +20,6 @@ bool test_add_overflow_uint_uint_uint(unsigned x, unsigned y, unsigned *res) {
 // LLVM: define{{.*}} i1 @_Z32test_add_overflow_uint_uint_uintjjPj(i32{{.*}}, i32{{.*}}, ptr{{.*}})
 // LLVM:   call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
 
-// OGCG: define{{.*}} i1 @_Z32test_add_overflow_uint_uint_uintjjPj(i32{{.*}}, i32{{.*}}, ptr{{.*}})
-// OGCG:   call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
 
 bool test_add_overflow_int_int_int(int x, int y, int *res) {
   return __builtin_add_overflow(x, y, res);

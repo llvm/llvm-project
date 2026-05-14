@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
@@ -20,6 +21,34 @@
 
 using namespace llvm;
 using namespace gsym;
+
+// Keep this matching cheap: Itanium and Swift both encode identifiers as
+// <length><identifier> in the raw mangled name. Look for that token instead of
+// demangling during finalize().
+static bool isSupportedMangledPrefix(StringRef Name) {
+  return Name.starts_with("_Z") || Name.starts_with("$s") ||
+         Name.starts_with("$S");
+}
+
+static bool shouldReplaceWithMangledName(StringRef AlternateName,
+                                         StringRef CurrentName) {
+  // Any name is better than no name.
+  if (CurrentName.empty() && !AlternateName.empty())
+    return true;
+
+  // Keep the current name if it's already mangled, or if the alternate name
+  // is not a supported mangled name.
+  if (isSupportedMangledPrefix(CurrentName) ||
+      !isSupportedMangledPrefix(AlternateName))
+    return false;
+
+  // Confirm the alternate mangled name actually contains the current name as
+  // an Itanium/Swift identifier token (<length><identifier>).
+  SmallString<64> LengthAndName;
+  raw_svector_ostream OS(LengthAndName);
+  OS << CurrentName.size() << CurrentName;
+  return AlternateName.contains(StringRef(LengthAndName));
+}
 
 GsymCreator::GsymCreator(bool Quiet)
     : StrTab(StringTableBuilder::ELF), Quiet(Quiet) {
@@ -180,14 +209,24 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
         if (ranges_equal || Prev.Range.intersects(Curr.Range)) {
           // Overlapping ranges or empty identical ranges.
           if (ranges_equal) {
-            // Same address range. Check if one is from debug
-            // info and the other is from a symbol table. If
-            // so, then keep the one with debug info. Our
-            // sorting guarantees that entries with matching
-            // address ranges that have debug info are last in
-            // the sort.
-            if (!(Prev == Curr)) {
-              if (Prev.hasRichInfo() && Curr.hasRichInfo())
+            // Same address range. The sort orders entries with more debug info
+            // last, so when exactly one entry has rich info, Prev is the
+            // non-rich (typically symbol-table) entry and Curr is the rich
+            // (typically DWARF) one. DWARF often truncates a function's
+            // linkage name to its short form, so before dropping the non-rich
+            // entry check whether its name is a more complete mangled
+            // (Itanium or Swift) form of the rich entry's name and, if so,
+            // copy it onto the rich entry. This lets downstream tools
+            // demangle the full signature.
+            const bool PrevRich = Prev.hasRichInfo();
+            const bool CurrRich = Curr.hasRichInfo();
+            if (PrevRich != CurrRich) {
+              if (shouldReplaceWithMangledName(getString(Prev.Name),
+                                               getString(Curr.Name)))
+                Curr.Name = Prev.Name;
+              std::swap(Prev, Curr);
+            } else if (Prev != Curr) {
+              if (PrevRich)
                 Out.Report(
                     "Duplicate address ranges with different debug info.",
                     [&](raw_ostream &OS) {
@@ -197,10 +236,6 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
                          << Prev << "\nIn favor of this one:\n"
                          << Curr << "\n";
                     });
-
-              // We want to swap the current entry with the previous since
-              // later entries with the same range always have more debug info
-              // or different debug info.
               std::swap(Prev, Curr);
             }
           } else {
