@@ -279,7 +279,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
   auto KernelLaunchEnvOrErr =
       getKernelLaunchEnvironment(GenericDevice, KernelArgs, DynBlockMemConf,
-                                 AsyncInfoWrapper, NumBlocks[0]);
+                                 AsyncInfoWrapper, EffectiveNumBlocks[0]);
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 

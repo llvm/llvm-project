@@ -103,7 +103,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 }
 
 // CHECK: kernel_environment =
-// CHECK-SAME: i32 24, i32 0
+// CHECK-SAME: i32 24
 // CHECK: call void @[[OUTLINED:__omp_offloading_[A-Za-z0-9_.]*]]
 // CHECK: %[[MASTER:.+]] = call i32 @__kmpc_gpu_xteam_reduce_nowait
 // CHECK: icmp eq i32 %[[MASTER]], 1

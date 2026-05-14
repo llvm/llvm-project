@@ -54,7 +54,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
 // indirection would result in a struct of {ptr} = 8 bytes.
 // ReductionBufferLength is 0: the offload plugin sizes the teams reduction
 // buffer at launch from the actual number of teams.
-// AMDGCN: @{{.*}}_kernel_environment = {{.*}} %struct.ConfigurationEnvironmentTy { {{.*}}i32 16, i32 0 }
+// AMDGCN: @{{.*}}_kernel_environment = {{.*}} %struct.ConfigurationEnvironmentTy { {{.*}}i32 16 }
 
 // Verify descriptor is copied via memcpy and base_ptr is updated in all helpers
 // AMDGCN-LABEL: define internal void @_omp_reduction_shuffle_and_reduce_func
@@ -118,7 +118,7 @@ module attributes {llvm.target_triple = "nvptx64-nvidia-cuda", omp.is_gpu = true
   }
 }
 
-// NVPTX: @{{.*}}_kernel_environment = {{.*}} %struct.ConfigurationEnvironmentTy { {{.*}}i32 16, i32 0 }
+// NVPTX: @{{.*}}_kernel_environment = {{.*}} %struct.ConfigurationEnvironmentTy { {{.*}}i32 16 }
 
 // Verify descriptor is copied via memcpy and base_ptr is updated in all helpers
 // NVPTX-LABEL: define internal void @_omp_reduction_shuffle_and_reduce_func
