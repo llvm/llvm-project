@@ -15,6 +15,75 @@
     "gpu_enabled": true,
     "gpu_enabled.description": "Instrument GPU targets"
   },
+  "module_pre": {
+    "module": {
+      "enabled": true,
+      "module_name": true,
+      "module_name.description": "The module/translation unit name.",
+      "target_triple": true,
+      "target_triple.description": "The target triple.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "module_post": {
+    "module": {
+      "enabled": true,
+      "module_name": true,
+      "module_name.description": "The module/translation unit name.",
+      "target_triple": true,
+      "target_triple.description": "The target triple.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "global_pre": {
+    "global": {
+      "enabled": true,
+      "address": true,
+      "address.replace": true,
+      "address.description": "The address of the global (replaceable for definitions).",
+      "address_space": true,
+      "address_space.description": "The address space of the global.",
+      "declared_size": true,
+      "declared_size.description": "The size of the declared type of the global.",
+      "alignment": true,
+      "alignment.description": "The allocation alignment.",
+      "name": true,
+      "name.description": "The name of the global.",
+      "initial_value": true,
+      "initial_value.description": "The initial value of the global.",
+      "is_constant": true,
+      "is_constant.description": "Flag to indicate constant globals.",
+      "is_definition": true,
+      "is_definition.description": "Flag to indicate global definitions.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "global_post": {
+    "global": {
+      "enabled": true,
+      "address": true,
+      "address.description": "The address of the global (replaceable for definitions).",
+      "address_space": true,
+      "address_space.description": "The address space of the global.",
+      "declared_size": true,
+      "declared_size.description": "The size of the declared type of the global.",
+      "alignment": true,
+      "alignment.description": "The allocation alignment.",
+      "name": true,
+      "name.description": "The name of the global.",
+      "initial_value": true,
+      "initial_value.description": "The initial value of the global.",
+      "is_constant": true,
+      "is_constant.description": "Flag to indicate constant globals.",
+      "is_definition": true,
+      "is_definition.description": "Flag to indicate global definitions.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
   "function_pre": {
     "function": {
       "enabled": true,
