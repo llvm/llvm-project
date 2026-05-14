@@ -143,10 +143,6 @@ private:
     uint64_t gcspr_e0 = 0;
   } m_gcs_regs;
 
-  bool IsGPR(unsigned reg) const;
-
-  bool IsFPR(unsigned reg) const;
-
   Status ReadAllSVE();
 
   Status WriteAllSVE();
@@ -195,15 +191,6 @@ private:
   Status ReadPOE();
 
   Status WritePOE();
-
-  bool IsSVE(unsigned reg) const;
-  bool IsSME(unsigned reg) const;
-  bool IsPAuth(unsigned reg) const;
-  bool IsMTE(unsigned reg) const;
-  bool IsTLS(unsigned reg) const;
-  bool IsFPMR(unsigned reg) const;
-  bool IsGCS(unsigned reg) const;
-  bool IsPOE(unsigned reg) const;
 
   uint64_t GetSVERegVG() { return m_sve_header.vl / 8; }
 

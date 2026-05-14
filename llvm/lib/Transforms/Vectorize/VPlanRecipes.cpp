@@ -2525,11 +2525,6 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
-  // TODO: In some cases, VPWidenCastRecipes are created but not considered in
-  // the legacy cost model, including truncates/extends when evaluating a
-  // reduction in a smaller type.
-  if (!getUnderlyingValue())
-    return 0;
   return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
 }
 

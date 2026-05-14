@@ -1564,6 +1564,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess, FeatureImageInsts,
+   FeatureExtendedImageInsts,
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
@@ -2540,6 +2541,11 @@ def isGFX1170Only :
 def isGFX11Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+
+def isGFX11GFX12 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX13Insts))>;
 
 def isGFX11PlusNot12_50 :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&"
