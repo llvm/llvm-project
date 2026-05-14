@@ -4254,6 +4254,8 @@ bool Compiler<Emitter>::VisitCXXReflectExpr(const CXXReflectExpr *E) {
       APValue Result(ReflectionKind::Type, E->getOpaqueValue());
       return this->emitReflectValue(E->getKind(), E->getOpaqueValue(), E);
     }
+    case ReflectionKind::Null:
+      llvm_unreachable("A null reflection should not reach here");
   }
 
   return false;
@@ -4753,7 +4755,7 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     return this->emitConstFixedPoint(FixedPoint::zero(Sem), E);
   }
   case PT_Reflect:
-    return this->emitReflectValue(ReflectionKind::Type, nullptr, E);
+    return this->emitReflectValue(ReflectionKind::Null, nullptr, E);
   }
   llvm_unreachable("unknown primitive type");
 }

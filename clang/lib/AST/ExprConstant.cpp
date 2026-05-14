@@ -2611,6 +2611,7 @@ static bool HandleConversionToBool(const APValue &Val, bool &Result) {
   case APValue::Struct:
   case APValue::Union:
   case APValue::AddrLabelDiff:
+  case APValue::Reflection:
     return false;
   }
 
@@ -7783,7 +7784,8 @@ class APValueToBufferConverter {
     case APValue::Matrix:
     case APValue::Union:
     case APValue::MemberPointer:
-    case APValue::AddrLabelDiff: {
+    case APValue::AddrLabelDiff:
+    case APValue::Reflection: {
       Info.FFDiag(BCE->getBeginLoc(),
                   diag::note_constexpr_bit_cast_unsupported_type)
           << Ty;
@@ -10964,6 +10966,10 @@ public:
 
 bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
   switch (E->getKind()) {
+    case ReflectionKind::Null: {
+      APValue Result(ReflectionKind::Null, nullptr);
+      return Success(Result, E);
+    }
     case ReflectionKind::Type: {
       APValue Result(ReflectionKind::Type, E->getOpaqueValue());
       return Success(Result, E);
@@ -15715,6 +15721,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+    case BuiltinType::MetaInfo:
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:

@@ -13154,6 +13154,8 @@ ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
       return ExprError();
     return SemaRef.BuildCXXReflectExpr(E->getOperatorLoc(), NewT);
   }
+  case ReflectionKind::Null:
+    llvm_unreachable("A null reflection should not reach here");
   }
 
   assert(false && "unknown or unimplemented reflection entities");

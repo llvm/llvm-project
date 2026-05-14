@@ -1045,6 +1045,19 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     Out << " - ";
     Out << "&&" << getAddrLabelDiffRHS()->getLabel()->getName();
     return;
+  case APValue::Reflection:
+    switch(getReflectionOperandKind()){
+    case ReflectionKind::Null:
+      Out << "std::meta::info{}";
+      break;
+    case ReflectionKind::Type:{
+      const auto *TInfo =
+          static_cast<const TypeSourceInfo *>(getReflectionOpaqueOperand());
+      Out << "^^" << TInfo->getType().stream(Policy);
+      break;
+    }
+    }
+    return;
   }
   llvm_unreachable("Unknown APValue kind!");
 }

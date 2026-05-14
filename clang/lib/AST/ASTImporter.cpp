@@ -10691,7 +10691,7 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
     }
     break;
   }
-  case APValue::LValue:
+  case APValue::LValue: {
     APValue::LValueBase Base;
     QualType FromElemTy;
     if (FromValue.getLValueBase()) {
@@ -10762,6 +10762,27 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
     } else
       Result.setLValue(Base, Offset, APValue::NoLValuePath{},
                        FromValue.isNullPointer());
+    break;
+  }
+  case APValue::Reflection: {
+    switch (FromValue.getReflectionOperandKind()) {
+    case ReflectionKind::Null:
+      Result = APValue(ReflectionKind::Null, nullptr);
+      break;
+    case ReflectionKind::Type: {
+      const auto *FromTSI = static_cast<const TypeSourceInfo *>(
+          FromValue.getReflectionOpaqueOperand());
+      QualType ImpType = importChecked(Err, FromTSI->getType());
+      if (Err)
+        return std::move(Err);
+      TypeSourceInfo *ToTSI =
+          Importer.ToContext.getTrivialTypeSourceInfo(ImpType);
+      Result = APValue(ReflectionKind::Type, ToTSI);
+      break;
+    }
+    }
+    break;
+  }
   }
   if (Err)
     return std::move(Err);

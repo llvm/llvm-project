@@ -10,6 +10,9 @@ template <typename T = X, auto ptm = &X::a>
 constexpr auto ptmOp = ((T)(^^int)).*ptm; // expected-error {{no matching conversion for C-style cast from 'std::meta::info' to 'X'}}
 constexpr auto var = ptmOp<>; // expected-note {{in instantiation of variable template specialization 'ptmOp' requested here}}
 
+static_assert(^^int == ^^float); // expected-error {{static assertion failed due to requirement '^^int == ^^float'}}
+static_assert(info{} == ^^int); // expected-error {{static assertion failed due to requirement 'std::meta::info{} == ^^int'}}
+
 consteval void test()
 {
     (^^char)++; // expected-error {{cannot increment value of type 'std::meta::info'}}

@@ -27,7 +27,7 @@ private:
   const void *Operand;
 
 public:
-  Reflect() : Kind(ReflectionKind::Type), Operand(nullptr) {}
+  Reflect() : Kind(ReflectionKind::Null), Operand(nullptr) {}
   Reflect(ReflectionKind Kind, const void *Operand)
       : Kind(Kind), Operand(Operand) {}
 
