@@ -24,6 +24,7 @@ add_clang_library(clangTooling
   FixIt.cpp
   GuessTargetAndModeCompilationDatabase.cpp
   InterpolatingCompilationDatabase.cpp
+  JSONBuildDatabase.cpp
   JSONCompilationDatabase.cpp
   LocateToolCompilationDatabase.cpp
   Refactoring.cpp

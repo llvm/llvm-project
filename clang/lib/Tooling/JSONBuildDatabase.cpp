@@ -1,4 +1,4 @@
-//===- JSONCompilationDatabase.cpp ----------------------------------------===//
+//===- JSONBuildDatabase.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file contains the implementation of the JSONCompilationDatabase.
+//  This file contains the implementation of the JSONBuildDatabase.
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/JSONCompilationDatabase.h"
+#include "clang/Tooling/JSONBuildDatabase.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/CompilationDatabasePluginRegistry.h"
@@ -39,138 +39,14 @@ using namespace clang;
 using namespace tooling;
 
 namespace {
-
-/// A parser for escaped strings of command line arguments.
-///
-/// Assumes \-escaping for quoted arguments (see the documentation of
-/// unescapeCommandLine(...)).
-class CommandLineArgumentParser {
-public:
-  CommandLineArgumentParser(StringRef CommandLine)
-      : Input(CommandLine), Position(Input.begin() - 1) {}
-
-  std::vector<std::string> parse() {
-    bool HasMoreInput = true;
-    while (HasMoreInput && nextNonWhitespace()) {
-      std::string Argument;
-      HasMoreInput = parseStringInto(Argument);
-      CommandLine.push_back(Argument);
-    }
-    return CommandLine;
-  }
-
-private:
-  // All private methods return true if there is more input available.
-
-  bool parseStringInto(std::string &String) {
-    do {
-      if (*Position == '"') {
-        if (!parseDoubleQuotedStringInto(String))
-          return false;
-      } else if (*Position == '\'') {
-        if (!parseSingleQuotedStringInto(String))
-          return false;
-      } else {
-        if (!parseFreeStringInto(String))
-          return false;
-      }
-    } while (*Position != ' ');
-    return true;
-  }
-
-  bool parseDoubleQuotedStringInto(std::string &String) {
-    if (!next())
-      return false;
-    while (*Position != '"') {
-      if (!skipEscapeCharacter())
-        return false;
-      String.push_back(*Position);
-      if (!next())
-        return false;
-    }
-    return next();
-  }
-
-  bool parseSingleQuotedStringInto(std::string &String) {
-    if (!next())
-      return false;
-    while (*Position != '\'') {
-      String.push_back(*Position);
-      if (!next())
-        return false;
-    }
-    return next();
-  }
-
-  bool parseFreeStringInto(std::string &String) {
-    do {
-      if (!skipEscapeCharacter())
-        return false;
-      String.push_back(*Position);
-      if (!next())
-        return false;
-    } while (*Position != ' ' && *Position != '"' && *Position != '\'');
-    return true;
-  }
-
-  bool skipEscapeCharacter() {
-    if (*Position == '\\') {
-      return next();
-    }
-    return true;
-  }
-
-  bool nextNonWhitespace() {
-    do {
-      if (!next())
-        return false;
-    } while (*Position == ' ');
-    return true;
-  }
-
-  bool next() {
-    ++Position;
-    return Position != Input.end();
-  }
-
-  const StringRef Input;
-  StringRef::iterator Position;
-  std::vector<std::string> CommandLine;
-};
-
-std::vector<std::string> unescapeCommandLine(JSONCommandLineSyntax Syntax,
-                                             StringRef EscapedCommandLine) {
-  if (Syntax == JSONCommandLineSyntax::AutoDetect) {
-#ifdef _WIN32
-    // Assume Windows command line parsing on Win32
-    Syntax = JSONCommandLineSyntax::Windows;
-#else
-    Syntax = JSONCommandLineSyntax::Gnu;
-#endif
-  }
-
-  if (Syntax == JSONCommandLineSyntax::Windows) {
-    llvm::BumpPtrAllocator Alloc;
-    llvm::StringSaver Saver(Alloc);
-    llvm::SmallVector<const char *, 64> T;
-    llvm::cl::TokenizeWindowsCommandLine(EscapedCommandLine, Saver, T);
-    std::vector<std::string> Result(T.begin(), T.end());
-    return Result;
-  }
-  assert(Syntax == JSONCommandLineSyntax::Gnu);
-  CommandLineArgumentParser parser(EscapedCommandLine);
-  return parser.parse();
-}
-
 // This plugin locates a nearby compile_command.json file, and also infers
 // compile commands for files not present in the database.
-class JSONCompilationDatabasePlugin : public CompilationDatabasePlugin {
+class JSONBuildDatabasePlugin : public CompilationDatabasePlugin {
   std::unique_ptr<CompilationDatabase>
   loadFromDirectory(StringRef Directory, std::string &ErrorMessage) override {
     SmallString<1024> JSONDatabasePath(Directory);
     llvm::sys::path::append(JSONDatabasePath, "compile_commands.json");
-    auto Base = JSONCompilationDatabase::loadFromFile(
-        JSONDatabasePath, ErrorMessage, JSONCommandLineSyntax::AutoDetect);
+    auto Base = JSONBuildDatabase::loadFromFile(JSONDatabasePath, ErrorMessage);
     return Base ? inferTargetAndDriverMode(
                       inferMissingCompileCommands(expandResponseFiles(
                           std::move(Base), llvm::vfs::getRealFileSystem())))
@@ -180,26 +56,23 @@ class JSONCompilationDatabasePlugin : public CompilationDatabasePlugin {
 
 } // namespace
 
-// Register the JSONCompilationDatabasePlugin with the
+// Register the JSONBuildDatabasePlugin with the
 // CompilationDatabasePluginRegistry using this statically initialized variable.
-static CompilationDatabasePluginRegistry::Add<JSONCompilationDatabasePlugin>
-    X("json-compilation-database",
-      "Reads JSON formatted compilation databases");
+static CompilationDatabasePluginRegistry::Add<JSONBuildDatabasePlugin>
+    X("json-build-database", "Reads JSON formatted build databases");
 
 namespace clang {
 namespace tooling {
 
 // This anchor is used to force the linker to link in the generated object file
-// and thus register the JSONCompilationDatabasePlugin.
-volatile int JSONCompilationAnchorSource = 0;
+// and thus register the JSONBuildDatabasePlugin.
+volatile int JSONBuildAnchorSource = 0;
 
 } // namespace tooling
 } // namespace clang
 
-std::unique_ptr<JSONCompilationDatabase>
-JSONCompilationDatabase::loadFromFile(StringRef FilePath,
-                                      std::string &ErrorMessage,
-                                      JSONCommandLineSyntax Syntax) {
+std::unique_ptr<JSONBuildDatabase>
+JSONBuildDatabase::loadFromFile(StringRef FilePath, std::string &ErrorMessage) {
   // Don't mmap: if we're a long-lived process, the build system may overwrite.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> DatabaseBuffer =
       llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/false,
@@ -209,28 +82,27 @@ JSONCompilationDatabase::loadFromFile(StringRef FilePath,
     ErrorMessage = "Error while opening JSON database: " + Result.message();
     return nullptr;
   }
-  std::unique_ptr<JSONCompilationDatabase> Database(
-      new JSONCompilationDatabase(std::move(*DatabaseBuffer), Syntax));
+  std::unique_ptr<JSONBuildDatabase> Database(
+      new JSONBuildDatabase(std::move(*DatabaseBuffer)));
   if (!Database->parse(ErrorMessage))
     return nullptr;
   return Database;
 }
 
-std::unique_ptr<JSONCompilationDatabase>
-JSONCompilationDatabase::loadFromBuffer(StringRef DatabaseString,
-                                        std::string &ErrorMessage,
-                                        JSONCommandLineSyntax Syntax) {
+std::unique_ptr<JSONBuildDatabase>
+JSONBuildDatabase::loadFromBuffer(StringRef DatabaseString,
+                                  std::string &ErrorMessage) {
   std::unique_ptr<llvm::MemoryBuffer> DatabaseBuffer(
       llvm::MemoryBuffer::getMemBufferCopy(DatabaseString));
-  std::unique_ptr<JSONCompilationDatabase> Database(
-      new JSONCompilationDatabase(std::move(DatabaseBuffer), Syntax));
+  std::unique_ptr<JSONBuildDatabase> Database(
+      new JSONBuildDatabase(std::move(DatabaseBuffer)));
   if (!Database->parse(ErrorMessage))
     return nullptr;
   return Database;
 }
 
 std::vector<CompileCommand>
-JSONCompilationDatabase::getCompileCommands(StringRef FilePath) const {
+JSONBuildDatabase::getCompileCommands(StringRef FilePath) const {
   SmallString<128> NativeFilePath;
   llvm::sys::path::native(FilePath, NativeFilePath);
 
@@ -247,15 +119,14 @@ JSONCompilationDatabase::getCompileCommands(StringRef FilePath) const {
   return Commands;
 }
 
-std::vector<std::string> JSONCompilationDatabase::getAllFiles() const {
+std::vector<std::string> JSONBuildDatabase::getAllFiles() const {
   std::vector<std::string> Result;
   for (const auto &CommandRef : IndexByFile)
     Result.push_back(CommandRef.first().str());
   return Result;
 }
 
-std::vector<CompileCommand>
-JSONCompilationDatabase::getAllCompileCommands() const {
+std::vector<CompileCommand> JSONBuildDatabase::getAllCompileCommands() const {
   std::vector<CompileCommand> Commands;
   getCommands(AllCommands, Commands);
   return Commands;
@@ -300,22 +171,18 @@ static bool unwrapCommand(std::vector<std::string> &Args) {
 }
 
 static std::vector<std::string>
-nodeToCommandLine(JSONCommandLineSyntax Syntax,
-                  const std::vector<llvm::yaml::ScalarNode *> &Nodes) {
+nodeToCommandLine(const std::vector<llvm::yaml::ScalarNode *> &Nodes) {
   SmallString<1024> Storage;
   std::vector<std::string> Arguments;
-  if (Nodes.size() == 1)
-    Arguments = unescapeCommandLine(Syntax, Nodes[0]->getValue(Storage));
-  else
-    for (const auto *Node : Nodes)
-      Arguments.push_back(std::string(Node->getValue(Storage)));
+  for (const auto *Node : Nodes)
+    Arguments.push_back(std::string(Node->getValue(Storage)));
   // There may be multiple wrappers: using distcc and ccache together is common.
   while (unwrapCommand(Arguments))
     ;
   return Arguments;
 }
 
-void JSONCompilationDatabase::getCommands(
+void JSONBuildDatabase::getCommands(
     ArrayRef<CompileCommandRef> CommandsRef,
     std::vector<CompileCommand> &Commands) const {
   for (const auto &CommandRef : CommandsRef) {
@@ -325,12 +192,12 @@ void JSONCompilationDatabase::getCommands(
     auto Output = std::get<3>(CommandRef);
     Commands.emplace_back(std::get<0>(CommandRef)->getValue(DirectoryStorage),
                           std::get<1>(CommandRef)->getValue(FilenameStorage),
-                          nodeToCommandLine(Syntax, std::get<2>(CommandRef)),
+                          nodeToCommandLine(std::get<2>(CommandRef)),
                           Output ? Output->getValue(OutputStorage) : "");
   }
 }
 
-bool JSONCompilationDatabase::parse(std::string &ErrorMessage) {
+bool JSONBuildDatabase::parse(std::string &ErrorMessage) {
   llvm::yaml::document_iterator I = YAMLStream.begin();
   if (I == YAMLStream.end()) {
     ErrorMessage = "Error while parsing YAML.";
