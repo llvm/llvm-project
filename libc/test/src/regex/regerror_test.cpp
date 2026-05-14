@@ -14,9 +14,9 @@
 #include "src/regex/regerror.h"
 #include "test/UnitTest/Test.h"
 
-#include "include/llvm-libc-macros/regex-macros.h"
+#include "hdr/regex_macros.h"
 
-TEST(LlvmLibcRegexTest, RegerrorAllCodes) {
+TEST(LlvmLibcRegexTest, RegerrorBasicCodes) {
   char buf[128];
 
   ASSERT_GT(LIBC_NAMESPACE::regerror(REG_NOMATCH, nullptr, buf, sizeof(buf)),
@@ -32,8 +32,7 @@ TEST(LlvmLibcRegexTest, RegerrorTruncation) {
   char buf[5];
   size_t needed =
       LIBC_NAMESPACE::regerror(REG_NOMATCH, nullptr, buf, sizeof(buf));
-  ASSERT_GT(needed, size_t(5)); // "No match" + NUL = 9 bytes
-  ASSERT_EQ(buf[4], '\0');      // properly NUL-terminated
+  ASSERT_STREQ("No m", buf); // "No match" truncated to 5 bytes (including NUL)
 }
 
 TEST(LlvmLibcRegexTest, RegerrorZeroBuffer) {

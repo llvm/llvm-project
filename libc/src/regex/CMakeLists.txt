@@ -9,8 +9,9 @@ add_entrypoint_object(
     libc.hdr.regex_macros
     libc.src.__support.common
     libc.src.__support.CPP.new
+    libc.src.__support.CPP.string_view
+    libc.src.__support.alloc_checker
     libc.src.string.memory_utils.inline_memcpy
-    libc.src.string.string_utils
 )
 
 add_entrypoint_object(
@@ -39,8 +40,8 @@ add_entrypoint_object(
     libc.hdr.types.size_t
     libc.hdr.regex_macros
     libc.src.__support.common
+    libc.src.__support.CPP.string_view
     libc.src.string.memory_utils.inline_memcpy
-    libc.src.string.string_utils
 )
 
 add_entrypoint_object(

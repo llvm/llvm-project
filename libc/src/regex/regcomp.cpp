@@ -15,11 +15,10 @@
 
 #include "hdr/regex_macros.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/alloc-checker.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -33,7 +32,8 @@ LLVM_LIBC_FUNCTION(int, regcomp,
   // object.  We therefore do not attempt to free any previous __internal here
   // — preg is uninitialized on first use and the pointer would be garbage.
 
-  size_t len = internal::string_length(pattern);
+  cpp::string_view pattern_view(pattern);
+  size_t len = pattern_view.size();
   AllocChecker ac;
   char *copy = new (ac) char[len + 1];
   if (!ac)

@@ -16,8 +16,8 @@
 #include "src/regex/regfree.h"
 #include "test/UnitTest/Test.h"
 
-#include "include/llvm-libc-macros/regex-macros.h"
-#include "include/llvm-libc-types/regex_t.h"
+#include "hdr/regex_macros.h"
+#include "hdr/types/regex_t.h"
 
 TEST(LlvmLibcRegexTest, BasicLiteralRoundTrip) {
   regex_t preg;

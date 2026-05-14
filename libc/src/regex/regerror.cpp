@@ -14,10 +14,10 @@
 #include "src/regex/regerror.h"
 
 #include "hdr/regex_macros.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -75,7 +75,7 @@ LLVM_LIBC_FUNCTION(size_t, regerror,
     break;
   }
 
-  size_t msg_len = internal::string_length(msg) + 1; // include NUL
+  size_t msg_len = cpp::string_view(msg).size() + 1; // include NUL
 
   if (errbuf_size > 0 && errbuf) {
     size_t copy_len = msg_len < errbuf_size ? msg_len : errbuf_size;
