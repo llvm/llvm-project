@@ -1433,16 +1433,36 @@ Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
 }
 
 Expected<SROAOptions> parseSROAOptions(StringRef Params) {
-  if (Params.empty() || Params == "modify-cfg")
-    return SROAOptions::ModifyCFG;
-  if (Params == "preserve-cfg")
-    return SROAOptions::PreserveCFG;
-  return make_error<StringError>(
-      formatv("invalid SROA pass parameter '{}' (either preserve-cfg or "
-              "modify-cfg can be specified)",
-              Params)
-          .str(),
-      inconvertibleErrorCode());
+  SROAOptions Result(SROAOptions::ModifyCFG);
+  bool SawCFGOption = false;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "modify-cfg") {
+      if (SawCFGOption)
+        return make_error<StringError>("multiple SROA CFG options specified",
+                                       inconvertibleErrorCode());
+      Result.CFG = SROAOptions::ModifyCFG;
+      SawCFGOption = true;
+    } else if (ParamName == "preserve-cfg") {
+      if (SawCFGOption)
+        return make_error<StringError>("multiple SROA CFG options specified",
+                                       inconvertibleErrorCode());
+      Result.CFG = SROAOptions::PreserveCFG;
+      SawCFGOption = true;
+    } else if (ParamName == "canonicalize-struct-to-vector") {
+      Result.CanonicalizeStructToVector = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid SROA pass parameter '{}' (expected preserve-cfg, "
+                  "modify-cfg, or canonicalize-struct-to-vector)",
+                  ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
 }
 
 Expected<StackLifetime::LivenessType>

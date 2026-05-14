@@ -178,6 +178,7 @@ class SROA {
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
   const bool PreserveCFG;
+  const bool CanonicalizeStructToVector;
 
   /// Worklist of alloca instructions to simplify.
   ///
@@ -240,9 +241,10 @@ class SROA {
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
-       SROAOptions PreserveCFG_)
+       SROAOptions Options)
       : C(C), DTU(DTU), AC(AC),
-        PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG) {}
+        PreserveCFG(Options.CFG == SROAOptions::PreserveCFG),
+        CanonicalizeStructToVector(Options.CanonicalizeStructToVector) {}
 
   /// Main run method used by both the SROAPass and by the legacy pass.
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runSROA(Function &F);
@@ -5088,44 +5090,50 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
 /// Try to canonicalize a homogeneous struct partition to a vector type.
 ///
-/// This is only used as a fallback after the usual promotion choices fail.
-/// Keep the policy simple: canonicalize when every remaining use of the
-/// partition is either a mem intrinsic or a whole-partition load/store.
+/// We can do this if all the elements of the struct are the same and tightly
+/// packed. This can sometimes eliminate allocas because structs cannot get
+/// promoted to LLVM values, but vectors can.
+///
+/// We only apply this transformation when all users of the alloca are memory
+/// intrinsics. Otherwise, if there is a load or store of some other type to the
+/// partition, SROA would select that type.
+///
+/// Applying this transformation too early may hinder memcpyopt, which may
+/// generate better code when eliminating allocas. For example, see
+/// `struct-to-vector-fp-store-only-tail.ll`, which demonstrates that applying
+/// this before memcpyopt can initialize previously uninitialized memory when
+/// the alloca gets promoted to an SSA value. For another example, see
+/// `struct-to-vector-before-memcpyopt.ll`, which demonstrates that applying
+/// this before memcpyopt can result in promoting an alloca so that we load a
+/// tempory value instead of copying the tempory value into memory, whereas
+/// memcpyopt eliminates the tempory altogether.
+///
+/// As such, we only apply this transformation after memcpyopt has run. We gate
+/// this transformation by the "CanonicalizeStructToVector" pass option.
 static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
                                                       Partition &P,
                                                       const DataLayout &DL) {
   unsigned NumElts = STy->getNumElements();
-  if (NumElts != 2 && NumElts != 4)
-    return nullptr;
 
   Type *EltTy = STy->getElementType(0);
   if (!llvm::all_equal(STy->elements()))
     return nullptr;
 
-  if (auto *IT = dyn_cast<IntegerType>(EltTy)) {
-    if (IT->getBitWidth() < 8)
-      return nullptr;
-  } else if (!EltTy->isFloatingPointTy()) {
-    return nullptr;
-  }
-
-  TypeSize EltTS = DL.getTypeAllocSize(EltTy);
-  if (!EltTS.isFixed())
-    return nullptr;
-  uint64_t EltSize = EltTS.getFixedValue();
-
-  if (DL.getStructLayout(STy)->getSizeInBytes() != NumElts * EltSize)
+  bool IsIntegralPointerTy =
+      EltTy->isPointerTy() && !DL.isNonIntegralPointerType(EltTy);
+  if (!EltTy->isIntegerTy() && !EltTy->isFloatingPointTy() &&
+      !IsIntegralPointerTy)
     return nullptr;
 
   auto *VTy = FixedVectorType::get(EltTy, NumElts);
-  bool SawUse = false;
-  bool AllMemIntrinsics = true;
-  bool AllWholePartitionLoadStore = true;
+  TypeSize StructSize = DL.getStructLayout(STy)->getSizeInBytes();
+  TypeSize VectorSize = DL.getTypeAllocSize(VTy);
+  if (StructSize != VectorSize)
+    return nullptr;
 
   for (const Slice &S : P) {
     if (S.isDead())
       continue;
-
     auto *U = S.getUse();
     if (!U)
       continue;
@@ -5133,18 +5141,12 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
     User *Usr = U->getUser();
     if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
       continue;
-    SawUse = true;
-    bool CoversWholePartition =
-        S.beginOffset() == P.beginOffset() && S.endOffset() == P.endOffset();
 
-    AllMemIntrinsics &= isa<MemIntrinsic>(Usr);
-    AllWholePartitionLoadStore &=
-        CoversWholePartition && (isa<LoadInst>(Usr) || isa<StoreInst>(Usr));
+    if (!isa<MemIntrinsic>(Usr))
+      return nullptr;
   }
 
-  if (SawUse && (AllMemIntrinsics || AllWholePartitionLoadStore))
-    return VTy;
-  return nullptr;
+  return VTy;
 }
 
 /// Select a partition type for an alloca partition.
@@ -5160,7 +5162,7 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
 ///     nullptr.
 static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
-                    LLVMContext &C) {
+                    LLVMContext &C, bool CanonicalizeStructToVector) {
   auto LogSelection = [&](StringRef Path, Type *SelectedTy,
                           VectorType *SelectedVecTy, bool SelectedIntWidening) {
     LLVM_DEBUG({
@@ -5251,12 +5253,16 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
       return {LargestIntTy, true, nullptr};
     }
 
-    // Try homogeneous struct to vector canonicalization.
-    if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
-      if (auto *VTy = tryCanonicalizeStructToVector(STy, P, DL)) {
-        LogSelection("struct-fallback-vecty", VTy, nullptr, false);
-        return {VTy, false, nullptr};
+    // Try homogeneous struct to vector canonicalization when requested. Running
+    // this too early can hide memcpy chains from MemCpyOpt.
+    if (CanonicalizeStructToVector) {
+      if (auto *STy = dyn_cast<StructType>(TypePartitionTy)) {
+        if (auto *VTy = tryCanonicalizeStructToVector(STy, P, DL)) {
+          LogSelection("struct-fallback-vecty", VTy, nullptr, false);
+          return {VTy, false, nullptr};
+        }
       }
+    }
 
     // Fallback to TypePartitionTy and we probably won't promote.
     LogSelection("type-partition-fallback", TypePartitionTy, nullptr, false);
@@ -5298,7 +5304,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
   // Select the type for the new alloca that spans the partition.
   auto [PartitionTy, IsIntegerWideningViable, VecTy] =
-      selectPartitionType(P, DL, AI, *C);
+      selectPartitionType(P, DL, AI, *C, CanonicalizeStructToVector);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
@@ -6107,7 +6113,7 @@ PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   auto [Changed, CFGChanged] =
-      SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+      SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -6121,23 +6127,27 @@ void SROAPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<SROAPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << (PreserveCFG == SROAOptions::PreserveCFG ? "<preserve-cfg>"
-                                                 : "<modify-cfg>");
+  OS << '<'
+     << (Options.CFG == SROAOptions::PreserveCFG ? "preserve-cfg"
+                                                 : "modify-cfg");
+  if (Options.CanonicalizeStructToVector)
+    OS << ";canonicalize-struct-to-vector";
+  OS << '>';
 }
 
-SROAPass::SROAPass(SROAOptions PreserveCFG) : PreserveCFG(PreserveCFG) {}
+SROAPass::SROAPass(SROAOptions Options) : Options(Options) {}
 
 namespace {
 
 /// A legacy pass for the legacy pass manager that wraps the \c SROA pass.
 class SROALegacyPass : public FunctionPass {
-  SROAOptions PreserveCFG;
+  SROAOptions Options;
 
 public:
   static char ID;
 
-  SROALegacyPass(SROAOptions PreserveCFG = SROAOptions::PreserveCFG)
-      : FunctionPass(ID), PreserveCFG(PreserveCFG) {
+  SROALegacyPass(SROAOptions Options = SROAOptions::PreserveCFG)
+      : FunctionPass(ID), Options(Options) {
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -6149,8 +6159,7 @@ public:
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-    auto [Changed, _] =
-        SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+    auto [Changed, _] = SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
     return Changed;
   }
 
@@ -6168,9 +6177,11 @@ public:
 
 char SROALegacyPass::ID = 0;
 
-FunctionPass *llvm::createSROAPass(bool PreserveCFG) {
-  return new SROALegacyPass(PreserveCFG ? SROAOptions::PreserveCFG
-                                        : SROAOptions::ModifyCFG);
+FunctionPass *llvm::createSROAPass(bool PreserveCFG,
+                                   bool CanonicalizeStructToVector) {
+  return new SROALegacyPass(SROAOptions(PreserveCFG ? SROAOptions::PreserveCFG
+                                                    : SROAOptions::ModifyCFG,
+                                        CanonicalizeStructToVector));
 }
 
 INITIALIZE_PASS_BEGIN(SROALegacyPass, "sroa",
