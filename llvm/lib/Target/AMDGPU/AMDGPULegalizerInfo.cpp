@@ -1750,6 +1750,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // inserting addrspacecasts.
   ExtLoads.customIf(typeIs(1, Constant32Ptr));
 
+  ExtLoads.narrowScalarIf(
+      [](const LegalityQuery &Query) {
+        LLT MemTy = Query.MMODescrs[0].MemoryTy;
+        return MemTy.isAnyScalar() && MemTy.getSizeInBits() > 32 &&
+               Query.Types[0].getSizeInBits() > MemTy.getSizeInBits();
+      }, // For large MemSize, narrowscalar to MemSize (load MemSize + ext)
+      getScalarTypeFromMemDesc(0));
   ExtLoads.clampScalar(0, S32, S32)
           .widenScalarToNextPow2(0)
           .lower();
