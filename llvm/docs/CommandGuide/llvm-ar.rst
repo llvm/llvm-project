@@ -144,12 +144,12 @@ t[v]
 
  A synonym for the :option:`--version` option.
 
-.. option:: x [oP]
+.. option:: x [oPN]
 
- Extract ``archive`` members back to files. The :option:`o` modifier applies
- to this operation. This operation retrieves the indicated *files* from the
- archive and writes them back to the operating system's file system. If no
- *files* are specified, the entire archive is extracted.
+ Extract ``archive`` members back to files. The :option:`o` and :option:`N`
+ modifiers apply to this operation. This operation retrieves the indicated
+ *files* from the archive and writes them back to the operating system's file
+ system. If no *files* are specified, the entire archive is extracted.
 
 Modifiers (operation specific)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
