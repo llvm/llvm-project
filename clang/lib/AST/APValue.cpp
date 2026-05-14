@@ -502,16 +502,43 @@ static void profileIntValue(llvm::FoldingSetNodeID &ID, const llvm::APInt &V) {
 
 /// Unwrap reflected type for profiling
 static QualType unwrapReflectedTypeForProfile(QualType QT) {
-static void profileReflectedType(llvm::FoldingSetNodeID &ID, QualType QT) {
-  QT.getQualifiers().Profile(ID);
-  if (const auto *TDT = QT->getAs<TypedefType>()) {
-    ID.AddBoolean(true);
-    ID.AddPointer(TDT->getDecl()->getCanonicalDecl());
-    return;
-  }
-  ID.AddBoolean(false);
-  QT.getCanonicalType().getUnqualifiedType().Profile(ID);
+
+  // TODO(Reflection)
+
+  /// [expr.reflect] p5, if a reflect-expression R matches the form ^^reflection-name
+  /// it is interpreted as such; the identifier is looked up and the representation of R is determined as follows:
+  /// - if lookup fines a type alias A, R represents the type the underlying entity of A if A
+  ///   was introduced by the declaration of a template parameter; otherwise, R represents A.
+
+  /// [expr.reflect] p6, Given reflect-expression R of the form ^^type-id,
+  /// if type-id is neither a placeholder type nor in the form of nested-name-specifier_opt template_opt simple-template-id
+  /// then R represents the type denoted by the type-id
+
+  bool IsConst = QT.isConstQualified();
+  bool IsVolatile = QT.isVolatileQualified();
+  bool UnwrapAliases = (IsConst || IsVolatile);
+
+  void *AsPtr;
+  do {
+    AsPtr = QT.getAsOpaquePtr();
+    if (const auto *DTT = dyn_cast<DecltypeType>(QT)) {
+      QT = DTT->desugar();
+      UnwrapAliases = true;
+    }
+    if (const auto *UT = dyn_cast<UsingType>(QT); UT && UnwrapAliases)
+      QT = UT->desugar();
+    if (const auto *TDT = dyn_cast<TypedefType>(QT); TDT && UnwrapAliases)
+      QT = TDT->desugar();
+  } while (QT.getAsOpaquePtr() != AsPtr);
+
+  if (IsConst)
+    QT = QT.withConst();
+  if (IsVolatile)
+    QT = QT.withVolatile();
+
+  return QT;
 }
+
 static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
   ID.AddInteger(static_cast<int>(V.getReflectionOperandKind()));
   switch (V.getReflectionOperandKind()) {

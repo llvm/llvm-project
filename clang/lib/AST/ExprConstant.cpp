@@ -2473,8 +2473,6 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
         Value.getUnionValue(), Kind, Value.getUnionField(), CheckedTemps);
   }
   if (Value.isStruct()) {
-    if (Type->isMetaInfoType())
-        return true;
     auto *RD = Type->castAsRecordDecl();
     if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
       unsigned BaseIndex = 0;
@@ -10979,7 +10977,7 @@ bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {
   return true;
 }
 
-}  // end anonymous namespace
+} // end anonymous namespace
 
 static bool EvaluateReflection(const Expr *E, APValue &Result, EvalInfo &Info) {
   assert(E->isPRValue() && E->getType()->isMetaInfoType());
@@ -20747,7 +20745,7 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
     if (!IntExprEvaluator(Info, Result).Visit(E))
       return false;
   } else if (T->isMetaInfoType()) {
-    if(!EvaluateReflection(E, Result, Info))
+    if (!EvaluateReflection(E, Result, Info))
       return false;
   } else if (T->hasPointerRepresentation()) {
     LValue LV;

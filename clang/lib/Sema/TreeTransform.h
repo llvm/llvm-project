@@ -13148,12 +13148,12 @@ ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(reflection): Implement its transform
 
   switch (E->getKind()) {
-    case ReflectionKind::Type: {
-      TypeSourceInfo *NewT = getDerived().TransformType(E->getTypeSourceInfo());
-      if (!NewT)
-        return ExprError();
-      return SemaRef.BuildCXXReflectExpr(E->getOperatorLoc(), NewT);
-    }
+  case ReflectionKind::Type: {
+    TypeSourceInfo *NewT = getDerived().TransformType(E->getTypeSourceInfo());
+    if (!NewT)
+      return ExprError();
+    return SemaRef.BuildCXXReflectExpr(E->getOperatorLoc(), NewT);
+  }
   }
 
   assert(false && "unknown or unimplemented reflection entities");

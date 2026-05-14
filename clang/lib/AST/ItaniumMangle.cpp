@@ -5010,17 +5010,17 @@ recurse:
     // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
     const CXXReflectExpr *RE = cast<CXXReflectExpr>(E);
     Out << "LDm";
-    switch(RE->getKind()) {
-      case ReflectionKind::Null: {
-        Out << "nu";
-        break;
-      }
-      case ReflectionKind::Type: {
-        Out << "ty";
-        const TypeSourceInfo* TSI = RE->getTypeSourceInfo();
-        mangleType(TSI->getType());
-        break;
-      }
+    switch (RE->getKind()) {
+    case ReflectionKind::Null: {
+      Out << "nu";
+      break;
+    }
+    case ReflectionKind::Type: {
+      Out << "ty";
+      const TypeSourceInfo* TSI = RE->getTypeSourceInfo();
+      mangleType(TSI->getType());
+      break;
+    }
     }
     Out << 'E';
     break;
@@ -6960,17 +6960,17 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
     // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
     Out << "LDm";
     switch (V.getReflectionOperandKind()) {
-      case ReflectionKind::Null: {
-         Out << "nu";
-         break;
-      }
-      case ReflectionKind::Type: {
-        const auto *TSI =
-            static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
-        Out << "ty";
-        mangleType(TSI->getType());
+    case ReflectionKind::Null: {
+        Out << "nu";
         break;
-      }
+    }
+    case ReflectionKind::Type: {
+      const auto *TSI =
+          static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
+      Out << "ty";
+      mangleType(TSI->getType());
+      break;
+    }
     }
     Out << 'E';
     break;
