@@ -561,7 +561,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       AffineMap readMap = readOp.getPermutationMap();
       if (!readMap.isMinorIdentity())
         return rewriter.notifyMatchFailure(
-            readOp, "Transpose not supported for SLM loads");
+            readOp,
+            "Non identity transposition is not supported for SLM loads.");
       // Out of bounds case is not supported for SLM loads.
       if (isOutOfBounds)
         return rewriter.notifyMatchFailure(
@@ -589,7 +590,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     auto chip = xegpu::getChipStr(readOp);
     // Lower to scattered load Op if the target HW doesn't have 2d block load
     // support and the load is not from shared memory.
-    if ((chip != "pvc" && chip != "bmg") ||
+    if ((chip != "pvc" && chip != "bmg" && chip != "cri") ||
         readOp.getVectorType().getRank() > 2) {
 
       // TODO: add support for OutOfBound access
@@ -613,16 +614,33 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
           readOp, "Unsupported non-zero padded out-of-bounds read");
 
     AffineMap readMap = readOp.getPermutationMap();
-    bool isTransposeLoad = !readMap.isMinorIdentity();
+    // Check if this is a transpose: the map must have exactly 2 results,
+    // and those 2 results must be the last 2 input dimensions interchanged.
+    // Examples:
+    //   (d0, d1) -> (d1, d0)      // transpose
+    //   (d0, d1) -> (d0, d1)      // not a transpose
+    //   (d0, d1, d2) -> (d2, d1)  // transpose (last 2 dims swapped)
+    bool isTransposeLoad = false;
+    if (readMap.getNumResults() == 2) {
+      auto results = readMap.getResults();
+      unsigned numInputs = readMap.getNumInputs();
+      if (numInputs >= 2) {
+        auto lastDim = getAffineDimExpr(numInputs - 1, readMap.getContext());
+        auto secondLastDim =
+            getAffineDimExpr(numInputs - 2, readMap.getContext());
+        isTransposeLoad =
+            (results[0] == lastDim && results[1] == secondLastDim);
+      }
+    }
     auto elementType = loadedVecTy.getElementType();
 
     SmallVector<int64_t> descShape(loadedVecTy.getShape());
     if (isTransposeLoad) {
-      // If load is transposed, then the shape of the source-descriptor
-      // is the opposite from the result-shape. Applying the permutation
-      // to get the reversive shape.
-      auto inversedMap = inversePermutation(readMap);
-      descShape = applyPermutationMap(inversedMap, loadedVecTy.getShape());
+      // If load is transposed, simply swap the last two dimensions of the
+      // loaded vector type to get the descriptor shape.
+      size_t rank = descShape.size();
+      assert(rank >= 2 && "Transpose requires at least 2 dimensions");
+      std::swap(descShape[rank - 1], descShape[rank - 2]);
       loadedVecTy = VectorType::get(descShape, elementType);
     }
     auto descType = xegpu::TensorDescType::get(
@@ -646,10 +664,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       // Transposing the loaded vector with a separate vector.transpose
       // operation
       auto range = llvm::seq<int64_t>(0, readMap.getResults().size());
-      SmallVector<int64_t> perm(range.begin(), range.end());
-      auto permApplied = applyPermutationMap<int64_t>(readMap, perm);
-      loadedOp = vector::TransposeOp::create(
-          rewriter, loc, loadedOp->getResult(0), permApplied);
+      SmallVector<int64_t> perm(
+          range.rbegin(), range.rend()); // reverse the range for transpose
+      loadedOp = vector::TransposeOp::create(rewriter, loc,
+                                             loadedOp->getResult(0), perm);
     }
     rewriter.replaceOp(readOp, loadedOp);
 
@@ -705,7 +723,7 @@ struct TransferWriteLowering
     auto chip = xegpu::getChipStr(writeOp);
     // Lower to scattered store Op if the target HW doesn't have 2d block
     // store support and the memref is not SLM.
-    if ((chip != "pvc" && chip != "bmg") ||
+    if ((chip != "pvc" && chip != "bmg" && chip != "cri") ||
         writeOp.getVectorType().getRank() > 2) {
 
       // TODO: add support for OutOfBound access
@@ -934,20 +952,17 @@ static MemRefType withMemorySpace(MemRefType memrefTy, Attribute newMemSpace) {
                          memrefTy.getLayout(), newMemSpace);
 }
 
-// For each `memref.alloca`/`memref.alloc` whose result is not already in shared
-// local memory (SLM) and which is consumed by a `vector.transfer_read` or
-// `vector.transfer_write` that would lower to `xegpu.load_matrix` /
-// `xegpu.store_matrix`, rewrite the allocation to be in SLM (address space 3)
-// and propagate the new memory space through any memref-producing users
-// (memref.cast, memref.subview, memref.expand_shape, memref.collapse_shape,
-// memref.reinterpret_cast, memref.transpose, memref.view). Consumers that take
-// a memref operand but produce a non-memref result (e.g. vector.transfer_read,
-// vector.load) are left untouched: their operand type simply reflects the new
-// memory space.
+// Rewrite every `memref.alloca` not already in shared local memory (SLM) to
+// be in SLM (address space 3), and propagate the new memory space through
+// memref-producing aliasing users (memref.cast, memref.subview,
+// memref.expand_shape, memref.collapse_shape, memref.reinterpret_cast,
+// memref.transpose, memref.view). Consumers that take a memref operand but
+// produce a non-memref result (e.g. vector.transfer_read, vector.load) are
+// left untouched: their operand type simply reflects the new memory space.
 //
 // This makes `xegpu.load_matrix`/`xegpu.store_matrix` lowering work end-to-end
 // for IR coming from bufferization, which by default assigns memory space 0/1
-// to allocations. See discussion in the XeGPU lighthouse "softmax" issue.
+// to allocations.
 static void promoteAllocasToSLM(Operation *root) {
   MLIRContext *ctx = root->getContext();
   Attribute slmAttr = IntegerAttr::get(IntegerType::get(ctx, 64), 3);
@@ -956,47 +971,6 @@ static void promoteAllocasToSLM(Operation *root) {
     return isa<memref::CastOp, memref::SubViewOp, memref::ExpandShapeOp,
                memref::CollapseShapeOp, memref::ReinterpretCastOp,
                memref::TransposeOp, memref::ViewOp>(op);
-  };
-
-  // Returns true if `xferOp` (a vector.transfer_read or vector.transfer_write)
-  // would lower to `xegpu.load_matrix`/`xegpu.store_matrix`: must operate on a
-  // 2D vector with a minor-identity permutation map and no out-of-bounds dims.
-  auto isSLMMatrixTransfer = [](Operation *xferOp) {
-    VectorType vecTy;
-    AffineMap permMap;
-    bool hasOOB = false;
-    if (auto rd = dyn_cast<vector::TransferReadOp>(xferOp)) {
-      vecTy = rd.getVectorType();
-      permMap = rd.getPermutationMap();
-      hasOOB = rd.hasOutOfBoundsDim();
-    } else if (auto wr = dyn_cast<vector::TransferWriteOp>(xferOp)) {
-      vecTy = wr.getVectorType();
-      permMap = wr.getPermutationMap();
-      hasOOB = wr.hasOutOfBoundsDim();
-    } else {
-      return false;
-    }
-    return vecTy && vecTy.getRank() == 2 && permMap.isMinorIdentity() &&
-           !hasOOB;
-  };
-
-  // Returns true if `v` (a memref) is transitively consumed by a
-  // transfer_read/transfer_write that would lower to load_matrix/store_matrix.
-  // Walks forward through memref-producing aliasing ops.
-  std::function<bool(Value, llvm::SmallPtrSetImpl<Operation *> &)> feedsMatrix =
-      [&](Value v, llvm::SmallPtrSetImpl<Operation *> &visited) -> bool {
-    for (Operation *user : v.getUsers()) {
-      if (!visited.insert(user).second)
-        continue;
-      if (isSLMMatrixTransfer(user))
-        return true;
-      if (isMemrefResultOp(user)) {
-        for (Value result : user->getResults())
-          if (feedsMatrix(result, visited))
-            return true;
-      }
-    }
-    return false;
   };
 
   // Update `v`'s type to have SLM memory space, then walk forward through
@@ -1014,38 +988,25 @@ static void promoteAllocasToSLM(Operation *root) {
     }
   };
 
-  SmallVector<Operation *> allocs;
-  root->walk([&](Operation *op) {
-    if (!isa<memref::AllocaOp, memref::AllocOp>(op))
-      return;
-    auto memrefTy = dyn_cast<MemRefType>(op->getResult(0).getType());
+  SmallVector<memref::AllocaOp> allocas;
+  root->walk([&](memref::AllocaOp op) {
+    auto memrefTy = dyn_cast<MemRefType>(op.getResult().getType());
     if (!memrefTy || xegpu::XeGPUDialect::isSharedMemory(memrefTy))
       return;
-    llvm::SmallPtrSet<Operation *, 8> visited;
-    if (!feedsMatrix(op->getResult(0), visited))
-      return;
-    allocs.push_back(op);
+    allocas.push_back(op);
   });
 
-  for (Operation *op : allocs) {
-    OpBuilder builder(op);
-    auto memrefTy = cast<MemRefType>(op->getResult(0).getType());
+  for (memref::AllocaOp alloca : allocas) {
+    OpBuilder builder(alloca);
+    auto memrefTy = cast<MemRefType>(alloca.getResult().getType());
     auto newTy = withMemorySpace(memrefTy, slmAttr);
-    Operation *newOp;
-    if (auto alloca = dyn_cast<memref::AllocaOp>(op)) {
-      newOp = memref::AllocaOp::create(
-          builder, alloca.getLoc(), newTy, alloca.getDynamicSizes(),
-          alloca.getSymbolOperands(), alloca.getAlignmentAttr());
-    } else {
-      auto alloc = cast<memref::AllocOp>(op);
-      newOp = memref::AllocOp::create(
-          builder, alloc.getLoc(), newTy, alloc.getDynamicSizes(),
-          alloc.getSymbolOperands(), alloc.getAlignmentAttr());
-    }
-    op->getResult(0).replaceAllUsesWith(newOp->getResult(0));
-    op->erase();
+    auto newOp = memref::AllocaOp::create(
+        builder, alloca.getLoc(), newTy, alloca.getDynamicSizes(),
+        alloca.getSymbolOperands(), alloca.getAlignmentAttr());
+    alloca.getResult().replaceAllUsesWith(newOp.getResult());
+    alloca.erase();
     // Propagate the new memory space through memref-producing consumers.
-    for (Operation *user : newOp->getResult(0).getUsers()) {
+    for (Operation *user : newOp.getResult().getUsers()) {
       if (!isMemrefResultOp(user))
         continue;
       for (Value result : user->getResults())
