@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_MMAP_H
 
 #include "hdr/types/off_t.h"
-#include "src/__support/OSUtil/linux/syscall.h" // For __syscall
+#include "src/__support/OSUtil/linux/syscall.h" // For syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -40,8 +40,9 @@ LIBC_INLINE ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags,
 
   // Explicit cast to silence "implicit conversion loses integer precision"
   // warnings when compiling for 32-bit systems.
-  return __syscall<void *>(syscall_number, reinterpret_cast<long>(addr), size,
-                           prot, flags, fd, static_cast<long>(offset));
+  return syscall_checked<void *>(syscall_number, reinterpret_cast<long>(addr),
+                                 size, prot, flags, fd,
+                                 static_cast<long>(offset));
 }
 
 } // namespace linux_syscalls

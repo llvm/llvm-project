@@ -31,7 +31,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // This function performs no error checking. For most syscalls, it's better to
-// use __syscall below.
+// use linux_syscalls::syscall_checked below.
 template <typename R, typename... Ts>
 LIBC_INLINE R syscall_impl(long __number, Ts... ts) {
   static_assert(sizeof...(Ts) <= 6, "Too many arguments for syscall");
@@ -46,7 +46,7 @@ LIBC_INLINE_VAR constexpr unsigned long MAX_ERRNO = 4095;
 // with the exception of a handful of syscalls (getpid, getuid, ...) that never
 // fail.
 template <typename R, typename... Ts>
-LIBC_INLINE ErrorOr<R> __syscall(long __number, Ts... ts) {
+LIBC_INLINE ErrorOr<R> syscall_checked(long __number, Ts... ts) {
   static_assert(sizeof...(Ts) <= 6, "Too many arguments");
   unsigned long ret =
       static_cast<unsigned long>(syscall_impl(__number, (long)ts...));

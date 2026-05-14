@@ -5,7 +5,6 @@ add_startup_object(
   DEPENDS
     libc.config.app_h
     libc.hdr.sys_mman_macros
-    libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
