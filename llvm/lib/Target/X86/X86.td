@@ -846,6 +846,9 @@ include "X86SchedIceLake.td"
 include "X86SchedAlderlakeP.td"
 include "X86SchedLunarlakeP.td"
 include "X86SchedSapphireRapids.td"
+include "X86ScheduleC864GM4.td"
+include "X86ScheduleC864GM7.td"
+
 
 //===----------------------------------------------------------------------===//
 // X86 Processor Feature Lists
@@ -2106,11 +2109,11 @@ def : ProcModel<"znver6", Znver4Model, ProcessorFeatures.ZN6Features,
 
 // Hygon CPUs.
 
-def : Proc<"c86-4g-m4", ProcessorFeatures.C864GM4Features,
+foreach P = ["c86-4g-m4", "c86-4g-m6"] in {
+def : ProcModel<P, C864GM4Model, ProcessorFeatures.C864GM4Features,
                 ProcessorFeatures.C864GM4Tuning>;
-def : Proc<"c86-4g-m6", ProcessorFeatures.C864GM6Features,
-                ProcessorFeatures.C864GM6Tuning>;
-def : Proc<"c86-4g-m7", ProcessorFeatures.C864GM7Features,
+}
+def : ProcModel<"c86-4g-m7", C864GM7Model, ProcessorFeatures.C864GM7Features,
                 ProcessorFeatures.C864GM7Tuning>;
 
 def : Proc<"geode",           [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
