@@ -26,11 +26,12 @@ define i32 @PR197240() {
 ; CHECK:       [[EARLY_EXIT]]:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       [[INNER_BODY]]:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], %[[LOOP_BODY]] ]
 ; CHECK-NEXT:    br i1 false, label %[[INNER_LATCH:.*]], label %[[FUNC_EXIT:.*]]
 ; CHECK:       [[INNER_LATCH]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[FUNC_EXIT]]:
-; CHECK-NEXT:    [[IV_LCSSA3:%.*]] = phi i32 [ 6, %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[IV_LCSSA3:%.*]] = phi i32 [ [[IV_LCSSA]], %[[INNER_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA3]]
 ;
 entry:
