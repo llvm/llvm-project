@@ -52,12 +52,6 @@
 #if _LIBCPP_ABI_VERSION >= 2
 // TODO: Move the description of the remaining ABI flags to ABIGuarantees.rst or remove them.
 
-// Override the default return value of exception::what() for bad_function_call::what()
-// with a string that is specific to bad_function_call (see http://wg21.link/LWG2233).
-// This is an ABI break on platforms that sign and authenticate vtable function pointers
-// because it changes the mangling of the virtual function located in the vtable, which
-// changes how it gets signed.
-#  define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 // According to the Standard, `bitset::operator[] const` returns bool
 #  define _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
 

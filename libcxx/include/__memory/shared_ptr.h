@@ -70,6 +70,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI bad_weak_ptr : public std::exception {
 public:
@@ -752,7 +753,7 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count {
     // [1]: https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
     size_t __bytes           = __elements == 0 ? sizeof(__unbounded_array_control_block)
                                                : (__elements - 1) * sizeof(_Tp) + sizeof(__unbounded_array_control_block);
-    constexpr size_t __align = alignof(_Tp);
+    constexpr size_t __align = alignof(__unbounded_array_control_block);
     return (__bytes + __align - 1) & ~(__align - 1);
   }
 
@@ -1536,6 +1537,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
 
 #endif // _LIBCPP_HAS_THREADS
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

@@ -35,32 +35,32 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
 ///   - MaterializeTemporaryExpr: a temporary object
 ///   - ParmVarDecl: a function parameter (placeholder)
 ///   - CXXMethodDecl: the implicit 'this' object (placeholder)
+///   - CXXNewExpr: a heap allocation made by `new`
 ///
 /// Placeholder paths never expire within the function scope, as they represent
 /// storage from the caller's scope.
 ///
 /// TODO: Model access paths of other types, e.g. field, array subscript, heap
-/// and globals.
+/// allocation not through `new`, and globals.
 class AccessPath {
 public:
   enum class Kind : uint8_t {
     ValueDecl,
     MaterializeTemporary,
     PlaceholderParam,
-    PlaceholderThis
+    PlaceholderThis,
+    NewAllocation,
   };
 
 private:
   Kind K;
-  const llvm::PointerUnion<const clang::ValueDecl *,
-                           const clang::MaterializeTemporaryExpr *,
-                           const ParmVarDecl *, const CXXMethodDecl *>
-      Root;
+  llvm::PointerUnion<const Expr *, const Decl *> Root;
 
 public:
   AccessPath(const clang::ValueDecl *D) : K(Kind::ValueDecl), Root(D) {}
   AccessPath(const clang::MaterializeTemporaryExpr *MTE)
       : K(Kind::MaterializeTemporary), Root(MTE) {}
+  AccessPath(const CXXNewExpr *New) : K(Kind::NewAllocation), Root(New) {}
   static AccessPath Placeholder(const ParmVarDecl *PVD) {
     return AccessPath(Kind::PlaceholderParam, PVD);
   }
@@ -68,25 +68,35 @@ public:
     return AccessPath(Kind::PlaceholderThis, MD);
   }
   AccessPath(const AccessPath &Other) : K(Other.K), Root(Other.Root) {}
+  AccessPath &operator=(const AccessPath &) = delete;
 
   Kind getKind() const { return K; }
 
   const clang::ValueDecl *getAsValueDecl() const {
-    return K == Kind::ValueDecl ? Root.dyn_cast<const clang::ValueDecl *>()
-                                : nullptr;
+    return K == Kind::ValueDecl
+               ? cast<const clang::ValueDecl>(cast<const clang::Decl *>(Root))
+               : nullptr;
   }
   const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
     return K == Kind::MaterializeTemporary
-               ? Root.dyn_cast<const clang::MaterializeTemporaryExpr *>()
+               ? cast<const MaterializeTemporaryExpr>(
+                     cast<const clang::Expr *>(Root))
                : nullptr;
   }
   const ParmVarDecl *getAsPlaceholderParam() const {
-    return K == Kind::PlaceholderParam ? Root.dyn_cast<const ParmVarDecl *>()
-                                       : nullptr;
+    return K == Kind::PlaceholderParam
+               ? cast<const ParmVarDecl>(cast<const clang::Decl *>(Root))
+               : nullptr;
   }
   const CXXMethodDecl *getAsPlaceholderThis() const {
-    return K == Kind::PlaceholderThis ? Root.dyn_cast<const CXXMethodDecl *>()
-                                      : nullptr;
+    return K == Kind::PlaceholderThis
+               ? cast<const CXXMethodDecl>(cast<const clang::Decl *>(Root))
+               : nullptr;
+  }
+  const CXXNewExpr *getAsNewAllocation() const {
+    return K == Kind::NewAllocation
+               ? cast<const CXXNewExpr>(cast<const clang::Expr *>(Root))
+               : nullptr;
   }
 
   bool operator==(const AccessPath &RHS) const {

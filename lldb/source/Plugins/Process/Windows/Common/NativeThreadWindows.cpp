@@ -38,6 +38,9 @@ Status NativeThreadWindows::DoStop() {
     if (previous_suspend_count == (DWORD)-1)
       return Status(::GetLastError(), eErrorTypeWin32);
 
+    // Invalidate cached register values on every stop.
+    GetRegisterContext().InvalidateAllRegisters();
+
     m_state = eStateStopped;
   }
   return Status();

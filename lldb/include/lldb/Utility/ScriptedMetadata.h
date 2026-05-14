@@ -41,7 +41,7 @@ public:
   /// The ID is computed from the class name and arguments dictionary,
   /// not from the pointer address, so two metadata objects with the same
   /// contents will have the same ID.
-  uint32_t GetID() const {
+  uint32_t GetHash() const {
     if (m_class_name.empty())
       return 0;
 

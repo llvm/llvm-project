@@ -19,6 +19,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Template.h"
+#include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
 using namespace clang;
 
@@ -379,17 +380,16 @@ namespace {
 // Callback to only accept typo corrections that can be a valid C++ member
 // initializer: either a non-static field member or a base class.
 class NestedNameSpecifierValidatorCCC final
-    : public CorrectionCandidateCallback {
+    : public QualifiedLookupValidatorCCC {
 public:
   explicit NestedNameSpecifierValidatorCCC(Sema &SRef, bool HasQualifier)
-      : SRef(SRef), HasQualifier(HasQualifier) {}
+      : QualifiedLookupValidatorCCC(HasQualifier), SRef(SRef) {}
 
   bool ValidateCandidate(const TypoCorrection &candidate) override {
+    if (!QualifiedLookupValidatorCCC::ValidateCandidate(candidate))
+      return false;
     const NamedDecl *ND = candidate.getCorrectionDecl();
     if (!SRef.isAcceptableNestedNameSpecifier(ND))
-      return false;
-    // A template type parameter cannot have a nested name specifier.
-    if (HasQualifier && isa<TemplateTypeParmDecl>(ND))
       return false;
     return true;
   }
@@ -399,10 +399,8 @@ public:
   }
 
  private:
-  Sema &SRef;
-  bool HasQualifier;
+   Sema &SRef;
 };
-
 }
 
 [[nodiscard]] static bool ExtendNestedNameSpecifier(Sema &S, CXXScopeSpec &SS,
@@ -683,8 +681,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
       }
     }
 
-    if (auto *TD = dyn_cast_or_null<TypedefNameDecl>(SD))
-      MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
+    MarkAnyDeclReferenced(SD->getLocation(), SD, /*OdrUse=*/false);
 
     // If we're just performing this lookup for error-recovery purposes,
     // don't extend the nested-name-specifier. Just return now.

@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
-#include "endian.h"
+#include "crt_endian.h"
 
   .syntax unified
   .text
@@ -135,15 +135,7 @@ LOCAL_LABEL(add_doadd):
   // The exponent difference is 32 or less. The test above also left
   // (32-difference) in r14, which is the amount we need to shift yh left by to
   // recover the bits that the right shift will lose off the bottom.
-#if !__thumb__
-  // Add the right-shifted parts of yh and yl to xh and xl, keeping the carry
-  // in between if any.
-  adds    xl, xl, yl, lsr r12
-  adc     xh, xh, yh, lsr r12
-  // Now add the remainder of yh to the low word, again checking for a carry.
-  adds    xl, xl, yh, lsl r14
-  adcs    xh, xh, #0
-#else
+#if __thumb__
   // Thumb can't fold a register-controlled shift into an add, so we must use
   // two separate instructions in each case.
   //
@@ -166,6 +158,14 @@ LOCAL_LABEL(add_doadd):
   adc     xh, xh, r14
   // And now reconstruct the inverted shift count, for use later.
   rsb     r14, r12, #32
+#else
+  // Add the right-shifted parts of yh and yl to xh and xl, keeping the carry
+  // in between if any.
+  adds    xl, xl, yl, lsr r12
+  adc     xh, xh, yh, lsr r12
+  // Now add the remainder of yh to the low word, again checking for a carry.
+  adds    xl, xl, yh, lsl r14
+  adcs    xh, xh, #0
 #endif
 
   // If that addition carried into bit 20 of xh, then the number has increased
@@ -274,11 +274,13 @@ LOCAL_LABEL(add_bigshift):
 
   // Do the actual addition, again conditionalised on the result of checking
   // whether the shift count r12 was too big.
-#if !__thumb__
-  addshs  xl, xl, yh, lsr r12
-#else
+#if __thumb__
+  // As noted above, Thumb can't fold a register-controlled shift into an add,
+  // so we must use two instructions.
   lsrhs   yh, yh, r12
   addshs  xl, xl, yh
+#else
+  addshs  xl, xl, yh, lsr r12
 #endif
 
   // Recombine the (unrounded) output mantissa with the output sign and

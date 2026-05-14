@@ -78,7 +78,7 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   set(${sys_var} ${target_sys} PARENT_SCOPE)
 endfunction(get_arch_and_system_from_triple)
 
-execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version -v
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} -c -v
                 RESULT_VARIABLE libc_compiler_info_result
                 OUTPUT_VARIABLE libc_compiler_info
                 ERROR_VARIABLE libc_compiler_info)
@@ -184,6 +184,8 @@ elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "nvptx")
   set(LIBC_TARGET_ARCHITECTURE_IS_NVPTX TRUE)
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "spirv")
   set(LIBC_TARGET_ARCHITECTURE_IS_SPIRV TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "power")
+  set(LIBC_TARGET_ARCHITECTURE_IS_POWERPC TRUE)
 else()
   message(FATAL_ERROR
           "Unsupported libc target architecture ${LIBC_TARGET_ARCHITECTURE}")

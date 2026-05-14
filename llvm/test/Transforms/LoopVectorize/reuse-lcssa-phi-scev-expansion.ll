@@ -39,9 +39,9 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr ptr, ptr [[TMP5]], i64 -1
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x ptr> [[WIDE_LOAD]], <2 x ptr> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[REVERSE]], i64 0
 ; CHECK-NEXT:    store ptr null, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[REVERSE]], i64 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -317,7 +317,7 @@ define void @expand_diff_neg_ptrtoint_expr(ptr %src, ptr %start) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; CHECK-NEXT:    [[OFFSET_IDX5:%.*]] = mul i64 [[INDEX]], 8
+; CHECK-NEXT:    [[OFFSET_IDX5:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[OFFSET_IDX5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP7]]
@@ -330,11 +330,11 @@ define void @expand_diff_neg_ptrtoint_expr(ptr %src, ptr %start) {
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 1, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[TMP1]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[TMP1]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_3:.*]]
 ; CHECK:       [[LOOP_3]]:
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[IV_NEXT_2:%.*]], %[[LOOP_3]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PTR_IV_3:%.*]] = phi ptr [ [[PTR_IV_3_NEXT:%.*]], %[[LOOP_3]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PTR_IV_3:%.*]] = phi ptr [ [[PTR_IV_3_NEXT:%.*]], %[[LOOP_3]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[IV_2]], -1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP_SRC]], align 8
@@ -411,7 +411,7 @@ define void @scev_exp_reuse_const_add(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_IV_1_NEXT_LCSSA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP4]]
@@ -466,7 +466,3 @@ exit:
   ret void
 }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare double @llvm.cos.f64(double) #0
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

@@ -50,42 +50,42 @@ define void @test(ptr %0, i64 %1, i64 %2, i1 %3, i64 %4, i64 %5) {
 ; CHECK-NEXT:    [[TMP49:%.*]] = ashr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP50:%.*]] = ashr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP51:%.*]] = ashr i64 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP52:%.*]] = add i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP53:%.*]] = ashr i64 [[TMP52]], 2
-; CHECK-NEXT:    [[TMP78:%.*]] = add i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP79:%.*]] = ashr i64 [[TMP78]], 2
 ; CHECK-NEXT:    [[TMP80:%.*]] = add i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP81:%.*]] = ashr i64 [[TMP80]], 2
+; CHECK-NEXT:    [[TMP54:%.*]] = add i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP55:%.*]] = ashr i64 [[TMP54]], 2
+; CHECK-NEXT:    [[TMP56:%.*]] = add i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP57:%.*]] = ashr i64 [[TMP56]], 2
 ; CHECK-NEXT:    br label %[[BB52]]
 ; CHECK:       [[BB52]]:
-; CHECK-NEXT:    [[TMP57:%.*]] = phi i64 [ [[TMP51]], %[[BB37]] ], [ [[TMP24]], [[TMP6:%.*]] ]
-; CHECK-NEXT:    [[TMP58:%.*]] = phi i64 [ [[TMP50]], %[[BB37]] ], [ [[TMP32]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP64:%.*]] = phi i64 [ [[TMP53]], %[[BB37]] ], [ [[TMP25]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP71:%.*]] = phi i64 [ [[TMP79]], %[[BB37]] ], [ [[TMP26]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP77:%.*]] = phi i64 [ [[TMP81]], %[[BB37]] ], [ [[TMP27]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP55:%.*]] = phi i64 [ [[TMP49]], %[[BB37]] ], [ [[TMP30]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP54:%.*]] = phi i64 [ [[TMP48]], %[[BB37]] ], [ [[TMP23]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP65:%.*]] = phi i64 [ [[TMP47]], %[[BB37]] ], [ [[TMP22]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP69:%.*]] = phi i64 [ [[TMP46]], %[[BB37]] ], [ [[TMP21]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP74:%.*]] = phi i64 [ [[TMP45]], %[[BB37]] ], [ [[TMP20]], [[TMP6]] ]
+; CHECK-NEXT:    [[TMP59:%.*]] = phi i64 [ [[TMP51]], %[[BB37]] ], [ [[TMP24]], [[TMP6:%.*]] ]
+; CHECK-NEXT:    [[TMP60:%.*]] = phi i64 [ [[TMP50]], %[[BB37]] ], [ [[TMP32]], [[TMP6]] ]
+; CHECK-NEXT:    [[TMP63:%.*]] = phi i64 [ [[TMP81]], %[[BB37]] ], [ [[TMP25]], [[TMP6]] ]
+; CHECK-NEXT:    [[TMP62:%.*]] = phi i64 [ [[TMP55]], %[[BB37]] ], [ [[TMP26]], [[TMP6]] ]
+; CHECK-NEXT:    [[TMP77:%.*]] = phi i64 [ [[TMP57]], %[[BB37]] ], [ [[TMP27]], [[TMP6]] ]
+; CHECK-NEXT:    [[TMP70:%.*]] = phi i64 [ [[TMP49]], %[[BB37]] ], [ [[TMP30]], [[TMP6]] ]
+; CHECK-NEXT:    [[TMP71:%.*]] = phi i64 [ [[TMP48]], %[[BB37]] ], [ [[TMP23]], [[TMP6]] ]
+; CHECK-NEXT:    [[TMP66:%.*]] = phi i64 [ [[TMP47]], %[[BB37]] ], [ [[TMP22]], [[TMP6]] ]
+; CHECK-NEXT:    [[TMP67:%.*]] = phi i64 [ [[TMP46]], %[[BB37]] ], [ [[TMP21]], [[TMP6]] ]
+; CHECK-NEXT:    [[TMP68:%.*]] = phi i64 [ [[TMP45]], %[[BB37]] ], [ [[TMP20]], [[TMP6]] ]
 ; CHECK-NEXT:    [[TMP76:%.*]] = phi i64 [ [[TMP41]], %[[BB37]] ], [ [[TMP28]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP60:%.*]] = phi i64 [ [[TMP34]], %[[BB37]] ], [ [[TMP12]], [[TMP6]] ]
+; CHECK-NEXT:    [[TMP69:%.*]] = phi i64 [ [[TMP34]], %[[BB37]] ], [ [[TMP12]], [[TMP6]] ]
 ; CHECK-NEXT:    [[TMP61:%.*]] = phi i64 [ [[TMP35]], %[[BB37]] ], [ [[TMP13]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP67:%.*]] = phi i64 [ [[TMP37]], %[[BB37]] ], [ [[TMP33]], [[TMP6]] ]
-; CHECK-NEXT:    [[TMP56:%.*]] = or i64 [[TMP54]], [[TMP55]]
-; CHECK-NEXT:    [[TMP59:%.*]] = or i64 [[TMP57]], [[TMP58]]
-; CHECK-NEXT:    [[TMP62:%.*]] = or i64 [[TMP60]], [[TMP61]]
-; CHECK-NEXT:    [[TMP63:%.*]] = or i64 [[TMP59]], [[TMP56]]
-; CHECK-NEXT:    [[TMP66:%.*]] = or i64 [[TMP64]], [[TMP65]]
-; CHECK-NEXT:    [[TMP68:%.*]] = or i64 [[TMP67]], [[TMP62]]
-; CHECK-NEXT:    [[TMP70:%.*]] = or i64 [[TMP69]], [[TMP66]]
+; CHECK-NEXT:    [[TMP78:%.*]] = phi i64 [ [[TMP37]], %[[BB37]] ], [ [[TMP33]], [[TMP6]] ]
 ; CHECK-NEXT:    [[TMP72:%.*]] = or i64 [[TMP71]], [[TMP70]]
-; CHECK-NEXT:    [[TMP73:%.*]] = or i64 [[TMP63]], [[TMP72]]
-; CHECK-NEXT:    [[TMP75:%.*]] = or i64 [[TMP74]], [[TMP73]]
-; CHECK-NEXT:    store i64 [[TMP68]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP74:%.*]] = or i64 [[TMP59]], [[TMP60]]
+; CHECK-NEXT:    [[TMP75:%.*]] = or i64 [[TMP69]], [[TMP61]]
+; CHECK-NEXT:    [[TMP83:%.*]] = or i64 [[TMP74]], [[TMP72]]
+; CHECK-NEXT:    [[TMP84:%.*]] = or i64 [[TMP63]], [[TMP66]]
+; CHECK-NEXT:    [[TMP73:%.*]] = or i64 [[TMP78]], [[TMP75]]
+; CHECK-NEXT:    [[TMP79:%.*]] = or i64 [[TMP67]], [[TMP84]]
+; CHECK-NEXT:    [[TMP85:%.*]] = or i64 [[TMP62]], [[TMP79]]
+; CHECK-NEXT:    [[TMP86:%.*]] = or i64 [[TMP83]], [[TMP85]]
+; CHECK-NEXT:    [[TMP82:%.*]] = or i64 [[TMP68]], [[TMP86]]
+; CHECK-NEXT:    store i64 [[TMP73]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    store i64 [[TMP76]], ptr null, align 4
 ; CHECK-NEXT:    store i64 [[TMP77]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    store i64 [[TMP75]], ptr null, align 4
+; CHECK-NEXT:    store i64 [[TMP82]], ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
   %7 = getelementptr i8, ptr %0, i32 248

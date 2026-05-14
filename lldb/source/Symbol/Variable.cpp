@@ -21,6 +21,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -96,7 +97,7 @@ bool Variable::NameMatches(ConstString name) const {
   return m_mangled.NameMatches(name);
 }
 bool Variable::NameMatches(const RegularExpression &regex) const {
-  if (regex.Execute(m_name.AsCString()))
+  if (regex.Execute(m_name.AsCString(nullptr)))
     return true;
   if (m_mangled)
     return m_mangled.NameMatches(regex);
@@ -475,6 +476,28 @@ static void PrivateAutoComplete(
         &prefix_path, // Anything that has been resolved already will be in here
     const CompilerType &compiler_type, CompletionRequest &request);
 
+/// Get the CompilerType of the current instance (this/self) for direct ivar
+/// completion. Returns an invalid CompilerType if the frame is not for an
+/// instance method.
+static CompilerType GetInstanceType(StackFrame &frame,
+                                    VariableList &variable_list) {
+  SymbolContext sc =
+      frame.GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
+  llvm::StringRef instance_name = sc.GetInstanceName();
+  if (instance_name.empty())
+    return {};
+  VariableSP var_sp = variable_list.FindVariable(ConstString(instance_name));
+  if (!var_sp)
+    return {};
+  Type *var_type = var_sp->GetType();
+  if (!var_type)
+    return {};
+  CompilerType compiler_type = var_type->GetForwardCompilerType();
+  if (compiler_type.IsPointerType())
+    compiler_type = compiler_type.GetPointeeType();
+  return compiler_type.GetCanonicalType();
+}
+
 static void PrivateAutoCompleteMembers(
     StackFrame *frame, const std::string &partial_member_name,
     llvm::StringRef partial_path,
@@ -578,7 +601,7 @@ static void PrivateAutoComplete(
       case eTypeClassObjCObjectPointer:
       case eTypeClassPointer: {
         bool omit_empty_base_classes = true;
-        if (llvm::expectedToStdOptional(
+        if (llvm::expectedToOptional(
                 compiler_type.GetNumChildren(omit_empty_base_classes, nullptr))
                 .value_or(0))
           request.AddCompletion((prefix_path + "->").str());
@@ -590,13 +613,21 @@ static void PrivateAutoComplete(
     } else {
       if (frame) {
         const bool get_file_globals = true;
+        const bool include_synthetic_vars = true;
 
-        VariableList *variable_list = frame->GetVariableList(get_file_globals,
-                                                             nullptr);
+        VariableList *variable_list = frame->GetVariableList(
+            get_file_globals, include_synthetic_vars, nullptr);
 
         if (variable_list) {
           for (const VariableSP &var_sp : *variable_list)
-            request.AddCompletion(var_sp->GetName().AsCString());
+            request.AddCompletion(var_sp->GetName());
+
+          // Offer members of this/self so that direct ivar access can be
+          // completed (eg "frame variable member" for "this->member").
+          CompilerType instance_type = GetInstanceType(*frame, *variable_list);
+          if (instance_type.IsValid())
+            PrivateAutoCompleteMembers(frame, "", "", "", instance_type,
+                                       request);
         }
       }
     }
@@ -686,9 +717,10 @@ static void PrivateAutoComplete(
         } else if (frame) {
           // We haven't found our variable yet
           const bool get_file_globals = true;
+          const bool include_synthetic_vars = true;
 
-          VariableList *variable_list =
-              frame->GetVariableList(get_file_globals, nullptr);
+          VariableList *variable_list = frame->GetVariableList(
+              get_file_globals, include_synthetic_vars, nullptr);
 
           if (!variable_list)
             break;
@@ -718,6 +750,13 @@ static void PrivateAutoComplete(
               }
             }
           }
+
+          // Try also completing the token as a member of this/self (direct ivar
+          // access).
+          CompilerType instance_type = GetInstanceType(*frame, *variable_list);
+          if (instance_type.IsValid())
+            PrivateAutoCompleteMembers(frame, token, remaining_partial_path,
+                                       prefix_path, instance_type, request);
         }
       }
       break;

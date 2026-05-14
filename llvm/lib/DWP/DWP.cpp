@@ -11,19 +11,21 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/DWP/DWP.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DWP/DWPError.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/DWP/ELFWriter.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/EndianStream.h"
+#include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
 #include <limits>
 
 using namespace llvm;
 using namespace llvm::object;
-
-static mc::RegisterMCTargetOptionsFlags MCTargetOptionsFlags;
 
 // Returns the size of debug_str_offsets section headers in bytes.
 static uint64_t debugStrOffsetsHeaderSize(DataExtractor StrOffsetsData,
@@ -200,12 +202,12 @@ static Error sectionOverflowErrorOrWarning(uint32_t PrevOffset,
 }
 
 static Error addAllTypesFromDWP(
-    MCStreamer &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
-    const DWARFUnitIndex &TUIndex, MCSection *OutputTypes, StringRef Types,
+    DWPWriter &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
+    const DWARFUnitIndex &TUIndex, DWPSectionId OutputSection, StringRef Types,
     const UnitIndexEntry &TUEntry, uint32_t &TypesOffset,
     unsigned TypesContributionIndex, OnCuIndexOverflow OverflowOptValue,
     bool &AnySectionOverflow) {
-  Out.switchSection(OutputTypes);
+  Out.switchSection(OutputSection);
   for (const DWARFUnitIndex::Entry &E : TUIndex.getRows()) {
     auto *I = E.getContributions();
     if (!I)
@@ -249,12 +251,12 @@ static Error addAllTypesFromDWP(
 }
 
 static Error addAllTypesFromTypesSection(
-    MCStreamer &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
-    MCSection *OutputTypes, const std::vector<StringRef> &TypesSections,
+    DWPWriter &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
+    DWPSectionId OutputSection, const std::vector<StringRef> &TypesSections,
     const UnitIndexEntry &CUEntry, uint32_t &TypesOffset,
     OnCuIndexOverflow OverflowOptValue, bool &AnySectionOverflow) {
   for (StringRef Types : TypesSections) {
-    Out.switchSection(OutputTypes);
+    Out.switchSection(OutputSection);
     uint64_t Offset = 0;
     DataExtractor Data(Types, true, 0);
     while (Data.isValidOffset(Offset)) {
@@ -351,6 +353,32 @@ handleCompressedSection(std::deque<SmallString<32>> &UncompressedSections,
   return Error::success();
 }
 
+static Error
+buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
+                    const CompileUnitIdentifiers &ID, StringRef DWPName) {
+  return make_error<DWPError>(
+      std::string("duplicate DWO ID (") + utohexstr(PrevE.first) + ") in " +
+      buildDWODescription(PrevE.second.Name, PrevE.second.DWPName,
+                          PrevE.second.DWOName) +
+      " and " + buildDWODescription(ID.Name, DWPName, ID.DWOName));
+}
+
+// Create a mask so we don't trigger a emitIntValue() assert below if the
+// NewOffset is over 4GB.
+static void writeNewOffsetsTo(DWPWriter &Out, DataExtractor &Data,
+                              DenseMap<uint64_t, uint64_t> &OffsetRemapping,
+                              uint64_t &Offset, const uint64_t Size,
+                              uint32_t OldOffsetSize, uint32_t NewOffsetSize) {
+  const uint64_t NewOffsetMask = NewOffsetSize == 8 ? UINT64_MAX : UINT32_MAX;
+  while (Offset < Size) {
+    const uint64_t OldOffset = Data.getUnsigned(&Offset, OldOffsetSize);
+    const uint64_t NewOffset = OffsetRemapping[OldOffset];
+    // Truncate the string offset like the old llvm-dwp would have if we aren't
+    // promoting the .debug_str_offsets to DWARF64.
+    Out.emitIntValue(NewOffset & NewOffsetMask, NewOffsetSize);
+  }
+}
+
 namespace llvm {
 // Parse and return the header of an info section compile/type unit.
 Expected<InfoSectionUnitHeader> parseInfoSectionUnitHeader(StringRef Info) {
@@ -412,33 +440,30 @@ Expected<InfoSectionUnitHeader> parseInfoSectionUnitHeader(StringRef Info) {
   return Header;
 }
 
-static void writeNewOffsetsTo(MCStreamer &Out, DataExtractor &Data,
-                              DenseMap<uint64_t, uint64_t> &OffsetRemapping,
-                              uint64_t &Offset, const uint64_t Size,
-                              uint32_t OldOffsetSize, uint32_t NewOffsetSize) {
-  // Create a mask so we don't trigger a emitIntValue() assert below if the
-  // NewOffset is over 4GB.
-  const uint64_t NewOffsetMask = NewOffsetSize == 8 ? UINT64_MAX : UINT32_MAX;
-  while (Offset < Size) {
-    const uint64_t OldOffset = Data.getUnsigned(&Offset, OldOffsetSize);
-    const uint64_t NewOffset = OffsetRemapping[OldOffset];
-    // Truncate the string offset like the old llvm-dwp would have if we aren't
-    // promoting the .debug_str_offsets to DWARF64.
-    Out.emitIntValue(NewOffset & NewOffsetMask, NewOffsetSize);
-  }
-}
-
-void writeStringsAndOffsets(
-    MCStreamer &Out, DWPStringPool &Strings, MCSection *StrOffsetSection,
-    StringRef CurStrSection, StringRef CurStrOffsetSection, uint16_t Version,
-    SectionLengths &SectionLength,
-    const Dwarf64StrOffsetsPromotion StrOffsetsOptValue) {
+static void
+writeStringsAndOffsets(DWPWriter &Out, DWPStringPool &Strings,
+                       StringRef CurStrSection, StringRef CurStrOffsetSection,
+                       uint16_t Version, SectionLengths &SectionLength,
+                       const Dwarf64StrOffsetsPromotion StrOffsetsOptValue,
+                       bool SingleInput) {
   // Could possibly produce an error or warning if one of these was non-null but
   // the other was null.
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
     return;
 
+  // Fast path: when there is only one input, all strings are unique and offsets
+  // don't need remapping. Copy both sections directly without any hashing.
+  if (SingleInput && StrOffsetsOptValue != Dwarf64StrOffsetsPromotion::Always) {
+    Out.switchSection(DS_Str);
+    Out.emitBytes(CurStrSection);
+    Out.switchSection(DS_StrOffsets);
+    Out.emitBytes(CurStrOffsetSection);
+    return;
+  }
+
   DenseMap<uint64_t, uint64_t> OffsetRemapping;
+  // Pre-reserve based on estimated string count to avoid rehashing.
+  OffsetRemapping.reserve(CurStrSection.size() / 20);
 
   DataExtractor Data(CurStrSection, true, 0);
   uint64_t LocalOffset = 0;
@@ -464,7 +489,7 @@ void writeStringsAndOffsets(
 
   Data = DataExtractor(CurStrOffsetSection, true, 0);
 
-  Out.switchSection(StrOffsetSection);
+  Out.switchSection(DS_StrOffsets);
 
   uint64_t Offset = 0;
   uint64_t Size = CurStrOffsetSection.size();
@@ -530,9 +555,11 @@ void writeStringsAndOffsets(
 }
 
 enum AccessField { Offset, Length };
-void writeIndexTable(MCStreamer &Out, ArrayRef<unsigned> ContributionOffsets,
-                     const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
-                     const AccessField &Field) {
+
+static void
+writeIndexTable(DWPWriter &Out, ArrayRef<unsigned> ContributionOffsets,
+                const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
+                const AccessField &Field) {
   for (const auto &E : IndexEntries)
     for (size_t I = 0; I != std::size(E.second.Contributions); ++I)
       if (ContributionOffsets[I])
@@ -542,10 +569,10 @@ void writeIndexTable(MCStreamer &Out, ArrayRef<unsigned> ContributionOffsets,
                          4);
 }
 
-void writeIndex(MCStreamer &Out, MCSection *Section,
-                ArrayRef<unsigned> ContributionOffsets,
-                const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
-                uint32_t IndexVersion) {
+static void writeIndex(DWPWriter &Out, DWPSectionId Section,
+                       ArrayRef<unsigned> ContributionOffsets,
+                       const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
+                       uint32_t IndexVersion) {
   if (IndexEntries.empty())
     return;
 
@@ -596,21 +623,29 @@ void writeIndex(MCStreamer &Out, MCSection *Section,
   writeIndexTable(Out, ContributionOffsets, IndexEntries, AccessField::Length);
 }
 
-Error buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
-                          const CompileUnitIdentifiers &ID, StringRef DWPName) {
-  return make_error<DWPError>(
-      std::string("duplicate DWO ID (") + utohexstr(PrevE.first) + ") in " +
-      buildDWODescription(PrevE.second.Name, PrevE.second.DWPName,
-                          PrevE.second.DWOName) +
-      " and " + buildDWODescription(ID.Name, DWPName, ID.DWOName));
+/// Map input ELF section names to DWP section IDs and DWARF section kinds.
+static const StringMap<std::pair<DWPSectionId, DWARFSectionKind>> &
+getKnownSections() {
+  static const StringMap<std::pair<DWPSectionId, DWARFSectionKind>> Map = {
+      {"debug_info.dwo", {DS_Info, DW_SECT_INFO}},
+      {"debug_types.dwo", {DS_Types, DW_SECT_EXT_TYPES}},
+      {"debug_str_offsets.dwo", {DS_StrOffsets, DW_SECT_STR_OFFSETS}},
+      {"debug_str.dwo", {DS_Str, static_cast<DWARFSectionKind>(0)}},
+      {"debug_loc.dwo", {DS_Loc, DW_SECT_EXT_LOC}},
+      {"debug_line.dwo", {DS_Line, DW_SECT_LINE}},
+      {"debug_macro.dwo", {DS_Macro, DW_SECT_MACRO}},
+      {"debug_abbrev.dwo", {DS_Abbrev, DW_SECT_ABBREV}},
+      {"debug_loclists.dwo", {DS_Loclists, DW_SECT_LOCLISTS}},
+      {"debug_rnglists.dwo", {DS_Rnglists, DW_SECT_RNGLISTS}},
+      {"debug_cu_index", {DS_CUIndex, static_cast<DWARFSectionKind>(0)}},
+      {"debug_tu_index", {DS_TUIndex, static_cast<DWARFSectionKind>(0)}},
+  };
+  return Map;
 }
 
-Error handleSection(
-    const StringMap<std::pair<MCSection *, DWARFSectionKind>> &KnownSections,
-    const MCSection *StrSection, const MCSection *StrOffsetSection,
-    const MCSection *TypesSection, const MCSection *CUIndexSection,
-    const MCSection *TUIndexSection, const MCSection *InfoSection,
-    const SectionRef &Section, MCStreamer &Out,
+static Error handleSection(
+    const StringMap<std::pair<DWPSectionId, DWARFSectionKind>> &KnownSections,
+    const SectionRef &Section, DWPWriter &Out,
     std::deque<SmallString<32>> &UncompressedSections,
     uint32_t (&ContributionOffsets)[8], UnitIndexEntry &CurEntry,
     StringRef &CurStrSection, StringRef &CurStrOffsetSection,
@@ -644,61 +679,49 @@ Error handleSection(
   if (SectionPair == KnownSections.end())
     return Error::success();
 
-  if (DWARFSectionKind Kind = SectionPair->second.second) {
-    if (Kind != DW_SECT_EXT_TYPES && Kind != DW_SECT_INFO) {
-      SectionLength.push_back(std::make_pair(Kind, Contents.size()));
-    }
+  DWPSectionId SectionId = SectionPair->second.first;
+  DWARFSectionKind Kind = SectionPair->second.second;
 
-    if (Kind == DW_SECT_ABBREV) {
+  if (Kind) {
+    if (Kind != DW_SECT_EXT_TYPES && Kind != DW_SECT_INFO)
+      SectionLength.push_back(std::make_pair(Kind, Contents.size()));
+    if (Kind == DW_SECT_ABBREV)
       AbbrevSection = Contents;
-    }
   }
 
-  MCSection *OutSection = SectionPair->second.first;
-  if (OutSection == StrOffsetSection)
+  switch (SectionId) {
+  case DS_StrOffsets:
     CurStrOffsetSection = Contents;
-  else if (OutSection == StrSection)
+    break;
+  case DS_Str:
     CurStrSection = Contents;
-  else if (OutSection == TypesSection)
+    break;
+  case DS_Types:
     CurTypesSection.push_back(Contents);
-  else if (OutSection == CUIndexSection)
+    break;
+  case DS_CUIndex:
     CurCUIndexSection = Contents;
-  else if (OutSection == TUIndexSection)
+    break;
+  case DS_TUIndex:
     CurTUIndexSection = Contents;
-  else if (OutSection == InfoSection)
+    break;
+  case DS_Info:
     CurInfoSection.push_back(Contents);
-  else {
-    Out.switchSection(OutSection);
+    break;
+  default:
+    // Pass-through: emit directly to output (zero-copy).
+    Out.switchSection(SectionId);
     Out.emitBytes(Contents);
+    break;
   }
   return Error::success();
 }
 
-Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
+Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
             OnCuIndexOverflow OverflowOptValue,
-            Dwarf64StrOffsetsPromotion StrOffsetsOptValue) {
-  const auto &MCOFI = *Out.getContext().getObjectFileInfo();
-  MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
-  MCSection *const StrOffsetSection = MCOFI.getDwarfStrOffDWOSection();
-  MCSection *const TypesSection = MCOFI.getDwarfTypesDWOSection();
-  MCSection *const CUIndexSection = MCOFI.getDwarfCUIndexSection();
-  MCSection *const TUIndexSection = MCOFI.getDwarfTUIndexSection();
-  MCSection *const InfoSection = MCOFI.getDwarfInfoDWOSection();
-  const StringMap<std::pair<MCSection *, DWARFSectionKind>> KnownSections = {
-      {"debug_info.dwo", {InfoSection, DW_SECT_INFO}},
-      {"debug_types.dwo", {MCOFI.getDwarfTypesDWOSection(), DW_SECT_EXT_TYPES}},
-      {"debug_str_offsets.dwo", {StrOffsetSection, DW_SECT_STR_OFFSETS}},
-      {"debug_str.dwo", {StrSection, static_cast<DWARFSectionKind>(0)}},
-      {"debug_loc.dwo", {MCOFI.getDwarfLocDWOSection(), DW_SECT_EXT_LOC}},
-      {"debug_line.dwo", {MCOFI.getDwarfLineDWOSection(), DW_SECT_LINE}},
-      {"debug_macro.dwo", {MCOFI.getDwarfMacroDWOSection(), DW_SECT_MACRO}},
-      {"debug_abbrev.dwo", {MCOFI.getDwarfAbbrevDWOSection(), DW_SECT_ABBREV}},
-      {"debug_loclists.dwo",
-       {MCOFI.getDwarfLoclistsDWOSection(), DW_SECT_LOCLISTS}},
-      {"debug_rnglists.dwo",
-       {MCOFI.getDwarfRnglistsDWOSection(), DW_SECT_RNGLISTS}},
-      {"debug_cu_index", {CUIndexSection, static_cast<DWARFSectionKind>(0)}},
-      {"debug_tu_index", {TUIndexSection, static_cast<DWARFSectionKind>(0)}}};
+            Dwarf64StrOffsetsPromotion StrOffsetsOptValue,
+            raw_pwrite_stream *OutputOS) {
+  const auto &KnownSections = getKnownSections();
 
   MapVector<uint64_t, UnitIndexEntry> IndexEntries;
   MapVector<uint64_t, UnitIndexEntry> TypeIndexEntries;
@@ -709,12 +732,14 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
   StringRef FirstInput;
   bool AnySectionOverflow = false;
 
-  DWPStringPool Strings(Out, StrSection);
+  DWPStringPool Strings(Out.getSectionBuffer(DS_Str));
 
   SmallVector<OwningBinary<object::ObjectFile>, 128> Objects;
   Objects.reserve(Inputs.size());
 
   std::deque<SmallString<32>> UncompressedSections;
+
+  bool MachineSet = false;
 
   for (const auto &Input : Inputs) {
     auto ErrOrObj = object::ObjectFile::createObjectFile(Input);
@@ -727,6 +752,17 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
 
     auto &Obj = *ErrOrObj->getBinary();
     Objects.push_back(std::move(*ErrOrObj));
+
+    // Set output format metadata from the first input file.
+    if (!MachineSet) {
+      if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj)) {
+        Out.setMachine(ELFObj->getEMachine());
+        Out.setOSABI(ELFObj->getOS());
+      } else if (Obj.isWasm()) {
+        Out.setIsWASM(true);
+      }
+      MachineSet = true;
+    }
 
     UnitIndexEntry CurEntry = {};
 
@@ -745,11 +781,9 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
 
     for (const auto &Section : Obj.sections())
       if (auto Err = handleSection(
-              KnownSections, StrSection, StrOffsetSection, TypesSection,
-              CUIndexSection, TUIndexSection, InfoSection, Section, Out,
-              UncompressedSections, ContributionOffsets, CurEntry,
-              CurStrSection, CurStrOffsetSection, CurTypesSection,
-              CurInfoSection, AbbrevSection, CurCUIndexSection,
+              KnownSections, Section, Out, UncompressedSections,
+              ContributionOffsets, CurEntry, CurStrSection, CurStrOffsetSection,
+              CurTypesSection, CurInfoSection, AbbrevSection, CurCUIndexSection,
               CurTUIndexSection, SectionLength))
         return Err;
 
@@ -773,9 +807,9 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
           utostr(Version) + ")");
     }
 
-    writeStringsAndOffsets(Out, Strings, StrOffsetSection, CurStrSection,
-                           CurStrOffsetSection, Header.Version, SectionLength,
-                           StrOffsetsOptValue);
+    writeStringsAndOffsets(Out, Strings, CurStrSection, CurStrOffsetSection,
+                           Header.Version, SectionLength, StrOffsetsOptValue,
+                           Inputs.size() == 1);
 
     for (auto Pair : SectionLength) {
       auto Index = getContributionIndex(Pair.first, IndexVersion);
@@ -803,7 +837,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
         ContributionOffsets[getContributionIndex(DW_SECT_INFO, IndexVersion)];
     if (CurCUIndexSection.empty()) {
       bool FoundCUUnit = false;
-      Out.switchSection(InfoSection);
+      Out.switchSection(DS_Info);
       for (StringRef Info : CurInfoSection) {
         uint64_t UnitOffset = 0;
         while (Info.size() > UnitOffset) {
@@ -869,7 +903,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
       if (IndexVersion == 2) {
         // Add types from the .debug_types section from DWARF < 5.
         if (Error Err = addAllTypesFromTypesSection(
-                Out, TypeIndexEntries, TypesSection, CurTypesSection, CurEntry,
+                Out, TypeIndexEntries, DS_Types, CurTypesSection, CurEntry,
                 ContributionOffsets[getContributionIndex(DW_SECT_EXT_TYPES, 2)],
                 OverflowOptValue, AnySectionOverflow))
           return Err;
@@ -893,7 +927,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
                                   utostr(CUIndex.getVersion()) +
                                   " and expecting " + utostr(IndexVersion));
 
-    Out.switchSection(InfoSection);
+    Out.switchSection(DS_Info);
     for (const DWARFUnitIndex::Entry &E : CUIndex.getRows()) {
       auto *I = E.getContributions();
       if (!I)
@@ -939,12 +973,12 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
 
     if (!CurTUIndexSection.empty()) {
       llvm::DWARFSectionKind TUSectionKind;
-      MCSection *OutSection;
+      DWPSectionId OutSection;
       StringRef TypeInputSection;
       // Write type units into debug info section for DWARFv5.
       if (Version >= 5) {
         TUSectionKind = DW_SECT_INFO;
-        OutSection = InfoSection;
+        OutSection = DS_Info;
         TypeInputSection = DwpSingleInfoSection;
       } else {
         // Write type units into debug types section for DWARF < 5.
@@ -953,7 +987,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
               "multiple type unit sections in .dwp file");
 
         TUSectionKind = DW_SECT_EXT_TYPES;
-        OutSection = TypesSection;
+        OutSection = DS_Types;
         TypeInputSection = CurTypesSection.front();
       }
 
@@ -984,8 +1018,8 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
     // contribution to the info section, so we do not want to lie about it.
     ContributionOffsets[0] = 0;
   }
-  writeIndex(Out, MCOFI.getDwarfTUIndexSection(), ContributionOffsets,
-             TypeIndexEntries, IndexVersion);
+  writeIndex(Out, DS_TUIndex, ContributionOffsets, TypeIndexEntries,
+             IndexVersion);
 
   if (Version < 5) {
     // Lie about the type contribution for DWARF < 5. In DWARFv5 the type
@@ -995,9 +1029,207 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
     ContributionOffsets[0] = 1;
   }
 
-  writeIndex(Out, MCOFI.getDwarfCUIndexSection(), ContributionOffsets,
-             IndexEntries, IndexVersion);
+  writeIndex(Out, DS_CUIndex, ContributionOffsets, IndexEntries, IndexVersion);
+
+  // Write ELF output while input data is still alive (zero-copy chunks
+  // reference mmap'd input data held by the Objects vector above).
+  if (OutputOS)
+    return Out.write(*OutputOS);
 
   return Error::success();
 }
+
+//===----------------------------------------------------------------------===//
+// DWPWriter::writeELF — produce a minimal ELF64 relocatable object.
+//===----------------------------------------------------------------------===//
+
+Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
+  support::endian::Writer Wr(OS, llvm::endianness::little);
+
+  // Section metadata table.
+  struct SectionMeta {
+    DWPSectionId Id;
+    const char *Name;
+    uint64_t Flags;
+    uint64_t EntSize;
+  };
+  static constexpr SectionMeta Meta[] = {
+      {DS_Loclists, ".debug_loclists.dwo", ELF::SHF_EXCLUDE, 0},
+      {DS_Loc, ".debug_loc.dwo", ELF::SHF_EXCLUDE, 0},
+      {DS_Abbrev, ".debug_abbrev.dwo", ELF::SHF_EXCLUDE, 0},
+      {DS_Line, ".debug_line.dwo", ELF::SHF_EXCLUDE, 0},
+      {DS_Rnglists, ".debug_rnglists.dwo", ELF::SHF_EXCLUDE, 0},
+      {DS_Macro, ".debug_macro.dwo", ELF::SHF_EXCLUDE, 0},
+      {DS_Str, ".debug_str.dwo",
+       ELF::SHF_EXCLUDE | ELF::SHF_MERGE | ELF::SHF_STRINGS, 1},
+      {DS_StrOffsets, ".debug_str_offsets.dwo", ELF::SHF_EXCLUDE, 0},
+      {DS_Info, ".debug_info.dwo", ELF::SHF_EXCLUDE, 0},
+      {DS_Types, ".debug_types.dwo", ELF::SHF_EXCLUDE, 0},
+      {DS_TUIndex, ".debug_tu_index", 0, 0},
+      {DS_CUIndex, ".debug_cu_index", 0, 0},
+  };
+
+  // Collect non-empty sections and build the section name string table.
+  struct OutputEntry {
+    const SectionData *Data;
+    const char *Name;
+    uint64_t Flags;
+    uint64_t EntSize;
+    uint32_t NameOffset;
+    uint64_t FileOffset; // filled in during layout
+  };
+  SmallVector<OutputEntry> Entries;
+
+  SmallString<256> Strtab;
+  Strtab.push_back('\0'); // null string at offset 0
+
+  for (const auto &M : Meta) {
+    if (Sections[M.Id].empty())
+      continue;
+    uint32_t NameOff = Strtab.size();
+    Strtab.append(M.Name);
+    Strtab.push_back('\0');
+    Entries.push_back(
+        {&Sections[M.Id], M.Name, M.Flags, M.EntSize, NameOff, 0});
+  }
+
+  // Add .strtab and .symtab name entries.
+  uint32_t StrtabNameOff = Strtab.size();
+  Strtab.append(".strtab");
+  Strtab.push_back('\0');
+  uint32_t SymtabNameOff = Strtab.size();
+  Strtab.append(".symtab");
+  Strtab.push_back('\0');
+
+  // Layout:
+  //   [ELF Header]              64 bytes
+  //   [section data...]         variable
+  //   [.strtab data]            variable
+  //   [padding to 8-byte align]
+  //   [.symtab data]            24 bytes (one null entry)
+  //   [padding to 8-byte align]
+  //   [Section Header Table]    64 * NumSections bytes
+
+  constexpr uint64_t EhdrSize = sizeof(ELF::Elf64_Ehdr);
+  constexpr uint64_t SymEntSize = 24;
+
+  uint64_t Offset = EhdrSize;
+  for (auto &E : Entries) {
+    E.FileOffset = Offset;
+    Offset += E.Data->totalSize();
+  }
+
+  uint64_t StrtabOffset = Offset;
+  Offset += Strtab.size();
+
+  uint64_t SymtabOffset = alignTo(Offset, 8);
+  Offset = SymtabOffset + SymEntSize;
+
+  uint64_t SHTOffset = alignTo(Offset, 8);
+
+  // Section indices: [0]=null, [1..N]=data, [N+1]=strtab, [N+2]=symtab
+  uint32_t StrtabIdx = 1 + Entries.size();
+  uint32_t SymtabIdx = StrtabIdx + 1;
+  uint32_t NumSections = SymtabIdx + 1;
+
+  // --- Write ELF header ---
+  ELF::writeHeader(Wr, /*Is64Bit=*/true, ELFOSABI, /*ABIVersion=*/0, ELFMachine,
+                   /*EFlags=*/0, SHTOffset, NumSections, StrtabIdx);
+
+  // --- Write section data ---
+  for (const auto &E : Entries)
+    E.Data->writeTo(OS);
+
+  // --- Write .strtab ---
+  OS.write(Strtab.data(), Strtab.size());
+
+  // --- Pad + write .symtab (one null symbol entry) ---
+  OS.write_zeros(SymtabOffset - (StrtabOffset + Strtab.size()));
+  OS.write_zeros(SymEntSize);
+
+  // --- Pad for section header table ---
+  uint64_t CurPos = SymtabOffset + SymEntSize;
+  OS.write_zeros(SHTOffset - CurPos);
+
+  // [0] ELF::SHT_NULL
+  ELF::writeSectionHeader(Wr, true, 0, ELF::SHT_NULL, 0, 0, 0, 0, 0, 0, 0, 0);
+
+  // [1..N] data sections
+  for (const auto &E : Entries)
+    ELF::writeSectionHeader(Wr, true, E.NameOffset, ELF::SHT_PROGBITS, E.Flags,
+                            0, E.FileOffset, E.Data->totalSize(), 0, 0, 1,
+                            E.EntSize);
+
+  // [N+1] .strtab
+  ELF::writeSectionHeader(Wr, true, StrtabNameOff, ELF::SHT_STRTAB, 0, 0,
+                          StrtabOffset, Strtab.size(), 0, 0, 1, 0);
+
+  // [N+2] .symtab
+  ELF::writeSectionHeader(Wr, true, SymtabNameOff, ELF::SHT_SYMTAB, 0, 0,
+                          SymtabOffset, SymEntSize, StrtabIdx, 1, 8,
+                          SymEntSize);
+
+  return Error::success();
+}
+
+//===----------------------------------------------------------------------===//
+// DWPWriter::writeWASM — produce a minimal WASM object with custom sections.
+//===----------------------------------------------------------------------===//
+
+Error DWPWriter::writeWASM(raw_pwrite_stream &OS) {
+  // Section name table (same names as ELF but without SHF_EXCLUDE flags).
+  static constexpr struct {
+    DWPSectionId Id;
+    const char *Name;
+  } Meta[] = {
+      {DS_Loclists, ".debug_loclists.dwo"},
+      {DS_Loc, ".debug_loc.dwo"},
+      {DS_Abbrev, ".debug_abbrev.dwo"},
+      {DS_Line, ".debug_line.dwo"},
+      {DS_Rnglists, ".debug_rnglists.dwo"},
+      {DS_Macro, ".debug_macro.dwo"},
+      {DS_Str, ".debug_str.dwo"},
+      {DS_StrOffsets, ".debug_str_offsets.dwo"},
+      {DS_Info, ".debug_info.dwo"},
+      {DS_Types, ".debug_types.dwo"},
+      {DS_TUIndex, ".debug_tu_index"},
+      {DS_CUIndex, ".debug_cu_index"},
+  };
+
+  // WASM magic and version.
+  OS.write("\0asm", 4);
+  const uint8_t Version[] = {0x01, 0x00, 0x00, 0x00};
+  OS.write(reinterpret_cast<const char *>(Version), 4);
+
+  // Emit each non-empty section as a WASM custom section (id=0).
+  for (const auto &M : Meta) {
+    const SectionData &SD = Sections[M.Id];
+    if (SD.empty())
+      continue;
+
+    size_t NameLen = strlen(M.Name);
+    uint64_t PayloadSize = SD.totalSize();
+
+    // Custom section payload = ULEB128(name_len) + name + data.
+    uint8_t NameLenEncoded[10];
+    unsigned NameLenSize = encodeULEB128(NameLen, NameLenEncoded);
+    uint64_t SectionPayloadSize = NameLenSize + NameLen + PayloadSize;
+
+    // Section header: id byte + ULEB128(section_payload_size).
+    OS.write(0x00); // Custom section id
+    uint8_t SizeEncoded[10];
+    unsigned SizeLen = encodeULEB128(SectionPayloadSize, SizeEncoded);
+    OS.write(reinterpret_cast<const char *>(SizeEncoded), SizeLen);
+
+    // Name
+    OS.write(reinterpret_cast<const char *>(NameLenEncoded), NameLenSize);
+    OS.write(M.Name, NameLen);
+
+    // Data
+    SD.writeTo(OS);
+  }
+
+  return Error::success();
+}
+
 } // namespace llvm

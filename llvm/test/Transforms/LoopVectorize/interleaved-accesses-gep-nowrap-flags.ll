@@ -192,7 +192,7 @@ define void @nusw_preservation_2(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw i8, ptr [[TMP1]], i32 -1
@@ -213,7 +213,7 @@ define void @nusw_preservation_2(ptr %src, ptr noalias %dst) {
 entry:
   br label %loop
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %iv2 = phi i64 [ 0, %entry ], [ %iv2.next, %loop ]
   %or.1 = or disjoint i64 %iv2, 1
@@ -242,7 +242,7 @@ define void @inbounds_preservation_2(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 -1
@@ -263,7 +263,7 @@ define void @inbounds_preservation_2(ptr %src, ptr noalias %dst) {
 entry:
   br label %loop
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %iv2 = phi i64 [ 0, %entry ], [ %iv2.next, %loop ]
   %or.1 = or disjoint i64 %iv2, 1
@@ -292,7 +292,7 @@ define void @nuw_drop_2(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 -1
@@ -313,7 +313,7 @@ define void @nuw_drop_2(ptr %src, ptr noalias %dst) {
 entry:
   br label %loop
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %iv2 = phi i64 [ 0, %entry ], [ %iv2.next, %loop ]
   %or.1 = or disjoint i64 %iv2, 1

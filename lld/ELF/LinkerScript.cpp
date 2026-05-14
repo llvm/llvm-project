@@ -104,6 +104,14 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
           return v;
     return ".text";
   }
+  if (isSectionPrefix(".ltext", s->name)) {
+    if (ctx.arg.zKeepTextSectionPrefix)
+      for (StringRef v : {".ltext.hot", ".ltext.unknown", ".ltext.unlikely",
+                          ".ltext.startup", ".ltext.exit", ".ltext.split"})
+        if (isSectionPrefix(v.substr(6), s->name.substr(6)))
+          return v;
+    return ".ltext";
+  }
 
   for (StringRef v : {".data.rel.ro", ".data",       ".rodata",
                       ".bss.rel.ro",  ".bss",        ".ldata",
@@ -550,14 +558,17 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           ctx.arg.sortSection, SortSectionPolicy::None);
     };
 
+    bool enableNonContiguousRegions = ctx.arg.enableNonContiguousRegions;
     for (const SectionPattern &pat : cmd->sectionPatterns) {
       size_t sizeBeforeCurrPat = ret.size();
 
       for (size_t i = 0, e = sections.size(); i != e; ++i) {
-        // Skip if the section is dead or has been matched by a previous pattern
-        // in this input section description.
+        // Skip if the section is dead, has been matched by a previous input
+        // section description with non-contiguous regions disabled, or has been
+        // matched by a previous pattern in this input section description.
         InputSectionBase *sec = sections[i];
-        if (!sec->isLive() || seen.contains(i))
+        if (!sec->isLive() || (!enableNonContiguousRegions && sec->parent) ||
+            seen.contains(i))
           continue;
 
         // For --emit-relocs we have to ignore entries like
@@ -578,9 +589,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
 
         if (sec->parent) {
-          // Skip if not allowing multiple matches.
-          if (!ctx.arg.enableNonContiguousRegions)
-            continue;
+          assert(ctx.arg.enableNonContiguousRegions);
 
           // Disallow spilling into /DISCARD/; special handling would be needed
           // for this in address assignment, and the semantics are nebulous.
