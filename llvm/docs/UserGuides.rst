@@ -326,6 +326,7 @@ intermediate LLVM representation.
    Remarks
    SourceLevelDebugging
    HowToUpdateDebugInfo
+   Instrumentor
    InstrRefDebugInfo
    RemoveDIsDebugInfo
    KeyInstructionsDebugInfo
@@ -502,6 +503,10 @@ Optimizations
 :doc:`InstCombineContributorGuide`
    This document specifies guidelines for contributions for InstCombine and
    related passes.
+
+:doc:`Instrumentor`
+   A comprehensive guide to the highly configurable Instrumentor pass for custom
+   program instrumentation, including the interactive configuration wizard.
 
 
 Code Generation

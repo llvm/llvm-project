@@ -16,6 +16,7 @@
 /amd/device-libs/ @b-sumner @lamb-j
 /amd/hipcc/ @david-salinas @lamb-j
 
+/libc/ @llbm/reviewers-libc
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind

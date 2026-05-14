@@ -1670,20 +1670,19 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    lui a0, 24414
 ; RV32-WITHFP-NEXT:    addi a0, a0, -1728
 ; RV32-WITHFP-NEXT:    sub sp, sp, a0
-; RV32-WITHFP-NEXT:    mv a0, sp
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32-WITHFP-NEXT:    sw a4, 16(s0)
-; RV32-WITHFP-NEXT:    addi a1, s0, 4
-; RV32-WITHFP-NEXT:    sw a1, 0(a0)
-; RV32-WITHFP-NEXT:    lw a1, 0(a0)
+; RV32-WITHFP-NEXT:    addi a0, s0, 4
+; RV32-WITHFP-NEXT:    sw a0, 0(sp)
+; RV32-WITHFP-NEXT:    lw a0, 0(sp)
 ; RV32-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
-; RV32-WITHFP-NEXT:    addi a2, a1, 4
-; RV32-WITHFP-NEXT:    sw a2, 0(a0)
-; RV32-WITHFP-NEXT:    lw a0, 0(a1)
+; RV32-WITHFP-NEXT:    addi a1, a0, 4
+; RV32-WITHFP-NEXT:    sw a1, 0(sp)
+; RV32-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV32-WITHFP-NEXT:    lui a1, 24414
 ; RV32-WITHFP-NEXT:    addi a1, a1, -1728
 ; RV32-WITHFP-NEXT:    add sp, sp, a1
@@ -1709,25 +1708,25 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    lui a0, 24414
 ; RV64-WITHFP-NEXT:    addi a0, a0, -1680
 ; RV64-WITHFP-NEXT:    sub sp, sp, a0
-; RV64-WITHFP-NEXT:    mv a0, sp
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 24(s0)
 ; RV64-WITHFP-NEXT:    sd a4, 32(s0)
+; RV64-WITHFP-NEXT:    mv a0, sp
 ; RV64-WITHFP-NEXT:    addi a1, s0, 8
-; RV64-WITHFP-NEXT:    sd a1, 0(a0)
-; RV64-WITHFP-NEXT:    lwu a1, 0(a0)
-; RV64-WITHFP-NEXT:    lw a2, 4(a0)
+; RV64-WITHFP-NEXT:    sd a1, 0(sp)
+; RV64-WITHFP-NEXT:    lw a0, 4(a0)
+; RV64-WITHFP-NEXT:    lwu a1, 0(sp)
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
-; RV64-WITHFP-NEXT:    slli a2, a2, 32
-; RV64-WITHFP-NEXT:    or a1, a2, a1
-; RV64-WITHFP-NEXT:    addi a2, a1, 4
-; RV64-WITHFP-NEXT:    srli a3, a2, 32
-; RV64-WITHFP-NEXT:    sw a2, 0(a0)
-; RV64-WITHFP-NEXT:    sw a3, 4(a0)
-; RV64-WITHFP-NEXT:    lw a0, 0(a1)
+; RV64-WITHFP-NEXT:    slli a0, a0, 32
+; RV64-WITHFP-NEXT:    or a0, a0, a1
+; RV64-WITHFP-NEXT:    addi a1, a0, 4
+; RV64-WITHFP-NEXT:    srli a2, a1, 32
+; RV64-WITHFP-NEXT:    sw a1, 0(sp)
+; RV64-WITHFP-NEXT:    sw a2, 4(sp)
+; RV64-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV64-WITHFP-NEXT:    lui a1, 24414
 ; RV64-WITHFP-NEXT:    addi a1, a1, -1680
 ; RV64-WITHFP-NEXT:    add sp, sp, a1
