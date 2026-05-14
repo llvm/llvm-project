@@ -22,6 +22,7 @@ subroutine default_none_scalar_precomputed(x, n, p, q)
   integer :: n, i
   factor = p / q
   !$acc parallel loop default(none) present(x)
+  !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'n' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
   do i = 1, n
     !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'factor' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
     x(i) = x(i) * factor
@@ -40,6 +41,7 @@ subroutine default_none_outer_loop_scalars(x, n, m)
     thresh = real(k) - real(k) / real(m)
     val    = real(k) * 4.0
     !$acc parallel loop default(none) present(x)
+    !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'n' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
     do i = 1, n
       !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'thresh' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
       !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'coef' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
