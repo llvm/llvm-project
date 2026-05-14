@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float128 floorf128(float128 x) {
+LIBC_INLINE LIBC_CONSTEXPR float128 floorf128(float128 x) {
   return fputil::floor(x);
 }
 

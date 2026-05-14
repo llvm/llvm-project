@@ -2210,7 +2210,7 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
 
   // If the argument is replaced with a null value, just replace this constant
   // with a null value.
-  if (cast<Constant>(To)->isNullValue())
+  if (isa<ConstantPointerNull>(To))
     return To;
 
   // The replacement could be a bitcast or an alias to another function. We can
@@ -2354,7 +2354,7 @@ bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
                                             const DataLayout &DL) const {
   // This function may only be validly called to analyze a ptrauth operation
   // with no deactivation symbol, so if we have one it isn't compatible.
-  if (!getDeactivationSymbol()->isNullValue())
+  if (!isa<ConstantPointerNull>(getDeactivationSymbol()))
     return false;
 
   // If the keys are different, there's no chance for this to be compatible.
