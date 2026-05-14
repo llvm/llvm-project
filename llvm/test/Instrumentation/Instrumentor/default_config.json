@@ -18,6 +18,8 @@
   "module_pre": {
     "module": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "module_name": true,
       "module_name.description": "The module/translation unit name.",
       "target_triple": true,
@@ -29,6 +31,8 @@
   "module_post": {
     "module": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "module_name": true,
       "module_name.description": "The module/translation unit name.",
       "target_triple": true,
@@ -40,6 +44,8 @@
   "global_pre": {
     "global": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "address": true,
       "address.replace": true,
       "address.description": "The address of the global (replaceable for definitions).",
@@ -64,6 +70,8 @@
   "global_post": {
     "global": {
       "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation.",
       "address": true,
       "address.description": "The address of the global (replaceable for definitions).",
       "address_space": true,
