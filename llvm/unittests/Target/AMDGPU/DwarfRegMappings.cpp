@@ -40,8 +40,7 @@ TEST_F(AMDGPUTestBase, TestWave64DwarfRegMapping) {
         }
 
         // Verify that subregisters have no dwarf encoding.
-        for (MCRegister LLSubReg :
-             {AMDGPU::VGPR1_LO16}) {
+        for (MCRegister LLSubReg : {AMDGPU::VGPR1_LO16}) {
           EXPECT_EQ(MRI->getDwarfRegNum(LLSubReg, false), -1);
         }
 
@@ -80,8 +79,7 @@ TEST_F(AMDGPUTestBase, TestWave32DwarfRegMapping) {
         }
 
         // Verify that subregisters have no dwarf encoding.
-        for (MCRegister LLSubReg :
-             {AMDGPU::VGPR1_LO16}) {
+        for (MCRegister LLSubReg : {AMDGPU::VGPR1_LO16}) {
           EXPECT_EQ(MRI->getDwarfRegNum(LLSubReg, false), -1);
         }
 
