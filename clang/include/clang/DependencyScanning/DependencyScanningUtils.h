@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGUTILS_H
 #define LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGUTILS_H
 
+#include "clang/DependencyScanning/DependencyActionController.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
