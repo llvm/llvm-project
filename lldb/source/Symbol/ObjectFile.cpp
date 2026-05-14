@@ -603,17 +603,22 @@ void ObjectFile::ClearSymtab() {
 }
 
 SectionList *ObjectFile::GetSectionList(bool update_module_section_list) {
-  if (m_sections_up == nullptr) {
-    if (update_module_section_list) {
-      ModuleSP module_sp(GetModule());
-      if (module_sp) {
-        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+  if (update_module_section_list) {
+    ModuleSP module_sp(GetModule());
+    if (module_sp) {
+      // The module mutex guards m_sections_up: check and populate under the
+      // lock so concurrent first-time initialization from multiple threads
+      // that share this Module doesn't race.
+      std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+      if (m_sections_up == nullptr)
         CreateSections(*module_sp->GetUnifiedSectionList());
-      }
-    } else {
-      SectionList unified_section_list;
-      CreateSections(unified_section_list);
+      return m_sections_up.get();
     }
+    return m_sections_up.get();
+  }
+  if (m_sections_up == nullptr) {
+    SectionList unified_section_list;
+    CreateSections(unified_section_list);
   }
   return m_sections_up.get();
 }
