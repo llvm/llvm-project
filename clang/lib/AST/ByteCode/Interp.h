@@ -1977,6 +1977,11 @@ inline bool GetRefLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return handleReference(S, OpPC, LocalBlock);
 }
 
+inline bool CheckRefInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  return CheckRange(S, OpPC, Ptr, AK_Read);
+}
+
 inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (S.Current->isBottomFrame())
     return false;
@@ -3430,6 +3435,12 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
   if (!SrcPtr.isBlockPointer() || !DestPtr.isBlockPointer())
     return false;
 
+  const Descriptor *SrcDesc = SrcPtr.getFieldDesc();
+  const Descriptor *DestDesc = DestPtr.getFieldDesc();
+  if (!SrcDesc->isPrimitiveArray() || !DestDesc->isPrimitiveArray() ||
+      SrcDesc->getPrimType() != Name || DestDesc->getPrimType() != Name)
+    return false;
+
   for (uint32_t I = 0; I != Size; ++I) {
     const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
 
@@ -3550,6 +3561,17 @@ inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
 #ifndef NDEBUG
   ++S.SpeculationDepth;
 #endif
+  return true;
+}
+
+inline bool StartInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  S.InitializingBlocks.push_back(Ptr.block());
+  return true;
+}
+
+inline bool EndInit(InterpState &S, CodePtr OpPC) {
+  S.InitializingBlocks.pop_back();
   return true;
 }
 
@@ -3728,6 +3750,22 @@ inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
         << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
     return false;
   }
+  return true;
+}
+
+/// Check if the destination array we're initializing can hold the \p NumElems
+/// elements.
+inline bool CheckArrayDestSize(InterpState &S, CodePtr OpPC, size_t NumElems) {
+  if (!CheckArraySize(S, OpPC, NumElems))
+    return false;
+
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!Ptr.isUnknownSizeArray() && NumElems > Ptr.getNumElems()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_small)
+        << Ptr.getNumElems() << NumElems;
+    return false;
+  }
+
   return true;
 }
 

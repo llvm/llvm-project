@@ -4009,4 +4009,12 @@ TEST(APIntTest, clmulh) {
                 .getSExtValue(),
             21845);
 }
+
+TEST(APIntTest, sqrt) {
+  EXPECT_EQ(APInt::getMaxValue(64).sqrt(), 4294967296U);
+  EXPECT_EQ(APInt::getMaxValue(128).sqrt(),
+            APInt(128, "18446744073709551616", 10));
+  EXPECT_EQ(APInt::getMaxValue(256).sqrt(),
+            APInt(256, "340282366920938463463374607431768211456", 10));
+}
 } // end anonymous namespace

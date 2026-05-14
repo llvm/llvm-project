@@ -15,6 +15,7 @@
 #include "src/unistd/close.h"
 #include "src/unistd/pipe.h"
 
+#include "src/__support/CPP/scope.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -23,10 +24,13 @@
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcSocketOptTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LIBC_NAMESPACE::cpp::scope_exit;
 
 TEST_F(LlvmLibcSocketOptTest, BasicSocketOpt) {
   int sock = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_STREAM, 0);
   ASSERT_GE(sock, 0);
+  scope_exit close_sock(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(sock), Succeeds(0)); });
 
   int optval = 0;
   socklen_t optlen = sizeof(optval);
@@ -48,7 +52,7 @@ TEST_F(LlvmLibcSocketOptTest, BasicSocketOpt) {
   ASSERT_THAT(
       LIBC_NAMESPACE::getsockopt(sock, SOL_SOCKET, SO_TYPE, &optval, &optlen),
       Succeeds(0));
-  ASSERT_EQ(optval, SOCK_STREAM);
+  ASSERT_EQ(optval, static_cast<int>(SOCK_STREAM));
   ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(optval)));
 
   optval = SOCK_DGRAM;
@@ -73,13 +77,13 @@ TEST_F(LlvmLibcSocketOptTest, BasicSocketOpt) {
   ASSERT_EQ(lin.l_onoff, 1);
   ASSERT_EQ(lin.l_linger, 5);
   ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(lin)));
-
-  ASSERT_THAT(LIBC_NAMESPACE::close(sock), Succeeds(0));
 }
 
 TEST_F(LlvmLibcSocketOptTest, NotASocket) {
   int fds[2];
   ASSERT_THAT(LIBC_NAMESPACE::pipe(fds), Succeeds(0));
+  scope_exit close_fd0(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(fds[0]), Succeeds(0)); });
   ASSERT_THAT(LIBC_NAMESPACE::close(fds[1]), Succeeds(0));
 
   int optval = 1;
@@ -91,7 +95,6 @@ TEST_F(LlvmLibcSocketOptTest, NotASocket) {
   ASSERT_THAT(LIBC_NAMESPACE::getsockopt(fds[0], SOL_SOCKET, SO_KEEPALIVE,
                                          &optval, &optlen),
               Fails(ENOTSOCK));
-  ASSERT_THAT(LIBC_NAMESPACE::close(fds[0]), Succeeds(0));
 }
 
 TEST_F(LlvmLibcSocketOptTest, InvalidSocket) {

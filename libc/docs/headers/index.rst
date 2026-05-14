@@ -7,6 +7,7 @@ Implementation Status
    aio
    arpa/inet
    assert
+   byteswap
    complex
    cpio
    ctype
@@ -25,6 +26,7 @@ Implementation Status
    netinet/in
    nl_types
    poll
+   pwd
    sched
    search
    setjmp

@@ -869,6 +869,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
+  // -frelaxed-c-loc
+  if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
+    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
+  }
+
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
                        args.hasFlag(clang::options::OPT_fxor_operator,
@@ -1622,25 +1627,6 @@ bool CompilerInvocation::createFromArgs(
       diags.Report(clang::diag::err_drv_unknown_argument_with_suggestion)
           << argString << nearest;
     success = false;
-  }
-
-  // -flang-experimental-hlfir
-  if (args.hasArg(clang::options::OPT_flang_experimental_hlfir) ||
-      args.hasArg(clang::options::OPT_emit_hlfir)) {
-    invoc.loweringOpts.setLowerToHighLevelFIR(true);
-  }
-
-  // -flang-deprecated-no-hlfir
-  if (args.hasArg(clang::options::OPT_flang_deprecated_no_hlfir) &&
-      !args.hasArg(clang::options::OPT_emit_hlfir)) {
-    if (args.hasArg(clang::options::OPT_flang_experimental_hlfir)) {
-      const unsigned diagID = diags.getCustomDiagID(
-          clang::DiagnosticsEngine::Error,
-          "Options '-flang-experimental-hlfir' and "
-          "'-flang-deprecated-no-hlfir' cannot be both specified");
-      diags.Report(diagID);
-    }
-    invoc.loweringOpts.setLowerToHighLevelFIR(false);
   }
 
   // -fno-ppc-native-vector-element-order
