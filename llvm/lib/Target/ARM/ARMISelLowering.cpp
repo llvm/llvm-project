@@ -4552,7 +4552,8 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     unsigned Mask = LHS.getConstantOperandVal(1);
     auto *RHSC = cast<ConstantSDNode>(RHS.getNode());
     uint64_t RHSV = RHSC->getZExtValue();
-    if (isMask_32(Mask) && (RHSV & ~Mask) == 0 && Mask != 255 && Mask != 65535) {
+    if (isMask_32(Mask) && (RHSV & ~Mask) == 0 &&
+        (!Subtarget->hasV6Ops() || (Mask != 255 && Mask != 65535))) {
       unsigned ShiftBits = llvm::countl_zero(Mask);
       if (RHSV && (RHSV > 255 || (RHSV << ShiftBits) <= 255)) {
         SDValue ShiftAmt = DAG.getConstant(ShiftBits, dl, MVT::i32);
@@ -14266,7 +14267,7 @@ static SDValue CombineANDShift(SDNode *N,
 
   uint32_t C1 = (uint32_t)N1C->getZExtValue();
   // Don't transform uxtb/uxth.
-  if (C1 == 255 || C1 == 65535)
+  if (Subtarget->hasV6Ops() && (C1 == 255 || C1 == 65535))
     return SDValue();
 
   SDNode *N0 = N->getOperand(0).getNode();
@@ -17787,7 +17788,7 @@ static SDValue PerformShiftCombine(SDNode *N,
       return SDValue();
     uint32_t AndMask = static_cast<uint32_t>(AndMaskNode->getZExtValue());
     // Don't transform uxtb/uxth.
-    if (AndMask == 255 || AndMask == 65535)
+    if (ST->hasV6Ops() && (AndMask == 255 || AndMask == 65535))
       return SDValue();
     if (isMask_32(AndMask)) {
       uint32_t MaskedBits = llvm::countl_zero(AndMask);

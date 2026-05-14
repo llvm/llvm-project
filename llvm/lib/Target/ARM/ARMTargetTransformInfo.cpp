@@ -484,7 +484,7 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
 
   if (Opcode == Instruction::And) {
     // UXTB/UXTH
-    if (Imm == 255 || Imm == 65535)
+    if (ST->hasV6Ops() && (Imm == 255 || Imm == 65535))
       return 0;
     // Conversion to BIC is free, and means we can use ~Imm instead.
     return std::min(getIntImmCost(Imm, Ty, CostKind),
