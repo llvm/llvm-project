@@ -423,7 +423,7 @@ private:
   typedef std::map<ClassAndSelStr, lldb::addr_t> MsgImplStrMap;
   typedef llvm::DenseMap<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
 
-  // Keys are already djbHash values, so use identity as the hash function.
+  /// Keys are already djbHash values, so use identity as the hash function.
   struct IdentityHashKeyInfo {
     static constexpr uint32_t getEmptyKey() { return ~0U; }
     static constexpr uint32_t getTombstoneKey() { return ~0U - 1; }
