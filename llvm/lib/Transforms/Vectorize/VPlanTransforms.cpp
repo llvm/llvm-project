@@ -6561,15 +6561,19 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
 
 /// Returns true if \p Info's parameter kinds are compatible with \p Args.
 static bool areVFParamsOk(const VFInfo &Info, ArrayRef<VPValue *> Args,
-                          PredicatedScalarEvolution &PSE, const Loop *L) {
+                          PredicatedScalarEvolution &PSE, const Loop *L,
+                          VPTypeAnalysis &Types) {
+  ScalarEvolution *SE = PSE.getSE();
   return all_of(Info.Shape.Parameters, [&](VFParameter Param) {
     switch (Param.ParamKind) {
     case VFParamKind::Vector:
     case VFParamKind::GlobalPredicate:
       return true;
     case VFParamKind::OMP_Uniform:
-      return PSE.getSE()->isLoopInvariant(
-          vputils::getSCEVExprForVPValue(Args[Param.ParamPos], PSE, L), L);
+      return SE->isSCEVable(Types.inferScalarType(Args[Param.ParamPos])) &&
+             SE->isLoopInvariant(
+                 vputils::getSCEVExprForVPValue(Args[Param.ParamPos], PSE, L),
+                 L);
     case VFParamKind::OMP_Linear:
       return match(vputils::getSCEVExprForVPValue(Args[Param.ParamPos], PSE, L),
                    m_scev_AffineAddRec(
@@ -6587,13 +6591,13 @@ static bool areVFParamsOk(const VFInfo &Info, ArrayRef<VPValue *> Args,
 static Function *findVectorVariant(CallInst *CI, ArrayRef<VPValue *> Args,
                                    ElementCount VF, bool MaskRequired,
                                    PredicatedScalarEvolution &PSE,
-                                   const Loop *L) {
+                                   const Loop *L, VPTypeAnalysis &Types) {
   if (CI->isNoBuiltin())
     return nullptr;
   auto Mappings = VFDatabase::getMappings(*CI);
   const auto *It = find_if(Mappings, [&](const VFInfo &Info) {
     return Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()) &&
-           areVFParamsOk(Info, Args, PSE, L);
+           areVFParamsOk(Info, Args, PSE, L, Types);
   });
   if (It == Mappings.end())
     return nullptr;
@@ -6643,8 +6647,8 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
       VPReplicateRecipe::computeCallCost(CalledFn, ResultTy, Ops,
                                          /*IsSingleScalar=*/false, VF, CostCtx);
 
-  Function *VecFunc =
-      findVectorVariant(CI, Ops, VF, MaskRequired, CostCtx.PSE, CostCtx.L);
+  Function *VecFunc = findVectorVariant(CI, Ops, VF, MaskRequired, CostCtx.PSE,
+                                        CostCtx.L, CostCtx.Types);
   InstructionCost VecCallCost = InstructionCost::getInvalid();
   if (VecFunc)
     VecCallCost = VPWidenCallRecipe::computeCallCost(VecFunc, CostCtx);
@@ -6695,8 +6699,8 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       case CallWideningDecision::KindTy::Intrinsic: {
         Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &CostCtx.TLI);
         Type *ResultTy = CostCtx.Types.inferScalarType(VPI);
-        Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, *VPI, *VPI,
-                                            VPI->getDebugLoc());
+        Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, *VPI,
+                                                 *VPI, VPI->getDebugLoc());
         break;
       }
       case CallWideningDecision::KindTy::VectorVariant: {
@@ -6707,8 +6711,8 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
           Ops.push_back(Mask);
         }
         Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
-        Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, *VPI, *VPI,
-                                       VPI->getDebugLoc());
+        Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, *VPI,
+                                            *VPI, VPI->getDebugLoc());
         break;
       }
       case CallWideningDecision::KindTy::Scalarize:
