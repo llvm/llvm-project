@@ -483,7 +483,7 @@ namespace B19773010 {
     // CHECK-LABEL: @_ZN9B197730102f1Ev
     testcase a{{"", ENUM_CONSTANT}};
     // X86: store ptr @.ref.tmp{{.*}}, ptr %{{.*}}, align 8
-    // AMDGCN: store ptr addrspacecast{{.*}} @.ref.tmp{{.*}}{{.*}}, ptr %{{.*}}, align 8
+    // AMDGCN: store ptr addrspacecast{{.*}} @.ref.tmp{{.*}}{{.*}}, ptr addrspace(5) %{{.*}}, align 8
   }
   void f2() {
     // CHECK-LABEL: @_ZN9B197730102f2Ev
