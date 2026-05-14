@@ -1000,9 +1000,12 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         RHSInfo, Operands, CtxI, &Ctx.TLI);
   }
   case Instruction::Freeze:
-    // This opcode is unknown. Assume that it is the same as 'mul'.
-    return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, ResultTy,
-                                          Ctx.CostKind);
+    // NOTE: The only way to ask for the cost is via getInstructionCost, which
+    // requires the actual vector instruction. Instead, both here and in the
+    // LoopVectorizationCostModel::getInstructionCost the costs mirror the
+    // current behaviour in llvm/Analysis/TargetTransformInfoImpl.h to keep
+    // them in sync.
+    return TTI::TCC_Free;
   case Instruction::ExtractValue:
     return Ctx.TTI.getInsertExtractValueCost(Instruction::ExtractValue,
                                              Ctx.CostKind);

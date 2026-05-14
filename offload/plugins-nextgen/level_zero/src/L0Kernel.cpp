@@ -19,28 +19,6 @@
 
 namespace llvm::omp::target::plugin {
 
-bool KernelPropertiesTy::reuseGroupParams(const int32_t NumTeamsIn,
-                                          const int32_t ThreadLimitIn,
-                                          uint32_t *GroupSizesOut,
-                                          L0LaunchEnvTy &KEnv) const {
-  if (NumTeamsIn != NumTeams || ThreadLimitIn != ThreadLimit)
-    return false;
-  // Found matching input parameters.
-  std::copy_n(GroupSizes, 3, GroupSizesOut);
-  KEnv.GroupCounts = GroupCounts;
-  return true;
-}
-
-void KernelPropertiesTy::cacheGroupParams(const int32_t NumTeamsIn,
-                                          const int32_t ThreadLimitIn,
-                                          const uint32_t *GroupSizesIn,
-                                          L0LaunchEnvTy &KEnv) {
-  NumTeams = NumTeamsIn;
-  ThreadLimit = ThreadLimitIn;
-  std::copy_n(GroupSizesIn, 3, GroupSizes);
-  GroupCounts = KEnv.GroupCounts;
-}
-
 Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   const auto &l0Device = L0DeviceTy::makeL0Device(Program.getDevice());
   auto &KernelPR = getProperties();
@@ -103,167 +81,6 @@ Error L0KernelTy::initImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = buildKernel(Program))
     return Err;
   Program.addKernel(this);
-
-  return Plugin::success();
-}
-
-void L0KernelTy::decideKernelGroupArguments(L0DeviceTy &Device,
-                                            uint32_t NumTeams,
-                                            uint32_t ThreadLimit,
-                                            uint32_t *GroupSizes,
-                                            L0LaunchEnvTy &KEnv) const {
-
-  const KernelPropertiesTy &KernelPR = getProperties();
-
-  const auto DeviceId = Device.getDeviceId();
-  bool MaxGroupSizeForced = false;
-  bool MaxGroupCountForced = false;
-  uint32_t MaxGroupSize = Device.getMaxGroupSize();
-  const auto &Option = Device.getPlugin().getOptions();
-  const auto OptSubscRate = Option.SubscriptionRate;
-  auto &GroupCounts = KEnv.GroupCounts;
-
-  uint32_t SIMDWidth = KernelPR.SIMDWidth;
-  uint32_t KernelWidth = KernelPR.Width;
-  uint32_t KernelMaxThreadGroupSize = KernelPR.MaxThreadGroupSize;
-
-  if (KernelMaxThreadGroupSize < MaxGroupSize) {
-    MaxGroupSize = KernelMaxThreadGroupSize;
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Capping maximum team size to %" PRIu32
-         " due to kernel constraints.\n",
-         MaxGroupSize);
-  }
-
-  if (ThreadLimit > 0) {
-    MaxGroupSizeForced = true;
-    MaxGroupSize = ThreadLimit;
-  }
-
-  uint32_t MaxGroupCount = 0;
-  if (NumTeams > 0) {
-    MaxGroupCount = NumTeams;
-    MaxGroupCountForced = true;
-  }
-
-  if (MaxGroupCountForced) {
-    // If number of teams is specified by the user, then use KernelWidth.
-    // WIs per WG by default, so that it matches
-    // decideLoopKernelGroupArguments() behavior.
-    if (!MaxGroupSizeForced) {
-      MaxGroupSize = KernelWidth;
-    }
-  } else {
-    const uint32_t NumSubslices = Device.getNumSubslices();
-    uint32_t NumThreadsPerSubslice = Device.getNumThreadsPerSubslice();
-    if (KEnv.HalfNumThreads)
-      NumThreadsPerSubslice /= 2;
-
-    MaxGroupCount = NumSubslices * NumThreadsPerSubslice;
-    if (MaxGroupSizeForced) {
-      // Set group size for the HW capacity.
-      uint32_t NumThreadsPerGroup = (MaxGroupSize + SIMDWidth - 1) / SIMDWidth;
-      uint32_t NumGroupsPerSubslice =
-          (NumThreadsPerSubslice + NumThreadsPerGroup - 1) / NumThreadsPerGroup;
-      MaxGroupCount = NumGroupsPerSubslice * NumSubslices;
-    } else {
-      assert(!MaxGroupSizeForced && !MaxGroupCountForced);
-      assert((MaxGroupSize <= KernelWidth || MaxGroupSize % KernelWidth == 0) &&
-             "Invalid maxGroupSize");
-      // Maximize group size.
-      while (MaxGroupSize >= KernelWidth) {
-        uint32_t NumThreadsPerGroup =
-            (MaxGroupSize + SIMDWidth - 1) / SIMDWidth;
-
-        if (NumThreadsPerSubslice % NumThreadsPerGroup == 0) {
-          uint32_t NumGroupsPerSubslice =
-              NumThreadsPerSubslice / NumThreadsPerGroup;
-          MaxGroupCount = NumGroupsPerSubslice * NumSubslices;
-          break;
-        }
-        MaxGroupSize -= KernelWidth;
-      }
-    }
-  }
-
-  uint32_t GRPCounts[3] = {MaxGroupCount, 1, 1};
-  uint32_t GRPSizes[3] = {MaxGroupSize, 1, 1};
-  if (!MaxGroupCountForced) {
-    GRPCounts[0] *= OptSubscRate;
-  }
-  GroupCounts.groupCountX = GRPCounts[0];
-  GroupCounts.groupCountY = GRPCounts[1];
-  GroupCounts.groupCountZ = GRPCounts[2];
-  std::copy(GRPSizes, GRPSizes + 3, GroupSizes);
-}
-
-Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
-                                 int32_t ThreadLimit, uint32_t *GroupSizes,
-                                 L0LaunchEnvTy &KEnv) const {
-
-  const auto DeviceId = Device.getDeviceId();
-  const auto &KernelPR = getProperties();
-
-  // Read the most recent global thread limit and max teams.
-  const int32_t NumTeamsICV = 0;
-  const int32_t ThreadLimitICV = 0;
-
-  bool IsXeHPG = Device.isDeviceArch(DeviceArchTy::DeviceArch_XeHPG);
-  KEnv.HalfNumThreads =
-      Device.getPlugin().getOptions().ZeDebugEnabled && IsXeHPG;
-  uint32_t KernelWidth = KernelPR.Width;
-  uint32_t SIMDWidth = KernelPR.SIMDWidth;
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Assumed kernel SIMD width is %" PRIu32 "\n", SIMDWidth);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Preferred team size is multiple of %" PRIu32 "\n", KernelWidth);
-  assert(SIMDWidth <= KernelWidth && "Invalid SIMD width.");
-
-  if (ThreadLimit > 0) {
-    // use thread_limit clause value default.
-    ODBG(OLDT_Kernel) << "Max team size is set to " << ThreadLimit
-                      << " (thread_limit clause)";
-  } else if (ThreadLimitICV > 0) {
-    // else use thread-limit-var ICV.
-    ThreadLimit = ThreadLimitICV;
-    ODBG(OLDT_Kernel) << "Max team size is set to " << ThreadLimit
-                      << " (thread-limit-icv)";
-  }
-
-  size_t MaxThreadLimit = Device.getMaxGroupSize();
-  // Set correct max group size if the kernel was compiled with explicit SIMD.
-  if (SIMDWidth == 1)
-    MaxThreadLimit = Device.getNumThreadsPerSubslice();
-
-  if (KernelPR.MaxThreadGroupSize < MaxThreadLimit) {
-    MaxThreadLimit = KernelPR.MaxThreadGroupSize;
-    ODBG(OLDT_Kernel) << "Capping maximum team size to " << MaxThreadLimit
-                      << " due to kernel constraints.";
-  }
-
-  if (ThreadLimit > static_cast<int32_t>(MaxThreadLimit)) {
-    ThreadLimit = MaxThreadLimit;
-    ODBG(OLDT_Kernel) << "Max team size exceeds current maximum "
-                      << MaxThreadLimit << ". Adjusted";
-  }
-  // scope code to ease integration with downstream custom code.
-  {
-    if (NumTeams > 0) {
-      ODBG(OLDT_Kernel) << "Number of teams is set to " << NumTeams
-                        << " (num_teams clause or no teams construct)";
-    } else if (NumTeamsICV > 0) {
-      // OMP_NUM_TEAMS only matters, if num_teams() clause is absent.
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "OMP_NUM_TEAMS(%" PRId32 ") is ignored\n", NumTeamsICV);
-
-      NumTeams = NumTeamsICV;
-      ODBG(OLDT_Kernel) << "Max number of teams is set to " << NumTeams
-                        << " (OMP_NUM_TEAMS)";
-    }
-
-    decideKernelGroupArguments(Device, (uint32_t)NumTeams,
-                               (uint32_t)ThreadLimit, GroupSizes, KEnv);
-  }
 
   return Plugin::success();
 }
@@ -379,41 +196,18 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
 Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
                                   uint32_t NumThreads[3],
                                   uint32_t NumBlocks[3]) const {
-
-  bool HasUserDefinedGroups = NumThreads[0] != 0 && NumThreads[1] != 0 &&
-                              NumThreads[2] != 0 && NumBlocks[0] != 0 &&
-                              NumBlocks[1] != 0 && NumBlocks[2] != 0;
+  assert(NumThreads[0] > 0 && NumThreads[1] > 0 && NumThreads[2] > 0 &&
+         "Pre-computed ThreadLimit values must be non-zero");
+  assert(NumBlocks[0] > 0 && NumBlocks[1] > 0 && NumBlocks[2] > 0 &&
+         "Pre-computed NumTeams values must be non-zero");
 
   uint32_t GroupSizes[3];
-  bool CanReuseParams = false;
-
-  if (HasUserDefinedGroups) {
-    KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
-    // Respect max group size attribute in the kernel.
-    uint32_t MaxGroupSize = KEnv.KernelPR.MaxThreadGroupSize;
-    GroupSizes[0] = std::min<uint32_t>(MaxGroupSize, NumThreads[0]);
-    GroupSizes[1] = std::min<uint32_t>(MaxGroupSize, NumThreads[1]);
-    GroupSizes[2] = std::min<uint32_t>(MaxGroupSize, NumThreads[2]);
-  } else {
-    int32_t NumTeams = NumBlocks[0];
-    int32_t ThreadLimit = NumThreads[0];
-    if (NumTeams < 0)
-      NumTeams = 0;
-    if (ThreadLimit < 0)
-      ThreadLimit = 0;
-
-    auto &KernelPR = KEnv.KernelPR;
-    // Check if we can reuse previous group parameters.
-    CanReuseParams =
-        KernelPR.reuseGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
-
-    if (!CanReuseParams) {
-      if (auto Err =
-              getGroupsShape(l0Device, NumTeams, ThreadLimit, GroupSizes, KEnv))
-        return Err;
-      KernelPR.cacheGroupParams(NumTeams, ThreadLimit, GroupSizes, KEnv);
-    }
-  }
+  KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
+  // Respect max group size attribute in the kernel.
+  uint32_t MaxGroupSize = KEnv.KernelPR.MaxThreadGroupSize;
+  GroupSizes[0] = std::min<uint32_t>(MaxGroupSize, NumThreads[0]);
+  GroupSizes[1] = std::min<uint32_t>(MaxGroupSize, NumThreads[1]);
+  GroupSizes[2] = std::min<uint32_t>(MaxGroupSize, NumThreads[2]);
 
   auto DeviceId = l0Device.getDeviceId();
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
@@ -424,10 +218,8 @@ Error L0KernelTy::setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
        KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
        KEnv.GroupCounts.groupCountZ);
 
-  if (!CanReuseParams) {
-    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), GroupSizes[0],
-                      GroupSizes[1], GroupSizes[2]);
-  }
+  CALL_ZE_RET_ERROR(zeKernelSetGroupSize, getZeKernel(), GroupSizes[0],
+                    GroupSizes[1], GroupSizes[2]);
 
   return Plugin::success();
 }

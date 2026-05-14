@@ -38,6 +38,7 @@ thread_local T tls_templ = {get_i()};
 // Alias: Ctor/Dtor: 
 // CIR: cir.func linkonce_odr @_ZTH9tls_templI8CtorDtorE() alias(@[[CTOR_DTOR_INIT:[^)]*]])
 // TLS Guard: Ctor/Dtor:
+// CIR: cir.global "private" linkonce_odr comdat tls_dyn @_ZGV9tls_templI8CtorDtorE = #cir.int<0> : !s64i
 
 // Wrapper: int
 // CIR-LABEL: cir.func comdat weak_odr private hidden @_ZTW9tls_templIiE() -> !cir.ptr<!s32i>
@@ -48,15 +49,28 @@ thread_local T tls_templ = {get_i()};
 
 // Alias: int
 // CIR: cir.func linkonce_odr @_ZTH9tls_templIiE() alias(@[[INT_INIT:[^)]*]])
+// TLS Guard: int
+// CIR: cir.global "private" linkonce_odr comdat tls_dyn @_ZGV9tls_templIiE = #cir.int<0> : !s64i
 
 // Global: int
 // CIR: cir.global linkonce_odr comdat tls_dyn dyn_tls_refs = <"_ZTW9tls_templIiE", "_ZTH9tls_templIiE", "_ZGV9tls_templIiE"> @_Z9tls_templIiE = #cir.int<0> : !s32i
 
 // Init Func: int
 // CIR:  cir.func internal private @[[INT_INIT]]() {
+// CIR:    %[[GET_GUARD:.*]] = cir.get_global thread_local @_ZGV9tls_templIiE : !cir.ptr<!s64i>
+// CIR:    %[[GUARD_CAST:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
+// CIR:    %[[LOAD_GUARD:.*]] = cir.load align(8) %[[GUARD_CAST]] : !cir.ptr<!s8i>, !s8i
+// CIR:    %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
+// CIR:    %[[ISUNINIT:.*]] = cir.cmp eq %[[LOAD_GUARD]], %[[ZERO]] : !s8i
+// CIR:    cir.if %[[ISUNINIT]] {
+// CIR:      %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
+// CIR:      cir.store %[[ONE]], %[[GET_GUARD]] : !s64i, !cir.ptr<!s64i>
 // CIR:      %[[GET_GLOB:.*]] = cir.get_global thread_local @_Z9tls_templIiE : !cir.ptr<!s32i>
 // CIR:      %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR:      cir.store {{.*}}%[[CALL]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>
+// CIR:    }
+// CIR:    cir.return
+// CIR:  }
 
 
 // Global: Ctor/Dotr:
@@ -64,6 +78,14 @@ thread_local T tls_templ = {get_i()};
 
 // Init Func: Ctor/Dtor:
 // CIR: cir.func internal private @[[CTOR_DTOR_INIT]]() {
+// CIR:   %[[GET_GUARD:.*]] = cir.get_global thread_local @_ZGV9tls_templI8CtorDtorE : !cir.ptr<!s64i>
+// CIR:    %[[GUARD_CAST:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
+// CIR:    %[[LOAD_GUARD:.*]] = cir.load align(8) %[[GUARD_CAST]] : !cir.ptr<!s8i>, !s8i
+// CIR:    %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
+// CIR:    %[[ISUNINIT:.*]] = cir.cmp eq %[[LOAD_GUARD]], %[[ZERO]] : !s8i
+// CIR:    cir.if %[[ISUNINIT]] {
+// CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
+// CIR:     cir.store %[[ONE]], %[[GET_GUARD]] : !s64i, !cir.ptr<!s64i>
 // CIR:     %[[GET_GLOB:.*]] = cir.get_global thread_local @_Z9tls_templI8CtorDtorE : !cir.ptr<!rec_CtorDtor>
 // CIR:     %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR:     cir.call @_ZN8CtorDtorC1Ei(%[[GET_GLOB]], %[[CALL]]) : (!cir.ptr<!rec_CtorDtor> {{.*}}, !s32i {llvm.noundef}) -> ()
@@ -73,9 +95,15 @@ thread_local T tls_templ = {get_i()};
 // CIR:     %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB:.*]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
 // CIR:     %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
 // CIR:     cir.call @__cxa_thread_atexit(%[[DTOR_FPTR]], %[[GLOB_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:   }
+// CIR:   cir.return
+// CIR: }
 
 // FIXME: These have inconsistent COMDAT with classic codegen, but we don't
 // currently specify 'comdat' with a name.
+// Guards:
+// LLVM-BOTH-DAG: @_ZGV9tls_templI8CtorDtorE = linkonce_odr thread_local global i64 0, comdat{{.*}}, align 8
+// LLVM-BOTH-DAG: @_ZGV9tls_templIiE = linkonce_odr thread_local global i64 0, comdat{{.*}}, align 8
 // Globals:
 // LLVM-BOTH-DAG: @_Z9tls_templIiE = linkonce_odr thread_local global i32 0, comdat, align 4
 // LLVM-BOTH-DAG: @_Z9tls_templI8CtorDtorE = linkonce_odr thread_local global %struct.CtorDtor zeroinitializer, comdat, align 4
@@ -121,10 +149,13 @@ thread_local T tls_templ = {get_i()};
 //    but ALWAYS treats the load/stores as i8.  This is likely a 'bug' in OGCG, but one that
 //    doesn't really matter at all.
 // LLVM-BOTH: define internal void @[[INT_INIT]]()
+// LLVM:   %[[GET_GUARD:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @_ZGV9tls_templIiE)
+// LLVM:   %[[LOAD_GUARD:.*]] = load i8, ptr %[[GET_GUARD]], align 8
 // OGCG:   %[[LOAD_GUARD:.*]] = load i8, ptr @_ZGV9tls_templIiE, align 8
-// OGCG:   %[[ISUNINIT:.*]] = icmp eq i{{.*}} %[[LOAD_GUARD]], 0
-// OGCG:   br i1 %[[ISUNINIT]]
+// LLVM-BOTH:   %[[ISUNINIT:.*]] = icmp eq i{{.*}} %[[LOAD_GUARD]], 0
+// LLVM-BOTH:   br i1 %[[ISUNINIT]]
 //
+// LLVM:   store i64 1, ptr %[[GET_GUARD]], align 8
 // OGCG:   store i8 1, ptr @_ZGV9tls_templIiE, align 8
 // LLVM:   %[[GET_GLOB:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templIiE)
 // LLVM:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()
@@ -133,10 +164,13 @@ thread_local T tls_templ = {get_i()};
 // LLVM-BOTH:   store i32 %[[CALL]], ptr %[[GET_GLOB]]
 
 // LLVM-BOTH: define internal void @[[CTOR_DTOR_INIT]]()
+// LLVM:   %[[GET_GUARD:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @_ZGV9tls_templI8CtorDtorE)
+// LLVM:   %[[LOAD_GUARD:.*]] = load i8, ptr %[[GET_GUARD]], align 8
 // OGCG:   %[[LOAD_GUARD:.*]] = load i8, ptr @_ZGV9tls_templI8CtorDtorE, align 8
-// OGCG:   %[[ISUNINIT:.*]] = icmp eq i{{.*}} %[[LOAD_GUARD]], 0
-// OGCG:   br i1 %[[ISUNINIT]]
+// LLVM-BOTH:   %[[ISUNINIT:.*]] = icmp eq i{{.*}} %[[LOAD_GUARD]], 0
+// LLVM-BOTH:   br i1 %[[ISUNINIT]]
 //
+// LLVM:   store i64 1, ptr %[[GET_GUARD]], align 8
 // OGCG:  store i8 1, ptr @_ZGV9tls_templI8CtorDtorE, align 8
 //
 // LLVM:   %[[GET_GLOB:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templI8CtorDtorE)
