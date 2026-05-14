@@ -21,9 +21,8 @@ namespace internal {
 __attribute__((no_stack_protector))
 #endif
 __attribute__((noreturn)) void exit(int status) {
-  for (;;) {
-    LIBC_NAMESPACE::syscall_impl(SYS_exit, status);
-  }
+  for (;;)
+    syscall_impl(SYS_exit, status);
 }
 
 } // namespace internal

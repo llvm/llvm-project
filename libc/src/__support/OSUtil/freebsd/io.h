@@ -14,9 +14,8 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
-  LIBC_NAMESPACE::freebsd_syscalls::write(2 /* stderr */, msg.data(),
+  freebsd_syscalls::write(2 /* stderr */, msg.data(),
                                           msg.size());
 }
 
