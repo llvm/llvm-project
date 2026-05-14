@@ -5009,51 +5009,38 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
 MachineBasicBlock *
 SITargetLowering::splitKillBlock(MachineInstr &MI,
                                  MachineBasicBlock *BB) const {
-  MachineBasicBlock *SplitBB = BB->splitAt(MI, /*UpdateLiveIns=*/true);
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
 
-  if (SplitBB->isLiveIn(AMDGPU::SCC)) {
-    const GCNSubtarget &ST = BB->getParent()->getSubtarget<GCNSubtarget>();
-    const SIRegisterInfo *TRI = ST.getRegisterInfo();
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    DebugLoc DL = MI.getDebugLoc();
+  // Default split point is the KILL instruction itself
+  MachineInstr *SplitIt = &MI;
 
-    // Insert a COPY from SCC from the last instruction which defines SCC in
-    // `BB`
-    bool Inserted = false;
-    Register SCCCopy;
-    for (auto I = BB->rbegin(), E = BB->rend(); I != E; ++I) {
-      if (I->isDebugInstr())
-        continue;
+  // Scan backwards from MI to see if SCC is defined before the KILL.
+  for (auto It = MachineBasicBlock::reverse_iterator(MI), E = BB->rend();
+       It != E; ++It) {
+    if (It->isDebugInstr())
+      continue;
 
-      if (I->isCall()) {
-        // $scc is caller saved register, so if it is clobbered, we ingore it
-        // since the value of $scc is not a useful one.
-        continue;
-      }
-      if (I->definesRegister(AMDGPU::SCC, TRI)) {
-        SCCCopy = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0_XEXECRegClass);
-        // const TargetRegisterClass *RC =
-        // TRI->getAllocatableClass(&AMDGPU::SCC_CLASSRegClass); SCCCopy =
-        // MRI.createVirtualRegister(RC);
-        BuildMI(*BB, std::next(I->getIterator()), DL,
-                TII->get(TargetOpcode::COPY), SCCCopy)
-            .addReg(AMDGPU::SCC);
-        Inserted = true;
-        break;
-      }
+    // If the SCC def is found, update SplitIT with It and break.
+    if (It->definesRegister(AMDGPU::SCC, TRI)) {
+      SplitIt = &*It;
+      break;
     }
 
-    assert(Inserted);
-    // Copy back to $scc in the SplitBB
-    BuildMI(*SplitBB, SplitBB->getFirstNonPHI(), DL,
-            TII->get(TargetOpcode::COPY), AMDGPU::SCC)
-        .addReg(SCCCopy, RegState::Kill);
-    // Now remove the scc from the livein of splitBB
-    SplitBB->removeLiveIn(AMDGPU::SCC);
+    // since scc is calleer-saved, the scan aborts.
+    if (It->isCall())
+      break;
   }
 
+  MachineBasicBlock *SplitBB = BB->splitAt(*SplitIt, /*UpdateLiveIns=*/true);
+
+  // the KILL instruction (MI) is hosited and appended to the very end of the
+  // original block (BB).
+  if (&MI != SplitIt)
+    BB->splice(BB->end(), SplitBB, MI);
+
   MI.setDesc(TII->getKillTerminatorFromPseudo(MI.getOpcode()));
+
   return SplitBB;
 }
 
