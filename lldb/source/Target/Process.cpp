@@ -6544,7 +6544,8 @@ Process::GetInstrumentationRuntime(lldb::InstrumentationRuntimeType type) {
 llvm::Error
 Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
                                           bool enabled) {
-  assert(IsAlive());
+  if (!IsAlive())
+    return llvm::createStringErrorV("process {} is not alive", GetID());
 
   if (auto instrumentation_runtime = GetInstrumentationRuntime(irt)) {
     // This process already has an instance of this plugin so just
