@@ -86,8 +86,8 @@ RUN wget https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
     mkdir gcc-7 && \
     cd gcc-7 && \
     ../gcc-7.5.0/configure --prefix=/usr/local/gcc7 --enable-languages=c,c++ \
-    --disable-multilib && \
-    make && \
+    --disable-multilib --disable-libsanitizer && \
+    make -j8 && \
     sudo make install && \
     cd .. && \
     rm -rf gcc-7 && \
@@ -103,8 +103,8 @@ RUN wget https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz && \
     mkdir gcc-8 && \
     cd gcc-8 && \
     ../gcc-8.5.0/configure --prefix=/usr/local/gcc8 --enable-languages=c,c++ \
-    --disable-multilib && \
-    make && \
+    --disable-multilib --disable-libsanitizer && \
+    make -j8 && \
     sudo make install && \
     cd .. && \
     rm -rf gcc-8 && \
