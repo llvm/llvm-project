@@ -1865,7 +1865,7 @@ VPCostContext::getOperandInfo(VPValue *V) const {
 }
 
 InstructionCost VPCostContext::getScalarizationOverhead(
-    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
+    Type *ResultTy, ArrayRef<VPValue *> Operands, ElementCount VF,
     TTI::VectorInstrContext VIC, bool AlwaysIncludeReplicatingR) {
   if (VF.isScalar())
     return 0;

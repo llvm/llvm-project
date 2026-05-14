@@ -1970,7 +1970,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
 /// Compute the cost for the intrinsic \p ID with \p Operands, produced by \p R.
 static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
-                                            ArrayRef<const VPValue *> Operands,
+                                            ArrayRef<VPValue *> Operands,
                                             const VPRecipeWithIRFlags &R,
                                             ElementCount VF,
                                             VPCostContext &Ctx) {
@@ -2016,7 +2016,7 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
 
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
                                                     VPCostContext &Ctx) const {
-  SmallVector<const VPValue *> ArgOps(operands());
+  ArrayRef<VPValue *> ArgOps(operands().begin(), getNumOperands());
   return getCostForIntrinsics(VectorIntrinsicID, ArgOps, *this, VF, Ctx);
 }
 
@@ -3351,7 +3351,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     auto *CalledFn =
         cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
 
-    SmallVector<const VPValue *> ArgOps(drop_end(operands()));
+    ArrayRef<VPValue *> ArgOps(operands().begin(), getNumOperands() - 1);
     SmallVector<Type *, 4> Tys;
     for (const VPValue *ArgOp : ArgOps)
       Tys.push_back(Ctx.Types.inferScalarType(ArgOp));
@@ -3421,9 +3421,11 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         }))
       break;
 
-    ScalarCost = ScalarCost * VF.getFixedValue() +
-                 Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),
-                                              to_vector(operands()), VF);
+    ScalarCost =
+        ScalarCost * VF.getFixedValue() +
+        Ctx.getScalarizationOverhead(
+            Ctx.Types.inferScalarType(this),
+            ArrayRef<VPValue *>(operands().begin(), getNumOperands()), VF);
     // If the recipe is not predicated (i.e. not in a replicate region), return
     // the scalar cost. Otherwise handle predicated cost.
     if (!getRegion()->isReplicator())
@@ -3488,7 +3490,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (isSingleScalar())
       return ScalarCost;
 
-    SmallVector<const VPValue *> OpsToScalarize;
+    SmallVector<VPValue *> OpsToScalarize;
     Type *ResultTy = Type::getVoidTy(PtrTy->getContext());
     // Set ResultTy and OpsToScalarize, if scalarization is needed. Currently we
     // don't assign scalarization overhead in general, if the target prefers

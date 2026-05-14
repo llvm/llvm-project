@@ -360,7 +360,7 @@ struct VPCostContext {
   /// AlwaysIncludeReplicatingR is true, always compute the cost of scalarizing
   /// replicating operands.
   InstructionCost getScalarizationOverhead(
-      Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
+      Type *ResultTy, ArrayRef<VPValue *> Operands, ElementCount VF,
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None,
       bool AlwaysIncludeReplicatingR = false);
 
