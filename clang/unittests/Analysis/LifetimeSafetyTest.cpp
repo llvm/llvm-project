@@ -1998,6 +1998,11 @@ TEST_F(LifetimeAnalysisTest, BuildLinearOriginFlowChainInOneBlock) {
 
   // 8 == 2 * (e + b + a + tgt)
   EXPECT_EQ(8u, OriginFlowChain.size());
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(Helper->buildOriginFlowChainInOneBlock("s", "e", "after_use"),
+               "TargetLoan must be present in the initial propagation point");
+#endif
 }
 } // anonymous namespace
 } // namespace clang::lifetimes::internal
