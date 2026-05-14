@@ -11019,7 +11019,7 @@ def warn_lifetime_safety_lifetimebound_violation
       DefaultIgnore;
 
 def warn_lifetime_safety_misplaced_lifetimebound
-    : Warning<"'lifetimebound' attribute on the definition is not visible from this declaration; add it to the declaration instead">,
+    : Warning<"'lifetimebound' attribute on the definition is not visible to callers; add it to this declaration instead">,
       InGroup<LifetimeSafetyMisplacedLifetimebound>,
       DefaultIgnore;
 

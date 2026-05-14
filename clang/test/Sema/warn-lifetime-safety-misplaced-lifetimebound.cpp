@@ -6,9 +6,9 @@ struct MyObj {
 
 struct S {
   MyObj data;
-  const MyObj &implicit_this_only(); // expected-warning {{'lifetimebound' attribute on the definition is not visible from this declaration; add it to the declaration instead}}
-  const MyObj &param_only(const MyObj &obj); // expected-warning {{'lifetimebound' attribute on the definition is not visible from this declaration; add it to the declaration instead}}
-  const MyObj &both(const MyObj &obj, bool); // expected-warning 2 {{'lifetimebound' attribute on the definition is not visible from this declaration; add it to the declaration instead}}
+  const MyObj &implicit_this_only(); // expected-warning {{'lifetimebound' attribute on the definition is not visible to callers; add it to this declaration instead}}
+  const MyObj &param_only(const MyObj &obj); // expected-warning {{'lifetimebound' attribute on the definition is not visible to callers; add it to this declaration instead}}
+  const MyObj &both(const MyObj &obj, bool); // expected-warning 2 {{'lifetimebound' attribute on the definition is not visible to callers; add it to this declaration instead}}
 };
 
 const MyObj &S::implicit_this_only() [[clang::lifetimebound]] { // expected-note {{'lifetimebound' attribute written on the definition is here}}
@@ -29,7 +29,7 @@ const MyObj &S::both(
 template <class T>
 struct MixedSpecializations {
   T data;
-  T &both(T &arg, bool); // expected-warning 2 {{'lifetimebound' attribute on the definition is not visible from this declaration; add it to the declaration instead}}
+  T &both(T &arg, bool); // expected-warning 2 {{'lifetimebound' attribute on the definition is not visible to callers; add it to this declaration instead}}
 };
 
 template <>
