@@ -22,7 +22,7 @@
 using namespace llvm;
 
 static cl::opt<float> ReservationStationScaleFactor(
-    "reservation-station-scale-factor", cl::Hidden, cl::init(1.0f),
+    "sched-model-reservation-station-scale-factor", cl::Hidden, cl::init(1.0f),
     cl::desc("Scale buffer size for all reservation stations by a non-negative "
              "factor. Can only scale non-negative buffer sizes. Computed sizes "
              "are truncated towards zero"));

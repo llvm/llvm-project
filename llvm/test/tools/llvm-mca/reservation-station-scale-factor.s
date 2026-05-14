@@ -2,17 +2,17 @@
 # REQUIRES: aarch64-registered-target
 
 ## Note: negative buffer size is not scaled 
-# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -reservation-station-scale-factor=2 -debug 2>&1 | FileCheck %s --check-prefix=UPSCALE
-# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -reservation-station-scale-factor=0.5 -debug 2>&1 | FileCheck %s --check-prefix=DOWNSCALE
+# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -sched-model-reservation-station-scale-factor=2 -debug 2>&1 | FileCheck %s --check-prefix=UPSCALE
+# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -sched-model-reservation-station-scale-factor=0.5 -debug 2>&1 | FileCheck %s --check-prefix=DOWNSCALE
 
 ## Default scale factor is 1
 # RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -debug 2>&1 | FileCheck %s --check-prefix=ORIGINAL
 
 ## Negative scale factor is ignored
-# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -reservation-station-scale-factor=-1 -debug 2>&1 | FileCheck %s --check-prefix=ORIGINAL
+# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -sched-model-reservation-station-scale-factor=-1 -debug 2>&1 | FileCheck %s --check-prefix=ORIGINAL
 
 ## BufferSize=0 is not scaled
-# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=cortex-a53 -reservation-station-scale-factor=2 -debug 2>&1 | FileCheck %s --check-prefix=ZERO-BUFFER
+# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=cortex-a53 -sched-model-reservation-station-scale-factor=2 -debug 2>&1 | FileCheck %s --check-prefix=ZERO-BUFFER
 
 # LLVM-MCA-BEGIN foo
 add x2, x0, x1

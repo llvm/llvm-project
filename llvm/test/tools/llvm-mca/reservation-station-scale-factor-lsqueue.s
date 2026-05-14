@@ -1,9 +1,9 @@
 # REQUIRES: asserts
 # REQUIRES: x86-registered-target
 
-## Load/store queues are not scaled by `-reservation-station-scale-factor`
+## Load/store queues are not scaled by `-sched-model-reservation-station-scale-factor`
 # RUN: llvm-mca < %s -mtriple=x86_64 -mcpu=znver4 -debug 2>&1 | FileCheck %s --check-prefix=ORIGINAL
-# RUN: llvm-mca < %s -mtriple=x86_64 -mcpu=znver4 -reservation-station-scale-factor=2 -debug 2>&1 | FileCheck %s --check-prefix=SCALED
+# RUN: llvm-mca < %s -mtriple=x86_64 -mcpu=znver4 -sched-model-reservation-station-scale-factor=2 -debug 2>&1 | FileCheck %s --check-prefix=SCALED
 
 # LLVM-MCA-BEGIN foo
 addl %eax, %ebx
