@@ -13091,9 +13091,10 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   auto [Mask, StepVec] =
       getLegalMaskAndStepVector(Node->getOperand(0), ZeroIsPoison, DL, DAG);
 
-  // StepVec is empty: split, mirroring SplitVecOp_VP_CttzElements:
-  //   ResLo != |Lo| ? ResLo : |Lo| + ResHi
-  // ResLo uses the non-poison opcode so the comparison is well-defined.
+  // No legal step vector: split mask in halves and recombine results.
+  // Lo uses the non-poison CTTZ_ELTS so its result is well-defined (== |Lo|
+  // when no active lane), allowing the SETNE comparison.
+  // Result: (ResLo != |Lo|) ? ResLo : (|Lo| + ResHi)
   if (!StepVec) {
     EVT ResVT = Node->getValueType(0);
     auto [MaskLo, MaskHi] = DAG.SplitVector(Node->getOperand(0), DL);
@@ -13104,8 +13105,11 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
     SDValue ResLoNotNumElts = DAG.getSetCC(
         DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ResVT),
         ResLo, LoNumElts, ISD::SETNE);
-    return DAG.getSelect(DL, ResVT, ResLoNotNumElts, ResLo,
-                         DAG.getNode(ISD::ADD, DL, ResVT, LoNumElts, ResHi));
+    // |Lo| + ResHi <= total lane count, fits in ResVT; both operands >= 0.
+    SDValue Sum = DAG.getNode(ISD::ADD, DL, ResVT, LoNumElts, ResHi,
+                              SDNodeFlags::NoUnsignedWrap |
+                                  SDNodeFlags::NoSignedWrap);
+    return DAG.getSelect(DL, ResVT, ResLoNotNumElts, ResLo, Sum);
   }
 
   EVT StepVecVT = StepVec.getValueType();
