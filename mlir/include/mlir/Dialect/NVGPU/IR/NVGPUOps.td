@@ -662,8 +662,8 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
   }];
   let arguments = (ins VectorOfNonZeroRankOf<[F32]>:$in,
                        DefaultValuedAttr<FPRoundingModeAttr, "::mlir::NVVM::FPRoundingMode::NONE">:$rounding,
-                       UnitAttr:$approx,
-                       UnitAttr:$ftz);
+                       DefaultValuedAttr<BoolAttr, "false">:$approx,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
   let results = (outs VectorOfNonZeroRankOf<[F32]>:$out);
   let assemblyFormat = [{
     $in attr-dict `:` type($out)
