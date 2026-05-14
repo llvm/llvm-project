@@ -18072,7 +18072,8 @@ bool Sema::CheckDependentFriend(SourceLocation Loc, NestedNameSpecifier NNS,
       T = PIT->getPattern();
 
     if (const auto *TST = dyn_cast<TemplateSpecializationType>(T)) {
-      if (isa<ClassTemplateDecl>(TST->getTemplateName().getAsTemplateDecl()))
+      if (isa_and_nonnull<ClassTemplateDecl>(
+              TST->getTemplateName().getAsTemplateDecl()))
         return false;
     }
 
