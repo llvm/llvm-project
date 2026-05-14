@@ -307,14 +307,14 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info) {
         // succeeded. Validate this composite register.
         SetRegisterIsValid(reg_info);
       } else {
-        SetRegisterIsUnavailable(reg_info);
+        SetRegisterIsUnfetched(reg_info);
       }
     } else {
       // Get each register individually
       if (GetPrimordialRegister(reg_info, gdb_comm))
         SetRegisterIsValid(reg_info);
       else
-        SetRegisterIsUnavailable(reg_info);
+        SetRegisterIsUnfetched(reg_info);
     }
 
     // Make sure we got a valid register value after reading it
