@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -global-isel=0 < %s | FileCheck -check-prefixes=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -global-isel=0 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -global-isel=1 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
 
 define amdgpu_kernel void @workgroup_id_x(ptr addrspace(1) %ptrx) {
 ;

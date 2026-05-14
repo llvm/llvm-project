@@ -177,7 +177,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R_DD[128] = {
     {0.0, 1.0},
 };
 
-LIBC_INLINE constexpr bool is_odd_integer(double x) {
+LIBC_INLINE LIBC_CONSTEXPR bool is_odd_integer(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
   uint64_t x_u = xbits.uintval();
@@ -189,7 +189,7 @@ LIBC_INLINE constexpr bool is_odd_integer(double x) {
   return (x_e + lsb == UNIT_EXPONENT);
 }
 
-LIBC_INLINE constexpr bool is_integer(double x) {
+LIBC_INLINE LIBC_CONSTEXPR bool is_integer(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
   uint64_t x_u = xbits.uintval();

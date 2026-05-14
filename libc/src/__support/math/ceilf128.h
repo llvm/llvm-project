@@ -19,7 +19,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float128 ceilf128(float128 x) { return fputil::ceil(x); }
+LIBC_INLINE LIBC_CONSTEXPR float128 ceilf128(float128 x) {
+  return fputil::ceil(x);
+}
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
