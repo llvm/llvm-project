@@ -3021,7 +3021,7 @@ SDValue SparcTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
   SDValue BSwapOp = Op.getOperand(0);
   EVT VT = BSwapOp.getValueType();
   Type *Ty = VT.getTypeForEVT(*DAG.getContext());
-  Align Al = DAG.getDataLayout().getABITypeAlign(Ty);
+  Align Al = DAG.getDataLayout().getPrefTypeAlign(Ty);
 
   // Create a stack object to serve as temporary storage.
   int TmpFI = MFI.CreateStackObject(VT.getStoreSize(), Al, false);
@@ -3261,33 +3261,33 @@ SDValue SparcTargetLowering::PerformBSWAPCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SDLoc DL(N);
   SelectionDAG &DAG = DCI.DAG;
-  SDValue Op0 = N->getOperand(0);
-  EVT Op0VT = N->getValueType(0);
+  SDValue Op = N->getOperand(0);
+  EVT VT = N->getValueType(0);
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
 
   // Turn BSWAP (LOAD) -> ld*a #ASI_P(_L) on V9.
-  if (Subtarget->isV9() && ISD::isNormalLoad(Op0.getNode()) &&
-      Op0.getNode()->hasOneUse() &&
-      (Op0VT == MVT::i16 || Op0VT == MVT::i32 ||
-       (Subtarget->is64Bit() && Op0VT == MVT::i64))) {
-    SDValue Load = Op0;
-    LoadSDNode *LD = cast<LoadSDNode>(Load);
+  if (Subtarget->isV9() && ISD::isNormalLoad(Op.getNode()) &&
+      Op.getNode()->hasOneUse() &&
+      (VT == MVT::i16 || VT == MVT::i32 ||
+       (Subtarget->is64Bit() && VT == MVT::i64))) {
+    SDValue Load = Op;
+    auto *LD = cast<LoadSDNode>(Load);
 
     // Create the byte-swapping load.
     SDValue Ops[] = {
-        LD->getChain(),         // Chain
-        LD->getBasePtr(),       // Ptr
-        DAG.getValueType(Op0VT) // VT
+        LD->getChain(),      // Chain
+        LD->getBasePtr(),    // Ptr
+        DAG.getValueType(VT) // VT
     };
 
     SDValue BSLoad = DAG.getMemIntrinsicNode(
         IsLittleEndian ? SPISD::LOAD_BIG : SPISD::LOAD_LITTLE, DL,
-        DAG.getVTList(Op0VT == MVT::i64 ? MVT::i64 : MVT::i32, MVT::Other), Ops,
+        DAG.getVTList(VT == MVT::i64 ? MVT::i64 : MVT::i32, MVT::Other), Ops,
         LD->getMemoryVT(), LD->getMemOperand());
 
     // If this is an i16 load, insert the truncate.
     SDValue ResVal = BSLoad;
-    if (Op0VT == MVT::i16)
+    if (VT == MVT::i16)
       ResVal = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, BSLoad);
 
     return DCI.CombineTo(N, ResVal);
@@ -3300,33 +3300,33 @@ SDValue SparcTargetLowering::PerformSTORECombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SDLoc DL(N);
   SelectionDAG &DAG = DCI.DAG;
-  EVT Op1VT = N->getOperand(1).getValueType();
-  unsigned Opcode = N->getOperand(1).getOpcode();
+  SDValue Op = N->getOperand(1);
+  EVT VT = Op.getValueType();
+  unsigned Opcode = Op.getOpcode();
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
 
   // Turn STORE (BSWAP) -> st*a #ASI_P(_L) on V9.
-  if (Subtarget->isV9() && Opcode == ISD::BSWAP &&
-      N->getOperand(1).getNode()->hasOneUse() &&
-      (Op1VT == MVT::i16 || Op1VT == MVT::i32 ||
-       (Subtarget->is64Bit() && Op1VT == MVT::i64))) {
+  if (Subtarget->isV9() && Opcode == ISD::BSWAP && Op.getNode()->hasOneUse() &&
+      (VT == MVT::i16 || VT == MVT::i32 ||
+       (Subtarget->is64Bit() && VT == MVT::i64))) {
 
     // st*a can only handle simple types and it makes no sense to store less
     // than two bytes in byte-reversed order.
     EVT MemVT = cast<StoreSDNode>(N)->getMemoryVT();
-    if (MemVT.isExtended() || MemVT.getSizeInBits() < 16)
+    if (MemVT.getSizeInBits() < 16)
       return SDValue();
 
-    SDValue BSwapOp = N->getOperand(1).getOperand(0);
+    SDValue BSwapOp = Op.getOperand(0);
     // Do an any-extend to 32-bits if this is a half-word input.
     if (BSwapOp.getValueType() == MVT::i16)
       BSwapOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, BSwapOp);
 
     // If the type of BSWAP operand is wider than stored memory width
     // it needs to be shifted to the right side before st*a.
-    if (Op1VT.bitsGT(MemVT)) {
-      int Shift = Op1VT.getSizeInBits() - MemVT.getSizeInBits();
-      BSwapOp = DAG.getNode(ISD::SRL, DL, Op1VT, BSwapOp,
-                            DAG.getConstant(Shift, DL, MVT::i32));
+    if (VT.bitsGT(MemVT)) {
+      unsigned Shift = VT.getSizeInBits() - MemVT.getSizeInBits();
+      BSwapOp = DAG.getNode(ISD::SRL, DL, VT, BSwapOp,
+                            DAG.getShiftAmountConstant(Shift, VT, DL));
     }
 
     SDValue Ops[] = {N->getOperand(0), BSwapOp, N->getOperand(2),
