@@ -19,6 +19,7 @@
 #include "ClangTidyOptions.h"
 #include "GlobList.h"
 #include "NoLintDirectiveHandler.h"
+#include "aliases/ClangTidyAliases.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
@@ -27,6 +28,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Lex/Lexer.h"
@@ -34,9 +36,12 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h" // IWYU pragma: keep
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -216,8 +221,23 @@ bool ClangTidyContext::shouldSuppressDiagnostic(
     SmallVectorImpl<tooling::Diagnostic> &NoLintErrors, bool AllowIO,
     bool EnableNoLintBlocks) {
   const std::string CheckName = getCheckName(Info.getID());
-  return NoLintHandler.shouldSuppress(DiagLevel, Info, CheckName, NoLintErrors,
-                                      AllowIO, EnableNoLintBlocks);
+  if (NoLintHandler.shouldSuppress(DiagLevel, Info, CheckName, NoLintErrors,
+                                   AllowIO, EnableNoLintBlocks))
+    return true;
+  // Also check if any alias name for this check is suppressed.
+  for (const StringRef Alias :
+       ClangTidyAliases::getAliasesForCanonical(CheckName)) {
+    if (NoLintHandler.shouldSuppress(DiagLevel, Info, std::string(Alias),
+                                     NoLintErrors, AllowIO,
+                                     EnableNoLintBlocks)) {
+      if (NotifyAliases)
+        llvm::errs() << "note: '" << Alias
+                     << "' is an alias for canonical name '" << CheckName
+                     << "' [checker-alias]\n";
+      return true;
+    }
+  }
+  return false;
 }
 
 void ClangTidyContext::setSourceManager(SourceManager *SourceMgr) {
@@ -236,13 +256,90 @@ static bool parseFileExtensions(llvm::ArrayRef<std::string> AllFileExtensions,
   return true;
 }
 
+/// Expand check alias patterns in the checks string.
+/// For each glob pattern, if it matches an alias name, also add the canonical
+/// name (and vice versa) with the same +/- prefix. This ensures that disabling
+/// either name disables both.
+static std::string expandCheckAliases(StringRef Checks) {
+  if (Checks.empty())
+    return {};
+
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  bool First = true;
+
+  StringRef Remaining = Checks;
+  while (!Remaining.empty()) {
+    // Trim leading whitespace/commas.
+    Remaining = Remaining.ltrim(" \t\n");
+    if (Remaining.empty())
+      break;
+    if (Remaining.front() == ',') {
+      Remaining = Remaining.drop_front();
+      continue;
+    }
+
+    // Extract the prefix (- or nothing).
+    const bool IsNegative = Remaining.consume_front("-");
+    // Extract the glob text up to the next comma or newline.
+    const StringRef Glob =
+        Remaining.substr(0, Remaining.find_first_of(",\n")).trim();
+    Remaining = Remaining.substr(Glob.size());
+
+    if (Glob.empty())
+      continue;
+
+    // Write the original pattern.
+    if (!First)
+      OS << ',';
+    if (IsNegative)
+      OS << '-';
+    OS << Glob;
+    First = false;
+
+    // Check if this glob matches any alias or canonical name.
+    // Create a regex from the glob for matching.
+    SmallString<128> RegexText("^");
+    for (const char C : Glob) {
+      if (C == '*') {
+        RegexText.append(".*");
+      } else if (StringRef("()^$|+?.[]\\{}").contains(C)) {
+        RegexText.push_back('\\');
+        RegexText.push_back(C);
+      } else {
+        RegexText.push_back(C);
+      }
+    }
+    RegexText.push_back('$');
+    const llvm::Regex Re(RegexText);
+
+    for (const auto &Entry : ClangTidyAliases::activeEntries()) {
+      if (Re.match(Entry.Alias)) {
+        // Alias enabled or disabled: also enable/disable the canonical.
+        OS << ',';
+        if (IsNegative)
+          OS << '-';
+        OS << Entry.Canonical;
+      } else if (IsNegative && Re.match(Entry.Canonical)) {
+        // Canonical disabled: also disable the alias.
+        OS << ",-";
+        OS << Entry.Alias;
+      }
+    }
+  }
+
+  return Result;
+}
+
 void ClangTidyContext::setCurrentFile(StringRef File) {
   CurrentFile = std::string(File);
   CurrentOptions = getOptionsForFile(CurrentFile);
-  CheckFilter = std::make_unique<CachedGlobList>(
-      StringRef(getOptions().Checks.value_or("")));
-  WarningAsErrorFilter = std::make_unique<CachedGlobList>(
-      StringRef(getOptions().WarningsAsErrors.value_or("")));
+  ExpandedChecks = expandCheckAliases(getOptions().Checks.value_or(""));
+  CheckFilter = std::make_unique<CachedGlobList>(StringRef(ExpandedChecks));
+  ExpandedWarningsAsErrors =
+      expandCheckAliases(getOptions().WarningsAsErrors.value_or(""));
+  WarningAsErrorFilter =
+      std::make_unique<CachedGlobList>(StringRef(ExpandedWarningsAsErrors));
   static const std::vector<std::string> EmptyFileExtensions;
   if (!parseFileExtensions(getOptions().HeaderFileExtensions
                                ? *getOptions().HeaderFileExtensions

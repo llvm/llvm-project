@@ -18,6 +18,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyForceLinker.h" // IWYU pragma: keep
 #include "../GlobList.h"
+#include "../aliases/ClangTidyAliases.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -234,6 +235,12 @@ static cl::opt<bool> ExplainConfig("explain-config", desc(R"(
 For each enabled check explains, where it is
 enabled, i.e. in clang-tidy binary, command
 line or a specific configuration file.
+)"),
+                                   cl::init(false), cl::cat(ClangTidyCategory));
+
+static cl::opt<bool> NotifyAliases("notify-aliases", desc(R"(
+Emit a note for each check alias used in --checks
+or NOLINT comments, showing the canonical check name.
 )"),
                                    cl::init(false), cl::cat(ClangTidyCategory));
 
@@ -658,6 +665,16 @@ int clangTidyMain(int argc, const char **argv) {
       getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers,
                     ExperimentalCustomChecks);
 
+  if (NotifyAliases) {
+    const GlobList OriginalFilter(
+        StringRef(EffectiveOptions.Checks.value_or("")), false);
+    for (const auto &Entry : ClangTidyAliases::activeEntries())
+      if (OriginalFilter.contains(Entry.Alias))
+        llvm::errs() << "note: '" << Entry.Alias
+                     << "' is an alias for canonical name '" << Entry.Canonical
+                     << "' [checker-alias]\n";
+  }
+
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
     std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
@@ -737,6 +754,7 @@ int clangTidyMain(int argc, const char **argv) {
   ClangTidyContext Context(
       std::move(OwningOptionsProvider), AllowEnablingAnalyzerAlphaCheckers,
       EnableModuleHeadersParsing, ExperimentalCustomChecks);
+  Context.setNotifyAliases(NotifyAliases);
   std::vector<ClangTidyError> Errors =
       runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                    FixNotes, EnableCheckProfile, ProfilePrefix, Quiet);

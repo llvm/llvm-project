@@ -18,6 +18,11 @@ extern volatile int AbseilModuleAnchorSource;
 [[maybe_unused]] static int AbseilModuleAnchorDestination =
     AbseilModuleAnchorSource;
 
+// This anchor is used to force the linker to link the AliasesModule.
+extern volatile int AliasesModuleAnchorSource;
+[[maybe_unused]] static int AliasesModuleAnchorDestination =
+    AliasesModuleAnchorSource;
+
 // This anchor is used to force the linker to link the AlteraModule.
 extern volatile int AlteraModuleAnchorSource;
 [[maybe_unused]] static int AlteraModuleAnchorDestination =

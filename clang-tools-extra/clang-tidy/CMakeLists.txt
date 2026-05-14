@@ -19,6 +19,9 @@ add_clang_library(clangTidy STATIC
   GlobList.cpp
   NoLintDirectiveHandler.cpp
 
+  LINK_LIBS
+  clangTidyAliasesModule
+
   DEPENDS
   ClangSACheckers
   omp_gen
@@ -50,8 +53,9 @@ endif()
 
 # Checks.
 # If you add a check, also add it to ClangTidyForceLinker.h in this directory.
-add_subdirectory(android)
 add_subdirectory(abseil)
+add_subdirectory(aliases)
+add_subdirectory(android)
 add_subdirectory(altera)
 add_subdirectory(boost)
 add_subdirectory(bugprone)
@@ -77,8 +81,9 @@ add_subdirectory(portability)
 add_subdirectory(readability)
 add_subdirectory(zircon)
 set(ALL_CLANG_TIDY_CHECKS
-  clangTidyAndroidModule
   clangTidyAbseilModule
+  clangTidyAliasesModule
+  clangTidyAndroidModule
   clangTidyAlteraModule
   clangTidyBoostModule
   clangTidyBugproneModule

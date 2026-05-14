@@ -11,7 +11,7 @@ struct B {
 struct D {
   B b;
 
-  // CHECK-MESSAGES: :[[@LINE+1]]:14: warning: move constructor initializes class member by calling a copy constructor [cert-oop11-cpp]
+  // CHECK-MESSAGES: :[[@LINE+1]]:14: warning: move constructor initializes class member by calling a copy constructor [performance-move-constructor-init]
   D(D &&d) : b(d.b) {}
 
   // This should not produce a diagnostic because it is not covered under

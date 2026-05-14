@@ -150,6 +150,9 @@ public:
   /// exposed as a 'clang-diagnostic-*' check.
   bool isCompilerDiagnostic(unsigned DiagnosticID) const;
 
+  /// Enable alias usage notifications.
+  void setNotifyAliases(bool Notify) { NotifyAliases = Notify; }
+
   /// Returns \c true if the check is enabled for the \c CurrentFile.
   ///
   /// The \c CurrentFile can be changed using \c setCurrentFile.
@@ -247,8 +250,12 @@ private:
   std::string CurrentFile;
   ClangTidyOptions CurrentOptions;
 
+  std::string ExpandedChecks;
+  std::string ExpandedWarningsAsErrors;
   std::unique_ptr<CachedGlobList> CheckFilter;
   std::unique_ptr<CachedGlobList> WarningAsErrorFilter;
+
+  bool NotifyAliases = false;
 
   FileExtensionsSet HeaderFileExtensions;
   FileExtensionsSet ImplementationFileExtensions;

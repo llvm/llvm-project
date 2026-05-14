@@ -360,6 +360,7 @@ ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
     std::unique_ptr<ClangTidyModule> Module = E.instantiate();
     Module->addCheckFactories(*CheckFactories);
   }
+  CheckFactories->resolveAliases();
 }
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
@@ -720,6 +721,7 @@ ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
        ClangTidyModuleRegistry::entries()) {
     Module.instantiate()->addCheckFactories(Factories);
   }
+  Factories.resolveAliases();
 
   for (const auto &Factory : Factories)
     Result.Checks.insert(Factory.getKey());
