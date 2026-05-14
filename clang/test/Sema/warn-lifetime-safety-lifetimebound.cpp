@@ -131,3 +131,7 @@ struct ThisAndMixedParams {
     return cond() ? lb(a) : not_lb(b);
   }
 };
+
+void implicit_lifetimebound_in_nested_std_namespace() {
+  (void)std::basic_string_view<char>("hello");
+}
