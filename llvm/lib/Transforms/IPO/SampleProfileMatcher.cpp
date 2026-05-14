@@ -841,7 +841,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
     if (!OrphanFunc)
       continue;
 
-    FuncToProfileNameMap[OrphanFunc] = ProfId;
+    OrphanFuncToProfileNameMap[OrphanFunc] = ProfId;
     if (const auto *FS = Reader.getSamplesFor(ProfId.stringRef()))
       NewlyLoadedProfiles.create(FS->getFunction()).merge(*FS);
     MatchCount++;
@@ -1036,6 +1036,27 @@ void SampleProfileMatcher::runOnModule() {
     if (skipProfileForFunction(*F))
       continue;
     runOnFunction(*F);
+  }
+
+  // Run a second stale profile matching with inferred profiles for orphan
+  // toplevel functions based on basename matching.
+  if (SalvageUnusedProfile) {
+    for (auto *F : TopDownFunctionList) {
+      if (skipProfileForFunction(*F))
+        continue;
+      auto ProfFunc = FuncToProfileNameMap.find(F);
+      if (ProfFunc == FuncToProfileNameMap.end()) {
+        ProfFunc = OrphanFuncToProfileNameMap.find(F);
+        if (ProfFunc == OrphanFuncToProfileNameMap.end())
+          continue;
+      }
+      auto Matched = FuncProfileMatchCache.find({F, ProfFunc->second});
+      // Skip already matched functions
+      if (functionMatchesProfile(*F, ProfFunc->second, true))
+        continue;
+      FuncToProfileNameMap[F] = ProfFunc->second;
+      runOnFunction(*F);
+    }
   }
 
   if (SalvageUnusedProfile)

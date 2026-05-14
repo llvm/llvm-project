@@ -79,6 +79,10 @@ class SampleProfileMatcher {
   // name.
   MapVector<Function *, FunctionId> FuncToProfileNameMap;
 
+  // Separate mapping for Orphan toplevel functions (without profile) to
+  // candidate function profiles when their basenames matched.
+  MapVector<Function *, FunctionId> OrphanFuncToProfileNameMap;
+
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
   // for sample loader to look up profile using the new name.
@@ -140,6 +144,7 @@ public:
     freeContainer(FuncCallsiteMatchStates);
     freeContainer(FunctionsWithoutProfile);
     freeContainer(FuncToProfileNameMap);
+    freeContainer(OrphanFuncToProfileNameMap);
   }
 
 private:
