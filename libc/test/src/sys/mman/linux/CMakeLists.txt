@@ -229,3 +229,24 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_unittest(
+  memfd_create_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    memfd_create_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_mman_macros
+    libc.include.llvm-libc-macros.file_seek_macros
+    libc.include.sys_mman
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.sys.mman.memfd_create
+    libc.src.unistd.close
+    libc.src.unistd.lseek
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

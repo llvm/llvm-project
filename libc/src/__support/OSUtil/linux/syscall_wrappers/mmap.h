@@ -14,7 +14,6 @@
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
-#include <linux/param.h> // For EXEC_PAGESIZE
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
@@ -25,12 +24,12 @@ LIBC_INLINE ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags,
   // TODO: Perform POSIX-prescribed argument validation not done by the
   // linux syscall.
 
-  // EXEC_PAGESIZE is used for the page size. While this is OK for x86_64,
-  // it might not be correct in general.
-  // TODO: Use pagesize read from the ELF aux vector instead of
-  // EXEC_PAGESIZE.
 #ifdef SYS_mmap2
-  offset /= EXEC_PAGESIZE;
+  // The mmap2 syscall uses 4k units, regardless of the actual page, size on
+  // almost every architecture. If porting to a new architecture (Openrisc,
+  // hexagon?), please confirm this code is correct.
+  constexpr off_t MMAP2_FACTOR = 4096;
+  offset /= MMAP2_FACTOR;
   long syscall_number = SYS_mmap2;
 #elif defined(SYS_mmap)
   long syscall_number = SYS_mmap;

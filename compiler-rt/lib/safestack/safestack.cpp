@@ -15,15 +15,14 @@
 
 #define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
 
-#include "safestack_platform.h"
-#include "safestack_util.h"
-#include "sanitizer_common/sanitizer_internal_defs.h"
-
 #include <errno.h>
 #include <string.h>
 #include <sys/resource.h>
 
 #include "interception/interception.h"
+#include "safestack_platform.h"
+#include "safestack_util.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 
 // interception.h drags in sanitizer_redefine_builtins.h, which in turn
 // creates references to __sanitizer_internal_memcpy etc.  The interceptors
@@ -277,6 +276,16 @@ INTERCEPTOR(int, pthread_create, pthread_t *thread,
   return REAL(pthread_create)(thread, attr, thread_start, tinfo);
 }
 
+// We are intercepting sigaction in order to keep note of the set sigaction and
+// overwrite it our own function to execute the switching if the unsafe stack
+// pointer before and after the signal is handled.
+// In this version, we are simply making sure the interceptor is functional.
+// sigaction is required to be async-signal-safe.
+INTERCEPTOR(int, sigaction, int sig, const struct sigaction* act,
+            struct sigaction* oldact) {
+  return REAL(sigaction)(sig, act, oldact);
+}
+
 pthread_mutex_t interceptor_init_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool interceptors_inited = false;
 
@@ -287,6 +296,8 @@ void EnsureInterceptorsInitialized() {
 
   // Initialize pthread interceptors for thread allocation
   INTERCEPT_FUNCTION(pthread_create);
+  // Initialize sigaction interceptor to overwrite the signal handler.
+  INTERCEPT_FUNCTION(sigaction);
 
   interceptors_inited = true;
 }
@@ -313,6 +324,8 @@ void __safestack_init() {
 
   // Setup the cleanup handler
   pthread_key_create(&thread_cleanup_key, thread_cleanup_handler);
+
+  EnsureInterceptorsInitialized();
 }
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY

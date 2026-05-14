@@ -259,6 +259,7 @@ class Builder:
             "debug_names": {"MAKE_DEBUG_NAMES": "YES"},
             "dwp": {"MAKE_DSYM": "NO", "MAKE_DWP": "YES"},
             "pdb": {"MAKE_PDB": "YES"},
+            "none": {"MAKE_DSYM": "NO", "MAKE_NO_DEBUG_INFO": "YES"},
         }
 
         # Collect all flags, with later options overriding earlier ones

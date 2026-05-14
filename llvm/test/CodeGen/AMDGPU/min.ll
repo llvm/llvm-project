@@ -2069,9 +2069,9 @@ define amdgpu_kernel void @v_test_umin_ule_v3i32(ptr addrspace(1) %out, ptr addr
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 3, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 9, @14, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.X, T3.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
+; EG-NEXT:    ALU 7, @14, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T3.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T2.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 6:
 ; EG-NEXT:     VTX_READ_128 T1.XYZW, T1.X, 0, #1
@@ -2084,13 +2084,11 @@ define amdgpu_kernel void @v_test_umin_ule_v3i32(ptr addrspace(1) %out, ptr addr
 ; EG-NEXT:    ALU clause starting at 14:
 ; EG-NEXT:     MIN_UINT * T0.Y, T2.Y, T1.Y,
 ; EG-NEXT:     MIN_UINT T0.X, T2.X, T1.X,
+; EG-NEXT:     MIN_UINT * T1.X, T2.Z, T1.Z,
 ; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, T0.W,
-; EG-NEXT:     LSHR T1.X, PV.W, literal.x,
-; EG-NEXT:     MIN_UINT * T2.X, T2.Z, T1.Z,
+; EG-NEXT:     LSHR * T2.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT * T0.W, T0.W, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR * T3.X, PV.W, literal.x,
+; EG-NEXT:     ADD_INT * T3.X, PV.X, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CI-LABEL: v_test_umin_ule_v3i32:
@@ -3390,25 +3388,23 @@ define amdgpu_kernel void @s_test_umin_ult_v1i32(ptr addrspace(1) %out, <1 x i32
 define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32> %a, <8 x i32> %b) #0 {
 ; EG-LABEL: s_test_umin_ult_v8i32:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 13, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T3.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T1.X, 1
+; EG-NEXT:    ALU 11, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T3.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T2.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    ALU clause starting at 4:
 ; EG-NEXT:     MIN_UINT * T0.W, KC0[5].X, KC0[7].X,
 ; EG-NEXT:     MIN_UINT * T0.Z, KC0[4].W, KC0[6].W,
 ; EG-NEXT:     MIN_UINT * T0.Y, KC0[4].Z, KC0[6].Z,
 ; EG-NEXT:     MIN_UINT * T0.X, KC0[4].Y, KC0[6].Y,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:     MIN_UINT * T1.W, KC0[6].X, KC0[8].X,
+; EG-NEXT:     MIN_UINT * T1.Z, KC0[5].W, KC0[7].W,
+; EG-NEXT:     MIN_UINT * T1.Y, KC0[5].Z, KC0[7].Z,
+; EG-NEXT:     MIN_UINT * T1.X, KC0[5].Y, KC0[7].Y,
+; EG-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     MIN_UINT * T2.W, KC0[6].X, KC0[8].X,
-; EG-NEXT:     MIN_UINT * T2.Z, KC0[5].W, KC0[7].W,
-; EG-NEXT:     MIN_UINT * T2.Y, KC0[5].Z, KC0[7].Z,
-; EG-NEXT:     MIN_UINT * T2.X, KC0[5].Y, KC0[7].Y,
-; EG-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR * T3.X, PV.W, literal.x,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT * T3.X, PV.X, literal.x,
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 ;
 ; CI-LABEL: s_test_umin_ult_v8i32:
 ; CI:       ; %bb.0:

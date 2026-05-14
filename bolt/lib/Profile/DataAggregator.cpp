@@ -717,10 +717,8 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 Error DataAggregator::readProfile(BinaryContext &BC) {
   processProfile(BC);
 
-  for (auto &BFI : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = BFI.second;
-    convertBranchData(Function);
-  }
+  if (Error E = DataReader::readProfile(BC))
+    return E;
 
   if (opts::AggregateOnly) {
     if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
@@ -747,6 +745,12 @@ bool DataAggregator::mayHaveProfileData(const BinaryFunction &Function) {
 }
 
 void DataAggregator::processProfile(BinaryContext &BC) {
+  // Set for DataReader::readProfile
+  NoLBRMode = opts::BasicAggregation;
+
+  // Set for DataReader::recordBranch and evaluateProfileData
+  BATMode = usesBAT();
+
   if (opts::BasicAggregation)
     processBasicEvents();
   else
@@ -771,6 +775,9 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     llvm::stable_sort(FuncBranches.second.Data);
     llvm::stable_sort(FuncBranches.second.EntryData);
   }
+
+  for (auto &FuncBasicSamples : NamesToBasicSamples)
+    llvm::stable_sort(FuncBasicSamples.second.Data);
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
@@ -880,8 +887,6 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
       FromAggrData->Name = SrcFunc;
       setBranchData(*FromFunc, FromAggrData);
     }
-
-    recordExit(*FromFunc, From, Mispreds, Count);
   }
   if (ToFunc) {
     DstFunc = getLocationName(*ToFunc, BAT);
@@ -891,8 +896,6 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
       ToAggrData->Name = DstFunc;
       setBranchData(*ToFunc, ToAggrData);
     }
-
-    recordEntry(*ToFunc, To, Mispreds, Count);
   }
 
   if (FromAggrData)
@@ -941,10 +944,8 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
     return false;
 
   // Treat recursive control transfers as inter-branches.
-  if (FromFunc == ToFunc && To != 0) {
-    recordBranch(*FromFunc, From, To, Count, Mispreds);
+  if (FromFunc == ToFunc && To != 0)
     return doIntraBranch(*FromFunc, From, To, Count, Mispreds);
-  }
 
   return doInterBranch(FromFunc, ToFunc, From, To, Count, Mispreds);
 }
@@ -976,7 +977,7 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count,
   std::optional<BoltAddressTranslation::FallthroughListTy> FTs =
       BAT && BAT->isBATFunction(FuncAddress)
           ? BAT->getFallthroughsInTrace(FuncAddress, From - IsReturn, To)
-          : getFallthroughsInTrace(*FromFunc, Trace, Count, IsReturn);
+          : getFallthroughsInTrace(*FromFunc, Trace, IsReturn);
   if (!FTs) {
     LLVM_DEBUG(dbgs() << "Invalid trace " << Trace << '\n');
     NumInvalidTraces += Count;
@@ -993,7 +994,7 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count,
 
 std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
 DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
-                                       uint64_t Count, bool IsReturn) const {
+                                       bool IsReturn) const {
   SmallVector<std::pair<uint64_t, uint64_t>, 16> Branches;
 
   BinaryContext &BC = BF.getBinaryContext();
@@ -1073,51 +1074,7 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
     BB = NextBB;
   }
 
-  // Record fall-through jumps
-  for (const auto &[FromOffset, ToOffset] : Branches) {
-    BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(FromOffset);
-    BinaryBasicBlock *ToBB = BF.getBasicBlockAtOffset(ToOffset);
-    assert(FromBB && ToBB);
-    BinaryBasicBlock::BinaryBranchInfo &BI = FromBB->getBranchInfo(*ToBB);
-    BI.Count += Count;
-  }
-
   return Branches;
-}
-
-bool DataAggregator::recordEntry(BinaryFunction &BF, uint64_t To, bool Mispred,
-                                 uint64_t Count) const {
-  if (To > BF.getSize())
-    return false;
-
-  if (!BF.hasProfile())
-    BF.ExecutionCount = 0;
-
-  BinaryBasicBlock *EntryBB = nullptr;
-  if (To == 0) {
-    BF.ExecutionCount += Count;
-    if (!BF.empty())
-      EntryBB = &BF.front();
-  } else if (BinaryBasicBlock *BB = BF.getBasicBlockAtOffset(To)) {
-    if (BB->isEntryPoint())
-      EntryBB = BB;
-  }
-
-  if (EntryBB)
-    EntryBB->setExecutionCount(EntryBB->getKnownExecutionCount() + Count);
-
-  return true;
-}
-
-bool DataAggregator::recordExit(BinaryFunction &BF, uint64_t From, bool Mispred,
-                                uint64_t Count) const {
-  if (!BF.isSimple() || From > BF.getSize())
-    return false;
-
-  if (!BF.hasProfile())
-    BF.ExecutionCount = 0;
-
-  return true;
 }
 
 ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {

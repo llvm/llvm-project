@@ -38,6 +38,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpeername
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpeername
+)
+
+add_entrypoint_object(
+  getsockname
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getsockname
+)
+
+add_entrypoint_object(
   getsockopt
   ALIAS
   DEPENDS

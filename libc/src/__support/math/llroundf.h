@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr long long llroundf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR long long llroundf(float x) {
   return fputil::round_to_signed_integer<float, long long>(x);
 }
 

@@ -708,61 +708,58 @@ define amdgpu_kernel void @round_v8f32(ptr addrspace(1) %out, <8 x float> %in) #
 ;
 ; R600-LABEL: round_v8f32:
 ; R600:       ; %bb.0:
-; R600-NEXT:    ALU 50, @4, KC0[CB0:0-32], KC1[]
+; R600-NEXT:    ALU 49, @4, KC0[CB0:0-32], KC1[]
 ; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T2.X, 0
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T3.XYZW, T1.X, 1
+; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T8.XYZW, T1.X, 1
 ; R600-NEXT:    CF_END
 ; R600-NEXT:    ALU clause starting at 4:
 ; R600-NEXT:     TRUNC * T0.W, KC0[6].X,
-; R600-NEXT:     ADD T0.Z, KC0[6].X, -PV.W,
-; R600-NEXT:     TRUNC * T1.W, KC0[5].X,
-; R600-NEXT:     TRUNC * T2.W, KC0[4].W,
-; R600-NEXT:     ADD T1.Z, KC0[4].W, -PV.W,
-; R600-NEXT:     ADD T3.W, KC0[5].X, -T1.W,
-; R600-NEXT:     SETGE * T4.W, |T0.Z|, 0.5,
-; R600-NEXT:     BFI_INT T0.Y, literal.x, PS, KC0[6].X,
-; R600-NEXT:     SETGE T0.Z, |PV.W|, 0.5,
-; R600-NEXT:     SETGE T3.W, |PV.Z|, 0.5,
-; R600-NEXT:     TRUNC * T4.W, KC0[5].Y,
+; R600-NEXT:     ADD T1.W, KC0[6].X, -PV.W,
+; R600-NEXT:     TRUNC * T2.W, KC0[5].X,
+; R600-NEXT:     ADD T3.W, KC0[5].X, -PS,
+; R600-NEXT:     SETGE * T1.W, |PV.W|, 0.5,
+; R600-NEXT:     BFI_INT T0.Z, literal.x, PS, KC0[6].X,
+; R600-NEXT:     SETGE T1.W, |PV.W|, 0.5,
+; R600-NEXT:     TRUNC * T3.W, KC0[5].Y,
 ; R600-NEXT:    2147483647(nan), 0(0.000000e+00)
-; R600-NEXT:     ADD T1.Y, KC0[5].Y, -PS,
-; R600-NEXT:     BFI_INT T1.Z, literal.x, PV.W, KC0[4].W,
-; R600-NEXT:     BFI_INT T3.W, literal.x, PV.Z, KC0[5].X,
-; R600-NEXT:     TRUNC * T5.W, KC0[4].Z,
+; R600-NEXT:     ADD T0.Y, KC0[5].Y, -PS,
+; R600-NEXT:     BFI_INT T1.Z, literal.x, PV.W, KC0[5].X,
+; R600-NEXT:     TRUNC * T1.W, KC0[4].Y,
 ; R600-NEXT:    2147483647(nan), 0(0.000000e+00)
-; R600-NEXT:     TRUNC T0.Z, KC0[4].Y,
-; R600-NEXT:     TRUNC * T6.W, KC0[5].W,
-; R600-NEXT:     ADD * T7.W, KC0[4].Z, -T5.W,
-; R600-NEXT:     TRUNC T0.X, KC0[5].Z,
-; R600-NEXT:     SETGE T2.Y, |PV.W|, 0.5,
-; R600-NEXT:     ADD T2.Z, KC0[5].W, -T6.W, BS:VEC_102/SCL_221
-; R600-NEXT:     ADD T7.W, KC0[4].Y, -T0.Z,
-; R600-NEXT:     ADD * T3.W, T1.W, T3.W,
-; R600-NEXT:     SETGE T1.X, |PV.W|, 0.5,
-; R600-NEXT:     SETGE T4.Y, |PV.Z|, 0.5,
-; R600-NEXT:     ADD T3.Z, T2.W, T1.Z,
-; R600-NEXT:     BFI_INT T1.W, literal.x, PV.Y, KC0[4].Z,
-; R600-NEXT:     ADD * T2.W, KC0[5].Z, -PV.X,
+; R600-NEXT:     TRUNC * T4.W, KC0[4].W,
+; R600-NEXT:     ADD T1.Y, KC0[4].W, -PV.W,
+; R600-NEXT:     TRUNC T2.Z, KC0[4].Z,
+; R600-NEXT:     TRUNC * T5.W, KC0[5].W,
+; R600-NEXT:     ADD * T6.W, KC0[4].Y, -T1.W,
+; R600-NEXT:     SETGE T0.X, |PV.W|, 0.5,
+; R600-NEXT:     ADD T2.Y, KC0[5].W, -T5.W,
+; R600-NEXT:     ADD T3.Z, KC0[4].Z, -T2.Z,
+; R600-NEXT:     SETGE T6.W, |T1.Y|, 0.5,
+; R600-NEXT:     TRUNC * T7.W, KC0[5].Z,
+; R600-NEXT:     ADD T1.X, KC0[5].Z, -PS,
+; R600-NEXT:     BFI_INT T1.Y, literal.x, PV.W, KC0[4].W,
+; R600-NEXT:     SETGE T3.Z, |PV.Z|, 0.5,
+; R600-NEXT:     SETGE T6.W, |PV.Y|, 0.5,
+; R600-NEXT:     ADD * T8.W, T2.W, T1.Z,
 ; R600-NEXT:    2147483647(nan), 0(0.000000e+00)
-; R600-NEXT:     SETGE T2.X, |PS|, 0.5,
-; R600-NEXT:     ADD T3.Y, T5.W, PV.W,
-; R600-NEXT:     BFI_INT T1.Z, literal.x, PV.Y, KC0[5].W,
-; R600-NEXT:     BFI_INT T1.W, literal.x, PV.X, KC0[4].Y,
-; R600-NEXT:     ADD * T0.W, T0.W, T0.Y,
+; R600-NEXT:     BFI_INT T2.X, literal.x, PV.W, KC0[5].W,
+; R600-NEXT:     BFI_INT T2.Y, literal.x, PV.Z, KC0[4].Z,
+; R600-NEXT:     ADD T8.Z, T4.W, PV.Y,
+; R600-NEXT:     SETGE T2.W, |PV.X|, 0.5,
+; R600-NEXT:     ADD * T0.W, T0.W, T0.Z,
 ; R600-NEXT:    2147483647(nan), 0(0.000000e+00)
-; R600-NEXT:     ADD T3.X, T0.Z, PV.W,
-; R600-NEXT:     ADD T0.Z, T6.W, PV.Z,
-; R600-NEXT:     BFI_INT T1.W, literal.x, PV.X, KC0[5].Z,
-; R600-NEXT:     SETGE * T2.W, |T1.Y|, 0.5,
+; R600-NEXT:     BFI_INT T1.X, literal.x, PV.W, KC0[5].Z,
+; R600-NEXT:     ADD T8.Y, T2.Z, PV.Y,
+; R600-NEXT:     ADD T0.Z, T5.W, PV.X,
+; R600-NEXT:     BFI_INT T2.W, literal.x, T0.X, KC0[4].Y,
+; R600-NEXT:     SETGE * T4.W, |T0.Y|, 0.5,
 ; R600-NEXT:    2147483647(nan), 0(0.000000e+00)
-; R600-NEXT:     LSHR T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:     ADD T0.Y, T0.X, PV.W,
-; R600-NEXT:     BFI_INT * T1.W, literal.y, PS, KC0[5].Y,
-; R600-NEXT:    2(2.802597e-45), 2147483647(nan)
-; R600-NEXT:     ADD T0.X, T4.W, PV.W,
-; R600-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.x,
-; R600-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; R600-NEXT:     LSHR * T2.X, PV.W, literal.x,
+; R600-NEXT:     ADD T8.X, T1.W, PV.W,
+; R600-NEXT:     ADD T0.Y, T7.W, PV.X, BS:VEC_120/SCL_212
+; R600-NEXT:     BFI_INT * T1.W, literal.x, PS, KC0[5].Y,
+; R600-NEXT:    2147483647(nan), 0(0.000000e+00)
+; R600-NEXT:     ADD T0.X, T3.W, PV.W,
+; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %result = call <8 x float> @llvm.round.v8f32(<8 x float> %in) #1
   store <8 x float> %result, ptr addrspace(1) %out

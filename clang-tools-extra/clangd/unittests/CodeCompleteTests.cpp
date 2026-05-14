@@ -4377,14 +4377,15 @@ TEST(CompletionTest, FunctionArgsExist) {
   EXPECT_THAT(
       completions(Context + "int y = fo^(42)", {}, Opts).Completions,
       UnorderedElementsAre(AllOf(labeled("foo(int A)"), snippetSuffix(""))));
-  // FIXME(kirillbobyrev): No snippet should be produced here.
-  EXPECT_THAT(completions(Context + "int y = fo^o(42)", {}, Opts).Completions,
-              UnorderedElementsAre(
-                  AllOf(labeled("foo(int A)"), snippetSuffix("(${1:int A})"))));
+  EXPECT_THAT(
+      completions(Context + "int y = fo^o(42)", {}, Opts).Completions,
+      UnorderedElementsAre(AllOf(labeled("foo(int A)"), snippetSuffix(""))));
   EXPECT_THAT(
       completions(Context + "int y = ba^", {}, Opts).Completions,
       UnorderedElementsAre(AllOf(labeled("bar()"), snippetSuffix("()"))));
   EXPECT_THAT(completions(Context + "int y = ba^()", {}, Opts).Completions,
+              UnorderedElementsAre(AllOf(labeled("bar()"), snippetSuffix(""))));
+  EXPECT_THAT(completions(Context + "int y = ba^r()", {}, Opts).Completions,
               UnorderedElementsAre(AllOf(labeled("bar()"), snippetSuffix(""))));
   EXPECT_THAT(
       completions(Context + "Object o = Obj^", {}, Opts).Completions,
@@ -4408,7 +4409,15 @@ TEST(CompletionTest, FunctionArgsExist) {
       Contains(AllOf(labeled("Container<typename T>(int Size)"),
                      snippetSuffix(""),
                      kind(CompletionItemKind::Constructor))));
+  EXPECT_THAT(
+      completions(Context + "Container c = Cont^ainer()", {}, Opts).Completions,
+      Contains(AllOf(labeled("Container<typename T>(int Size)"),
+                     snippetSuffix("<${1:typename T}>"),
+                     kind(CompletionItemKind::Constructor))));
   EXPECT_THAT(completions(Context + "MAC^(2)", {}, Opts).Completions,
+              Contains(AllOf(labeled("MACRO(x)"), snippetSuffix(""),
+                             kind(CompletionItemKind::Function))));
+  EXPECT_THAT(completions(Context + "MAC^RO(2)", {}, Opts).Completions,
               Contains(AllOf(labeled("MACRO(x)"), snippetSuffix(""),
                              kind(CompletionItemKind::Function))));
 }

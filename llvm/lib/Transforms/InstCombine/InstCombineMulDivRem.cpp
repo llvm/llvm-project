@@ -635,7 +635,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
   auto createPowiExpr = [](BinaryOperator &I, InstCombinerImpl &IC, Value *X,
                            Value *Y, Value *Z) {
     InstCombiner::BuilderTy &Builder = IC.Builder;
-    Value *YZ = Builder.CreateAdd(Y, Z);
+    Value *YZ = Builder.CreateNSWAdd(Y, Z);
     Instruction *NewPow = Builder.CreateIntrinsic(
         Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
 
@@ -667,7 +667,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
                      m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y)))) &&
       match(Op1, m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(m_Specific(X),
                                                              m_Value(Z)))) &&
-      Y->getType() == Z->getType()) {
+      Y->getType() == Z->getType() && willNotOverflowSignedAdd(Y, Z, I)) {
     Instruction *NewPow = createPowiExpr(I, *this, X, Y, Z);
     return replaceInstUsesWith(I, NewPow);
   }

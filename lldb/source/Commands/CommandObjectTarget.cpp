@@ -435,6 +435,8 @@ protected:
             result.AppendMessageWithFormatv(
                 "Core file '{0}' ({1}) was loaded.\n", core_file.GetPath(),
                 target_sp->GetArchitecture().GetArchitectureName());
+            if (auto core_args = process_sp->GetCoreFileArgs())
+              core_args->Format(result.GetOutputStream());
             result.SetStatus(eReturnStatusSuccessFinishNoResult);
             on_error.release();
           }

@@ -3,10 +3,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-ipra=0 < %s | FileCheck -check-prefixes=GCN,MUBUF,SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 < %s | FileCheck -check-prefixes=GCN,MUBUF,SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLATSCR,SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 < %s | FileCheck -check-prefixes=GCN,MUBUF,GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-ipra=0 < %s | FileCheck -check-prefixes=GCN,MUBUF,GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 < %s | FileCheck -check-prefixes=GCN,MUBUF,GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLATSCR,GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 < %s | FileCheck -check-prefixes=GCN,MUBUF,GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-ipra=0 < %s | FileCheck -check-prefixes=GCN,MUBUF,GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 < %s | FileCheck -check-prefixes=GCN,MUBUF,GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLATSCR,GISEL %s
 
 declare hidden void @external_void_func_void() #3
 

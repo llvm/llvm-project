@@ -1266,19 +1266,43 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                              attrs, argAttrs, retAttrs, callingConv, sideEffect,
                              /*attrOnCallSite=*/true, /*isThunk=*/false);
 
+  auto resolvedFuncOpFromGlobal = [&](mlir::Operation *op) -> cir::FuncOp {
+    if (auto fnOp = dyn_cast<cir::FuncOp>(op))
+      return fnOp;
+    if (auto getGlobalOp = dyn_cast<cir::GetGlobalOp>(op)) {
+      // FIXME(cir): This peephole optimization avoids indirect calls for
+      // builtins. This should be fixed in the builtin declaration instead by
+      // not emitting an unecessary get_global in the first place. However,
+      // this is also used for no-prototype functions.
+      mlir::Operation *globalOp = cgm.getGlobalValue(getGlobalOp.getName());
+      assert(globalOp && "undefined global function");
+      return cast<cir::FuncOp>(globalOp);
+    }
+    return nullptr;
+  };
+
   cir::FuncType indirectFuncTy;
   mlir::Value indirectFuncVal;
   cir::FuncOp directFuncOp;
-  if (auto fnOp = dyn_cast<cir::FuncOp>(calleePtr)) {
-    directFuncOp = fnOp;
-  } else if (auto getGlobalOp = mlir::dyn_cast<cir::GetGlobalOp>(calleePtr)) {
-    // FIXME(cir): This peephole optimization avoids indirect calls for
-    // builtins. This should be fixed in the builtin declaration instead by
-    // not emitting an unecessary get_global in the first place.
-    // However, this is also used for no-prototype functions.
-    mlir::Operation *globalOp = cgm.getGlobalValue(getGlobalOp.getName());
-    assert(globalOp && "undefined global function");
-    directFuncOp = mlir::cast<cir::FuncOp>(globalOp);
+
+  // If the callee resolves to a FuncOp whose stored signature differs from
+  // this call site's expected signature, the CIR verifier would reject the
+  // mismatched types. This happens, for example, when two declarations share a
+  // mangled name via __asm__ renaming (glibc's __REDIRECT_NTH pattern) but
+  // disagree about a struct argument type. If that happens, we demote the
+  // direct call to an indirect call through a function-pointer bitcast typed
+  // at the call site.
+  if (cir::FuncOp candidate = resolvedFuncOpFromGlobal(calleePtr)) {
+    if (candidate.getFunctionType() == cirFuncTy) {
+      directFuncOp = candidate;
+    } else {
+      mlir::Value addr = cir::GetGlobalOp::create(
+          builder, loc, cir::PointerType::get(candidate.getFunctionType()),
+          candidate.getSymName());
+      indirectFuncTy = cirFuncTy;
+      indirectFuncVal =
+          builder.createBitcast(addr, cir::PointerType::get(cirFuncTy));
+    }
   } else {
     [[maybe_unused]] mlir::ValueTypeRange<mlir::ResultRange> resultTypes =
         calleePtr->getResultTypes();

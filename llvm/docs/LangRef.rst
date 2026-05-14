@@ -3698,9 +3698,64 @@ memory before the call, the call may capture two components of the pointer:
     rules <pointeraliasing>`. We further distinguish whether only read accesses
     are allowed, or both reads and writes.
 
+These two cases are discussed in more detail in the following.
+
+Provenance capture
+^^^^^^^^^^^^^^^^^^
+
+If an argument does not capture the provenance of the pointer, accesses that are
+based on the argument and are performed after the function returns (or unwinds)
+cause undefined behavior. In the case where only read provenance is captured,
+only stores cause undefined behavior.
+
+More formally, an argument that does not capture provenance effectively provides
+the callee a new pointer with the same address and a derived provenance, where
+the derived provenance initially has the same permissions as the original, but
+all access permissions are removed once the function returns (or unwinds). Or
+in the case of only capturing read provenance, the permissions are changed to
+only allow read accesses.
+
+This means that the following code is well-defined in isolation:
+
+.. code-block:: llvm
+
+    define void @f(ptr captures(address) %a, ptr %b) {
+      store ptr %a, ptr %b
+      ret void
+    }
+
+Even though the pointer is stored in another location that persists past the
+return of the function, this does not cause undefined behavior by itself. It
+depends on whether/how the pointer will be used in the future.
+
+.. code-block:: llvm
+
+    call void @f(ptr captures(address) %a, ptr %b)
+    %a2 = load ptr, ptr %b ; This is still well-defined
+    load i64, ptr %a2 ; This causes undefined behavior
+
+In this example, the persisted pointer is accessed after the return of the
+function, which causes undefined behavior.
+
+.. code-block:: llvm
+
+    call void @f(ptr captures(address, read_provenance) %a, ptr %b)
+    %a2 = load ptr, ptr %b
+    load i64, ptr %a2 ; This is still well-defined
+    store i64 0, ptr %a2 ; This causes undefined behavior
+
+In this example, we additionally declare that ``read_provenance`` is captured.
+This means that the ``load`` after the function return is still well-defined,
+while the store causes undefined behavior.
+
+Address capture
+^^^^^^^^^^^^^^^
+
+The address of the pointer is considered to be captured if the function can
+exhibit different observable behavior based on the address of the pointer.
+
 For example, the following function captures the address of ``%a``, because
-it is compared to a pointer, leaking information about the identity of the
-pointer:
+it will return a different value if the address has a specific value:
 
 .. code-block:: llvm
 
@@ -3712,33 +3767,28 @@ pointer:
     }
 
 The function does not capture the provenance of the pointer, because the
-``icmp`` instruction only operates on the pointer address. The following
-function captures both the address and provenance of the pointer, as both
-may be read from ``@glb`` after the function returns:
+``icmp`` instruction only operates on the pointer address.
+
+Even if the function contains a comparison on the pointer address, this does
+not necessarily mean that it captures the address:
 
 .. code-block:: llvm
 
-    @glb = global ptr null
+    define void @my_memmove(
+        ptr captures(none) %dst, ptr captures(none) %src, i64 %size
+    ) {
+      %cmp = icmp ult ptr %dst, %src
+      br i1 %cmp, label %perform_forward_copy, label %perform_backward_copy
 
-    define void @f(ptr %a) {
-      store ptr %a, ptr @glb
-      ret void
+      ; ...
     }
 
-The following function captures *neither* the address nor the provenance of
-the pointer:
+While the implementation differs based on the addresses of the arguments, the
+observable behavior stays the same in both branches. A common case where this
+occurs are runtime aliasing checks for loop versioning.
 
-.. code-block:: llvm
-
-    define i32 @f(ptr %a) {
-      %v = load i32, ptr %a
-      ret i32
-    }
-
-While address capture includes uses of the address within the body of the
-function, provenance capture refers exclusively to the ability to perform
-accesses *after* the function returns. Memory accesses within the function
-itself are not considered pointer captures.
+Location specific capture
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We can further say that the capture only occurs through a specific location.
 In the following example, the pointer (both address and provenance) is captured
@@ -3770,71 +3820,26 @@ ultimately only contributes to the return value:
 This definition is chosen to allow capture analysis to continue with the return
 value in the usual fashion.
 
-The following describes possible ways to capture a pointer in more detail,
-where unqualified uses of the word "capture" refer to capturing both address
-and provenance.
+Inference
+^^^^^^^^^
 
-1. The call stores any bit of the pointer carrying information into a place,
-   and the stored bits can be read from the place by the caller after this call
-   exits.
+The definitions given above are permissive to facilitate frontend-driven
+annotations based on language semantics. As inference generally cannot know
+how pointers will be used after the function returns, it needs to make
+conservative assumptions. Here is an example set of rules that could be used
+to infer ``captures``:
 
-.. code-block:: llvm
-
-    @glb  = global ptr null
-    @glb2 = global ptr null
-    @glb3 = global ptr null
-    @glbi = global i32 0
-
-    define ptr @f(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) {
-      store ptr %a, ptr @glb ; %a is captured by this call
-
-      store ptr %b,   ptr @glb2 ; %b isn't captured because the stored value is overwritten by the store below
-      store ptr null, ptr @glb2
-
-      store ptr %c,   ptr @glb3
-      call void @g() ; If @g makes a copy of %c that outlives this call (@f), %c is captured
-      store ptr null, ptr @glb3
-
-      %i = ptrtoint ptr %d to i64
-      %j = trunc i64 %i to i32
-      store i32 %j, ptr @glbi ; %d is captured
-
-      ret ptr %e ; %e is captured
-    }
-
-2. The call stores any bit of the pointer carrying information into a place,
-   and the stored bits can be safely read from the place by another thread via
-   synchronization.
-
-.. code-block:: llvm
-
-    @lock = global i1 true
-
-    define void @f(ptr %a) {
-      store ptr %a, ptr @glb
-      store atomic i1 false, ptr @lock release ; %a is captured because another thread can safely read @glb
-      store ptr null, ptr @glb
-      ret void
-    }
-
-3. The call's behavior depends on any bit of the pointer carrying information
-   (address capture only).
-
-.. code-block:: llvm
-
-    @glb = global i8 0
-
-    define void @f(ptr %a) {
-      %c = icmp eq ptr %a, @glb
-      br i1 %c, label %BB_EXIT, label %BB_CONTINUE ; captures address of %a only
-    BB_EXIT:
-      call void @exit()
-      unreachable
-    BB_CONTINUE:
-      ret void
-    }
-
-4. The pointer is used as the pointer operand of a volatile access.
+ * Volatile memory accesses capture the address of the pointer.
+ * getelementptr, bitcast, addrspacecast, select, phi: Do not capture anything.
+ * load, va_arg: Do not capture anything (unless volatile).
+ * icmp, ptrtoaddr: Captures only address.
+ * ptrtoint: Captures address and provenance.
+ * call/invoke: Depends on ``captures`` on arguments. The callee is never
+   captured.
+ * store, atomicrmw, cmpxchg: Capture the address and provenance of the value
+   operand. Do not capture the pointer operand (unless volatile).
+ * Other (including insertvalue and insertelement): Conservatively assume
+   address and provenance are captured.
 
 .. _volatile:
 

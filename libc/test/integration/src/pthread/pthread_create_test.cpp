@@ -18,6 +18,7 @@
 #include "src/pthread/pthread_attr_setstack.h"
 #include "src/pthread/pthread_attr_setstacksize.h"
 #include "src/pthread/pthread_create.h"
+#include "src/pthread/pthread_getunique_np.h"
 #include "src/pthread/pthread_join.h"
 #include "src/pthread/pthread_self.h"
 
@@ -180,6 +181,9 @@ static void run_success_config(int detachstate, size_t guardsize,
                                            reinterpret_cast<void *>(th_arg)),
             0);
   ASSERT_ERRNO_SUCCESS();
+  pthread_id_np_t id;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_getunique_np(&tid, &id), 0);
+  ASSERT_NE(id, 0);
 
   if (detachstate == PTHREAD_CREATE_JOINABLE) {
     void *th_ret;

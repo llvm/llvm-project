@@ -75,7 +75,7 @@ namespace math {
 // and relative errors bounded by:
 //   |(atan(u) - P(u)) / P(u)| < u^10 / 11 < 2^-73.
 
-LIBC_INLINE constexpr double atan2(double y, double x) {
+LIBC_INLINE LIBC_CONSTEXPR double atan2(double y, double x) {
   using namespace atan_internal;
   using FPBits = fputil::FPBits<double>;
 

@@ -63,25 +63,29 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
                      /*AcrossComments=*/false, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false,
+                     /*EnumAssignments=*/true, /*PadOperators=*/true}));
     IO.enumCase(Value, "AcrossEmptyLines",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/true,
                      /*AcrossComments=*/false, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false,
+                     /*EnumAssignments=*/true, /*PadOperators=*/true}));
     IO.enumCase(Value, "AcrossComments",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
                      /*AcrossComments=*/true, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false,
+                     /*EnumAssignments=*/true, /*PadOperators=*/true}));
     IO.enumCase(Value, "AcrossEmptyLinesAndComments",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/true,
                      /*AcrossComments=*/true, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false,
+                     /*EnumAssignments=*/true, /*PadOperators=*/true}));
 
     // For backward compatibility.
     IO.enumCase(Value, "true",
@@ -89,7 +93,8 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
                      /*AcrossComments=*/false, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false,
+                     /*EnumAssignments=*/true, /*PadOperators=*/true}));
     IO.enumCase(Value, "false", FormatStyle::AlignConsecutiveStyle{});
   }
 
@@ -101,6 +106,7 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
     IO.mapOptional("AlignFunctionDeclarations",
                    Value.AlignFunctionDeclarations);
     IO.mapOptional("AlignFunctionPointers", Value.AlignFunctionPointers);
+    IO.mapOptional("EnumAssignments", Value.EnumAssignments);
     IO.mapOptional("PadOperators", Value.PadOperators);
   }
 };
@@ -744,6 +750,19 @@ struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakBeforeReturnTypeStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakBeforeReturnTypeStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::BBRTS_None);
+    IO.enumCase(Value, "All", FormatStyle::BBRTS_All);
+    IO.enumCase(Value, "TopLevel", FormatStyle::BBRTS_TopLevel);
+    IO.enumCase(Value, "AllDefinitions", FormatStyle::BBRTS_AllDefinitions);
+    IO.enumCase(Value, "TopLevelDefinitions",
+                FormatStyle::BBRTS_TopLevelDefinitions);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::SeparateDefinitionStyle> {
   static void enumeration(IO &IO, FormatStyle::SeparateDefinitionStyle &Value) {
     IO.enumCase(Value, "Leave", FormatStyle::SDS_Leave);
@@ -1311,6 +1330,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakBeforeBraces", Style.BreakBeforeBraces);
     IO.mapOptional("BreakBeforeInlineASMColon",
                    Style.BreakBeforeInlineASMColon);
+    IO.mapOptional("BreakBeforeReturnType", Style.BreakBeforeReturnType);
     IO.mapOptional("BreakBeforeTemplateCloser",
                    Style.BreakBeforeTemplateCloser);
     IO.mapOptional("BreakBeforeTernaryOperators",
@@ -1883,6 +1903,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeCloseBracketSwitch = false;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
+  LLVMStyle.BreakBeforeReturnType = FormatStyle::BBRTS_None;
   LLVMStyle.BreakBeforeTemplateCloser = false;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};

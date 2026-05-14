@@ -384,8 +384,8 @@ private:
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
-  void CheckMultipleAppearances(
-      const parser::Name &, const Symbol &, Symbol::Flag);
+  void CheckMultipleAppearances(const parser::Name &, const Symbol &,
+      Symbol::Flag, const parser::AccObject *occurrence = nullptr);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -1875,7 +1875,7 @@ void AccAttributeVisitor::ResolveAccObject(
               if (auto *symbol{ResolveAcc(*name, accFlag, currScope())}) {
                 AddToContextObjectWithDSA(*symbol, accFlag);
                 if (dataSharingAttributeFlags.test(accFlag)) {
-                  CheckMultipleAppearances(*name, *symbol, accFlag);
+                  CheckMultipleAppearances(*name, *symbol, accFlag, &accObject);
                 }
               }
             } else {
@@ -1940,20 +1940,31 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
   return &object;
 }
 
-static bool WithMultipleAppearancesAccException(
-    const Symbol &symbol, Symbol::Flag flag) {
-  return false; // Place holder
-}
-
-void AccAttributeVisitor::CheckMultipleAppearances(
-    const parser::Name &name, const Symbol &symbol, Symbol::Flag accFlag) {
+void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
+    const Symbol &symbol, Symbol::Flag accFlag,
+    const parser::AccObject *occurrence) {
   const auto *target{&symbol};
-  if (HasDataSharingAttributeObject(*target) &&
-      !WithMultipleAppearancesAccException(symbol, accFlag)) {
-    context_.Say(name.source,
-        "'%s' appears in more than one data-sharing clause "
-        "on the same OpenACC directive"_err_en_US,
-        name.ToString());
+  if (HasDataSharingAttributeObject(*target)) {
+    // A same-kind duplicate (e.g. private(x, x) or private(x) private(x))
+    // is benign: warn and tag this AccObject occurrence so rewrite-parse-tree
+    // can drop it from the clause list. Cross-kind duplicates (e.g.
+    // private(x) firstprivate(x)) remain hard errors.
+    //
+    // Reduction is excluded from the benign case: two reduction clauses
+    // with the same Symbol::Flag may still differ in operator, which is a
+    // real conflict that dedup would silently hide.
+    auto firstFlag{GetContext().FindSymbolWithDSA(*target)};
+    if (occurrence && firstFlag && *firstFlag == accFlag &&
+        accFlag != Symbol::Flag::AccReduction) {
+      context_.Warn(common::UsageWarning::OpenAccUsage, name.source,
+          "'%s' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored"_warn_en_US,
+          name.ToString());
+      context_.MarkAccObjectDuplicate(occurrence);
+    } else {
+      context_.Say(name.source,
+          "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
+          name.ToString());
+    }
   } else {
     AddDataSharingAttributeObject(*target);
   }

@@ -140,7 +140,7 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v2, v1
 ; GCN-NEXT:    v_sub_u32_e32 v3, vcc, 0, v1
 ; GCN-NEXT:    s_mov_b32 s4, 0xf4240
-; GCN-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GCN-NEXT:    v_rcp_f32_e32 v2, v2
 ; GCN-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GCN-NEXT:    v_mul_f32_e32 v2, 0x4f7ffffe, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v2
@@ -222,7 +222,7 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v2, v1
 ; GCN-NEXT:    v_sub_u32_e32 v3, vcc, 0, v1
 ; GCN-NEXT:    s_mov_b32 s4, 0xf4240
-; GCN-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GCN-NEXT:    v_rcp_f32_e32 v2, v2
 ; GCN-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GCN-NEXT:    v_mul_f32_e32 v2, 0x4f7ffffe, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v2

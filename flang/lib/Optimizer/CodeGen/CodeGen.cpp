@@ -2099,6 +2099,15 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
   }
 };
 
+/// Return true if any user of \p val is a gpu.launch_func operation,
+/// indicating the descriptor must be in device-accessible memory.
+static bool isUsedByGPULaunchFunc(mlir::Value val) {
+  for (auto *user : val.getUsers())
+    if (mlir::isa<mlir::gpu::LaunchFuncOp>(user))
+      return true;
+  return false;
+}
+
 static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal) {
   if (val.getDefiningOp() &&
       val.getDefiningOp()->getParentOfType<mlir::gpu::GPUModuleOp>())
@@ -2340,9 +2349,11 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     dest = insertBaseAddress(rewriter, loc, dest, base);
     if (fir::isDerivedTypeWithLenParams(boxTy))
       TODO(loc, "fir.embox codegen of derived with length parameters");
-    mlir::Value result = placeInMemoryIfNotGlobalInit(
-        rewriter, loc, boxTy, dest,
-        isDeviceAllocation(xbox.getMemref(), adaptor.getMemref()));
+    bool needsDeviceAlloc =
+        isDeviceAllocation(xbox.getMemref(), adaptor.getMemref()) ||
+        isUsedByGPULaunchFunc(xbox);
+    mlir::Value result = placeInMemoryIfNotGlobalInit(rewriter, loc, boxTy,
+                                                      dest, needsDeviceAlloc);
     rewriter.replaceOp(xbox, result);
     return mlir::success();
   }
@@ -2458,9 +2469,11 @@ private:
       dest = insertStride(rewriter, loc, dest, dim, std::get<1>(iter.value()));
     }
     dest = insertBaseAddress(rewriter, loc, dest, base);
+    bool needsDeviceAlloc =
+        isDeviceAllocation(rebox.getBox(), adaptor.getBox()) ||
+        isUsedByGPULaunchFunc(rebox);
     mlir::Value result = placeInMemoryIfNotGlobalInit(
-        rewriter, rebox.getLoc(), destBoxTy, dest,
-        isDeviceAllocation(rebox.getBox(), adaptor.getBox()));
+        rewriter, rebox.getLoc(), destBoxTy, dest, needsDeviceAlloc);
     rewriter.replaceOp(rebox, result);
     return mlir::success();
   }
@@ -2830,7 +2843,8 @@ struct XArrayCoorOpConversion
     // operations.
     mlir::LLVM::IntegerOverflowFlags subFlags = isShifted ? nsw : (nsw | nuw);
     mlir::LLVM::IntegerOverflowFlags addMulFlags = nsw | nuw;
-    mlir::LLVM::GEPNoWrapFlags gepFlags = mlir::LLVM::GEPNoWrapFlags::nusw | mlir::LLVM::GEPNoWrapFlags::nuw;
+    mlir::LLVM::GEPNoWrapFlags gepFlags =
+        mlir::LLVM::GEPNoWrapFlags::nusw | mlir::LLVM::GEPNoWrapFlags::nuw;
 
     // For each dimension of the array, generate the offset calculation.
     for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
@@ -3625,6 +3639,11 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
           newBoxStorage =
               genCUFAllocDescriptor(loc, rewriter, mod, boxTy, lowerTy());
         }
+      }
+      if (!newBoxStorage && isUsedByGPULaunchFunc(load)) {
+        auto mod = load->getParentOfType<mlir::ModuleOp>();
+        newBoxStorage =
+            genCUFAllocDescriptor(loc, rewriter, mod, boxTy, lowerTy());
       }
       if (!newBoxStorage)
         newBoxStorage = genAllocaAndAddrCastWithType(loc, llvmLoadTy,

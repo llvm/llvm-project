@@ -513,7 +513,7 @@ public:
   /// (in the format produced by -fdump-record-layouts).
   std::string OverrideRecordLayoutsFile;
 
-  /// Auxiliary triple for CUDA/HIP compilation.
+  /// Auxiliary triple for CUDA/HIP/SYCL compilation.
   std::string AuxTriple;
 
   /// Auxiliary target CPU for CUDA/HIP compilation.

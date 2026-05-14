@@ -166,7 +166,7 @@ LLVM_ABI Value *simplifyFCmpInst(CmpPredicate Predicate, Value *LHS, Value *RHS,
 
 /// Given operands for a SelectInst, fold the result or return null.
 LLVM_ABI Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
-                                   const SimplifyQuery &Q);
+                                   FastMathFlags FMF, const SimplifyQuery &Q);
 
 /// Given operands for a GetElementPtrInst, fold the result or return null.
 LLVM_ABI Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,

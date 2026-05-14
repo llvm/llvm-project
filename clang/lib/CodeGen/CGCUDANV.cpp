@@ -372,7 +372,7 @@ Address CGNVCUDARuntime::prepareKernelArgs(CodeGenFunction &CGF,
   // args, allocate a single pointer so we still have a valid pointer to the
   // argument array that we can pass to runtime, even if it will be unused.
   Address KernelArgs = CGF.CreateTempAlloca(
-      PtrTy, CharUnits::fromQuantity(16), "kernel_args",
+      PtrTy, LangAS::Default, CharUnits::fromQuantity(16), "kernel_args",
       llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
   // Store pointers to the arguments in a locally allocated launch_args.
   for (unsigned i = 0; i < Args.size(); ++i) {
@@ -437,9 +437,10 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
       CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "grid_dim");
   Address BlockDim =
       CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "block_dim");
-  Address ShmemSize =
-      CGF.CreateTempAlloca(SizeTy, CGM.getSizeAlign(), "shmem_size");
-  Address Stream = CGF.CreateTempAlloca(PtrTy, CGM.getPointerAlign(), "stream");
+  Address ShmemSize = CGF.CreateTempAlloca(SizeTy, LangAS::Default,
+                                           CGM.getSizeAlign(), "shmem_size");
+  Address Stream = CGF.CreateTempAlloca(PtrTy, LangAS::Default,
+                                        CGM.getPointerAlign(), "stream");
   llvm::FunctionCallee cudaPopConfigFn = CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(IntTy,
                               {/*gridDim=*/GridDim.getType(),

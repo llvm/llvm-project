@@ -1164,8 +1164,7 @@ define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_v
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
 ; SVE-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; SVE-NEXT:    [[TMP7:%.*]] = select <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> splat (i32 1)
-; SVE-NEXT:    [[TMP8:%.*]] = sdiv <vscale x 4 x i32> splat (i32 42), [[TMP7]]
+; SVE-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i32> @llvm.masked.sdiv.nxv4i32(<vscale x 4 x i32> splat (i32 42), <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> [[TMP6]])
 ; SVE-NEXT:    [[TMP9:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP10]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]

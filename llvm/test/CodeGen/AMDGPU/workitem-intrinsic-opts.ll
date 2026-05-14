@@ -3,9 +3,9 @@
 ; RUN: llc -O3 -mtriple=amdgcn -mcpu=gfx942 %s -o - | FileCheck %s --check-prefixes=GFX942,DAGISEL-GFX942
 ; RUN: llc -O3 -mtriple=amdgcn -mcpu=gfx1200 %s -o - | FileCheck %s --check-prefixes=GFX12,DAGISEL-GFX12
 
-; RUN: llc -O3 -global-isel -mtriple=amdgcn -mcpu=fiji %s -o - | FileCheck %s --check-prefixes=GFX8,GISEL-GFX8
-; RUN: llc -O3 -global-isel -mtriple=amdgcn -mcpu=gfx942 %s -o - | FileCheck %s --check-prefixes=GFX942,GISEL-GFX942
-; RUN: llc -O3 -global-isel -mtriple=amdgcn -mcpu=gfx1200 %s -o - | FileCheck %s --check-prefixes=GFX12,GISEL-GFX12
+; RUN: llc -O3 -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji %s -o - | FileCheck %s --check-prefixes=GFX8,GISEL-GFX8
+; RUN: llc -O3 -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx942 %s -o - | FileCheck %s --check-prefixes=GFX942,GISEL-GFX942
+; RUN: llc -O3 -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 %s -o - | FileCheck %s --check-prefixes=GFX12,GISEL-GFX12
 
 ; (workitem_id_x | workitem_id_y | workitem_id_z) == 0
 define i1 @workitem_zero() {

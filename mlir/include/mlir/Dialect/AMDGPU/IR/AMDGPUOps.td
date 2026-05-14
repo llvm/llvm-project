@@ -1413,6 +1413,7 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
     attr-dict `:` $transferType `,` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def AMDGPU_TransposeLoadOp :

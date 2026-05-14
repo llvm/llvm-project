@@ -1213,7 +1213,7 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
       assert(E->getOperand(1)->getType() == I->getOperand(1)->getType() &&
              E->getOperand(2)->getType() == I->getOperand(2)->getType());
       Value *V = simplifySelectInst(E->getOperand(0), E->getOperand(1),
-                                    E->getOperand(2), Q);
+                                    E->getOperand(2), FastMathFlags(), Q);
       if (auto Simplified = checkExprResults(E, I, V))
         return Simplified;
     }

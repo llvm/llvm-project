@@ -139,6 +139,32 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  sockname_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sockname_test.cpp
+  DEPENDS
+    .socket_test_support
+    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_sockaddr_un
+    libc.src.errno.errno
+    libc.src.sys.socket.accept
+    libc.src.sys.socket.bind
+    libc.src.sys.socket.connect
+    libc.src.sys.socket.getpeername
+    libc.src.sys.socket.getsockname
+    libc.src.sys.socket.listen
+    libc.src.sys.socket.socket
+    libc.src.stdio.remove
+    libc.src.unistd.close
+    libc.src.__support.CPP.scope
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
   send_recv_test
   SUITE
     libc_sys_socket_unittests

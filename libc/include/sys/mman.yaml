@@ -19,6 +19,13 @@ functions:
       - type: void *
       - type: size_t
       - type: int
+  - name: memfd_create
+    standards:
+      - Linux
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: unsigned int
   - name: mincore
     standards:
       - Linux

@@ -6017,7 +6017,8 @@ static Expr *makeLaunchBoundsArgExpr(Sema &S, Expr *E,
 
 CUDALaunchBoundsAttr *
 Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
-                             Expr *MinBlocks, Expr *MaxBlocks) {
+                             Expr *MinBlocks, Expr *MaxBlocks,
+                             bool IgnoreArch) {
   CUDALaunchBoundsAttr TmpAttr(Context, CI, MaxThreads, MinBlocks, MaxBlocks);
   MaxThreads = makeLaunchBoundsArgExpr(*this, MaxThreads, TmpAttr, 0);
   if (!MaxThreads)
@@ -6030,14 +6031,20 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
   }
 
   if (MaxBlocks) {
-    // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-    auto SM = getOffloadArch(Context.getTargetInfo());
-    if (SM == OffloadArch::Unknown || SM < OffloadArch::SM_90) {
-      Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
-          << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
-      // Ignore it by setting MaxBlocks to null;
-      MaxBlocks = nullptr;
-    } else {
+    // We might want to ignore the nvptx arch check, e.g., when processing the
+    // launch bounds attribute within ompx_attribute to support other archs.
+    if (!IgnoreArch) {
+      // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
+      auto SM = getOffloadArch(Context.getTargetInfo());
+      if (SM == OffloadArch::Unknown || SM < OffloadArch::SM_90) {
+        Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
+            << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
+        // Ignore it by setting MaxBlocks to null;
+        MaxBlocks = nullptr;
+      }
+    }
+
+    if (MaxBlocks) {
       MaxBlocks = makeLaunchBoundsArgExpr(*this, MaxBlocks, TmpAttr, 2);
       if (!MaxBlocks)
         return nullptr;

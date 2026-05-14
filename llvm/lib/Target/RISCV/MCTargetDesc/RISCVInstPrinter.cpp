@@ -341,6 +341,17 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
   O << ".t";
 }
 
+void RISCVInstPrinter::printVScaleReg(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isReg() && "printVScaleReg can only print register operands");
+  O << ", ";
+  printRegName(O, MO.getReg());
+  O << ".scale";
+}
+
 void RISCVInstPrinter::printImm(const MCInst *MI, unsigned OpNo,
                                 const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);

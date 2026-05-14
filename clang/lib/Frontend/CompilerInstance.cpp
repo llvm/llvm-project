@@ -119,6 +119,12 @@ bool CompilerInstance::createTarget() {
   if (!hasTarget())
     return false;
 
+  if (getLangOpts().SYCLIsDevice && !getTarget().getTriple().isGPU()) {
+    getDiagnostics().Report(diag::err_sycl_device_invalid_target)
+        << getTarget().getTriple().str();
+    return false;
+  }
+
   // Check whether AuxTarget exists, if not, then create TargetInfo for the
   // other side of CUDA/OpenMP/SYCL compilation.
   if (!getAuxTarget() &&

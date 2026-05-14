@@ -27,7 +27,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr float expm1f(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float expm1f(float x) {
   using namespace common_constants_internal;
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);

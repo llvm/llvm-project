@@ -71,12 +71,7 @@ using namespace llvm;
 
 STATISTIC(FuseCounter, "Loops fused");
 STATISTIC(NumFusionCandidates, "Number of candidates for loop fusion");
-STATISTIC(InvalidPreheader, "Loop has invalid preheader");
-STATISTIC(InvalidHeader, "Loop has invalid header");
-STATISTIC(InvalidExitingBlock, "Loop has invalid exiting blocks");
-STATISTIC(InvalidExitBlock, "Loop has invalid exit block");
-STATISTIC(InvalidLatch, "Loop has invalid latch");
-STATISTIC(InvalidLoop, "Loop is invalid");
+STATISTIC(InvalidLoopStructure, "Loop has invalid structure");
 STATISTIC(AddressTakenBB, "Basic block has address taken");
 STATISTIC(MayThrowException, "Loop may throw an exception");
 STATISTIC(ContainsVolatileAccess, "Loop contains a volatile access");
@@ -210,7 +205,7 @@ struct FusionCandidate {
 
   /// Check if all members of the class are valid.
   bool isValid() const {
-    return Preheader && Header && ExitingBlock && ExitBlock && Latch && L &&
+    return Preheader && ExitingBlock && ExitBlock && Latch && L &&
            !L->isInvalid() && Valid;
   }
 
@@ -293,19 +288,8 @@ struct FusionCandidate {
   bool isEligibleForFusion(ScalarEvolution &SE) const {
     if (!isValid()) {
       LLVM_DEBUG(dbgs() << "FC has invalid CFG requirements!\n");
-      if (!Preheader)
-        ++InvalidPreheader;
-      if (!Header)
-        ++InvalidHeader;
-      if (!ExitingBlock)
-        ++InvalidExitingBlock;
-      if (!ExitBlock)
-        ++InvalidExitBlock;
-      if (!Latch)
-        ++InvalidLatch;
-      if (L->isInvalid())
-        ++InvalidLoop;
-
+      assert(Header && "Header should be guaranteed to exist!");
+      ++InvalidLoopStructure;
       return false;
     }
 

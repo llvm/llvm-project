@@ -515,26 +515,6 @@ poly64x2_t test_vextq_p64(poly64x2_t a, poly64x2_t b) {
   return vextq_p64(a, b, 1);
 }
 
-// CHECK-LABEL: define dso_local <2 x i64> @test_vtrn1q_p64(
-// CHECK-SAME: <2 x i64> noundef [[A:%.*]], <2 x i64> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[A]], <2 x i64> [[B]], <2 x i32> <i32 0, i32 2>
-// CHECK-NEXT:    ret <2 x i64> [[SHUFFLE_I]]
-//
-poly64x2_t test_vtrn1q_p64(poly64x2_t a, poly64x2_t b) {
-  return vtrn1q_p64(a, b);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vtrn2q_p64(
-// CHECK-SAME: <2 x i64> noundef [[A:%.*]], <2 x i64> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[A]], <2 x i64> [[B]], <2 x i32> <i32 1, i32 3>
-// CHECK-NEXT:    ret <2 x i64> [[SHUFFLE_I]]
-//
-poly64x2_t test_vtrn2q_p64(poly64x2_t a, poly64x2_t b) {
-  return vtrn2q_u64(a, b);
-}
-
 // CHECK-LABEL: define dso_local <1 x i64> @test_vsri_n_p64(
 // CHECK-SAME: <1 x i64> noundef [[A:%.*]], <1 x i64> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

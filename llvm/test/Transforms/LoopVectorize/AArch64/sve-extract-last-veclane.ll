@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize,instcombine -mtriple aarch64-linux-gnu -S < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple aarch64-linux-gnu -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
@@ -9,8 +9,8 @@ define void @inv_store_last_lane(ptr noalias nocapture %a, ptr noalias nocapture
 ; CHECK:  store <vscale x 4 x i32> %[[VEC_VAL:.*]], ptr
 ; CHECK: middle.block:
 ; CHECK: %[[VSCALE:.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT: %[[VSCALE2:.*]] = shl nuw i32 %[[VSCALE]], 2
-; CHECK-NEXT: %[[LAST_LANE:.*]] = add i32 %[[VSCALE2]], -1
+; CHECK-NEXT: %[[VSCALE2:.*]] = mul nuw i32 %[[VSCALE]], 4
+; CHECK-NEXT: %[[LAST_LANE:.*]] = sub i32 %[[VSCALE2]], 1
 ; CHECK-NEXT: %{{.*}} = extractelement <vscale x 4 x i32> %[[VEC_VAL]], i32 %[[LAST_LANE]]
 
 entry:
@@ -39,10 +39,9 @@ define float @ret_last_lane(ptr noalias nocapture %a, ptr noalias nocapture read
 ; CHECK:  store <vscale x 4 x float> %[[VEC_VAL:.*]], ptr
 ; CHECK: middle.block:
 ; CHECK: %[[VSCALE:.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT: %[[VSCALE2:.*]] = shl nuw i32 %[[VSCALE]], 2
-; CHECK-NEXT: %[[LAST_LANE:.*]] = add i32 %[[VSCALE2]], -1
+; CHECK-NEXT: %[[VSCALE2:.*]] = mul nuw i32 %[[VSCALE]], 4
+; CHECK-NEXT: %[[LAST_LANE:.*]] = sub i32 %[[VSCALE2]], 1
 ; CHECK-NEXT: %{{.*}} = extractelement <vscale x 4 x float> %[[VEC_VAL]], i32 %[[LAST_LANE]]
-
 entry:
   br label %for.body
 

@@ -532,9 +532,119 @@ cir.func @test_nested_cleanup_break_in_switch() {
 // CHECK:       ^[[DONE]]:
 // CHECK:         cir.return
 
+// Test that a goto inside the cleanup body that targets a label also inside
+// the cleanup body is left alone by flattening. The cleanup's only exit is
+// the yield at the end of the body, so the cleanup runs once after the goto's
+// destination is reached.
+cir.func @test_goto_within_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    %cond = cir.call @shouldGoto() : () -> !cir.bool
+    cir.brcond %cond ^bb_goto, ^bb_other
+  ^bb_goto:
+    cir.goto "internal_label"
+  ^bb_other:
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.br ^bb_label
+  ^bb_label:
+    cir.label "internal_label"
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_goto_within_cleanup()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldGoto
+// CHECK:         cir.brcond %[[COND]] ^[[GOTO_BB:bb[0-9]+]], ^[[OTHER_BB:bb[0-9]+]]
+// CHECK:       ^[[GOTO_BB]]:
+// CHECK:         cir.goto "internal_label"
+// CHECK:       ^[[OTHER_BB]]:
+// CHECK:         cir.call @doSomething(%[[ALLOCA]])
+// CHECK:         cir.br ^[[LABEL_BB:bb[0-9]+]]
+// CHECK:       ^[[LABEL_BB]]:
+// CHECK:         cir.label "internal_label"
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[DONE:bb[0-9]+]]
+// CHECK:       ^[[DONE]]:
+// CHECK:         cir.return
+
+// Test a goto inside a nested cleanup scope whose target label is inside the
+// same nested cleanup body. Neither cleanup needs to handle the goto as an
+// exit; the inner cleanup runs once after the goto's destination is reached
+// and the outer cleanup runs once on normal exit from the inner cleanup.
+cir.func @test_goto_within_nested_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      %cond = cir.call @shouldGoto() : () -> !cir.bool
+      cir.brcond %cond ^bb_goto, ^bb_other
+    ^bb_goto:
+      cir.goto "inner_label"
+    ^bb_other:
+      cir.call @doSomething(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.br ^bb_label
+    ^bb_label:
+      cir.label "inner_label"
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_goto_within_nested_cleanup()
+// CHECK:         %[[A1:.*]] = cir.alloca !rec_SomeClass{{.*}}["c1"
+// CHECK:         %[[A2:.*]] = cir.alloca !rec_SomeClass{{.*}}["c2"
+// CHECK:         cir.call @ctor(%[[A1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[A2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldGoto
+// CHECK:         cir.brcond %[[COND]] ^[[GOTO_BB:bb[0-9]+]], ^[[OTHER_BB:bb[0-9]+]]
+// CHECK:       ^[[GOTO_BB]]:
+// CHECK:         cir.goto "inner_label"
+// CHECK:       ^[[OTHER_BB]]:
+// CHECK:         cir.call @doSomething(%[[A2]])
+// CHECK:         cir.br ^[[LABEL_BB:bb[0-9]+]]
+// CHECK:       ^[[LABEL_BB]]:
+// CHECK:         cir.label "inner_label"
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[A2]])
+// CHECK:         cir.br ^[[INNER_DONE:bb[0-9]+]]
+// CHECK:       ^[[INNER_DONE]]:
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[A1]])
+// CHECK:         cir.br ^[[OUTER_DONE:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DONE]]:
+// CHECK:         cir.return
+
 cir.func private @get() -> !s32i
 cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
 cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
 cir.func private @doSomething(!cir.ptr<!rec_SomeClass>)
 cir.func private @shouldBreak() -> !cir.bool
 cir.func private @shouldContinue() -> !cir.bool
+cir.func private @shouldGoto() -> !cir.bool

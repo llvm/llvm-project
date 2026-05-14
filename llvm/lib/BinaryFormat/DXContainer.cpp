@@ -110,6 +110,12 @@ dxbc::PartType dxbc::parsePartType(StringRef S) {
       .Default(dxbc::PartType::Unknown);
 }
 
+bool dxbc::isDebugProgramPart(PartType PT) { return PT == PartType::ILDB; }
+
+const char *dxbc::getProgramPartName(bool IsDebug) {
+  return IsDebug ? "ILDB" : "DXIL";
+}
+
 bool ShaderHash::isPopulated() {
   static uint8_t Zeros[16] = {0};
   return Flags > 0 || 0 != memcmp(&Digest, &Zeros, 16);

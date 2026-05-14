@@ -678,3 +678,10 @@ int64_t AMDGPU::getLitValue(const MCExpr *Expr) {
   return cast<MCConstantExpr>(cast<AMDGPUMCExpr>(Expr)->getArgs()[0])
       ->getValue();
 }
+
+AMDGPUMCExpr::VariantKind AMDGPU::getExprKind(const MCExpr *Expr) {
+  const auto *E = dyn_cast<AMDGPUMCExpr>(Expr);
+  if (!E)
+    return AMDGPUMCExpr::AGVK_None;
+  return E->getKind();
+}

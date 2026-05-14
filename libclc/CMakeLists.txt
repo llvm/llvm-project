@@ -23,9 +23,10 @@ option(
 )
 
 # List of all supported architectures.
-set( LIBCLC_ARCHS_ALL amdgpu amdgcn nvptx64 )
+set( LIBCLC_ARCHS_NVPTX nvptx64 )
+set( LIBCLC_ARCHS_AMDGPU amdgpu amdgcn )
 set( LIBCLC_ARCHS_SPIRV spirv spirv32 spirv64 )
-list( APPEND LIBCLC_ARCHS_ALL ${LIBCLC_ARCHS_SPIRV} )
+list( APPEND LIBCLC_ARCHS_ALL ${LIBCLC_ARCHS_AMDGPU} ${LIBCLC_ARCHS_NVPTX} ${LIBCLC_ARCHS_SPIRV} )
 
 set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
@@ -102,9 +103,9 @@ endif()
 message(STATUS "libclc target '${LIBCLC_TARGET}' is enabled")
 
 # Map the LLVM target architecture to the standard directory name.
-if(LIBCLC_TARGET_ARCH STREQUAL amdgcn OR LIBCLC_TARGET_ARCH STREQUAL amdgpu)
+if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_AMDGPU)
   set(LIBCLC_ARCH_DIR amdgpu)
-elseif(LIBCLC_TARGET_ARCH STREQUAL nvptx64)
+elseif(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_NVPTX)
   set(LIBCLC_ARCH_DIR nvptx)
 elseif(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
   set(LIBCLC_ARCH_DIR spirv)
@@ -138,7 +139,7 @@ endif()
 # Address space values.
 set(private_addrspace_val 0)
 set(generic_addrspace_val 0)
-if(LIBCLC_TARGET_ARCH STREQUAL amdgcn)
+if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_AMDGPU)
   set(private_addrspace_val 5)
 endif()
 if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV AND NOT LIBCLC_TARGET_OS STREQUAL vulkan)
@@ -158,8 +159,12 @@ if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
     list(APPEND target_extra_defines CLC_SPIRV)
     set(opt_flags)
   endif()
-elseif(LIBCLC_TARGET_ARCH STREQUAL amdgcn)
+elseif(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_AMDGPU)
   list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")
+endif()
+if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_AMDGPU OR LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_NVPTX)
+  list(APPEND target_compile_flags -fvisibility=hidden)
+  list(APPEND target_compile_flags "SHELL:-Xclang -fapply-global-visibility-to-externs")
 endif()
 
 # Common compile options shared by CLC and OpenCL libraries.
@@ -223,8 +228,6 @@ libclc_add_library(libclc-${LIBCLC_TARGET}
   OUTPUT_FILENAME libclc
   PARENT_TARGET libclc-opencl-builtins
 )
-
-set(LIBCLC_UNRESOLVED_SYMBOL_TEST_TARGETS libclc-${LIBCLC_TARGET})
 
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)

@@ -16,7 +16,6 @@
 
 #include "hdr/types/socklen_t.h"
 #include "hdr/types/struct_sockaddr.h"
-#include <linux/net.h>   // For SYS_ACCEPT socketcall number.
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
@@ -24,17 +23,12 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> accept(int sockfd, struct sockaddr *addr,
                                 socklen_t *addrlen) {
-#ifdef SYS_accept
-  int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_accept, sockfd, addr, addrlen);
-#elif defined(SYS_socketcall)
-  unsigned long sockcall_args[3] = {static_cast<unsigned long>(sockfd),
-                                    reinterpret_cast<unsigned long>(addr),
-                                    reinterpret_cast<unsigned long>(addrlen)};
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_ACCEPT,
-                                              sockcall_args);
+#if defined(SYS_accept)
+  int ret = syscall_impl<int>(SYS_accept, sockfd, addr, addrlen);
+#elif defined(SYS_accept4)
+  int ret = syscall_impl<int>(SYS_accept4, sockfd, addr, addrlen, 0);
 #else
-#error "accept and socketcall syscalls unavailable for this platform."
+#error "accept and accept4 syscalls unavailable for this platform."
 #endif
 
   if (ret < 0)

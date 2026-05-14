@@ -41,6 +41,11 @@ bool isNormalAssignmentOperator(const FunctionDecl *FD);
 /// has the lifetimebound attribute.
 bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD);
 
+/// Returns the lifetimebound attribute for the implicit this parameter, if it
+/// exists on any redeclaration.
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
+
 /// Returns true if the implicit object parameter (this) should be considered
 /// lifetimebound, either due to an explicit lifetimebound attribute on the
 /// method or because it's a normal assignment operator.

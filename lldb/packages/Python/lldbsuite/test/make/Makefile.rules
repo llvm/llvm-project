@@ -240,6 +240,10 @@ ifeq "$(OS)" "Windows_NT"
 	DEBUG_INFO_FLAG ?= -gdwarf
 endif
 
+ifeq "$(MAKE_NO_DEBUG_INFO)" "YES"
+	DEBUG_INFO_FLAG := -g0
+endif
+
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0

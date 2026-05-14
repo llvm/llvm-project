@@ -464,8 +464,7 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; RV64I-NEXT:    addi sp, sp, -64
 ; RV64I-NEXT:    lui a0, 1
 ; RV64I-NEXT:    sub sp, sp, a0
-; RV64I-NEXT:    addi a0, s0, -2048
-; RV64I-NEXT:    addi a0, a0, -48
+; RV64I-NEXT:    mv a0, sp
 ; RV64I-NEXT:    call callee_stack_args
 ; RV64I-NEXT:    lui a0, 1
 ; RV64I-NEXT:    add sp, sp, a0
@@ -494,8 +493,7 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; RV32I-NEXT:    sub sp, sp, a0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    addi sp, sp, -32
-; RV32I-NEXT:    addi a0, s0, -2048
-; RV32I-NEXT:    addi a0, a0, -36
+; RV32I-NEXT:    addi a0, sp, 12
 ; RV32I-NEXT:    call callee_stack_args
 ; RV32I-NEXT:    lui a0, 1
 ; RV32I-NEXT:    addi a0, a0, 32

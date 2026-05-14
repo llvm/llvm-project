@@ -3179,6 +3179,18 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
   }
 }
 
+/// Returns {build-session validation applies, MF was validated this session}.
+static std::pair<bool, bool>
+wasValidatedInBuildSession(const ModuleFile &MF,
+                           const HeaderSearchOptions &HSOpts) {
+  const bool EnablesBSValidation =
+      HSOpts.ModulesValidateOncePerBuildSession && MF.Kind == MK_ImplicitModule;
+  const bool WasValidated =
+      EnablesBSValidation &&
+      MF.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp;
+  return {EnablesBSValidation, WasValidated};
+}
+
 ASTReader::RelocationResult
 ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // Don't emit module relocation errors if we have -fno-validate-pch.
@@ -3201,12 +3213,13 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // When only validating modules once per build session,
   // Skip check if the timestamp is up to date or module was built in same build
   // session.
-  if (HSOpts.ModulesValidateOncePerBuildSession && IsImplicitModule) {
-    if (F.InputFilesValidationTimestamp >= HSOpts.BuildSessionTimestamp)
-      return {std::nullopt, IgnoreError};
-    if (static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
-      return {std::nullopt, IgnoreError};
-  }
+  auto [EnablesBSValidation, WasValidated] =
+      wasValidatedInBuildSession(F, HSOpts);
+  if (WasValidated)
+    return {std::nullopt, IgnoreError};
+  if (EnablesBSValidation &&
+      static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
+    return {std::nullopt, IgnoreError};
 
   Diag(diag::remark_module_check_relocation) << F.ModuleName << F.FileName;
 
@@ -3294,9 +3307,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         F.InputFilesValidationStatus = ValidateSystemInputs
                                            ? InputFilesValidation::AllFiles
                                            : InputFilesValidation::UserFiles;
-        if (HSOpts.ModulesValidateOncePerBuildSession &&
-            F.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp &&
-            F.Kind == MK_ImplicitModule) {
+        auto [_, WasValidated] = wasValidatedInBuildSession(F, HSOpts);
+        if (WasValidated) {
           N = ForceValidateUserInputs ? NumUserInputs : 0;
           F.InputFilesValidationStatus =
               ForceValidateUserInputs

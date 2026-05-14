@@ -553,12 +553,13 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
         arith::MulFOp::create(b, lhsReal, rhsReal, fmfValue);
     Value lhsImagTimesRhsImag =
         arith::MulFOp::create(b, lhsImag, rhsImag, fmfValue);
-    Value real = arith::SubFOp::create(b, lhsRealTimesRhsReal,
-                                       lhsImagTimesRhsImag, fmfValue);
     Value lhsImagTimesRhsReal =
         arith::MulFOp::create(b, lhsImag, rhsReal, fmfValue);
     Value lhsRealTimesRhsImag =
         arith::MulFOp::create(b, lhsReal, rhsImag, fmfValue);
+
+    Value real = arith::SubFOp::create(b, lhsRealTimesRhsReal,
+                                       lhsImagTimesRhsImag, fmfValue);
     Value imag = arith::AddFOp::create(b, lhsImagTimesRhsReal,
                                        lhsRealTimesRhsImag, fmfValue);
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, real, imag);

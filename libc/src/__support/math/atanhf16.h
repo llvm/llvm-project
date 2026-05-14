@@ -151,7 +151,7 @@ LIBC_INLINE float log_eval_f(float x) {
 
 } // namespace atanhf16_internal
 
-LIBC_INLINE constexpr float16 atanhf16(float16 x) {
+LIBC_INLINE LIBC_CONSTEXPR float16 atanhf16(float16 x) {
   constexpr size_t N_EXCEPTS = 1;
   constexpr fputil::ExceptValues<float16, N_EXCEPTS> ATANHF16_EXCEPTS{{
       // (input, RZ output, RU offset, RD offset, RN offset)

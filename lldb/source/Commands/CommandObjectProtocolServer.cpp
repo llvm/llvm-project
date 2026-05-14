@@ -92,8 +92,8 @@ protected:
       result.AppendMessageWithFormatv(
           "{0} server started with connection listeners: {1}", protocol,
           address);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
-    result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 };
 
@@ -128,7 +128,6 @@ protected:
       result.AppendErrorWithFormatv("{0}", llvm::fmt_consume(std::move(error)));
       return;
     }
-    result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 };
 

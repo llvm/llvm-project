@@ -142,7 +142,8 @@ inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
 /// Infers the source layout attribute for an operand using result layout
 /// attribute
 DistributeLayoutAttr
-inferSourceLayoutFromResult(OpOperand &operand, DistributeLayoutAttr resLayout);
+inferSourceLayoutFromResultForNonAnchorOp(OpOperand &operand,
+                                          DistributeLayoutAttr resLayout);
 
 /// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
 /// the result.

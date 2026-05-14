@@ -366,7 +366,7 @@ static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
     assert(stores.size() == 1 && "Expected only one store");
     assert(stores[0].first == CharUnits::Zero() &&
            "Expected store to begin at offset zero");
-    CIRGenBuilderTy builder = cgf.getBuilder();
+    CIRGenBuilderTy &builder = cgf.getBuilder();
     mlir::Location loc = cgf.getLoc(base->getBeginLoc());
     builder.createStore(loc, builder.getConstant(loc, nullConstantForBase),
                         destPtr);

@@ -1360,9 +1360,28 @@ bool Vectorizer::isSafeToMove(
 }
 
 static bool checkNoWrapFlags(Instruction *I, bool Signed) {
+  // or disjoint is equivalent to add nuw nsw, so it never wraps.
+  if (auto *PDI = dyn_cast<PossiblyDisjointInst>(I); PDI && PDI->isDisjoint())
+    return true;
   BinaryOperator *BinOpI = cast<BinaryOperator>(I);
   return (Signed && BinOpI->hasNoSignedWrap()) ||
          (!Signed && BinOpI->hasNoUnsignedWrap());
+}
+
+/// Check if instruction is an add or an or-disjoint (which is semantically
+/// equivalent to add nuw nsw).
+static bool isAddLike(Instruction *I) {
+  switch (I->getOpcode()) {
+  default:
+    break;
+  case Instruction::Add:
+    return true;
+  case Instruction::Or:
+    if (auto *PDI = dyn_cast<PossiblyDisjointInst>(I))
+      return PDI->isDisjoint();
+    break;
+  }
+  return false;
 }
 
 static bool checkIfSafeAddSequence(const APInt &IdxDiff, Instruction *AddOpA,
@@ -1373,9 +1392,10 @@ static bool checkIfSafeAddSequence(const APInt &IdxDiff, Instruction *AddOpA,
                     << MatchingOpIdxA << ", AddOpB=" << *AddOpB
                     << ", MatchingOpIdxB=" << MatchingOpIdxB
                     << ", Signed=" << Signed << "\n");
-  // If both OpA and OpB are adds with NSW/NUW and with one of the operands
-  // being the same, we can guarantee that the transformation is safe if we can
-  // prove that OpA won't overflow when Ret added to the other operand of OpA.
+  // If both OpA and OpB are adds (or or-disjoint) with NSW/NUW and with one of
+  // the operands being the same, we can guarantee that the transformation is
+  // safe if we can prove that OpA won't overflow when Ret added to the other
+  // operand of OpA.
   // For example:
   //  %tmp7 = add nsw i32 %tmp2, %v0
   //  %tmp8 = sext i32 %tmp7 to i64
@@ -1387,8 +1407,7 @@ static bool checkIfSafeAddSequence(const APInt &IdxDiff, Instruction *AddOpA,
   //  Both %tmp7 and %tmp12 have the nsw flag and the first operand is %tmp2.
   //  It's guaranteed that adding 1 to %tmp7 won't overflow because %tmp11 adds
   //  1 to %v0 and both %tmp11 and %tmp12 have the nsw flag.
-  assert(AddOpA->getOpcode() == Instruction::Add &&
-         AddOpB->getOpcode() == Instruction::Add &&
+  assert(isAddLike(AddOpA) && isAddLike(AddOpB) &&
          checkNoWrapFlags(AddOpA, Signed) && checkNoWrapFlags(AddOpB, Signed));
   if (AddOpA->getOperand(MatchingOpIdxA) ==
       AddOpB->getOperand(MatchingOpIdxB)) {
@@ -1397,7 +1416,7 @@ static bool checkIfSafeAddSequence(const APInt &IdxDiff, Instruction *AddOpA,
     Instruction *OtherInstrA = dyn_cast<Instruction>(OtherOperandA);
     Instruction *OtherInstrB = dyn_cast<Instruction>(OtherOperandB);
     // Match `x +nsw/nuw y` and `x +nsw/nuw (y +nsw/nuw IdxDiff)`.
-    if (OtherInstrB && OtherInstrB->getOpcode() == Instruction::Add &&
+    if (OtherInstrB && isAddLike(OtherInstrB) &&
         checkNoWrapFlags(OtherInstrB, Signed) &&
         isa<ConstantInt>(OtherInstrB->getOperand(1))) {
       int64_t CstVal =
@@ -1407,7 +1426,7 @@ static bool checkIfSafeAddSequence(const APInt &IdxDiff, Instruction *AddOpA,
         return true;
     }
     // Match `x +nsw/nuw (y +nsw/nuw -Idx)` and `x +nsw/nuw (y +nsw/nuw x)`.
-    if (OtherInstrA && OtherInstrA->getOpcode() == Instruction::Add &&
+    if (OtherInstrA && isAddLike(OtherInstrA) &&
         checkNoWrapFlags(OtherInstrA, Signed) &&
         isa<ConstantInt>(OtherInstrA->getOperand(1))) {
       int64_t CstVal =
@@ -1418,10 +1437,8 @@ static bool checkIfSafeAddSequence(const APInt &IdxDiff, Instruction *AddOpA,
     }
     // Match `x +nsw/nuw (y +nsw/nuw c)` and
     // `x +nsw/nuw (y +nsw/nuw (c + IdxDiff))`.
-    if (OtherInstrA && OtherInstrB &&
-        OtherInstrA->getOpcode() == Instruction::Add &&
-        OtherInstrB->getOpcode() == Instruction::Add &&
-        checkNoWrapFlags(OtherInstrA, Signed) &&
+    if (OtherInstrA && OtherInstrB && isAddLike(OtherInstrA) &&
+        isAddLike(OtherInstrB) && checkNoWrapFlags(OtherInstrA, Signed) &&
         checkNoWrapFlags(OtherInstrB, Signed) &&
         isa<ConstantInt>(OtherInstrA->getOperand(1)) &&
         isa<ConstantInt>(OtherInstrB->getOperand(1))) {
@@ -1499,10 +1516,9 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
   // Now we need to prove that adding IdxDiff to ValA won't overflow.
   bool Safe = false;
 
-  // First attempt: if OpB is an add with NSW/NUW, and OpB is IdxDiff added to
-  // ValA, we're okay.
-  if (OpB->getOpcode() == Instruction::Add &&
-      isa<ConstantInt>(OpB->getOperand(1)) &&
+  // First attempt: if OpB is an add (or or-disjoint) with NSW/NUW, and OpB is
+  // IdxDiff added to ValA, we're okay.
+  if (isAddLike(OpB) && isa<ConstantInt>(OpB->getOperand(1)) &&
       IdxDiff.sle(cast<ConstantInt>(OpB->getOperand(1))->getSExtValue()) &&
       checkNoWrapFlags(OpB, Signed))
     Safe = true;
@@ -1510,9 +1526,8 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
   // Second attempt: check if we have eligible add NSW/NUW instruction
   // sequences.
   OpA = dyn_cast<Instruction>(ValA);
-  if (!Safe && OpA && OpA->getOpcode() == Instruction::Add &&
-      OpB->getOpcode() == Instruction::Add && checkNoWrapFlags(OpA, Signed) &&
-      checkNoWrapFlags(OpB, Signed)) {
+  if (!Safe && OpA && isAddLike(OpA) && isAddLike(OpB) &&
+      checkNoWrapFlags(OpA, Signed) && checkNoWrapFlags(OpB, Signed)) {
     // In the checks below a matching operand in OpA and OpB is an operand which
     // is the same in those two instructions.  Below we account for possible
     // orders of the operands of these add instructions.

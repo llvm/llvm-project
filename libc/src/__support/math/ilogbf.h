@@ -17,7 +17,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr int ilogbf(float x) { return fputil::intlogb<int>(x); }
+LIBC_INLINE LIBC_CONSTEXPR int ilogbf(float x) {
+  return fputil::intlogb<int>(x);
+}
 
 } // namespace math
 

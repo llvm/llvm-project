@@ -3,7 +3,7 @@
 target triple = "dxil-unknown-shadermodel6.7-library"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-; CHECK: define float @fma(float, float, float) unnamed_addr #0 !dbg [[Fn:[!][0-9]+]]
+; CHECK: define float @fma(float, float, float) unnamed_addr #0
 define dso_local float @fma(float %0, float %1, float %2) local_unnamed_addr #0 !dbg !6 {
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata float %0, metadata [[VarX:[!][0-9]+]], metadata [[Expr:[!][0-9]+]]), !dbg [[Line1:[!][0-9]+]]
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata float %1, metadata [[VarY:[!][0-9]+]], metadata [[Expr]]), !dbg [[Line1]]
@@ -32,15 +32,15 @@ attributes #0 = { norecurse nounwind readnone willreturn "hlsl.export" }
 
 ; CHECK:      !0 = distinct !DICompileUnit
 ; CHECK-NEXT: !1 = !DIFile(filename:
-; CHECK:      [[Fn]] = distinct !DISubprogram(name: "fma",
-; CHECK:      [[VarX]] = !DILocalVariable(tag: DW_TAG_arg_variable
-; CHECK:      [[VarY]] = !DILocalVariable(tag: DW_TAG_arg_variable
-; CHECK:      [[VarZ]] = !DILocalVariable(tag: DW_TAG_arg_variable
-; CHECK-NEXT: [[Expr]] = !DIExpression()
-; CHECK-NEXT: [[Line1]] = !DILocation(line:
-; CHECK-NEXT: [[Line2]] = !DILocation(line:
-; CHECK-NEXT: [[Line3]] = !DILocation(line:
-; CHECK-NEXT: {{[!][0-9]+}} = !DILocation(line:
+; CHECK:      [[Fn:[!][0-9]+]] = distinct !DISubprogram(name: "fma",
+; CHECK:      [[VarX]] = !DILocalVariable(tag:
+; CHECK:      [[VarY]] = !DILocalVariable(tag:
+; CHECK:      [[VarZ]] = !DILocalVariable(tag:
+; CHECK:      [[Expr]] = !DIExpression()
+; CHECK:      [[Line1]] = !DILocation(line:
+; CHECK:      [[Line2]] = !DILocation(line:
+; CHECK:      [[Line3]] = !DILocation(line:
+; CHECK:      {{[!][0-9]+}} = !DILocation(line:
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "in.c", directory: "dir")

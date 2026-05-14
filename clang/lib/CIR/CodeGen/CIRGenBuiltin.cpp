@@ -1932,7 +1932,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::UnreachableOp::create(builder, loc);
     return RValue::get(nullptr);
   }
-  case Builtin::BI__builtin_launder:
+  case Builtin::BI__builtin_launder: {
+    const Expr *arg = e->getArg(0);
+    QualType argTy = arg->getType()->getPointeeType();
+    mlir::Value ptr = emitScalarExpr(arg);
+
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        argTy.requiresBuiltinLaunder(cgm.getASTContext())) {
+      mlir::Location loc = getLoc(e->getExprLoc());
+      ptr = cir::LaunderOp::create(builder, loc, ptr).getResult();
+    }
+    return RValue::get(ptr);
+  }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
   case Builtin::BI__sync_fetch_and_or:

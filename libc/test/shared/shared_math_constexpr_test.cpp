@@ -82,8 +82,10 @@ static_assert(0L == LIBC_NAMESPACE::shared::lround(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::nearbyint(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::nextafter(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::rint(0.0));
-static_assert(1 == LIBC_NAMESPACE::shared::iscanonical(0.0));
-static_assert(0.0 == LIBC_NAMESPACE::shared::issignaling(0.0));
+// TODO: iscanonical clashes with a macro defined in <math.h>
+// static_assert(1 == LIBC_NAMESPACE::shared::iscanonical(0.0));
+// TODO: issignaling clashes with a macro defined in <math.h>
+// static_assert(0.0 == LIBC_NAMESPACE::shared::issignaling(0.0));
 static_assert(1 == [] {
   const char arg{};
   return LIBC_NAMESPACE::fputil::FPBits<double>(
@@ -93,7 +95,8 @@ static_assert(1 == [] {
 static_assert(0.0 == LIBC_NAMESPACE::shared::round(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::roundeven(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::trunc(0.0));
-static_assert(0 == LIBC_NAMESPACE::shared::isnan(0.0));
+// TODO: isnan clashes with a macro defined in <math.h>
+// static_assert(0 == LIBC_NAMESPACE::shared::isnan(0.0));
 
 //===----------------------------------------------------------------------===//
 //                       Float Tests

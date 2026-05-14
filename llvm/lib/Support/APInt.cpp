@@ -1302,12 +1302,12 @@ APInt APInt::sqrt() const {
   // floating point representation after 192 bits. There are no discrepancies
   // between this algorithm and pari/gp for bit widths < 192 bits.
   APInt square(x_old * x_old);
-  APInt nextSquare((x_old + 1) * (x_old +1));
   if (this->ult(square))
     return x_old;
-  assert(this->ule(nextSquare) && "Error in APInt::sqrt computation");
-  APInt midpoint((nextSquare - square).udiv(two));
+  APInt delta(2 * x_old + 1);
   APInt offset(*this - square);
+  assert(offset.ule(delta) && "Error in APInt::sqrt computation");
+  APInt midpoint(delta.udiv(two));
   if (offset.ult(midpoint))
     return x_old;
   return x_old + 1;

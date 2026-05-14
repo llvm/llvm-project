@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GCN,GFX1250,GFX1250-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 < %s | FileCheck -check-prefixes=GCN,GFX1251,GFX1251-SDAG %s
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GCN,GFX1250,GFX1250-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 < %s | FileCheck -check-prefixes=GCN,GFX1251,GFX1251-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GCN,GFX1250,GFX1250-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 < %s | FileCheck -check-prefixes=GCN,GFX1251,GFX1251-GISEL %s
 
 ; this test has both gfx1250/1251 run lines to check availability of the intrinsic on both variants.
 

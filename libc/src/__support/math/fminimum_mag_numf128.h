@@ -19,7 +19,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float128 fminimum_mag_numf128(float128 x, float128 y) {
+LIBC_INLINE LIBC_CONSTEXPR float128 fminimum_mag_numf128(float128 x,
+                                                         float128 y) {
   return fputil::fminimum_mag_num(x, y);
 }
 

@@ -240,6 +240,1083 @@ define i32 @popcount64_mask(i64 %x) {
   ret i32 %13
 }
 
+define i32 @popcnt1_32(i32 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %and = and i32 %uWord, 1431655765
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, 1431655765
+  %add = add i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add i32 %and4, %and2
+  %and6 = and i32 %add5, 252645135
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 252645135
+  %add9 = add i32 %and8, %and6
+  %and10 = and i32 %add9, 16711935
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 16711935
+  %add13 = add i32 %and12, %and10
+  %and14 = and i32 %add13, 65535
+  %shr15 = lshr i32 %add13, 16
+  %add16 = add i32 %and14, %shr15
+  ret i32 %add16
+}
+
+define i32 @popcnt1_32_variant2(i32 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_32_variant2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %and = and i32 %uWord, 1431655765
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, 1431655765
+  %add = add i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add i32 %and4, %and2
+  %and6 = and i32 %add5, 252645135
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 252645135
+  %add9 = add i32 %and8, %and6
+  %and10 = and i32 %add9, 16711935
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 16711935
+  %add13 = add i32 %and12, %and10
+  %and14 = and i32 %add13, 65535
+  %shr15 = lshr i32 %add13, 16
+  %and16 = and i32 %shr15, 65535
+  %add17 = add i32 %and14, %and16
+  ret i32 %add17
+}
+
+define  i64 @popcnt1_64(i64 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %and = and i64 %uWord, u0x5555555555555555
+  %shr = lshr i64 %uWord, 1
+  %and1 = and i64 %shr, 6148914691236517205
+  %add = add i64 %and1, %and
+  %and2 = and i64 %add, u0x3333333333333333
+  %shr3 = lshr i64 %add, 2
+  %and4 = and i64 %shr3, 3689348814741910323
+  %add5 = add i64 %and4, %and2
+  %and6 = and i64 %add5, u0x0F0F0F0F0F0F0F0F
+  %shr7 = lshr i64 %add5, 4
+  %and8 = and i64 %shr7, 1085102592571150095
+  %add9 = add i64 %and8, %and6
+  %and10 = and i64 %add9, u0x00FF00FF00FF00FF
+  %shr11 = lshr i64 %add9, 8
+  %and12 = and i64 %shr11, 71777214294589695
+  %add13 = add i64 %and12, %and10
+  %and14 = and i64 %add13, u0x0000FFFF0000FFFF
+  %shr15 = lshr i64 %add13, 16
+  %and16 = and i64 %shr15, 281470681808895
+  %add17 = add i64 %and16, %and14
+  %and18 = and i64 %add17, u0x00000000FFFFFFFF
+  %shr19 = lshr i64 %add17, 32
+  %add20 = add i64 %and18, %shr19
+  ret i64 %add20
+}
+
+; Test 16-bit popcount pattern (Hacker's Delight)
+define i16 @popcnt1_16(i16 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_16(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %and = and i16 %uWord, u0x5555
+  %shr = lshr i16 %uWord, 1
+  %and1 = and i16 %shr, 21845
+  %add = add i16 %and1, %and
+  %and2 = and i16 %add, u0x3333
+  %shr3 = lshr i16 %add, 2
+  %and4 = and i16 %shr3, 13107
+  %add5 = add i16 %and4, %and2
+  %and6 = and i16 %add5, u0x0F0F
+  %shr7 = lshr i16 %add5, 4
+  %and8 = and i16 %shr7, 3855
+  %add9 = add i16 %and8, %and6
+  %and10 = and i16 %add9, u0x00FF
+  %shr11 = lshr i16 %add9, 8
+  %add13 = add i16 %shr11, %and10
+  ret i16 %add13
+}
+
+; Test 16-bit popcount pattern variant2 (with extra mask on final shift)
+define i16 @popcnt1_16_variant2(i16 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_16_variant2(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %and = and i16 %uWord, u0x5555
+  %shr = lshr i16 %uWord, 1
+  %and1 = and i16 %shr, 21845
+  %add = add i16 %and1, %and
+  %and2 = and i16 %add, u0x3333
+  %shr3 = lshr i16 %add, 2
+  %and4 = and i16 %shr3, 13107
+  %add5 = add i16 %and4, %and2
+  %and6 = and i16 %add5, u0x0F0F
+  %shr7 = lshr i16 %add5, 4
+  %and8 = and i16 %shr7, 3855
+  %add9 = add i16 %and8, %and6
+  %and10 = and i16 %add9, u0x00FF
+  %shr11 = lshr i16 %add9, 8
+  %and12 = and i16 %shr11, 255
+  %add13 = add i16 %and10, %and12
+  ret i16 %add13
+}
+
+; Vector variant: 16-bit popcount pattern (Hacker's Delight)
+define <8 x i16> @popcnt1_16vec(<8 x i16> %uWord) {
+; CHECK-LABEL: @popcnt1_16vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> [[UWORD:%.*]])
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %and = and <8 x i16> %uWord, <i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845>
+  %shr = lshr <8 x i16> %uWord, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %and1 = and <8 x i16> %shr, <i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845>
+  %add = add <8 x i16> %and1, %and
+  %and2 = and <8 x i16> %add, <i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107>
+  %shr3 = lshr <8 x i16> %add, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %and4 = and <8 x i16> %shr3, <i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107>
+  %add5 = add <8 x i16> %and4, %and2
+  %and6 = and <8 x i16> %add5, <i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855>
+  %shr7 = lshr <8 x i16> %add5, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
+  %and8 = and <8 x i16> %shr7, <i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855>
+  %add9 = add <8 x i16> %and8, %and6
+  %and10 = and <8 x i16> %add9, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %shr11 = lshr <8 x i16> %add9, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %add13 = add <8 x i16> %shr11, %and10
+  ret <8 x i16> %add13
+}
+
+; Vector variant: 32-bit popcount pattern (Hacker's Delight)
+define <4 x i32> @popcnt1_32vec(<4 x i32> %uWord) {
+; CHECK-LABEL: @popcnt1_32vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[UWORD:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+;
+  %and = and <4 x i32> %uWord, <i32 1431655765, i32 1431655765, i32 1431655765, i32 1431655765>
+  %shr = lshr <4 x i32> %uWord, <i32 1, i32 1, i32 1, i32 1>
+  %and1 = and <4 x i32> %shr, <i32 1431655765, i32 1431655765, i32 1431655765, i32 1431655765>
+  %add = add <4 x i32> %and1, %and
+  %and2 = and <4 x i32> %add, <i32 858993459, i32 858993459, i32 858993459, i32 858993459>
+  %shr3 = lshr <4 x i32> %add, <i32 2, i32 2, i32 2, i32 2>
+  %and4 = and <4 x i32> %shr3, <i32 858993459, i32 858993459, i32 858993459, i32 858993459>
+  %add5 = add <4 x i32> %and4, %and2
+  %and6 = and <4 x i32> %add5, <i32 252645135, i32 252645135, i32 252645135, i32 252645135>
+  %shr7 = lshr <4 x i32> %add5, <i32 4, i32 4, i32 4, i32 4>
+  %and8 = and <4 x i32> %shr7, <i32 252645135, i32 252645135, i32 252645135, i32 252645135>
+  %add9 = add <4 x i32> %and8, %and6
+  %and10 = and <4 x i32> %add9, <i32 16711935, i32 16711935, i32 16711935, i32 16711935>
+  %shr11 = lshr <4 x i32> %add9, <i32 8, i32 8, i32 8, i32 8>
+  %and12 = and <4 x i32> %shr11, <i32 16711935, i32 16711935, i32 16711935, i32 16711935>
+  %add13 = add <4 x i32> %and12, %and10
+  %and14 = and <4 x i32> %add13, <i32 65535, i32 65535, i32 65535, i32 65535>
+  %shr15 = lshr <4 x i32> %add13, <i32 16, i32 16, i32 16, i32 16>
+  %add16 = add <4 x i32> %and14, %shr15
+  ret <4 x i32> %add16
+}
+
+; Test 64-bit popcount pattern variant2 (with extra mask on final shift)
+define i64 @popcnt1_64_variant2(i64 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_64_variant2(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %and = and i64 %uWord, u0x5555555555555555
+  %shr = lshr i64 %uWord, 1
+  %and1 = and i64 %shr, u0x5555555555555555
+  %add = add i64 %and1, %and
+  %and2 = and i64 %add, u0x3333333333333333
+  %shr3 = lshr i64 %add, 2
+  %and4 = and i64 %shr3, 3689348814741910323
+  %add5 = add i64 %and4, %and2
+  %and6 = and i64 %add5, u0x0F0F0F0F0F0F0F0F
+  %shr7 = lshr i64 %add5, 4
+  %and8 = and i64 %shr7, 1085102592571150095
+  %add9 = add i64 %and8, %and6
+  %and10 = and i64 %add9, u0x00FF00FF00FF00FF
+  %shr11 = lshr i64 %add9, 8
+  %and12 = and i64 %shr11, 71777214294589695
+  %add13 = add i64 %and12, %and10
+  %and14 = and i64 %add13, u0x0000FFFF0000FFFF
+  %shr15 = lshr i64 %add13, 16
+  %and16 = and i64 %shr15, 281470681808895
+  %add17 = add i64 %and16, %and14
+  %and18 = and i64 %add17, u0x00000000FFFFFFFF
+  %shr19 = lshr i64 %add17, 32
+  %and20 = and i64 %shr19, 4294967295
+  %add21 = add i64 %and18, %and20
+  ret i64 %add21
+}
+
+; Vector variant: 64-bit popcount pattern (Hacker's Delight)
+define <2 x i64> @popcnt1_64vec(<2 x i64> %uWord) {
+; CHECK-LABEL: @popcnt1_64vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[UWORD:%.*]])
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+;
+  %and = and <2 x i64> %uWord, <i64 6148914691236517205, i64 6148914691236517205>
+  %shr = lshr <2 x i64> %uWord, <i64 1, i64 1>
+  %and1 = and <2 x i64> %shr, <i64 6148914691236517205, i64 6148914691236517205>
+  %add = add <2 x i64> %and1, %and
+  %and2 = and <2 x i64> %add, <i64 3689348814741910323, i64 3689348814741910323>
+  %shr3 = lshr <2 x i64> %add, <i64 2, i64 2>
+  %and4 = and <2 x i64> %shr3, <i64 3689348814741910323, i64 3689348814741910323>
+  %add5 = add <2 x i64> %and4, %and2
+  %and6 = and <2 x i64> %add5, <i64 1085102592571150095, i64 1085102592571150095>
+  %shr7 = lshr <2 x i64> %add5, <i64 4, i64 4>
+  %and8 = and <2 x i64> %shr7, <i64 1085102592571150095, i64 1085102592571150095>
+  %add9 = add <2 x i64> %and8, %and6
+  %and10 = and <2 x i64> %add9, <i64 71777214294589695, i64 71777214294589695>
+  %shr11 = lshr <2 x i64> %add9, <i64 8, i64 8>
+  %and12 = and <2 x i64> %shr11, <i64 71777214294589695, i64 71777214294589695>
+  %add13 = add <2 x i64> %and12, %and10
+  %and14 = and <2 x i64> %add13, <i64 281470681808895, i64 281470681808895>
+  %shr15 = lshr <2 x i64> %add13, <i64 16, i64 16>
+  %and16 = and <2 x i64> %shr15, <i64 281470681808895, i64 281470681808895>
+  %add17 = add <2 x i64> %and16, %and14
+  %and18 = and <2 x i64> %add17, <i64 4294967295, i64 4294967295>
+  %shr19 = lshr <2 x i64> %add17, <i64 32, i64 32>
+  %add20 = add <2 x i64> %and18, %shr19
+  ret <2 x i64> %add20
+}
+
+; Popcount pattern with masks narrowed by InstCombine's known-bits analysis.
+; 0x0F0F0F0F -> 0x07070707, 0x00FF00FF -> 0x000F000F, 0x0000FFFF -> 0x0000001F
+define i32 @popcnt1_32_narrowed_masks(i32 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_32_narrowed_masks(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %and = and i32 %uWord, 1431655765
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, 1431655765
+  %add = add nuw i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add nuw nsw i32 %and4, %and2
+  %and6 = and i32 %add5, 117901063
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 117901063
+  %add9 = add nuw nsw i32 %and8, %and6
+  %and10 = and i32 %add9, 983055
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 983055
+  %add13 = add nuw nsw i32 %and12, %and10
+  %and14 = and i32 %add13, 31
+  %shr15 = lshr i32 %add13, 16
+  %add16 = add nuw nsw i32 %and14, %shr15
+  ret i32 %add16
+}
+
+; 64-bit popcount with masks narrowed by InstCombine.
+; 0x0F0F0F0F0F0F0F0F -> 0x0707070707070707
+; 0x00FF00FF00FF00FF -> 0x000F000F000F000F
+; 0x0000FFFF0000FFFF -> 0x0000001F0000001F
+; 0x00000000FFFFFFFF -> 0x000000000000003F
+define i64 @popcnt1_64_narrowed_masks(i64 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_64_narrowed_masks(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %and = and i64 %uWord, 6148914691236517205
+  %shr = lshr i64 %uWord, 1
+  %and1 = and i64 %shr, 6148914691236517205
+  %add = add nuw i64 %and1, %and
+  %and2 = and i64 %add, 3689348814741910323
+  %shr3 = lshr i64 %add, 2
+  %and4 = and i64 %shr3, 3689348814741910323
+  %add5 = add nuw nsw i64 %and4, %and2
+  %and6 = and i64 %add5, 506381209866536711
+  %shr7 = lshr i64 %add5, 4
+  %and8 = and i64 %shr7, 506381209866536711
+  %add9 = add nuw nsw i64 %and8, %and6
+  %and10 = and i64 %add9, 4222189076152335
+  %shr11 = lshr i64 %add9, 8
+  %and12 = and i64 %shr11, 4222189076152335
+  %add13 = add nuw nsw i64 %and12, %and10
+  %and14 = and i64 %add13, 133143986207
+  %shr15 = lshr i64 %add13, 16
+  %and16 = and i64 %shr15, 133143986207
+  %add17 = add nuw nsw i64 %and16, %and14
+  %and18 = and i64 %add17, 63
+  %shr19 = lshr i64 %add17, 32
+  %add20 = add nuw nsw i64 %and18, %shr19
+  ret i64 %add20
+}
+
+; NEGATIVE: 32-bit narrowed mask NOT a subset of expected mask.
+; Uses 0x17171717 (bit 4 set in each byte) instead of valid narrowing
+; of 0x0F0F0F0F. 0x17 is NOT a subset of 0x0F since bit 4 is outside 0x0F.
+define i32 @popcnt1_32_narrowed_masks_wrong(i32 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_32_narrowed_masks_wrong(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[UWORD:%.*]], 1431655765
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[SHR]], 1431655765
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ADD]], 858993459
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i32 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i32 [[SHR3]], 858993459
+; CHECK-NEXT:    [[ADD5:%.*]] = add nuw nsw i32 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i32 [[ADD5]], 389520147
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i32 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i32 [[SHR7]], 389520147
+; CHECK-NEXT:    [[ADD9:%.*]] = add nuw nsw i32 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i32 [[ADD9]], 983055
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i32 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i32 [[SHR11]], 983055
+; CHECK-NEXT:    [[ADD13:%.*]] = add nuw nsw i32 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i32 [[ADD13]], 31
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i32 [[ADD13]], 16
+; CHECK-NEXT:    [[ADD16:%.*]] = add nuw nsw i32 [[AND14]], [[SHR15]]
+; CHECK-NEXT:    ret i32 [[ADD16]]
+;
+entry:
+  %and = and i32 %uWord, 1431655765
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, 1431655765
+  %add = add nuw i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add nuw nsw i32 %and4, %and2
+  %and6 = and i32 %add5, 389520147
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 389520147
+  %add9 = add nuw nsw i32 %and8, %and6
+  %and10 = and i32 %add9, 983055
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 983055
+  %add13 = add nuw nsw i32 %and12, %and10
+  %and14 = and i32 %add13, 31
+  %shr15 = lshr i32 %add13, 16
+  %add16 = add nuw nsw i32 %and14, %shr15
+  ret i32 %add16
+}
+
+; Negative test cases - these should NOT be optimized to llvm.ctpop
+
+; NEGATIVE: i8 type - too small (Len <= 8), bails out at line 402-404
+define i8 @popcnt1_8_negative(i8 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_8_negative(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[UWORD:%.*]], 85
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[SHR]], 85
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[ADD]], 51
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i8 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i8 [[SHR3]], 51
+; CHECK-NEXT:    [[ADD5:%.*]] = add i8 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i8 [[ADD5]], 15
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i8 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i8 [[SHR7]], 15
+; CHECK-NEXT:    [[ADD9:%.*]] = add i8 [[AND8]], [[AND6]]
+; CHECK-NEXT:    ret i8 [[ADD9]]
+;
+  %and = and i8 %uWord, u0x55
+  %shr = lshr i8 %uWord, 1
+  %and1 = and i8 %shr, 85
+  %add = add i8 %and1, %and
+  %and2 = and i8 %add, u0x33
+  %shr3 = lshr i8 %add, 2
+  %and4 = and i8 %shr3, 51
+  %add5 = add i8 %and4, %and2
+  %and6 = and i8 %add5, u0x0F
+  %shr7 = lshr i8 %add5, 4
+  %and8 = and i8 %shr7, 15
+  %add9 = add i8 %and8, %and6
+  ret i8 %add9
+}
+
+; NEGATIVE: i128 type - too large (Len > 64), bails out at line 402-404
+define i128 @popcnt1_128_negative(i128 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_128_negative(
+; CHECK-NEXT:    [[AND:%.*]] = and i128 [[UWORD:%.*]], 113427455640312821154458202477256070485
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i128 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i128 [[SHR]], 113427455640312821154458202477256070485
+; CHECK-NEXT:    [[ADD:%.*]] = add i128 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i128 [[ADD]], 68056473384187692692674921486353642291
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i128 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i128 [[SHR3]], 68056473384187692692674921486353642291
+; CHECK-NEXT:    [[ADD5:%.*]] = add i128 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i128 [[ADD5]], 20016609818878733144904388672456953615
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i128 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i128 [[SHR7]], 20016609818878733144904388672456953615
+; CHECK-NEXT:    [[ADD9:%.*]] = add i128 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i128 [[ADD9]], 1324055902416102970674609367438786815
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i128 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i128 [[SHR11]], 1324055902416102970674609367438786815
+; CHECK-NEXT:    [[ADD13:%.*]] = add i128 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i128 [[ADD13]], 5192217631581220737344928932233215
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i128 [[ADD13]], 16
+; CHECK-NEXT:    [[AND16:%.*]] = and i128 [[SHR15]], 5192217631581220737344928932233215
+; CHECK-NEXT:    [[ADD17:%.*]] = add i128 [[AND16]], [[AND14]]
+; CHECK-NEXT:    [[AND18:%.*]] = and i128 [[ADD17]], 79228162495817593524129366015
+; CHECK-NEXT:    [[SHR19:%.*]] = lshr i128 [[ADD17]], 32
+; CHECK-NEXT:    [[AND20:%.*]] = and i128 [[SHR19]], 79228162495817593524129366015
+; CHECK-NEXT:    [[ADD21:%.*]] = add i128 [[AND18]], [[AND20]]
+; CHECK-NEXT:    [[AND22:%.*]] = and i128 [[ADD21]], 18446744073709551615
+; CHECK-NEXT:    [[SHR23:%.*]] = lshr i128 [[ADD21]], 64
+; CHECK-NEXT:    [[ADD24:%.*]] = add i128 [[AND22]], [[SHR23]]
+; CHECK-NEXT:    ret i128 [[ADD24]]
+;
+  %and = and i128 %uWord, u0x55555555555555555555555555555555
+  %shr = lshr i128 %uWord, 1
+  %and1 = and i128 %shr, u0x55555555555555555555555555555555
+  %add = add i128 %and1, %and
+  %and2 = and i128 %add, u0x33333333333333333333333333333333
+  %shr3 = lshr i128 %add, 2
+  %and4 = and i128 %shr3, u0x33333333333333333333333333333333
+  %add5 = add i128 %and4, %and2
+  %and6 = and i128 %add5, u0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F
+  %shr7 = lshr i128 %add5, 4
+  %and8 = and i128 %shr7, u0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F
+  %add9 = add i128 %and8, %and6
+  %and10 = and i128 %add9, u0x00FF00FF00FF00FF00FF00FF00FF00FF
+  %shr11 = lshr i128 %add9, 8
+  %and12 = and i128 %shr11, u0x00FF00FF00FF00FF00FF00FF00FF00FF
+  %add13 = add i128 %and12, %and10
+  %and14 = and i128 %add13, u0x0000FFFF0000FFFF0000FFFF0000FFFF
+  %shr15 = lshr i128 %add13, 16
+  %and16 = and i128 %shr15, u0x0000FFFF0000FFFF0000FFFF0000FFFF
+  %add17 = add i128 %and16, %and14
+  %and18 = and i128 %add17, u0x00000000FFFFFFFF00000000FFFFFFFF
+  %shr19 = lshr i128 %add17, 32
+  %and20 = and i128 %shr19, u0x00000000FFFFFFFF00000000FFFFFFFF
+  %add21 = add i128 %and18, %and20
+  %and22 = and i128 %add21, u0x0000000000000000FFFFFFFFFFFFFFFF
+  %shr23 = lshr i128 %add21, 64
+  %add24 = add i128 %and22, %shr23
+  ret i128 %add24
+}
+
+; NEGATIVE: Missing the 0x55 mask step - incomplete pattern, bails out at line 475-487
+define i32 @popcnt1_32_missing_step1(i32 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_32_missing_step1(
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[UWORD:%.*]], 858993459
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i32 [[UWORD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i32 [[SHR3]], 858993459
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i32 [[ADD5]], 252645135
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i32 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i32 [[SHR7]], 252645135
+; CHECK-NEXT:    [[ADD9:%.*]] = add i32 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i32 [[ADD9]], 16711935
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i32 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i32 [[SHR11]], 16711935
+; CHECK-NEXT:    [[ADD13:%.*]] = add i32 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i32 [[ADD13]], 65535
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i32 [[ADD13]], 16
+; CHECK-NEXT:    [[ADD16:%.*]] = add i32 [[AND14]], [[SHR15]]
+; CHECK-NEXT:    ret i32 [[ADD16]]
+;
+  ; Missing: %and = and i32 %uWord, 1431655765
+  ; Missing: %shr = lshr i32 %uWord, 1
+  ; Missing: %and1 = and i32 %shr, 1431655765
+  ; Missing: %add = add nuw i32 %and1, %and
+  ; Starting from step 2 (0x33 mask)
+  %and2 = and i32 %uWord, 858993459
+  %shr3 = lshr i32 %uWord, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add i32 %and4, %and2
+  %and6 = and i32 %add5, 252645135
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 252645135
+  %add9 = add i32 %and8, %and6
+  %and10 = and i32 %add9, 16711935
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 16711935
+  %add13 = add i32 %and12, %and10
+  %and14 = and i32 %add13, 65535
+  %shr15 = lshr i32 %add13, 16
+  %add16 = add i32 %and14, %shr15
+  ret i32 %add16
+}
+
+; NEGATIVE: Missing the 0x0F mask step - incomplete pattern, bails out at line 467-469
+define i32 @popcnt1_32_missing_step3(i32 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_32_missing_step3(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[UWORD:%.*]], 1431655765
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[SHR]], 1431655765
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ADD]], 858993459
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i32 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i32 [[SHR3]], 858993459
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i32 [[ADD5]], 16711935
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i32 [[ADD5]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i32 [[SHR11]], 16711935
+; CHECK-NEXT:    [[ADD13:%.*]] = add i32 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i32 [[ADD13]], 65535
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i32 [[ADD13]], 16
+; CHECK-NEXT:    [[ADD16:%.*]] = add i32 [[AND14]], [[SHR15]]
+; CHECK-NEXT:    ret i32 [[ADD16]]
+;
+  %and = and i32 %uWord, 1431655765
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, 1431655765
+  %add = add i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add i32 %and4, %and2
+  ; Missing: %and6 = and i32 %add5, 252645135
+  ; Missing: %shr7 = lshr i32 %add5, 4
+  ; Missing: %and8 = and i32 %shr7, 252645135
+  ; Missing: %add9 = add nuw nsw i32 %and8, %and6
+  ; Jumping to step 4 (0x00FF00FF mask)
+  %and10 = and i32 %add5, 16711935
+  %shr11 = lshr i32 %add5, 8
+  %and12 = and i32 %shr11, 16711935
+  %add13 = add i32 %and12, %and10
+  %and14 = and i32 %add13, 65535
+  %shr15 = lshr i32 %add13, 16
+  %add16 = add i32 %and14, %shr15
+  ret i32 %add16
+}
+
+; NEGATIVE: Wrong mask value - using 0x44444444 instead of 0x55555555
+define i32 @popcnt1_32_wrong_mask(i32 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_32_wrong_mask(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[UWORD:%.*]], 1145324612
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[SHR]], 1145324612
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ADD]], 858993459
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i32 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i32 [[SHR3]], 858993459
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i32 [[ADD5]], 252645135
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i32 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i32 [[SHR7]], 252645135
+; CHECK-NEXT:    [[ADD9:%.*]] = add i32 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i32 [[ADD9]], 16711935
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i32 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i32 [[SHR11]], 16711935
+; CHECK-NEXT:    [[ADD13:%.*]] = add i32 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i32 [[ADD13]], 65535
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i32 [[ADD13]], 16
+; CHECK-NEXT:    [[ADD16:%.*]] = add i32 [[AND14]], [[SHR15]]
+; CHECK-NEXT:    ret i32 [[ADD16]]
+;
+  %and = and i32 %uWord, u0x44444444
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, u0x44444444
+  %add = add i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add i32 %and4, %and2
+  %and6 = and i32 %add5, 252645135
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 252645135
+  %add9 = add i32 %and8, %and6
+  %and10 = and i32 %add9, 16711935
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 16711935
+  %add13 = add i32 %and12, %and10
+  %and14 = and i32 %add13, 65535
+  %shr15 = lshr i32 %add13, 16
+  %add16 = add i32 %and14, %shr15
+  ret i32 %add16
+}
+
+; NEGATIVE: 64-bit - Missing the 0x55 mask step - incomplete pattern
+define i64 @popcnt1_64_missing_step1(i64 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_64_missing_step1(
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[UWORD:%.*]], 3689348814741910323
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i64 [[UWORD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i64 [[SHR3]], 3689348814741910323
+; CHECK-NEXT:    [[ADD5:%.*]] = add i64 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i64 [[ADD5]], 1085102592571150095
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i64 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i64 [[SHR7]], 1085102592571150095
+; CHECK-NEXT:    [[ADD9:%.*]] = add i64 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i64 [[ADD9]], 71777214294589695
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i64 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i64 [[SHR11]], 71777214294589695
+; CHECK-NEXT:    [[ADD13:%.*]] = add i64 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i64 [[ADD13]], 281470681808895
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i64 [[ADD13]], 16
+; CHECK-NEXT:    [[AND16:%.*]] = and i64 [[SHR15]], 281470681808895
+; CHECK-NEXT:    [[ADD17:%.*]] = add i64 [[AND16]], [[AND14]]
+; CHECK-NEXT:    [[AND18:%.*]] = and i64 [[ADD17]], 4294967295
+; CHECK-NEXT:    [[SHR19:%.*]] = lshr i64 [[ADD17]], 32
+; CHECK-NEXT:    [[ADD20:%.*]] = add i64 [[AND18]], [[SHR19]]
+; CHECK-NEXT:    ret i64 [[ADD20]]
+;
+  ; Missing: %and = and i64 %uWord, 6148914691236517205
+  ; Missing: %shr = lshr i64 %uWord, 1
+  ; Missing: %and1 = and i64 %shr, 6148914691236517205
+  ; Missing: %add = add nuw i64 %and1, %and
+  ; Starting from step 2 (0x33 mask)
+  %and2 = and i64 %uWord, 3689348814741910323
+  %shr3 = lshr i64 %uWord, 2
+  %and4 = and i64 %shr3, 3689348814741910323
+  %add5 = add i64 %and4, %and2
+  %and6 = and i64 %add5, 1085102592571150095
+  %shr7 = lshr i64 %add5, 4
+  %and8 = and i64 %shr7, 1085102592571150095
+  %add9 = add i64 %and8, %and6
+  %and10 = and i64 %add9, 71777214294589695
+  %shr11 = lshr i64 %add9, 8
+  %and12 = and i64 %shr11, 71777214294589695
+  %add13 = add i64 %and12, %and10
+  %and14 = and i64 %add13, 281470681808895
+  %shr15 = lshr i64 %add13, 16
+  %and16 = and i64 %shr15, 281470681808895
+  %add17 = add i64 %and16, %and14
+  %and18 = and i64 %add17, 4294967295
+  %shr19 = lshr i64 %add17, 32
+  %add20 = add i64 %and18, %shr19
+  ret i64 %add20
+}
+
+; NEGATIVE: 64-bit - Missing the 0x0F mask step - incomplete pattern
+define i64 @popcnt1_64_missing_step3(i64 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_64_missing_step3(
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[UWORD:%.*]], 6148914691236517205
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[SHR]], 6148914691236517205
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[ADD]], 3689348814741910323
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i64 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i64 [[SHR3]], 3689348814741910323
+; CHECK-NEXT:    [[ADD5:%.*]] = add i64 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i64 [[ADD5]], 71777214294589695
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i64 [[ADD5]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i64 [[SHR11]], 71777214294589695
+; CHECK-NEXT:    [[ADD13:%.*]] = add i64 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i64 [[ADD13]], 281470681808895
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i64 [[ADD13]], 16
+; CHECK-NEXT:    [[AND16:%.*]] = and i64 [[SHR15]], 281470681808895
+; CHECK-NEXT:    [[ADD17:%.*]] = add i64 [[AND16]], [[AND14]]
+; CHECK-NEXT:    [[AND18:%.*]] = and i64 [[ADD17]], 4294967295
+; CHECK-NEXT:    [[SHR19:%.*]] = lshr i64 [[ADD17]], 32
+; CHECK-NEXT:    [[ADD20:%.*]] = add i64 [[AND18]], [[SHR19]]
+; CHECK-NEXT:    ret i64 [[ADD20]]
+;
+  %and = and i64 %uWord, 6148914691236517205
+  %shr = lshr i64 %uWord, 1
+  %and1 = and i64 %shr, 6148914691236517205
+  %add = add i64 %and1, %and
+  %and2 = and i64 %add, 3689348814741910323
+  %shr3 = lshr i64 %add, 2
+  %and4 = and i64 %shr3, 3689348814741910323
+  %add5 = add i64 %and4, %and2
+  ; Missing: %and6 = and i64 %add5, 1085102592571150095
+  ; Missing: %shr7 = lshr i64 %add5, 4
+  ; Missing: %and8 = and i64 %shr7, 1085102592571150095
+  ; Missing: %add9 = add nuw nsw i64 %and8, %and6
+  ; Jumping to step 4 (0x00FF00FF mask)
+  %and10 = and i64 %add5, 71777214294589695
+  %shr11 = lshr i64 %add5, 8
+  %and12 = and i64 %shr11, 71777214294589695
+  %add13 = add i64 %and12, %and10
+  %and14 = and i64 %add13, 281470681808895
+  %shr15 = lshr i64 %add13, 16
+  %and16 = and i64 %shr15, 281470681808895
+  %add17 = add i64 %and16, %and14
+  %and18 = and i64 %add17, 4294967295
+  %shr19 = lshr i64 %add17, 32
+  %add20 = add i64 %and18, %shr19
+  ret i64 %add20
+}
+
+; NEGATIVE: 64-bit - Wrong mask value - using 0x4444444444444444 instead of 0x5555555555555555
+define i64 @popcnt1_64_wrong_mask(i64 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_64_wrong_mask(
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[UWORD:%.*]], 4919131752989213764
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[SHR]], 4919131752989213764
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[ADD]], 3689348814741910323
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i64 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i64 [[SHR3]], 3689348814741910323
+; CHECK-NEXT:    [[ADD5:%.*]] = add i64 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i64 [[ADD5]], 1085102592571150095
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i64 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i64 [[SHR7]], 1085102592571150095
+; CHECK-NEXT:    [[ADD9:%.*]] = add i64 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i64 [[ADD9]], 71777214294589695
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i64 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i64 [[SHR11]], 71777214294589695
+; CHECK-NEXT:    [[ADD13:%.*]] = add i64 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i64 [[ADD13]], 281470681808895
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i64 [[ADD13]], 16
+; CHECK-NEXT:    [[AND16:%.*]] = and i64 [[SHR15]], 281470681808895
+; CHECK-NEXT:    [[ADD17:%.*]] = add i64 [[AND16]], [[AND14]]
+; CHECK-NEXT:    [[AND18:%.*]] = and i64 [[ADD17]], 4294967295
+; CHECK-NEXT:    [[SHR19:%.*]] = lshr i64 [[ADD17]], 32
+; CHECK-NEXT:    [[ADD20:%.*]] = add i64 [[AND18]], [[SHR19]]
+; CHECK-NEXT:    ret i64 [[ADD20]]
+;
+  %and = and i64 %uWord, u0x4444444444444444
+  %shr = lshr i64 %uWord, 1
+  %and1 = and i64 %shr, u0x4444444444444444
+  %add = add i64 %and1, %and
+  %and2 = and i64 %add, 3689348814741910323
+  %shr3 = lshr i64 %add, 2
+  %and4 = and i64 %shr3, 3689348814741910323
+  %add5 = add i64 %and4, %and2
+  %and6 = and i64 %add5, 1085102592571150095
+  %shr7 = lshr i64 %add5, 4
+  %and8 = and i64 %shr7, 1085102592571150095
+  %add9 = add i64 %and8, %and6
+  %and10 = and i64 %add9, 71777214294589695
+  %shr11 = lshr i64 %add9, 8
+  %and12 = and i64 %shr11, 71777214294589695
+  %add13 = add i64 %and12, %and10
+  %and14 = and i64 %add13, 281470681808895
+  %shr15 = lshr i64 %add13, 16
+  %and16 = and i64 %shr15, 281470681808895
+  %add17 = add i64 %and16, %and14
+  %and18 = and i64 %add17, 4294967295
+  %shr19 = lshr i64 %add17, 32
+  %add20 = add i64 %and18, %shr19
+  ret i64 %add20
+}
+
+; NEGATIVE: 16-bit - Missing the 0x55 mask step - incomplete pattern
+define i16 @popcnt1_16_missing_step1(i16 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_16_missing_step1(
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[UWORD:%.*]], 13107
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i16 [[UWORD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i16 [[SHR3]], 13107
+; CHECK-NEXT:    [[ADD5:%.*]] = add i16 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i16 [[ADD5]], 3855
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i16 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i16 [[SHR7]], 3855
+; CHECK-NEXT:    [[ADD9:%.*]] = add i16 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i16 [[ADD9]], 255
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i16 [[ADD9]], 8
+; CHECK-NEXT:    [[ADD13:%.*]] = add i16 [[SHR11]], [[AND10]]
+; CHECK-NEXT:    ret i16 [[ADD13]]
+;
+  ; Missing: %and = and i16 %uWord, 21845
+  ; Missing: %shr = lshr i16 %uWord, 1
+  ; Missing: %and1 = and i16 %shr, 21845
+  ; Missing: %add = add nuw i16 %and1, %and
+  ; Starting from step 2 (0x33 mask)
+  %and2 = and i16 %uWord, 13107
+  %shr3 = lshr i16 %uWord, 2
+  %and4 = and i16 %shr3, 13107
+  %add5 = add i16 %and4, %and2
+  %and6 = and i16 %add5, 3855
+  %shr7 = lshr i16 %add5, 4
+  %and8 = and i16 %shr7, 3855
+  %add9 = add i16 %and8, %and6
+  %and10 = and i16 %add9, 255
+  %shr11 = lshr i16 %add9, 8
+  %add13 = add i16 %shr11, %and10
+  ret i16 %add13
+}
+
+; NEGATIVE: 16-bit - Missing the 0x0F mask step - incomplete pattern
+define i16 @popcnt1_16_missing_step3(i16 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_16_missing_step3(
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[UWORD:%.*]], 21845
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[SHR]], 21845
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[ADD]], 13107
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i16 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i16 [[SHR3]], 13107
+; CHECK-NEXT:    [[ADD5:%.*]] = add i16 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i16 [[ADD5]], 255
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i16 [[ADD5]], 8
+; CHECK-NEXT:    [[ADD13:%.*]] = add i16 [[SHR11]], [[AND10]]
+; CHECK-NEXT:    ret i16 [[ADD13]]
+;
+  %and = and i16 %uWord, 21845
+  %shr = lshr i16 %uWord, 1
+  %and1 = and i16 %shr, 21845
+  %add = add i16 %and1, %and
+  %and2 = and i16 %add, 13107
+  %shr3 = lshr i16 %add, 2
+  %and4 = and i16 %shr3, 13107
+  %add5 = add i16 %and4, %and2
+  ; Missing: %and6 = and i16 %add5, 3855
+  ; Missing: %shr7 = lshr i16 %add5, 4
+  ; Missing: %and8 = and i16 %shr7, 3855
+  ; Missing: %add9 = add nuw nsw i16 %and8, %and6
+  ; Jumping to step 4 (0x00FF mask)
+  %and10 = and i16 %add5, 255
+  %shr11 = lshr i16 %add5, 8
+  %add13 = add i16 %shr11, %and10
+  ret i16 %add13
+}
+
+; NEGATIVE: 16-bit - Wrong mask value - using 0x4444 instead of 0x5555
+define i16 @popcnt1_16_wrong_mask(i16 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_16_wrong_mask(
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[UWORD:%.*]], 17476
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[SHR]], 17476
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[ADD]], 13107
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i16 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i16 [[SHR3]], 13107
+; CHECK-NEXT:    [[ADD5:%.*]] = add i16 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i16 [[ADD5]], 3855
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i16 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i16 [[SHR7]], 3855
+; CHECK-NEXT:    [[ADD9:%.*]] = add i16 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i16 [[ADD9]], 255
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i16 [[ADD9]], 8
+; CHECK-NEXT:    [[ADD13:%.*]] = add i16 [[SHR11]], [[AND10]]
+; CHECK-NEXT:    ret i16 [[ADD13]]
+;
+  %and = and i16 %uWord, u0x4444
+  %shr = lshr i16 %uWord, 1
+  %and1 = and i16 %shr, 17476
+  %add = add i16 %and1, %and
+  %and2 = and i16 %add, 13107
+  %shr3 = lshr i16 %add, 2
+  %and4 = and i16 %shr3, 13107
+  %add5 = add i16 %and4, %and2
+  %and6 = and i16 %add5, 3855
+  %shr7 = lshr i16 %add5, 4
+  %and8 = and i16 %shr7, 3855
+  %add9 = add i16 %and8, %and6
+  %and10 = and i16 %add9, 255
+  %shr11 = lshr i16 %add9, 8
+  %add13 = add i16 %shr11, %and10
+  ret i16 %add13
+}
+
+; NEGATIVE: 24-bit popcount pattern - non-power-of-2 bit width (should NOT optimize)
+define i24 @popcnt1_negative_i24(i24 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_negative_i24(
+; CHECK-NEXT:    [[AND:%.*]] = and i24 [[UWORD:%.*]], 5592405
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i24 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i24 [[SHR]], 5592405
+; CHECK-NEXT:    [[ADD:%.*]] = add i24 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i24 [[ADD]], 3355443
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i24 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i24 [[SHR3]], 3355443
+; CHECK-NEXT:    [[ADD5:%.*]] = add i24 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i24 [[ADD5]], 986895
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i24 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i24 [[SHR7]], 986895
+; CHECK-NEXT:    [[ADD9:%.*]] = add i24 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i24 [[ADD9]], 65535
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i24 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i24 [[SHR11]], 65535
+; CHECK-NEXT:    [[ADD13:%.*]] = add i24 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i24 [[ADD13]], 255
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i24 [[ADD13]], 16
+; CHECK-NEXT:    [[ADD16:%.*]] = add i24 [[SHR15]], [[AND14]]
+; CHECK-NEXT:    ret i24 [[ADD16]]
+;
+  %and = and i24 %uWord, u0x555555
+  %shr = lshr i24 %uWord, 1
+  %and1 = and i24 %shr, u0x555555
+  %add = add i24 %and1, %and
+  %and2 = and i24 %add, u0x333333
+  %shr3 = lshr i24 %add, 2
+  %and4 = and i24 %shr3, u0x333333
+  %add5 = add i24 %and4, %and2
+  %and6 = and i24 %add5, u0x0F0F0F
+  %shr7 = lshr i24 %add5, 4
+  %and8 = and i24 %shr7, u0x0F0F0F
+  %add9 = add i24 %and8, %and6
+  %and10 = and i24 %add9, u0x00FFFF
+  %shr11 = lshr i24 %add9, 8
+  %and12 = and i24 %shr11, u0x00FFFF
+  %add13 = add i24 %and12, %and10
+  %and14 = and i24 %add13, u0x0000FF
+  %shr15 = lshr i24 %add13, 16
+  %add16 = add i24 %shr15, %and14
+  ret i24 %add16
+}
+
+; NEGATIVE: 40-bit popcount pattern - non-power-of-2 bit width (should NOT optimize)
+define i40 @popcnt1_negative_i40(i40 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_negative_i40(
+; CHECK-NEXT:    [[AND:%.*]] = and i40 [[UWORD:%.*]], 366503875925
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i40 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i40 [[SHR]], 366503875925
+; CHECK-NEXT:    [[ADD:%.*]] = add i40 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i40 [[ADD]], 219902325555
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i40 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i40 [[SHR3]], 219902325555
+; CHECK-NEXT:    [[ADD5:%.*]] = add i40 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i40 [[ADD5]], 64677154575
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i40 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i40 [[SHR7]], 64677154575
+; CHECK-NEXT:    [[ADD9:%.*]] = add i40 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i40 [[ADD9]], 33318534175
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i40 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i40 [[SHR11]], 33318534175
+; CHECK-NEXT:    [[ADD13:%.*]] = add i40 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i40 [[ADD13]], 17163092991
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i40 [[ADD13]], 16
+; CHECK-NEXT:    [[AND16:%.*]] = and i40 [[SHR15]], 17163092991
+; CHECK-NEXT:    [[ADD17:%.*]] = add i40 [[AND16]], [[AND14]]
+; CHECK-NEXT:    [[AND18:%.*]] = and i40 [[ADD17]], -1
+; CHECK-NEXT:    [[SHR19:%.*]] = lshr i40 [[ADD17]], 32
+; CHECK-NEXT:    [[ADD20:%.*]] = add i40 [[SHR19]], [[AND18]]
+; CHECK-NEXT:    ret i40 [[ADD20]]
+;
+  %and = and i40 %uWord, u0x5555555555
+  %shr = lshr i40 %uWord, 1
+  %and1 = and i40 %shr, u0x5555555555
+  %add = add i40 %and1, %and
+  %and2 = and i40 %add, u0x3333333333
+  %shr3 = lshr i40 %add, 2
+  %and4 = and i40 %shr3, u0x3333333333
+  %add5 = add i40 %and4, %and2
+  %and6 = and i40 %add5, u0x0F0F0F0F0F
+  %shr7 = lshr i40 %add5, 4
+  %and8 = and i40 %shr7, u0x0F0F0F0F0F
+  %add9 = add i40 %and8, %and6
+  %and10 = and i40 %add9, u0x7C1F07C1F
+  %shr11 = lshr i40 %add9, 8
+  %and12 = and i40 %shr11, u0x7C1F07C1F
+  %add13 = add i40 %and12, %and10
+  %and14 = and i40 %add13, u0x03FF0003FF
+  %shr15 = lshr i40 %add13, 16
+  %and16 = and i40 %shr15, u0x03FF0003FF
+  %add17 = add i40 %and16, %and14
+  %and18 = and i40 %add17, u0xFFFFFFFFFF
+  %shr19 = lshr i40 %add17, 32
+  %add20 = add i40 %shr19, %and18
+  ret i40 %add20
+}
+
+; NEGATIVE: 48-bit popcount pattern - non-power-of-2 bit width (should NOT optimize)
+define i48 @popcnt1_negative_i48(i48 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_negative_i48(
+; CHECK-NEXT:    [[AND:%.*]] = and i48 [[UWORD:%.*]], 93824992236885
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i48 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i48 [[SHR]], 93824992236885
+; CHECK-NEXT:    [[ADD:%.*]] = add i48 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i48 [[ADD]], 56294995342131
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i48 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i48 [[SHR3]], 56294995342131
+; CHECK-NEXT:    [[ADD5:%.*]] = add i48 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i48 [[ADD5]], 16557351571215
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i48 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i48 [[SHR7]], 16557351571215
+; CHECK-NEXT:    [[ADD9:%.*]] = add i48 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i48 [[ADD9]], 4330384257087
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i48 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i48 [[SHR11]], 4330384257087
+; CHECK-NEXT:    [[ADD13:%.*]] = add i48 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i48 [[ADD13]], 68702703615
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i48 [[ADD13]], 16
+; CHECK-NEXT:    [[AND16:%.*]] = and i48 [[SHR15]], 68702703615
+; CHECK-NEXT:    [[ADD17:%.*]] = add i48 [[AND16]], [[AND14]]
+; CHECK-NEXT:    [[AND18:%.*]] = and i48 [[ADD17]], -1
+; CHECK-NEXT:    [[SHR19:%.*]] = lshr i48 [[ADD17]], 32
+; CHECK-NEXT:    [[ADD20:%.*]] = add i48 [[SHR19]], [[AND18]]
+; CHECK-NEXT:    ret i48 [[ADD20]]
+;
+  %and = and i48 %uWord, u0x555555555555
+  %shr = lshr i48 %uWord, 1
+  %and1 = and i48 %shr, u0x555555555555
+  %add = add i48 %and1, %and
+  %and2 = and i48 %add, u0x333333333333
+  %shr3 = lshr i48 %add, 2
+  %and4 = and i48 %shr3, u0x333333333333
+  %add5 = add i48 %and4, %and2
+  %and6 = and i48 %add5, u0x0F0F0F0F0F0F
+  %shr7 = lshr i48 %add5, 4
+  %and8 = and i48 %shr7, u0x0F0F0F0F0F0F
+  %add9 = add i48 %and8, %and6
+  %and10 = and i48 %add9, u0x03F03F03F03F
+  %shr11 = lshr i48 %add9, 8
+  %and12 = and i48 %shr11, u0x03F03F03F03F
+  %add13 = add i48 %and12, %and10
+  %and14 = and i48 %add13, u0x000FFF000FFF
+  %shr15 = lshr i48 %add13, 16
+  %and16 = and i48 %shr15, u0x000FFF000FFF
+  %add17 = add i48 %and16, %and14
+  %and18 = and i48 %add17, u0xFFFFFFFFFFFF
+  %shr19 = lshr i48 %add17, 32
+  %add20 = add i48 %shr19, %and18
+  ret i48 %add20
+}
+
+; NEGATIVE: 56-bit popcount pattern - non-power-of-2 bit width (should NOT optimize)
+define i56 @popcnt1_negative_i56(i56 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_negative_i56(
+; CHECK-NEXT:    [[AND:%.*]] = and i56 [[UWORD:%.*]], 24019198012642645
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i56 [[UWORD]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i56 [[SHR]], 24019198012642645
+; CHECK-NEXT:    [[ADD:%.*]] = add i56 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i56 [[ADD]], 14411518807585587
+; CHECK-NEXT:    [[SHR3:%.*]] = lshr i56 [[ADD]], 2
+; CHECK-NEXT:    [[AND4:%.*]] = and i56 [[SHR3]], 14411518807585587
+; CHECK-NEXT:    [[ADD5:%.*]] = add i56 [[AND4]], [[AND2]]
+; CHECK-NEXT:    [[AND6:%.*]] = and i56 [[ADD5]], 4238682002231055
+; CHECK-NEXT:    [[SHR7:%.*]] = lshr i56 [[ADD5]], 4
+; CHECK-NEXT:    [[AND8:%.*]] = and i56 [[SHR7]], 4238682002231055
+; CHECK-NEXT:    [[ADD9:%.*]] = add i56 [[AND8]], [[AND6]]
+; CHECK-NEXT:    [[AND10:%.*]] = and i56 [[ADD9]], 35747867511423103
+; CHECK-NEXT:    [[SHR11:%.*]] = lshr i56 [[ADD9]], 8
+; CHECK-NEXT:    [[AND12:%.*]] = and i56 [[SHR11]], 35747867511423103
+; CHECK-NEXT:    [[ADD13:%.*]] = add i56 [[AND12]], [[AND10]]
+; CHECK-NEXT:    [[AND14:%.*]] = and i56 [[ADD13]], 4397778092031
+; CHECK-NEXT:    [[SHR15:%.*]] = lshr i56 [[ADD13]], 16
+; CHECK-NEXT:    [[AND16:%.*]] = and i56 [[SHR15]], 4397778092031
+; CHECK-NEXT:    [[ADD17:%.*]] = add i56 [[AND16]], [[AND14]]
+; CHECK-NEXT:    [[AND18:%.*]] = and i56 [[ADD17]], -1
+; CHECK-NEXT:    [[SHR19:%.*]] = lshr i56 [[ADD17]], 32
+; CHECK-NEXT:    [[ADD20:%.*]] = add i56 [[SHR19]], [[AND18]]
+; CHECK-NEXT:    ret i56 [[ADD20]]
+;
+  %and = and i56 %uWord, u0x55555555555555
+  %shr = lshr i56 %uWord, 1
+  %and1 = and i56 %shr, u0x55555555555555
+  %add = add i56 %and1, %and
+  %and2 = and i56 %add, u0x33333333333333
+  %shr3 = lshr i56 %add, 2
+  %and4 = and i56 %shr3, u0x33333333333333
+  %add5 = add i56 %and4, %and2
+  %and6 = and i56 %add5, u0x0F0F0F0F0F0F0F
+  %shr7 = lshr i56 %add5, 4
+  %and8 = and i56 %shr7, u0x0F0F0F0F0F0F0F
+  %add9 = add i56 %and8, %and6
+  %and10 = and i56 %add9, u0x007F007F007F007F
+  %shr11 = lshr i56 %add9, 8
+  %and12 = and i56 %shr11, u0x007F007F007F007F
+  %add13 = add i56 %and12, %and10
+  %and14 = and i56 %add13, u0x0003FFF0003FFF
+  %shr15 = lshr i56 %add13, 16
+  %and16 = and i56 %shr15, u0x0003FFF0003FFF
+  %add17 = add i56 %and16, %and14
+  %and18 = and i56 %add17, u0xFFFFFFFFFFFFFF
+  %shr19 = lshr i56 %add17, 32
+  %add20 = add i56 %shr19, %and18
+  ret i56 %add20
+}
+
 define i32 @popcnt2_32(i32 noundef %0)  {
 ; CHECK-LABEL: define i32 @popcnt2_32(
 ; CHECK-SAME: i32 noundef [[TMP0:%.*]])  {

@@ -486,6 +486,16 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
   return true;
 }
 
+/// Helper function to replace an instruction with a popcount intrinsic.
+/// This creates the ctpop intrinsic and replaces all uses of the instruction.
+static void replaceWithPopCount(Instruction &I, Value *Root) {
+  LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+  IRBuilder<> Builder(&I);
+  I.replaceAllUsesWith(
+      Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+  ++NumPopCountRecognized;
+}
+
 // Try to recognize below function as popcount intrinsic.
 // This is the "best" algorithm from
 // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
@@ -555,11 +565,7 @@ static bool tryToRecognizePopCount(Instruction &I) {
           };
 
           if (CheckAndMask()) {
-            LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-            IRBuilder<> Builder(&I);
-            I.replaceAllUsesWith(
-                Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
-            ++NumPopCountRecognized;
+            replaceWithPopCount(I, Root);
             return true;
           }
         }
@@ -568,6 +574,129 @@ static bool tryToRecognizePopCount(Instruction &I) {
   }
 
   return false;
+}
+
+// Try to recognize below function as popcount intrinsic.
+// Ref. Hacker Delights
+// int popcount32(unsigned int i) {
+// uWord = (uWord & 0x55555555) + ((uWord>>1) & 0x55555555);
+// uWord = (uWord & 0x33333333) + ((uWord>>2) & 0x33333333);
+// uWord = (uWord & 0x0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F);
+// uWord = (uWord & 0x00FF00FF) + ((uWord>>8) & 0x00FF00FF);
+// return  (uWord & 0x0000FFFF) + (uWord>>16);
+// }
+// int popcount64(unsigned long i) {
+// uWord = (uWord & 0x5555555555555555) + ((uWord>>1) & 0x5555555555555555);
+// uWord = (uWord & 0x3333333333333333) + ((uWord>>2) & 0x3333333333333333);
+// uWord = (uWord & 0x0F0F0F0F0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F0F0F0F0F);
+// uWord = (uWord & 0x00FF00FF00FF00FF) + ((uWord>>8) & 0x00FF00FF00FF00FF);
+// uWord = (uWord & 0x0000FFFF0000FFFF) + ((uWord>>16) & 0x0000FFFF0000FFFF);
+// return  (uWord & 0x00000000FFFFFFFF) + (uWord>>32) & 0x00000000FFFFFFFF;
+// }
+//
+// InstCombine may narrow AND masks when it can prove the removed bits are
+// known zero (e.g. 0x0F0F0F0F -> 0x07070707). We accept such narrowed masks
+// by checking they are subsets of the expected masks and verifying the missing
+// bits are known zero via MaskedValueIsZero.
+static bool tryToRecognizePopCount1(Instruction &I) {
+  if (I.getOpcode() != Instruction::Add)
+    return false;
+
+  Type *Ty = I.getType();
+  if (!Ty->isIntOrIntVectorTy())
+    return false;
+
+  unsigned Len = Ty->getScalarSizeInBits();
+  if (Len > 64 || Len <= 8 || Len % 8 != 0)
+    return false;
+
+  // Len should be a power of 2 for the loop to work correctly
+  if (!isPowerOf2_32(Len))
+    return false;
+
+  APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
+  APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
+
+  SimplifyQuery SQ(I.getDataLayout());
+
+  // Check if CapturedMask is a valid (possibly narrowed) version of
+  // ExpectedMask for the given Operand. Returns true if the masks match
+  // exactly, or if CapturedMask is a subset and the missing bits are
+  // known zero in the Operand.
+  auto isValidNarrowedMask = [&](const APInt &CapturedMask,
+                                 const APInt &ExpectedMask,
+                                 Value *Operand) -> bool {
+    if (CapturedMask == ExpectedMask)
+      return true;
+    if (!CapturedMask.isSubsetOf(ExpectedMask))
+      return false;
+    APInt NeededMask = ExpectedMask & ~CapturedMask;
+    return MaskedValueIsZero(Operand, NeededMask, SQ);
+  };
+
+  // For "(x & M) + ((x >> S) & M)" patterns, both AND masks may be narrowed.
+  // Require subsets of BaseMask and prove any implied missing bits are zero.
+  auto narrowAddPairMasksOk = [&](const APInt &BaseMask, unsigned ShiftAmt,
+                                  Value *Val, const APInt &AndMask1,
+                                  const APInt &AndMask2) -> bool {
+    if (!AndMask1.isSubsetOf(BaseMask) || !AndMask2.isSubsetOf(BaseMask))
+      return false;
+    APInt NeededShifted = (BaseMask & ~AndMask1).shl(ShiftAmt);
+    APInt NeededUnshifted = BaseMask & ~AndMask2;
+    APInt AllNeeded = NeededShifted | NeededUnshifted;
+    return AllNeeded.isZero() || MaskedValueIsZero(Val, AllNeeded, SQ);
+  };
+
+  Value *ShiftOp;
+  Value *Start = &I;
+  for (unsigned I = Len; I >= 8; I = I / 2) {
+    APInt Mask = APInt::getSplat(Len, APInt::getLowBitsSet(I, I / 2));
+    const APInt *AndMask1 = nullptr, *AndMask2 = nullptr;
+
+    // Matching "(uWord & Mask) + ((uWord>>I/2) & Mask)".
+    // Both masks might have been narrowed by InstCombine.
+    if (match(Start,
+              m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
+                            m_APInt(AndMask1)),
+                      m_And(m_Deferred(ShiftOp), m_APInt(AndMask2))))) {
+      if (!narrowAddPairMasksOk(Mask, I / 2, ShiftOp, *AndMask1, *AndMask2))
+        return false;
+    }
+    // Matching "(uWord & Mask) + (uWord>>I/2)".
+    // The mask might have been narrowed by InstCombine.
+    else if (match(Start,
+                   m_c_Add(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
+                           m_And(m_Deferred(ShiftOp), m_APInt(AndMask1))))) {
+      if (!isValidNarrowedMask(*AndMask1, Mask, ShiftOp))
+        return false;
+    } else
+      return false;
+    Start = ShiftOp;
+  }
+
+  // Matching "uWord = (uWord & Mask33) + ((uWord>>2) & Mask33)".
+  const APInt *AndMask1 = nullptr, *AndMask2 = nullptr;
+  if (!match(Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(2)),
+                                  m_APInt(AndMask1)),
+                            m_And(m_Deferred(ShiftOp), m_APInt(AndMask2)))))
+    return false;
+  if (!narrowAddPairMasksOk(Mask33, 2, ShiftOp, *AndMask1, *AndMask2))
+    return false;
+
+  Start = ShiftOp;
+  Value *Root;
+  // Matching "uWord = (uWord & Mask55) + ((uWord>>1) & Mask55)".
+  AndMask1 = nullptr;
+  AndMask2 = nullptr;
+  if (!match(Start, m_c_Add(m_And(m_LShr(m_Value(Root), m_SpecificInt(1)),
+                                  m_APInt(AndMask1)),
+                            m_And(m_Deferred(Root), m_APInt(AndMask2)))))
+    return false;
+  if (!narrowAddPairMasksOk(Mask55, 1, Root, *AndMask1, *AndMask2))
+    return false;
+
+  replaceWithPopCount(I, Root);
+  return true;
 }
 
 // Try to recognize below function as popcount intrinsic.
@@ -654,11 +783,7 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
                                m_SpecificInt(Mask55)))))
     return false;
 
-  LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-  IRBuilder<> Builder(&I);
-  I.replaceAllUsesWith(
-      Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
-  ++NumPopCountRecognized;
+  replaceWithPopCount(I, Root);
   return true;
 }
 
@@ -2302,6 +2427,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldSelectSplitCTTZ(I);
       MadeChange |= foldSelectSplitCTLZ(I);
       MadeChange |= tryToRecognizePopCount(I);
+      MadeChange |= tryToRecognizePopCount1(I);
       MadeChange |= tryToRecognizePopCount2n3(I);
       MadeChange |= tryToFPToSat(I, TTI);
       MadeChange |= tryToRecognizeTableBasedCttz(I, DL);

@@ -11,7 +11,7 @@
 // CHECK-SPIRV: define hidden spir_func void @
 void test_GroupMemoryBarrierWithGroupSync() {
 // CHECK-DXIL: call void @llvm.[[TARGET]].group.memory.barrier.with.group.sync()
-// CHECK-SPIRV: call spir_func void @llvm.[[TARGET]].group.memory.barrier.with.group.sync()
+// CHECK-SPIRV: call void @llvm.[[TARGET]].group.memory.barrier.with.group.sync()
   GroupMemoryBarrierWithGroupSync();
 }
 

@@ -108,17 +108,17 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-WITHFP-NEXT:    addi s0, sp, 12
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 24
 ; ILP32E-WITHFP-NEXT:    .cfi_remember_state
-; ILP32E-WITHFP-NEXT:    sw a5, 20(s0)
-; ILP32E-WITHFP-NEXT:    sw a1, 4(s0)
-; ILP32E-WITHFP-NEXT:    sw a2, 8(s0)
-; ILP32E-WITHFP-NEXT:    sw a3, 12(s0)
-; ILP32E-WITHFP-NEXT:    sw a4, 16(s0)
-; ILP32E-WITHFP-NEXT:    addi a0, s0, 4
-; ILP32E-WITHFP-NEXT:    addi a1, s0, 11
-; ILP32E-WITHFP-NEXT:    sw a0, -12(s0)
+; ILP32E-WITHFP-NEXT:    sw a5, 32(sp)
+; ILP32E-WITHFP-NEXT:    sw a1, 16(sp)
+; ILP32E-WITHFP-NEXT:    sw a2, 20(sp)
+; ILP32E-WITHFP-NEXT:    sw a3, 24(sp)
+; ILP32E-WITHFP-NEXT:    sw a4, 28(sp)
+; ILP32E-WITHFP-NEXT:    addi a0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi a1, sp, 23
+; ILP32E-WITHFP-NEXT:    sw a0, 0(sp)
 ; ILP32E-WITHFP-NEXT:    andi a1, a1, -8
 ; ILP32E-WITHFP-NEXT:    addi a0, a1, 8
-; ILP32E-WITHFP-NEXT:    sw a0, -12(s0)
+; ILP32E-WITHFP-NEXT:    sw a0, 0(sp)
 ; ILP32E-WITHFP-NEXT:    lw a0, 0(a1)
 ; ILP32E-WITHFP-NEXT:    lw a1, 4(a1)
 ; ILP32E-WITHFP-NEXT:    lui a3, 262144

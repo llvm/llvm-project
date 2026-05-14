@@ -6,9 +6,44 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CIRTransformUtils.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+
+#include "llvm/ADT/DepthFirstIterator.h"
+
+void cir::collectUnreachable(mlir::Operation *parent,
+                             llvm::SmallVectorImpl<mlir::Operation *> &ops) {
+  // For every region under `parent`, find the blocks unreachable from the
+  // entry via a forward CFG traversal and collect their ops.
+  llvm::df_iterator_default_set<mlir::Block *, 16> reachable;
+  parent->walk([&](mlir::Region *region) {
+    // Empty regions have no blocks; single-block regions have only the
+    // entry, which is trivially reachable. Either way, nothing to collect.
+    if (region->empty() || region->hasOneBlock())
+      return;
+
+    // We clear this for each region as we walk the parent because each block
+    // is only in one region, so the reachable blocks from previously visited
+    // regions aren't needed.
+    reachable.clear();
+
+    // The depth_first_ext range iterator internally adds each block to the
+    // reachable set as it visits it, so while this loop looks like it doesn't
+    // do anything, it's actually populating the set of reachable blocks in
+    // this region.
+    for (mlir::Block *blk : llvm::depth_first_ext(&region->front(), reachable))
+      (void)blk;
+
+    // Collect the unreachable blocks.
+    for (mlir::Block &blk : *region) {
+      if (reachable.contains(&blk))
+        continue;
+      for (mlir::Operation &op : blk)
+        ops.push_back(&op);
+    }
+  });
+}
 
 mlir::Block *cir::replaceCallWithTryCall(cir::CallOp callOp,
                                          mlir::Block *unwindDest,

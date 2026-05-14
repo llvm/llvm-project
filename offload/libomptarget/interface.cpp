@@ -308,12 +308,12 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
     LocalKernelArgs.Tripcount = KernelArgs->Tripcount;
     LocalKernelArgs.Flags = KernelArgs->Flags;
     LocalKernelArgs.DynCGroupMem = 0;
-    LocalKernelArgs.NumTeams[0] = NumTeams;
-    LocalKernelArgs.NumTeams[1] = 1;
-    LocalKernelArgs.NumTeams[2] = 1;
-    LocalKernelArgs.ThreadLimit[0] = ThreadLimit;
-    LocalKernelArgs.ThreadLimit[1] = 1;
-    LocalKernelArgs.ThreadLimit[2] = 1;
+    LocalKernelArgs.UserNumBlocks[0] = NumTeams;
+    LocalKernelArgs.UserNumBlocks[1] = 1;
+    LocalKernelArgs.UserNumBlocks[2] = 1;
+    LocalKernelArgs.UserThreadLimit[0] = ThreadLimit;
+    LocalKernelArgs.UserThreadLimit[1] = 1;
+    LocalKernelArgs.UserThreadLimit[2] = 1;
     return &LocalKernelArgs;
   }
 
@@ -325,8 +325,8 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
     if (Val[2] == 0)
       Val[2] = 1;
   };
-  CorrectMultiDim(KernelArgs->ThreadLimit);
-  CorrectMultiDim(KernelArgs->NumTeams);
+  CorrectMultiDim(KernelArgs->UserThreadLimit);
+  CorrectMultiDim(KernelArgs->UserNumBlocks);
 
   // Version 3 put the implicit argument at the front with no storage.
   if (KernelArgs->Version == OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
@@ -384,7 +384,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 
   bool IsTeams = NumTeams != -1;
   if (!IsTeams)
-    KernelArgs->NumTeams[0] = NumTeams = 1;
+    KernelArgs->UserNumBlocks[0] = NumTeams = 1;
 
   KernelArgsTy LocalKernelArgs;
   UpgradedArgBuffersTy UpgradedBufs;

@@ -29,3 +29,23 @@
 // RUN: %clang --target=aarch64_be -mbig-endian -march=ARMv8.1a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A-BE %s
 // RUN: %clang --target=aarch64_be -mbig-endian -march=ARMV8.1-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A-BE %s
 // GENERICV81A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+v8.1a"
+
+// ================== Check whether -march diagnoses the first invalid argument.
+// RUN: not %clang --target=aarch64 -march=armv9.6-a+sme2+sme2p1+sve2+sve2p1+badfeature+aes+sha2+memtag+bf16 %s -### -c 2>&1 | FileCheck -check-prefix=INVALID-EXT %s
+// RUN: not %clang --target=aarch64 -march=notanarch+sme2 %s -### -c 2>&1 | FileCheck -check-prefix=INVALID-ARCH %s
+// INVALID-EXT: error: unsupported argument '+badfeature' to option '-march='
+// INVALID-EXT-NOT: armv9.6-a+sme2+sme2p1+sve2+sve2p1+badfeature+aes+sha2+memtag+bf16
+// INVALID-ARCH: error: unsupported argument 'notanarch' to option '-march='
+
+// ================== Check whether -mcpu diagnoses the first invalid argument.
+// RUN: not %clang --target=aarch64 -mcpu=generic+sme2+badfeature+aes %s -### -c 2>&1 | FileCheck -check-prefix=INVALID-MCPU-EXT %s
+// RUN: not %clang --target=aarch64 -mcpu=notacpu+sme2 %s -### -c 2>&1 | FileCheck -check-prefix=INVALID-MCPU %s
+// INVALID-MCPU-EXT: error: unsupported argument '+badfeature' to option '-mcpu='
+// INVALID-MCPU-EXT-NOT: generic+sme2+badfeature+aes
+// INVALID-MCPU: error: unsupported argument 'notacpu' to option '-mcpu='
+
+// ================== Check whether -mtune diagnoses the first invalid argument.
+// RUN: not %clang --target=aarch64 -mtune=generic+sme2+badfeature+aes %s -### -c 2>&1 | FileCheck -check-prefix=INVALID-MTUNE-EXT %s
+// RUN: not %clang --target=aarch64 -mtune=notacpu+sme2 %s -### -c 2>&1 | FileCheck -check-prefix=INVALID-MTUNE %s
+// INVALID-MTUNE-EXT: error: unsupported argument '+badfeature' to option '-mtune='
+// INVALID-MTUNE: error: unsupported argument 'notacpu' to option '-mtune='

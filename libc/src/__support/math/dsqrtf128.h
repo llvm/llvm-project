@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double dsqrtf128(float128 x) {
+LIBC_INLINE LIBC_CONSTEXPR double dsqrtf128(float128 x) {
   return fputil::sqrt<double>(x);
 }
 

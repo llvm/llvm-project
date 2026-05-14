@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr bfloat16 remainderbf16(bfloat16 x, bfloat16 y) {
+LIBC_INLINE LIBC_CONSTEXPR bfloat16 remainderbf16(bfloat16 x, bfloat16 y) {
   int quotient{};
   return fputil::remquo(x, y, quotient);
 }

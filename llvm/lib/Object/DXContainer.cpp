@@ -61,9 +61,13 @@ Error DXContainer::parseHeader() {
   return readStruct(Data.getBuffer(), Data.getBuffer().data(), Header);
 }
 
-Error DXContainer::parseDXILHeader(StringRef Part) {
+Error DXContainer::parseDXILHeader(dxbc::PartType PT, StringRef Part) {
+  bool IsDebug = dxbc::isDebugProgramPart(PT);
+  std::optional<DXILData> &DXIL = IsDebug ? this->DebugDXIL : this->DXIL;
+
   if (DXIL)
-    return parseFailed("More than one DXIL part is present in the file");
+    return parseFailed(formatv("more than one {0} part is present in the file",
+                               dxbc::getProgramPartName(IsDebug)));
   const char *Current = Part.begin();
   dxbc::ProgramHeader Header;
   if (Error Err = readStruct(Part, Current, Header))
@@ -174,7 +178,8 @@ Error DXContainer::parsePartOffsets() {
     LastOffset = PartOffset + PartSize;
     switch (PT) {
     case dxbc::PartType::DXIL:
-      if (Error Err = parseDXILHeader(PartData))
+    case dxbc::PartType::ILDB:
+      if (Error Err = parseDXILHeader(PT, PartData))
         return Err;
       break;
     case dxbc::PartType::SFI0:
@@ -210,13 +215,19 @@ Error DXContainer::parsePartOffsets() {
     }
   }
 
+  if (DXIL && DebugDXIL &&
+      DXIL->first.ShaderKind != DebugDXIL->first.ShaderKind)
+    return parseFailed(
+        "ILDB part shader kind does not match DXIL part shader kind");
+
   // Fully parsing the PSVInfo requires knowing the shader kind which we read
   // out of the program header in the DXIL part.
   if (PSVInfo) {
-    if (!DXIL)
-      return parseFailed("Cannot fully parse pipeline state validation "
-                         "information without DXIL part.");
-    if (Error Err = PSVInfo->parse(DXIL->first.ShaderKind))
+    std::optional<uint16_t> ShaderKind = getShaderKind();
+    if (!ShaderKind)
+      return parseFailed("cannot fully parse pipeline state validation "
+                         "information without DXIL or ILDB part");
+    if (Error Err = PSVInfo->parse(*ShaderKind))
       return Err;
   }
   return Error::success();

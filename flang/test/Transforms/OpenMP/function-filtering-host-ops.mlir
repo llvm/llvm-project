@@ -471,6 +471,11 @@ module attributes {omp.is_target_device = true} {
     return
   }
 
+  omp.private {type = firstprivate} @boxchar_firstprivatizer : !fir.boxchar<1> copy {
+  ^bb0(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>):
+    omp.yield(%arg0 : !fir.boxchar<1>)
+  }
+
   // CHECK-LABEL: func.func @hlfir_storage
   func.func @hlfir_storage(%i : index) {
     // CHECK-NEXT: %[[PLACEHOLDER:.*]] = fir.alloca i1

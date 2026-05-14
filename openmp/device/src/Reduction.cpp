@@ -20,17 +20,17 @@
 
 using namespace ompx;
 
-namespace {
-
-void gpu_regular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct) {
+static void gpu_regular_warp_reduce(void *reduce_data,
+                                    ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {
     shflFct(reduce_data, /*LaneId - not used= */ 0,
             /*Offset = */ mask, /*AlgoVersion=*/0);
   }
 }
 
-void gpu_irregular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
-                               uint32_t size, uint32_t tid) {
+static void gpu_irregular_warp_reduce(void *reduce_data,
+                                      ShuffleReductFnTy shflFct, uint32_t size,
+                                      uint32_t tid) {
   uint32_t curr_size;
   uint32_t mask;
   curr_size = size;
@@ -153,17 +153,18 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
   return BlockThreadId == 0;
 }
 
-uint32_t roundToWarpsize(uint32_t s) {
+static uint32_t roundToWarpsize(uint32_t s) {
   if (s < mapping::getWarpSize())
     return 1;
   return utils::alignDown(s, mapping::getWarpSize());
 }
 
-uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
-
-} // namespace
+static constexpr uint32_t kmpcMin(uint32_t x, uint32_t y) {
+  return x < y ? x : y;
+}
 
 extern "C" {
+[[clang::always_inline]]
 int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
                                                uint64_t reduce_data_size,
                                                void *reduce_data,
@@ -172,6 +173,7 @@ int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
   return nvptx_parallel_reduce_nowait(reduce_data, shflFct, cpyFct);
 }
 
+[[clang::always_inline]]
 int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     IdentTy *Loc, void *GlobalBuffer, uint32_t num_of_records,
     uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,

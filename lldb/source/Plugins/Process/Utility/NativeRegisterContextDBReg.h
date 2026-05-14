@@ -65,8 +65,8 @@ public:
   };
 
 protected:
-  std::array<struct DREG, 16> m_hbp_regs; // hardware breakpoints
-  std::array<struct DREG, 16> m_hwp_regs; // hardware watchpoints
+  std::array<struct DREG, 16> m_hbp_regs{}; // hardware breakpoints
+  std::array<struct DREG, 16> m_hwp_regs{}; // hardware watchpoints
 
   uint32_t m_max_hbp_supported;
   uint32_t m_max_hwp_supported;

@@ -390,12 +390,9 @@ entry:
 define i32 @mulv_v3i32(<3 x i32> %a) {
 ; CHECK-LABEL: mulv_v3i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov v1.s[3], w8
-; CHECK-NEXT:    mov d1, v1.d[1]
-; CHECK-NEXT:    mul v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mul v0.2s, v0.2s, v0.s[1]
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    mul v1.2s, v0.2s, v1.2s
+; CHECK-NEXT:    mul v0.2s, v1.2s, v0.s[1]
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:

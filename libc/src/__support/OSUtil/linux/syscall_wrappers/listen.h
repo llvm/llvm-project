@@ -14,24 +14,13 @@
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 
-#include <linux/net.h>   // For SYS_LISTEN socketcall number.
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> listen(int sockfd, int backlog) {
-#ifdef SYS_listen
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_listen, sockfd, backlog);
-#elif defined(SYS_socketcall)
-  unsigned long sockcall_args[2] = {static_cast<unsigned long>(sockfd),
-                                    static_cast<unsigned long>(backlog)};
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_LISTEN,
-                                              sockcall_args);
-#else
-#error "listen and socketcall syscalls unavailable for this platform."
-#endif
-
+  int ret = syscall_impl<int>(SYS_listen, sockfd, backlog);
   if (ret < 0)
     return Error(-static_cast<int>(ret));
   return ret;

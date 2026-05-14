@@ -316,7 +316,10 @@ ekeane@nvidia.com (email), ErichKeane (Phabricator), [erichkeane](https://github
 ### SYCL conformance
 
 Alexey Bader \
-alexey.bader@intel.com (email), bader (Phabricator), [bader](https://github.com/bader) (GitHub)
+alexey.bader@intel.com (email), [bader](https://github.com/bader) (GitHub), bader7427 (Discord), bader (Discourse)
+
+Tom Honermann \
+tom@honermann.net (email), [tahonermann](https://github.com/tahonermann) (GitHub), tahonermann (Discord), tahonermann (Discourse)
 
 ### HLSL conformance
 

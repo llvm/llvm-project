@@ -194,3 +194,159 @@ define bfloat @vreduce_fadd_nxv4bf16(<vscale x 4 x bfloat> %v, bfloat %s) {
   %red = call reassoc bfloat @llvm.vector.reduce.fadd.nxv4bf16(bfloat %s, <vscale x 4 x bfloat> %v)
   ret bfloat %red
 }
+
+define bfloat @vreduce_fmin_nxv32bf16(<vscale x 32 x bfloat> %v) {
+; CHECK-LABEL: vreduce_fmin_nxv32bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v12
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfredmin.vs v8, v16, v16
+; CHECK-NEXT:    vfredmin.vs v9, v24, v24
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vfmv.f.s fa4, v9
+; CHECK-NEXT:    fmin.s fa5, fa4, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
+  %red = call bfloat @llvm.vector.reduce.fmin.nxv32bf16(<vscale x 32 x bfloat> %v)
+  ret bfloat %red
+}
+
+define bfloat @vreduce_fmax_nxv32bf16(<vscale x 32 x bfloat> %v) {
+; CHECK-LABEL: vreduce_fmax_nxv32bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v12
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfredmax.vs v8, v16, v16
+; CHECK-NEXT:    vfredmax.vs v9, v24, v24
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vfmv.f.s fa4, v9
+; CHECK-NEXT:    fmax.s fa5, fa4, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
+  %red = call bfloat @llvm.vector.reduce.fmax.nxv32bf16(<vscale x 32 x bfloat> %v)
+  ret bfloat %red
+}
+
+define bfloat @vreduce_fminimum_nxv32bf16(<vscale x 32 x bfloat> %v) {
+; CHECK-LABEL: vreduce_fminimum_nxv32bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v12
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmfne.vv v12, v16, v16
+; CHECK-NEXT:    vcpop.m a0, v12
+; CHECK-NEXT:    lui a1, 523264
+; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    beqz a0, .LBB13_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fmv.s fa4, fa5
+; CHECK-NEXT:    j .LBB13_3
+; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:    vfredmin.vs v12, v16, v16
+; CHECK-NEXT:    vfmv.f.s fa4, v12
+; CHECK-NEXT:  .LBB13_3:
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmfne.vv v8, v16, v16
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    bnez a0, .LBB13_5
+; CHECK-NEXT:  # %bb.4:
+; CHECK-NEXT:    vfredmin.vs v8, v16, v16
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:  .LBB13_5:
+; CHECK-NEXT:    feq.s a0, fa5, fa5
+; CHECK-NEXT:    fmv.s fa3, fa4
+; CHECK-NEXT:    bnez a0, .LBB13_7
+; CHECK-NEXT:  # %bb.6:
+; CHECK-NEXT:    fmv.s fa3, fa5
+; CHECK-NEXT:  .LBB13_7:
+; CHECK-NEXT:    feq.s a0, fa4, fa4
+; CHECK-NEXT:    bnez a0, .LBB13_9
+; CHECK-NEXT:  # %bb.8:
+; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:  .LBB13_9:
+; CHECK-NEXT:    fmin.s fa5, fa5, fa3
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
+  %red = call bfloat @llvm.vector.reduce.fminimum.nxv32bf16(<vscale x 32 x bfloat> %v)
+  ret bfloat %red
+}
+
+define bfloat @vreduce_fmaximum_nxv32bf16(<vscale x 32 x bfloat> %v) {
+; CHECK-LABEL: vreduce_fmaximum_nxv32bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v12
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmfne.vv v12, v16, v16
+; CHECK-NEXT:    vcpop.m a0, v12
+; CHECK-NEXT:    lui a1, 523264
+; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    beqz a0, .LBB14_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fmv.s fa4, fa5
+; CHECK-NEXT:    j .LBB14_3
+; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    vfredmax.vs v12, v16, v16
+; CHECK-NEXT:    vfmv.f.s fa4, v12
+; CHECK-NEXT:  .LBB14_3:
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmfne.vv v8, v16, v16
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    bnez a0, .LBB14_5
+; CHECK-NEXT:  # %bb.4:
+; CHECK-NEXT:    vfredmax.vs v8, v16, v16
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:  .LBB14_5:
+; CHECK-NEXT:    feq.s a0, fa5, fa5
+; CHECK-NEXT:    fmv.s fa3, fa4
+; CHECK-NEXT:    bnez a0, .LBB14_7
+; CHECK-NEXT:  # %bb.6:
+; CHECK-NEXT:    fmv.s fa3, fa5
+; CHECK-NEXT:  .LBB14_7:
+; CHECK-NEXT:    feq.s a0, fa4, fa4
+; CHECK-NEXT:    bnez a0, .LBB14_9
+; CHECK-NEXT:  # %bb.8:
+; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:  .LBB14_9:
+; CHECK-NEXT:    fmax.s fa5, fa5, fa3
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
+  %red = call bfloat @llvm.vector.reduce.fmaximum.nxv32bf16(<vscale x 32 x bfloat> %v)
+  ret bfloat %red
+}
+
+define bfloat @vreduce_fadd_nxv32bf16(<vscale x 32 x bfloat> %v, bfloat %s) {
+; CHECK-LABEL: vreduce_fadd_nxv32bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v12
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vfredusum.vs v9, v16, v8
+; CHECK-NEXT:    vfredusum.vs v8, v24, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
+; CHECK-NEXT:    fadd.s fa5, fa4, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    fadd.s fa5, fa4, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    ret
+  %red = call reassoc bfloat @llvm.vector.reduce.fadd.nxv32bf16(bfloat %s, <vscale x 32 x bfloat> %v)
+  ret bfloat %red
+}

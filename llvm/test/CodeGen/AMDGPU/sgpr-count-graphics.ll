@@ -1,5 +1,5 @@
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s | FileCheck %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=tahiti < %s | FileCheck %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s | FileCheck %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdpal -mcpu=tahiti < %s | FileCheck %s
 
 @global = addrspace(1) global i32 poison, align 4
 

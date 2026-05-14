@@ -14,6 +14,8 @@ declare <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(<4 x i8>, metadat
 declare half @llvm.convert.from.arbitrary.fp.f16.i8(i8, metadata)
 declare <2 x half> @llvm.convert.from.arbitrary.fp.v2f16.v2i8(<2 x i8>, metadata)
 declare double @llvm.convert.from.arbitrary.fp.f64.i8(i8, metadata)
+declare bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8, metadata)
+declare <2 x bfloat> @llvm.convert.from.arbitrary.fp.v2bf16.v2i8(<2 x i8>, metadata)
 
 ; Float8E5M2
 ; Layout: sign(1) exp(5) mant(2), bias=15
@@ -1230,4 +1232,169 @@ define <2 x half> @from_f8e4m3fn_v2f16(<2 x i8> %x) {
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call <2 x half> @llvm.convert.from.arbitrary.fp.v2f16.v2i8(<2 x i8> %x, metadata !"Float8E4M3FN")
   ret <2 x half> %r
+}
+
+define bfloat @from_f8e5m2_bf16(i8 %x) {
+; CHECK-LABEL: from_f8e5m2_bf16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_and_b32_e32 v2, 3, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; CHECK-NEXT:    v_ffbh_u32_e32 v3, v3
+; CHECK-NEXT:    v_sub_u16_e32 v5, 15, v3
+; CHECK-NEXT:    v_lshlrev_b16_e32 v1, 8, v0
+; CHECK-NEXT:    v_sub_u16_e32 v4, 0x7e, v3
+; CHECK-NEXT:    v_lshlrev_b16_e64 v5, v5, 1
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff8000, v1
+; CHECK-NEXT:    v_lshlrev_b16_e32 v4, 7, v4
+; CHECK-NEXT:    v_xor_b32_e32 v5, v2, v5
+; CHECK-NEXT:    v_add_u16_e32 v3, -8, v3
+; CHECK-NEXT:    v_or_b32_e32 v4, v1, v4
+; CHECK-NEXT:    v_lshlrev_b16_e32 v3, v3, v5
+; CHECK-NEXT:    v_bfe_u32 v0, v0, 2, 5
+; CHECK-NEXT:    v_or_b32_e32 v3, v4, v3
+; CHECK-NEXT:    v_lshlrev_b16_e32 v4, 7, v0
+; CHECK-NEXT:    v_or_b32_e32 v4, v4, v1
+; CHECK-NEXT:    v_lshlrev_b16_e32 v5, 5, v2
+; CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v2
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
+; CHECK-NEXT:    v_or_b32_e32 v4, v4, v5
+; CHECK-NEXT:    v_add_u16_e32 v4, 0x3800, v4
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, v4, v3, s[4:5]
+; CHECK-NEXT:    v_or_b32_e32 v4, v0, v2
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v4
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, v3, v1, s[4:5]
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v2
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[6:7], 31, v0
+; CHECK-NEXT:    v_or_b32_e32 v0, 0x7f80, v1
+; CHECK-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, v3, v0, s[4:5]
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fc0
+; CHECK-NEXT:    s_and_b64 vcc, s[6:7], vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %r = call bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 %x, metadata !"Float8E5M2")
+  ret bfloat %r
+}
+
+define bfloat @from_f8e4m3fn_bf16(i8 %x) {
+; CHECK-LABEL: from_f8e4m3fn_bf16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_and_b32_e32 v2, 7, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; CHECK-NEXT:    v_ffbh_u32_e32 v3, v3
+; CHECK-NEXT:    v_sub_u16_e32 v5, 15, v3
+; CHECK-NEXT:    v_lshlrev_b16_e32 v1, 8, v0
+; CHECK-NEXT:    v_sub_u16_e32 v4, 0x85, v3
+; CHECK-NEXT:    v_lshlrev_b16_e64 v5, v5, 1
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff8000, v1
+; CHECK-NEXT:    v_lshlrev_b16_e32 v4, 7, v4
+; CHECK-NEXT:    v_xor_b32_e32 v5, v2, v5
+; CHECK-NEXT:    v_add_u16_e32 v3, -8, v3
+; CHECK-NEXT:    v_or_b32_e32 v4, v1, v4
+; CHECK-NEXT:    v_lshlrev_b16_e32 v3, v3, v5
+; CHECK-NEXT:    v_bfe_u32 v0, v0, 3, 4
+; CHECK-NEXT:    v_or_b32_e32 v3, v4, v3
+; CHECK-NEXT:    v_lshlrev_b16_e32 v4, 7, v0
+; CHECK-NEXT:    v_or_b32_e32 v4, v4, v1
+; CHECK-NEXT:    v_lshlrev_b16_e32 v5, 4, v2
+; CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v2
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
+; CHECK-NEXT:    v_or_b32_e32 v4, v4, v5
+; CHECK-NEXT:    v_add_u16_e32 v4, 0x3c00, v4
+; CHECK-NEXT:    s_and_b64 vcc, s[4:5], vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
+; CHECK-NEXT:    v_or_b32_e32 v4, v0, v2
+; CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v4
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; CHECK-NEXT:    v_cmp_eq_u16_e32 vcc, 7, v2
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 15, v0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0x7fc0
+; CHECK-NEXT:    s_and_b64 vcc, s[4:5], vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %r = call bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 %x, metadata !"Float8E4M3FN")
+  ret bfloat %r
+}
+
+define <2 x bfloat> @from_f8e5m2_v2bf16(<2 x i8> %x) {
+; CHECK-LABEL: from_f8e5m2_v2bf16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_and_b32_e32 v3, 3, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 16, v3
+; CHECK-NEXT:    v_ffbh_u32_e32 v4, v4
+; CHECK-NEXT:    v_sub_u16_e32 v6, 15, v4
+; CHECK-NEXT:    v_lshlrev_b16_e32 v2, 8, v0
+; CHECK-NEXT:    v_sub_u16_e32 v5, 0x7e, v4
+; CHECK-NEXT:    v_lshlrev_b16_e64 v6, v6, 1
+; CHECK-NEXT:    v_and_b32_e32 v2, 0xffff8000, v2
+; CHECK-NEXT:    v_lshlrev_b16_e32 v5, 7, v5
+; CHECK-NEXT:    v_xor_b32_e32 v6, v3, v6
+; CHECK-NEXT:    v_add_u16_e32 v4, -8, v4
+; CHECK-NEXT:    v_or_b32_e32 v5, v2, v5
+; CHECK-NEXT:    v_lshlrev_b16_e32 v4, v4, v6
+; CHECK-NEXT:    v_bfe_u32 v0, v0, 2, 5
+; CHECK-NEXT:    v_or_b32_e32 v4, v5, v4
+; CHECK-NEXT:    v_lshlrev_b16_e32 v5, 7, v0
+; CHECK-NEXT:    v_or_b32_e32 v5, v5, v2
+; CHECK-NEXT:    v_lshlrev_b16_e32 v6, 5, v3
+; CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v3
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v0
+; CHECK-NEXT:    v_or_b32_e32 v5, v5, v6
+; CHECK-NEXT:    v_add_u16_e32 v5, 0x3800, v5
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
+; CHECK-NEXT:    v_cndmask_b32_e64 v4, v5, v4, s[4:5]
+; CHECK-NEXT:    v_or_b32_e32 v5, v0, v3
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v5
+; CHECK-NEXT:    v_cndmask_b32_e64 v4, v4, v2, s[4:5]
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v3
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[6:7], 31, v0
+; CHECK-NEXT:    v_or_b32_e32 v0, 0x7f80, v2
+; CHECK-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, v4, v0, s[4:5]
+; CHECK-NEXT:    v_and_b32_e32 v4, 3, v1
+; CHECK-NEXT:    v_lshlrev_b32_e32 v5, 16, v4
+; CHECK-NEXT:    v_ffbh_u32_e32 v5, v5
+; CHECK-NEXT:    v_sub_u16_e32 v7, 15, v5
+; CHECK-NEXT:    v_lshlrev_b16_e32 v3, 8, v1
+; CHECK-NEXT:    v_sub_u16_e32 v6, 0x7e, v5
+; CHECK-NEXT:    v_lshlrev_b16_e64 v7, v7, 1
+; CHECK-NEXT:    v_and_b32_e32 v3, 0xffff8000, v3
+; CHECK-NEXT:    v_lshlrev_b16_e32 v6, 7, v6
+; CHECK-NEXT:    v_xor_b32_e32 v7, v4, v7
+; CHECK-NEXT:    v_add_u16_e32 v5, -8, v5
+; CHECK-NEXT:    v_or_b32_e32 v6, v3, v6
+; CHECK-NEXT:    v_lshlrev_b16_e32 v5, v5, v7
+; CHECK-NEXT:    v_bfe_u32 v1, v1, 2, 5
+; CHECK-NEXT:    v_or_b32_e32 v5, v6, v5
+; CHECK-NEXT:    v_lshlrev_b16_e32 v6, 7, v1
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0x7fc0
+; CHECK-NEXT:    s_and_b64 vcc, s[6:7], vcc
+; CHECK-NEXT:    v_or_b32_e32 v6, v6, v3
+; CHECK-NEXT:    v_lshlrev_b16_e32 v7, 5, v4
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v4
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v1
+; CHECK-NEXT:    v_or_b32_e32 v6, v6, v7
+; CHECK-NEXT:    v_add_u16_e32 v6, 0x3800, v6
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
+; CHECK-NEXT:    v_cndmask_b32_e64 v5, v6, v5, s[4:5]
+; CHECK-NEXT:    v_or_b32_e32 v6, v1, v4
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v6
+; CHECK-NEXT:    v_cndmask_b32_e64 v5, v5, v3, s[4:5]
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[4:5], 0, v4
+; CHECK-NEXT:    v_cmp_eq_u16_e64 s[6:7], 31, v1
+; CHECK-NEXT:    v_or_b32_e32 v1, 0x7f80, v3
+; CHECK-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, v5, v1, s[4:5]
+; CHECK-NEXT:    s_and_b64 vcc, s[6:7], vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; CHECK-NEXT:    s_mov_b32 s4, 0x5040100
+; CHECK-NEXT:    v_perm_b32 v0, v1, v0, s4
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %r = call <2 x bfloat> @llvm.convert.from.arbitrary.fp.v2bf16.v2i8(<2 x i8> %x, metadata !"Float8E5M2")
+  ret <2 x bfloat> %r
 }

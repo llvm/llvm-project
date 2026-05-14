@@ -3846,12 +3846,13 @@ OMPClause *Parser::ParseOpenMPOMPXAttributesClause(bool ParseOnly) {
       continue;
     case ParsedAttr::AT_CUDALaunchBounds:
       if (!PA.checkAtLeastNumArgs(Actions, 1) ||
-          !PA.checkAtMostNumArgs(Actions, 2))
+          !PA.checkAtMostNumArgs(Actions, 3))
         continue;
       if (auto *A = Actions.CreateLaunchBoundsAttr(
               PA, PA.getArgAsExpr(0),
               PA.getNumArgs() > 1 ? PA.getArgAsExpr(1) : nullptr,
-              PA.getNumArgs() > 2 ? PA.getArgAsExpr(2) : nullptr))
+              PA.getNumArgs() > 2 ? PA.getArgAsExpr(2) : nullptr,
+              /*IgnoreArch=*/true))
         Attrs.push_back(A);
       continue;
     default:

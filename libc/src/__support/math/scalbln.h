@@ -20,7 +20,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double scalbln(double x, long n) {
+LIBC_INLINE LIBC_CONSTEXPR double scalbln(double x, long n) {
   return fputil::ldexp(x, n);
 }
 

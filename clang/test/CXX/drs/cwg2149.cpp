@@ -55,23 +55,23 @@ void f() {
 // via static_assert, even with constant folding enabled.
 
 // CXX98:       VarDecl {{.+}} a 'X[2]'
-// CXX98-NEXT:  `-InitListExpr {{.+}} 'X[2]'
-// CXX98-NEXT:    |-InitListExpr {{.+}} 'X'{{$}}
+// CXX98-NEXT:  `-InitListExpr {{.+}} 'X[2]' explicit
+// CXX98-NEXT:    |-InitListExpr {{.+}} 'X' implicit{{$}}
 // CXX98-NEXT:    | |-IntegerLiteral {{.+}} 'int' 1
 // CXX98-NEXT:    | |-IntegerLiteral {{.+}} 'int' 2
 // CXX98-NEXT:    | `-IntegerLiteral {{.+}} 'int' 3
-// CXX98-NEXT:    `-InitListExpr {{.+}} 'X'{{$}}
+// CXX98-NEXT:    `-InitListExpr {{.+}} 'X' implicit{{$}}
 // CXX98-NEXT:      |-IntegerLiteral {{.+}} 'int' 4
 // CXX98-NEXT:      |-IntegerLiteral {{.+}} 'int' 5
 // CXX98-NEXT:      `-IntegerLiteral {{.+}} 'int' 6
 
 // CXX98:       VarDecl {{.+}} b 'X[2]'
-// CXX98-NEXT:  `-InitListExpr {{.+}} 'X[2]'
-// CXX98-NEXT:    |-InitListExpr {{.+}} 'X'{{$}}
+// CXX98-NEXT:  `-InitListExpr {{.+}} 'X[2]' explicit
+// CXX98-NEXT:    |-InitListExpr {{.+}} 'X' explicit{{$}}
 // CXX98-NEXT:    | |-IntegerLiteral {{.+}} 'int' 1
 // CXX98-NEXT:    | |-IntegerLiteral {{.+}} 'int' 2
 // CXX98-NEXT:    | `-IntegerLiteral {{.+}} 'int' 3
-// CXX98-NEXT:    `-InitListExpr {{.+}} 'X'{{$}}
+// CXX98-NEXT:    `-InitListExpr {{.+}} 'X' explicit{{$}}
 // CXX98-NEXT:      |-IntegerLiteral {{.+}} 'int' 4
 // CXX98-NEXT:      |-IntegerLiteral {{.+}} 'int' 5
 // CXX98-NEXT:      `-IntegerLiteral {{.+}} 'int' 6
