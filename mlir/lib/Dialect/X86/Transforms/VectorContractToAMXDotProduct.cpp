@@ -581,9 +581,8 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
             if (outerPos >= 0) {
               unsigned operandIdx = static_cast<unsigned>(outerPos + 1);
 
-              if (operandIdx < rhsOp->getNumOperands()) {
+              if (operandIdx < rhsOp->getNumOperands())
                 rhsMapping.map(rhsOp->getOperand(operandIdx), ivOuterLoop);
-              }
             }
           }
 
@@ -592,19 +591,18 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
           if (innerPos >= 0) {
             unsigned operandIdx = static_cast<unsigned>(innerPos + 1);
 
-            if (operandIdx < rhsOp->getNumOperands()) {
+            if (operandIdx < rhsOp->getNumOperands())
               rhsMapping.map(rhsOp->getOperand(operandIdx), ivNewInnerLoop);
-            }
           }
 
           auto rhsClone = rewriterNewInnerLoop.clone(*rhsOp, rhsMapping);
-
           matB = rhsClone->getResult(0);
 
         } else {
           // memref.get_global / constants
           matB = rhsOp->getResult(0);
         }
+
         if (!isVnni) {
           if (outerLoop) {
             if (!pack) {
@@ -1332,7 +1330,7 @@ struct VectorContractToAMXDotProduct
     auto mBound = arith::ConstantIndexOp::create(rewriter, loc, N);
 
     // Create a loop that iterates over the MxN memerf, retrives two rows +
-    // shuffle them, add up the C element values and stores them back.
+    // shuffle them, add up the C element values and stores them to temp buffer.
     scf::ForOp::create(
         rewriter, loc, c0, mBound, one, ValueRange{},
         [&](OpBuilder &nestedBuilder, Location loc, Value iv,
@@ -1416,6 +1414,7 @@ struct VectorContractToAMXDotProduct
       }
     }
 
+    // Replace use of vector.contract with dot-products.
     for (size_t i = 0; i < ops.size(); i++) {
       vector::ContractionOp contOp = ops[i];
       Value vecRoc = writeResults[i];
