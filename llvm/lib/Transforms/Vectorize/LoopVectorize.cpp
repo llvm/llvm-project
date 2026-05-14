@@ -5803,7 +5803,7 @@ bool VPCostContext::isMaskRequired(Instruction *I) const {
 std::optional<VPCostContext::CallWideningKind>
 VPCostContext::getLegacyCallKind(CallInst *CI, ElementCount VF) const {
   if (VF.isScalar())
-    return std::nullopt;
+    return CallWideningKind::Scalarize;
   switch (CM.getCallWideningDecision(CI, VF).Kind) {
   case LoopVectorizationCostModel::CM_Scalarize:
     return CallWideningKind::Scalarize;
@@ -6460,7 +6460,7 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
   return new VPWidenIntOrFpInductionRecipe(
       Phi, Start, Step, &Plan.getVF(), IndDesc, I, Flags, VPI->getDebugLoc());
-
+}
 
 bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
   assert((!isa<UncondBrInst, CondBrInst, PHINode, LoadInst, StoreInst>(I)) &&
@@ -6657,7 +6657,7 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                                               VFRange &Range) {
   assert(!R->isPhi() && "phis must be handled earlier");
   // First, check for specific widening recipes that deal with optimizing
-  // truncates and memory operations
+  // truncates and memory operations.
   auto *VPI = cast<VPInstruction>(R);
   assert(VPI->getOpcode() != Instruction::Call &&
          "Call should have been handled by makeCallWideningDecisions");

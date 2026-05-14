@@ -6626,12 +6626,12 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
           },
           Range);
 
-      VPSingleDefRecipe *Recipe = nullptr;
+      VPSingleDefRecipe *Replacement = nullptr;
       switch (Decision.Kind) {
       case CallWideningDecision::KindTy::Intrinsic: {
         Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &CostCtx.TLI);
         Type *ResultTy = CostCtx.Types.inferScalarType(VPI);
-        Recipe = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, *VPI, *VPI,
+        Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, *VPI, *VPI,
                                             VPI->getDebugLoc());
         break;
       }
@@ -6643,12 +6643,12 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
           Ops.push_back(Mask);
         }
         Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
-        Recipe = new VPWidenCallRecipe(CI, Decision.Variant, Ops, *VPI, *VPI,
+        Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, *VPI, *VPI,
                                        VPI->getDebugLoc());
         break;
       }
       case CallWideningDecision::KindTy::Scalarize:
-        Recipe = RecipeBuilder.handleReplication(VPI, Range);
+        Replacement = RecipeBuilder.handleReplication(VPI, Range);
         break;
       }
 
@@ -6663,8 +6663,8 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                     }) &&
              "VPlan call widening decision must match legacy decision");
 
-      Recipe->insertBefore(VPI);
-      VPI->replaceAllUsesWith(Recipe->getVPSingleValue());
+      Replacement->insertBefore(VPI);
+      VPI->replaceAllUsesWith(Replacement);
       ToErase.push_back(VPI);
     }
   }
