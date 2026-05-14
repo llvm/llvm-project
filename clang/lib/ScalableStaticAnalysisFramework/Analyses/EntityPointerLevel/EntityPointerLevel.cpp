@@ -306,15 +306,16 @@ private:
     return EntityPointerLevelSet{};
   }
 
-  // Fall back if the InitListExpr is not an empty or singleton list that
-  // initializes a pointer scalar. EntityPointerLevelTranslator does not
-  // expect to visit an InitListExpr in any other case.
+  // The InitListExpr must be an empty or singleton list that
+  // initializes a pointer scalar.  Other cases are unexpected thus an error.
   Expected<EntityPointerLevelSet> VisitInitListExpr(const InitListExpr *E) {
     if (E->getNumInits() < 1)
       return EntityPointerLevelSet{};
     if (E->getType()->isPointerType())
       return Visit(E->getInit(0));
-    return fallback(E);
+    return llvm::createStringError(
+        "Cannot translate an InitListExpr to EntityPointerLevels if it is not "
+        "an empty or singleton list that initializes a pointer scalar");
   }
 
   // Clang may default initializes an array with a CXXConstructExpr. Fallback on
