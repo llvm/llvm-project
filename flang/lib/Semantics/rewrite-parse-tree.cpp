@@ -497,11 +497,13 @@ void RewriteMutator::Post(parser::WriteStmt &x) {
   FixMisparsedUntaggedNamelistName(x);
 }
 
-// Erase AccObjects flagged by resolve-directives as same-kind data-sharing
-// duplicates. Cross-kind duplicates remain hard errors and never reach this
-// pass.
+// Erase AccObjects recorded in the context by resolve-directives as same-kind
+// data-sharing duplicates. Cross-kind duplicates remain hard errors and never
+// reach this pass.
 void RewriteMutator::Post(parser::AccObjectList &x) {
-  x.v.remove_if([](const parser::AccObject &o) { return o.isDuplicate; });
+  x.v.remove_if([this](const parser::AccObject &o) {
+    return context_.IsAccObjectDuplicate(&o);
+  });
 }
 
 bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {

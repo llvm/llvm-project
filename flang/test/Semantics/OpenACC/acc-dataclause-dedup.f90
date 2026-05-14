@@ -12,7 +12,7 @@ program test_dataclause_dedup
   integer :: x, y, z, i
 
   ! passThis1.f90 pattern: duplicate within a single PRIVATE clause.
-  !WARNING: 'x' appears in more than one data-sharing clause on the same OpenACC directive [-Wopenacc-usage]
+  !WARNING: 'x' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
   !$acc parallel loop private(x, x)
   do i = 1, 10
   end do
@@ -20,7 +20,7 @@ program test_dataclause_dedup
   ! passThis2.f90 pattern: duplicate within a single PRIVATE clause across
   ! a continuation, with another variable in between.
   !$acc parallel loop private(x, &
-  !WARNING: 'x' appears in more than one data-sharing clause on the same OpenACC directive [-Wopenacc-usage]
+  !WARNING: 'x' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
   !$acc&               y, x)
   do i = 1, 10
   end do
@@ -28,26 +28,33 @@ program test_dataclause_dedup
   ! passThis3.f90 pattern: duplicate across two separate PRIVATE clauses
   ! on the same directive.
   !$acc parallel loop private(x) &
-  !WARNING: 'x' appears in more than one data-sharing clause on the same OpenACC directive [-Wopenacc-usage]
+  !WARNING: 'x' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
   !$acc&              private(y, x)
   do i = 1, 10
   end do
 
   ! Same patterns generalize to FIRSTPRIVATE.
-  !WARNING: 'x' appears in more than one data-sharing clause on the same OpenACC directive [-Wopenacc-usage]
+  !WARNING: 'x' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
   !$acc parallel loop firstprivate(x, x)
   do i = 1, 10
   end do
 
-  !WARNING: 'x' appears in more than one data-sharing clause on the same OpenACC directive [-Wopenacc-usage]
+  !WARNING: 'x' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
   !$acc parallel loop firstprivate(x) firstprivate(y, x)
   do i = 1, 10
   end do
 
   ! Multiple distinct duplicates on a single directive.
-  !WARNING: 'x' appears in more than one data-sharing clause on the same OpenACC directive [-Wopenacc-usage]
-  !WARNING: 'y' appears in more than one data-sharing clause on the same OpenACC directive [-Wopenacc-usage]
+  !WARNING: 'x' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
+  !WARNING: 'y' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
   !$acc parallel loop private(x, y, x, y)
+  do i = 1, 10
+  end do
+
+  ! Triple occurrence: two duplicates, both warned, only one survives dedup.
+  !WARNING: 'x' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
+  !WARNING: 'x' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
+  !$acc parallel loop private(x, x, x)
   do i = 1, 10
   end do
 

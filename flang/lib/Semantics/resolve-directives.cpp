@@ -1957,9 +1957,9 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     if (occurrence && firstFlag && *firstFlag == accFlag &&
         accFlag != Symbol::Flag::AccReduction) {
       context_.Warn(common::UsageWarning::OpenAccUsage, name.source,
-          "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_warn_en_US,
+          "'%s' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored"_warn_en_US,
           name.ToString());
-      occurrence->isDuplicate = true;
+      context_.MarkAccObjectDuplicate(occurrence);
     } else {
       context_.Say(name.source,
           "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
