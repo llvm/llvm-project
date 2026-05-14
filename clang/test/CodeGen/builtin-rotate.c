@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -ffreestanding %s -emit-llvm -o - | FileCheck %s
+// RUN: %if clang-target-64-bits %{ %clang_cc1 -ffreestanding %s -emit-llvm -o - | FileCheck %s --check-prefix=INT128 %}
+// RUN: %clang_cc1 -std=c2y -isystem %S/Inputs -DTEST_C2Y_LIB_SPELLINGS %s -emit-llvm -o - | FileCheck %s --check-prefix=C2Y
 
+#ifndef TEST_C2Y_LIB_SPELLINGS
 #include<stdint.h>
 
 unsigned char rotl8(unsigned char x, unsigned char y) {
@@ -95,7 +98,7 @@ long long rotr64(long long x, unsigned long long y) {
 // CHECK:  call i8 @llvm.fshl.i8(i8 %{{.*}}, i8 %{{.*}}, i8 0)
 void test_builtin_stdc_rotate_left(uint8_t u8, uint16_t u16,
                                    uint32_t u32, uint64_t u64,
-                                   uint64_t u64_2, unsigned __int128 u128,
+                                   uint64_t u64_2, unsigned _BitInt(128) u128,
                                    unsigned _BitInt(9) u9, unsigned _BitInt(37) u37,
                                    unsigned _BitInt(10) u10, unsigned _BitInt(16) u16_bit,
                                    unsigned _BitInt(24) u24, unsigned _BitInt(48) u48) {
@@ -105,7 +108,7 @@ void test_builtin_stdc_rotate_left(uint8_t u8, uint16_t u16,
   volatile uint32_t result_u32;
   volatile uint64_t result_u64;
   volatile uint64_t result_u64_2;
-  volatile unsigned __int128 result_u128;
+  volatile unsigned _BitInt(128) result_u128;
   volatile unsigned _BitInt(9) result_u9;
   volatile unsigned _BitInt(37) result_u37;
   volatile unsigned _BitInt(10) result_u10;
@@ -187,7 +190,7 @@ void test_builtin_stdc_rotate_left(uint8_t u8, uint16_t u16,
 // CHECK:  call i16 @llvm.fshl.i16(i16 %{{.*}}, i16 %{{.*}}, i16 1)
 void test_builtin_stdc_rotate_right(uint8_t u8, uint16_t u16,
                                     uint32_t u32, uint64_t u64,
-                                    uint64_t u64_2, unsigned __int128 u128,
+                                    uint64_t u64_2, unsigned _BitInt(128) u128,
                                     unsigned _BitInt(9) u9, unsigned _BitInt(12) u12,
                                     unsigned _BitInt(20) u20, unsigned _BitInt(32) u32_bit) {
 
@@ -196,7 +199,7 @@ void test_builtin_stdc_rotate_right(uint8_t u8, uint16_t u16,
   volatile uint32_t result_u32;
   volatile uint64_t result_u64;
   volatile uint64_t result_u64_2;
-  volatile unsigned __int128 result_u128;
+  volatile unsigned _BitInt(128) result_u128;
   volatile unsigned _BitInt(9) result_u9;
   volatile unsigned _BitInt(12) result_u12;
   volatile unsigned _BitInt(20) result_u20;
@@ -302,3 +305,99 @@ void test_wider_shift_amount(uint8_t u8, uint16_t u16, uint32_t u32, unsigned _B
   result_u9 = __builtin_stdc_rotate_left((unsigned _BitInt(9))0x1FF, (int64_t)-2147483647);
 }
 
+#ifdef __SIZEOF_INT128__
+// INT128-LABEL: test_int128_rotate
+// INT128:  call i128 @llvm.fshl.i128(i128 %{{.*}}, i128 %{{.*}}, i128 32)
+// INT128:  call i128 @llvm.fshr.i128(i128 %{{.*}}, i128 %{{.*}}, i128 32)
+void test_int128_rotate(unsigned __int128 u128) {
+  volatile unsigned __int128 result_u128;
+  result_u128 = __builtin_stdc_rotate_left(u128, 32);
+  result_u128 = __builtin_stdc_rotate_right(u128, 32);
+}
+#endif
+
+#endif // !TEST_C2Y_LIB_SPELLINGS
+
+#ifdef TEST_C2Y_LIB_SPELLINGS
+#include <stdbit.h>
+
+// C2Y-LABEL: test_typed_rotate_left_uc
+// C2Y:  call i8 @llvm.fshl.i8(i8 %{{.*}}, i8 %{{.*}}, i8 %{{.*}})
+unsigned char test_typed_rotate_left_uc(unsigned char x, unsigned int cnt) {
+  return stdc_rotate_left_uc(x, cnt);
+}
+
+// C2Y-LABEL: test_typed_rotate_left_us
+// C2Y:  call i16 @llvm.fshl.i16(i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
+unsigned short test_typed_rotate_left_us(unsigned short x, unsigned int cnt) {
+  return stdc_rotate_left_us(x, cnt);
+}
+
+// C2Y-LABEL: test_typed_rotate_left_ui
+// C2Y:  call i32 @llvm.fshl.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+unsigned int test_typed_rotate_left_ui(unsigned int x, unsigned int cnt) {
+  return stdc_rotate_left_ui(x, cnt);
+}
+
+// C2Y-LABEL: test_typed_rotate_left_ul
+// C2Y:  call {{i32|i64}} @llvm.fshl.{{i32|i64}}({{i32|i64}} %{{.*}}, {{i32|i64}} %{{.*}}, {{i32|i64}} %{{.*}})
+unsigned long test_typed_rotate_left_ul(unsigned long x, unsigned int cnt) {
+  return stdc_rotate_left_ul(x, cnt);
+}
+
+// C2Y-LABEL: test_typed_rotate_left_ull
+// C2Y:  call i64 @llvm.fshl.i64(i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
+unsigned long long test_typed_rotate_left_ull(unsigned long long x, unsigned int cnt) {
+  return stdc_rotate_left_ull(x, cnt);
+}
+
+// C2Y-LABEL: test_typed_rotate_right_uc
+// C2Y:  call i8 @llvm.fshr.i8(i8 %{{.*}}, i8 %{{.*}}, i8 %{{.*}})
+unsigned char test_typed_rotate_right_uc(unsigned char x, unsigned int cnt) {
+  return stdc_rotate_right_uc(x, cnt);
+}
+
+// C2Y-LABEL: test_typed_rotate_right_us
+// C2Y:  call i16 @llvm.fshr.i16(i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
+unsigned short test_typed_rotate_right_us(unsigned short x, unsigned int cnt) {
+  return stdc_rotate_right_us(x, cnt);
+}
+
+// C2Y-LABEL: test_typed_rotate_right_ui
+// C2Y:  call i32 @llvm.fshr.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+unsigned int test_typed_rotate_right_ui(unsigned int x, unsigned int cnt) {
+  return stdc_rotate_right_ui(x, cnt);
+}
+
+// C2Y-LABEL: test_typed_rotate_right_ul
+// C2Y:  call {{i32|i64}} @llvm.fshr.{{i32|i64}}({{i32|i64}} %{{.*}}, {{i32|i64}} %{{.*}}, {{i32|i64}} %{{.*}})
+unsigned long test_typed_rotate_right_ul(unsigned long x, unsigned int cnt) {
+  return stdc_rotate_right_ul(x, cnt);
+}
+
+// C2Y-LABEL: test_typed_rotate_right_ull
+// C2Y:  call i64 @llvm.fshr.i64(i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
+unsigned long long test_typed_rotate_right_ull(unsigned long long x, unsigned int cnt) {
+  return stdc_rotate_right_ull(x, cnt);
+}
+
+// C2Y-LABEL: test_typed_rotate_constant_count
+// C2Y:  call i8 @llvm.fshl.i8(i8 %{{.*}}, i8 %{{.*}}, i8 3)
+// C2Y:  call i8 @llvm.fshr.i8(i8 %{{.*}}, i8 %{{.*}}, i8 3)
+// C2Y:  call i16 @llvm.fshl.i16(i16 %{{.*}}, i16 %{{.*}}, i16 5)
+// C2Y:  call i32 @llvm.fshl.i32(i32 %{{.*}}, i32 %{{.*}}, i32 8)
+// C2Y:  call i64 @llvm.fshr.i64(i64 %{{.*}}, i64 %{{.*}}, i64 16)
+void test_typed_rotate_constant_count(unsigned char uc, unsigned short us,
+                                      unsigned int ui, unsigned long long ull) {
+  volatile unsigned char r_uc;
+  volatile unsigned short r_us;
+  volatile unsigned int r_ui;
+  volatile unsigned long long r_ull;
+  r_uc = stdc_rotate_left_uc(uc, 3);
+  r_uc = stdc_rotate_right_uc(uc, 3);
+  r_us = stdc_rotate_left_us(us, 5);
+  r_ui = stdc_rotate_left_ui(ui, 8);
+  r_ull = stdc_rotate_right_ull(ull, 16);
+}
+
+#endif // TEST_C2Y_LIB_SPELLINGS

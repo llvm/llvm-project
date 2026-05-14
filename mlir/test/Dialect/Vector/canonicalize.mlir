@@ -272,6 +272,98 @@ func.func @extract_from_non_constant_create_mask(%dim0: index) -> vector<[2]xi1>
 
 // -----
 
+// CHECK-LABEL: extract_from_constant_mask
+func.func @extract_from_constant_mask() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = vector.constant_mask [3] : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[1] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_all_false
+func.func @extract_from_constant_mask_all_false() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant dense<false> : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[3] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_at_boundary
+func.func @extract_from_constant_mask_at_boundary() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant dense<false> : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[2] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_multiple_indices
+func.func @extract_from_constant_mask_multiple_indices() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3, 3] : vector<4x4x4xi1>
+  // CHECK: %[[RES:.*]] = vector.constant_mask [3] : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[1, 2] : vector<4xi1> from vector<4x4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_dynamic_position_all_true
+//  CHECK-SAME: %[[INDEX:.*]]: index
+func.func @extract_from_constant_mask_dynamic_position_all_true(%index: index) -> vector<4xi1> {
+  // The mask covers the entire first dimension, so a dynamic index is fine.
+  %mask = vector.constant_mask [4, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = vector.constant_mask [3] : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[%index] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_dynamic_position_not_all_true
+//  CHECK-SAME: %[[INDEX:.*]]: index
+func.func @extract_from_constant_mask_dynamic_position_not_all_true(%index: index) -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[MASK:.*]] = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK-NEXT: %[[RES:.*]] = vector.extract %[[MASK]][%[[INDEX]]] : vector<4xi1> from vector<4x4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[%index] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_scalar_from_constant_mask_within_bounds
+func.func @extract_scalar_from_constant_mask_within_bounds() -> i1 {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant true
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[0, 1] : i1 from vector<4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
+// CHECK-LABEL: extract_scalar_from_constant_mask_outside_bounds
+func.func @extract_scalar_from_constant_mask_outside_bounds() -> i1 {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant false
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[0, 3] : i1 from vector<4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
 // CHECK-LABEL: constant_mask_to_true_splat
 func.func @constant_mask_to_true_splat() -> vector<2x4xi1> {
   // CHECK: arith.constant dense<true>
@@ -1078,6 +1170,19 @@ func.func @dont_fold_expand_collapse(%arg0: vector<1x1x64xf32>) -> vector<8x8xf3
 
 // -----
 
+// CHECK-LABEL:   func.func @fold_shape_cast_from_elements(
+// CHECK-SAME:    %[[C1:.*]]: f32, %[[C2:.*]]: f32, %[[C3:.*]]: f32, %[[C4:.*]]: f32
+func.func @fold_shape_cast_from_elements(%c1: f32, %c2: f32, %c3: f32, %c4: f32) -> vector<2x2xf32>{
+// CHECK:           %[[VAL_0:.*]] = vector.from_elements %[[C1]], %[[C2]], %[[C3]], %[[C4]] : vector<2x2xf32>
+// CHECK:           return %[[VAL_0]] : vector<2x2xf32>
+// CHECK-NOT: vector.shape_cast
+  %1 = vector.from_elements %c1, %c2, %c3, %c4 : vector<4xf32>
+  %2 = vector.shape_cast %1 : vector<4xf32> to vector<2x2xf32>
+  return %2 : vector<2x2xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_broadcast_shapecast
 //  CHECK-SAME: (%[[V:.+]]: vector<4xf32>)
 //       CHECK:   return %[[V]]
@@ -1367,6 +1472,19 @@ func.func @bitcast_i8_to_i32() -> (vector<4xi32>, vector<4xi32>) {
   %cast0 = vector.bitcast %cst0: vector<16xi8> to vector<4xi32>
   %cast1 = vector.bitcast %cst1: vector<16xi8> to vector<4xi32>
   return %cast0, %cast1: vector<4xi32>, vector<4xi32>
+}
+
+// -----
+
+// Verify that bitcast with index source element type does not crash (the fold
+// must not call getIntOrFloatBitWidth on a non-integer/float type).
+// CHECK-LABEL: func @bitcast_index_no_fold
+//       CHECK: %[[CST:.+]] = arith.constant dense<0> : vector<16xindex>
+//       CHECK: vector.bitcast %[[CST]] : vector<16xindex> to vector<16xi64>
+func.func @bitcast_index_no_fold() -> vector<16xi64> {
+  %cst = arith.constant dense<0> : vector<16xindex>
+  %0 = vector.bitcast %cst : vector<16xindex> to vector<16xi64>
+  return %0 : vector<16xi64>
 }
 
 // -----
@@ -1694,6 +1812,61 @@ func.func @transfer_folding_1(%t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>)
 
   // CHECK-NEXT: return %[[T0]], %[[T0]], %[[T0]]
   return %r0, %r1, %r2: tensor<2x3x4xf32>, tensor<2x3x4xf32>, tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transfer_folding_masked_read
+//       CHECK:   vector.transfer_read {{.*}}, {{.*}}, %[[MASK:.*]]
+//       CHECK:   %[[R:.*]] = vector.transfer_write
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_read(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transfer_folding_masked_write
+//       CHECK:   vector.transfer_read
+//       CHECK:   %[[R:.*]] = vector.transfer_write {{.*}}, {{.*}}, %[[MASK:.*]]
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_write(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0], %mask {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transfer_folding_masked_read_and_write
+//  CHECK-SAME:   %[[MASK:[0-9a-zA-Z_]+]]: vector<2x3x4xi1>
+//       CHECK:   %[[V:.*]] = vector.transfer_read {{.*}}, {{.*}}, %[[MASK]]
+//       CHECK:   %[[R:.*]] = vector.transfer_write %[[V]], {{.*}}, %[[MASK]]
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_read_and_write(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0], %mask {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
 }
 
 // -----
@@ -2080,6 +2253,26 @@ func.func @masked_vector_multi_reduction_single_parallel(%arg0: vector<2xf32>, %
     %0 = vector.mask %mask { vector.multi_reduction <mul>, %arg0, %acc [] : vector<2xf32> to vector<2xf32> } : vector<2xi1> -> vector<2xf32>
 //       CHECK:   return %[[VAL_0]] : vector<2xf32>
     return %0 : vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @vector_multi_reduction_no_reduction_dims_nd(
+//  CHECK-SAME:     %[[v:.*]]: vector<2x3xf32>,
+func.func @vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3xf32>, %acc: vector<2x3xf32>) -> vector<2x3xf32> {
+    %0 = vector.multi_reduction <add>, %arg0, %acc [] : vector<2x3xf32> to vector<2x3xf32>
+//       CHECK:   return %[[v]] : vector<2x3xf32>
+    return %0 : vector<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @masked_vector_multi_reduction_no_reduction_dims_nd(
+//  CHECK-SAME:     %[[VAL_0:.*]]: vector<2x3xf32>, %{{.*}}: vector<2x3xf32>,
+func.func @masked_vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3xf32>, %acc: vector<2x3xf32>, %mask: vector<2x3xi1>) -> vector<2x3xf32> {
+    %0 = vector.mask %mask { vector.multi_reduction <add>, %arg0, %acc [] : vector<2x3xf32> to vector<2x3xf32> } : vector<2x3xi1> -> vector<2x3xf32>
+//       CHECK:   return %[[VAL_0]] : vector<2x3xf32>
+    return %0 : vector<2x3xf32>
 }
 
 // -----
@@ -2614,6 +2807,99 @@ func.func @shuffle_fold4(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> ve
 func.func @shuffle_nofold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<5xi32> {
   %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3, 4] : vector<4xi32>, vector<2xi32>
   return %shuffle : vector<5xi32>
+}
+
+// -----
+
+// All mask elements are poison: replace shuffle with poison.
+// CHECK-LABEL: func @shuffle_all_poison_mask
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   %[[P:.*]] = ub.poison : vector<2xi32>
+//       CHECK:   return %[[P]]
+func.func @shuffle_all_poison_mask(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [-1, -1] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V1 is unused: replace V1 operand with poison.
+// CHECK-LABEL: func @shuffle_unused_v1
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[P]], %[[B]] [4, 3] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v1(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, 3] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V2 is unused: replace V2 operand with poison.
+// CHECK-LABEL: func @shuffle_unused_v2
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[A]], %[[P]] [2, 0] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v2(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [2, 0] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V1 is unused (mask has poison indices mixed with V2 references).
+// CHECK-LABEL: func @shuffle_unused_v1_with_poison_idx
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[P]], %[[B]] [4, -1, 3] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v1_with_poison_idx(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<3xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, -1, 3] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<3xi32>
+}
+
+// -----
+
+// V2 is unused (multidimensional vectors).
+// CHECK-LABEL: func @shuffle_unused_v2_multidim
+//  CHECK-SAME:   %[[A:.*]]: vector<4x2xf32>, %[[B:.*]]: vector<3x2xf32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3x2xf32>
+//       CHECK:   vector.shuffle %[[A]], %[[P]] [2, 0, 3] : vector<4x2xf32>, vector<3x2xf32>
+func.func @shuffle_unused_v2_multidim(%v0 : vector<4x2xf32>, %v1 : vector<3x2xf32>) -> vector<3x2xf32> {
+  %shuffle = vector.shuffle %v0, %v1 [2, 0, 3] : vector<4x2xf32>, vector<3x2xf32>
+  return %shuffle : vector<3x2xf32>
+}
+
+// -----
+
+// Both operands are used: no folding.
+// CHECK-LABEL: func @shuffle_both_operands_used
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   vector.shuffle %[[A]], %[[B]] [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_both_operands_used(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<4xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// One operand is poison, the other one is not used.
+// CHECK-LABEL: func @shuffle_poison_unused
+//       CHECK:   %[[r:.*]] = ub.poison : vector<4xi32>
+//       CHECK:   return %[[r]]
+func.func @shuffle_poison_unused(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, -1, -1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_poison_into_mask
+//       CHECK:   vector.shuffle %{{.*}}, %{{.*}} [-1, -1, 2, -1] : vector<2xi32>, vector<2xi32>
+func.func @fold_poison_into_mask(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, 2, 1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
 }
 
 // -----
@@ -3689,6 +3975,25 @@ func.func @insert_vector_poison_idx_non_cst(%a: vector<4x5xf32>, %b: vector<5xf3
 
 // -----
 
+// Similar to the test above, but with a dense constant destination. This exercises
+// foldDenseElementsAttrDestInsertOp, which must not crash when the dynamic index
+// constant is -1 (the poison sentinel). The IR should instead fold to ub.poison.
+// Regression test for https://github.com/llvm/llvm-project/issues/188404
+
+// CHECK-LABEL: @insert_scalar_poison_idx_dense_dest
+func.func @insert_scalar_poison_idx_dense_dest() -> vector<2xf16> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<2xf16>
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: return %[[UB]] : vector<2xf16>
+  %cst = arith.constant dense<0.0> : vector<2xf16>
+  %idx = arith.constant -1 : index
+  %val = arith.constant 2.5 : f16
+  %0 = vector.insert %val, %cst [%idx] : f16 into vector<2xf16>
+  return %0 : vector<2xf16>
+}
+
+// -----
+
 // Similar to test above, but now the index is out-of-bounds.
 
 // CHECK-LABEL: @no_fold_insert_scalar_idx_oob
@@ -4068,4 +4373,37 @@ func.func @extract_strided_slice_outer_shorter(%arg0: vector<4x8x16xf32>) -> vec
   %0 = vector.extract_strided_slice %arg0 {offsets = [1, 2], sizes = [3, 4], strides = [1, 1]} : vector<4x8x16xf32> to vector<3x4x16xf32>
   %1 = vector.extract_strided_slice %0 {offsets = [0], sizes = [2], strides = [1]} : vector<3x4x16xf32> to vector<2x4x16xf32>
   return %1 : vector<2x4x16xf32>
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/177833:
+// CanonializeEmptyMaskOp must not create arith.select with a vector condition
+// and scalar value types (incompatible with arith.select semantics). The
+// vector.mask op should remain unchanged.
+//
+// CHECK-LABEL: func @no_fold_empty_mask_scalar_result_with_passthru
+//  CHECK-SAME:     %[[MASK:.*]]: vector<1xi1>, %[[PASSTHRU:.*]]: i32, %[[VAL:.*]]: i32
+//       CHECK:   vector.mask %[[MASK]], %[[PASSTHRU]] { vector.yield %[[VAL]] : i32 } : vector<1xi1> -> i32
+//   CHECK-NOT:   arith.select
+func.func @no_fold_empty_mask_scalar_result_with_passthru(
+    %mask : vector<1xi1>, %passthru : i32, %val : i32) -> i32 {
+  %result = vector.mask %mask, %passthru { vector.yield %val : i32 } : vector<1xi1> -> i32
+  return %result : i32
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/177833:
+// MaskOp::fold must not crash with a null pointer dereference when the mask
+// is all-true and the mask body has no maskable op (only a yield).
+//
+// CHECK-LABEL: func @no_fold_alltrue_mask_empty_body_scalar_result
+//  CHECK-SAME:     %[[PASSTHRU:.*]]: i32, %[[VAL:.*]]: i32
+//       CHECK:   vector.mask
+func.func @no_fold_alltrue_mask_empty_body_scalar_result(
+    %passthru : i32, %val : i32) -> i32 {
+  %all_true = vector.constant_mask [1] : vector<1xi1>
+  %result = vector.mask %all_true, %passthru { vector.yield %val : i32 } : vector<1xi1> -> i32
+  return %result : i32
 }

@@ -16,18 +16,41 @@ void test_sized_delete(SizedDelete *x) {
 }
 
 // SizedDelete::operator delete(void*, unsigned long)
-// CIR:  cir.func private @_ZN11SizedDeletedlEPvm(!cir.ptr<!void>, !u64i)
-// LLVM: declare void @_ZN11SizedDeletedlEPvm(ptr, i64)
+// CIR:  cir.func private @_ZN11SizedDeletedlEPvm(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
+// LLVM: declare void @_ZN11SizedDeletedlEPvm(ptr noundef, i64 noundef)
 
 // CIR: cir.func {{.*}} @_Z17test_sized_deleteP11SizedDelete
 // CIR:   %[[X:.*]] = cir.load{{.*}} %{{.*}}
-// CIR:   %[[X_CAST:.*]] = cir.cast bitcast %[[X]] : !cir.ptr<!rec_SizedDelete> -> !cir.ptr<!void>
-// CIR:   %[[OBJ_SIZE:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:   cir.call @_ZN11SizedDeletedlEPvm(%[[X_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void>, !u64i) -> ()
+// CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_SizedDelete>
+// CIR:   %[[NOT_NULL:.*]] = cir.cmp ne %[[X]], %[[NULL]] : !cir.ptr<!rec_SizedDelete>
+// CIR:   cir.if %[[NOT_NULL]] {
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       %[[X_CAST:.*]] = cir.cast bitcast %[[X]] : !cir.ptr<!rec_SizedDelete> -> !cir.ptr<!void>
+// CIR:       %[[OBJ_SIZE:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:       cir.call @_ZN11SizedDeletedlEPvm(%[[X_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}) -> ()
+// CIR:       cir.yield
+// CIR:     }
+// CIR:   }
 
 // LLVM: define dso_local void @_Z17test_sized_deleteP11SizedDelete
 // LLVM:   %[[X:.*]] = load ptr, ptr %{{.*}}
-// LLVM:   call void @_ZN11SizedDeletedlEPvm(ptr %[[X]], i64 4)
+// LLVM:   %[[NOT_NULL:.*]] = icmp ne ptr %[[X]], null
+// LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
+// LLVM: [[DELETE_NOTNULL]]:
+// LLVM:   br label %[[ENTER_CLEANUP_SCOPE:.*]]
+// LLVM: [[ENTER_CLEANUP_SCOPE]]:
+// LLVM:   br label %[[NORMAL_CLEANUP:.*]]
+// LLVM: [[NORMAL_CLEANUP]]:
+// LLVM:   call void @_ZN11SizedDeletedlEPvm(ptr noundef %[[X]], i64 noundef 4)
+// LLVM:   br label %[[EXIT_CLEANUP:.*]]
+// LLVM: [[EXIT_CLEANUP]]:
+// LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
+// LLVM: [[EXIT_CLEANUP_SCOPE]]:
+// LLVM:   br label %[[DELETE_END]]
+// LLVM: [[DELETE_END]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z17test_sized_deleteP11SizedDelete
 // OGCG:   %[[X:.*]] = load ptr, ptr %{{.*}}
@@ -53,25 +76,48 @@ Container::~Container() { delete contents; }
 // LLVM: define linkonce_odr void @_ZN8ContentsD2Ev
 
 // operator delete(void*, unsigned long)
-// CIR: cir.func {{.*}} @_ZdlPvm(!cir.ptr<!void>, !u64i)
-// LLVM: declare void @_ZdlPvm(ptr, i64)
+// CIR: cir.func {{.*}} @_ZdlPvm(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
+// LLVM: declare void @_ZdlPvm(ptr noundef, i64 noundef)
 
 // Container::~Container()
 // CIR: cir.func {{.*}} @_ZN9ContainerD2Ev
 // CIR:   %[[THIS:.*]] = cir.load %{{.*}}
 // CIR:   %[[CONTENTS_PTR_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "contents"} : !cir.ptr<!rec_Container> -> !cir.ptr<!cir.ptr<!rec_Contents>>
 // CIR:   %[[CONTENTS_PTR:.*]] = cir.load{{.*}} %[[CONTENTS_PTR_ADDR]]
-// CIR:   cir.call @_ZN8ContentsD2Ev(%[[CONTENTS_PTR]]) nothrow : (!cir.ptr<!rec_Contents>) -> ()
-// CIR:   %[[CONTENTS_CAST:.*]] = cir.cast bitcast %[[CONTENTS_PTR]] : !cir.ptr<!rec_Contents> -> !cir.ptr<!void>
-// CIR:   %[[OBJ_SIZE:.*]] = cir.const #cir.int<1> : !u64i
-// CIR:   cir.call @_ZdlPvm(%[[CONTENTS_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void>, !u64i) -> ()
+// CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_Contents>
+// CIR:   %[[NOT_NULL:.*]] = cir.cmp ne %[[CONTENTS_PTR]], %[[NULL]] : !cir.ptr<!rec_Contents>
+// CIR:   cir.if %[[NOT_NULL]] {
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.call @_ZN8ContentsD2Ev(%[[CONTENTS_PTR]]) nothrow : (!cir.ptr<!rec_Contents> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       %[[CONTENTS_CAST:.*]] = cir.cast bitcast %[[CONTENTS_PTR]] : !cir.ptr<!rec_Contents> -> !cir.ptr<!void>
+// CIR:       %[[OBJ_SIZE:.*]] = cir.const #cir.int<1> : !u64i
+// CIR:       cir.call @_ZdlPvm(%[[CONTENTS_CAST]], %[[OBJ_SIZE]]) nothrow {builtin} : (!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}) -> ()
+// CIR:       cir.yield
+// CIR:     }
+// CIR:   }
 
 // LLVM: define dso_local void @_ZN9ContainerD2Ev
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
-// LLVM:   %[[CONTENTS_PTR_ADDR:.*]] = getelementptr %struct.Container, ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[CONTENTS_PTR_ADDR:.*]] = getelementptr inbounds nuw %struct.Container, ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[CONTENTS_PTR:.*]] = load ptr, ptr %[[CONTENTS_PTR_ADDR]]
-// LLVM:   call void @_ZN8ContentsD2Ev(ptr %[[CONTENTS_PTR]])
-// LLVM:   call void @_ZdlPvm(ptr %[[CONTENTS_PTR]], i64 1)
+// LLVM:   %[[NOT_NULL:.*]] = icmp ne ptr %[[CONTENTS_PTR]], null
+// LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
+// LLVM: [[DELETE_NOTNULL]]:
+// LLVM:   br label %[[ENTER_CLEANUP_SCOPE:.*]]
+// LLVM: [[ENTER_CLEANUP_SCOPE]]:
+// LLVM:   call void @_ZN8ContentsD2Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CONTENTS_PTR]])
+// LLVM:   br label %[[NORMAL_CLEANUP:.*]]
+// LLVM: [[NORMAL_CLEANUP]]:
+// LLVM:   call void @_ZdlPvm(ptr noundef %[[CONTENTS_PTR]], i64 noundef 1)
+// LLVM:   br label %[[EXIT_CLEANUP:.*]]
+// LLVM: [[EXIT_CLEANUP]]:
+// LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
+// LLVM: [[EXIT_CLEANUP_SCOPE]]:
+// LLVM:   br label %[[DELETE_END]]
+// LLVM: [[DELETE_END]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_ZN9ContainerD2Ev
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
@@ -99,20 +145,29 @@ void destroy(StructWithVirtualDestructor *x) {
 // CIR:   %[[X_ADDR:.*]] = cir.alloca !cir.ptr<!rec_StructWithVirtualDestructor>
 // CIR:   cir.store %[[X_ARG]], %[[X_ADDR]]
 // CIR:   %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]]
-// CIR:   %[[VTABLE_PTR:.*]] = cir.vtable.get_vptr %[[X]] : !cir.ptr<!rec_StructWithVirtualDestructor> -> !cir.ptr<!cir.vptr>
-// CIR:   %[[VTABLE:.*]] = cir.load{{.*}} %[[VTABLE_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:   %[[DTOR_FN_ADDR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VTABLE]][1]
-// CIR:   %[[DTOR_FN_ADDR:.*]] = cir.load{{.*}} %[[DTOR_FN_ADDR_PTR]]
-// CIR:   cir.call %[[DTOR_FN_ADDR]](%[[X]])
+// CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_StructWithVirtualDestructor>
+// CIR:   %[[NOT_NULL:.*]] = cir.cmp ne %[[X]], %[[NULL]] : !cir.ptr<!rec_StructWithVirtualDestructor>
+// CIR:   cir.if %[[NOT_NULL]] {
+// CIR:     %[[VTABLE_PTR:.*]] = cir.vtable.get_vptr %[[X]] : !cir.ptr<!rec_StructWithVirtualDestructor> -> !cir.ptr<!cir.vptr>
+// CIR:     %[[VTABLE:.*]] = cir.load{{.*}} %[[VTABLE_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR:     %[[DTOR_FN_ADDR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VTABLE]][1]
+// CIR:     %[[DTOR_FN_ADDR:.*]] = cir.load{{.*}} %[[DTOR_FN_ADDR_PTR]]
+// CIR:     cir.call %[[DTOR_FN_ADDR]](%[[X]])
+// CIR:   }
 
-// LLVM: define {{.*}} void @_Z7destroyP27StructWithVirtualDestructor(ptr %[[X_ARG:.*]])
+// LLVM: define {{.*}} void @_Z7destroyP27StructWithVirtualDestructor(ptr {{.*}} %[[X_ARG:.*]])
 // LLVM:   %[[X_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[X_ARG]], ptr %[[X_ADDR]]
 // LLVM:   %[[X:.*]] = load ptr, ptr %[[X_ADDR]]
+// LLVM:   %[[NOT_NULL:.*]] = icmp ne ptr %[[X]], null
+// LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
+// LLVM: [[DELETE_NOTNULL]]:
 // LLVM:   %[[VTABLE:.*]] = load ptr, ptr %[[X]]
 // LLVM:   %[[DTOR_FN_ADDR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i32 1
 // LLVM:   %[[DTOR_FN_ADDR:.*]] = load ptr, ptr %[[DTOR_FN_ADDR_PTR]]
-// LLVM:   call void %[[DTOR_FN_ADDR]](ptr %[[X]])
+// LLVM:   call void %[[DTOR_FN_ADDR]](ptr {{.*}} %[[X]])
+// LLVM: [[DELETE_END]]:
+// LLVM:   ret void
 
 // OGCG: define {{.*}} void @_Z7destroyP27StructWithVirtualDestructor(ptr {{.*}} %[[X_ARG:.*]])
 // OGCG:   %[[X_ADDR:.*]] = alloca ptr

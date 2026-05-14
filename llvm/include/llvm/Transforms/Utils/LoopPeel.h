@@ -30,7 +30,7 @@ bool canPeelLastIteration(const Loop &L, ScalarEvolution &SE);
 /// instructions in the last peeled-off iteration. If \p PeelLast is true, peel
 /// off the last \p PeelCount iterations from \p L (canPeelLastIteration must be
 /// true for \p L), otherwise peel off the first \p PeelCount iterations.
-bool peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
+void peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
               ScalarEvolution *SE, DominatorTree &DT, AssumptionCache *AC,
               bool PreserveLCSSA, ValueToValueMapTy &VMap);
 

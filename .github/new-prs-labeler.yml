@@ -184,7 +184,10 @@ compiler-rt:msan:
 compiler-rt:sanitizer:
   - changed-files:
     - any-glob-to-any-file:
+      - llvm/include/llvm/Transforms/Utils/MemoryTaggingSupport.h
+      - llvm/lib/Target/AArch64/AArch64StackTagging.cpp
       - llvm/lib/Transforms/Instrumentation/*Sanitizer*
+      - llvm/lib/Transforms/Utils/MemoryTaggingSupport.cpp
       - compiler-rt/lib/interception/**
       - compiler-rt/lib/*san*/**
       - compiler-rt/include/sanitizer/**
@@ -372,6 +375,12 @@ mlir:llvm:
     - any-glob-to-any-file:
       - mlir/**/LLVM*
       - mlir/**/LLVM*/**
+
+mlir:nvvm:
+  - changed-files:
+    - any-glob-to-any-file:
+      - mlir/**/NVVM*
+      - mlir/**/NVVM*/**
 
 mlir:linalg:
   - changed-files:
@@ -685,6 +694,15 @@ clang:analysis:
     - any-glob-to-any-file:
       - clang/include/clang/Analysis/**
       - clang/lib/Analysis/**
+
+clang:ssaf:
+  - changed-files:
+    - any-glob-to-any-file:
+      - clang/docs/ScalableStaticAnalysisFramework/**
+      - clang/include/clang/ScalableStaticAnalysisFramework/**
+      - clang/lib/ScalableStaticAnalysisFramework/**
+      - clang/test/Analysis/Scalable/**
+      - clang/unittests/ScalableStaticAnalysisFramework/**
 
 clang:static analyzer:
   - changed-files:
@@ -1413,6 +1431,7 @@ clang:temporal-safety:
       - clang/test/Sema/*lifetime-safety*
       - clang/test/Sema/*lifetime-analysis*
       - clang/test/Analysis/LifetimeSafety/**
+      - clang/docs/LifetimeSafety.rst
 
 clang:as-a-library:
   - changed-files:
@@ -1455,3 +1474,9 @@ infrastructure:
   - changed-files:
     - any-glob-to-any-file:
       - .ci/**
+
+tools:llubi:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/tools/llubi/**
+      - llvm/test/tools/llubi/**

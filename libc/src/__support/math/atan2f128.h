@@ -81,27 +81,27 @@ namespace math {
 // and relative errors bounded by:
 //   |(atan(u) - P(u)) / P(u)| < 2^-114.
 
-LIBC_INLINE static constexpr float128 atan2f128(float128 y, float128 x) {
+LIBC_INLINE LIBC_CONSTEXPR float128 atan2f128(float128 y, float128 x) {
   using Float128 = fputil::DyadicFloat<128>;
 
-  constexpr Float128 ZERO = {Sign::POS, 0, 0_u128};
-  constexpr Float128 MZERO = {Sign::NEG, 0, 0_u128};
-  constexpr Float128 PI = {Sign::POS, -126,
-                           0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
-  constexpr Float128 MPI = {Sign::NEG, -126,
-                            0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
-  constexpr Float128 PI_OVER_2 = {Sign::POS, -127,
-                                  0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
-  constexpr Float128 MPI_OVER_2 = {Sign::NEG, -127,
-                                   0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
-  constexpr Float128 PI_OVER_4 = {Sign::POS, -128,
-                                  0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
-  constexpr Float128 THREE_PI_OVER_4 = {
+  LIBC_CONSTEXPR Float128 ZERO = {Sign::POS, 0, 0_u128};
+  LIBC_CONSTEXPR Float128 MZERO = {Sign::NEG, 0, 0_u128};
+  LIBC_CONSTEXPR Float128 PI = {Sign::POS, -126,
+                                0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+  LIBC_CONSTEXPR Float128 MPI = {Sign::NEG, -126,
+                                 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+  LIBC_CONSTEXPR Float128 PI_OVER_2 = {
+      Sign::POS, -127, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+  LIBC_CONSTEXPR Float128 MPI_OVER_2 = {
+      Sign::NEG, -127, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+  LIBC_CONSTEXPR Float128 PI_OVER_4 = {
+      Sign::POS, -128, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+  LIBC_CONSTEXPR Float128 THREE_PI_OVER_4 = {
       Sign::POS, -128, 0x96cbe3f9'990e91a7'9394c9e8'a0a5159d_u128};
 
   // Adjustment for constant term:
   //   CONST_ADJ[x_sign][y_sign][recip]
-  constexpr Float128 CONST_ADJ[2][2][2] = {
+  LIBC_CONSTEXPR Float128 CONST_ADJ[2][2][2] = {
       {{ZERO, MPI_OVER_2}, {MZERO, MPI_OVER_2}},
       {{MPI, PI_OVER_2}, {MPI, PI_OVER_2}}};
 
@@ -139,7 +139,7 @@ LIBC_INLINE static constexpr float128 atan2f128(float128 y, float128 x) {
     //   0: zero
     //   1: finite, non-zero
     //   2: infinity
-    constexpr Float128 EXCEPTS[3][3][2] = {
+    LIBC_CONSTEXPR Float128 EXCEPTS[3][3][2] = {
         {{ZERO, PI}, {ZERO, PI}, {ZERO, PI}},
         {{PI_OVER_2, PI_OVER_2}, {ZERO, ZERO}, {ZERO, PI}},
         {{PI_OVER_2, PI_OVER_2},
@@ -161,9 +161,11 @@ LIBC_INLINE static constexpr float128 atan2f128(float128 y, float128 x) {
   // We have the following bound for normalized n and d:
   //   2^(-exp_diff - 1) < n/d < 2^(-exp_diff + 1).
   if (LIBC_UNLIKELY(exp_diff > FPBits::FRACTION_LEN + 2)) {
+    Float128 quotient = rounded_div(num, den);
+    Float128 result = quick_add(const_term, quotient);
     if (final_sign)
-      const_term.sign = const_term.sign.negate();
-    return static_cast<float128>(const_term);
+      result.sign = result.sign.negate();
+    return static_cast<float128>(result);
   }
 
   // Take 24 leading bits of num and den to convert to float for fast division.

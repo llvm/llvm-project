@@ -579,3 +579,44 @@ namespace UnknownParams {
     return 1;
   }
 }
+
+namespace NonCompoundStmtBody {
+  /// The body of the constructor is NOT a CompoundStmt.
+  struct S {
+    constexpr S() try { x = 20; } catch(...) {}
+
+    int x = 0;
+  };
+
+  constexpr bool testS() {
+    S s;
+    return s.x == 20;
+  }
+  static_assert(testS());
+}
+
+namespace LValueConstant {
+  struct D {
+    unsigned y;
+  };
+
+  extern D d;
+  consteval D& c() { return d; }
+  long long f() { return c().y; }
+}
+
+#if __cplusplus >= 202302L
+namespace PointerIntInc {
+  constexpr const char *foo(const char *p, bool b) {
+    auto q = reinterpret_cast<__UINTPTR_TYPE__>(p);
+    if (b)
+      q++;
+    else
+      q--;
+    return p;
+  }
+  constexpr char p = 10;
+  auto bar = foo(&p, true);
+  auto bar2 = foo(&p, false);
+}
+#endif

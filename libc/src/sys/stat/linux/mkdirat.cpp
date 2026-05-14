@@ -8,25 +8,17 @@
 
 #include "src/sys/stat/mkdirat.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/mkdirat.h"
 #include "src/__support/common.h"
-
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include <sys/stat.h>
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, mkdirat, (int dfd, const char *path, mode_t mode)) {
-#ifdef SYS_mkdirat
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_mkdirat, dfd, path, mode);
-#else
-#error "mkdirat syscall not available."
-#endif
-
-  if (ret < 0) {
-    libc_errno = -ret;
+  auto result = linux_syscalls::mkdirat(dfd, path, mode);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
   return 0;

@@ -48,6 +48,10 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
 #ifndef NDEBUG
   // Some additional checks not yet implemented by verifyTargetNode.
   switch (N->getOpcode()) {
+  case AArch64ISD::CTTZ_ELTS:
+    assert(N->getOperand(0).getValueType() == N->getOperand(1).getValueType() &&
+           "Expected the general-predicate and mask to have matching types");
+    break;
   case AArch64ISD::SADDWT:
   case AArch64ISD::SADDWB:
   case AArch64ISD::UADDWT:
@@ -123,9 +127,9 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
                                           MachinePointerInfo SrcPtrInfo) const {
 
   // Get the constant size of the copy/set.
-  uint64_t ConstSize = 0;
+  LocationSize MemSize = LocationSize::afterPointer();
   if (auto *C = dyn_cast<ConstantSDNode>(Size))
-    ConstSize = C->getZExtValue();
+    MemSize = LocationSize::precise(C->getZExtValue());
 
   const bool IsSet = Opcode == AArch64::MOPSMemorySetPseudo ||
                      Opcode == AArch64::MOPSMemorySetTaggingPseudo;
@@ -136,7 +140,7 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
       isVolatile ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
   auto DstFlags = MachineMemOperand::MOStore | Vol;
   auto *DstOp =
-      MF.getMachineMemOperand(DstPtrInfo, DstFlags, ConstSize, Alignment);
+      MF.getMachineMemOperand(DstPtrInfo, DstFlags, MemSize, Alignment);
 
   if (IsSet) {
     // Extend value to i64, if required.
@@ -154,7 +158,7 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
 
     auto SrcFlags = MachineMemOperand::MOLoad | Vol;
     auto *SrcOp =
-        MF.getMachineMemOperand(SrcPtrInfo, SrcFlags, ConstSize, Alignment);
+        MF.getMachineMemOperand(SrcPtrInfo, SrcFlags, MemSize, Alignment);
     DAG.setNodeMemRefs(Node, {DstOp, SrcOp});
     return SDValue(Node, 3);
   }

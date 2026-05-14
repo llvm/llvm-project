@@ -14,8 +14,8 @@ define i32 @PR51200(ptr %p, ptr %p2) {
 ; CHECK-LABEL: define i32 @PR51200
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[P]], ptr [[P2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[STPCPY]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[CALL:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[CALL]]

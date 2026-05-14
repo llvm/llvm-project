@@ -151,8 +151,8 @@ struct ImOpConversion : public ConvertOpToLLVMPattern<complex::ImOp> {
 };
 
 struct BinaryComplexOperands {
-  std::complex<Value> lhs;
-  std::complex<Value> rhs;
+  mlir::Complex<Value> lhs;
+  mlir::Complex<Value> rhs;
 };
 
 template <typename OpTy>
@@ -279,13 +279,20 @@ struct MulOpConversion : public ConvertOpToLLVMPattern<complex::MulOp> {
     Value lhsRe = arg.lhs.real();
     Value lhsIm = arg.lhs.imag();
 
-    Value real = LLVM::FSubOp::create(
-        rewriter, loc, LLVM::FMulOp::create(rewriter, loc, rhsRe, lhsRe, fmf),
-        LLVM::FMulOp::create(rewriter, loc, rhsIm, lhsIm, fmf), fmf);
+    Value lhsRealTimesRhsReal =
+        LLVM::FMulOp::create(rewriter, loc, rhsRe, lhsRe, fmf);
+    Value lhsImagTimesRhsImag =
+        LLVM::FMulOp::create(rewriter, loc, rhsIm, lhsIm, fmf);
+    Value lhsImagTimesRhsReal =
+        LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsRe, fmf);
+    Value lhsRealTimesRhsImag =
+        LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsIm, fmf);
 
-    Value imag = LLVM::FAddOp::create(
-        rewriter, loc, LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsRe, fmf),
-        LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsIm, fmf), fmf);
+    Value real = LLVM::FSubOp::create(rewriter, loc, lhsRealTimesRhsReal,
+                                      lhsImagTimesRhsImag, fmf);
+
+    Value imag = LLVM::FAddOp::create(rewriter, loc, lhsImagTimesRhsReal,
+                                      lhsRealTimesRhsImag, fmf);
 
     result.setReal(rewriter, loc, real);
     result.setImaginary(rewriter, loc, imag);
@@ -375,7 +382,9 @@ void ConvertComplexToLLVMPass::runOnOperation() {
 namespace {
 /// Implement the interface to convert MemRef to LLVM.
 struct ComplexToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  ComplexToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

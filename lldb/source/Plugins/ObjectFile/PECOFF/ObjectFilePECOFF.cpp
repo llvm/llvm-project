@@ -86,7 +86,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_objectfilepecoff_properties);
+    m_collection_sp->Initialize(g_objectfilepecoff_properties_def);
   }
 
   llvm::Triple::EnvironmentType ABI() const {
@@ -165,7 +165,7 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
     auto raw_data = coff_obj.getData();
     LLDB_SCOPED_TIMERF(
         "Calculating module crc32 %s with size %" PRIu64 " KiB",
-        FileSpec(coff_obj.getFileName()).GetFilename().AsCString(),
+        FileSpec(coff_obj.getFileName()).GetFilename().AsCString(""),
         static_cast<lldb::offset_t>(raw_data.size()) / 1024);
     gnu_debuglink_crc = llvm::crc32(0, llvm::arrayRefFromStringRef(raw_data));
   }
@@ -215,7 +215,7 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(
     extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
 
-  if (!ObjectFilePECOFF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer()))
+  if (!ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already
@@ -240,7 +240,11 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
-  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
+  if (!data_sp)
+    return nullptr;
+  DataExtractorSP extractor_sp =
+      std::make_shared<DataExtractor>(data_sp, eByteOrderLittle, 4);
+  if (!ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return nullptr;
   auto objfile_up = std::make_unique<ObjectFilePECOFF>(
       module_sp, data_sp, process_sp, header_addr);
@@ -250,31 +254,31 @@ ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFilePECOFF::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
-  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
-    return initial_count;
+ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
+    lldb::offset_t file_offset, lldb::offset_t length) {
+  if (!extractor_sp || !extractor_sp->HasData() ||
+      !ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
+    return {};
 
   Log *log = GetLog(LLDBLog::Object);
 
-  if (data_sp->GetByteSize() < length)
+  if (extractor_sp->GetByteSize() < length)
     if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
-      data_sp = std::move(full_sp);
+      extractor_sp->SetData(std::move(full_sp));
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
-      toStringRef(data_sp->GetData()), file.GetFilename().GetStringRef()));
+      toStringRef(extractor_sp->GetSharedDataBuffer()->GetData()),
+      file.GetFilename().GetStringRef()));
 
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", file);
-    return initial_count;
+    return {};
   }
 
   auto *COFFObj = llvm::dyn_cast<llvm::object::COFFObjectFile>(binary->get());
   if (!COFFObj)
-    return initial_count;
+    return {};
 
   ModuleSpec module_spec(file);
   ArchSpec &spec = module_spec.GetArchitecture();
@@ -328,6 +332,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   if (env == llvm::Triple::UnknownEnvironment)
     env = default_env;
 
+  ModuleSpecList specs;
   switch (COFFObj->getMachine()) {
   case MachineAmd64:
     spec.SetTriple("x86_64-pc-windows");
@@ -354,7 +359,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     break;
   }
 
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
 bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
@@ -366,10 +371,9 @@ bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
   return SaveMiniDump(process_sp, options, error);
 }
 
-bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP data_sp) {
-  DataExtractor data(data_sp, eByteOrderLittle, 4);
+bool ObjectFilePECOFF::MagicBytesMatch(DataExtractorSP extractor_sp) {
   lldb::offset_t offset = 0;
-  uint16_t magic = data.GetU16(&offset);
+  uint16_t magic = extractor_sp->GetU16(&offset);
   return magic == IMAGE_DOS_SIGNATURE;
 }
 
@@ -449,12 +453,12 @@ bool ObjectFilePECOFF::ParseHeader() {
     m_data_nsp->SetByteOrder(eByteOrderLittle);
     lldb::offset_t offset = 0;
 
-    if (ParseDOSHeader(*m_data_nsp.get(), m_dos_header)) {
+    if (ParseDOSHeader(*m_data_nsp, m_dos_header)) {
       offset = m_dos_header.e_lfanew;
       uint32_t pe_signature = m_data_nsp->GetU32(&offset);
       if (pe_signature != IMAGE_NT_SIGNATURE)
         return false;
-      if (ParseCOFFHeader(*m_data_nsp.get(), &offset, m_coff_header)) {
+      if (ParseCOFFHeader(*m_data_nsp, &offset, m_coff_header)) {
         if (m_coff_header.hdrsize > 0)
           ParseCOFFOptionalHeader(&offset);
         ParseSectionHeaders(offset);
@@ -695,7 +699,7 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
     return {};
 
   if (m_data_nsp->ValidOffsetForDataOfSize(offset, size))
-    return DataExtractor(*m_data_nsp.get(), offset, size);
+    return DataExtractor(*m_data_nsp, offset, size);
 
   ProcessSP process_sp(m_process_wp.lock());
   DataExtractor data;
@@ -1101,6 +1105,27 @@ std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
   if (GetDebugLinkContents(*m_binary, gnu_debuglink_file, gnu_debuglink_crc))
     return FileSpec(gnu_debuglink_file);
   return std::nullopt;
+}
+
+std::optional<FileSpec> ObjectFilePECOFF::GetPDBPath() {
+  llvm::StringRef pdb_file;
+  const llvm::codeview::DebugInfo *pdb_info = nullptr;
+  if (llvm::Error Err = m_binary->getDebugPDBInfo(pdb_info, pdb_file)) {
+    // DebugInfo section is corrupt.
+    Log *log = GetLog(LLDBLog::Object);
+    llvm::StringRef file = m_binary->getFileName();
+    LLDB_LOG_ERROR(
+        log, std::move(Err),
+        "Failed to read Codeview record for PDB debug info file ({1}): {0}",
+        file);
+    return std::nullopt;
+  }
+  if (pdb_file.empty()) {
+    // No DebugInfo section present.
+    return std::nullopt;
+  }
+  return FileSpec(pdb_file, FileSpec::GuessPathStyle(pdb_file).value_or(
+                                FileSpec::Style::native));
 }
 
 uint32_t ObjectFilePECOFF::ParseDependentModules() {

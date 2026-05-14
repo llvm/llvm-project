@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=aarch64-expand-pseudo -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -passes=aarch64-expand-pseudo -o - %s | FileCheck %s
 
 # When expanding a BLR_BTI, we should copy all the operands to the branch in the
 # bundle. Otherwise we could end up using a register after the BL which was

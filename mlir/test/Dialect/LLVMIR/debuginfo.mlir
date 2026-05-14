@@ -3,10 +3,15 @@
 // CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"debuginfo.mlir" in "/test/">
 #file = #llvm.di_file<"debuginfo.mlir" in "/test/">
 
-// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full>
+// CHECK-DAG: #[[NS:.*]] = #llvm.di_namespace<name = "cu_import_ns", exportSymbols = false>
+// CHECK-DAG: #[[IE:.*]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[FILE]], entity = #[[NS]], file = #[[FILE]]>
+// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true, importedEntities = #[[IE]]>
+#cu_import_ns = #llvm.di_namespace<name = "cu_import_ns", exportSymbols = false>
+#cu_import_ie = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #file, entity = #cu_import_ns, file = #file>
 #cu = #llvm.di_compile_unit<
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
-  producer = "MLIR", isOptimized = true, emissionKind = Full
+  producer = "MLIR", isOptimized = true, emissionKind = Full,
+  isDebugInfoForProfiling = true, importedEntities = #cu_import_ie
 >
 
 // CHECK-DAG: #[[NULL:.*]] = #llvm.di_null_type
@@ -22,6 +27,12 @@
 #int1 = #llvm.di_basic_type<
   tag = DW_TAG_base_type, name = "int1",
   sizeInBits = 32, encoding = DW_ATE_signed
+>
+
+// CHECK-DAG: #[[FLOAT1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "float1", sizeInBits = 32, encoding = DW_ATE_float>
+#float1 = #llvm.di_basic_type<
+  tag = DW_TAG_base_type, name = "float1",
+  sizeInBits = 32, encoding = DW_ATE_float
 >
 
 // CHECK-DAG: #[[PTR0:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT1]]>
@@ -44,6 +55,16 @@
   dwarfAddressSpace = 3, extraData = #int1
 >
 
+// CHECK-DAG: #[[PTR3:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, flags = "Artificial|ObjectPointer">
+#ptr3 = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, flags = "Artificial|ObjectPointer"
+>
+
+// CHECK-DAG: #[[PTR4:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type>
+#ptr4 = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, flags = "Zero"
+>
+
 // CHECK-DAG: #[[COMP0:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array0", line = 10, sizeInBits = 128, alignInBits = 32>
 #comp0 = #llvm.di_composite_type<
   tag = DW_TAG_array_type, name = "array0",
@@ -57,6 +78,31 @@
   // Specify the subrange count.
   allocated = <[DW_OP_push_object_address, DW_OP_deref]>,
   elements = #llvm.di_subrange<count = 4>
+>
+
+// CHECK-DAG: #[[DISC:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "discriminator", baseType = #[[INT0]], flags = Artificial>
+#disc = #llvm.di_derived_type<
+  tag = DW_TAG_member, name = "discriminator", baseType = #int0,
+  flags = Artificial
+>
+
+// CHECK-DAG: #[[ELEM_INT:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "_int1", baseType = #[[INT1]], extraData = 1 : i8>
+#elemInt = #llvm.di_derived_type<
+  tag = DW_TAG_member, name = "_int1", baseType = #int1,
+  extraData = 1 : i8
+>
+
+// CHECK-DAG: #[[ELEM_FLOAT:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "_float1", baseType = #[[FLOAT1]], extraData = 2 : i8>
+#elemFloat = #llvm.di_derived_type<
+  tag = DW_TAG_member, name = "_float1", baseType = #float1,
+  extraData = 2 : i8
+>
+
+// CHECK-DAG: #[[VARIANT:.*]] = #llvm.di_composite_type<tag = DW_TAG_variant_part, name = "variant_part", identifier = "variant-id", discriminator = #[[DISC]], elements = #[[ELEM_INT]], #[[ELEM_FLOAT]]>
+#variant = #llvm.di_composite_type<
+  tag = DW_TAG_variant_part, name = "variant_part",
+  identifier = "variant-id", discriminator = #disc,
+  elements = #elemInt, #elemFloat
 >
 
 // CHECK-DAG: #[[TOPLEVEL:.*]] = #llvm.di_namespace<name = "toplevel", exportSymbols = true>
@@ -89,9 +135,9 @@
  name = "expr_elements2", baseType = #int0, elements =
  #llvm.di_generic_subrange<count = #exp1, lowerBound = #exp2, stride = #exp3>>
 
-// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]], #[[COMP3:.*]]>
+// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[PTR3]], #[[PTR4]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]], #[[COMP3:.*]], #[[VARIANT]]>
 #spType0 = #llvm.di_subroutine_type<
-  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #comp0, #comp1, #comp2, #comp3
+  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #ptr3, #ptr4, #comp0, #comp1, #comp2, #comp3, #variant
 >
 
 // CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<types = #[[INT1]], #[[INT1]]>

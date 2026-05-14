@@ -669,6 +669,9 @@ public:
   bool TraverseConceptReference(ConceptReference *X) {
     return traverseNode(X, [&] { return Base::TraverseConceptReference(X); });
   }
+  bool TraverseOffsetOfNode(const OffsetOfNode *N) {
+    return traverseNode(N, [&] { return Base::TraverseOffsetOfNode(N); });
+  }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {
     if (!X || isImplicit(X))
@@ -892,13 +895,19 @@ private:
     // rather than the TypeLoc nested inside it.
     // We still traverse the TypeLoc, because it may contain other targeted
     // things like the T in ~Foo<T>().
-    if (const auto *CDD = N.get<CXXDestructorDecl>())
-      return CDD->getNameInfo().getNamedTypeInfo()->getTypeLoc().getBeginLoc();
+    // FIXME: Investigate if getNamedTypeInfo() can still return null for
+    // invalid cases, and drop these checks when it never returns null.
+    if (const auto *CDD = N.get<CXXDestructorDecl>()) {
+      if (auto *TypeInfo = CDD->getNameInfo().getNamedTypeInfo())
+        return TypeInfo->getTypeLoc().getBeginLoc();
+    }
     if (const auto *ME = N.get<MemberExpr>()) {
       auto NameInfo = ME->getMemberNameInfo();
       if (NameInfo.getName().getNameKind() ==
-          DeclarationName::CXXDestructorName)
-        return NameInfo.getNamedTypeInfo()->getTypeLoc().getBeginLoc();
+          DeclarationName::CXXDestructorName) {
+        if (auto *TypeInfo = NameInfo.getNamedTypeInfo())
+          return TypeInfo->getTypeLoc().getBeginLoc();
+      }
     }
 
     return SourceRange();
@@ -919,6 +928,15 @@ private:
     // Prevent it claiming 's' in the case above.
     if (N.get<ExprWithCleanups>())
       return;
+
+    if (const auto *OON = N.get<OffsetOfNode>()) {
+      if (OON->getKind() == OffsetOfNode::Array) {
+        // Leave the array index expression to its own child nodes.
+        claimRange(OON->getBeginLoc(), Result);
+        claimRange(OON->getEndLoc(), Result);
+        return;
+      }
+    }
 
     // Declarators nest "inside out", with parent types inside child ones.
     // Instead of claiming the whole range (clobbering parent tokens), carefully
@@ -957,6 +975,10 @@ private:
       }
       if (auto PTL = TL->getAs<PointerTypeLoc>()) {
         claimRange(PTL.getStarLoc(), Result);
+        return;
+      }
+      if (auto MPTL = TL->getAs<MemberPointerTypeLoc>()) {
+        claimRange(MPTL.getLocalSourceRange(), Result);
         return;
       }
       if (auto FTL = TL->getAs<FunctionTypeLoc>()) {

@@ -33,6 +33,7 @@ group("unittests") {
     "FileCheck:FileCheckTests",
     "Frontend:LLVMFrontendTests",
     "FuzzMutate:FuzzMutateTests",
+    "HTTP:HTTPTests",
     "IR:IRTests",
     "InterfaceStub:InterfaceStubTests",
     "LineEditor:LineEditorTests",

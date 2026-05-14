@@ -35,11 +35,13 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/lldb-enumerations.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 
 using namespace lldb_private;
@@ -108,16 +110,13 @@ lldb::ValueObjectSP UserExpression::GetObjectPointerValueObject(
     return {};
   }
 
-  lldb::VariableSP var_sp;
-  lldb::ValueObjectSP valobj_sp;
+  if (auto var_list_sp = frame_sp->GetInScopeVariableList(false))
+    if (auto var_sp =
+            var_list_sp->FindVariable(ConstString(object_name), false))
+      return frame_sp->GetValueObjectForFrameVariable(var_sp,
+                                                      lldb::eNoDynamicValues);
 
-  return frame_sp->GetValueForVariableExpressionPath(
-      object_name, lldb::eNoDynamicValues,
-      StackFrame::eExpressionPathOptionCheckPtrVsMember |
-          StackFrame::eExpressionPathOptionsNoFragileObjcIvar |
-          StackFrame::eExpressionPathOptionsNoSyntheticChildren |
-          StackFrame::eExpressionPathOptionsNoSyntheticArrayRange,
-      var_sp, err);
+  return {};
 }
 
 lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
@@ -290,34 +289,29 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
   // If there is a fixed expression, try to parse it:
   if (!parse_success) {
-    // Delete the expression that failed to parse before attempting to parse
-    // the next expression.
-    user_expression_sp.reset();
-
     execution_results = lldb::eExpressionParseError;
     if (!fixed_expression->empty() && options.GetAutoApplyFixIts()) {
       const uint64_t max_fix_retries = options.GetRetriesWithFixIts();
       for (uint64_t i = 0; i < max_fix_retries; ++i) {
         // Try parsing the fixed expression.
-        lldb::UserExpressionSP fixed_expression_sp(
-            target->GetUserExpressionForLanguage(
-                fixed_expression->c_str(), full_prefix, language, desired_type,
-                options, ctx_obj, error));
-        if (!fixed_expression_sp)
+        user_expression_sp.reset(target->GetUserExpressionForLanguage(
+            fixed_expression->c_str(), full_prefix, language, desired_type,
+            options, ctx_obj, error));
+        if (!user_expression_sp)
           break;
+
         DiagnosticManager fixed_diagnostic_manager;
-        parse_success = fixed_expression_sp->Parse(
+        parse_success = user_expression_sp->Parse(
             fixed_diagnostic_manager, exe_ctx, execution_policy,
             keep_expression_in_memory, generate_debug_info);
         if (parse_success) {
           diagnostic_manager.Clear();
-          user_expression_sp = fixed_expression_sp;
           break;
         }
         // The fixed expression also didn't parse. Let's check for any new
         // fixits we could try.
-        if (!fixed_expression_sp->GetFixedText().empty()) {
-          *fixed_expression = fixed_expression_sp->GetFixedText().str();
+        if (!user_expression_sp->GetFixedText().empty()) {
+          *fixed_expression = user_expression_sp->GetFixedText().str();
         } else {
           // Fixed expression didn't compile without a fixit, don't retry and
           // don't tell the user about it.
@@ -328,6 +322,9 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     }
 
     if (!parse_success) {
+      if (user_expression_sp)
+        user_expression_sp->FixupParseErrorDiagnostics(diagnostic_manager);
+
       if (target->GetEnableNotifyAboutFixIts() && fixed_expression &&
           !fixed_expression->empty()) {
         std::string fixit =

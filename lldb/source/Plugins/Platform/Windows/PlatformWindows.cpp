@@ -398,10 +398,10 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   }
 
   if (!token) {
-    // XXX(compnerd) should we use the compiler to get the sizeof(unsigned)?
-    uint64_t error_code =
-        process->ReadUnsignedIntegerFromMemory(injected_result + 2 * word_size + sizeof(unsigned),
-                                               word_size, 0, status);
+    // ErrorCode is a 4-byte `unsigned` field in __lldb_LoadLibraryResult.
+    uint64_t error_code = process->ReadUnsignedIntegerFromMemory(
+        injected_result + 2 * word_size + sizeof(unsigned), sizeof(unsigned), 0,
+        status);
     if (status.Fail()) {
       error = Status::FromErrorStringWithFormat(
           "LoadLibrary error: could not read error status: %s",
@@ -430,7 +430,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
 
 Status PlatformWindows::UnloadImage(Process *process, uint32_t image_token) {
   const addr_t address = process->GetImagePtrFromToken(image_token);
-  if (address == LLDB_INVALID_IMAGE_TOKEN)
+  if (address == LLDB_INVALID_ADDRESS)
     return Status::FromErrorString("invalid image token");
 
   StreamString expression;
@@ -522,9 +522,9 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
     return nullptr;
   error = process_sp->Launch(launch_info);
 #ifdef _WIN32
-  if (error.Success())
-    process_sp->SetPseudoConsoleHandle(launch_info.GetPTYSP());
-  else {
+  if (error.Success()) {
+    process_sp->SetPseudoConsoleHandle();
+  } else {
     Log *log = GetLog(LLDBLog::Platform);
     LLDB_LOGF(log, "Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
               error.AsCString());
@@ -645,6 +645,11 @@ extern "C" {
 // application should include in its DLL search path.
 #define LOAD_LIBRARY_SEARCH_DEFAULT_DIRS 0x00001000
 
+// If this value is used, and lpFileName specifies an absolute path, the system
+// uses the alternate file search strategy to find associated executable
+// modules.
+#define LOAD_WITH_ALTERED_SEARCH_PATH 0x00000008
+
 // WINBASEAPI DWORD WINAPI GetLastError(VOID);
 /* __declspec(dllimport) */ uint32_t __stdcall GetLastError();
 
@@ -688,6 +693,32 @@ void * __lldb_LoadLibraryHelper(const wchar_t *name, const wchar_t *paths,
 
   result->ImageBase = LoadLibraryExW(name, nullptr,
                                      LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+
+  // Fallback: if the AddDllDirectory + LOAD_LIBRARY_SEARCH_DEFAULT_DIRS path
+  // failed to find the library, iterate the search paths ourselves and
+  // load by absolute path using LOAD_WITH_ALTERED_SEARCH_PATH, which makes
+  // Windows use the loaded DLL's own directory to resolve its sibling imports.
+  if (result->ImageBase == nullptr) {
+    wchar_t full[4096];
+    for (const wchar_t *path = paths; path && *path; path += wcslen(path) + 1) {
+      size_t plen = wcslen(path);
+      size_t nlen = wcslen(name);
+      // Need room for: path + '\\' + name + '\0'
+      if (plen + 1 + nlen + 1 > 4096)
+        continue;
+      wchar_t *p = full;
+      for (size_t i = 0; i < plen; ++i)
+        *p++ = path[i];
+      *p++ = L'\\';
+      for (size_t i = 0; i <= nlen; ++i) // Copy name including trailing '\0'.
+        *p++ = name[i];
+      result->ImageBase = LoadLibraryExW(full, nullptr,
+                                         LOAD_WITH_ALTERED_SEARCH_PATH);
+      if (result->ImageBase != nullptr)
+        break;
+    }
+  }
+
   if (result->ImageBase == nullptr)
     result->ErrorCode = GetLastError();
   else

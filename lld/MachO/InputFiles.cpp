@@ -1451,7 +1451,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       continue;
     }
 
-    assert(cieMap.count(cieIsec));
+    assert(cieMap.contains(cieIsec));
     const CIE &cie = cieMap[cieIsec];
     // Offset of the function address within the EH frame.
     const size_t funcAddrOff = dataOff;
@@ -1858,15 +1858,6 @@ constexpr std::array<StringRef, 3> skipPlatformChecks{
     "/usr/lib/system/libsystem_platform.dylib",
     "/usr/lib/system/libsystem_pthread.dylib"};
 
-static bool skipPlatformCheckForCatalyst(const InterfaceFile &interface,
-                                         bool explicitlyLinked) {
-  // Catalyst outputs can link against implicitly linked macOS-only libraries.
-  if (config->platform() != PLATFORM_MACCATALYST || explicitlyLinked)
-    return false;
-  return is_contained(interface.targets(),
-                      MachO::Target(config->arch(), PLATFORM_MACOS));
-}
-
 static bool isArchABICompatible(ArchitectureSet archSet,
                                 Architecture targetArch) {
   uint32_t cpuType;
@@ -1877,6 +1868,18 @@ static bool isArchABICompatible(ArchitectureSet archSet,
     std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(p);
     return cpuType == targetCpuType;
   });
+}
+
+static bool skipPlatformCheckForCatalyst(const InterfaceFile &interface,
+                                         bool explicitlyLinked) {
+  // Catalyst outputs can link against implicitly linked macOS-only libraries.
+  if (config->platform() != PLATFORM_MACCATALYST || explicitlyLinked)
+    return false;
+  ArchitectureSet macOSArchs;
+  for (const auto &target : interface.targets())
+    if (target.Platform == PLATFORM_MACOS)
+      macOSArchs.set(target.Arch);
+  return isArchABICompatible(macOSArchs, config->arch());
 }
 
 static bool isTargetPlatformArchCompatible(

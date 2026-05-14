@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
 
 namespace mlir {
 namespace acc {
@@ -42,11 +43,12 @@ InFlightDiagnostic OpenACCSupport::emitNYI(Location loc, const Twine &message) {
 }
 
 remark::detail::InFlightRemark
-OpenACCSupport::emitRemark(Operation *op, const Twine &message,
+OpenACCSupport::emitRemark(Operation *op,
+                           std::function<std::string()> messageFn,
                            llvm::StringRef category) {
   if (impl)
-    return impl->emitRemark(op, message, category);
-  return acc::emitRemark(op, message, category);
+    return impl->emitRemark(op, std::move(messageFn), category);
+  return acc::emitRemark(op, messageFn(), category);
 }
 
 bool OpenACCSupport::isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
@@ -60,6 +62,14 @@ bool OpenACCSupport::isValidValueUse(Value v, Region &region) {
   if (impl)
     return impl->isValidValueUse(v, region);
   return acc::isValidValueUse(v, region);
+}
+
+std::optional<gpu::GPUModuleOp>
+OpenACCSupport::getOrCreateGPUModule(ModuleOp mod, bool create,
+                                     llvm::StringRef name) {
+  if (impl)
+    return impl->getOrCreateGPUModule(mod, create, name);
+  return acc::getOrCreateGPUModule(mod, create, name);
 }
 
 } // namespace acc

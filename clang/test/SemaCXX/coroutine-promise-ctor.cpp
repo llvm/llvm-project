@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -Wno-coroutines-unsupported-target -ast-dump %s | FileCheck %s
 #include "Inputs/std-coroutine.h"
 
 // Github issue: https://github.com/llvm/llvm-project/issues/78290

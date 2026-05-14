@@ -296,4 +296,13 @@ features = [
             """,
         ),
     ),
+    # Whether `FileCheck` and `split-file` executables are available.
+    Feature(
+        name="has-filecheck",
+        when=lambda cfg: runScriptExitCode(cfg, ["FileCheck --version"]) == 0,
+    ),
+    Feature(
+        name="has-splitfile",
+        when=lambda cfg: runScriptExitCode(cfg, ["split-file --version"]) == 0,
+    ),
 ]

@@ -113,6 +113,15 @@ LOCAL_LABEL(done_align):
   // aSignificand += bSignificand;
   adds r4, r4, r5
 
+  // Check for denormal result
+  cmp  r2, #0
+  bne  1f // branch if result is not denormal
+
+  // Add carry bit to exponent
+  lsrs r6, r4, #(significandBits + 3)
+  adds r2, r2, r6  // result Exponent
+
+1:
   // Check carry bit.
   movs r6, #1
   lsls r6, r6, #(significandBits + 3 + 1)

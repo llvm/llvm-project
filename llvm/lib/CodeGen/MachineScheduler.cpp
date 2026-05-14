@@ -2942,17 +2942,6 @@ unsigned SchedBoundary::countResource(const MCSchedClassDesc *SC, unsigned PIdx,
 
 /// Move the boundary of scheduled code by one SUnit.
 void SchedBoundary::bumpNode(SUnit *SU) {
-  // Update the reservation table.
-  if (HazardRec->isEnabled()) {
-    if (!isTop() && SU->isCall) {
-      // Calls are scheduled with their preceding instructions. For bottom-up
-      // scheduling, clear the pipeline state before emitting.
-      HazardRec->Reset();
-    }
-    HazardRec->EmitInstruction(SU);
-    // Scheduling an instruction may have made pending instructions available.
-    CheckPending = true;
-  }
   // checkHazard should prevent scheduling multiple instructions per cycle that
   // exceed the issue width.
   const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
@@ -3078,6 +3067,18 @@ void SchedBoundary::bumpNode(SUnit *SU) {
     IsResourceLimited =
         checkResourceLimit(SchedModel->getLatencyFactor(), getCriticalCount(),
                            getScheduledLatency(), true);
+
+  // Update the reservation table.
+  if (HazardRec->isEnabled()) {
+    if (!isTop() && SU->isCall) {
+      // Calls are scheduled with their preceding instructions. For bottom-up
+      // scheduling, clear the pipeline state before emitting.
+      HazardRec->Reset();
+    }
+    HazardRec->EmitInstruction(SU);
+    // Scheduling an instruction may have made pending instructions available.
+    CheckPending = true;
+  }
 
   // Update CurrMOps after calling bumpCycle to handle stalls, since bumpCycle
   // resets CurrMOps. Loop to handle instructions with more MOps than issue in
@@ -3254,31 +3255,6 @@ initResourceDelta(const ScheduleDAGMI *DAG,
   }
 }
 
-/// Compute remaining latency. We need this both to determine whether the
-/// overall schedule has become latency-limited and whether the instructions
-/// outside this zone are resource or latency limited.
-///
-/// The "dependent" latency is updated incrementally during scheduling as the
-/// max height/depth of scheduled nodes minus the cycles since it was
-/// scheduled:
-///   DLat = max (N.depth - (CurrCycle - N.ReadyCycle) for N in Zone
-///
-/// The "independent" latency is the max ready queue depth:
-///   ILat = max N.depth for N in Available|Pending
-///
-/// RemainingLatency is the greater of independent and dependent latency.
-///
-/// These computations are expensive, especially in DAGs with many edges, so
-/// only do them if necessary.
-static unsigned computeRemLatency(SchedBoundary &CurrZone) {
-  unsigned RemLatency = CurrZone.getDependentLatency();
-  RemLatency = std::max(RemLatency,
-                        CurrZone.findMaxLatency(CurrZone.Available.elements()));
-  RemLatency = std::max(RemLatency,
-                        CurrZone.findMaxLatency(CurrZone.Pending.elements()));
-  return RemLatency;
-}
-
 /// Returns true if the current cycle plus remaning latency is greater than
 /// the critical path in the scheduling region.
 bool GenericSchedulerBase::shouldReduceLatency(const CandPolicy &Policy,
@@ -3435,6 +3411,31 @@ void GenericSchedulerBase::traceCandidate(const SchedCandidate &Cand) {
   dbgs() << '\n';
 }
 #endif
+
+/// Compute remaining latency. We need this both to determine whether the
+/// overall schedule has become latency-limited and whether the instructions
+/// outside this zone are resource or latency limited.
+///
+/// The "dependent" latency is updated incrementally during scheduling as the
+/// max height/depth of scheduled nodes minus the cycles since it was
+/// scheduled:
+///   DLat = max (N.depth - (CurrCycle - N.ReadyCycle) for N in Zone
+///
+/// The "independent" latency is the max ready queue depth:
+///   ILat = max N.depth for N in Available|Pending
+///
+/// RemainingLatency is the greater of independent and dependent latency.
+///
+/// These computations are expensive, especially in DAGs with many edges, so
+/// only do them if necessary.
+unsigned llvm::computeRemLatency(SchedBoundary &CurrZone) {
+  unsigned RemLatency = CurrZone.getDependentLatency();
+  RemLatency = std::max(RemLatency,
+                        CurrZone.findMaxLatency(CurrZone.Available.elements()));
+  RemLatency = std::max(RemLatency,
+                        CurrZone.findMaxLatency(CurrZone.Pending.elements()));
+  return RemLatency;
+}
 
 /// Return true if this heuristic determines order.
 /// TODO: Consider refactor return type of these functions as integer or enum,
@@ -3836,7 +3837,7 @@ unsigned llvm::getWeakLeft(const SUnit *SU, bool isTop) {
 /// copies which can be prescheduled. The rest (e.g. x86 MUL) could be bundled
 /// with the operation that produces or consumes the physreg. We'll do this when
 /// regalloc has support for parallel copies.
-int llvm::biasPhysReg(const SUnit *SU, bool isTop) {
+int llvm::biasPhysReg(const SUnit *SU, bool isTop, bool BiasPRegsExtra) {
   const MachineInstr *MI = SU->getInstr();
 
   if (MI->isCopy()) {
@@ -3869,7 +3870,34 @@ int llvm::biasPhysReg(const SUnit *SU, bool isTop) {
       return isTop ? -1 : 1;
   }
 
+  if (BiasPRegsExtra && !isTop && MI->getNumExplicitDefs() == 1)
+    // Register coalescer will create cases of e.g. Load Address of a frame
+    // index directly into a physreg.
+    return MI->getOperand(0).getReg().isPhysical();
+
   return 0;
+}
+
+bool llvm::tryBiasPhysRegs(GenericSchedulerBase::SchedCandidate &TryCand,
+                           GenericSchedulerBase::SchedCandidate &Cand,
+                           SchedBoundary *Zone, bool BiasPRegsExtra) {
+  int TryCandPRegBias = biasPhysReg(TryCand.SU, TryCand.AtTop, BiasPRegsExtra);
+  int CandPRegBias = biasPhysReg(Cand.SU, Cand.AtTop, BiasPRegsExtra);
+  if (tryGreater(TryCandPRegBias, CandPRegBias, TryCand, Cand,
+                 GenericSchedulerBase::PhysReg))
+    return true;
+  if (BiasPRegsExtra && Zone != nullptr && TryCandPRegBias &&
+      TryCandPRegBias == CandPRegBias) {
+    // Both biased same way - maintain their input order.
+    if (Zone->isTop())
+      tryLess(TryCand.SU->NodeNum, Cand.SU->NodeNum, TryCand, Cand,
+              GenericSchedulerBase::NodeOrder);
+    else
+      tryGreater(TryCand.SU->NodeNum, Cand.SU->NodeNum, TryCand, Cand,
+                 GenericSchedulerBase::NodeOrder);
+    return true;
+  }
+  return false;
 }
 
 void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -3930,8 +3958,7 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
   }
 
   // Bias PhysReg Defs and copies to their uses and defined respectively.
-  if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
-                 biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
+  if (tryBiasPhysRegs(TryCand, Cand, Zone, RegionPolicy.BiasPRegsExtra))
     return TryCand.Reason != NoCand;
 
   // Avoid exceeding the target's limit.

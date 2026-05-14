@@ -15,7 +15,6 @@
 namespace llvm {
 
 class Function;
-class GCNSubtarget;
 
 enum class LitModifier { None, Lit, Lit64 };
 
@@ -135,6 +134,8 @@ static inline AMDGPUMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
 LLVM_READONLY bool isLitExpr(const MCExpr *Expr);
 
 LLVM_READONLY int64_t getLitValue(const MCExpr *Expr);
+
+LLVM_READONLY AMDGPUMCExpr::VariantKind getExprKind(const MCExpr *Expr);
 
 } // end namespace AMDGPU
 } // end namespace llvm

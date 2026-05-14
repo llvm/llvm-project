@@ -168,6 +168,7 @@ BTFTypeInt::BTFTypeInt(uint32_t Encoding, uint32_t SizeInBits,
     break;
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_unsigned_char:
+  case dwarf::DW_ATE_UTF:
     BTFEncoding = 0;
     break;
   default:
@@ -605,6 +606,7 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
   case dwarf::DW_ATE_signed_char:
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_unsigned_char:
+  case dwarf::DW_ATE_UTF:
     // Create a BTF type instance for this DIBasicType and put it into
     // DIToIdMap for cross-type reference check.
     TypeEntry = std::make_unique<BTFTypeInt>(
@@ -794,6 +796,12 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
 
   // Visit array dimensions.
   DINodeArray Elements = CTy->getElements();
+  if (Elements.size() == 0) {
+    // Rust and other languages may emit array types with no dimensions.
+    // Treat as a zero-length array so the type is still registered.
+    auto TypeEntry = std::make_unique<BTFTypeArray>(ElemTypeId, 0);
+    ElemTypeId = addType(std::move(TypeEntry), CTy);
+  }
   for (int I = Elements.size() - 1; I >= 0; --I) {
     if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
@@ -1125,7 +1133,7 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
     for (line_iterator I(*Buf, false), E; I != E; ++I)
       Content.push_back(std::string(*I));
 
-  FileContent[FileName] = Content;
+  FileContent[FileName] = std::move(Content);
   return FileName;
 }
 
@@ -1615,7 +1623,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
 
     // Calculate symbol size
     const DataLayout &DL = Global.getDataLayout();
-    uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
+    uint32_t Size = Global.getGlobalSize(DL);
 
     It->second->addDataSecEntry(VarId, Asm->getSymbol(&Global), Size);
 

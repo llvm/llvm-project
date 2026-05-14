@@ -47,17 +47,11 @@ namespace LIBC_NAMESPACE_DECL {
 
 struct __llvm_libc_stdio_cookie;
 
-extern "C" struct __llvm_libc_stdio_cookie __llvm_libc_stdin_cookie;
-extern "C" struct __llvm_libc_stdio_cookie __llvm_libc_stdout_cookie;
-extern "C" struct __llvm_libc_stdio_cookie __llvm_libc_stderr_cookie;
-
 extern "C" ssize_t __llvm_libc_stdio_read(void *cookie, char *buf, size_t size);
 extern "C" ssize_t __llvm_libc_stdio_write(void *cookie, const char *buf,
                                            size_t size);
 
-ssize_t read_from_stdin(char *buf, size_t size);
 void write_to_stderr(cpp::string_view msg);
-void write_to_stdout(cpp::string_view msg);
 
 } // namespace LIBC_NAMESPACE_DECL
 

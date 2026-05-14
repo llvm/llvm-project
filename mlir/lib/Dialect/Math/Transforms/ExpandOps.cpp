@@ -232,6 +232,52 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
+  Type operandETy = getElementTypeOrSelf(opType);
+  FloatType floatTy = llvm::dyn_cast<FloatType>(operandETy);
+  const llvm::fltSemantics &semantics = floatTy.getFloatSemantics();
+
+  unsigned bitWidth = floatTy.getWidth();
+  unsigned mantissaWidth = floatTy.getFPMantissaWidth() - 1;
+  const int bias = (&semantics == &APFloat::Float8E8M0FNU())
+                       ? -semantics.minExponent
+                       : -(semantics.minExponent - 1);
+  bool hasNegativeZeroNaNEncoding =
+      (semantics.nanEncoding == llvm::fltNanEncoding::NegativeZero);
+
+  Type iTy = rewriter.getIntegerType(bitWidth);
+  if (auto shapedTy = dyn_cast<ShapedType>(opType))
+    iTy = shapedTy.clone(iTy);
+
+  // For IEEE-like floating-point formats with an unbiased exponent ≥
+  // `mantissaWidth` falls into one of these categories:
+  //   - a large finite value (|x| ≥ 2^mantissaWidth), where all representable
+  //     numbers are already integral, or
+  //   - a special value (NaN or ±Inf), which also satisfies this exponent
+  //     condition.
+  // For all such cases, `ceilf(x)` is defined to return `x` directly.
+  Value operandBitcast = arith::BitcastOp::create(b, iTy, operand);
+  Value cMask = createIntConst(
+      op->getLoc(), iTy, static_cast<int64_t>((1ull << (bitWidth - 1)) - 1), b);
+  Value unsignedBits = arith::AndIOp::create(b, operandBitcast, cMask);
+  Value cThreshold = createIntConst(
+      op->getLoc(), iTy,
+      static_cast<int64_t>((uint64_t(bias + mantissaWidth)) << mantissaWidth),
+      b);
+  Value isLargeExp = arith::CmpIOp::create(b, arith::CmpIPredicate::uge,
+                                           unsignedBits, cThreshold);
+  Value isSpecialValOrLargeVal = isLargeExp;
+
+  // In FNUZ-suffixed floating point, NaN is represented by a sign bit of 1 and
+  // all 0s in the exponent and mantissa, therefore requires an explicit check.
+  if (hasNegativeZeroNaNEncoding) {
+    Value cNegZeroBits = createIntConst(
+        op->getLoc(), iTy, static_cast<int64_t>(1ull << (bitWidth - 1)), b);
+    Value isNegZeroEncoding = arith::CmpIOp::create(
+        b, arith::CmpIPredicate::eq, operandBitcast, cNegZeroBits);
+    isSpecialValOrLargeVal =
+        arith::OrIOp::create(b, isLargeExp, isNegZeroEncoding);
+  }
+
   Value fpFixedConvert = createTruncatedFPValue(operand, b);
 
   // Creating constants for later use.
@@ -243,7 +289,8 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   Value incrValue =
       arith::SelectOp::create(b, op->getLoc(), gtCheck, one, zero);
 
-  Value ret = arith::AddFOp::create(b, opType, fpFixedConvert, incrValue);
+  Value add = arith::AddFOp::create(b, opType, fpFixedConvert, incrValue);
+  Value ret = arith::SelectOp::create(b, isSpecialValOrLargeVal, operand, add);
   rewriter.replaceOp(op, ret);
   return success();
 }
@@ -475,6 +522,11 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
   auto operandTy = operand.getType();
   auto eTy = getElementTypeOrSelf(operandTy);
   Location loc = op.getLoc();
+
+  // Only expand for integer or float element types (index has no fixed bitwidth).
+  if (!eTy.isIntOrFloat()) {
+    return rewriter.notifyMatchFailure(op, "ctlz expansion only supports int or float types");
+  }
 
   int32_t bitwidth = eTy.getIntOrFloatBitWidth();
   if (bitwidth > 64)

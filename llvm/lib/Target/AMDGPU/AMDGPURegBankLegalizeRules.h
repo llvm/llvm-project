@@ -37,6 +37,7 @@ bool isAnyPtr(LLT Ty, unsigned Width);
 // to apply (see Fast Rules), IDs are useful when two or more operands need to
 // be checked.
 enum UniformityLLTOpPredicateID {
+  // Represents non-register and physical register operands.
   _,
   // scalars
   S1,
@@ -57,9 +58,13 @@ enum UniformityLLTOpPredicateID {
   DivS64,
   DivS128,
 
+  // any LLT, divergent-check only predicate
+  DivAnyTy,
+
   // pointers
   P0,
   P1,
+  P2,
   P3,
   P4,
   P5,
@@ -70,6 +75,7 @@ enum UniformityLLTOpPredicateID {
 
   UniP0,
   UniP1,
+  UniP2,
   UniP3,
   UniP4,
   UniP5,
@@ -80,6 +86,7 @@ enum UniformityLLTOpPredicateID {
 
   DivP0,
   DivP1,
+  DivP2,
   DivP3,
   DivP4,
   DivP5,
@@ -90,36 +97,48 @@ enum UniformityLLTOpPredicateID {
   // vectors
   V2S16,
   V2S32,
+  V2S64,
   V3S32,
   V4S32,
 
   UniV2S16,
   UniV2S32,
+  UniV2S64,
 
   DivV2S16,
   DivV2S32,
+  DivV2S64,
+  DivV3S32,
+  DivV4S16,
+  DivV6S32,
 
   // B types
   B32,
   B64,
   B96,
   B128,
+  B160,
   B256,
   B512,
+  BRC,
 
   UniB32,
   UniB64,
   UniB96,
   UniB128,
+  UniB160,
   UniB256,
   UniB512,
+  UniBRC,
 
   DivB32,
   DivB64,
   DivB96,
   DivB128,
+  DivB160,
   DivB256,
   DivB512,
+  DivBRC
 };
 
 // How to apply register bank on register operand.
@@ -133,6 +152,10 @@ enum RegBankLLTMappingApplyID {
   Imm,
   Vcc,
 
+  // any LLT, bank-only apply IDs
+  VgprAnyTy,
+  AgprAnyTy,
+
   // sgpr scalars, pointers, vectors and B-types
   Sgpr16,
   Sgpr32,
@@ -140,6 +163,7 @@ enum RegBankLLTMappingApplyID {
   Sgpr128,
   SgprP0,
   SgprP1,
+  SgprP2,
   SgprP3,
   SgprP4,
   SgprP5,
@@ -156,6 +180,7 @@ enum RegBankLLTMappingApplyID {
   SgprB128,
   SgprB256,
   SgprB512,
+  SgprBRC,
 
   // vgpr scalars, pointers, vectors and B-types
   Vgpr16,
@@ -164,6 +189,7 @@ enum RegBankLLTMappingApplyID {
   Vgpr128,
   VgprP0,
   VgprP1,
+  VgprP2,
   VgprP3,
   VgprP4,
   VgprP5,
@@ -172,13 +198,19 @@ enum RegBankLLTMappingApplyID {
   VgprPtr128,
   VgprV2S16,
   VgprV2S32,
+  VgprV3S32,
   VgprB32,
   VgprB64,
   VgprB96,
   VgprB128,
+  VgprB160,
   VgprB256,
   VgprB512,
+  VgprBRC,
+  VgprV4S16,
   VgprV4S32,
+  VgprV8S32,
+  VgprV2S64,
 
   // Dst only modifiers: read-any-lane and truncs
   UniInVcc,
@@ -188,18 +220,40 @@ enum RegBankLLTMappingApplyID {
   UniInVgprV2S16,
   UniInVgprV2S32,
   UniInVgprV4S32,
+  UniInVgprV2S64,
   UniInVgprB32,
   UniInVgprB64,
   UniInVgprB96,
   UniInVgprB128,
+  UniInVgprB160,
   UniInVgprB256,
   UniInVgprB512,
 
   Sgpr32Trunc,
 
+  // Dst only modifiers: dst was assigned VGPR by RegBankSelect but the
+  // instruction result must be in SGPR. Replace dst with SGPR, then copy the
+  // result back to the original VGPR.
+  Sgpr32ToVgprDst,
+  Sgpr64ToVgprDst,
+
   // Src only modifiers: execute in waterfall loop if divergent
   Sgpr32_WF,
   SgprV4S32_WF,
+
+  // Src only modifiers: execute in waterfall loop for calls
+  SgprP0Call_WF,
+  SgprP4Call_WF,
+
+  // Src only modifiers: for operands that must end up in M0. If divergent,
+  // readfirstlane to SGPR. The result can then be copied to M0 in ISel.
+  SgprB32_M0,
+
+  // Src only modifiers: operand must be SGPR, if in VGPR, insert readfirstlane
+  // to move to SGPR.
+  SgprB32_ReadFirstLane,
+  SgprB64_ReadFirstLane,
+  SgprV4S32_ReadFirstLane,
 
   // Src only modifiers: extends
   Sgpr32AExt,
@@ -209,6 +263,10 @@ enum RegBankLLTMappingApplyID {
   Vgpr32AExt,
   Vgpr32SExt,
   Vgpr32ZExt,
+
+  VgprV6S32,
+  VgprV32S16,
+  VgprV32S32,
 };
 
 // Instruction needs to be replaced with sequence of instructions. Lowering was
@@ -229,6 +287,7 @@ enum LoweringMethodID {
   UniMul64,
   DivSMulToMAD,
   SplitTo32,
+  SplitTo32Mul,
   ScalarizeToS16,
   SplitTo32Select,
   SplitTo32SExtInReg,
@@ -237,7 +296,22 @@ enum LoweringMethodID {
   SplitLoad,
   WidenLoad,
   WidenMMOToS32,
-  UnpackAExt
+  UnpackAExt,
+  VerifyAllSgpr,
+  ApplyAllVgpr,
+  UnmergeToShiftTrunc,
+  AextToS32InIncomingBlockGPHI,
+  VerifyAllSgprGPHI,
+  VerifyAllSgprOrVgprGPHI,
+  ApplyINTRIN_IMAGE,
+  ApplyBVH_INTERSECT_RAY,
+  SplitBitCount64To32,
+  ExtrVecEltToSel,
+  ExtrVecEltTo32,
+  InsVecEltToSel,
+  InsVecEltTo32,
+  AbsToNegMax,
+  AbsToS32
 };
 
 enum FastRulesTypes {
@@ -311,7 +385,7 @@ private:
 class RegBankLegalizeRules {
   const GCNSubtarget *ST;
   MachineRegisterInfo *MRI;
-  // Separate maps for G-opcodes and instrinsics since they are in different
+  // Separate maps for G-opcodes and intrinsics since they are in different
   // enums. Multiple opcodes can share same set of rules.
   // RulesAlias = map<Opcode, KeyOpcode>
   // Rules = map<KeyOpcode, SetOfRulesForOpcode>

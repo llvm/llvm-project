@@ -513,6 +513,9 @@ let Class = UnaryTransformType in {
 }
 
 let Class = AutoType in {
+  def : Property<"deducedKind", DeducedKind> {
+    let Read = [{ node->getDeducedKind() }];
+  }
   def : Property<"deducedType", Optional<QualType>> {
     let Read = [{ makeOptionalFromNullable(node->getDeducedType()) }];
   }
@@ -526,18 +529,9 @@ let Class = AutoType in {
   def : Property<"typeConstraintArguments", Array<TemplateArgument>> {
     let Read = [{ node->getTypeConstraintArguments() }];
   }
-  // FIXME: better enumerated value
-  // Only really required when the deduced type is null
-  def : Property<"dependence", UInt32> {
-    let Read = [{ !node->getDeducedType().isNull() ? 0 :
-                  node->containsUnexpandedParameterPack() ? 2 :
-                  node->isDependentType() ? 1 : 0 }];
-  }
 
   def : Creator<[{
-    return ctx.getAutoType(makeNullableFromOptional(deducedType), keyword,
-                           /*isDependentWithoutDeducedType*/ dependence > 0,
-                           /*isPackWithoutDeducedType*/ dependence > 1,
+    return ctx.getAutoType(deducedKind, makeNullableFromOptional(deducedType), keyword,
                            makePointerFromOptional(typeConstraintConcept),
                            typeConstraintArguments);
   }]>;
@@ -550,19 +544,16 @@ let Class = DeducedTemplateSpecializationType in {
   def : Property<"templateName", Optional<TemplateName>> {
     let Read = [{ makeOptionalFromNullable(node->getTemplateName()) }];
   }
+  def : Property<"deducedKind", DeducedKind> {
+    let Read = [{ node->getDeducedKind() }];
+  }
   def : Property<"deducedType", QualType> {
     let Read = [{ node->getDeducedType() }];
   }
-  // Only really required when the deduced type is null
-  def : Property<"dependent", Bool> {
-    let Read = [{ !node->getDeducedType().isNull()
-                    ? false : node->isDependentType() }];
-  }
 
   def : Creator<[{
-    return ctx.getDeducedTemplateSpecializationType(keyword,
-                                     makeNullableFromOptional(templateName),
-                                     deducedType, dependent);
+    return ctx.getDeducedTemplateSpecializationType(deducedKind, deducedType, keyword,
+                                     makeNullableFromOptional(templateName));
   }]>;
 }
 
@@ -655,9 +646,25 @@ let Class = BTFTagAttributedType in {
   }]>;
 }
 
+let Class = OverflowBehaviorType in {
+  def : Property<"behaviorKind", OverflowBehaviorKind> {
+    let Read = [{ node->getBehaviorKind() }];
+  }
+  def : Property<"underlyingType", QualType> {
+    let Read = [{ node->getUnderlyingType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getOverflowBehaviorType(behaviorKind, underlyingType);
+  }]>;
+}
+
 let Class = HLSLAttributedResourceType in {
   def : Property<"resClass", UInt32> {
     let Read = [{ static_cast<uint32_t>(node->getAttrs().ResourceClass) }];
+  }
+  def : Property<"resDimension", UInt32> {
+    let Read = [{ static_cast<uint32_t>(node->getAttrs().ResourceDimension) }];
   }
   def : Property<"isROV", Bool> {
     let Read = [{ node->getAttrs().IsROV }];
@@ -675,7 +682,10 @@ let Class = HLSLAttributedResourceType in {
     let Read = [{ node->getContainedType() }];
   }
   def : Creator<[{
-    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer, isCounter);
+    HLSLAttributedResourceType::Attributes attrs(
+        static_cast<llvm::dxil::ResourceClass>(resClass),
+        static_cast<llvm::dxil::ResourceDimension>(resDimension), isROV,
+        rawBuffer, isCounter);
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }

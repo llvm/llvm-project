@@ -49,6 +49,10 @@ LogicalResult lowerAffineDelinearizeIndexOp(RewriterBase &rewriter,
 LogicalResult lowerAffineLinearizeIndexOp(RewriterBase &rewriter,
                                           AffineLinearizeIndexOp op);
 
+/// Populate patterns that simplify `affine.delinearize_index` /
+/// `affine.linearize_index` pairs using value bounds analysis.
+void populateSimplifyAffineWithBoundsPatterns(RewritePatternSet &patterns);
+
 /// Populate patterns that expand affine index operations into more fundamental
 /// operations (not necessarily restricted to Affine dialect).
 void populateAffineExpandIndexOpsPatterns(RewritePatternSet &patterns);
@@ -76,19 +80,19 @@ FailureOr<AffineApplyOp> decompose(RewriterBase &rewriter, AffineApplyOp op);
 /// `stopCondition` is met.
 ///
 /// By default, lower/equal bounds are closed and upper bounds are open. If
-/// `closedUB` is set to "true", upper bounds are also closed.
+/// `options.closedUB` is set to "true", upper bounds are also closed.
 FailureOr<OpFoldResult>
 reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
                 const ValueBoundsConstraintSet::Variable &var,
                 ValueBoundsConstraintSet::StopConditionFn stopCondition,
-                bool closedUB = false);
+                ValueBoundsOptions options = {});
 
 /// Reify a bound for the given index-typed value in terms of SSA values for
 /// which `stopCondition` is met. If no stop condition is specified, reify in
 /// terms of the operands of the owner op.
 ///
 /// By default, lower/equal bounds are closed and upper bounds are open. If
-/// `closedUB` is set to "true", upper bounds are also closed.
+/// `options.closedUB` is set to "true", upper bounds are also closed.
 ///
 /// Example:
 /// %0 = arith.addi %a, %b : index
@@ -103,19 +107,19 @@ reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
 FailureOr<OpFoldResult> reifyIndexValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     ValueBoundsConstraintSet::StopConditionFn stopCondition = nullptr,
-    bool closedUB = false);
+    ValueBoundsOptions options = {});
 
 /// Reify a bound for the specified dimension of the given shaped value in terms
 /// of SSA values for which `stopCondition` is met. If no stop condition is
 /// specified, reify in terms of the operands of the owner op.
 ///
 /// By default, lower/equal bounds are closed and upper bounds are open. If
-/// `closedUB` is set to "true", upper bounds are also closed.
+/// `options.closedUB` is set to "true", upper bounds are also closed.
 FailureOr<OpFoldResult> reifyShapedValueDimBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     int64_t dim,
     ValueBoundsConstraintSet::StopConditionFn stopCondition = nullptr,
-    bool closedUB = false);
+    ValueBoundsOptions options = {});
 
 /// Materialize an already computed bound with Affine dialect ops.
 ///

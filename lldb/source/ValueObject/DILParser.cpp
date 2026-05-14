@@ -16,6 +16,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
 #include "llvm/ADT/StringRef.h"
@@ -35,23 +36,67 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   DiagnosticDetail::SourceLocation sloc = {
       FileSpec{}, /*line=*/1, static_cast<uint16_t>(loc + 1),
       err_len,    false,      /*in_user_input=*/true};
-  std::string rendered_msg =
-      llvm::formatv("<user expression 0>:1:{0}: {1}\n   1 | {2}\n     | ^",
-                    loc + 1, message, expr);
+  // If the error is not handled by `RenderDiagnosticDetails`, this creates an
+  // error message that can be displayed instead.
+  // Example:
+  // (lldb) script lldb.frame.GetValueForVariablePath("1 + foo")
+  // error: <user expression>:1:5: use of undeclared identifier 'foo'
+  //   1 | 1 + foo
+  //     |     ^~~
+  auto msg = llvm::formatv("<user expression>:1:{0}: {1}\n    1 | {2}\n      |",
+                           loc + 1, message, expr);
+  std::string rendered_str;
+  llvm::raw_string_ostream rendered_os(rendered_str);
+  rendered_os << msg.str();
+  rendered_os << llvm::indent(loc + 1) << "^";
+  if (err_len > 1) {
+    // Underline the rest of the erroneous token after the cursor '^'.
+    rendered_os << std::string(err_len - 1, '~');
+  }
   m_detail.source_location = sloc;
   m_detail.severity = lldb::eSeverityError;
   m_detail.message = message;
-  m_detail.rendered = std::move(rendered_msg);
+  m_detail.rendered = std::move(rendered_str);
 }
 
-llvm::Expected<ASTNodeUP>
-DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
-                 std::shared_ptr<StackFrame> frame_sp,
-                 lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                 bool fragile_ivar, bool check_ptr_vs_member) {
+static CompilerType ResolveTypeByName(const std::string &name,
+                                      ExecutionContextScope &ctx_scope) {
+  // Internally types don't have global scope qualifier in their names and
+  // LLDB doesn't support queries with it too.
+  llvm::StringRef name_ref(name);
+
+  if (name_ref.starts_with("::"))
+    name_ref = name_ref.drop_front(2);
+
+  std::vector<CompilerType> result_type_list;
+  lldb::TargetSP target_sp = ctx_scope.CalculateTarget();
+  if (!name_ref.empty() && target_sp) {
+    ModuleList &images = target_sp->GetImages();
+    TypeQuery query{ConstString(name_ref), TypeQueryOptions::e_exact_match |
+                                               TypeQueryOptions::e_find_one};
+    TypeResults results;
+    images.FindTypes(nullptr, query, results);
+    const lldb::TypeSP &type_sp = results.GetFirstType();
+    if (type_sp)
+      result_type_list.push_back(type_sp->GetFullCompilerType());
+  }
+
+  if (!result_type_list.empty()) {
+    CompilerType type = result_type_list[0];
+    if (type.IsValid() && type.GetTypeName().GetStringRef() == name_ref)
+      return type;
+  }
+
+  return {};
+}
+
+llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
+                                           DILLexer lexer,
+                                           std::shared_ptr<StackFrame> frame_sp,
+                                           lldb::DynamicValueType use_dynamic,
+                                           lldb::DILMode mode) {
   llvm::Error error = llvm::Error::success();
-  DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic, use_synthetic,
-                   fragile_ivar, check_ptr_vs_member, error);
+  DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic, error, mode);
 
   ASTNodeUP node_up = parser.Run();
   assert(node_up && "ASTNodeUP must not contain a nullptr");
@@ -64,13 +109,11 @@ DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
 
 DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
                      std::shared_ptr<StackFrame> frame_sp,
-                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     bool fragile_ivar, bool check_ptr_vs_member,
-                     llvm::Error &error)
+                     lldb::DynamicValueType use_dynamic, llvm::Error &error,
+                     lldb::DILMode mode)
     : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr),
       m_dil_lexer(std::move(lexer)), m_error(error), m_use_dynamic(use_dynamic),
-      m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
-      m_check_ptr_vs_member(check_ptr_vs_member) {}
+      m_mode(mode) {}
 
 ASTNodeUP DILParser::Run() {
   ASTNodeUP expr = ParseExpression();
@@ -85,7 +128,57 @@ ASTNodeUP DILParser::Run() {
 //  expression:
 //    cast_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseCastExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
+
+// Parse an additive_expression.
+//
+//  additive_expression:
+//    multiplicative_expression {"+" multiplicative_expression}
+//
+ASTNodeUP DILParser::ParseAdditiveExpression() {
+  auto lhs = ParseMultiplicativeExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().IsOneOf({Token::plus, Token::minus})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseMultiplicativeExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a multiplicative_expression.
+//
+//  multiplicative_expression:
+//    cast_expression {"*" cast_expression}
+//    cast_expression {"/" cast_expression}
+//    cast_expression {"%" cast_expression}
+//
+ASTNodeUP DILParser::ParseMultiplicativeExpression() {
+  auto lhs = ParseCastExpression();
+
+  while (CurToken().IsOneOf({Token::star, Token::slash, Token::percent})) {
+    Token token = CurToken();
+    if (token.Is(Token::star) && m_mode != lldb::eDILModeFull) {
+      BailOut("binary multiplication (*) is allowed only in DIL full mode",
+              token.GetLocation(), token.GetSpelling().length());
+      return std::make_unique<ErrorNode>();
+    }
+    m_dil_lexer.Advance();
+    auto rhs = ParseCastExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
 
 // Parse a cast_expression.
 //
@@ -343,12 +436,32 @@ std::string DILParser::ParseNestedNameSpecifier() {
 //
 std::optional<CompilerType> DILParser::ParseTypeId() {
   CompilerType type;
-  // For now only allow builtin types -- will expand add to this later.
   auto maybe_builtin_type = ParseBuiltinType();
   if (maybe_builtin_type) {
     type = *maybe_builtin_type;
-  } else
-    return {};
+  } else {
+    // Check to see if we have a user-defined type here.
+    // First build  up the user-defined type name.
+    std::string type_name;
+    ParseTypeSpecifierSeq(type_name);
+
+    if (type_name.empty())
+      return {};
+    type = ResolveTypeByName(type_name, *m_ctx_scope);
+    if (!type.IsValid())
+      return {};
+
+    // Same-name identifiers should be preferred over typenames.
+    if (LookupIdentifier(type_name, m_ctx_scope, m_use_dynamic))
+      // TODO: Make type accessible with 'class', 'struct' and 'union' keywords.
+      return {};
+
+    // Same-name identifiers should be preferred over typenames.
+    if (LookupGlobalIdentifier(type_name, m_ctx_scope,
+                               m_ctx_scope->CalculateTarget(), m_use_dynamic))
+      // TODO: Make type accessible with 'class', 'struct' and 'union' keywords
+      return {};
+  }
 
   //
   //  abstract_declarator:
@@ -402,6 +515,88 @@ std::optional<CompilerType> DILParser::ParseBuiltinType() {
 
   TentativeParsingRollback(save_token_idx);
   return {};
+}
+
+// Parse a type_specifier_seq.
+//
+//  type_specifier_seq:
+//    type_specifier [type_specifier_seq]
+//
+void DILParser::ParseTypeSpecifierSeq(std::string &type_name) {
+  while (true) {
+    std::optional<std::string> err_or_string = ParseTypeSpecifier();
+    if (!err_or_string)
+      break;
+    type_name = *err_or_string;
+  }
+}
+
+// Parse a type_specifier.
+//
+//  type_specifier:
+//    ["::"] [nested_name_specifier] type_name
+//
+// Returns TRUE if a type_specifier was successfully parsed at this location.
+//
+std::optional<std::string> DILParser::ParseTypeSpecifier() {
+  // The type_specifier must be a user-defined type. Try parsing a
+  // simple_type_specifier.
+
+  // Try parsing optional global scope operator.
+  bool global_scope = false;
+  if (CurToken().Is(Token::coloncolon)) {
+    global_scope = true;
+    m_dil_lexer.Advance();
+  }
+
+  // Try parsing optional nested_name_specifier.
+  auto nested_name_specifier = ParseNestedNameSpecifier();
+
+  // Try parsing required type_name.
+  auto type_name_or_err = ParseTypeName();
+  if (!type_name_or_err)
+    return type_name_or_err;
+  std::string type_name = *type_name_or_err;
+
+  // If there is a type_name, then this is indeed a simple_type_specifier.
+  // Global and qualified (namespace/class) scopes can be empty, since they're
+  // optional. In this case type_name is type we're looking for.
+  if (!type_name.empty())
+    // User-defined typenames can't be combined with builtin keywords.
+    return llvm::formatv("{0}{1}{2}", global_scope ? "::" : "",
+                         nested_name_specifier, type_name);
+
+  // No type_specifier was found here.
+  return {};
+}
+
+// Parse a type_name.
+//
+//  type_name:
+//    class_name
+//    enum_name
+//    typedef_name
+//
+//  class_name
+//    identifier
+//
+//  enum_name
+//    identifier
+//
+//  typedef_name
+//    identifier
+//
+std::optional<std::string> DILParser::ParseTypeName() {
+  // Typename always starts with an identifier.
+  if (CurToken().IsNot(Token::identifier)) {
+    return std::nullopt;
+  }
+
+  // Otherwise look for a class_name, enum_name or a typedef_name.
+  std::string identifier = CurToken().GetSpelling();
+  m_dil_lexer.Advance();
+
+  return identifier;
 }
 
 // Parse an id_expression.

@@ -1,9 +1,6 @@
 // RUN: %check_clang_tidy -std=c++98 %s readability-implicit-bool-conversion %t
 
-// We need NULL macro, but some buildbots don't like including <cstddef> header
-// This is a portable way of getting it to work
-#undef NULL
-#define NULL 0L
+#include <cstddef>
 
 template<typename T>
 void functionTaking(T);

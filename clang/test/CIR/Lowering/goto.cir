@@ -11,7 +11,7 @@ module {
     cir.scope {
       %6 = cir.load %0 : !cir.ptr<!s32i>, !s32i
       %7 = cir.const #cir.int<5> : !s32i
-      %8 = cir.cmp(gt, %6, %7) : !s32i, !cir.bool
+      %8 = cir.cmp gt %6, %7 : !s32i
       cir.if %8 {
         cir.goto "err"
       }

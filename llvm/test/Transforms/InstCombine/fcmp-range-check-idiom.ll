@@ -7,7 +7,7 @@ define i1 @test_and_olt(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x3C00000000000000
@@ -20,7 +20,7 @@ define i1 @test_and_ole(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ole(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp ole float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ole float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ole float %x, 0x3C00000000000000
@@ -33,7 +33,7 @@ define i1 @test_or_ogt(float %x) {
 ; CHECK-LABEL: define i1 @test_or_ogt(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp ogt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ogt float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ogt float %x, 0x3C00000000000000
@@ -46,7 +46,7 @@ define i1 @test_or_oge(float %x) {
 ; CHECK-LABEL: define i1 @test_or_oge(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp oge float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp oge float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp oge float %x, 0x3C00000000000000
@@ -59,7 +59,7 @@ define i1 @test_and_ult(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ult(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp ult float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ult float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ult float %x, 0x3C00000000000000
@@ -72,7 +72,7 @@ define i1 @test_and_ule(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ule(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp ule float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ule float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ule float %x, 0x3C00000000000000
@@ -85,7 +85,7 @@ define i1 @test_or_ugt(float %x) {
 ; CHECK-LABEL: define i1 @test_or_ugt(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp ugt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ugt float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ugt float %x, 0x3C00000000000000
@@ -98,7 +98,7 @@ define i1 @test_or_uge(float %x) {
 ; CHECK-LABEL: define i1 @test_or_uge(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp uge float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp uge float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp uge float %x, 0x3C00000000000000
@@ -111,7 +111,7 @@ define i1 @test_and_olt_commuted(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_commuted(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x3C00000000000000
@@ -124,7 +124,7 @@ define i1 @test_and_olt_subnormal(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_subnormal(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x36A0000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 1.401300e-45
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x36A0000000000000
@@ -137,7 +137,7 @@ define i1 @test_and_olt_infinity(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_infinity(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp one float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp one float [[TMP1]], +inf
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x7FF0000000000000
@@ -173,7 +173,7 @@ define i1 @test_and_olt_logical(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_logical(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x3C00000000000000
@@ -186,7 +186,7 @@ define <2 x i1> @test_and_olt_poison(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x i1> @test_and_olt_poison(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp olt <2 x float> [[TMP1]], splat (float 0x3C00000000000000)
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt <2 x float> [[TMP1]], splat (float f0x20000000)
 ; CHECK-NEXT:    ret <2 x i1> [[COND]]
 ;
   %cmp1 = fcmp olt <2 x float> %x, <float 0x3C00000000000000, float poison>
@@ -254,7 +254,7 @@ define i1 @test_or_olt(float %x) {
 ; CHECK-LABEL: define i1 @test_or_olt(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp ogt float [[TMP1]], 0xBC00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ogt float [[TMP1]], f0xA0000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x3C00000000000000
@@ -268,9 +268,9 @@ define i1 @test_or_olt(float %x) {
 define i1 @test_and_olt_multiuse(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_multiuse(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], 0x3C00000000000000
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], f0x20000000
 ; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 0xBC00000000000000
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], f0xA0000000
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
@@ -284,8 +284,8 @@ define i1 @test_and_olt_multiuse(float %x) {
 define i1 @test_and_olt_mismatched_lhs(float %x, float %y) {
 ; CHECK-LABEL: define i1 @test_and_olt_mismatched_lhs(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[Y]], 0xBC00000000000000
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], f0x20000000
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[Y]], f0xA0000000
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
@@ -309,8 +309,8 @@ define i1 @test_and_olt_same_sign(float %x) {
 define i1 @test_and_olt_mismatched_mag(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_mismatched_mag(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], 0x3C80000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 0xBC00000000000000
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], f0x24000000
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], f0xA0000000
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
@@ -323,8 +323,8 @@ define i1 @test_and_olt_mismatched_mag(float %x) {
 define i1 @test_and_olt_wrong_pred2(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_wrong_pred2(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], 0x3C00000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp oge float [[X]], 0xBC00000000000000
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], f0x20000000
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp oge float [[X]], f0xA0000000
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
@@ -338,7 +338,7 @@ define i1 @test_and_olt_fmf_propagation(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp nnan ninf nsz olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp nnan ninf nsz olt float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp nsz nnan ninf olt float %x, 0x3C00000000000000
@@ -351,7 +351,7 @@ define i1 @test_and_olt_fmf_propagation_union(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation_union(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp nnan ninf nsz olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp nnan ninf nsz olt float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp nnan ninf olt float %x, 0x3C00000000000000
@@ -364,7 +364,7 @@ define i1 @test_and_olt_fmf_propagation_union_logical_rhs_poison(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation_union_logical_rhs_poison(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ninf olt float %x, 0x3C00000000000000
@@ -377,7 +377,7 @@ define i1 @test_and_olt_fmf_propagation_union_logical_lhs_poison(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation_union_logical_lhs_poison(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ninf float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp ninf olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ninf olt float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp olt float %x, 0x3C00000000000000
@@ -390,7 +390,7 @@ define i1 @test_and_olt_fmf_propagation_union_logical_both_poison(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation_union_logical_both_poison(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ninf float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp ninf olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ninf olt float [[TMP1]], f0x20000000
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %cmp1 = fcmp ninf olt float %x, 0x3C00000000000000
