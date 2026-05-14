@@ -33,6 +33,7 @@ RUN apt-get update && \
     software-properties-common \
     gnupg \
     cmake \
+    m4 \
     linux-libc-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
