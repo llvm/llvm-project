@@ -250,7 +250,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Stream &ostrm = result.GetOutputStream();
 
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetCommandInterpreter().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
@@ -1071,7 +1071,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetCommandInterpreter().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
@@ -1223,7 +1223,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetCommandInterpreter().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
@@ -1470,7 +1470,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetCommandInterpreter().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();

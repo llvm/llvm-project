@@ -143,8 +143,7 @@ public:
 
 protected:
   void DoExecute(Args &launch_args, CommandReturnObject &result) override {
-    Debugger &debugger = GetDebugger();
-    Target *target = debugger.GetSelectedTarget().get();
+    Target *target = GetCommandInterpreter().GetSelectedTarget().get();
     // If our listener is nullptr, users aren't allows to launch
     ModuleSP exe_module_sp = target->GetExecutableModule();
 
@@ -314,7 +313,7 @@ protected:
     PlatformSP platform_sp(
         GetDebugger().GetPlatformList().GetSelectedPlatform());
 
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetCommandInterpreter().GetSelectedTarget().get();
     // N.B. The attach should be synchronous.  It doesn't help much to get the
     // prompt back between initiating the attach and the target actually
     // stopping.  So even if the interpreter is set to be asynchronous, we wait
@@ -916,15 +915,15 @@ protected:
     Status error;
     Debugger &debugger = GetDebugger();
     PlatformSP platform_sp = m_interpreter.GetPlatform(true);
+    Target *selected_target = GetCommandInterpreter().GetSelectedTarget().get();
     ProcessSP process_sp =
         debugger.GetAsyncExecution()
-            ? platform_sp->ConnectProcess(
-                  command.GetArgumentAtIndex(0), plugin_name, debugger,
-                  debugger.GetSelectedTarget().get(), error)
+            ? platform_sp->ConnectProcess(command.GetArgumentAtIndex(0),
+                                          plugin_name, debugger,
+                                          selected_target, error)
             : platform_sp->ConnectProcessSynchronous(
                   command.GetArgumentAtIndex(0), plugin_name, debugger,
-                  result.GetOutputStream(), debugger.GetSelectedTarget().get(),
-                  error);
+                  result.GetOutputStream(), selected_target, error);
     if (error.Fail() || process_sp == nullptr) {
       result.AppendError(error.AsCString("Error connecting to the process"));
     }
