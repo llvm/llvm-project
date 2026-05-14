@@ -4054,10 +4054,14 @@ struct CastInfoMixinImpl
                                      CastInfoMixinImpl<VPMixin, RecipeTys...>> {
   static_assert((std::is_base_of_v<VPMixin, RecipeTys> && ...),
                 "Each type in RecipeTys must derive from VPMixin");
+
+  /// Used by isa.
   static bool isPossible(VPRecipeBase *R) { return isa<RecipeTys...>(R); }
+
+  /// Used by cast.
   static VPMixin *doCast(VPRecipeBase *R) {
     VPMixin *Out = nullptr;
-    (void)((Out = dyn_cast<RecipeTys>(R)) || ...);
+    ((Out = dyn_cast<RecipeTys>(R)) || ...);
     assert(Out && "Illegal recipe for cast");
     return Out;
   }
