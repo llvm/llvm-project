@@ -57,7 +57,7 @@ for.end:
 define i32 @foo_mid_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) {
 ; CHECK-LABEL: @foo_mid_trip_count(
 ; PREDICATED: vector.body
-; SCALAR-NOT: vector.body
+; SCALAR: vector.body
 entry:
   br label %for.body
 

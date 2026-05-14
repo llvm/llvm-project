@@ -8,17 +8,15 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; trip count (which implies opt for size).
 define void @func_34() {
 ; CHECK-LABEL: define void @func_34() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[IV]], 16
-; CHECK-NEXT:    [[STEP:%.*]] = ashr exact i32 [[SEXT]], 16
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[STEP]], 1
-; CHECK-NEXT:    [[IV_NEXT_TRUNC:%.*]] = trunc i32 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[EC:%.*]] = icmp slt i16 [[IV_NEXT_TRUNC]], 3
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -187,12 +187,11 @@ static cl::opt<unsigned> EpilogueVectorizationMinVF(
              "the specified value are considered for epilogue vectorization."));
 
 /// Loops with a known constant trip count below this number are vectorized only
-/// if no scalar iteration overheads are incurred.
+/// if no scalar epilogue is required.
 static cl::opt<unsigned> TinyTripCountVectorThreshold(
     "vectorizer-min-trip-count", cl::init(16), cl::Hidden,
     cl::desc("Loops with a constant trip count that is smaller than this "
-             "value are vectorized only if no scalar iteration overheads "
-             "are incurred."));
+             "value are vectorized only if no scalar epilogue is required"));
 
 static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
@@ -795,10 +794,9 @@ enum EpilogueLowering {
   // Vectorization with OptForSize: don't allow epilogues.
   CM_EpilogueNotAllowedOptSize,
 
-  // A special case of vectorisation with OptForSize: loops with a very small
-  // trip count are considered for vectorization under OptForSize, thereby
-  // making sure the cost of their loop body is dominant, free of runtime
-  // guards and scalar iteration overheads.
+  // A special case for loops with a very small trip count: they are vectorized
+  // only if no scalar epilogue is required, ensuring the vectorized loop body
+  // is the dominant cost without scalar epilogue overheads.
   CM_EpilogueNotAllowedLowTripLoop,
 
   // Loop hint indicating an epilogue is undesired, apply tail folding.
@@ -2932,13 +2930,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
                       << "vector loop.\n");
     break;
   case CM_EpilogueNotAllowedLowTripLoop:
-    // fallthrough as a special case of OptForSize
+    LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to low trip "
+                      << "count.\n");
+    break;
   case CM_EpilogueNotAllowedOptSize:
-    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize)
-      LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to -Os/-Oz.\n");
-    else
-      LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to low trip "
-                        << "count.\n");
+    LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to -Os/-Oz.\n");
 
     // Bail if runtime checks are required, which are not good when optimising
     // for size.
@@ -8103,17 +8099,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       ExpectedTC->getFixedValue() < TinyTripCountVectorThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
                       << "This loop is worth vectorizing only if no scalar "
-                      << "iteration overheads are incurred.");
+                      << "epilogue is required.");
     if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)
       LLVM_DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
     else {
       LLVM_DEBUG(dbgs() << "\n");
-      // Tail-folded loops are efficient even when the loop
-      // iteration count is low. However, setting the epilogue policy to
-      // `CM_EpilogueNotAllowedLowTripLoop` prevents vectorizing loops
-      // with runtime checks. It's more effective to let
-      // `isOutsideLoopWorkProfitable` determine if vectorization is
-      // beneficial for the loop.
+      // For loops with very small trip counts, require that no scalar epilogue
+      // is needed. Tail-folded loops are still allowed as they avoid epilogues.
       if (SEL != CM_EpilogueNotNeededFoldTail)
         SEL = CM_EpilogueNotAllowedLowTripLoop;
     }

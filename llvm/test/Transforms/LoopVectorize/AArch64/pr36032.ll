@@ -14,6 +14,7 @@ define void @_Z1dv() {
 ; CHECK-LABEL: @_Z1dv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @"_ZN3$_01aEv"(ptr nonnull @b)
+; CHECK-NEXT:    [[CALL1:%.*]] = ptrtoaddr ptr [[CALL]] to i64
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[F_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD5:%.*]], [[FOR_COND_CLEANUP:%.*]] ]
@@ -23,15 +24,43 @@ define void @_Z1dv() {
 ; CHECK-NEXT:    br i1 [[CMP12]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[G_0]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 4, [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[CALL1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[G_0]], [[CONV]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], ptrtoaddr (ptr @c to i64)
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP13]], [[TMP5]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP12]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP12]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[CONV]], [[G_0]]
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [6 x i8], ptr @c, i64 0, i64 [[TMP9]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 [[TMP0]]
+; CHECK-NEXT:    store <4 x i8> [[WIDE_LOAD]], ptr [[TMP11]], align 1
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP12]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_BODY]] ]
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[G_1_LCSSA]] = phi i32 [ [[G_0]], [[FOR_COND]] ], [ 4, [[FOR_COND_CLEANUP_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[G_1_LCSSA]] = phi i32 [ [[G_0]], [[FOR_COND]] ], [ 4, [[FOR_COND_CLEANUP_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[ADD5]] = add nuw nsw i32 [[CONV]], 4
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[CONV]], [[TMP1]]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[ADD]] to i64
@@ -41,7 +70,7 @@ define void @_Z1dv() {
 ; CHECK-NEXT:    store i8 [[TMP2]], ptr [[ARRAYIDX3]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY1]], !llvm.loop [[LOOP0:![0-9]+]]
 ;
 entry:
   %call = tail call ptr @"_ZN3$_01aEv"(ptr nonnull @b) #2
