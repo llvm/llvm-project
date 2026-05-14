@@ -122,7 +122,8 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
   DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
   for (const auto *file : inputFiles) {
     for (auto *sec : file->sections) {
-      if (sec->orderSensitive)
+      if (sec->name == section_names::ehFrame &&
+          sec->segname == segment_names::text)
         continue;
       for (auto &subsec : sec->subsections) {
         auto *isec = subsec.isec;
