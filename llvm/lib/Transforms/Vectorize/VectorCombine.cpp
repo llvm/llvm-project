@@ -4165,9 +4165,9 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     ReduceVecTy = FixedVectorType::get(FVT->getElementType(), SubVecSize);
     ExtractMask.resize(SubVecSize);
     std::iota(ExtractMask.begin(), ExtractMask.end(), 0);
-    NewCost +=
-        TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                           ReduceVecTy, FinalVecVTy, ExtractMask, CostKind, 0);
+    NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                  ReduceVecTy, FinalVecVTy, ExtractMask,
+                                  CostKind, 0, ReduceVecTy);
   }
 
   IntrinsicCostAttributes ICA(ReducedOp, ReduceVecTy, {ReduceVecTy});
