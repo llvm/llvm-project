@@ -11,9 +11,7 @@
 #include "mlir/Analysis/DataFlow/IntegerDivisibilityAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/IR/InferIntDivisibilityOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/IR/InferIntDivisibilityOpInterfaceImpl.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Operation.h"
@@ -42,8 +40,6 @@ struct TestIntegerDivisibilityAnalysisPass
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<arith::ArithDialect, affine::AffineDialect>();
-    arith::registerInferIntDivisibilityOpInterfaceExternalModels(registry);
-    affine::registerInferIntDivisibilityOpInterfaceExternalModels(registry);
   }
 
   void runOnOperation() override {

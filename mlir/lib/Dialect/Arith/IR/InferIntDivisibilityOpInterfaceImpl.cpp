@@ -5,24 +5,24 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Direct implementations of `InferIntDivisibilityOpInterface` for arith ops.
+//
+//===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/IR/InferIntDivisibilityOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/InferIntDivisibilityOpInterface.h"
 
 #include <cstdlib>
 
 using namespace mlir;
-
-namespace {
+using namespace mlir::arith;
 
 static ConstantIntDivisibility
 getDivisibilityOfOperand(Value v, IntegerDivisibility divisibility) {
-  if (!divisibility.isUninitialized()) {
+  if (!divisibility.isUninitialized())
     return divisibility.getValue();
-  }
   APInt intVal;
   if (matchPattern(v, m_ConstantInt(&intVal))) {
     uint64_t udiv = intVal.getZExtValue();
@@ -32,131 +32,92 @@ getDivisibilityOfOperand(Value v, IntegerDivisibility divisibility) {
   return ConstantIntDivisibility(1, 1);
 }
 
-/// Helper for binary arith ops whose result divisibility is the GCD (union) of
-/// their operands' divisibilities. This covers add, sub, min, and max.
+// Result divisibility is the GCD (union) of the operand divisibilities.
 template <typename OpTy>
-struct ArithBinaryGCDInferIntDivisibilityOpInterface
-    : InferIntDivisibilityOpInterface::ExternalModel<
-          ArithBinaryGCDInferIntDivisibilityOpInterface<OpTy>, OpTy> {
+static void inferBinaryGCDResultDivisibility(OpTy op,
+                                             ArrayRef<IntegerDivisibility> argDivs,
+                                             SetIntDivisibilityFn setResultDivs) {
+  auto lhsDiv = getDivisibilityOfOperand(op.getLhs(), argDivs[0]);
+  auto rhsDiv = getDivisibilityOfOperand(op.getRhs(), argDivs[1]);
+  setResultDivs(op.getResult(), lhsDiv.getUnion(rhsDiv));
+}
 
-  void inferResultDivisibility(Operation *op,
-                               ArrayRef<IntegerDivisibility> argDivs,
-                               SetIntDivisibilityFn setResultDivs) const {
-    auto binOp = cast<OpTy>(op);
-    auto lhsDiv = getDivisibilityOfOperand(binOp.getLhs(), argDivs[0]);
-    auto rhsDiv = getDivisibilityOfOperand(binOp.getRhs(), argDivs[1]);
-    setResultDivs(binOp.getResult(), lhsDiv.getUnion(rhsDiv));
-  }
-};
+void ConstantOp::inferResultDivisibility(
+    ArrayRef<IntegerDivisibility> argDivs,
+    SetIntDivisibilityFn setResultDivs) {
+  auto constAttr = dyn_cast_if_present<IntegerAttr>(getValue());
+  if (!constAttr)
+    return;
+  const APInt &value = constAttr.getValue();
+  uint64_t udiv = value.getZExtValue();
+  uint64_t sdiv = std::abs(value.getSExtValue());
+  setResultDivs(getResult(), ConstantIntDivisibility(udiv, sdiv));
+}
 
-/// For arith.select, the result divisibility is the GCD of the true and false
-/// operands' divisibilities. The condition (operand 0) is i1 and irrelevant.
-struct ArithSelectInferIntDivisibilityOpInterface
-    : InferIntDivisibilityOpInterface::ExternalModel<
-          ArithSelectInferIntDivisibilityOpInterface, arith::SelectOp> {
+void AddIOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                     SetIntDivisibilityFn setResultDivs) {
+  inferBinaryGCDResultDivisibility(*this, argDivs, setResultDivs);
+}
 
-  void inferResultDivisibility(Operation *op,
-                               ArrayRef<IntegerDivisibility> argDivs,
-                               SetIntDivisibilityFn setResultDivs) const {
-    auto selectOp = cast<arith::SelectOp>(op);
-    // argDivs[0] is the condition (i1), argDivs[1] is true, argDivs[2] is
-    // false.
-    auto trueDiv =
-        getDivisibilityOfOperand(selectOp.getTrueValue(), argDivs[1]);
-    auto falseDiv =
-        getDivisibilityOfOperand(selectOp.getFalseValue(), argDivs[2]);
-    setResultDivs(selectOp.getResult(), trueDiv.getUnion(falseDiv));
-  }
-};
+void SubIOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                     SetIntDivisibilityFn setResultDivs) {
+  inferBinaryGCDResultDivisibility(*this, argDivs, setResultDivs);
+}
 
-struct ArithConstantInferIntDivisibilityOpInterface
-    : InferIntDivisibilityOpInterface::ExternalModel<
-          ArithConstantInferIntDivisibilityOpInterface, arith::ConstantOp> {
+void MinUIOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                      SetIntDivisibilityFn setResultDivs) {
+  inferBinaryGCDResultDivisibility(*this, argDivs, setResultDivs);
+}
 
-  void inferResultDivisibility(Operation *op,
-                               ArrayRef<IntegerDivisibility> argDivs,
-                               SetIntDivisibilityFn setResultDivs) const {
-    auto constOp = cast<arith::ConstantOp>(op);
-    auto constAttr = dyn_cast_if_present<IntegerAttr>(constOp.getValue());
-    if (constAttr) {
-      const APInt &value = constAttr.getValue();
-      uint64_t udiv = value.getZExtValue();
-      uint64_t sdiv = std::abs(value.getSExtValue());
-      setResultDivs(constOp.getResult(), ConstantIntDivisibility(udiv, sdiv));
-    }
-  }
-};
+void MaxUIOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                      SetIntDivisibilityFn setResultDivs) {
+  inferBinaryGCDResultDivisibility(*this, argDivs, setResultDivs);
+}
 
-struct ArithMulIInferIntDivisibilityOpInterface
-    : InferIntDivisibilityOpInterface::ExternalModel<
-          ArithMulIInferIntDivisibilityOpInterface, arith::MulIOp> {
+void MinSIOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                      SetIntDivisibilityFn setResultDivs) {
+  inferBinaryGCDResultDivisibility(*this, argDivs, setResultDivs);
+}
 
-  void inferResultDivisibility(Operation *op,
-                               ArrayRef<IntegerDivisibility> argDivs,
-                               SetIntDivisibilityFn setResultDivs) const {
-    auto mulOp = cast<arith::MulIOp>(op);
+void MaxSIOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                      SetIntDivisibilityFn setResultDivs) {
+  inferBinaryGCDResultDivisibility(*this, argDivs, setResultDivs);
+}
 
-    auto lhsDivisibility = getDivisibilityOfOperand(mulOp.getLhs(), argDivs[0]);
-    auto rhsDivisibility = getDivisibilityOfOperand(mulOp.getRhs(), argDivs[1]);
+void MulIOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                     SetIntDivisibilityFn setResultDivs) {
+  auto lhsDivisibility = getDivisibilityOfOperand(getLhs(), argDivs[0]);
+  auto rhsDivisibility = getDivisibilityOfOperand(getRhs(), argDivs[1]);
 
-    uint64_t mulUDiv = lhsDivisibility.udiv() * rhsDivisibility.udiv();
-    uint64_t mulSDiv = lhsDivisibility.sdiv() * rhsDivisibility.sdiv();
+  uint64_t mulUDiv = lhsDivisibility.udiv() * rhsDivisibility.udiv();
+  uint64_t mulSDiv = lhsDivisibility.sdiv() * rhsDivisibility.sdiv();
 
-    setResultDivs(mulOp.getResult(), ConstantIntDivisibility(mulUDiv, mulSDiv));
-  }
-};
+  setResultDivs(getResult(), ConstantIntDivisibility(mulUDiv, mulSDiv));
+}
 
-struct ArithDivUIInferIntDivisibilityOpInterface
-    : InferIntDivisibilityOpInterface::ExternalModel<
-          ArithDivUIInferIntDivisibilityOpInterface, arith::DivUIOp> {
+void DivUIOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                      SetIntDivisibilityFn setResultDivs) {
+  APInt intVal;
+  if (!matchPattern(getRhs(), m_ConstantInt(&intVal)))
+    return;
 
-  void inferResultDivisibility(Operation *op,
-                               ArrayRef<IntegerDivisibility> argDivs,
-                               SetIntDivisibilityFn setResultDivs) const {
-    auto divOp = cast<arith::DivUIOp>(op);
+  auto lhsDivisibility = getDivisibilityOfOperand(getLhs(), argDivs[0]);
 
-    APInt intVal;
-    if (!matchPattern(divOp.getRhs(), m_ConstantInt(&intVal))) {
-      return;
-    }
+  uint64_t divUDiv = lhsDivisibility.udiv() % intVal.getZExtValue() == 0
+                         ? lhsDivisibility.udiv() / intVal.getZExtValue()
+                         : 1;
+  uint64_t divSDiv =
+      lhsDivisibility.sdiv() % std::abs(intVal.getSExtValue()) == 0
+          ? lhsDivisibility.sdiv() / std::abs(intVal.getSExtValue())
+          : 1;
 
-    auto lhsDivisibility = getDivisibilityOfOperand(divOp.getLhs(), argDivs[0]);
+  setResultDivs(getResult(), ConstantIntDivisibility(divUDiv, divSDiv));
+}
 
-    uint64_t divUDiv = lhsDivisibility.udiv() % intVal.getZExtValue() == 0
-                           ? lhsDivisibility.udiv() / intVal.getZExtValue()
-                           : 1;
-    uint64_t divSDiv =
-        lhsDivisibility.sdiv() % std::abs(intVal.getSExtValue()) == 0
-            ? lhsDivisibility.sdiv() / std::abs(intVal.getSExtValue())
-            : 1;
-
-    setResultDivs(divOp, ConstantIntDivisibility(divUDiv, divSDiv));
-  }
-};
-
-} // namespace
-
-void mlir::arith::registerInferIntDivisibilityOpInterfaceExternalModels(
-    DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *context, ArithDialect *dialect) {
-    ConstantOp::attachInterface<ArithConstantInferIntDivisibilityOpInterface>(
-        *context);
-    MulIOp::attachInterface<ArithMulIInferIntDivisibilityOpInterface>(*context);
-    DivUIOp::attachInterface<ArithDivUIInferIntDivisibilityOpInterface>(
-        *context);
-    AddIOp::attachInterface<
-        ArithBinaryGCDInferIntDivisibilityOpInterface<AddIOp>>(*context);
-    SubIOp::attachInterface<
-        ArithBinaryGCDInferIntDivisibilityOpInterface<SubIOp>>(*context);
-    MinUIOp::attachInterface<
-        ArithBinaryGCDInferIntDivisibilityOpInterface<MinUIOp>>(*context);
-    MaxUIOp::attachInterface<
-        ArithBinaryGCDInferIntDivisibilityOpInterface<MaxUIOp>>(*context);
-    MinSIOp::attachInterface<
-        ArithBinaryGCDInferIntDivisibilityOpInterface<MinSIOp>>(*context);
-    MaxSIOp::attachInterface<
-        ArithBinaryGCDInferIntDivisibilityOpInterface<MaxSIOp>>(*context);
-    SelectOp::attachInterface<ArithSelectInferIntDivisibilityOpInterface>(
-        *context);
-  });
+void SelectOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                       SetIntDivisibilityFn setResultDivs) {
+  // argDivs[0] is the condition (i1), argDivs[1] is true, argDivs[2] is false.
+  auto trueDiv = getDivisibilityOfOperand(getTrueValue(), argDivs[1]);
+  auto falseDiv = getDivisibilityOfOperand(getFalseValue(), argDivs[2]);
+  setResultDivs(getResult(), trueDiv.getUnion(falseDiv));
 }

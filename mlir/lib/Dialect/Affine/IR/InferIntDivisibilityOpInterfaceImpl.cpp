@@ -5,11 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Direct implementations of `InferIntDivisibilityOpInterface` for affine ops.
+//
+//===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/InferIntDivisibilityOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/IR/AffineExprVisitor.h"
-#include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/InferIntDivisibilityOpInterface.h"
 
@@ -17,14 +19,14 @@
 #include <numeric>
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 
 static ConstantIntDivisibility
 getDivisibilityOfOperand(Value v, IntegerDivisibility divisibility) {
-  if (!divisibility.isUninitialized()) {
+  if (!divisibility.isUninitialized())
     return divisibility.getValue();
-  }
   APInt intVal;
   if (matchPattern(v, m_ConstantInt(&intVal))) {
     uint64_t udiv = intVal.getZExtValue();
@@ -57,9 +59,8 @@ public:
     // Dim expressions cannot be analyzed further, so return the divisibility
     // in `divisibilityMap` if it has been populated by the caller, or fallback
     // to the minimum divisibility.
-    if (divisibilityMap.contains(expr)) {
+    if (divisibilityMap.contains(expr))
       return divisibilityMap[expr];
-    }
     return IntegerDivisibility::getMinDivisibility().getValue();
   }
 
@@ -67,18 +68,16 @@ public:
     // Symbol expressions cannot be analyzed further, so return the divisibility
     // in `divisibilityMap` if it has been populated by the caller, or fallback
     // to the minimum divisibility.
-    if (divisibilityMap.contains(expr)) {
+    if (divisibilityMap.contains(expr))
       return divisibilityMap[expr];
-    }
     return IntegerDivisibility::getMinDivisibility().getValue();
   }
 
   /// Infer the divisibility of an addition or subtraction expression by
   /// recursively visiting the LHS and RHS, and then unioning the results.
   ConstantIntDivisibility visitAddExpr(AffineBinaryOpExpr expr) {
-    if (divisibilityMap.contains(expr)) {
+    if (divisibilityMap.contains(expr))
       return divisibilityMap[expr];
-    }
     // The divisibility of an addition is the GCD of its constituents'
     // divisibilities.
     ConstantIntDivisibility lhsDiv = visit(expr.getLHS());
@@ -89,9 +88,8 @@ public:
   /// Infer the divisibility of a multiplication expression by recursively
   /// visiting the LHS and RHS, and then multiplying the results.
   ConstantIntDivisibility visitMulExpr(AffineBinaryOpExpr expr) {
-    if (divisibilityMap.contains(expr)) {
+    if (divisibilityMap.contains(expr))
       return divisibilityMap[expr];
-    }
     // The divisibility of a multiplication is the product of its constituents'
     // divisibilities.
     ConstantIntDivisibility lhsDiv = visit(expr.getLHS());
@@ -114,13 +112,11 @@ public:
   /// LHS divisibility is itself divisible by the constant (i.e., d % c == 0),
   /// then (d * k) mod c is always zero, represented as divisibility 0.
   ConstantIntDivisibility visitModExpr(AffineBinaryOpExpr expr) {
-    if (divisibilityMap.contains(expr)) {
+    if (divisibilityMap.contains(expr))
       return divisibilityMap[expr];
-    }
     auto constRhs = dyn_cast<AffineConstantExpr>(expr.getRHS());
-    if (!constRhs || constRhs.getValue() == 0) {
+    if (!constRhs || constRhs.getValue() == 0)
       return ConstantIntDivisibility(1, 1);
-    }
     auto constValue = static_cast<uint64_t>(std::abs(constRhs.getValue()));
     ConstantIntDivisibility lhsDiv = visit(expr.getLHS());
     // If the LHS is always a multiple of constValue, x mod constValue is
@@ -145,14 +141,12 @@ private:
   /// constant, then this function recursively visits the dividend, and returns
   /// the quotient of the dividend's divisibility with the divisor.
   ConstantIntDivisibility visitDivExpr(AffineBinaryOpExpr expr) {
-    if (divisibilityMap.contains(expr)) {
+    if (divisibilityMap.contains(expr))
       return divisibilityMap[expr];
-    }
     auto constRhs = dyn_cast<AffineConstantExpr>(expr.getRHS());
     // Division by zero is undefined, so return the minimum divisibility.
-    if (!constRhs || constRhs.getValue() == 0) {
+    if (!constRhs || constRhs.getValue() == 0)
       return ConstantIntDivisibility(1, 1);
-    }
     auto constValue = static_cast<uint64_t>(std::abs(constRhs.getValue()));
     ConstantIntDivisibility lhsDiv = visit(expr.getLHS());
     uint64_t divUDiv =
@@ -169,7 +163,7 @@ private:
 /// divisibilities of its dims and symbols. The `dimAndSymbolDivisibilities`
 /// should contain the divisibilities of the dims, followed by the
 /// divisibilities of the symbols in ascending order by their positions.
-static SmallVector<ConstantIntDivisibility> getResultDivisibilities(
+SmallVector<ConstantIntDivisibility> getResultDivisibilities(
     AffineMap map,
     ArrayRef<ConstantIntDivisibility> dimAndSymbolDivisibilities) {
   // Seed the AffineExprDivisibilityFinder with the dimAndSymbolDivisibilities.
@@ -189,49 +183,21 @@ static SmallVector<ConstantIntDivisibility> getResultDivisibilities(
 
   // Walk each result expression and compute their divisibilities.
   SmallVector<ConstantIntDivisibility> resultDivisibilities;
-  for (AffineExpr resultExpr : map.getResults()) {
+  for (AffineExpr resultExpr : map.getResults())
     resultDivisibilities.push_back(divisibilityFinder.visit(resultExpr));
-  }
   return resultDivisibilities;
 }
-
-struct AffineApplyInferIntDivisibilityOpInterface
-    : InferIntDivisibilityOpInterface::ExternalModel<
-          AffineApplyInferIntDivisibilityOpInterface, affine::AffineApplyOp> {
-
-  void inferResultDivisibility(Operation *op,
-                               ArrayRef<IntegerDivisibility> argDivs,
-                               SetIntDivisibilityFn setResultDivs) const {
-    auto affineApplyOp = cast<affine::AffineApplyOp>(op);
-    SmallVector<ConstantIntDivisibility> operandDivisibilities;
-    for (auto [operand, divisibility] :
-         llvm::zip(affineApplyOp.getOperands(), argDivs)) {
-      operandDivisibilities.push_back(
-          getDivisibilityOfOperand(operand, divisibility));
-    }
-
-    SmallVector<ConstantIntDivisibility> resultDivisibilities =
-        getResultDivisibilities(affineApplyOp.getMap(), operandDivisibilities);
-    for (auto [result, divisibility] :
-         llvm::zip_equal(affineApplyOp->getResults(), resultDivisibilities)) {
-      setResultDivs(result, divisibility);
-    }
-  }
-};
 
 /// Infer the result divisibility of an affine.min or affine.max operation
 /// based on its operand divisibilities. The result divisibility is the GCD
 /// of the divisibilities of each of the affine map results, because the result
 /// of the affine.min/max op could be any of these results.
 template <typename MinOrMaxTy>
-static void
-inferAffineMinOrMaxResultDivisibility(MinOrMaxTy minOrMaxOp,
-                                      ArrayRef<IntegerDivisibility> argDivs,
-                                      SetIntDivisibilityFn setResultDivs) {
-  static_assert(
-      llvm::is_one_of<MinOrMaxTy, affine::AffineMinOp,
-                      affine::AffineMaxOp>::value,
-      "MinOrMaxTy must be affine::AffineMinOp or affine::AffineMaxOp");
+void inferAffineMinOrMaxResultDivisibility(
+    MinOrMaxTy minOrMaxOp, ArrayRef<IntegerDivisibility> argDivs,
+    SetIntDivisibilityFn setResultDivs) {
+  static_assert(llvm::is_one_of<MinOrMaxTy, AffineMinOp, AffineMaxOp>::value,
+                "MinOrMaxTy must be AffineMinOp or AffineMaxOp");
   SmallVector<ConstantIntDivisibility> operandDivisibilities;
   for (auto [operand, divisibility] :
        llvm::zip(minOrMaxOp.getOperands(), argDivs)) {
@@ -244,125 +210,107 @@ inferAffineMinOrMaxResultDivisibility(MinOrMaxTy minOrMaxOp,
 
   ConstantIntDivisibility resultDivisibility =
       resultDivisibilities.pop_back_val();
-  for (auto divisibility : resultDivisibilities) {
+  for (auto divisibility : resultDivisibilities)
     resultDivisibility = resultDivisibility.getUnion(divisibility);
-  }
   setResultDivs(minOrMaxOp.getResult(), resultDivisibility);
 }
 
-struct AffineMinInferIntDivisibilityOpInterface
-    : InferIntDivisibilityOpInterface::ExternalModel<
-          AffineMinInferIntDivisibilityOpInterface, affine::AffineMinOp> {
-
-  void inferResultDivisibility(Operation *op,
-                               ArrayRef<IntegerDivisibility> argDivs,
-                               SetIntDivisibilityFn setResultDivs) const {
-    auto affineMinOp = cast<affine::AffineMinOp>(op);
-    inferAffineMinOrMaxResultDivisibility(affineMinOp, argDivs, setResultDivs);
-  }
-};
-
-struct AffineMaxInferIntDivisibilityOpInterface
-    : InferIntDivisibilityOpInterface::ExternalModel<
-          AffineMaxInferIntDivisibilityOpInterface, affine::AffineMaxOp> {
-
-  void inferResultDivisibility(Operation *op,
-                               ArrayRef<IntegerDivisibility> argDivs,
-                               SetIntDivisibilityFn setResultDivs) const {
-    auto affineMaxOp = cast<affine::AffineMaxOp>(op);
-    inferAffineMinOrMaxResultDivisibility(affineMaxOp, argDivs, setResultDivs);
-  }
-};
-
-struct AffineDelinearizeIndexInferIntDivisibilityOpInterface
-    : InferIntDivisibilityOpInterface::ExternalModel<
-          AffineDelinearizeIndexInferIntDivisibilityOpInterface,
-          affine::AffineDelinearizeIndexOp> {
-
-  void inferResultDivisibility(Operation *op,
-                               ArrayRef<IntegerDivisibility> argDivs,
-                               SetIntDivisibilityFn setResultDivs) const {
-    auto delinearizeOp = cast<affine::AffineDelinearizeIndexOp>(op);
-    MLIRContext *ctx = op->getContext();
-
-    // Operands are: [linear_index, dynamic_basis_values...]
-    ConstantIntDivisibility linearDiv =
-        getDivisibilityOfOperand(delinearizeOp.getLinearIndex(), argDivs[0]);
-
-    ArrayRef<int64_t> staticBasis = delinearizeOp.getStaticBasis();
-    int64_t numResults = delinearizeOp.getNumResults();
-
-    // Build affine expressions for each result.
-    // Dim 0 = linear index, symbols = dynamic basis values.
-    AffineExpr linearExpr = getAffineDimExpr(0, ctx);
-
-    // Collect operand divisibilities: [linear_index_div, dynamic_basis_divs...]
-    SmallVector<ConstantIntDivisibility> operandDivs;
-    operandDivs.push_back(linearDiv);
-
-    // Map static/dynamic basis values to affine expressions.
-    int64_t dynIdx = 0;
-    SmallVector<AffineExpr> basisExprs;
-    for (int64_t i = 0, e = static_cast<int64_t>(staticBasis.size()); i < e;
-         ++i) {
-      if (ShapedType::isDynamic(staticBasis[i])) {
-        basisExprs.push_back(getAffineSymbolExpr(dynIdx, ctx));
-        operandDivs.push_back(getDivisibilityOfOperand(
-            delinearizeOp.getDynamicBasis()[dynIdx], argDivs[1 + dynIdx]));
-        dynIdx++;
-      } else {
-        basisExprs.push_back(getAffineConstantExpr(staticBasis[i], ctx));
-      }
-    }
-
-    // The computation basis skips the outer bound if present.
-    bool hasOuter = delinearizeOp.hasOuterBound();
-    int64_t basisStart = hasOuter ? 1 : 0;
-
-    // Each result[i] can be expressed as an affine expression of the linear
-    // index using the effective basis (after dropping outer bound if present).
-    // Effective basis B[k] = basisExprs[basisStart + k], for k = 0..N-2.
-    // Stride s[i] = product of B[i..N-2] = product of
-    //               basisExprs[basisStart+i .. end].
-    //
-    // result[0]   = x floordiv s[0]
-    // result[i>0] = (x floordiv s[i]) mod B[i-1]
-    // For i=N-1, s[N-1]=1, so result[N-1] = x mod B[N-2].
-
-    AffineExpr stride = getAffineConstantExpr(1, ctx);
-    for (int64_t i = numResults - 1; i >= 0; --i) {
-      AffineExpr resultExpr;
-      if (i == 0) {
-        resultExpr = linearExpr.floorDiv(stride);
-      } else {
-        resultExpr =
-            (linearExpr.floorDiv(stride)) % basisExprs[basisStart + i - 1];
-      }
-
-      AffineMap resultMap = AffineMap::get(1, dynIdx, resultExpr, ctx);
-      SmallVector<ConstantIntDivisibility> divs =
-          getResultDivisibilities(resultMap, operandDivs);
-      setResultDivs(delinearizeOp.getResult(i), divs[0]);
-
-      if (i > 0) {
-        stride = basisExprs[basisStart + i - 1] * stride;
-      }
-    }
-  }
-};
-
 } // namespace
 
-void mlir::affine::registerInferIntDivisibilityOpInterfaceExternalModels(
-    DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *context, AffineDialect *dialect) {
-    AffineApplyOp::attachInterface<AffineApplyInferIntDivisibilityOpInterface>(
-        *context);
-    AffineMinOp::attachInterface<AffineMinInferIntDivisibilityOpInterface>(
-        *context);
-    AffineMaxOp::attachInterface<AffineMaxInferIntDivisibilityOpInterface>(
-        *context);
-    AffineDelinearizeIndexOp::attachInterface<
-        AffineDelinearizeIndexInferIntDivisibilityOpInterface>(*context);
-  });
+void AffineApplyOp::inferResultDivisibility(
+    ArrayRef<IntegerDivisibility> argDivs,
+    SetIntDivisibilityFn setResultDivs) {
+  SmallVector<ConstantIntDivisibility> operandDivisibilities;
+  for (auto [operand, divisibility] : llvm::zip(getOperands(), argDivs)) {
+    operandDivisibilities.push_back(
+        getDivisibilityOfOperand(operand, divisibility));
+  }
+
+  SmallVector<ConstantIntDivisibility> resultDivisibilities =
+      getResultDivisibilities(getMap(), operandDivisibilities);
+  for (auto [result, divisibility] :
+       llvm::zip_equal(getOperation()->getResults(), resultDivisibilities)) {
+    setResultDivs(result, divisibility);
+  }
+}
+
+void AffineMinOp::inferResultDivisibility(
+    ArrayRef<IntegerDivisibility> argDivs,
+    SetIntDivisibilityFn setResultDivs) {
+  inferAffineMinOrMaxResultDivisibility(*this, argDivs, setResultDivs);
+}
+
+void AffineMaxOp::inferResultDivisibility(
+    ArrayRef<IntegerDivisibility> argDivs,
+    SetIntDivisibilityFn setResultDivs) {
+  inferAffineMinOrMaxResultDivisibility(*this, argDivs, setResultDivs);
+}
+
+void AffineDelinearizeIndexOp::inferResultDivisibility(
+    ArrayRef<IntegerDivisibility> argDivs,
+    SetIntDivisibilityFn setResultDivs) {
+  MLIRContext *ctx = getContext();
+
+  // Operands are: [linear_index, dynamic_basis_values...]
+  ConstantIntDivisibility linearDiv =
+      getDivisibilityOfOperand(getLinearIndex(), argDivs[0]);
+
+  ArrayRef<int64_t> staticBasis = getStaticBasis();
+  int64_t numResults = getNumResults();
+
+  // Build affine expressions for each result.
+  // Dim 0 = linear index, symbols = dynamic basis values.
+  AffineExpr linearExpr = getAffineDimExpr(0, ctx);
+
+  // Collect operand divisibilities: [linear_index_div, dynamic_basis_divs...]
+  SmallVector<ConstantIntDivisibility> operandDivs;
+  operandDivs.push_back(linearDiv);
+
+  // Map static/dynamic basis values to affine expressions.
+  int64_t dynIdx = 0;
+  SmallVector<AffineExpr> basisExprs;
+  for (int64_t i = 0, e = static_cast<int64_t>(staticBasis.size()); i < e;
+       ++i) {
+    if (ShapedType::isDynamic(staticBasis[i])) {
+      basisExprs.push_back(getAffineSymbolExpr(dynIdx, ctx));
+      operandDivs.push_back(getDivisibilityOfOperand(
+          getDynamicBasis()[dynIdx], argDivs[1 + dynIdx]));
+      dynIdx++;
+    } else {
+      basisExprs.push_back(getAffineConstantExpr(staticBasis[i], ctx));
+    }
+  }
+
+  // The computation basis skips the outer bound if present.
+  bool hasOuter = hasOuterBound();
+  int64_t basisStart = hasOuter ? 1 : 0;
+
+  // Each result[i] can be expressed as an affine expression of the linear
+  // index using the effective basis (after dropping outer bound if present).
+  // Effective basis B[k] = basisExprs[basisStart + k], for k = 0..N-2.
+  // Stride s[i] = product of B[i..N-2] = product of
+  //               basisExprs[basisStart+i .. end].
+  //
+  // result[0]   = x floordiv s[0]
+  // result[i>0] = (x floordiv s[i]) mod B[i-1]
+  // For i=N-1, s[N-1]=1, so result[N-1] = x mod B[N-2].
+
+  AffineExpr stride = getAffineConstantExpr(1, ctx);
+  for (int64_t i = numResults - 1; i >= 0; --i) {
+    AffineExpr resultExpr;
+    if (i == 0) {
+      resultExpr = linearExpr.floorDiv(stride);
+    } else {
+      resultExpr =
+          (linearExpr.floorDiv(stride)) % basisExprs[basisStart + i - 1];
+    }
+
+    AffineMap resultMap = AffineMap::get(1, dynIdx, resultExpr, ctx);
+    SmallVector<ConstantIntDivisibility> divs =
+        getResultDivisibilities(resultMap, operandDivs);
+    setResultDivs(getResult(i), divs[0]);
+
+    if (i > 0)
+      stride = basisExprs[basisStart + i - 1] * stride;
+  }
 }
