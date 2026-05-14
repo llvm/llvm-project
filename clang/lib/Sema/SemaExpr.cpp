@@ -12849,17 +12849,31 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   if (getLangOpts().CPlusPlus && LHSStripped->getType()->isArrayType() &&
       RHSStripped->getType()->isArrayType()) {
 
-    auto IsDeprArrayComparionIgnored =
-        getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
-    auto DiagID = getLangOpts().CPlusPlus26 ? diag::warn_array_comparison_cxx26
-                  : !getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored
-                      ? diag::warn_array_comparison
-                      : diag::warn_depr_array_comparison;
-    Diag(Loc, DiagID) << LHS.get()->getSourceRange()
-                      << RHS.get()->getSourceRange() << LHSStripped->getType()
-                      << RHSStripped->getType();
-    if (getLangOpts().CPlusPlus26) {
-      return QualType();
+    // If arrays are WASM referance types, do not warn here.
+    // They will be handled as ill-formed later.
+    auto IsWebAssemblyRefArray = [](QualType T) {
+      if (const auto *AT = T->getAsArrayTypeUnsafe())
+        return AT->getElementType()->isWebAssemblyExternrefType();
+      return false;
+    };
+
+    // Don't warn for <=> because its already handled elsewhere where the
+    // operator is supported.
+    if (Opc != BO_Cmp && !IsWebAssemblyRefArray(LHSStripped->getType()) &&
+        !IsWebAssemblyRefArray(RHSStripped->getType())) {
+      auto IsDeprArrayComparionIgnored =
+          getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
+      auto DiagID = getLangOpts().CPlusPlus26
+                        ? diag::warn_array_comparison_cxx26
+                    : !getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored
+                        ? diag::warn_array_comparison
+                        : diag::warn_depr_array_comparison;
+      Diag(Loc, DiagID) << LHS.get()->getSourceRange()
+                        << RHS.get()->getSourceRange() << LHSStripped->getType()
+                        << RHSStripped->getType();
+      if (getDiagnostics().getDiagnosticLevel(DiagID, Loc) >=
+          DiagnosticsEngine::Error)
+        return QualType();
     }
   }
 

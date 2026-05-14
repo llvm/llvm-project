@@ -486,7 +486,7 @@ Bug Fixes in This Version
 -------------------------
 
 - Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
-- Clang now rejects array comparisons done within lambda functions and templates, except in SFINAE contexts, which are just discarded instead. (GH#190756)
+- Clang now diagnoses array comparisons within template instantiations. (GH#190756)
 - Correctly handle default template argument when establishing subsumption. (#GH188640)
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
 - Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
