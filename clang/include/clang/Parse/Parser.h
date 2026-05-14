@@ -190,6 +190,12 @@ public:
 /// FIXME: Perhaps we should change the name of LateParsedDeclaration to
 /// LateParsedTokens.
 struct LateParsedAttribute : public LateParsedDeclaration {
+
+  enum class Kind {
+    Declaration,
+    Type,
+  };
+
   Parser *Self;
   CachedTokens Toks;
   IdentifierInfo &AttrName;
@@ -197,13 +203,49 @@ struct LateParsedAttribute : public LateParsedDeclaration {
   SourceLocation AttrNameLoc;
   SmallVector<Decl *, 2> Decls;
 
+private:
+  Kind K;
+
+protected:
+  explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
+                               SourceLocation Loc, Kind K)
+      : Self(P), AttrName(Name), AttrNameLoc(Loc), K(K) {}
+
+public:
   explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
                                SourceLocation Loc)
-      : Self(P), AttrName(Name), AttrNameLoc(Loc) {}
+      : LateParsedAttribute(P, Name, Loc, Kind::Declaration) {}
 
   void ParseLexedAttributes() override;
 
   void addDecl(Decl *D) { Decls.push_back(D); }
+
+  Kind getKind() const { return K; }
+
+  static bool classof(const LateParsedAttribute *LA) { return true; }
+};
+
+/// A late-parsed attribute that will be applied as a type attribute.
+/// Unlike LateParsedAttribute (which applies to declarations via
+/// ActOnFinishDelayedAttribute), this stores cached tokens that are
+/// parsed during type construction when the placeholder LateParsedAttrType
+/// is replaced with a concrete type (e.g., CountAttributedType).
+struct LateParsedTypeAttribute : public LateParsedAttribute {
+
+  explicit LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name,
+                                   SourceLocation Loc)
+      : LateParsedAttribute(P, Name, Loc, Kind::Type) {}
+
+  void ParseLexedAttributes() override;
+
+  /// Parse this late-parsed type attribute and store results in OutAttrs.
+  /// This method can be called from Sema during type transformation to
+  /// parse the cached tokens and produce the final attribute.
+  void ParseInto(ParsedAttributes &OutAttrs);
+
+  static bool classof(const LateParsedAttribute *LA) {
+    return LA->getKind() == Kind::Type;
+  }
 };
 
 /// Parser - This implements a parser for the C family of languages.  After
@@ -1165,6 +1207,7 @@ private:
 
 private:
   friend struct LateParsedAttribute;
+  friend struct LateParsedTypeAttribute;
 
   struct ParsingClass;
 
@@ -1475,7 +1518,7 @@ private:
                                 const char *&PrevSpec, unsigned &DiagID,
                                 bool &isInvalid);
 
-  void ParseLexedCAttributeList(LateParsedAttrList &LA, bool EnterScope,
+  void ParseLexedCAttributeList(LateParsedAttrList &LA,
                                 ParsedAttributes *OutAttrs = nullptr);
 
   /// Finish parsing an attribute for which parsing was delayed.
@@ -1483,8 +1526,22 @@ private:
   /// for each LateParsedAttribute. We consume the saved tokens and
   /// create an attribute with the arguments filled in. We add this
   /// to the Attribute list for the decl.
-  void ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
+  void ParseLexedCAttribute(LateParsedAttribute &LA,
                             ParsedAttributes *OutAttrs = nullptr);
+
+  void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
+                               ParsedAttributes &OutAttrs);
+
+  /// Parse cached tokens for a late-parsed attribute and return the parsed
+  /// attributes. Shared implementation used by both ParseLexedCAttribute and
+  /// ParseLexedTypeAttribute.
+  ParsedAttributes ParseLexedCAttributeTokens(LateParsedAttribute &LA);
+
+  /// Helper function to move LateParsedTypeAttribute pointers from one list
+  /// to another. Filters type attributes from \p From and appends them to \p
+  /// To.
+  static void TakeTypeAttrsAppendingFrom(LateParsedAttrList &To,
+                                         LateParsedAttrList &From);
 
   void ParseLexedPragmas(ParsingClass &Class);
   void ParseLexedPragma(LateParsedPragma &LP);
