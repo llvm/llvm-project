@@ -3477,6 +3477,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
     case LLVMContext::MD_noalias_addrspace:
+    case LLVMContext::MD_ejit_may_const:
       // All of these directly apply.
       Dest.setMetadata(ID, N);
       break;
@@ -3496,6 +3497,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_range:
       copyRangeMetadata(DL, Source, N, Dest);
       break;
+
     }
   }
 }

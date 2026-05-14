@@ -25,6 +25,8 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar/EarlyCSE.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
@@ -74,13 +76,93 @@ static void computeTransitiveClosure(
   }
 }
 
-/// Run a lightweight optimization pipeline on the extracted bitcode module
-/// to reduce JIT compilation pressure. InstCombine folds constant chains,
-/// Mem2Reg promotes allocas, and SimplifyCFG cleans up dead branches.
+/// Walk a GEP chain from a load's pointer operand down to the root
+/// GlobalVariable, accumulating the total byte offset.
+static const GlobalVariable *findRootGV(const Value *V, APInt &Offset,
+                                         const DataLayout &DL) {
+  Offset = APInt(DL.getPointerSizeInBits(0), 0);
+  while (V) {
+    V = V->stripPointerCasts();
+    if (isa<GlobalVariable>(V))
+      return cast<GlobalVariable>(V);
+    auto *GEP = dyn_cast<GEPOperator>(V);
+    if (!GEP)
+      return nullptr;
+    SmallVector<Value *, 4> IdxList;
+    for (auto I = GEP->idx_begin(), E = GEP->idx_end(); I != E; ++I) {
+      if (!isa<ConstantInt>(*I))
+        return nullptr;
+      IdxList.push_back(*I);
+    }
+    Offset += DL.getIndexedOffsetInType(GEP->getSourceElementType(), IdxList);
+    V = GEP->getPointerOperand();
+  }
+  return nullptr;
+}
+
+/// Re-annotate loads with !ejit.may_const using GV-level offset metadata.
+/// Optimization passes may drop per-load metadata; this restores it from
+/// the !ejit.may_const_field entries on the GV's !ejit.metadata.
+static void reAnnotateMayConst(Module &M) {
+  const DataLayout &DL = M.getDataLayout();
+  LLVMContext &Ctx = M.getContext();
+  auto MayConstKind = Ctx.getMDKindID(MD_EJIT_MAY_CONST);
+
+  // Build offset map from GV metadata
+  DenseMap<const GlobalVariable *, SmallVector<uint64_t, 4>> mayConstMap;
+  for (GlobalVariable &GV : M.globals()) {
+    MDNode *MD = GV.getMetadata(MD_EJIT_METADATA);
+    if (!MD)
+      continue;
+    SmallVector<uint64_t, 4> offsets;
+    for (const MDOperand &Op : MD->operands()) {
+      auto *Sub = dyn_cast<MDNode>(Op.get());
+      if (!Sub || Sub->getNumOperands() < 2)
+        continue;
+      auto *Tag = dyn_cast<MDString>(Sub->getOperand(0));
+      if (!Tag || Tag->getString() != TAG_EJIT_MAY_CONST_FIELD)
+        continue;
+      if (auto *CI = mdconst::dyn_extract<ConstantInt>(Sub->getOperand(1)))
+        offsets.push_back(CI->getZExtValue());
+    }
+    if (!offsets.empty())
+      mayConstMap[&GV] = std::move(offsets);
+  }
+  if (mayConstMap.empty())
+    return;
+
+  // Re-annotate matching loads
+  unsigned count = 0;
+  for (Function &F : M.functions()) {
+    if (F.isDeclaration())
+      continue;
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        auto *LI = dyn_cast<LoadInst>(&I);
+        if (!LI || LI->hasMetadata(MayConstKind))
+          continue;
+        APInt Off;
+        const GlobalVariable *GV = findRootGV(LI->getPointerOperand(), Off, DL);
+        if (!GV)
+          continue;
+        auto it = mayConstMap.find(GV);
+        if (it == mayConstMap.end())
+          continue;
+        if (is_contained(it->second, Off.getZExtValue())) {
+          LI->setMetadata(MayConstKind, MDNode::get(Ctx, {}));
+          count++;
+        }
+      }
+    }
+  }
+  LLVM_DEBUG(dbgs() << "ejit-register-bitcode: re-annotated " << count
+                    << " may_const load(s)\n");
+}
+
+/// Run pre-optimization on the extracted bitcode at AOT time to reduce
+/// JIT compilation pressure. In debug/shared builds this is a no-op
+/// (cyclic link dependency: LLVMPasses <-> LLVMEmbeddedJIT).
 #ifdef NDEBUG
-// Release build: run pre-optimization on extracted bitcode to reduce
-// JIT compilation pressure. (Debug/shared builds skip this due to
-// cyclic link dependency: LLVMPasses <-> LLVMEmbeddedJIT.)
 static void preOptimizeBitcode(Module &M) {
   PassBuilder PB;
   LoopAnalysisManager LAM;
@@ -93,6 +175,7 @@ static void preOptimizeBitcode(Module &M) {
   PB.registerModuleAnalyses(MAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
+  // 1. Inline: AlwaysInline + cost-based inliner for small functions
   {
     ModulePassManager MPM;
     MPM.addPass(AlwaysInlinerPass());
@@ -100,6 +183,8 @@ static void preOptimizeBitcode(Module &M) {
         llvm::OptimizationLevel::O2, ThinOrFullLTOPhase::None));
     MPM.run(M, MAM);
   }
+
+  // 2. Mem2Reg: promote allocas from inlined code to SSA
   {
     FunctionPassManager FPM;
     FPM.addPass(PromotePass());
@@ -107,16 +192,30 @@ static void preOptimizeBitcode(Module &M) {
       if (!F.isDeclaration())
         FPM.run(F, FAM);
   }
+
+  // 3. EarlyCSE + InstCombine: simplify and fold redundant computations
   {
     FunctionPassManager FPM;
+    FPM.addPass(EarlyCSEPass());
     FPM.addPass(InstCombinePass());
     for (Function &F : M.functions())
       if (!F.isDeclaration())
         FPM.run(F, FAM);
   }
+
+  // 4. SimplifyCFG: flatten branches, merge blocks
+  {
+    FunctionPassManager FPM;
+    FPM.addPass(SimplifyCFGPass());
+    for (Function &F : M.functions())
+      if (!F.isDeclaration())
+        FPM.run(F, FAM);
+  }
+
+  // 5. Restore !ejit.may_const metadata that passes may have dropped
+  reAnnotateMayConst(M);
 }
 #else
-// Debug/shared build: skip pre-optimization. Same passes run at JIT time.
 static void preOptimizeBitcode(Module &) {}
 #endif
 
