@@ -29,9 +29,11 @@ DependencyScanningWorker::DependencyScanningWorker(
 
   auto BaseFS = Service.getOpts().MakeVFS();
 
-  if (Service.getOpts().TraceVFS)
-    BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
+  if (Service.getOpts().TraceVFS) {
+    TracingFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
         std::move(BaseFS));
+    BaseFS = TracingFS;
+  }
 
   DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
       Service.getSharedCache(), std::move(BaseFS));
