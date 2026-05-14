@@ -385,10 +385,8 @@ bool DwarfInstrProfCorrelator<IntPtrT>::isDIEOfProbe(const DWARFDie &Die,
 }
 
 template <class IntPtrT>
-void DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
-    InstrProfCorrelator::CorrelationData *Data,
-    MapVector<std::string, std::pair<InstrProfCorrelator::Probe, IntPtrT>,
-              StringMap<unsigned>> &Probes,
+std::optional<std::pair<InstrProfCorrelator::Probe, IntPtrT>>
+DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
     const DWARFDie &Die, const bool UnlimitedWarnings,
     int &NumSuppressedWarnings) {
   std::optional<const char *> FunctionName;
@@ -422,7 +420,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
   }
   // If there is no function and no counter, assume it was dead-stripped
   if (!FunctionPtr && !CounterPtr)
-    return;
+    return std::nullopt;
   if (!FunctionName || !CFGHash || !CounterPtr || !NumCounters) {
     if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
       WithColor::warning() << "Incomplete DIE for function " << FunctionName
@@ -431,7 +429,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
                            << "  NumCounters=" << NumCounters << "\n";
       LLVM_DEBUG(Die.dump(dbgs()));
     }
-    return;
+    return std::nullopt;
   }
   uint64_t CountersStart = this->Ctx->CountersSectionStart;
   uint64_t CountersEnd = this->Ctx->CountersSectionEnd;
@@ -443,7 +441,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
           *FunctionName, *CounterPtr, CountersStart, CountersEnd);
       LLVM_DEBUG(Die.dump(dbgs()));
     }
-    return;
+    return std::nullopt;
   }
   if (!FunctionPtr && (UnlimitedWarnings || ++NumSuppressedWarnings < 1)) {
     WithColor::warning() << format("Could not find address of function %s\n",
@@ -468,29 +466,13 @@ void DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
   if (auto LineNumber = FnDie.getDeclLine())
     P.LineNumber = LineNumber;
 
-  // Try to find appropriate probe.
-  auto Iter = Probes.find(*FunctionName);
-  if (Iter != Probes.end()) {
-    InstrProfCorrelator::Probe &Probe = Iter->second.first;
-    Probe.LinkageName = P.LinkageName;
-    Probe.CFGHash = P.CFGHash;
-    Probe.CounterOffset = P.CounterOffset;
-    Probe.NumCounters = P.NumCounters;
-    Probe.FilePath = P.FilePath;
-    Probe.LineNumber = P.LineNumber;
-    Iter->second.second = *FunctionPtr;
-    return;
-  }
-  Probes[std::string(*FunctionName)] = {P, *FunctionPtr};
-  if (!Data)
-    this->NamesVec.push_back(*FunctionName);
+  return std::optional<std::pair<InstrProfCorrelator::Probe, IntPtrT>>(
+      {P, FunctionPtr.value_or(0)});
 }
 
 template <class IntPtrT>
-void DwarfInstrProfCorrelator<IntPtrT>::addBitmapToDataProbe(
-    InstrProfCorrelator::CorrelationData *Data,
-    MapVector<std::string, std::pair<InstrProfCorrelator::Probe, IntPtrT>,
-              StringMap<unsigned>> &Probes,
+std::optional<std::pair<InstrProfCorrelator::Probe, IntPtrT>>
+DwarfInstrProfCorrelator<IntPtrT>::addBitmapToDataProbe(
     const DWARFDie &Die, const bool UnlimitedWarnings,
     int &NumSuppressedWarnings) {
   std::optional<const char *> FunctionName;
@@ -526,7 +508,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::addBitmapToDataProbe(
                            << "  NumBitmapBytes=" << NumBitmapBytes << "\n";
       LLVM_DEBUG(Die.dump(dbgs()));
     }
-    return;
+    return std::nullopt;
   }
   uint64_t BitmapStart = this->Ctx->BitmapSectionStart;
   uint64_t BitmapEnd = this->Ctx->BitmapSectionEnd;
@@ -534,7 +516,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::addBitmapToDataProbe(
     auto E = make_error<InstrProfError>(
         instrprof_error::unable_to_correlate_profile,
         "could not find profile bitmap section in correlated file");
-    return;
+    return std::nullopt;
   }
   if (*BitmapPtr < BitmapStart || (*BitmapPtr >= BitmapEnd && NumBitmapBytes)) {
     if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
@@ -544,7 +526,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::addBitmapToDataProbe(
           *FunctionName, *BitmapPtr, BitmapStart, BitmapEnd);
       LLVM_DEBUG(Die.dump(dbgs()));
     }
-    return;
+    return std::nullopt;
   }
   // In debug info correlation mode, the BitmapPtr is an absolute address of
   // the bitmap, but it's expected to be relative later when iterating Data.
@@ -553,17 +535,8 @@ void DwarfInstrProfCorrelator<IntPtrT>::addBitmapToDataProbe(
   P.FunctionName = *FunctionName;
   P.BitmapOffset = BitmapOffset;
   P.NumBitmapBytes = NumBitmapBytes;
-  // Try to find appropriate probe.
-  auto Iter = Probes.find(*FunctionName);
-  if (Iter != Probes.end()) {
-    InstrProfCorrelator::Probe &Probe = Iter->second.first;
-    Probe.BitmapOffset = P.BitmapOffset;
-    Probe.NumBitmapBytes = P.NumBitmapBytes;
-    return;
-  }
-  Probes[std::string(*FunctionName)] = {P, 0};
-  if (!Data)
-    this->NamesVec.push_back(*FunctionName);
+
+  return std::optional<std::pair<InstrProfCorrelator::Probe, IntPtrT>>({P, 0});
 }
 
 template <class IntPtrT>
@@ -579,12 +552,33 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
   int NumSuppressedWarnings = -MaxWarnings;
 
   auto MaybeAddProbe = [&](DWARFDie Die) {
+    std::optional<std::pair<InstrProfCorrelator::Probe, IntPtrT>> ProbeData;
     if (isDIEOfProbe(Die, getInstrProfCountersVarPrefix()))
-      addCountersToDataProbe(Data, Probes, Die, UnlimitedWarnings,
-                             NumSuppressedWarnings);
+      ProbeData =
+          addCountersToDataProbe(Die, UnlimitedWarnings, NumSuppressedWarnings);
     else if (isDIEOfProbe(Die, getInstrProfBitmapVarPrefix()))
-      addBitmapToDataProbe(Data, Probes, Die, UnlimitedWarnings,
-                           NumSuppressedWarnings);
+      ProbeData =
+          addBitmapToDataProbe(Die, UnlimitedWarnings, NumSuppressedWarnings);
+    if (!ProbeData)
+      return;
+    auto [Probe, FunctionPtr] = *ProbeData;
+
+    auto [It, Inserted] =
+        Probes.try_emplace(Probe.FunctionName, Probe, FunctionPtr);
+    if (!Inserted) {
+      auto &P = It->second.first;
+      if (isDIEOfProbe(Die, getInstrProfCountersVarPrefix())) {
+        P.LinkageName = Probe.LinkageName;
+        P.CFGHash = Probe.CFGHash;
+        P.CounterOffset = Probe.CounterOffset;
+        P.NumCounters = Probe.NumCounters;
+        P.FilePath = Probe.FilePath;
+        P.LineNumber = Probe.LineNumber;
+      } else {
+        P.BitmapOffset = Probe.BitmapOffset;
+        P.NumBitmapBytes = Probe.NumBitmapBytes;
+      }
+    }
   };
   for (auto &CU : DICtx->normal_units())
     for (const auto &Entry : CU->dies())
@@ -598,6 +592,7 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     if (Data)
       Data->Probes.push_back(Probe);
     else {
+      this->NamesVec.push_back(Probe.FunctionName);
       uint64_t NameRef = IndexedInstrProf::ComputeHash(Probe.FunctionName);
       IntPtrT FunctionPtr = Iter->second.second;
       this->addDataProbe(NameRef, Probe.CFGHash, Probe.CounterOffset,

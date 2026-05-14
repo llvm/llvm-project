@@ -208,19 +208,13 @@ private:
   /// symbol of the necessary type.
   static bool isDIEOfProbe(const DWARFDie &Die, StringRef Prefix);
 
-  void addCountersToDataProbe(
-      InstrProfCorrelator::CorrelationData *Data,
-      MapVector<std::string, std::pair<InstrProfCorrelator::Probe, IntPtrT>,
-                StringMap<unsigned>> &Probes,
-      const DWARFDie &Die, const bool UnlimitedWarnings,
-      int &NumSuppressedWarnings);
+  std::optional<std::pair<InstrProfCorrelator::Probe, IntPtrT>>
+  addCountersToDataProbe(const DWARFDie &Die, const bool UnlimitedWarnings,
+                         int &NumSuppressedWarnings);
 
-  void addBitmapToDataProbe(
-      InstrProfCorrelator::CorrelationData *Data,
-      MapVector<std::string, std::pair<InstrProfCorrelator::Probe, IntPtrT>,
-                StringMap<unsigned>> &Probes,
-      const DWARFDie &Die, const bool UnlimitedWarnings,
-      int &NumSuppressedWarnings);
+  std::optional<std::pair<InstrProfCorrelator::Probe, IntPtrT>>
+  addBitmapToDataProbe(const DWARFDie &Die, const bool UnlimitedWarnings,
+                       int &NumSuppressedWarnings);
 
   /// Iterate over DWARF DIEs to find those that symbolize instrumentation
   /// probes and construct the ProfileData vector and Names string.
