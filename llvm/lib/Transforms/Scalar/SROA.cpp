@@ -5111,25 +5111,15 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 ///
 /// As such, we only apply this transformation after memcpyopt has run. We gate
 /// this transformation by the "CanonicalizeStructToVector" pass option.
-static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
-                                                      Partition &P,
-                                                      const DataLayout &DL) {
-  unsigned NumElts = STy->getNumElements();
-
-  Type *EltTy = STy->getElementType(0);
-  if (!llvm::all_equal(STy->elements()))
+static FixedVectorType *
+tryCanonicalizeMemIntrinsicsToByteVector(Partition &P, const DataLayout &DL,
+                                         LLVMContext &C) {
+  uint64_t Size = P.size();
+  if (Size == 0 || Size > std::numeric_limits<unsigned>::max())
     return nullptr;
 
-  bool IsIntegralPointerTy =
-      EltTy->isPointerTy() && !DL.isNonIntegralPointerType(EltTy);
-  if (!EltTy->isIntegerTy() && !EltTy->isFloatingPointTy() &&
-      !IsIntegralPointerTy)
-    return nullptr;
-
-  auto *VTy = FixedVectorType::get(EltTy, NumElts);
-  TypeSize StructSize = DL.getStructLayout(STy)->getSizeInBytes();
-  TypeSize VectorSize = DL.getTypeAllocSize(VTy);
-  if (StructSize != VectorSize)
+  auto *VTy = FixedVectorType::get(Type::getInt8Ty(C), Size);
+  if (DL.getTypeAllocSize(VTy).getFixedValue() != Size)
     return nullptr;
 
   for (const Slice &S : P) {
@@ -5258,7 +5248,7 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
     // this too early can hide memcpy chains from MemCpyOpt.
     if (CanonicalizeStructToVector) {
       if (auto *STy = dyn_cast<StructType>(TypePartitionTy)) {
-        if (auto *VTy = tryCanonicalizeStructToVector(STy, P, DL)) {
+        if (auto *VTy = tryCanonicalizeMemIntrinsicsToByteVector(P, DL, C)) {
           LogSelection("struct-fallback-vecty", VTy, nullptr, false);
           return {VTy, false, nullptr};
         }
