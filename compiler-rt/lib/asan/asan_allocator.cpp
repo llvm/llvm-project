@@ -1615,16 +1615,25 @@ hsa_status_t asan_hsa_amd_ipc_memory_detach(void* mapped_ptr) {
   static_assert(AP_.kMetadataSize == 0, "Expression below requires this");
   uptr mapped_base = reinterpret_cast<uptr>(mapped_ptr) - kPageSize_;
 
+  // Snapshot mapping size before detach: ROCr may return an error while the
+  // import is still live (e.g. thunk_bo path if hsaKmtMemoryVaUnmap fails).
+  // Only clear ASan shadow after a successful detach so redzones stay valid
+  // if teardown did not complete.
   hsa_amd_pointer_info_t info;
   info.size = sizeof(hsa_amd_pointer_info_t);
+  uptr mapped_sz = 0;
   if (REAL(hsa_amd_pointer_info)(reinterpret_cast<void*>(mapped_base), &info,
                                  nullptr, nullptr,
-                                 nullptr) == HSA_STATUS_SUCCESS) {
-    PoisonShadow(mapped_base, info.sizeInBytes, 0);
-    FlushUnneededASanShadowMemory(mapped_base, info.sizeInBytes);
-  }
+                                 nullptr) == HSA_STATUS_SUCCESS)
+    mapped_sz = static_cast<uptr>(info.sizeInBytes);
 
-  return REAL(hsa_amd_ipc_memory_detach)(reinterpret_cast<void*>(mapped_base));
+  const hsa_status_t status =
+      REAL(hsa_amd_ipc_memory_detach)(reinterpret_cast<void*>(mapped_base));
+  if (status == HSA_STATUS_SUCCESS && mapped_sz) {
+    PoisonShadow(mapped_base, mapped_sz, 0);
+    FlushUnneededASanShadowMemory(mapped_base, mapped_sz);
+  }
+  return status;
 }
 
 hsa_status_t asan_hsa_amd_vmem_address_reserve_align(
@@ -1675,6 +1684,13 @@ hsa_status_t asan_hsa_amd_vmem_address_free(void* ptr, size_t size,
 
   void* p = get_allocator().GetBlockBegin(ptr);
   if (p) {
+    // Match ROCr: require the same va/size as reserve before freeing metadata.
+    uptr ptr_ = reinterpret_cast<uptr>(ptr);
+    AsanChunk* m = reinterpret_cast<AsanChunk*>(ptr_ - kChunkHeaderSize);
+    if (m->Beg() != ptr_ || size != m->UsedSize()) {
+      errno = errno_EINVAL;
+      return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+    }
     instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
     return HSA_STATUS_SUCCESS;
   }

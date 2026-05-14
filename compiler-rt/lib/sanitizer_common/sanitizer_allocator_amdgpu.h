@@ -35,6 +35,12 @@ struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
     status = HSA_STATUS_SUCCESS;
     alloc_func = nullptr;
   }
+  // If allocation fails without an HSA API status, record one so callers never
+  // see *ptr == nullptr with status still SUCCESS.
+  void EnsureFailureStatus(hsa_status_t err) {
+    if (status == HSA_STATUS_SUCCESS)
+      status = err;
+  }
   hsa_status_t status;
   void* alloc_func;
   hsa_amd_memory_pool_t memory_pool;
