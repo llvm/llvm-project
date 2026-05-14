@@ -132,6 +132,15 @@ LIBC_INLINE LIBC_CONSTEXPR float exp10m1f(float x) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     if (auto r = EXP10M1F_EXCEPTS_LO.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
       return r.value();
+#else
+    // Even if we're not checking for the misrounded cases in this interval, we
+    // must still check for -0 as input and return -0 as output, rather than +0
+    // as the code below would compute.
+    //
+    // We might as well check for both zeroes at once, in fact, since it's no
+    // slower.
+    if (LIBC_UNLIKELY(x_abs == 0))
+      return x;
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
     double dx = x;
