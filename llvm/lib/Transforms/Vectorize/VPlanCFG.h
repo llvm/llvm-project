@@ -261,11 +261,11 @@ vp_depth_first_shallow(const VPBlockBase *G) {
 
 /// Returns the VPBasicBlocks forming the loop body of a plain (pre-region)
 /// VPlan in reverse post-order starting from \p Header.
-inline SmallVector<VPBasicBlock *, 16>
+inline SmallVector<VPBasicBlock *>
 vp_plain_cfg_loop_body(VPBasicBlock *Header) {
   assert(!Header->getParent() && "Header must not be inside a region");
   VPBlockBase *Middle = Header->getPredecessors()[1]->getSuccessors()[0];
-  SmallVector<VPBasicBlock *, 16> Result;
+  SmallVector<VPBasicBlock *> Result;
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
