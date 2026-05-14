@@ -35,9 +35,6 @@ public:
   /// Run InstCombine on all functions.
   void runInstCombine(Module &M);
 
-  /// Run the inliner (AlwaysInline + cost-based for small functions).
-  void runInline(Module &M);
-
   /// Run the full optimization pipeline at the given level (L1/L2/L3).
   void runOptimizationPipeline(Module &M, OptimizationLevel level);
 

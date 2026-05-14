@@ -78,16 +78,19 @@ EJitOrcEngine::Create(const Config &config,
 
   // Register all known global variable addresses from the PeriodArrayRegistry
   // so that external global references in any loaded bitcode module resolve
-  // to the AOT process's memory. This must happen before any module is loaded.
+  // to the AOT process's memory. Deduplicate: the constructor may run twice
+  // (PASS1 + PASS2 both add to global_ctors), causing duplicate entries.
   {
     auto &JD = engine->P->J->getMainJITDylib();
-    // Period arrays: iterate all periods and their arrays
-    for (auto &kv : periodReg.getStaticVars()) {
-      orc::SymbolMap symMap;
+    orc::SymbolMap symMap;
+    for (auto &kv : periodReg.getStaticVars())
       symMap[engine->P->J->mangleAndIntern(kv.varName)] =
           orc::ExecutorSymbolDef(orc::ExecutorAddr::fromPtr(kv.varAddr),
                                  JITSymbolFlags::Exported);
-      (void)JD.define(orc::absoluteSymbols(std::move(symMap)));
+    if (!symMap.empty()) {
+      if (auto Err = JD.define(orc::absoluteSymbols(std::move(symMap))))
+        LLVM_DEBUG(dbgs() << "ejit-orc-engine: define static vars: "
+                          << toString(std::move(Err)) << "\n");
     }
   }
 
@@ -114,10 +117,6 @@ EJitOrcEngine::Create(const Config &config,
           // 2. InstCombine: fold constant chains from substituted params
           opt.runInstCombine(M);
 
-          // 3. Inline: expand callees so StructFieldPass can trace GEP chains.
-          //    Cost-based inliner handles small index-wrapper functions.
-          opt.runInline(M);
-
           // Dump pre-optimization IR if configured.
           if (!engine->P->dumpJITDir.empty() && ctx) {
             std::string path = engine->P->dumpJITDir + "/" +
@@ -128,7 +127,7 @@ EJitOrcEngine::Create(const Config &config,
               M.print(OS, nullptr);
           }
 
-          // 4. First EJitStructFieldPass: replace ejit_may_const loads
+          // 3. First EJitStructFieldPass: replace ejit_may_const loads
           //    before the optimization pipeline so SCCP/ADCE can propagate
           //    the resulting constants.
           {
@@ -138,10 +137,10 @@ EJitOrcEngine::Create(const Config &config,
                 structField.run(F, opt.getFAM());
           }
 
-          // 5. Run the standard optimization pipeline at the configured level.
+          // 4. Run the standard optimization pipeline at the configured level.
           opt.runOptimizationPipeline(M, ctx->optLevel);
 
-          // 6. Second EJitStructFieldPass + InstCombine: catch loads exposed
+          // 5. Second EJitStructFieldPass + InstCombine: catch loads exposed
           //    after loop unrolling (L3) or inlining.
           {
             EJitStructFieldPass structField(periodReg);
@@ -197,7 +196,16 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
 
   // Each specialization gets its own JITDylib so that symbols from
   // different specializations (same TU bitcode loaded multiple times)
-  // never conflict. Helper functions and globals coexist independently.
+  // never conflict. Remove any stale JD from a previous compilation
+  // of the same cacheKey (e.g., after ejit_clear_cache).
+  auto it = P->specDylibs.find(cacheKey);
+  if (it != P->specDylibs.end()) {
+    if (auto Err = P->J->getExecutionSession().removeJITDylib(*it->second))
+      LLVM_DEBUG(dbgs() << "ejit-orc-engine: remove stale JD: "
+                        << toString(std::move(Err)) << "\n");
+    P->specDylibs.erase(it);
+  }
+
   auto JDOrErr = P->J->createJITDylib("spec_" + cacheKey);
   if (!JDOrErr)
     return JDOrErr.takeError();
@@ -234,7 +242,10 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
   // Define all collected symbols in the spec JITDylib before loading the
   // IR module so the JIT linker can resolve external references.
   if (!globalSymbols.empty())
-    (void)JDOrErr->define(orc::absoluteSymbols(std::move(globalSymbols)));
+    if (auto Err = JDOrErr->define(
+            orc::absoluteSymbols(std::move(globalSymbols))))
+      LLVM_DEBUG(dbgs() << "ejit-orc-engine: define globals: "
+                        << toString(std::move(Err)) << "\n");
 
   if (auto Err = P->J->addIRModule(*JDOrErr,
       orc::ThreadSafeModule(std::move(*ModuleOrErr), std::move(Ctx))))

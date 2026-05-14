@@ -83,15 +83,6 @@ void EJitOptimizer::runInstCombine(Module &M) {
       FPM.run(F, FAM_);
 }
 
-void EJitOptimizer::runInline(Module &M) {
-  PassBuilder PB;
-  ModulePassManager MPM;
-  MPM.addPass(AlwaysInlinerPass());
-  MPM.addPass(PB.buildModuleInlinerPipeline(
-      llvm::OptimizationLevel::O2, ThinOrFullLTOPhase::None));
-  MPM.run(M, MAM_);
-}
-
 void EJitOptimizer::runOptimizationPipeline(Module &M,
                                             OptimizationLevel level) {
   // L1: SCCP + ADCE + SimplifyCFG

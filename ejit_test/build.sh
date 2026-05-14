@@ -73,7 +73,7 @@ LD_LLD="${BUILD_DIR}/bin/ld.lld"
 [[ -x "${LD_LLD}" ]] || { echo "ERROR: lld not found at ${LD_LLD}"; exit 1; }
 
 EJIT_RUNTIME="${BUILD_DIR}/lib/libLLVMEJIT.a"
-OTHER_LIBS=$(ls "${BUILD_DIR}/lib/"*.a 2>/dev/null | grep -v gtest | grep -v libLLVMEJIT | grep -v libLLVMEmbeddedJIT || true)
+OTHER_LIBS=$(ls "${BUILD_DIR}/lib/"*.a 2>/dev/null | grep -v gtest | grep -v libLLVMEJIT || true)
 LINK_LIBS="-lz -lpthread -ldl"
 [[ -f "${EJIT_RUNTIME}" ]] || { echo "ERROR: libLLVMEJIT.a not found in ${BUILD_DIR}/lib/"; exit 1; }
 

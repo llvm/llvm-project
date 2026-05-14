@@ -96,6 +96,8 @@ static void preOptimizeBitcode(Module &M) {
   {
     ModulePassManager MPM;
     MPM.addPass(AlwaysInlinerPass());
+    MPM.addPass(PB.buildModuleInlinerPipeline(
+        llvm::OptimizationLevel::O2, ThinOrFullLTOPhase::None));
     MPM.run(M, MAM);
   }
   {
