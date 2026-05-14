@@ -6,12 +6,12 @@
 
 define void @udiv() {
 ; NEON-LABEL: 'udiv'
-; NEON-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:6 Lat:7 SizeLat:7 for: %V1I16 = call <1 x i16> @llvm.masked.udiv.v1i16(<1 x i16> poison, <1 x i16> poison, <1 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:8 Lat:10 SizeLat:10 for: %V2I16 = call <2 x i16> @llvm.masked.udiv.v2i16(<2 x i16> poison, <2 x i16> poison, <2 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:60 CodeSize:12 Lat:16 SizeLat:16 for: %V4I16 = call <4 x i16> @llvm.masked.udiv.v4i16(<4 x i16> poison, <4 x i16> poison, <4 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:20 Lat:28 SizeLat:28 for: %V8I16 = call <8 x i16> @llvm.masked.udiv.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:184 CodeSize:20 Lat:20 SizeLat:20 for: %V16I16 = call <16 x i16> @llvm.masked.udiv.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:424 CodeSize:68 Lat:100 SizeLat:100 for: %V32I16 = call <32 x i16> @llvm.masked.udiv.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:6 Lat:7 SizeLat:7 for: %V1I16 = call <1 x i16> @llvm.masked.udiv.v1i16(<1 x i16> poison, <1 x i16> poison, <1 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:8 Lat:10 SizeLat:10 for: %V2I16 = call <2 x i16> @llvm.masked.udiv.v2i16(<2 x i16> poison, <2 x i16> poison, <2 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:12 Lat:16 SizeLat:16 for: %V4I16 = call <4 x i16> @llvm.masked.udiv.v4i16(<4 x i16> poison, <4 x i16> poison, <4 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:144 CodeSize:20 Lat:28 SizeLat:28 for: %V8I16 = call <8 x i16> @llvm.masked.udiv.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:248 CodeSize:20 Lat:20 SizeLat:20 for: %V16I16 = call <16 x i16> @llvm.masked.udiv.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:552 CodeSize:68 Lat:100 SizeLat:100 for: %V32I16 = call <32 x i16> @llvm.masked.udiv.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of Invalid for: %NXV1I16 = call <vscale x 1 x i16> @llvm.masked.udiv.nxv1i16(<vscale x 1 x i16> poison, <vscale x 1 x i16> poison, <vscale x 1 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:Invalid Lat:Invalid SizeLat:Invalid for: %NXV2I16 = call <vscale x 2 x i16> @llvm.masked.udiv.nxv2i16(<vscale x 2 x i16> poison, <vscale x 2 x i16> poison, <vscale x 2 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:Invalid Lat:Invalid SizeLat:Invalid for: %NXV4I16 = call <vscale x 4 x i16> @llvm.masked.udiv.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> poison, <vscale x 4 x i1> poison)
@@ -112,12 +112,12 @@ define void @udiv() {
 
 define void @sdiv() {
 ; NEON-LABEL: 'sdiv'
-; NEON-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:6 Lat:7 SizeLat:7 for: %V1I16 = call <1 x i16> @llvm.masked.sdiv.v1i16(<1 x i16> poison, <1 x i16> poison, <1 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:8 Lat:10 SizeLat:10 for: %V2I16 = call <2 x i16> @llvm.masked.sdiv.v2i16(<2 x i16> poison, <2 x i16> poison, <2 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:60 CodeSize:12 Lat:16 SizeLat:16 for: %V4I16 = call <4 x i16> @llvm.masked.sdiv.v4i16(<4 x i16> poison, <4 x i16> poison, <4 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:20 Lat:28 SizeLat:28 for: %V8I16 = call <8 x i16> @llvm.masked.sdiv.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:184 CodeSize:20 Lat:20 SizeLat:20 for: %V16I16 = call <16 x i16> @llvm.masked.sdiv.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:424 CodeSize:68 Lat:100 SizeLat:100 for: %V32I16 = call <32 x i16> @llvm.masked.sdiv.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:6 Lat:7 SizeLat:7 for: %V1I16 = call <1 x i16> @llvm.masked.sdiv.v1i16(<1 x i16> poison, <1 x i16> poison, <1 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:42 CodeSize:8 Lat:10 SizeLat:10 for: %V2I16 = call <2 x i16> @llvm.masked.sdiv.v2i16(<2 x i16> poison, <2 x i16> poison, <2 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:12 Lat:16 SizeLat:16 for: %V4I16 = call <4 x i16> @llvm.masked.sdiv.v4i16(<4 x i16> poison, <4 x i16> poison, <4 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:144 CodeSize:20 Lat:28 SizeLat:28 for: %V8I16 = call <8 x i16> @llvm.masked.sdiv.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:248 CodeSize:20 Lat:20 SizeLat:20 for: %V16I16 = call <16 x i16> @llvm.masked.sdiv.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:552 CodeSize:68 Lat:100 SizeLat:100 for: %V32I16 = call <32 x i16> @llvm.masked.sdiv.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of Invalid for: %NXV1I16 = call <vscale x 1 x i16> @llvm.masked.sdiv.nxv1i16(<vscale x 1 x i16> poison, <vscale x 1 x i16> poison, <vscale x 1 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:Invalid Lat:Invalid SizeLat:Invalid for: %NXV2I16 = call <vscale x 2 x i16> @llvm.masked.sdiv.nxv2i16(<vscale x 2 x i16> poison, <vscale x 2 x i16> poison, <vscale x 2 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:Invalid Lat:Invalid SizeLat:Invalid for: %NXV4I16 = call <vscale x 4 x i16> @llvm.masked.sdiv.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> poison, <vscale x 4 x i1> poison)
@@ -218,12 +218,12 @@ define void @sdiv() {
 
 define void @urem() {
 ; NEON-LABEL: 'urem'
-; NEON-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:7 SizeLat:7 for: %V1I16 = call <1 x i16> @llvm.masked.urem.v1i16(<1 x i16> poison, <1 x i16> poison, <1 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:8 Lat:10 SizeLat:10 for: %V2I16 = call <2 x i16> @llvm.masked.urem.v2i16(<2 x i16> poison, <2 x i16> poison, <2 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:12 Lat:16 SizeLat:16 for: %V4I16 = call <4 x i16> @llvm.masked.urem.v4i16(<4 x i16> poison, <4 x i16> poison, <4 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:20 Lat:28 SizeLat:28 for: %V8I16 = call <8 x i16> @llvm.masked.urem.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:20 Lat:20 SizeLat:20 for: %V16I16 = call <16 x i16> @llvm.masked.urem.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:68 Lat:100 SizeLat:100 for: %V32I16 = call <32 x i16> @llvm.masked.urem.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:6 Lat:7 SizeLat:7 for: %V1I16 = call <1 x i16> @llvm.masked.urem.v1i16(<1 x i16> poison, <1 x i16> poison, <1 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:8 Lat:10 SizeLat:10 for: %V2I16 = call <2 x i16> @llvm.masked.urem.v2i16(<2 x i16> poison, <2 x i16> poison, <2 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:12 Lat:16 SizeLat:16 for: %V4I16 = call <4 x i16> @llvm.masked.urem.v4i16(<4 x i16> poison, <4 x i16> poison, <4 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:20 Lat:28 SizeLat:28 for: %V8I16 = call <8 x i16> @llvm.masked.urem.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:20 Lat:20 SizeLat:20 for: %V16I16 = call <16 x i16> @llvm.masked.urem.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:384 CodeSize:68 Lat:100 SizeLat:100 for: %V32I16 = call <32 x i16> @llvm.masked.urem.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of Invalid for: %NXV1I16 = call <vscale x 1 x i16> @llvm.masked.urem.nxv1i16(<vscale x 1 x i16> poison, <vscale x 1 x i16> poison, <vscale x 1 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:Invalid Lat:Invalid SizeLat:Invalid for: %NXV2I16 = call <vscale x 2 x i16> @llvm.masked.urem.nxv2i16(<vscale x 2 x i16> poison, <vscale x 2 x i16> poison, <vscale x 2 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:Invalid Lat:Invalid SizeLat:Invalid for: %NXV4I16 = call <vscale x 4 x i16> @llvm.masked.urem.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> poison, <vscale x 4 x i1> poison)
@@ -324,12 +324,12 @@ define void @urem() {
 
 define void @srem() {
 ; NEON-LABEL: 'srem'
-; NEON-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:7 SizeLat:7 for: %V1I16 = call <1 x i16> @llvm.masked.srem.v1i16(<1 x i16> poison, <1 x i16> poison, <1 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:8 Lat:10 SizeLat:10 for: %V2I16 = call <2 x i16> @llvm.masked.srem.v2i16(<2 x i16> poison, <2 x i16> poison, <2 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:12 Lat:16 SizeLat:16 for: %V4I16 = call <4 x i16> @llvm.masked.srem.v4i16(<4 x i16> poison, <4 x i16> poison, <4 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:20 Lat:28 SizeLat:28 for: %V8I16 = call <8 x i16> @llvm.masked.srem.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:20 Lat:20 SizeLat:20 for: %V16I16 = call <16 x i16> @llvm.masked.srem.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
-; NEON-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:68 Lat:100 SizeLat:100 for: %V32I16 = call <32 x i16> @llvm.masked.srem.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:6 Lat:7 SizeLat:7 for: %V1I16 = call <1 x i16> @llvm.masked.srem.v1i16(<1 x i16> poison, <1 x i16> poison, <1 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:8 Lat:10 SizeLat:10 for: %V2I16 = call <2 x i16> @llvm.masked.srem.v2i16(<2 x i16> poison, <2 x i16> poison, <2 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:12 Lat:16 SizeLat:16 for: %V4I16 = call <4 x i16> @llvm.masked.srem.v4i16(<4 x i16> poison, <4 x i16> poison, <4 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:20 Lat:28 SizeLat:28 for: %V8I16 = call <8 x i16> @llvm.masked.srem.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:20 Lat:20 SizeLat:20 for: %V16I16 = call <16 x i16> @llvm.masked.srem.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
+; NEON-NEXT:  Cost Model: Found costs of RThru:384 CodeSize:68 Lat:100 SizeLat:100 for: %V32I16 = call <32 x i16> @llvm.masked.srem.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of Invalid for: %NXV1I16 = call <vscale x 1 x i16> @llvm.masked.srem.nxv1i16(<vscale x 1 x i16> poison, <vscale x 1 x i16> poison, <vscale x 1 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:Invalid Lat:Invalid SizeLat:Invalid for: %NXV2I16 = call <vscale x 2 x i16> @llvm.masked.srem.nxv2i16(<vscale x 2 x i16> poison, <vscale x 2 x i16> poison, <vscale x 2 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:Invalid Lat:Invalid SizeLat:Invalid for: %NXV4I16 = call <vscale x 4 x i16> @llvm.masked.srem.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> poison, <vscale x 4 x i1> poison)
