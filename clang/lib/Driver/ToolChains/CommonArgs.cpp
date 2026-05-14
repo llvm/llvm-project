@@ -1529,7 +1529,8 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
 
   // Solaris ld defaults to --export-dynamic behaviour but doesn't support
   // the option, so don't try to pass it.
-  if (TC.getTriple().isOSSolaris() && !LinkerIsGnuLd)
+  auto TT = TC.getTriple();
+  if ((TT.isOSSolaris() || TT.isOSIllumos()) && !LinkerIsGnuLd)
     return true;
   SmallString<128> SanRT(TC.getCompilerRT(Args, Sanitizer));
   if (llvm::sys::fs::exists(SanRT + ".syms")) {
@@ -1552,7 +1553,10 @@ void tools::addAsNeededOption(const ToolChain &TC,
   // so always use the native form.
   // GNU ld doesn't support -z ignore/-z record, so don't use them even on
   // Solaris.
-  if (TC.getTriple().isOSSolaris() && !LinkerIsGnuLd) {
+  // TODO: use the native forms on Solaris 11.2 and test it there, before
+  // changing this branch to only apply to Illumos.
+  auto TT = TC.getTriple();
+  if ((TT.isOSSolaris() || TT.isOSIllumos()) && !LinkerIsGnuLd) {
     CmdArgs.push_back("-z");
     CmdArgs.push_back(as_needed ? "ignore" : "record");
   } else {

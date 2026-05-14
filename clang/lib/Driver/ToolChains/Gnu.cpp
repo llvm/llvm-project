@@ -607,7 +607,8 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   const char *DefaultAssembler = "as";
   // Enforce GNU as on Solaris; the native assembler's input syntax isn't fully
   // compatible.
-  if (getToolChain().getTriple().isOSSolaris())
+  auto TT = getToolChain().getTriple();
+  if (TT.isOSSolaris() || TT.isOSIllumos())
     DefaultAssembler = "gas";
   std::tie(RelocationModel, PICLevel, IsPIE) =
       ParsePICArgs(getToolChain(), Args);
@@ -1827,8 +1828,8 @@ static bool findBiarchMultilibs(const Driver &D,
   // crtbegin.o without the subdirectory.
 
   StringRef Suff64 = "/64";
-  // Solaris uses platform-specific suffixes instead of /64.
-  if (TargetTriple.isOSSolaris()) {
+  // Solaris and Illumos use platform-specific suffixes instead of /64.
+  if (TargetTriple.isOSSolaris() || TargetTriple.isOSIllumos()) {
     switch (TargetTriple.getArch()) {
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
@@ -2259,8 +2260,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     return;
   }
 
-  if (TargetTriple.isOSSolaris()) {
-    // Solaris is a special case.
+  if (TargetTriple.isOSSolaris() || TargetTriple.isOSIllumos()) {
+    // Solaris/Illumos is a special case.
     // The GCC installation is under
     //   /usr/gcc/<major>.<minor>/lib/gcc/<triple>/<major>.<minor>.<patch>/
     // so we need to find those /usr/gcc/*/lib/gcc libdirs and go with
@@ -2467,7 +2468,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   using std::begin;
   using std::end;
 
-  if (TargetTriple.isOSSolaris()) {
+  if (TargetTriple.isOSSolaris() || TargetTriple.isOSIllumos()) {
     static const char *const SolarisLibDirs[] = {"/lib"};
     static const char *const SolarisSparcV8Triples[] = {
         "sparc-sun-solaris2.11"};
