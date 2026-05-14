@@ -6608,11 +6608,20 @@ bool SPIRVInstructionSelector::selectGlobalValue(
         MIB2.constrainAllUses(TII, TRI, RBI);
         return true;
       }
+      // Even without SPV_INTEL_function_pointers a function reference can
+      // still be load-bearing (e.g. the Invoke operand of OpEnqueueKernel).
+      // Emit an OpUndef placeholder of the pointer type and record the
+      // operand -> Function mapping; a later consumer can then resolve it
+      // to the function's <id>. If the placeholder ends up unused, it is
+      // emitted unchanged - functionally equivalent to the previous
+      // OpConstantNull for the existing not-used scenarios.
       MachineInstrBuilder MIB3 =
-          BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+          BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpUndef))
               .addDef(ResVReg)
               .addUse(GR.getSPIRVTypeID(ResType));
       GR.add(ConstVal, MIB3);
+      GR.recordFunctionPointer(&MIB3.getInstr()->getOperand(0),
+                               cast<Function>(GV));
       MIB3.constrainAllUses(TII, TRI, RBI);
       return true;
     }
