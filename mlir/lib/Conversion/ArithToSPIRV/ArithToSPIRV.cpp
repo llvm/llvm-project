@@ -1324,7 +1324,7 @@ public:
 /// Converts arith.addui_extended/arith.subui_extended to spirv.IAddCarry/
 /// spirv.ISubBorrow.
 template <typename ArithExtendedOp, typename SPIRVExtendedOp>
-class ExtendedBinaryOpPattern final
+class BinaryExtendedOpPattern final
     : public OpConversionPattern<ArithExtendedOp> {
 public:
   using OpConversionPattern<ArithExtendedOp>::OpConversionPattern;
@@ -1554,8 +1554,8 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
     CmpFOpNanNonePattern, CmpFOpPattern,
-    ExtendedBinaryOpPattern<arith::AddUIExtendedOp, spirv::IAddCarryOp>,
-    ExtendedBinaryOpPattern<arith::SubUIExtendedOp, spirv::ISubBorrowOp>,
+    BinaryExtendedOpPattern<arith::AddUIExtendedOp, spirv::IAddCarryOp>,
+    BinaryExtendedOpPattern<arith::SubUIExtendedOp, spirv::ISubBorrowOp>,
     MulIExtendedOpPattern<arith::MulSIExtendedOp, spirv::SMulExtendedOp>,
     MulIExtendedOpPattern<arith::MulUIExtendedOp, spirv::UMulExtendedOp>,
     SelectOpPattern,
