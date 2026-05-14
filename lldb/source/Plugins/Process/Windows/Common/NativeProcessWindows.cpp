@@ -603,7 +603,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
 
     return result;
   }
-}
+  }
 }
 
 void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
