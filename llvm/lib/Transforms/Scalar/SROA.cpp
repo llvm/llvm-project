@@ -5247,11 +5247,9 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
     // Try homogeneous struct to vector canonicalization when requested. Running
     // this too early can hide memcpy chains from MemCpyOpt.
     if (CanonicalizeStructToVector) {
-      if (auto *STy = dyn_cast<StructType>(TypePartitionTy)) {
-        if (auto *VTy = tryCanonicalizeMemIntrinsicsToByteVector(P, DL, C)) {
-          LogSelection("struct-fallback-vecty", VTy, nullptr, false);
-          return {VTy, false, nullptr};
-        }
+      if (auto *VTy = tryCanonicalizeMemIntrinsicsToByteVector(P, DL, C)) {
+        LogSelection("struct-fallback-vecty", VTy, nullptr, false);
+        return {VTy, false, nullptr};
       }
     }
 
