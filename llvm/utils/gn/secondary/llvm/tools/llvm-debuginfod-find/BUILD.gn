@@ -12,7 +12,7 @@ if (llvm_install_binutils_symlinks) {
   symlink_or_copy("debuginfod-find") {
     deps = [ ":llvm-debuginfod-find" ]
     source = "llvm-debuginfod-find"
-    output = "$root_out_dir/bin/debuginfod-find"
+    output = "$llvm_current_bindir/debuginfod-find"
   }
 }
 
