@@ -91,11 +91,11 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
   SetFastMathFlags(CurFPFeatures);
 }
 
-unsigned CodeGenFunction::getCurrentFunctionX86AVXABILevel() const {
+const FunctionDecl *CodeGenFunction::getCurrentFunctionDecl() const {
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
   if (!FD)
     FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl);
-  return static_cast<unsigned>(CGM.getEffectiveX86AVXABILevel(FD));
+  return FD;
 }
 
 CodeGenFunction::~CodeGenFunction() {
@@ -1622,7 +1622,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     const FunctionType *FT = cast<FunctionType>(FD->getType());
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FT);
     const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
-        CallArgs, FT, /*ChainCall=*/false);
+        CallArgs, FT, /*ChainCall=*/false, getCurrentFunctionDecl());
     llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FnInfo);
     llvm::Constant *GDStubFunctionPointer =
         CGM.getRawFunctionPointer(GDStub, FTy);
