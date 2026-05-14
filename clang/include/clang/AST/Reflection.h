@@ -28,8 +28,10 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ReflectionKind Kind)
   switch(Kind) {
   case ReflectionKind::Type:
     OS << "type";
+    break;
   case ReflectionKind::Null:
     OS << "null";
+    break;
   }
 
   return OS;
