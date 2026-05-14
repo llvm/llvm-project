@@ -423,15 +423,29 @@ StringRef ZOSArchiveMemberHeader::getRawUID() const { return StringRef(UID); }
 StringRef ZOSArchiveMemberHeader::getRawGID() const { return StringRef(GID); }
 
 void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
+  // If there was an error in the construction of the Header
+  // then just return with the error now set.
+  if (Err && *Err)
+    return;
+
   uint64_t Offset =
       reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
+
+  // Validate that the buffer is large enough to contain the full header
+  if (Size < sizeof(UnixArMemHdrType)) {
+    if (Err)
+      *Err = malformedError("archive member header truncated at offset " +
+                            Twine(Offset));
+    return;
+  }
 
   // Set RawMemberName
   RawMemberName = ebcdicFieldToASCII(ArMemHdr->Name);
   if (RawMemberName.empty() || RawMemberName[0] == ' ') {
-    *Err = malformedError("name contains a leading space for archive member "
-                          "header at offset " +
-                          Twine(Offset));
+    if (Err)
+      *Err = malformedError("name contains a leading space for archive member "
+                            "header at offset " +
+                            Twine(Offset));
     return;
   }
 
@@ -439,7 +453,10 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   if (StringRef(RawMemberName).starts_with("#1/")) {
     Expected<StringRef> NameOrErr = ArchiveMemberHeader::getName(Size);
     if (!NameOrErr) {
-      *Err = NameOrErr.takeError();
+      if (Err)
+        *Err = NameOrErr.takeError();
+      else
+        consumeError(NameOrErr.takeError());
       return;
     }
     StringRef Name = NameOrErr.get();
@@ -453,38 +470,42 @@ void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
   // LastModified
   LastModified = ebcdicFieldToASCII(ArMemHdr->LastModified);
   if (LastModified.empty()) {
-    *Err =
-        malformedError("LastModified field is empty or contains only spaces in "
-                       "archive member header at offset " +
-                       Twine(Offset));
+    if (Err)
+      *Err =
+          malformedError("LastModified field is empty or contains only spaces in "
+                         "archive member header at offset " +
+                         Twine(Offset));
     return;
   }
 
   // UID
   UID = ebcdicFieldToASCII(ArMemHdr->UID);
   if (UID.empty()) {
-    *Err = malformedError("UID field is empty or contains only spaces in "
-                          "archive member header at offset " +
-                          Twine(Offset));
+    if (Err)
+      *Err = malformedError("UID field is empty or contains only spaces in "
+                            "archive member header at offset " +
+                            Twine(Offset));
     return;
   }
 
   // GID
   GID = ebcdicFieldToASCII(ArMemHdr->GID);
   if (GID.empty()) {
-    *Err = malformedError("GID field is empty or contains only spaces in "
-                          "archive member header at offset " +
-                          Twine(Offset));
+    if (Err)
+      *Err = malformedError("GID field is empty or contains only spaces in "
+                            "archive member header at offset " +
+                            Twine(Offset));
     return;
   }
 
   // AccessMode
   AccessMode = ebcdicFieldToASCII(ArMemHdr->AccessMode);
   if (AccessMode.empty()) {
-    *Err =
-        malformedError("AccessMode field is empty or contains only spaces in "
-                       "archive member header at offset " +
-                       Twine(Offset));
+    if (Err)
+      *Err =
+          malformedError("AccessMode field is empty or contains only spaces in "
+                         "archive member header at offset " +
+                         Twine(Offset));
     return;
   }
 }
