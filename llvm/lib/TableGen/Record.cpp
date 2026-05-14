@@ -2311,10 +2311,6 @@ const Init *InstancesOpInit::resolveReferences(Resolver &R) const {
   return this;
 }
 
-const Init *InstancesOpInit::getBit(unsigned Bit) const {
-  return VarBitInit::get(this, Bit);
-}
-
 std::string InstancesOpInit::getAsString() const {
   return "!instances<" + Type->getAsString() + ">(" + Regex->getAsString() +
          ")";
