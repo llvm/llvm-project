@@ -936,6 +936,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
           bool useCurrentScope = true;
           if (emitStmt(s.getLoopVarStmt(), useCurrentScope).failed())
             loopRes = mlir::failure();
+          LexicalScope lexScope{*this, loc, builder.getInsertionBlock()};
           if (emitStmt(s.getBody(), useCurrentScope).failed())
             loopRes = mlir::failure();
           emitStopPoint(&s);
