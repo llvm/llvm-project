@@ -113,20 +113,21 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = icmp ule ir<%iv>, vp<[[VP3]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      WIDEN ir<%cond0> = icmp ult ir<%iv>, ir<13>
 ; CHECK-NEXT:      WIDEN ir<%s> = select ir<%cond0>, ir<10>, ir<20>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP5]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP6]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:        REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP6]]>
+; CHECK-NEXT:        vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:        REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP7]]>
 ; CHECK-NEXT:        REPLICATE store ir<%s>, ir<%gep>
 ; CHECK-NEXT:      Successor(s): pred.store.continue
 ; CHECK-EMPTY:

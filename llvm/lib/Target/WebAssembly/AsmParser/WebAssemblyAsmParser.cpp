@@ -46,7 +46,15 @@ namespace {
 /// WebAssemblyOperand - Instances of this class represent the operands in a
 /// parsed Wasm machine instruction.
 struct WebAssemblyOperand : public MCParsedAsmOperand {
-  enum KindTy { Token, Integer, Float, Symbol, BrList, CatchList } Kind;
+  enum KindTy {
+    Token,
+    Integer,
+    Float,
+    Symbol,
+    BrList,
+    CatchList,
+    TypeList
+  } Kind;
 
   SMLoc StartLoc, EndLoc;
 
@@ -80,6 +88,10 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     std::vector<CaLOpElem> List;
   };
 
+  struct TyLOp {
+    std::vector<uint8_t> List;
+  };
+
   union {
     struct TokOp Tok;
     struct IntOp Int;
@@ -87,6 +99,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     struct SymOp Sym;
     struct BrLOp BrL;
     struct CaLOp CaL;
+    struct TyLOp TyL;
   };
 
   WebAssemblyOperand(SMLoc Start, SMLoc End, TokOp T)
@@ -101,12 +114,16 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
       : Kind(BrList), StartLoc(Start), EndLoc(End), BrL(B) {}
   WebAssemblyOperand(SMLoc Start, SMLoc End, CaLOp C)
       : Kind(CatchList), StartLoc(Start), EndLoc(End), CaL(C) {}
+  WebAssemblyOperand(SMLoc Start, SMLoc End, TyLOp T)
+      : Kind(TypeList), StartLoc(Start), EndLoc(End), TyL(T) {}
 
   ~WebAssemblyOperand() override {
     if (isBrList())
       BrL.~BrLOp();
     if (isCatchList())
       CaL.~CaLOp();
+    if (isTypeList())
+      TyL.~TyLOp();
   }
 
   bool isToken() const override { return Kind == Token; }
@@ -116,6 +133,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   bool isReg() const override { return false; }
   bool isBrList() const { return Kind == BrList; }
   bool isCatchList() const { return Kind == CatchList; }
+  bool isTypeList() const { return Kind == TypeList; }
 
   MCRegister getReg() const override {
     llvm_unreachable("Assembly inspects a register operand");
@@ -180,6 +198,13 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     }
   }
 
+  void addTypeListOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && isTypeList() && "Invalid TypeList!");
+    Inst.addOperand(MCOperand::createImm(TyL.List.size()));
+    for (auto Ty : TyL.List)
+      Inst.addOperand(MCOperand::createImm(Ty));
+  }
+
   void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Token:
@@ -199,6 +224,9 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
       break;
     case CatchList:
       OS << "CaList:" << CaL.List.size();
+      break;
+    case TypeList:
+      OS << "TyList:" << TyL.List.size();
       break;
     }
   }
@@ -718,6 +746,22 @@ public:
       // When we get support for wasm-gc types, this should become
       // ExpectRefType.
       ExpectFuncType = true;
+    } else if (Name == "select") {
+      // The typed select instruction takes a vec of valtypes as its sole
+      // operand (select t*). Parse the list of value-type identifiers here
+      // and push a TypeList operand.
+      auto Op = std::make_unique<WebAssemblyOperand>(
+          Lexer.getLoc(), Lexer.getLoc(), WebAssemblyOperand::TyLOp{});
+      while (Lexer.is(AsmToken::Identifier)) {
+        auto &Id = Lexer.getTok();
+        auto Ty = WebAssembly::parseType(Id.getString());
+        if (!Ty)
+          return error("unknown value type in select operand list: ", Id);
+        Op->TyL.List.push_back(static_cast<uint8_t>(*Ty));
+        Op->EndLoc = Id.getEndLoc();
+        Parser.Lex();
+      }
+      Operands.push_back(std::move(Op));
     }
 
     if (Name.contains("atomic.")) {

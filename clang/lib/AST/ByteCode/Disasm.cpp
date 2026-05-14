@@ -28,6 +28,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -328,9 +329,9 @@ static std::string formatBytes(size_t B) {
   if (B < (1u << 10u))
     SS << B << " B";
   else if (B < (1u << 20u))
-    SS << llvm::format("{0:F2}", B / 1024.) << " KB";
+    SS << llvm::formatv("{0:F2}", B / 1024.) << " KB";
   else
-    SS << llvm::format("{0:F2}", B / 1024. / 1024.) << " MB";
+    SS << llvm::formatv("{0:F2}", B / 1024. / 1024.) << " MB";
 
   return Result;
 }
