@@ -1349,6 +1349,38 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+/// Converts arith.subui_extended to spirv.ISubBorrow.
+class SubUIExtendedOpPattern final
+    : public OpConversionPattern<arith::SubUIExtendedOp> {
+public:
+  using Base::Base;
+  LogicalResult
+  matchAndRewrite(arith::SubUIExtendedOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstElemTy = adaptor.getLhs().getType();
+    Location loc = op->getLoc();
+    Value result = spirv::ISubBorrowOp::create(rewriter, loc, adaptor.getLhs(),
+                                               adaptor.getRhs());
+
+    Value diffResult = spirv::CompositeExtractOp::create(rewriter, loc, result,
+                                                         llvm::ArrayRef(0));
+    Value borrowValue = spirv::CompositeExtractOp::create(rewriter, loc, result,
+                                                          llvm::ArrayRef(1));
+
+    // Convert the borrow value to boolean.
+    Value one = spirv::ConstantOp::getOne(dstElemTy, loc, rewriter);
+    Value borrowResult =
+        spirv::IEqualOp::create(rewriter, loc, borrowValue, one);
+
+    rewriter.replaceOp(op, {diffResult, borrowResult});
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // MulIExtendedOp
 //===----------------------------------------------------------------------===//
 
@@ -1553,6 +1585,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     CmpIOpBooleanPattern, CmpIOpPattern,
     CmpFOpNanNonePattern, CmpFOpPattern,
     AddUIExtendedOpPattern,
+    SubUIExtendedOpPattern,
     MulIExtendedOpPattern<arith::MulSIExtendedOp, spirv::SMulExtendedOp>,
     MulIExtendedOpPattern<arith::MulUIExtendedOp, spirv::UMulExtendedOp>,
     SelectOpPattern,
