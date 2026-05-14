@@ -158,8 +158,8 @@ LOCAL_LABEL(ddiv_normalised): // denormal handler will come back to here
   // In PIC or ROPI modes, we must construct the address in a pc-relative
   // manner, by making a literal containing the offset from the current code.
   // The reference point for that offset is the value of pc as read by the add
-  // instruction at reciptbl_add_to_pc below, which will be 4 or 8 bytes after
-  // it in Thumb or Arm state respectively.
+  // instruction at get_reciptbl below, which will be 4 or 8 bytes after it in
+  // Thumb or Arm state respectively.
 #if __thumb__
   ldr     r6, =(LOCAL_LABEL(reciptbl)-0x80) - (LOCAL_LABEL(get_reciptbl)+4)
 #else
