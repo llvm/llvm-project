@@ -3436,6 +3436,18 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   auto IsVCC = [](const Register Reg) {
     return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI;
   };
+  auto IsRelevantSGPR = [&](const MachineOperand &Op) {
+    Register Reg = Op.getReg();
+    if (IgnoreableSGPR(Reg))
+      return false;
+    if (!IsVCC(Reg)) {
+      if (Op.isImplicit())
+        return false;
+      if (!TRI->isSGPRReg(MRI, Reg))
+        return false;
+    }
+    return true;
+  };
 
   struct StateType {
     SmallSet<Register, 2> HazardSGPRs;
@@ -3452,35 +3464,26 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   bool HasSGPRRead = false;
   StateType InitialState;
 
-  // Look for SGPR write.
+  // Look for SGPR writes first, so we can we can bail out early if none.
   MachineOperand *HazardDef = nullptr;
   for (MachineOperand &Op : MI->operands()) {
-    if (!Op.isReg())
+    if (!Op.isReg() || !Op.isDef() || !IsRelevantSGPR(Op))
       continue;
-    if (Op.isDef() && HazardDef)
-      continue;
-
-    Register Reg = Op.getReg();
-    if (IgnoreableSGPR(Reg))
-      continue;
-    if (!IsVCC(Reg)) {
-      if (Op.isImplicit())
-        continue;
-      if (!TRI->isSGPRReg(MRI, Reg))
-        continue;
-    }
-    // Also check for SGPR reads.
-    if (Op.isUse()) {
-      HasSGPRRead = true;
-      continue;
-    }
-
     assert(!HazardDef);
     HazardDef = &Op;
+    break;
   }
 
   if (!HazardDef)
     return false;
+
+  // Then check for SGPR reads.
+  for (MachineOperand &Op : MI->operands()) {
+    if (!Op.isReg() || !Op.isUse() || !IsRelevantSGPR(Op))
+      continue;
+    HasSGPRRead = true;
+    break;
+  }
 
   // Setup to track writes to individual SGPRs
   const Register HazardReg = HazardDef->getReg();
@@ -3550,27 +3553,13 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
         WaitInstrs.push_back(&I);
       break;
     default:
-      // Update tracking of SGPR reads and writes.
+      // Stop tracking any SGPRs with writes on the basis that they will
+      // already have an appropriate wait inserted afterwards.
       for (auto &Op : I.operands()) {
-        if (!Op.isReg())
+        if (!Op.isReg() || !Op.isDef() || !IsRelevantSGPR(Op))
           continue;
 
         Register Reg = Op.getReg();
-        if (IgnoreableSGPR(Reg))
-          continue;
-        if (!IsVCC(Reg)) {
-          if (Op.isImplicit())
-            continue;
-          if (!TRI->isSGPRReg(MRI, Reg))
-            continue;
-        }
-        if (Op.isUse()) {
-          HasSGPRRead = true;
-          continue;
-        }
-
-        // Stop tracking any SGPRs with writes on the basis that they will
-        // already have an appropriate wait inserted afterwards.
         SmallVector<Register, 2> Found;
         for (Register SGPR : State.HazardSGPRs) {
           if (Reg == SGPR || TRI->regsOverlap(Reg, SGPR))
@@ -3578,6 +3567,17 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
         }
         for (Register SGPR : Found)
           State.HazardSGPRs.erase(SGPR);
+      }
+
+      // Once HasSGPRRead is set it never resets, so skip the use scan.
+      if (HasSGPRRead)
+        break;
+
+      for (const MachineOperand &Op : I.operands()) {
+        if (!Op.isReg() || !Op.isUse() || !IsRelevantSGPR(Op))
+          continue;
+        HasSGPRRead = true;
+        break;
       }
       break;
     }
