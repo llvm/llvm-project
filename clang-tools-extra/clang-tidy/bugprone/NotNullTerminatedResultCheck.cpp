@@ -800,7 +800,7 @@ void NotNullTerminatedResultCheck::check(
         continue;
       const auto &T = MI->tokens().back();
       if (T.isLiteral() && T.getLiteralData()) {
-        const StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
+        const StringRef ValueStr(T.getLiteralData(), T.getLength());
         llvm::APInt IntValue;
         ValueStr.getAsInteger(10, IntValue);
         AreSafeFunctionsWanted = IntValue.getZExtValue();
