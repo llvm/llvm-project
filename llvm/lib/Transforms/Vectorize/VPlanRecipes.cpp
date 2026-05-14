@@ -1001,8 +1001,10 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   }
   case Instruction::Freeze:
     // NOTE: The only way to ask for the cost is via getInstructionCost, which
-    // requires the actual vector instruction. Instead, I've simply mirrored
-    // the behaviour in llvm/Analysis/TargetTransformInfoImpl.h.
+    // requires the actual vector instruction. Instead, both here and in the
+    // LoopVectorizationCostModel::getInstructionCost the costs mirror the
+    // current behaviour in llvm/Analysis/TargetTransformInfoImpl.h to keep
+    // them in sync.
     return TTI::TCC_Free;
   case Instruction::ExtractValue:
     return Ctx.TTI.getInsertExtractValueCost(Instruction::ExtractValue,
