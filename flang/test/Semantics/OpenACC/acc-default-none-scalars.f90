@@ -8,9 +8,45 @@ subroutine default_none_scalars()
   integer :: a
   integer :: b(10)
   !$acc parallel default(none)
-  !WARNING: 'a' has no data clause under DEFAULT(NONE); implicit attribute inferred (-facc-allow-default-none-scalars enables pre-OpenACC-3.2 behavior) [-Wacc-implicit-scalar]
+  !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'a' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
   a = 1
   !ERROR: The DEFAULT(NONE) clause requires that 'b' must be listed in a data-mapping clause
   b(1) = 2
   !$acc end parallel
+end subroutine
+
+! Scalar computed before an ACC parallel loop and read-only inside it.
+subroutine default_none_scalar_precomputed(x, n, p, q)
+  implicit none
+  real :: x(n), factor, p, q
+  integer :: n, i
+  factor = p / q
+  !$acc parallel loop default(none) present(x)
+  do i = 1, n
+    !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'factor' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
+    x(i) = x(i) * factor
+  end do
+  !$acc end parallel loop
+end subroutine
+
+! Outer serial loop variable and scalars assigned in the outer loop body
+! are read inside a nested ACC parallel loop.
+subroutine default_none_outer_loop_scalars(x, n, m)
+  implicit none
+  real :: x(n), thresh, coef, val
+  integer :: n, m, k, i
+  do k = 1, m
+    coef   = real(m) / real(k)
+    thresh = real(k) - real(k) / real(m)
+    val    = real(k) * 4.0
+    !$acc parallel loop default(none) present(x)
+    do i = 1, n
+      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'thresh' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
+      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'coef' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
+      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'val' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
+      !WARNING: Implicit attribute inferred for DEFAULT(NONE) scalar 'k' (-facc-allow-default-none-scalars) [-Wacc-implicit-scalar]
+      if (x(i) < thresh) x(i) = x(i) + coef * val * real(k)
+    end do
+    !$acc end parallel loop
+  end do
 end subroutine
