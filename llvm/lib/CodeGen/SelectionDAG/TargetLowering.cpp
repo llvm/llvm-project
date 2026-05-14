@@ -13091,40 +13091,22 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   auto [Mask, StepVec] =
       getLegalMaskAndStepVector(Node->getOperand(0), ZeroIsPoison, DL, DAG);
 
-  // If StepVec is empty, the stepvector would require splitting. Split the
-  // operation instead and let it be recursively legalized. CTTZ_ELTS finds
-  // the index of the first active lane, so the low half is preferred; only
-  // fall through to the high half (offset by LoVT's lane count) when the
-  // low half has no active lanes.
+  // StepVec is empty: split, mirroring SplitVecOp_VP_CttzElements:
+  //   ResLo != |Lo| ? ResLo : |Lo| + ResHi
+  // ResLo uses the non-poison opcode so the comparison is well-defined.
   if (!StepVec) {
-    EVT MaskVT = Node->getOperand(0).getValueType();
     EVT ResVT = Node->getValueType(0);
-    unsigned Opcode = Node->getOpcode();
-
-    // Split the mask
-    auto [LoVT, HiVT] = DAG.GetSplitDestVTs(MaskVT);
     auto [MaskLo, MaskHi] = DAG.SplitVector(Node->getOperand(0), DL);
-
-    // Create split CTTZ_ELTS / CTTZ_ELTS_ZERO_POISON operations.
-    SDValue LoResult = DAG.getNode(Opcode, DL, ResVT, MaskLo);
-    SDValue HiResult = DAG.getNode(Opcode, DL, ResVT, MaskHi);
-
-    // Check if any lane is active in the low mask.
-    SDValue AnyLoActive = DAG.getNode(ISD::VECREDUCE_OR, DL, MVT::i1, MaskLo);
-    SDValue Cond = DAG.getBoolExtOrTrunc(
-        AnyLoActive, DL,
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i1),
-        MVT::i1);
-
-    // Adjust HiResult by adding the number of elements in Lo.
-    SDValue LoNumElts =
-        DAG.getElementCount(DL, ResVT, LoVT.getVectorElementCount());
-    SDValue AdjustedHiResult =
-        DAG.getNode(ISD::ADD, DL, ResVT, HiResult, LoNumElts);
-
-    // Return: AnyLoActive ? LoResult : AdjustedHiResult;
-    return DAG.getNode(ISD::SELECT, DL, ResVT, Cond, LoResult,
-                       AdjustedHiResult);
+    SDValue LoNumElts = DAG.getElementCount(
+        DL, ResVT, MaskLo.getValueType().getVectorElementCount());
+    SDValue ResLo = DAG.getNode(ISD::CTTZ_ELTS, DL, ResVT, MaskLo);
+    SDValue ResHi = DAG.getNode(Node->getOpcode(), DL, ResVT, MaskHi);
+    SDValue ResLoNotNumElts =
+        DAG.getSetCC(DL, getSetCCResultType(DAG.getDataLayout(),
+                                            *DAG.getContext(), ResVT),
+                     ResLo, LoNumElts, ISD::SETNE);
+    return DAG.getSelect(DL, ResVT, ResLoNotNumElts, ResLo,
+                         DAG.getNode(ISD::ADD, DL, ResVT, LoNumElts, ResHi));
   }
 
   EVT StepVecVT = StepVec.getValueType();
