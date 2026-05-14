@@ -1882,9 +1882,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         VPValue *SafeDivisor = Builder.createSelect(
             IntrR->getOperand(2), IntrR->getOperand(1),
             Plan.getConstantInt(IntrR->getResultType(), 1));
-        VPValue *Clone =
-            Builder.createNaryOp(*Opc, {IntrR->getOperand(0), SafeDivisor},
-                                 VPIRFlags::getDefaultFlags(*Opc));
+        VPValue *Clone = Builder.createNaryOp(
+            *Opc, {IntrR->getOperand(0), SafeDivisor},
+            VPIRFlags::getDefaultFlags(*Opc), IntrR->getDebugLoc());
         IntrR->replaceAllUsesWith(Clone);
         IntrR->eraseFromParent();
         continue;
