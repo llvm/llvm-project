@@ -18062,30 +18062,26 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
 
 bool Sema::CheckDependentFriend(SourceLocation Loc, NestedNameSpecifier NNS,
                                 TemplateParameterList *FPL) {
-  if (!NNS || !FPL || FPL->size() == 0)
+  if (!NNS.isDependent() || !FPL || FPL->size() == 0)
     return false;
 
-  if (NNS.isDependent()) {
-    if (NNS.getKind() == NestedNameSpecifier::Kind::Type) {
-      QualType T(NNS.getCanonical().getAsType(), 0);
+  if (NNS.getKind() == NestedNameSpecifier::Kind::Type) {
+    QualType T(NNS.getCanonical().getAsType(), 0);
 
-      if (const auto *PIT = dyn_cast<PackIndexingType>(T))
-        T = PIT->getPattern();
+    if (const auto *PIT = dyn_cast<PackIndexingType>(T))
+      T = PIT->getPattern();
 
-      if (const auto *TST = dyn_cast<TemplateSpecializationType>(T)) {
-        if (isa<ClassTemplateDecl>(TST->getTemplateName().getAsTemplateDecl()))
-          return false;
-      }
-
-      if (isa<InjectedClassNameType>(T))
+    if (const auto *TST = dyn_cast<TemplateSpecializationType>(T)) {
+      if (isa<ClassTemplateDecl>(TST->getTemplateName().getAsTemplateDecl()))
         return false;
     }
 
-    Diag(Loc, diag::err_dependent_friend_not_member);
-    return true;
+    if (isa<InjectedClassNameType>(T))
+      return false;
   }
 
-  return false;
+  Diag(Loc, diag::err_dependent_friend_not_member);
+  return true;
 }
 
 DeclResult Sema::ActOnTemplatedFriendTag(
