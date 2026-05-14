@@ -96,12 +96,9 @@ static mlir::Value emitFPIntBuiltin(CIRGenFunction &cgf, const CallExpr *e,
                                     llvm::StringRef intrinsicName) {
   mlir::Value src0 = cgf.emitScalarExpr(e->getArg(0));
   mlir::Value src1 = cgf.emitScalarExpr(e->getArg(1));
-  mlir::Value result =
-      LLVMIntrinsicCallOp::create(cgf.getBuilder(), cgf.getLoc(e->getExprLoc()),
-                                  cgf.getBuilder().getStringAttr(intrinsicName),
-                                  src0.getType(), {src0, src1})
-          .getResult();
-  return result;
+  return cgf.getBuilder().emitIntrinsicCallOp(
+      cgf.getLoc(e->getExprLoc()), "amdgcn.ds.swizzle", src0.getType(),
+      mlir::ValueRange{src0, src1});
 }
 
 std::optional<mlir::Value>
