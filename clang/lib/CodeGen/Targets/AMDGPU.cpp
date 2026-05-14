@@ -96,7 +96,7 @@ static llvm::Type *buildAMDGPUAggregateReturnCoerceType(CodeGenTypes &CGT,
     Members.push_back({Off, FD->getType()});
   }
 
-  llvm::stable_sort(Members, [](const CoerceMember &A, const CoerceMember &B) {
+  llvm::sort(Members, [](const CoerceMember &A, const CoerceMember &B) {
     return A.Offset < B.Offset;
   });
 
