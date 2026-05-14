@@ -29691,8 +29691,7 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
   unsigned NumSrcElts = SrcVT.getVectorNumElements();
   for (unsigned NumElts = NumSrcElts; NumElts != 1; NumElts /= 2) {
     // Scalarize the last 2 elements if the vector binop isn't legal.
-    if (NumElts == 2 &&
-        (!Subtarget.hasAVX() || BinOp == ISD::UMIN || BinOp == ISD::UMAX) &&
+    if (NumElts == 2 && !Subtarget.hasAVX512() &&
         !TLI.isOperationLegal(BinOp, SrcVT) && TLI.isTypeLegal(ExtractVT)) {
       return DAG.getNode(BinOp, DL, ExtractVT,
                          DAG.getExtractVectorElt(DL, ExtractVT, Src, 0),

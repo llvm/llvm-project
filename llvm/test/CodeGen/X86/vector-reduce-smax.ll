@@ -99,10 +99,10 @@ define i64 @test_v2i64(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX-LABEL: test_v2i64:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; X64-AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX-NEXT:    vmovq %xmm0, %rax
+; X64-AVX-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX-NEXT:    cmpq %rax, %rcx
+; X64-AVX-NEXT:    cmovgq %rcx, %rax
 ; X64-AVX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_v2i64:
@@ -285,10 +285,10 @@ define i64 @test_v4i64(<4 x i64> %a0) nounwind {
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; X64-AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; X64-AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX1-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX1-NEXT:    cmpq %rax, %rcx
+; X64-AVX1-NEXT:    cmovgq %rcx, %rax
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
@@ -310,10 +310,10 @@ define i64 @test_v4i64(<4 x i64> %a0) nounwind {
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; X64-AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX2-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX2-NEXT:    cmpq %rax, %rcx
+; X64-AVX2-NEXT:    cmovgq %rcx, %rax
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
@@ -659,10 +659,10 @@ define i64 @test_v8i64(<8 x i64> %a0) nounwind {
 ; X64-AVX1-NEXT:    vblendvpd %xmm3, %xmm0, %xmm1, %xmm0
 ; X64-AVX1-NEXT:    vpcmpgtq %xmm2, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vblendvpd %xmm1, %xmm0, %xmm2, %xmm0
-; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; X64-AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX1-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX1-NEXT:    cmpq %rax, %rcx
+; X64-AVX1-NEXT:    cmovgq %rcx, %rax
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
@@ -688,10 +688,10 @@ define i64 @test_v8i64(<8 x i64> %a0) nounwind {
 ; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; X64-AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX2-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX2-NEXT:    cmpq %rax, %rcx
+; X64-AVX2-NEXT:    cmovgq %rcx, %rax
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
@@ -1337,10 +1337,10 @@ define i64 @test_v16i64(<16 x i64> %a0) nounwind {
 ; X64-AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; X64-AVX1-NEXT:    vpcmpgtq %xmm4, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vblendvpd %xmm1, %xmm0, %xmm4, %xmm0
-; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; X64-AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX1-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX1-NEXT:    cmpq %rax, %rcx
+; X64-AVX1-NEXT:    cmovgq %rcx, %rax
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1381,10 +1381,10 @@ define i64 @test_v16i64(<16 x i64> %a0) nounwind {
 ; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; X64-AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX2-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX2-NEXT:    cmpq %rax, %rcx
+; X64-AVX2-NEXT:    cmovgq %rcx, %rax
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
