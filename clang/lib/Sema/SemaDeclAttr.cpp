@@ -6031,6 +6031,8 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
   }
 
   if (MaxBlocks) {
+    // We might want to ignore the nvptx arch check, e.g., when processing the
+    // launch bounds attribute within ompx_attribute to support other archs.
     if (!IgnoreArch) {
       // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
       auto SM = getOffloadArch(Context.getTargetInfo());
