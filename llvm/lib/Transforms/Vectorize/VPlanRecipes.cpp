@@ -2245,7 +2245,7 @@ bool VPIRFlags::hasRequiredFlagsForOpcode(unsigned Opcode) const {
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-static void printRecurKind(raw_ostream &OS, const RecurKind &Kind) {
+static void printRecurrenceKind(raw_ostream &OS, const RecurKind &Kind) {
   switch (Kind) {
   case RecurKind::None:
     OS << "none";
@@ -2382,7 +2382,7 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     break;
   case OperationType::ReductionOp: {
     O << " (";
-    printRecurKind(O, getRecurKind());
+    printRecurrenceKind(O, getRecurKind());
     if (isReductionInLoop())
       O << ", in-loop";
     if (isReductionOrdered())
@@ -4522,7 +4522,7 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
   printAsOperand(O, SlotTracker);
   O << " = phi (";
-  printRecurKind(O, Kind);
+  printRecurrenceKind(O, Kind);
   O << ")";
   printFlags(O);
   printOperands(O, SlotTracker);
