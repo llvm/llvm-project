@@ -41,6 +41,17 @@ func.func @absi_0dvector(%arg0 : vector<i32>) {
 
 // -----
 
+// CHECK-LABEL: func @absi_2dvector(
+func.func @absi_2dvector(%arg0 : vector<4x3xi32>) {
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<3xi32>>
+  // CHECK: %[[ABS:.*]] = "llvm.intr.abs"(%[[EXTRACT]]) <{is_int_min_poison = false}> : (vector<3xi32>) -> vector<3xi32>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[ABS]], %{{.*}}[0] : !llvm.array<4 x vector<3xi32>>
+  %0 = math.absi %arg0 : vector<4x3xi32>
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @log1p(
 // CHECK-SAME: f32
 func.func @log1p(%arg0 : f32) {

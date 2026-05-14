@@ -70,7 +70,7 @@ define half @uitofp_i32_f16(i32 %x) {
 ; CHECK-NEXT:    [[TMP39:%.*]] = fptrunc float [[TMP38]] to half
 ; CHECK-NEXT:    br label %[[ITOFP_RETURN]]
 ; CHECK:       [[ITOFP_RETURN]]:
-; CHECK-NEXT:    [[TMP40:%.*]] = phi half [ [[TMP39]], %[[ITOFP_IF_END26]] ], [ 0xH0000, %[[ITOFP_ENTRY]] ]
+; CHECK-NEXT:    [[TMP40:%.*]] = phi half [ [[TMP39]], %[[ITOFP_IF_END26]] ], [ 0.000000e+00, %[[ITOFP_ENTRY]] ]
 ; CHECK-NEXT:    ret half [[TMP40]]
 ;
   %res = uitofp i32 %x to half
@@ -143,7 +143,7 @@ define half @uitofp_i32_f16_noundef(i32 noundef %x) {
 ; CHECK-NEXT:    [[TMP39:%.*]] = fptrunc float [[TMP38]] to half
 ; CHECK-NEXT:    br label %[[ITOFP_RETURN]]
 ; CHECK:       [[ITOFP_RETURN]]:
-; CHECK-NEXT:    [[TMP40:%.*]] = phi half [ [[TMP39]], %[[ITOFP_IF_END26]] ], [ 0xH0000, %[[ITOFP_ENTRY]] ]
+; CHECK-NEXT:    [[TMP40:%.*]] = phi half [ [[TMP39]], %[[ITOFP_IF_END26]] ], [ 0.000000e+00, %[[ITOFP_ENTRY]] ]
 ; CHECK-NEXT:    ret half [[TMP40]]
 ;
   %res = uitofp i32 %x to half
@@ -218,7 +218,7 @@ define half @uitofp_i16_f16(i16 %x) {
 ; CHECK-NEXT:    [[TMP40:%.*]] = fptrunc float [[TMP39]] to half
 ; CHECK-NEXT:    br label %[[ITOFP_RETURN]]
 ; CHECK:       [[ITOFP_RETURN]]:
-; CHECK-NEXT:    [[TMP41:%.*]] = phi half [ [[TMP40]], %[[ITOFP_IF_END26]] ], [ 0xH0000, %[[ITOFP_ENTRY]] ]
+; CHECK-NEXT:    [[TMP41:%.*]] = phi half [ [[TMP40]], %[[ITOFP_IF_END26]] ], [ 0.000000e+00, %[[ITOFP_ENTRY]] ]
 ; CHECK-NEXT:    ret half [[TMP41]]
 ;
   %res = uitofp i16 %x to half
@@ -292,7 +292,7 @@ define half @sitofp_i32_f16(i32 %x) {
 ; CHECK-NEXT:    [[TMP39:%.*]] = fptrunc float [[TMP38]] to half
 ; CHECK-NEXT:    br label %[[ITOFP_RETURN]]
 ; CHECK:       [[ITOFP_RETURN]]:
-; CHECK-NEXT:    [[TMP40:%.*]] = phi half [ [[TMP39]], %[[ITOFP_IF_END26]] ], [ 0xH0000, %[[ITOFP_ENTRY]] ]
+; CHECK-NEXT:    [[TMP40:%.*]] = phi half [ [[TMP39]], %[[ITOFP_IF_END26]] ], [ 0.000000e+00, %[[ITOFP_ENTRY]] ]
 ; CHECK-NEXT:    ret half [[TMP40]]
 ;
   %res = sitofp i32 %x to half
@@ -367,7 +367,7 @@ define half @sitofp_i16_f16(i16 %x) {
 ; CHECK-NEXT:    [[TMP39:%.*]] = fptrunc float [[TMP38]] to half
 ; CHECK-NEXT:    br label %[[ITOFP_RETURN]]
 ; CHECK:       [[ITOFP_RETURN]]:
-; CHECK-NEXT:    [[TMP40:%.*]] = phi half [ [[TMP39]], %[[ITOFP_IF_END26]] ], [ 0xH0000, %[[ITOFP_ENTRY]] ]
+; CHECK-NEXT:    [[TMP40:%.*]] = phi half [ [[TMP39]], %[[ITOFP_IF_END26]] ], [ 0.000000e+00, %[[ITOFP_ENTRY]] ]
 ; CHECK-NEXT:    ret half [[TMP40]]
 ;
   %res = sitofp i16 %x to half

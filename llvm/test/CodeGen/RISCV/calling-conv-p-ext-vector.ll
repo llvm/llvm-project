@@ -27,8 +27,7 @@ define <2 x i16> @test_cc_v2i16(<2 x i16> %a, <2 x i16> %b) {
 define <8 x i8> @test_cc_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_cc_v8i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    padd.b a0, a0, a2
-; RV32-NEXT:    padd.b a1, a1, a3
+; RV32-NEXT:    padd.db a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v8i8:
@@ -42,8 +41,7 @@ define <8 x i8> @test_cc_v8i8(<8 x i8> %a, <8 x i8> %b) {
 define <4 x i16> @test_cc_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; RV32-LABEL: test_cc_v4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    padd.h a0, a0, a2
-; RV32-NEXT:    padd.h a1, a1, a3
+; RV32-NEXT:    padd.dh a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v4i16:
@@ -57,8 +55,7 @@ define <4 x i16> @test_cc_v4i16(<4 x i16> %a, <4 x i16> %b) {
 define <2 x i32> @test_cc_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; RV32-LABEL: test_cc_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    add a0, a0, a2
-; RV32-NEXT:    add a1, a1, a3
+; RV32-NEXT:    padd.dw a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v2i32:
@@ -77,18 +74,18 @@ define <16 x i8> @test_cc_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; RV32-NEXT:    lw a4, 4(a2)
 ; RV32-NEXT:    lw a5, 8(a2)
 ; RV32-NEXT:    lw a2, 12(a2)
-; RV32-NEXT:    lw a6, 0(a1)
-; RV32-NEXT:    lw a7, 4(a1)
-; RV32-NEXT:    lw t0, 8(a1)
-; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    padd.b a3, a6, a3
-; RV32-NEXT:    padd.b a4, a7, a4
-; RV32-NEXT:    padd.b a5, t0, a5
-; RV32-NEXT:    padd.b a1, a1, a2
-; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    lw a6, 12(a1)
+; RV32-NEXT:    lw a7, 8(a1)
+; RV32-NEXT:    lw t0, 4(a1)
+; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    padd.b a2, a6, a2
+; RV32-NEXT:    padd.b a5, a7, a5
+; RV32-NEXT:    padd.b a4, t0, a4
+; RV32-NEXT:    padd.b a1, a1, a3
+; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    sw a4, 4(a0)
 ; RV32-NEXT:    sw a5, 8(a0)
-; RV32-NEXT:    sw a1, 12(a0)
+; RV32-NEXT:    sw a2, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v16i8:
@@ -107,18 +104,18 @@ define <8 x i16> @test_cc_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; RV32-NEXT:    lw a4, 4(a2)
 ; RV32-NEXT:    lw a5, 8(a2)
 ; RV32-NEXT:    lw a2, 12(a2)
-; RV32-NEXT:    lw a6, 0(a1)
-; RV32-NEXT:    lw a7, 4(a1)
-; RV32-NEXT:    lw t0, 8(a1)
-; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    padd.h a3, a6, a3
-; RV32-NEXT:    padd.h a4, a7, a4
-; RV32-NEXT:    padd.h a5, t0, a5
-; RV32-NEXT:    padd.h a1, a1, a2
-; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    lw a6, 12(a1)
+; RV32-NEXT:    lw a7, 8(a1)
+; RV32-NEXT:    lw t0, 4(a1)
+; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    padd.h a2, a6, a2
+; RV32-NEXT:    padd.h a5, a7, a5
+; RV32-NEXT:    padd.h a4, t0, a4
+; RV32-NEXT:    padd.h a1, a1, a3
+; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    sw a4, 4(a0)
 ; RV32-NEXT:    sw a5, 8(a0)
-; RV32-NEXT:    sw a1, 12(a0)
+; RV32-NEXT:    sw a2, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v8i16:
@@ -133,22 +130,20 @@ define <8 x i16> @test_cc_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @test_cc_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; RV32-LABEL: test_cc_v4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a3, 0(a2)
-; RV32-NEXT:    lw a4, 4(a2)
-; RV32-NEXT:    lw a5, 8(a2)
-; RV32-NEXT:    lw a2, 12(a2)
-; RV32-NEXT:    lw a6, 0(a1)
+; RV32-NEXT:    lw a5, 4(a2)
+; RV32-NEXT:    lw a3, 12(a2)
+; RV32-NEXT:    lw a4, 0(a2)
+; RV32-NEXT:    lw a2, 8(a2)
 ; RV32-NEXT:    lw a7, 4(a1)
-; RV32-NEXT:    lw t0, 8(a1)
-; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    add a3, a6, a3
-; RV32-NEXT:    add a4, a7, a4
-; RV32-NEXT:    add a5, t0, a5
-; RV32-NEXT:    add a1, a1, a2
-; RV32-NEXT:    sw a3, 0(a0)
-; RV32-NEXT:    sw a4, 4(a0)
-; RV32-NEXT:    sw a5, 8(a0)
-; RV32-NEXT:    sw a1, 12(a0)
+; RV32-NEXT:    lw t2, 12(a1)
+; RV32-NEXT:    lw a6, 0(a1)
+; RV32-NEXT:    lw t1, 8(a1)
+; RV32-NEXT:    padd.dw a4, a6, a4
+; RV32-NEXT:    padd.dw a2, t1, a2
+; RV32-NEXT:    sw a4, 0(a0)
+; RV32-NEXT:    sw a5, 4(a0)
+; RV32-NEXT:    sw a2, 8(a0)
+; RV32-NEXT:    sw a3, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v4i32:
@@ -329,9 +324,9 @@ define <2 x i16> @test_exhaust(i64 %dummy, i64 %dummy2, i64 %dummy3, i64 %dummy4
 define <4 x i16> @test_exhaust_2xlen_rv32(i64 %dummy, i64 %dummy2, i64 %dummy3, i32 %dummy4, <4 x i16> %b) {
 ; RV32-LABEL: test_exhaust_2xlen_rv32:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    mv a0, a7
 ; RV32-NEXT:    lw a1, 0(sp)
-; RV32-NEXT:    padd.h a0, a7, a7
-; RV32-NEXT:    padd.h a1, a1, a1
+; RV32-NEXT:    padd.dh a0, a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_exhaust_2xlen_rv32:
@@ -345,10 +340,9 @@ define <4 x i16> @test_exhaust_2xlen_rv32(i64 %dummy, i64 %dummy2, i64 %dummy3, 
 define <4 x i16> @test_exhaust_2xlen_rv32_2(i64 %dummy, i64 %dummy2, i64 %dummy3, i64 %dummy4, <4 x i16> %b) {
 ; RV32-LABEL: test_exhaust_2xlen_rv32_2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a0, 0(sp)
 ; RV32-NEXT:    lw a1, 4(sp)
-; RV32-NEXT:    padd.h a0, a0, a0
-; RV32-NEXT:    padd.h a1, a1, a1
+; RV32-NEXT:    lw a0, 0(sp)
+; RV32-NEXT:    padd.dh a0, a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_exhaust_2xlen_rv32_2:

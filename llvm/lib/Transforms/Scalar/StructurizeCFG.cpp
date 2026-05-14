@@ -1302,7 +1302,7 @@ static bool hasOnlyUniformBranches(Region *R, unsigned UniformMDKindID,
       if (!Br)
         continue;
 
-      if (!UA.isUniform(Br))
+      if (!UA.isUniformAtDef(Br))
         return false;
 
       // One of our direct children is conditional.

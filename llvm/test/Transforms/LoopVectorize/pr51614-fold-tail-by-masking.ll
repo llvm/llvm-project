@@ -24,8 +24,7 @@ define i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i16 [[TMP3]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i16 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[TMP4]], i16 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i16> poison, i16 [[TMP6]], i64 0
