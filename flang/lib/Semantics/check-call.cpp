@@ -2024,6 +2024,116 @@ static void CheckFree(evaluate::ActualArguments &arguments,
   }
 }
 
+static void CheckSystemClockArgsOnlyInteger(
+    evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &foldingContext) {
+  for (const auto &arg : arguments) {
+    if (arg) {
+      auto dyType{arg->GetType()};
+      if (dyType && dyType->category() != TypeCategory::Integer) {
+        foldingContext.Warn(common::UsageWarning::SystemClockArgsOnlyInteger,
+            arg->sourceLocation(),
+            "Argument to SYSTEM_CLOCK should be integer. Given %s."_warn_en_US,
+            dyType->AsFortran());
+      }
+    }
+  }
+}
+
+static void CheckSystemClockIntArgsOnlyDefault(
+    evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &foldingContext) {
+  int defaultInt{
+      foldingContext.defaults().GetDefaultKind(TypeCategory::Integer)};
+  for (const auto &arg : arguments) {
+    if (arg) {
+      auto dyType{arg->GetType()};
+      if (dyType && dyType->category() == TypeCategory::Integer &&
+          dyType->kind() != defaultInt) {
+        foldingContext.Warn(common::UsageWarning::SystemClockIntArgsOnlyDefault,
+            arg->sourceLocation(),
+            "Integer argument to SYSTEM_CLOCK should be an integer with kind == %d. Given %d."_warn_en_US,
+            defaultInt, dyType->kind());
+      }
+    }
+  }
+}
+
+static void CheckSystemClockIntArgsSameKind(
+    evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &foldingContext) {
+  std::optional<int> commonKind;
+  if (arguments.size() < 2) {
+    return;
+  }
+  for (const auto &arg : arguments) {
+    if (arg) {
+      auto dyType{arg->GetType()};
+      if (dyType && dyType->category() == TypeCategory::Integer) {
+        if (!commonKind) {
+          commonKind = dyType->kind();
+        } else if (*commonKind != dyType->kind()) {
+          foldingContext.Warn(common::UsageWarning::SystemClockIntArgsSameKind,
+              arg->sourceLocation(),
+              "Integer arguments to SYSTEM_CLOCK should have the same kind. Given %d and %d."_warn_en_US,
+              *commonKind, dyType->kind());
+        }
+      }
+    }
+  }
+}
+
+static void CheckSystemClockMinSize(evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &foldingContext) {
+  int defaultInt{
+      foldingContext.defaults().GetDefaultKind(TypeCategory::Integer)};
+  for (const auto &arg : arguments) {
+    if (arg) {
+      auto dyType{arg->GetType()};
+      if (dyType && dyType->category() == TypeCategory::Integer &&
+          dyType->kind() < defaultInt) {
+        foldingContext.Warn(common::UsageWarning::SystemClockMinSize,
+            arg->sourceLocation(),
+            "Integer argument to SYSTEM_CLOCK should be an integer with kind >= %d. Given %d."_warn_en_US,
+            defaultInt, dyType->kind());
+      }
+    }
+  }
+}
+
+static void CheckSystemClock(
+    evaluate::ActualArguments &arguments, SemanticsContext &context) {
+  // Fortran 77 does not have an intrinsic SYSTEM_CLOCK
+  if (context.ShouldWarn(common::UsageWarning::SystemClockNotIntrinsic)) {
+    context.foldingContext().Warn(common::UsageWarning::SystemClockNotIntrinsic,
+        context.foldingContext().messages().at(),
+        "Intrinsic SYSTEM_CLOCK is not part of the Fortran 77 standard."_warn_en_US);
+  }
+
+  // Fortran 90 and 95 limit arguments to SYSTEM_CLOCK to only integers.
+  if (context.ShouldWarn(common::UsageWarning::SystemClockArgsOnlyInteger)) {
+    CheckSystemClockArgsOnlyInteger(arguments, context.foldingContext());
+  }
+
+  // Fortran 90 and 95 limit integer arguments to SYSTEM_CLOCK to having the
+  // same kind as the default integer.
+  if (context.ShouldWarn(common::UsageWarning::SystemClockIntArgsOnlyDefault)) {
+    CheckSystemClockIntArgsOnlyDefault(arguments, context.foldingContext());
+  }
+
+  // Fortran 2023 and beyond limit integer arguments to SYSTEM_CLOCK to all
+  // having the same kind.
+  if (context.ShouldWarn(common::UsageWarning::SystemClockIntArgsSameKind)) {
+    CheckSystemClockIntArgsSameKind(arguments, context.foldingContext());
+  }
+
+  // Fortran 2023 and beyond limit integer arguments to SYSTEM_CLOCK to having
+  // kind as least as large as the default integer.
+  if (context.ShouldWarn(common::UsageWarning::SystemClockMinSize)) {
+    CheckSystemClockMinSize(arguments, context.foldingContext());
+  }
+}
+
 // MOVE_ALLOC (F'2023 16.9.147)
 static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
     parser::ContextualMessages &messages) {
@@ -2325,6 +2435,8 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
     CheckTransfer(arguments, context, scope);
   } else if (intrinsic.name == "free") {
     CheckFree(arguments, context.foldingContext().messages());
+  } else if (intrinsic.name == "system_clock") {
+    CheckSystemClock(arguments, context);
   }
 }
 

@@ -65,6 +65,20 @@ inline DiagnosticLevelMask operator&(DiagnosticLevelMask LHS,
 
 raw_ostream& operator<<(raw_ostream& Out, DiagnosticLevelMask M);
 
+/// Supported versions of Fortran standards for different levels of pedantic
+/// in Flang.
+enum FlangPedanticVersionTy : unsigned {
+  NoPedantic,
+  f77,
+  f90,
+  f95,
+  f2003,
+  f2008,
+  f2018,
+  f2023,
+  f202Y
+};
+
 /// Options for controlling the compiler diagnostics engine.
 class DiagnosticOptions {
   friend bool ParseDiagnosticArgs(DiagnosticOptions &, llvm::opt::ArgList &,

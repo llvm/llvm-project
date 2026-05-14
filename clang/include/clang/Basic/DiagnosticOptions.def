@@ -101,6 +101,12 @@ VALUE_DIAGOPT(MessageLength, 32, 0)
 
 DIAGOPT(ShowSafeBufferUsageSuggestions, 1, 0)
 
+ENUM_DIAGOPT(FlangPedanticVersion, FlangPedanticVersionTy, 5,
+             FlangPedanticVersionTy::NoPedantic) /// For Flang, set version of
+                                                 /// pedantic, roughly
+                                                 /// corresponding to Fortran
+                                                 /// standards.
+
 #undef DIAGOPT
 #undef ENUM_DIAGOPT
 #undef VALUE_DIAGOPT

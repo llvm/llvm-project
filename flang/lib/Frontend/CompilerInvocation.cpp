@@ -1040,12 +1040,50 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // The order of these flags (-pedantic -W<feature> -w) is important and is
   // chosen to match clang's behavior.
 
-  // -pedantic
-  if (args.hasArg(clang::options::OPT_pedantic)) {
-    features.WarnOnAllNonstandard();
-    features.WarnOnAllUsage();
-    res.setEnableConformanceChecks();
-    res.setEnableUsageChecks();
+  // -pedantic, -no-pedantic, and -pedantic=f**
+  llvm::opt::Arg *arg = args.getLastArg(clang::options::OPT_pedantic,
+                                        clang::options::OPT_no_pedantic,
+                                        clang::options::OPT_pedantic_EQ);
+  // Pedantic is turned off if there is no pedantic argument or if
+  // -no_pedantic is the last argument.
+  if (arg && !arg->getOption().matches(clang::options::OPT_no_pedantic)) {
+    using FlangPedanticVersionTy = clang::FlangPedanticVersionTy;
+    FlangPedanticVersionTy version = FlangPedanticVersionTy::NoPedantic;
+    if (arg->getOption().matches(clang::options::OPT_pedantic)) {
+      version = FlangPedanticVersionTy::f2018;
+    } else if (arg->getOption().matches(clang::options::OPT_pedantic_EQ)) {
+      std::optional<FlangPedanticVersionTy> val =
+          llvm::StringSwitch<std::optional<FlangPedanticVersionTy>>(
+              arg->getValue())
+              .Case("f77", FlangPedanticVersionTy::f77)
+              .Case("f1977", FlangPedanticVersionTy::f77)
+              .Case("f90", FlangPedanticVersionTy::f90)
+              .Case("f1990", FlangPedanticVersionTy::f90)
+              .Case("f95", FlangPedanticVersionTy::f95)
+              .Case("f1995", FlangPedanticVersionTy::f95)
+              .Case("f2003", FlangPedanticVersionTy::f2003)
+              .Case("f03", FlangPedanticVersionTy::f2003)
+              .Case("f2008", FlangPedanticVersionTy::f2008)
+              .Case("f08", FlangPedanticVersionTy::f2008)
+              .Case("f2018", FlangPedanticVersionTy::f2018)
+              .Case("f18", FlangPedanticVersionTy::f2018)
+              .Case("f2023", FlangPedanticVersionTy::f2023)
+              .Case("f23", FlangPedanticVersionTy::f2023)
+              .Case("f202Y", FlangPedanticVersionTy::f202Y)
+              .Case("f2Y", FlangPedanticVersionTy::f202Y)
+              .Default(std::nullopt);
+      if (!val.has_value()) {
+        diags.Report(clang::diag::err_drv_invalid_value)
+            << arg->getAsString(args) << arg->getValue();
+      } else {
+        version = val.value();
+      }
+    }
+
+    if (version != FlangPedanticVersionTy::NoPedantic) {
+      features.WarnOnAllNonstandard();
+      features.WarnOnAllUsage(version);
+    }
   }
 
   // -Werror option
@@ -1084,7 +1122,6 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // -w
   if (args.hasArg(clang::options::OPT_w)) {
     features.DisableAllWarnings();
-    res.setDisableWarnings();
   }
 
   // Default to off for `flang -fc1`.
@@ -1193,7 +1230,6 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     auto standard = args.getLastArgValue(clang::options::OPT_std_EQ);
     // We only allow f2018 as the given standard
     if (standard == "f2018") {
-      res.setEnableConformanceChecks();
       res.getFrontendOpts().features.WarnOnAllNonstandard();
     } else {
       const unsigned diagID =
