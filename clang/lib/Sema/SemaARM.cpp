@@ -49,6 +49,7 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     if (!SecArgType->isIntegerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
              << "second" << SecArgType << Arg1->getSourceRange();
+    TheCall->setArg(1, SecArg.get());
 
     // Derive the return type from the pointer argument.
     TheCall->setType(FirstArgType);
@@ -89,11 +90,17 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     if (!FirstArgType->isAnyPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
              << "first" << FirstArgType << Arg0->getSourceRange();
+    TheCall->setArg(0, FirstArg.get());
 
-    QualType SecArgType = Arg1->getType();
+    ExprResult SecArg = SemaRef.DefaultLvalueConversion(Arg1);
+    if (SecArg.isInvalid())
+      return true;
+    QualType SecArgType = SecArg.get()->getType();
     if (!SecArgType->isIntegerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
              << "second" << SecArgType << Arg1->getSourceRange();
+    TheCall->setArg(1, SecArg.get());
+
     return false;
   }
 
