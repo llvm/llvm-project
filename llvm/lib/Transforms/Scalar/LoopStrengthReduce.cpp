@@ -937,11 +937,10 @@ static Immediate ExtractImmediateOperand(MutableArrayRef<SCEVUse> Ops,
 
   // Constant SCEV operands are always sorted to the LHS.
   SCEVUse &S = Ops.front();
-  if (match(S, m_scev_APInt(C)) && !C->isZero()) {
-    if (C->getSignificantBits() <= 64) {
-      Op = &S;
-      Result = Immediate::getFixed(C->getSExtValue());
-    }
+  if (match(S, m_scev_APInt(C)) && !C->isZero() &&
+      C->getSignificantBits() <= 64) {
+    Op = &S;
+    Result = Immediate::getFixed(C->getSExtValue());
   }
 
   if (EnableVScaleImmediates && (Result.isZero() || PreferScalable)) {
@@ -953,7 +952,7 @@ static Immediate ExtractImmediateOperand(MutableArrayRef<SCEVUse> Ops,
         break;
       if (match(S, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale()))) {
         Op = &S;
-        Result = Immediate::getScalable(C->getZExtValue());
+        Result = Immediate::getScalable(C->getSExtValue());
         break;
       }
     }
