@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/Support/Path.h"
@@ -77,16 +78,20 @@ class CIRGenConsumer : public clang::ASTConsumer {
   const FrontendOptions &FEOptions;
   CodeGenOptions &CGO;
 
-  SmallVector<::clang::LinkModule, 4> linkModules;
+  llvm::LLVMContext &LLVMCtx;
+  SmallVectorImpl<::clang::LinkModule> &LinkModules;
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
-                 CodeGenOptions &CGO, std::unique_ptr<raw_pwrite_stream> OS)
+                 CodeGenOptions &CGO, std::unique_ptr<raw_pwrite_stream> OS,
+                 llvm::LLVMContext &LLVMCtx,
+                 SmallVectorImpl<::clang::LinkModule> &LinkModules)
       : Action(Action), CI(CI), OutputStream(std::move(OS)),
         FS(&CI.getVirtualFileSystem()),
         Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
                                            CI.getCodeGenOpts())),
-        FEOptions(CI.getFrontendOpts()), CGO(CGO) {}
+        FEOptions(CI.getFrontendOpts()), CGO(CGO), LLVMCtx(LLVMCtx),
+        LinkModules(LinkModules) {}
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
@@ -168,10 +173,6 @@ public:
           MlirModule->print(out);
       }
 
-      llvm::LLVMContext LLVMCtx;
-      if (clang::loadLinkModules(CI, LLVMCtx, linkModules))
-        return;
-
       std::unique_ptr<llvm::Module> LLVMModule =
           lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, mlirSaveTempsOutFile,
                                &CI.getVirtualFileSystem());
@@ -189,7 +190,7 @@ public:
   }
 
   bool linkInModules(llvm::Module &M) {
-    for (auto &LM : linkModules) {
+    for (auto &LM : LinkModules) {
       assert(LM.Module && "LinkModule does not actually have a module");
 
       bool Err;
@@ -209,7 +210,7 @@ public:
         return true;
     }
 
-    linkModules.clear();
+    LinkModules.clear();
     return false;
   }
 
@@ -235,9 +236,16 @@ public:
 void CIRGenConsumer::anchor() {}
 
 CIRGenAction::CIRGenAction(OutputType Act, mlir::MLIRContext *MLIRCtx)
-    : MLIRCtx(MLIRCtx ? MLIRCtx : new mlir::MLIRContext), Action(Act) {}
+    : MLIRCtx(MLIRCtx ? MLIRCtx : new mlir::MLIRContext),
+      VMContext(std::make_unique<llvm::LLVMContext>()), Action(Act) {}
 
 CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
+
+bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+    return false;
+  return ASTFrontendAction::BeginSourceFileAction(CI);
+}
 
 static std::unique_ptr<raw_pwrite_stream>
 getOutputStream(CompilerInstance &CI, StringRef InFile,
@@ -265,7 +273,7 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     Out = getOutputStream(CI, InFile, Action);
 
   auto Result = std::make_unique<cir::CIRGenConsumer>(
-      Action, CI, CI.getCodeGenOpts(), std::move(Out));
+      Action, CI, CI.getCodeGenOpts(), std::move(Out), *VMContext, LinkModules);
 
   return Result;
 }
