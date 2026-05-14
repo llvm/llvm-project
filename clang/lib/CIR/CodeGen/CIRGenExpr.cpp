@@ -2194,8 +2194,9 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
     // When directing calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
-    auto fn = cast<cir::FuncOp>(curFn);
-    if (fn.getName() != fdInlineName && onlyHasInlineBuiltinDeclaration(fd)) {
+    if (auto fn = dyn_cast<cir::FuncOp>(curFn);
+        fn && fn.getName() != fdInlineName &&
+        onlyHasInlineBuiltinDeclaration(fd)) {
       cir::FuncOp clone =
           mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
 
