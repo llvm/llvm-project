@@ -8,6 +8,7 @@
 
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
 #include "CIRDiagnosticHandler.h"
+#include "TargetLowering/LowerModule.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -16,14 +17,17 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Pass/PassManager.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticCodeGen.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
 #include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
+#include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleLinker.h"
@@ -40,6 +44,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 
@@ -76,6 +81,21 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
                      llvm::vfs::FileSystem *fs = nullptr) {
   return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx, EnableOpenMP,
                                               mlirSaveTempsOutFile, fs);
+}
+
+// Build a LowerModule from the surrounding cc1 invocation. Used both for
+// in-process CIRGen (where the same TargetInfo also drives the AST) and for
+// the .cir input path, where there is no AST at all.
+static std::unique_ptr<cir::LowerModule>
+makeLowerModuleFromInvocation(CompilerInstance &CI, mlir::ModuleOp module) {
+  // Clone TargetInfo: LowerModule takes ownership and CI keeps its copy.
+  auto target =
+      std::unique_ptr<clang::TargetInfo>(clang::TargetInfo::CreateTargetInfo(
+          CI.getDiagnostics(), CI.getInvocation().getTargetOpts()));
+  if (!target)
+    return nullptr;
+  return cir::createLowerModule(module, CI.getLangOpts(), CI.getCodeGenOpts(),
+                                std::move(target));
 }
 
 class CIRGenConsumer : public clang::ASTConsumer {
@@ -165,8 +185,15 @@ public:
       // Setup and run CIR pipeline.
       const bool EnableLibOpt =
           FEOptions.ClangIRLibOptEnabled && (CGO.OptimizationLevel > 0);
+      std::unique_ptr<cir::LowerModule> lowerModule =
+          makeLowerModuleFromInvocation(CI, MlirModule);
+      if (!lowerModule) {
+        CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
+        return;
+      }
       if (runCIRToCIRPasses(
-              MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
+              MlirModule, MlirCtx, C, *lowerModule, &CI.getVirtualFileSystem(),
+              !FEOptions.ClangIRDisableCIRVerifier,
               FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
               EnableLibOpt, LibOptOptions, FEOptions.ClangIRCallConvLowering)
               .failed()) {
@@ -345,6 +372,13 @@ void CIRGenAction::ExecuteAction() {
 
   registerCIRInputDialects(*MLIRCtx);
 
+  // Route MLIR diagnostics (parse errors and pass-side errors) through
+  // clang's DiagnosticsEngine, so this path reports real MLIR error text like
+  // the source path does. Without a live ASTContext the SourceManager still
+  // holds the .cir buffer, which is enough to translate cir.loc locations.
+  CIRDiagnosticHandler DiagHandler(MLIRCtx, CI.getDiagnostics(),
+                                   CI.getSourceManager(), CI.getFileManager());
+
   llvm::SourceMgr SrcMgr;
   SrcMgr.AddNewSourceBuffer(
       llvm::MemoryBuffer::getMemBufferCopy(MainFile->getBuffer(),
@@ -376,17 +410,6 @@ void CIRGenAction::ExecuteAction() {
                  mlir::StringAttr::get(MLIRCtx, invocationTriple));
   }
 
-  // For now, the CIR-to-CIR pipeline (target-lowering, cxxabi-lowering,
-  // lowering-prepare) still requires a live ASTContext. On .cir input that
-  // ASTContext is unavailable, so this path only supports formats whose
-  // emission does not rely on those passes:
-  //   * EmitCIR: round-trip the parsed module.
-  //   * EmitLLVM/EmitBC/EmitObj/EmitAssembly: lower directly via the existing
-  //     CIR-to-LLVM dialect translation, which itself does not require an
-  //     ASTContext, and hand the result to the LLVM backend.
-  // Lifting the remaining ASTContext dependency from LoweringPrepare is
-  // tracked separately and will let this entry point run the full pipeline.
-
   if (Action == OutputType::EmitCIR) {
     mlir::OpPrintingFlags flags;
     flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
@@ -394,12 +417,41 @@ void CIRGenAction::ExecuteAction() {
     return;
   }
 
-  llvm::LLVMContext LLVMCtx;
-  std::unique_ptr<llvm::Module> LLVMModule =
-      lowerFromCIRToLLVMIR(Mod, LLVMCtx, /*mlirSaveTempsOutFile=*/{},
-                           &CI.getVirtualFileSystem());
-  if (!LLVMModule) {
+  // Run the post-CIRGen pipeline (target-lowering, cxxabi-lowering,
+  // lowering-prepare). LoweringPrepare reads target/LangOpts facts via the
+  // LowerModule we build from the surrounding cc1 invocation, so it does not
+  // need a live ASTContext. IdiomRecognizer is intentionally skipped on this
+  // path -- it documents an AST dependency and is opt-in even on the source
+  // path.
+  std::unique_ptr<cir::LowerModule> lowerModule =
+      makeLowerModuleFromInvocation(CI, Mod);
+  if (!lowerModule) {
     CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
+    return;
+  }
+  {
+    mlir::PassManager pm(MLIRCtx);
+    pm.addPass(mlir::createCIRCanonicalizePass());
+    pm.addPass(mlir::createTargetLoweringPass());
+    pm.addPass(mlir::createCXXABILoweringPass());
+    pm.addPass(mlir::createLoweringPreparePass(lowerModule.get(),
+                                               &CI.getVirtualFileSystem()));
+    if (mlir::failed(pm.run(Mod))) {
+      // Pass-side errors are routed through DiagHandler above; only emit the
+      // generic catch-all if nothing more specific was reported.
+      if (!CI.getDiagnostics().hasErrorOccurred())
+        CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
+      return;
+    }
+  }
+
+  llvm::LLVMContext LLVMCtx;
+  std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
+      Mod, LLVMCtx, CI.getLangOpts().OpenMP,
+      /*mlirSaveTempsOutFile=*/{}, &CI.getVirtualFileSystem());
+  if (!LLVMModule) {
+    if (!CI.getDiagnostics().hasErrorOccurred())
+      CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
     return;
   }
 

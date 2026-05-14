@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace cir {
@@ -75,10 +76,11 @@ getX86ABICompatInfo(const clang::ASTContext &astContext) {
 
 mlir::LogicalResult
 runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
-                  clang::ASTContext &astContext, bool enableVerifier,
-                  bool enableIdiomRecognizer, bool enableCIRSimplify,
-                  bool enableLibOpt, llvm::StringRef libOptOptions,
-                  bool enableCallConvLowering) {
+                  clang::ASTContext &astContext, cir::LowerModule &lowerModule,
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs,
+                  bool enableVerifier, bool enableIdiomRecognizer,
+                  bool enableCIRSimplify, bool enableLibOpt,
+                  llvm::StringRef libOptOptions, bool enableCallConvLowering) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -110,7 +112,7 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   // outlines dynamic global initializers into functions.  It must run before
   // CallConvLowering so the classifier sees them, otherwise their signatures
   // go unclassified and caller and callee disagree on the ABI.
-  pm.addPass(mlir::createLoweringPreparePass(&astContext));
+  pm.addPass(mlir::createLoweringPreparePass(&lowerModule, std::move(vfs)));
 
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
