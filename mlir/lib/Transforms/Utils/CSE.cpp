@@ -16,6 +16,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/Allocator.h"
@@ -134,18 +135,11 @@ private:
 
   bool hoistPureOps = true;
 
-  // The map uses region op as the key and a list of operations as the
-  // value. This list describes the dependencies of the region op, as the
-  // operations within the region op consume results from the value in
-  // the map. Therefore, it is necessary to consider these dependent operations
-  // when hoisting a region op.
-  DenseMap<Operation *, SmallVector<Operation *>> hoistBlockingDeps;
-
-  // The keys of this map are exiting ops, and the values are lists of
-  // operations. Each entry describes an exiting op that has been hoisted along
-  // with its associated operations. When an exiting op and its equivalent
+  // The keys of this map are existing ops, and the values are lists of
+  // operations. Each entry describes an existing op that has been hoisted along
+  // with its associated operations. When an existing op and its equivalent
   // operations are hoisted for the first time, they are added to this map.
-  // During subsequent hoistings of the same exiting op(hoisting exiting op
+  // During subsequent hoistings of the same existing op(hoisting exiting op
   // multiple times), the operations stored in the map's value will also be
   // hoisted together with it.
   DenseMap<Operation *, SmallVector<Operation *>> hoistOpsSet;
@@ -189,29 +183,14 @@ LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
       isBlockCrossIsIsolatedFromAbove(domInfo, ancestorBlock, op->getBlock()))
     return failure();
 
-  if (existing->getParentOp() != ancestorBlock->getParentOp() &&
-      !existing->use_empty()) {
-    LDBG() << "add "
-           << OpWithFlags(existing->getParentOp(),
-                          OpPrintingFlags().skipRegions())
-           << " dependents "
-           << OpWithFlags(existing, OpPrintingFlags().skipRegions());
-    hoistBlockingDeps[existing->getParentOp()].push_back(existing);
-  }
-
   // Find the insertion point based on dominance relationships. When hoisting a
   // region op, we must consider not only its operands but also the dominance
   // relationships of the operations within the region when determining the
   // insertion point
   Operation *insertPoint = nullptr;
-  SmallVector<Value> dependentOperands(existing->getOperands());
-  if (hoistBlockingDeps.contains(existing) &&
-      !hoistBlockingDeps[existing].empty()) {
-    for (Operation *dependentOp : hoistBlockingDeps[existing])
-      dependentOperands.append(dependentOp->getResults().begin(),
-                               dependentOp->getResults().end());
-  }
-
+  SetVector<Value> dependentOperands;
+  dependentOperands.insert_range(existing->getOperands());
+  mlir::getUsedValuesDefinedAbove(existing->getRegions(), dependentOperands);
   for (Value operand : dependentOperands) {
     if (domInfo->properlyDominates(operand, &ancestorBlock->front()))
       continue;
