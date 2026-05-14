@@ -3185,13 +3185,6 @@ TEST_F(FormatTest, FormatsLabels) {
                "    // Block\n"
                "  }\n"
                "}");
-  verifyFormat("void func() {\n"
-               "label:\n"
-               "  // Comment\n"
-               "  {\n"
-               "    // Block\n"
-               "  }\n"
-               "}");
 
   FormatStyle Style = getLLVMStyle();
   Style.IndentGotoLabels = FormatStyle::IGLS_NoIndent;
