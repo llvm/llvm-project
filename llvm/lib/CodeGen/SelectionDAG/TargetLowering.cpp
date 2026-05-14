@@ -13106,9 +13106,9 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
         DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ResVT),
         ResLo, LoNumElts, ISD::SETNE);
     // |Lo| + ResHi <= total lane count, fits in ResVT; both operands >= 0.
-    SDValue Sum = DAG.getNode(ISD::ADD, DL, ResVT, LoNumElts, ResHi,
-                              SDNodeFlags::NoUnsignedWrap |
-                                  SDNodeFlags::NoSignedWrap);
+    SDValue Sum =
+        DAG.getNode(ISD::ADD, DL, ResVT, LoNumElts, ResHi,
+                    SDNodeFlags::NoUnsignedWrap | SDNodeFlags::NoSignedWrap);
     return DAG.getSelect(DL, ResVT, ResLoNotNumElts, ResLo, Sum);
   }
 
