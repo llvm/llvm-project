@@ -78,6 +78,7 @@ TEST_F(LlvmLibcFputwcTest, WriteUtf8) {
   EXPECT_EQ(buffer[1], static_cast<unsigned char>(0xC2));
   EXPECT_EQ(buffer[2], static_cast<unsigned char>(0xA2));
 
+#if WCHAR_MAX > 0xFFFF
   // Verify 3-byte
   EXPECT_EQ(buffer[3], static_cast<unsigned char>(0xE2));
   EXPECT_EQ(buffer[4], static_cast<unsigned char>(0x82));
@@ -88,10 +89,13 @@ TEST_F(LlvmLibcFputwcTest, WriteUtf8) {
   EXPECT_EQ(buffer[7], static_cast<unsigned char>(0x90));
   EXPECT_EQ(buffer[8], static_cast<unsigned char>(0x8D));
   EXPECT_EQ(buffer[9], static_cast<unsigned char>(0x88));
-
+#endif
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
+// For the character to be outside the unicode range it also needs to be outside
+// the UTF-16 range.
+#if WCHAR_MAX > 0xFFFF
 TEST_F(LlvmLibcFputwcTest, EncodingErrorEILSEQ) {
   auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputwc_eilseq.test"));
@@ -107,6 +111,7 @@ TEST_F(LlvmLibcFputwcTest, EncodingErrorEILSEQ) {
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
+#endif
 
 TEST_F(LlvmLibcFputwcTest, InvalidStream) {
   auto FILENAME =
