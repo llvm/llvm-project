@@ -33,8 +33,6 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-bool isLinkerGnuLd(const ToolChain &TC, const llvm::opt::ArgList &Args);
-
 class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("solaris::Linker", "linker", TC) {}
@@ -55,6 +53,7 @@ namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY Solaris : public Generic_ELF {
 public:
+  friend class tools::solaris::Linker;
   Solaris(const Driver &D, const llvm::Triple &Triple,
           const llvm::opt::ArgList &Args);
 
@@ -76,9 +75,14 @@ public:
 
   const char *getDefaultLinker() const override;
 
+  virtual bool mustElideDynamicList() const override;
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
+
+private:
+  bool isLinkerGnuLd() const;
 };
 
 } // end namespace toolchains

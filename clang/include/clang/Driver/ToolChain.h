@@ -870,6 +870,8 @@ public:
     return llvm::DenormalMode::getIEEE();
   }
 
+  virtual bool mustElideDynamicList() const { return false; }
+
   // We want to expand the shortened versions of the triples passed in to
   // the values used for the bitcode libraries.
   static void normalizeOffloadTriple(llvm::Triple &TT) {

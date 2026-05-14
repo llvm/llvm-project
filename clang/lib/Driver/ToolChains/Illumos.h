@@ -66,6 +66,8 @@ public:
 
   const char *getDefaultLinker() const override;
 
+  virtual bool mustElideDynamicList() const override;
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

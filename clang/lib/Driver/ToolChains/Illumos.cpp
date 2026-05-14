@@ -406,3 +406,8 @@ void Illumos::addAsNeededOption(llvm::opt::ArgStringList &CmdArgs,
 }
 */
 }
+
+bool Illumos::mustElideDynamicList() const {
+  // TODO: GNU linker
+  return true;
+}

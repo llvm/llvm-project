@@ -36,10 +36,10 @@ void solaris::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   gnutools::Assembler::ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
 }
 
-bool solaris::isLinkerGnuLd(const ToolChain &TC, const ArgList &Args) {
+bool Solaris::isLinkerGnuLd() const {
   // Only used if targetting Solaris.
-  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
-  StringRef UseLinker = A ? A->getValue() : TC.getDriver().getPreferredLinker();
+  const Arg *A = getArgs().getLastArg(options::OPT_fuse_ld_EQ);
+  StringRef UseLinker = A ? A->getValue() : getDriver().getPreferredLinker();
   return UseLinker == "bfd" || UseLinker == "gld";
 }
 
@@ -87,7 +87,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   const bool IsPIE = getPIE(Args, ToolChain);
-  const bool LinkerIsGnuLd = isLinkerGnuLd(ToolChain, Args);
+  const bool LinkerIsGnuLd = ToolChain.isLinkerGnuLd();
   ArgStringList CmdArgs;
 
   // Demangle C++ names in errors.  GNU ld already defaults to --demangle.
@@ -426,10 +426,12 @@ void Solaris::addLibStdCxxIncludePaths(
 
 void Solaris::addAsNeededOption(llvm::opt::ArgStringList &CmdArgs,
                                 bool as_needed) const {
-  if (solaris::isLinkerGnuLd(*this, getArgs())) {
+  if (isLinkerGnuLd()) {
     CmdArgs.push_back("-z");
     CmdArgs.push_back(as_needed ? "ignore" : "record");
   } else {
     CmdArgs.push_back(as_needed ? "--as-needed" : "--no-as-needed");
   }
 }
+
+bool Solaris::mustElideDynamicList() const { return !isLinkerGnuLd(); }
