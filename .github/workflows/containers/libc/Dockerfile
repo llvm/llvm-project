@@ -66,7 +66,7 @@ RUN wget https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.2.tar.xz && \
     rm mpfr-4.2.2.tar.xz
 
 RUN wget https://ftp.gnu.org/gnu/mpc/mpc-1.4.1.tar.xz && \
-    tar -xf mpc-1.4.1 && \
+    tar -xf mpc-1.4.1.tar.xz && \
     cd mpc-1.4.1 && \
     ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu \
     --with-gmp=/usr/riscv64-linux-gnu \
