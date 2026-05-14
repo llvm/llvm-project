@@ -28,20 +28,31 @@ TEST_F(YAMLGeneratorTest, emitNamespaceYAML) {
   NamespaceInfo I;
   I.Name = "Namespace";
   I.Path = "path/to/A";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace,
                          "path::to::A::Namespace::ChildNamespace",
                          "path/to/A/Namespace");
-  I.Children.Namespaces.push_back(NewNamespace);
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                                  "path::to::A::Namespace::ChildStruct",
-                                  "path/to/A/Namespace");
-  I.Children.Functions.emplace_back();
-  I.Children.Functions.back().Name = "OneFunction";
-  I.Children.Functions.back().Access = AccessSpecifier::AS_none;
-  I.Children.Enums.emplace_back();
-  I.Children.Enums.back().Name = "OneEnum";
+  InfoNode<Reference> NewNamespaceNode(&NewNamespace);
+  I.Children.Namespaces.push_back(NewNamespaceNode);
+
+  Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record,
+                        "path::to::A::Namespace::ChildStruct",
+                        "path/to/A/Namespace");
+  InfoNode<Reference> ChildStructNode(&ChildStruct);
+  I.Children.Records.push_back(ChildStructNode);
+
+  FunctionInfo F;
+  F.Name = "OneFunction";
+  F.Access = AccessSpecifier::AS_none;
+  InfoNode<FunctionInfo> FNode(&F);
+  I.Children.Functions.push_back(FNode);
+
+  EnumInfo E;
+  E.Name = "OneEnum";
+  InfoNode<EnumInfo> ENode(&E);
+  I.Children.Enums.push_back(ENode);
 
   auto G = getYAMLGenerator();
   assert(G);
@@ -85,12 +96,15 @@ TEST_F(YAMLGeneratorTest, emitRecordYAML) {
   I.Name = "r";
   I.Path = "path/to/A";
   I.IsTypeDef = true;
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  I.Loc.emplace_back(12, 12, "test.cpp");
+  Location Loc1(12, 12, "test.cpp");
+  InfoNode<Location> Loc1Node(&Loc1);
+  I.Loc.push_back(Loc1Node);
 
-  I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
+  MemberTypeInfo M(TypeInfo("int"), "X", AccessSpecifier::AS_private);
 
   // Member documentation.
   CommentInfo BriefChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
@@ -99,26 +113,45 @@ TEST_F(YAMLGeneratorTest, emitRecordYAML) {
   CommentInfo TopCommentChildren[] = {
       CommentInfo(CommentKind::CK_ParagraphComment, BriefChildren)};
   CommentInfo TopComment(CommentKind::CK_FullComment, TopCommentChildren);
-  I.Members.back().Description.push_back(std::move(TopComment));
+  InfoNode<CommentInfo> TopCommentNode(&TopComment);
+  M.Description.push_back(TopCommentNode);
+  MemberTypeInfo MemArr[] = {std::move(M)};
+  I.Members = llvm::ArrayRef(MemArr);
 
   I.TagType = TagTypeKind::Class;
-  I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
-                       AccessSpecifier::AS_public, true);
-  I.Bases.back().Children.Functions.emplace_back();
-  I.Bases.back().Children.Functions.back().Name = "InheritedFunctionOne";
-  I.Bases.back().Members.emplace_back(TypeInfo("int"), "N",
-                                      AccessSpecifier::AS_private);
-  // F is in the global namespace
-  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, "");
-  I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record,
-                                "path::to::G::G", "path/to/G");
+  BaseRecordInfo B(EmptySID, "F", "path/to/F", true, AccessSpecifier::AS_public,
+                   true);
+  FunctionInfo F;
+  F.Name = "InheritedFunctionOne";
+  InfoNode<FunctionInfo> FNode(&F);
+  B.Children.Functions.push_back(FNode);
+  MemberTypeInfo BMem[] = {
+      MemberTypeInfo(TypeInfo("int"), "N", AccessSpecifier::AS_private)};
+  B.Members = llvm::ArrayRef(BMem);
+  BaseRecordInfo Bases[] = {std::move(B)};
+  I.Bases = llvm::ArrayRef(Bases);
 
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                                  "path::to::A::r::ChildStruct", "path/to/A/r");
-  I.Children.Functions.emplace_back();
-  I.Children.Functions.back().Name = "OneFunction";
-  I.Children.Enums.emplace_back();
-  I.Children.Enums.back().Name = "OneEnum";
+  // F is in the global namespace
+  Reference Parents[] = {Reference(EmptySID, "F", InfoType::IT_record, "")};
+  I.Parents = llvm::ArrayRef(Parents);
+  Reference VParents[] = {Reference(EmptySID, "G", InfoType::IT_record,
+                                    "path::to::G::G", "path/to/G")};
+  I.VirtualParents = llvm::ArrayRef(VParents);
+
+  Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record,
+                        "path::to::A::r::ChildStruct", "path/to/A/r");
+  InfoNode<Reference> ChildStructNode(&ChildStruct);
+  I.Children.Records.push_back(ChildStructNode);
+
+  FunctionInfo F2;
+  F2.Name = "OneFunction";
+  InfoNode<FunctionInfo> F2Node(&F2);
+  I.Children.Functions.push_back(F2Node);
+
+  EnumInfo E;
+  E.Name = "OneEnum";
+  InfoNode<EnumInfo> ENode(&E);
+  I.Children.Enums.push_back(ENode);
 
   auto G = getYAMLGenerator();
   assert(G);
@@ -205,17 +238,23 @@ ChildEnums:
 TEST_F(YAMLGeneratorTest, emitFunctionYAML) {
   FunctionInfo I;
   I.Name = "f";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  I.Loc.emplace_back(12, 12, "test.cpp");
+  Location Loc1(12, 12, "test.cpp");
+  InfoNode<Location> Loc1Node(&Loc1);
+  I.Loc.push_back(Loc1Node);
 
   I.Access = AccessSpecifier::AS_none;
 
   I.ReturnType = TypeInfo(Reference(EmptySID, "void", InfoType::IT_default));
-  I.Params.emplace_back(TypeInfo("int"), "P");
-  I.Params.emplace_back(TypeInfo("double"), "D");
-  I.Params.back().DefaultValue = "2.0 * M_PI";
+
+  FieldTypeInfo P1(TypeInfo("int"), "P");
+  FieldTypeInfo D(TypeInfo("double"), "D");
+  D.DefaultValue = "2.0 * M_PI";
+  FieldTypeInfo Params[] = {std::move(P1), std::move(D)};
+  I.Params = llvm::ArrayRef(Params);
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -270,12 +309,16 @@ ReturnType:
 TEST_F(YAMLGeneratorTest, emitSimpleEnumYAML) {
   EnumInfo I;
   I.Name = "e";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  I.Namespace = llvm::ArrayRef(Ns);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  I.Loc.emplace_back(12, 12, "test.cpp");
+  Location Loc1(12, 12, "test.cpp");
+  InfoNode<Location> Loc1Node(&Loc1);
+  I.Loc.push_back(Loc1Node);
 
-  I.Members.emplace_back("X");
+  EnumValueInfo EV[] = {EnumValueInfo("X")};
+  I.Members = llvm::ArrayRef(EV);
   I.Scoped = false;
 
   auto G = getYAMLGenerator();
@@ -312,7 +355,8 @@ TEST_F(YAMLGeneratorTest, enumTypedScopedEnumYAML) {
   EnumInfo I;
   I.Name = "e";
 
-  I.Members.emplace_back("X", "-9876", "FOO_BAR + 2");
+  EnumValueInfo EV[] = {EnumValueInfo("X", "-9876", "FOO_BAR + 2")};
+  I.Members = llvm::ArrayRef(EV);
   I.Scoped = true;
   I.BaseType = TypeInfo("short");
 
@@ -370,8 +414,9 @@ TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   I.Name = "f";
   I.DefLoc = Location(10, 10, "test.cpp");
   I.ReturnType = TypeInfo("void");
-  I.Params.emplace_back(TypeInfo("int"), "I");
-  I.Params.emplace_back(TypeInfo("int"), "J");
+  FieldTypeInfo Params[] = {FieldTypeInfo(TypeInfo("int"), "I"),
+                            FieldTypeInfo(TypeInfo("int"), "J")};
+  I.Params = llvm::ArrayRef(Params);
   I.Access = AccessSpecifier::AS_none;
 
   // BlankLine
@@ -443,8 +488,8 @@ TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   CommentInfo TopChildren[] = {BlankLine, Brief,    Extended, HTML,
                                Verbatim,  ParamOut, ParamIn,  Return};
   CommentInfo Top(CommentKind::CK_FullComment, TopChildren);
-
-  I.Description.emplace_back(std::move(Top));
+  InfoNode<CommentInfo> TopNode(&Top);
+  I.Description.push_back(TopNode);
 
   auto G = getYAMLGenerator();
   assert(G);

@@ -101,7 +101,7 @@ define <8 x i16> @test_vextRq_undef2(<8 x i16> %tmp1) nounwind {
 define <4 x i16> @test_undef(<8 x i16> %tmp1, <8 x i16> %tmp2) {
 ; CHECK-SD-LABEL: test_undef:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    ret
 ;

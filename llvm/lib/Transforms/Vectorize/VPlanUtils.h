@@ -74,6 +74,7 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 
 /// Return true if we do not know how to (mechanically) hoist or sink \p R.
 /// When sinking, passing \p Sinking = true ensures that assumes aren't sunk.
+/// Returns true for recipes that access memory.
 bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
 
 /// Returns the VPValue representing the uncountable exit comparison used by
@@ -154,6 +155,14 @@ template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
 /// Find the canonical IV increment of \p Plan's vector loop region. Returns
 /// nullptr if not found.
 VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
+
+/// Returns the GEP nowrap flags for \p Ptr, looking through pointer casts
+/// mirroring Value::stripPointerCasts.
+GEPNoWrapFlags getGEPFlagsForPtr(VPValue *Ptr);
+
+/// Returns true if \p V is used as part of the address of another load or
+/// store.
+bool isUsedByLoadStoreAddress(const VPValue *V);
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
 /// inserted for predicated reductions or tail folding.

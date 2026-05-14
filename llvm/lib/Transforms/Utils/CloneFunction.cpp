@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -470,33 +471,8 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
   // be created. Assume the first arguments of constrained intrinsics are the
   // same as the operands of original instruction.
 
-  // Determine overloaded types of the intrinsic.
-  SmallVector<Type *, 2> TParams;
-  SmallVector<Intrinsic::IITDescriptor, 8> Descriptor;
-  getIntrinsicInfoTableEntries(CIID, Descriptor);
-  for (unsigned I = 0, E = Descriptor.size(); I != E; ++I) {
-    Intrinsic::IITDescriptor Operand = Descriptor[I];
-    switch (Operand.Kind) {
-    case Intrinsic::IITDescriptor::Overloaded:
-      if (Operand.getOverloadKind() != Intrinsic::IITDescriptor::AK_MatchType) {
-        if (I == 0)
-          TParams.push_back(OldInst.getType());
-        else
-          TParams.push_back(OldInst.getOperand(I - 1)->getType());
-      }
-      break;
-    case Intrinsic::IITDescriptor::SameVecWidth:
-      ++I;
-      break;
-    default:
-      break;
-    }
-  }
-
   // Create intrinsic call.
   LLVMContext &Ctx = NewFunc->getContext();
-  Function *IFn =
-      Intrinsic::getOrInsertDeclaration(NewFunc->getParent(), CIID, TParams);
   SmallVector<Value *, 4> Args;
   unsigned NumOperands = OldInst.getNumOperands();
   if (isa<CallInst>(OldInst))
@@ -510,15 +486,18 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
     Args.push_back(MetadataAsValue::get(Ctx, MDString::get(Ctx, PredName)));
   }
 
-  // The last arguments of a constrained intrinsic are metadata that
-  // represent rounding mode (absents in some intrinsics) and exception
-  // behavior. The inlined function uses default settings.
+  // The last arguments of a constrained intrinsic are metadata that represent
+  // rounding mode (absent in some intrinsics) and exception behavior. The
+  // inlined function uses default settings.
   if (Intrinsic::hasConstrainedFPRoundingModeOperand(CIID))
     Args.push_back(
         MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.tonearest")));
   Args.push_back(
       MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore")));
 
+  SmallVector<Type *> ArgTys = llvm::map_to_vector(Args, &Value::getType);
+  Function *IFn = Intrinsic::getOrInsertDeclaration(NewFunc->getParent(), CIID,
+                                                    OldInst.getType(), ArgTys);
   return CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
 }
 
