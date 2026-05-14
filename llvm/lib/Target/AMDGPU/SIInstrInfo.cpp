@@ -7116,7 +7116,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
       const TargetRegisterClass *VScalarOpRC = MRI.getRegClass(VScalarOp);
       if (const TargetRegisterClass *Common =
               TRI->getCommonSubClass(VScalarOpRC, RFLSrcRC);
-          Common && Common != VScalarOpRC) {
+          Common != VScalarOpRC) {
         Register VRReg = MRI.createVirtualRegister(Common);
         BuildMI(LoopBB, I, DL, TII.get(AMDGPU::COPY), VRReg).addReg(VScalarOp);
         VScalarOp = VRReg;

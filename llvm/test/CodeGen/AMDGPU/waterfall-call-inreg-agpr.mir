@@ -12,9 +12,8 @@
 
 --- |
   declare void @callee()
-  define void @waterfall_si_call_inreg_av32() #0 { ret void }
-  define void @waterfall_si_call_inreg_vgpr32() #0 { ret void }
-  attributes #0 = { "target-cpu"="gfx90a" }
+  define void @waterfall_si_call_inreg_av32() { ret void }
+  define void @waterfall_si_call_inreg_vgpr32() { ret void }
 ...
 
 # AV_32 ScalarOp: a COPY to VGPR_32 must be inserted in the loop header
