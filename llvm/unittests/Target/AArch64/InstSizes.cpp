@@ -38,8 +38,9 @@ createInstrInfo(TargetMachine *TM) {
       /* isLittle */ false);
   // The AArch64InstrInfo constructor takes a const reference to *ST, hence we
   // cannot stack allocate *ST.
+  auto II = std::make_unique<AArch64InstrInfo>(*ST);
 
-  return {std::move(ST), std::make_unique<AArch64InstrInfo>(*ST)};
+  return {std::move(ST), std::move(II)};
 }
 
 /// The \p InputIRSnippet is only needed for things that can't be expressed in
@@ -142,7 +143,6 @@ TEST(InstSizes, STACKMAP) {
 TEST(InstSizes, PATCHPOINT) {
   std::unique_ptr<TargetMachine> TM = createTargetMachine();
   auto [ST, II] = createInstrInfo(TM.get());
-  //  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
             "    PATCHPOINT 0, 16, 0, 0, 0, csr_aarch64_aapcs\n"
