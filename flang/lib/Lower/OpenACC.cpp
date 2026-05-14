@@ -3887,10 +3887,10 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                         if (!parentUlt.test(
                                 Fortran::semantics::Symbol::Flag::AccDeclare)) {
                           TODO(operandLocation,
-                              "OpenACC declare: whole variable must appear in "
-                              "ACC DECLARE before a component reference; "
-                              "list the whole variable in this or an earlier "
-                              "clause");
+                               "OpenACC declare: whole variable must appear in "
+                               "ACC DECLARE before a component reference; "
+                               "list the whole variable in this or an earlier "
+                               "clause");
                         }
                         std::optional<Fortran::semantics::Symbol::Flag>
                             parentMapping{
@@ -3898,7 +3898,8 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                         if (!parentMapping) {
                           fir::emitFatalError(
                               operandLocation,
-                              "parent of component reference has unexpected ACC DECLARE clause");
+                              "parent of component reference has unexpected "
+                              "ACC DECLARE clause");
                         }
                         if (*parentMapping != declareMappingFlag) {
                           TODO(operandLocation,
