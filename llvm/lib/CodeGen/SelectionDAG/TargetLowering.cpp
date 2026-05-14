@@ -13101,10 +13101,9 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
         DL, ResVT, MaskLo.getValueType().getVectorElementCount());
     SDValue ResLo = DAG.getNode(ISD::CTTZ_ELTS, DL, ResVT, MaskLo);
     SDValue ResHi = DAG.getNode(Node->getOpcode(), DL, ResVT, MaskHi);
-    SDValue ResLoNotNumElts =
-        DAG.getSetCC(DL, getSetCCResultType(DAG.getDataLayout(),
-                                            *DAG.getContext(), ResVT),
-                     ResLo, LoNumElts, ISD::SETNE);
+    SDValue ResLoNotNumElts = DAG.getSetCC(
+        DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ResVT),
+        ResLo, LoNumElts, ISD::SETNE);
     return DAG.getSelect(DL, ResVT, ResLoNotNumElts, ResLo,
                          DAG.getNode(ISD::ADD, DL, ResVT, LoNumElts, ResHi));
   }
