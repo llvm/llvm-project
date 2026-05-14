@@ -111,6 +111,113 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   CheckNamespaceInfo(InfoAsNamespace(&Expected), InfoAsNamespace(Actual.get()));
 }
 
+TEST_F(MergeTest, mergeSingleNamespaceInfo) {
+  NamespaceInfo One;
+  One.Name = "Namespace";
+  Reference Ns1[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  One.Namespace = llvm::ArrayRef(Ns1);
+
+  Reference RA(NonEmptySID, "ChildNamespace", InfoType::IT_namespace);
+  InfoNode<Reference> RANode(&RA);
+  One.Children.Namespaces.push_back(RANode);
+  Reference RC1(NonEmptySID, "ChildStruct", InfoType::IT_record);
+  InfoNode<Reference> RC1Node(&RC1);
+  One.Children.Records.push_back(RC1Node);
+
+  FunctionInfo F1;
+  F1.Name = "OneFunction";
+  F1.USR = NonEmptySID;
+  InfoNode<FunctionInfo> F1Node(&F1);
+  One.Children.Functions.push_back(F1Node);
+
+  EnumInfo E1;
+  E1.Name = "OneEnum";
+  E1.USR = NonEmptySID;
+  InfoNode<EnumInfo> E1Node(&E1);
+  One.Children.Enums.push_back(E1Node);
+
+  NamespaceInfo Two;
+  Two.Name = "Namespace";
+  Reference Ns2[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  Two.Namespace = llvm::ArrayRef(Ns2);
+
+  Reference RB(EmptySID, "OtherChildNamespace", InfoType::IT_namespace);
+  InfoNode<Reference> RBNode(&RB);
+  Two.Children.Namespaces.push_back(RBNode);
+  Reference RC2(EmptySID, "OtherChildStruct", InfoType::IT_record);
+  InfoNode<Reference> RC2Node(&RC2);
+  Two.Children.Records.push_back(RC2Node);
+
+  FunctionInfo F2;
+  F2.Name = "TwoFunction";
+  InfoNode<FunctionInfo> F2Node(&F2);
+  Two.Children.Functions.push_back(F2Node);
+
+  EnumInfo E2;
+  E2.Name = "TwoEnum";
+  InfoNode<EnumInfo> E2Node(&E2);
+  Two.Children.Enums.push_back(E2Node);
+
+  NamespaceInfo Expected;
+  Expected.Name = "Namespace";
+  Reference NsExpected[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
+  Expected.Namespace = llvm::ArrayRef(NsExpected);
+
+  Reference RC(NonEmptySID, "ChildNamespace", InfoType::IT_namespace);
+  InfoNode<Reference> RCNode(&RC);
+  Expected.Children.Namespaces.push_back(RCNode);
+  Reference RCE1(NonEmptySID, "ChildStruct", InfoType::IT_record);
+  InfoNode<Reference> RCE1Node(&RCE1);
+  Expected.Children.Records.push_back(RCE1Node);
+  Reference RD(EmptySID, "OtherChildNamespace", InfoType::IT_namespace);
+  InfoNode<Reference> RDNode(&RD);
+  Expected.Children.Namespaces.push_back(RDNode);
+  Reference RCE2(EmptySID, "OtherChildStruct", InfoType::IT_record);
+  InfoNode<Reference> RCE2Node(&RCE2);
+  Expected.Children.Records.push_back(RCE2Node);
+
+  FunctionInfo FE1;
+  FE1.Name = "OneFunction";
+  FE1.USR = NonEmptySID;
+  InfoNode<FunctionInfo> FE1Node(&FE1);
+  Expected.Children.Functions.push_back(FE1Node);
+
+  FunctionInfo FE2;
+  FE2.Name = "TwoFunction";
+  InfoNode<FunctionInfo> FE2Node(&FE2);
+  Expected.Children.Functions.push_back(FE2Node);
+
+  EnumInfo EE1;
+  EE1.Name = "OneEnum";
+  EE1.USR = NonEmptySID;
+  InfoNode<EnumInfo> EE1Node(&EE1);
+  Expected.Children.Enums.push_back(EE1Node);
+
+  EnumInfo EE2;
+  EE2.Name = "TwoEnum";
+  InfoNode<EnumInfo> EE2Node(&EE2);
+  Expected.Children.Enums.push_back(EE2Node);
+  NamespaceInfo ReducedObj;
+  ReducedObj.IT = InfoType::IT_namespace;
+  doc::OwnedPtr<doc::Info> Reduced = &ReducedObj;
+
+  Info *PtrOne = &One;
+  auto Err1 = mergeSingleInfo(Reduced, std::move(PtrOne), doc::PersistentArena);
+  assert(!Err1);
+
+  Info *PtrTwo = &Two;
+  auto Err2 = mergeSingleInfo(Reduced, std::move(PtrTwo), doc::PersistentArena);
+  assert(!Err2);
+
+  CheckNamespaceInfo(InfoAsNamespace(&Expected),
+                     static_cast<NamespaceInfo *>(getPtr(Reduced)));
+
+  auto *RedNS = static_cast<NamespaceInfo *>(getPtr(Reduced));
+  // Check that children functions are NOT the same instances as in One or Two
+  ASSERT_NE(RedNS->Children.Functions.front().Ptr, &F1);
+  ASSERT_NE(RedNS->Children.Functions.back().Ptr, &F2);
+}
+
 TEST_F(MergeTest, mergeRecordInfos) {
   RecordInfo One;
   One.Name = "r";
