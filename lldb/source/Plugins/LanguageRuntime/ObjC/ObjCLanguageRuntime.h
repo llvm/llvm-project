@@ -340,7 +340,7 @@ protected:
 
   bool AddClass(ObjCISA isa, const ClassDescriptorSP &descriptor_sp) {
     if (isa != 0) {
-      m_isa_to_descriptor[isa] = descriptor_sp;
+      m_isa_to_descriptor.insert_or_assign(isa, descriptor_sp);
       return true;
     }
     return false;
@@ -352,7 +352,7 @@ protected:
   bool AddClass(ObjCISA isa, const ClassDescriptorSP &descriptor_sp,
                 uint32_t class_name_hash) {
     if (isa != 0) {
-      m_isa_to_descriptor[isa] = descriptor_sp;
+      m_isa_to_descriptor.insert_or_assign(isa, descriptor_sp);
       m_hash_to_isa_map.insert(std::make_pair(class_name_hash, isa));
       return true;
     }
@@ -419,7 +419,7 @@ private:
 
   typedef std::map<ClassAndSel, lldb::addr_t> MsgImplMap;
   typedef std::map<ClassAndSelStr, lldb::addr_t> MsgImplStrMap;
-  typedef std::map<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
+  typedef llvm::DenseMap<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
   typedef std::multimap<uint32_t, ObjCISA> HashToISAMap;
   typedef ISAToDescriptorMap::iterator ISAToDescriptorIterator;
   typedef HashToISAMap::iterator HashToISAIterator;

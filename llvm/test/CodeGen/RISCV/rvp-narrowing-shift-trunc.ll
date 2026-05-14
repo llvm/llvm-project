@@ -12,8 +12,7 @@
 define i32 @trunc_lshr_v2i32_to_v2i16(i64 %a.coerce) {
 ; CHECK-RV32-LABEL: trunc_lshr_v2i32_to_v2i16:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    srli a1, a1, 8
-; CHECK-RV32-NEXT:    srli a0, a0, 8
+; CHECK-RV32-NEXT:    psrli.dw a0, a0, 8
 ; CHECK-RV32-NEXT:    pack a0, a0, a1
 ; CHECK-RV32-NEXT:    ret
 ;
@@ -33,8 +32,7 @@ define i32 @trunc_lshr_v2i32_to_v2i16(i64 %a.coerce) {
 define i32 @trunc_ashr_v2i32_to_v2i16(i64 %a.coerce) {
 ; CHECK-RV32-LABEL: trunc_ashr_v2i32_to_v2i16:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    srli a1, a1, 8
-; CHECK-RV32-NEXT:    srli a0, a0, 8
+; CHECK-RV32-NEXT:    psrli.dw a0, a0, 8
 ; CHECK-RV32-NEXT:    pack a0, a0, a1
 ; CHECK-RV32-NEXT:    ret
 ;
@@ -58,19 +56,16 @@ define i32 @trunc_lshr_v4i16_to_v4i8(i64 %a.coerce) {
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-RV32-NEXT:    sw a0, 0(sp)
 ; CHECK-RV32-NEXT:    sw a1, 4(sp)
-; CHECK-RV32-NEXT:    lw a0, 0(sp)
 ; CHECK-RV32-NEXT:    lw a1, 4(sp)
+; CHECK-RV32-NEXT:    lw a0, 0(sp)
+; CHECK-RV32-NEXT:    psrli.dh a0, a0, 4
 ; CHECK-RV32-NEXT:    sw a0, 8(sp)
 ; CHECK-RV32-NEXT:    sw a1, 12(sp)
-; CHECK-RV32-NEXT:    lhu a0, 12(sp)
-; CHECK-RV32-NEXT:    lhu a1, 8(sp)
-; CHECK-RV32-NEXT:    lhu a2, 14(sp)
-; CHECK-RV32-NEXT:    lhu a3, 10(sp)
-; CHECK-RV32-NEXT:    srli a5, a0, 4
-; CHECK-RV32-NEXT:    srli a4, a1, 4
-; CHECK-RV32-NEXT:    srli a1, a2, 4
-; CHECK-RV32-NEXT:    srli a0, a3, 4
-; CHECK-RV32-NEXT:    ppaire.db a0, a4, a0
+; CHECK-RV32-NEXT:    lh a1, 12(sp)
+; CHECK-RV32-NEXT:    lh a3, 14(sp)
+; CHECK-RV32-NEXT:    lh a0, 8(sp)
+; CHECK-RV32-NEXT:    lh a2, 10(sp)
+; CHECK-RV32-NEXT:    ppaire.db a0, a0, a2
 ; CHECK-RV32-NEXT:    pack a0, a0, a1
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0

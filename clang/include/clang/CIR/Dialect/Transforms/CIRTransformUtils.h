@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CIR_DIALECT_TRANSFORMS_CIRTRANSFORMUTILS_H
-#define CIR_DIALECT_TRANSFORMS_CIRTRANSFORMUTILS_H
+#ifndef LLVM_CLANG_CIR_DIALECT_TRANSFORMS_CIRTRANSFORMUTILS_H
+#define LLVM_CLANG_CIR_DIALECT_TRANSFORMS_CIRTRANSFORMUTILS_H
 
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+
+#include "llvm/ADT/SmallVector.h"
 
 namespace cir {
 
@@ -30,6 +32,13 @@ mlir::Block *replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
                                     mlir::Location loc,
                                     mlir::RewriterBase &rewriter);
 
+/// Collect ops in blocks that are unreachable from their region's entry,
+/// appending them to \p ops. Used by CIR passes that drive
+/// `applyPartialConversion` and need to feed it operations the conversion
+/// driver's dominance-order traversal would otherwise skip.
+void collectUnreachable(mlir::Operation *parent,
+                        llvm::SmallVectorImpl<mlir::Operation *> &ops);
+
 } // namespace cir
 
-#endif // CIR_DIALECT_TRANSFORMS_CIRTRANSFORMUTILS_H
+#endif // LLVM_CLANG_CIR_DIALECT_TRANSFORMS_CIRTRANSFORMUTILS_H

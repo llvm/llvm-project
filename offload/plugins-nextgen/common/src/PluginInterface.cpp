@@ -362,23 +362,23 @@ GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
 uint32_t
 GenericKernelTy::getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
-                                        uint32_t ThreadLimitClause[3]) const {
+                                        uint32_t UserThreadLimit[3]) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
-  assert(ThreadLimitClause[1] == 1 && ThreadLimitClause[2] == 1 &&
+  assert(UserThreadLimit[1] == 1 && UserThreadLimit[2] == 1 &&
          "Multi dimensional launch not supported yet.");
 
-  if (ThreadLimitClause[0] > 0 && isGenericMode())
-    ThreadLimitClause[0] += GenericDevice.getWarpSize();
+  if (UserThreadLimit[0] > 0 && isGenericMode())
+    UserThreadLimit[0] += GenericDevice.getWarpSize();
 
-  return std::min(MaxNumThreads, (ThreadLimitClause[0] > 0)
-                                     ? ThreadLimitClause[0]
+  return std::min(MaxNumThreads, (UserThreadLimit[0] > 0)
+                                     ? UserThreadLimit[0]
                                      : PreferredNumThreads);
 }
 
 uint32_t GenericKernelTy::getEffectiveNumBlocks(
     GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks[3],
-    uint64_t LoopTripCount, uint32_t &NumThreads,
+    uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
     bool IsNumThreadsFromUser) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
@@ -394,7 +394,8 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
 
   // Return the number of blocks required to cover the loop iterations.
   if (isNoLoopMode())
-    return LoopTripCount > 0 ? (((LoopTripCount - 1) / NumThreads) + 1) : 1;
+    return LoopTripCount > 0 ? (((LoopTripCount - 1) / EffectiveNumThreads) + 1)
+                             : 1;
 
   uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
@@ -406,14 +407,14 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
       // integer. However, if that results in too few blocks, we artificially
       // reduce the thread count per block to increase the outer parallelism.
       auto MinThreads = GenericDevice.getMinThreadsForLowTripCountLoop();
-      MinThreads = std::min(MinThreads, NumThreads);
+      MinThreads = std::min(MinThreads, EffectiveNumThreads);
 
       // Honor the thread_limit clause; only lower the number of threads.
-      [[maybe_unused]] auto OldNumThreads = NumThreads;
-      if (LoopTripCount >= DefaultNumBlocks * NumThreads ||
+      [[maybe_unused]] auto OldNumThreads = EffectiveNumThreads;
+      if (LoopTripCount >= DefaultNumBlocks * EffectiveNumThreads ||
           IsNumThreadsFromUser) {
         // Enough parallelism for blocks and threads.
-        TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
+        TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
         assert(IsNumThreadsFromUser ||
                TripCountNumBlocks >= DefaultNumBlocks &&
                    "Expected sufficient outer parallelism.");
@@ -428,19 +429,20 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
         auto NumThreadsDefaultBlocksP2 =
             llvm::PowerOf2Ceil(NumThreadsDefaultBlocks);
         // Do not increase a thread limit given be the user.
-        NumThreads = std::min(NumThreads, uint32_t(NumThreadsDefaultBlocksP2));
-        assert(NumThreads >= MinThreads &&
+        EffectiveNumThreads =
+            std::min(EffectiveNumThreads, uint32_t(NumThreadsDefaultBlocksP2));
+        assert(EffectiveNumThreads >= MinThreads &&
                "Expected sufficient inner parallelism.");
-        TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
+        TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
       } else {
         // Not enough parallelism for blocks and threads, limit both.
-        NumThreads = std::min(NumThreads, MinThreads);
-        TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
+        EffectiveNumThreads = std::min(EffectiveNumThreads, MinThreads);
+        TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
       }
 
-      assert(NumThreads * TripCountNumBlocks >= LoopTripCount &&
+      assert(EffectiveNumThreads * TripCountNumBlocks >= LoopTripCount &&
              "Expected sufficient parallelism");
-      assert(OldNumThreads >= NumThreads &&
+      assert(OldNumThreads >= EffectiveNumThreads &&
              "Number of threads cannot be increased!");
     } else {
       assert((isGenericMode() || isGenericSPMDMode()) &&

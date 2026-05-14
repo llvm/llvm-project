@@ -8260,7 +8260,8 @@ generateGatherLanePattern(MachineInstr &Root,
                 NewRegister)
             .addReg(SrcRegister)
             .addImm(Lane)
-            .addReg(OffsetRegister, getKillRegState(OffsetRegisterKillState));
+            .addReg(OffsetRegister, getKillRegState(OffsetRegisterKillState))
+            .setMemRefs(OriginalInstr->memoperands());
     InstrIdxForVirtReg.insert(std::make_pair(NewRegister, InsInstrs.size()));
     InsInstrs.push_back(LoadIndexIntoRegister);
     return NewRegister;
@@ -8268,9 +8269,9 @@ generateGatherLanePattern(MachineInstr &Root,
 
   // Helper to create load instruction based on the NumLanes in the NEON
   // register we are rewriting.
-  auto CreateLDRInstruction = [&](unsigned NumLanes, Register DestReg,
-                                  Register OffsetReg,
-                                  bool KillState) -> MachineInstrBuilder {
+  auto CreateLDRInstruction =
+      [&](unsigned NumLanes, Register DestReg, Register OffsetReg,
+          ArrayRef<MachineMemOperand *> MMOs) -> MachineInstrBuilder {
     unsigned Opcode;
     switch (NumLanes) {
     case 4:
@@ -8289,7 +8290,8 @@ generateGatherLanePattern(MachineInstr &Root,
     // Immediate offset load
     return BuildMI(MF, MIMetadata(Root), TII->get(Opcode), DestReg)
         .addReg(OffsetReg)
-        .addImm(0);
+        .addImm(0)
+        .setMemRefs(MMOs);
   };
 
   // Load the remaining lanes into register 0.
@@ -8319,7 +8321,7 @@ generateGatherLanePattern(MachineInstr &Root,
   MachineInstrBuilder MiddleIndexLoadInstr =
       CreateLDRInstruction(NumLanes, DestRegForMiddleIndex,
                            OriginalSplitToLoadOffsetOperand.getReg(),
-                           OriginalSplitToLoadOffsetOperand.isKill());
+                           OriginalSplitLoad->memoperands());
 
   InstrIdxForVirtReg.insert(
       std::make_pair(DestRegForMiddleIndex, InsInstrs.size()));
