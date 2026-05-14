@@ -241,7 +241,7 @@ protected:
         traced(false), hasVersionSuffix(false), isInIplt(false),
         gotInIgot(false), folded(false), archSpecificBit(false),
         scriptDefined(false), dsoDefined(false), dsoProtected(false),
-        versionScriptAssigned(false), thunkAccessed(false),
+        isAMDGPULDS(false), versionScriptAssigned(false), thunkAccessed(false),
         inDynamicList(false), referenced(false), referencedAfterWrap(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
@@ -252,6 +252,7 @@ protected:
     sym.binding = binding;
     sym.stOther = (stOther & ~3) | sym.visibility();
     sym.symbolKind = k;
+    sym.isAMDGPULDS = isAMDGPULDS;
   }
 
 public:
@@ -298,6 +299,11 @@ public:
   // True if defined in a DSO as protected visibility.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t dsoProtected : 1;
+
+  // True if this is an AMDGPU LDS symbol (SHN_AMDGPU_LDS). These are handled
+  // by the AMDGPU link-time LDS resolution pass, not replaceCommonSymbols().
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isAMDGPULDS : 1;
 
   // Temporary flags used to communicate which symbol entries need PLT and GOT
   // entries during postScanRelocations();

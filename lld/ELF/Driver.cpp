@@ -23,6 +23,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Driver.h"
+#include "AMDGPUObjectLinking.h"
 #include "Config.h"
 #include "ICF.h"
 #include "InputFiles.h"
@@ -2666,6 +2667,9 @@ static void replaceCommonSymbols(Ctx &ctx) {
       auto *s = dyn_cast<CommonSymbol>(sym);
       if (!s)
         continue;
+      // AMDGPU LDS symbols are resolved by the link-time LDS pass, not here.
+      if (sym->isAMDGPULDS)
+        continue;
 
       auto *bss = make<BssSection>(ctx, "COMMON", s->size, s->alignment);
       bss->file = s->file;
@@ -3543,6 +3547,17 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Merge .riscv.attributes sections.
   if (ctx.arg.emachine == EM_RISCV)
     mergeRISCVAttributesSections(ctx);
+
+  // Resolve AMDGPU link-time LDS and resource usage before relocation
+  // resolution.
+  if (ctx.arg.emachine == EM_AMDGPU) {
+    if constexpr (ELFT::Endianness == endianness::little) {
+      resolveAMDGPUObjectLinking<ELFT>(ctx);
+    } else {
+      Err(ctx) << "AMDGPU only supports little-endian ELF";
+      return;
+    }
+  }
 
   {
     llvm::TimeTraceScope timeScope("Assign sections");
