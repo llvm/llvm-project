@@ -720,9 +720,11 @@ void SymbolTableSection::addSymbol(Twine Name, uint8_t Bind, uint8_t Type,
   Sym.Binding = Bind;
   Sym.Type = Type;
   Sym.DefinedIn = DefinedIn;
-  if (DefinedIn != nullptr)
+  if (DefinedIn != nullptr) {
     DefinedIn->HasSymbol = true;
-  if (DefinedIn == nullptr) {
+    Sym.ShndxType = SYMBOL_SIMPLE_INDEX;
+  }
+  else {
     if (Shndx >= SHN_LORESERVE)
       Sym.ShndxType = static_cast<SymbolShndxType>(Shndx);
     else
