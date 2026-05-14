@@ -347,7 +347,8 @@ bool JSONCompilationDatabase::parse(std::string &ErrorMessage) {
     llvm::yaml::ScalarNode *File = nullptr;
     llvm::yaml::ScalarNode *Output = nullptr;
     for (auto& NextKeyValue : *Object) {
-      auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+      auto *KeyString =
+          dyn_cast_if_present<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
       if (!KeyString) {
         ErrorMessage = "Expected strings as key.";
         return false;

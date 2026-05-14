@@ -28,6 +28,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/MovedLoans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/ADT/PointerUnion.h"
 #include <cstddef>
 #include <memory>
 
@@ -60,9 +61,9 @@ public:
   LifetimeSafetySemaHelper() = default;
   virtual ~LifetimeSafetySemaHelper() = default;
 
-  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                                  const Expr *MovedExpr,
-                                  SourceLocation FreeLoc) {}
+  virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
+                                   const Expr *MovedExpr,
+                                   SourceLocation FreeLoc) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
@@ -87,11 +88,26 @@ public:
   virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
                                           const Expr *UseExpr,
                                           const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedField(const Expr *IssueExpr,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedField(const ParmVarDecl *PVD,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const Expr *IssueExpr,
+                                       const VarDecl *Global,
+                                       const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const ParmVarDecl *PVD,
+                                       const VarDecl *Global,
+                                       const Expr *InvalidationExpr) {}
 
-  // Suggests lifetime bound annotations for function paramters.
+  using EscapingTarget =
+      llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
+
+  // Suggests lifetime bound annotations for function parameters.
   virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                              const ParmVarDecl *ParmToAnnotate,
-                                             const Expr *EscapeExpr) {}
+                                             EscapingTarget Target) {}
 
   // Reports misuse of [[clang::noescape]] when parameter escapes through return
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
@@ -103,6 +119,16 @@ public:
   // assignment to a global variable
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                        const VarDecl *EscapeGlobal) {}
+
+  // Reports misuse of [[clang::lifetimebound]] when parameter doesn't escape
+  // through return.
+  virtual void
+  reportLifetimeboundViolation(const ParmVarDecl *ParmWithLifetimebound) {}
+
+  // Reports misuse of [[clang::lifetimebound]] when implicit this parameter
+  // doesn't escape through return.
+  virtual void
+  reportLifetimeboundViolation(const CXXMethodDecl *MDWithLifetimebound) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

@@ -179,6 +179,8 @@ function(llvm_ExternalProject_Add name source_dir)
     LibEdit_LIBRARIES
     ZLIB_INCLUDE_DIR
     ZLIB_LIBRARY
+    ZLIB_LIBRARY_RELEASE
+    ZLIB_LIBRARY_DEBUG
     zstd_INCLUDE_DIR
     zstd_LIBRARY
     LIBXML2_LIBRARY

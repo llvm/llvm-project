@@ -5,26 +5,25 @@ define i16 @test(i32 %call5, i32 %add36) {
 ; CHECK-LABEL: define i16 @test(
 ; CHECK-SAME: i32 [[CALL5:%.*]], i32 [[ADD36:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 poison>, i32 [[CALL5]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[ADD36]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> <i32 0, i32 1, i32 0, i32 0>, [[TMP1]]
-; CHECK-NEXT:    [[TOBOOL6_NOT:%.*]] = icmp eq i32 0, 0
-; CHECK-NEXT:    [[CMP17:%.*]] = icmp ne i32 [[CALL5]], 0
-; CHECK-NEXT:    [[TOBOOL32_NOT:%.*]] = icmp eq i32 0, 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 poison, i32 poison, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 poison>, i32 [[CALL5]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[ADD36]], i32 5
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 3, i32 4, i32 5, i32 6, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <8 x i32> <i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1>, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP3]], i32 6
+; CHECK-NEXT:    [[COND3:%.*]] = zext i1 [[TMP4]] to i16
 ; CHECK-NEXT:    [[TOBOOL48_NOT:%.*]] = icmp eq i32 0, 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i16> zeroinitializer, <4 x i16> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <8 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 poison, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i1> [[TMP4]], i1 [[TOBOOL6_NOT]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i1> [[TMP5]], i1 [[CMP17]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i1> [[TMP6]], i1 [[TOBOOL32_NOT]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i1> [[TMP7]], i1 [[TOBOOL48_NOT]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = zext <8 x i1> [[TMP8]] to <8 x i16>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i16> [[TMP9]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i16> [[TMP10]], [[TMP3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i16> [[RDX_OP]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i16> [[TMP9]], <8 x i16> [[TMP11]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[COND7:%.*]] = zext i1 [[TOBOOL48_NOT]] to i16
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ne i32 0, 0
+; CHECK-NEXT:    [[COND26:%.*]] = select i1 [[CMP21]], i16 0, i16 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP3]], i32 5
+; CHECK-NEXT:    [[COND42:%.*]] = select i1 [[TMP5]], i16 0, i16 0
+; CHECK-NEXT:    [[TMP12:%.*]] = select <8 x i1> [[TMP3]], <8 x i16> <i16 1, i16 1, i16 1, i16 0, i16 0, i16 1, i16 0, i16 0>, <8 x i16> <i16 0, i16 0, i16 0, i16 1, i16 1, i16 0, i16 0, i16 0>
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP12]])
-; CHECK-NEXT:    ret i16 [[TMP13]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i16 [[TMP13]], [[COND3]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i16 [[COND7]], [[COND26]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i16 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i16 [[OP_RDX2]], [[COND42]]
+; CHECK-NEXT:    ret i16 [[OP_RDX3]]
 ;
 entry:
   %cmp = icmp ne i32 0, 0

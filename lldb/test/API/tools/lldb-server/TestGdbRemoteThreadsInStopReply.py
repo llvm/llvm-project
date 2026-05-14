@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 @skipIfMTE  # MTE security transition shims restrict socket operations.
 class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
     ENABLE_THREADS_IN_STOP_REPLY_ENTRIES = [

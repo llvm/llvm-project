@@ -39,7 +39,7 @@ void binary_assign(void) {
 // LLVM:         %[[I_PTR:.*]] = alloca i32
 // LLVM:         store i8 1, ptr %[[B_PTR]]
 // LLVM:         store i8 65, ptr %[[C_PTR]]
-// LLVM:         store float 0x40091EB860000000, ptr %[[F_PTR]]
+// LLVM:         store float 3.140000e+00, ptr %[[F_PTR]]
 // LLVM:         store i32 42, ptr %[[I_PTR]]
 // LLVM:         ret void
 
@@ -50,7 +50,7 @@ void binary_assign(void) {
 // OGCG:         %[[I_PTR:.*]] = alloca i32
 // OGCG:         store i8 1, ptr %[[B_PTR]]
 // OGCG:         store i8 65, ptr %[[C_PTR]]
-// OGCG:         store float 0x40091EB860000000, ptr %[[F_PTR]]
+// OGCG:         store float 3.140000e+00, ptr %[[F_PTR]]
 // OGCG:         store i32 42, ptr %[[I_PTR]]
 // OGCG:         ret void
 
@@ -123,7 +123,8 @@ int ignore_result_assign() {
 // CIR:         cir.store{{.*}} %[[VAL_123]], %[[J]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[VAL_5:.*]] = cir.const #cir.int<5> : !s32i
 // CIR:         cir.store{{.*}} %[[VAL_5]], %[[I]] : !s32i, !cir.ptr<!s32i>
-// CIR:         %[[ARR_ELEM:.*]] = cir.get_element %[[ARR]][%[[VAL_5]] : !s32i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CIR:         %[[VAL_5_64:.*]] = cir.const #cir.int<5> : !s64i
+// CIR:         %[[ARR_ELEM:.*]] = cir.get_element %[[ARR]][%[[VAL_5_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR:         %[[ARR_LOAD:.*]] = cir.load{{.*}} %[[ARR_ELEM]] : !cir.ptr<!s32i>, !s32i
 // CIR:         cir.store{{.*}} %[[ARR_LOAD]], %[[J]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>

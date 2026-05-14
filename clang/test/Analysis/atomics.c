@@ -101,3 +101,8 @@ void test_atomic_compare(int input) {
     // no crash
   }
 }
+
+void test_atomic_gh187925(void) {
+  void foo(_Atomic(void*));
+  foo(0); // no assertion failure
+}

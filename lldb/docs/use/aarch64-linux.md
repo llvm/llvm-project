@@ -230,6 +230,81 @@ bytes.
 `zt0`'s value and whether it is active or not will be saved prior to
 expression evaluation and restored afterwards.
 
+## SME Only Systems
+
+AArch64 systems may have both SVE and SME, or they can have only SME. If they
+only have SME, the system has the usual SVE state, but that state and SVE
+instructions may only be used while in streaming mode.
+
+The LLDB experience is very similar to SVE+SME systems, with a few changes.
+
+### Registers
+
+When in streaming mode, registers act as they would on an SVE+SME system.
+Outside of streaming mode LLDB will show the `Z` registers as zero extended copies
+of the `V` registers.
+
+Writes to `Z` registers are allowed, but these are converted to `V` register writes
+and so only the bottom 128-bits will be applied. The size of the value
+written to a `Z` register must match the current streaming vector length, even if
+the process is in non-streaming mode.
+
+For an SME only system, `lldb-server` describes the system as having `Z`
+registers with `V` registers as subsets of those registers. We do not change the
+representation each time the mode changes.
+
+A consequence of this is that if the user writes to a `V` register while in
+non-streaming mode, it will be sent to `lldb-server` as a `Z` register write
+of a zero extended value. `lldb-server` will convert that back into a `V`
+register write with the value truncated to 128-bits.
+
+In streaming mode, it will be zero extended, sent as a `Z` write and written
+to the real streaming SVE `Z` register without truncation.
+
+`P` registers will be shown as 0s in non-streaming mode. They cannot be
+written to in non-streaming mode.
+
+The `ffr` register will also be shown as 0s in non-streaming mode. In streaming
+mode, use of `ffr` is forbidden so it will also show as 0s. It cannot be written
+to in either state.
+
+(in the former state, LLDB generates the fake value, in the latter state, the
+kernel tells `lldb-server` that the value is 0, the result is the same)
+
+The `ZA` and `ZT0` registers act as they would for an SVE+SME system.
+
+Since there is no non-streaming SVE, there is no non-streaming vector length.
+Therefore even in non-streaming mode, the value shown in `vg` will be the
+streaming vector length, and it will be equal to the value of `svg`.
+
+### Expression Evaluation
+
+Some instructions are illegal to use in streaming mode, unless `FEAT_SMEFA64`
+is present.
+
+LLDB **will not** make any attempt to make expressions compatible with the
+current mode.
+
+If part of an expression is not compatible, it will
+result in a `SIGILL` that will be cleaned up as any other signal would be. All
+register, `ZA` and mode state will be restored as normal after expression
+evaluation.
+
+Note that to restore to a non-streaming state from a streaming state, LLDB uses
+a special part of the Linux Kernel's
+[SVE ABI](https://docs.kernel.org/arch/arm64/sve.html). FPSIMD format data is
+written to the non-existent non-streaming SVE register set, with the vector
+length set to 0 to cause the process to exit streaming mode and apply those
+FPSIMD values to the `V` registers.
+
+This feature was added in version 6.19 of the Linux kernel. On older versions,
+LLDB will attempt the restore and it will fail. This will result in the mode
+and some register state not being restored.
+
+This feature is only used for this purpose. Otherwise, in non-streaming mode FP
+registers are accessed using the FP register set, and in streaming mode using
+the streaming SVE register set.
+
 ## Guarded Control Stack Extension (GCS)
 
 GCS support includes the following new registers:
@@ -290,3 +365,62 @@ if it wants to return to LLDB correctly.
 If it does not do this, the expression will fail and although most process
 state will be restored, GCS will be left enabled. Which means that the program
 is very unlikely to be able to progress.
+
+## Permission Overlay Extension (POE)
+
+The Permission Overlay Extension (FEAT_S1POE) enables userspace processes to
+change page permissions without using a syscall. This extension is
+used to implement Linux's [Memory Protection Keys](https://docs.kernel.org/core-api/protection-keys.html) feature on AArch64.
+
+This involves 3 components:
+* Memory protection keys. These are set in the page table and used as an index
+  into the overlay permissions.
+* The permissions set in the page table. These are the base permissions of the
+  memory.
+* Overlay permissions, stored in the `por_el0` register. These are applied on top
+  of the page table permissions. Overlay permissions cannot enable anything
+  that was not enabled in the page table. In other words, overlay permissions
+  can only keep, or remove permissions.
+
+LLDB users can read and write the `por_el0` register if they choose to, but for
+purely inspecting permissions, the `memory region` command is the better choice
+as it will show you all 3 things in one place.
+
+In the example below, we have violated a permission overlay:
+```
+(lldb) c
+Process 462 resuming
+Process 462 stopped
+<...> stop reason = signal SIGSEGV: failed protection key checks (fault address=0xffffff7d60000)
+<...>
+-> 106 	  read_only_page[0] = '?';
+```
+To inspect the permissions of `read_only_page`, use `memory region`:
+```
+(lldb) memory region read_only_page
+[0x000ffffff7d60000-0x000ffffff7d70000) rw-
+protection key: 6 (r--, effective: r--)
+```
+The first output line shows the base permissions from the page table (`rw-`).
+
+The page has protection key `6` attached to it, and LLDB shows us that permission
+overlay 6 is read only (`r--`). `effective: r--` is the result of overlaying
+that permission set onto the base permissions. Which removes the write
+permission, which is the cause of the signal.
+
+You can also see overlay `6` by reading the `por_el0` register:
+```
+(lldb) register read por_el0
+     por_el0 = 0x0000000001234567
+         = {
+<...>
+             Perm6 = Read
+```
+
+Writing to this register would have the same effect as using the pkey set
+function provided by your C library ([`pkey_set`](https://sourceware.org/glibc/manual/latest/html_node/Memory-Protection.html#Memory-Protection-Keys))
+for glibc).
+
+### Expression Evaluation
+
+The `por_el0` reigster is saved before, and restored after expression evaluation.

@@ -661,7 +661,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (State->get<InvariantViolated>())
     return;
 
-  auto RetSVal = C.getSVal(S).getAs<DefinedOrUnknownSVal>();
+  auto RetSVal = C.getSVal(RetExpr).getAs<DefinedOrUnknownSVal>();
   if (!RetSVal)
     return;
 

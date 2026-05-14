@@ -76,6 +76,7 @@ void CodeGenModule::EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
   CodeGenFunction CGF(*this);
   SetLLVMFunctionAttributes(GlobalDecl(), FnInfo, Fn, false);
   SetSYCLKernelAttributes(Fn, CGF);
+  addSYCLModuleIdAttr(Fn);
   CGF.StartFunction(GlobalDecl(), Ctx.VoidTy, Fn, FnInfo, Args,
                     SourceLocation(), SourceLocation());
   CGF.EmitFunctionBody(OutlinedFnDecl->getBody());

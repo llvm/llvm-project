@@ -28,9 +28,21 @@ void RTDECL(CUFRegisterFunction)(
 void RTDECL(CUFRegisterVariable)(
     void **module, char *varSym, const char *varName, int64_t size);
 
+/// Register a module-scope variable as host-resident under -gpu=mem:unified,
+/// so that the device-side symbol of the same name is mapped to the host
+/// pointer at module-load time. Wraps __cudaRegisterHostVar. Kernel accesses
+/// to the variable then reach the host storage directly via HMM/ATS.
+void RTDECL(CUFRegisterExternalVariable)(
+    void **module, char *varSym, const char *varName, int64_t size);
+
 /// Register a managed variable.
 void RTDECL(CUFRegisterManagedVariable)(
     void **module, void **varSym, char *varName, int64_t size);
+
+/// Initialize a CUDA module after all variables have been registered.
+/// Triggers the runtime to populate managed variable pointers with
+/// unified memory addresses.
+void RTDECL(CUFInitModule)(void **module);
 
 } // extern "C"
 

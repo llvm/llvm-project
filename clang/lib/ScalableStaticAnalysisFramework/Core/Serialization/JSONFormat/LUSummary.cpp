@@ -67,7 +67,7 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
           .build();
     }
 
-    auto ExpectedIdTable = entityIdTableFromJSON(*IdTableArray);
+    auto ExpectedIdTable = luEntityIdTableFromJSON(*IdTableArray);
     if (!ExpectedIdTable) {
       return ErrorBuilder::wrap(ExpectedIdTable.takeError())
           .context(ErrorMessages::ReadingFromField, "IdTable", "id_table")
@@ -140,7 +140,7 @@ llvm::Error JSONFormat::writeLUSummary(const LUSummary &S,
 
   RootObject["lu_namespace"] = nestedBuildNamespaceToJSON(getLUNamespace(S));
 
-  RootObject["id_table"] = entityIdTableToJSON(getIdTable(S));
+  RootObject["id_table"] = luEntityIdTableToJSON(getIdTable(S));
 
   RootObject["linkage_table"] = linkageTableToJSON(getLinkageTable(S));
 

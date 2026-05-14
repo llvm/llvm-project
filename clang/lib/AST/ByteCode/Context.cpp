@@ -9,6 +9,7 @@
 #include "Context.h"
 #include "Boolean.h"
 #include "ByteCodeEmitter.h"
+#include "Char.h"
 #include "Compiler.h"
 #include "EvalEmitter.h"
 #include "Integral.h"
@@ -34,7 +35,7 @@ Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {
          "We're assuming 8 bit chars");
 }
 
-Context::~Context() {}
+Context::~Context() = default;
 
 bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   assert(Stk.empty());
@@ -186,7 +187,7 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       return false;
 
     // Must be char.
-    if (Ptr.getFieldDesc()->getElemSize() != 1 /*bytes*/)
+    if (Ptr.getFieldDesc()->getElemDataSize() != 1 /*bytes*/)
       return false;
 
     if (Size > Ptr.getNumElems()) {
@@ -344,7 +345,7 @@ Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind) {
 
   std::optional<uint64_t> Result;
 
-  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+  auto PtrRes = C.interpretAsLValuePointer(E, [&](const Pointer &Ptr) {
     const Descriptor *DeclDesc = Ptr.getDeclDesc();
     if (!DeclDesc)
       return false;
