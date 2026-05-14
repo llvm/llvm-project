@@ -725,7 +725,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   }
 
   if (Retain) {
-    if (TM.getTargetTriple().isOSSolaris())
+    if (TM.getTargetTriple().isOSSolaris() ||
+        TM.getTargetTriple().isOSIllumos())
       Flags |= ELF::SHF_SUNW_NODISCARD;
     else if (Ctx.getAsmInfo().useIntegratedAssembler() ||
              Ctx.getAsmInfo().binutilsIsAtLeast(2, 36))
@@ -932,7 +933,8 @@ static MCSection *selectELFSectionForGlobal(
     Flags |= ELF::SHF_LINK_ORDER;
   }
   if (Retain) {
-    if (TM.getTargetTriple().isOSSolaris()) {
+    if (TM.getTargetTriple().isOSSolaris() ||
+        TM.getTargetTriple().isOSIllumos()) {
       EmitUniqueSection = true;
       Flags |= ELF::SHF_SUNW_NODISCARD;
     } else if (Ctx.getAsmInfo().useIntegratedAssembler() ||

@@ -1,4 +1,5 @@
 ## Check handling of SHF_GNU_RETAIN and SHF_SUNW_NODISCARD section flags.
+## Note: this flag is also used on Illumos.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: obj2yaml %t1 | FileCheck %s --check-prefix=GNU

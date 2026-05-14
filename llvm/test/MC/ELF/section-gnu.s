@@ -3,6 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s | llvm-readobj -hS - | FileCheck %s --check-prefixes=GNU,OBJ,OBJ-GNU
 # RUN: llvm-mc -filetype=obj -triple=aarch64-freebsd %s | llvm-readobj -hS - | FileCheck %s --check-prefixes=FREEBSD,OBJ,OBJ-GNU
 # RUN: llvm-mc -filetype=obj -triple=x86_64-solaris %s | llvm-readobj -hS - | FileCheck %s --check-prefixes=SOLARIS,OBJ,OBJ-SOLARIS
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-illumos %s | llvm-readobj -hS - | FileCheck %s --check-prefixes=SOLARIS,OBJ,OBJ-SOLARIS
 
 # ASM: .section retain,"aR",@progbits
 

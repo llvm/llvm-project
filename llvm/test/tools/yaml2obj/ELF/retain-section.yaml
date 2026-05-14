@@ -1,5 +1,6 @@
 ## Check how yaml2obj handles retain (SHF_GNU_RETAIN and
 ## SHF_SUNW_NODISCARD) section flags.
+## Note: this flag is also used on Illumos.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj --sections %t1 | FileCheck %s --check-prefix=GNU

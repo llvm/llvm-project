@@ -126,7 +126,7 @@ void MCAsmInfoELF::printSwitchToSection(const MCSection &Section,
     OS << 'R';
 
   // If there are os-specific flags, print them.
-  if (T.isOSSolaris())
+  if (T.isOSSolaris() || T.isOSIllumos())
     if (Sec.Flags & ELF::SHF_SUNW_NODISCARD)
       OS << 'R';
 

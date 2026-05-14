@@ -323,7 +323,7 @@ static unsigned parseSectionFlags(const Triple &TT, StringRef flagsStr,
       flags |= ELF::SHF_X86_64_LARGE;
       break;
     case 'R':
-      if (TT.isOSSolaris())
+      if (TT.isOSSolaris() || TT.isOSIllumos())
         flags |= ELF::SHF_SUNW_NODISCARD;
       else
         flags |= ELF::SHF_GNU_RETAIN;
