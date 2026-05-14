@@ -950,10 +950,10 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
       bool AsNeeded = !getTriple().isOSAIX();
       CmdArgs.push_back("-lflang_rt.quadmath");
       if (AsNeeded)
-        addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/true);
+        addAsNeededOption(CmdArgs, /*as_needed=*/true);
       CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
       if (AsNeeded)
-        addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/false);
+        addAsNeededOption(CmdArgs, /*as_needed=*/false);
     }
     addFlangRTLibPath(Args, CmdArgs);
 
@@ -1859,6 +1859,11 @@ ToolChain::computeMSVCVersion(const Driver *D,
   }
 
   return VersionTuple();
+}
+
+void ToolChain::addAsNeededOption(llvm::opt::ArgStringList &CmdArgs,
+                                  bool as_needed) const {
+  CmdArgs.push_back(as_needed ? "--as-needed" : "--no-as-needed");
 }
 
 llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(

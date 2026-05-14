@@ -58,6 +58,10 @@ public:
   addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
 
+  /// The Illumos linker supports an equivalent of --as-needed/--no-as-needed.
+  void addAsNeededOption(llvm::opt::ArgStringList &CmdArgs,
+                         bool as_needed) const override;
+
   SanitizerMask getSupportedSanitizers() const override;
 
   const char *getDefaultLinker() const override;

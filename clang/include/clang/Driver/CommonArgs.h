@@ -146,9 +146,6 @@ void addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                           const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs);
 
-void addAsNeededOption(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                       llvm::opt::ArgStringList &CmdArgs, bool as_needed);
-
 llvm::opt::Arg *getLastCSProfileGenerateArg(const llvm::opt::ArgList &Args);
 llvm::opt::Arg *getLastProfileUseArg(const llvm::opt::ArgList &Args);
 llvm::opt::Arg *getLastProfileSampleUseArg(const llvm::opt::ArgList &Args);

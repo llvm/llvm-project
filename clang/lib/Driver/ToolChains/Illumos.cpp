@@ -395,3 +395,14 @@ void Illumos::addLibStdCxxIncludePaths(
                            TripleStr, Multilib.includeSuffix(), DriverArgs,
                            CC1Args);
 }
+
+void Illumos::addAsNeededOption(llvm::opt::ArgStringList &CmdArgs,
+                                bool as_needed) const {
+  CmdArgs.push_back("-z");
+  CmdArgs.push_back(as_needed ? "ignore" : "record");
+  /* TODO: GNU linker
+} else {
+  CmdArgs.push_back(as_needed ? "--as-needed" : "--no-as-needed");
+}
+*/
+}

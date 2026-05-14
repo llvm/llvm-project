@@ -66,6 +66,12 @@ public:
   addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
 
+  /// TODO: test if newer versions of the Solaris linker
+  /// respect --as--needed/--no-as-needed. If so, this
+  /// override can be removed.
+  void addAsNeededOption(llvm::opt::ArgStringList &CmdArgs,
+                         bool as_needed) const override;
+
   SanitizerMask getSupportedSanitizers() const override;
 
   const char *getDefaultLinker() const override;

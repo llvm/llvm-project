@@ -238,9 +238,9 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // LLVM support for atomics on 32-bit SPARC V8+ is incomplete, so
     // forcibly link with libatomic as a workaround.
     if (Arch == llvm::Triple::sparc) {
-      addAsNeededOption(ToolChain, Args, CmdArgs, true);
+      ToolChain.addAsNeededOption(CmdArgs, true);
       CmdArgs.push_back("-latomic");
-      addAsNeededOption(ToolChain, Args, CmdArgs, false);
+      ToolChain.addAsNeededOption(CmdArgs, false);
     }
 
     AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
@@ -422,4 +422,14 @@ void Solaris::addLibStdCxxIncludePaths(
   addLibStdCXXIncludePaths(LibDir.str() + "/../include/c++/" + Version.Text,
                            TripleStr, Multilib.includeSuffix(), DriverArgs,
                            CC1Args);
+}
+
+void Solaris::addAsNeededOption(llvm::opt::ArgStringList &CmdArgs,
+                                bool as_needed) const {
+  if (solaris::isLinkerGnuLd(*this, getArgs())) {
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back(as_needed ? "ignore" : "record");
+  } else {
+    CmdArgs.push_back(as_needed ? "--as-needed" : "--no-as-needed");
+  }
 }

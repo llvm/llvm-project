@@ -103,6 +103,12 @@ public:
 
   path_list getArchSpecificLibPaths() const override { return path_list(); };
 
+  void addAsNeededOption(llvm::opt::ArgStringList &CmdArgs,
+                         bool as_needed) const override {
+    assert(!TC.getTriple().isOSAIX() &&
+           "AIX linker does not support any form of --as-needed option yet.");
+  }
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

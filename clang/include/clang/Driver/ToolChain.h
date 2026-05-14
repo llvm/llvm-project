@@ -264,6 +264,8 @@ protected:
 
   static std::string concat(StringRef Path, const Twine &A, const Twine &B = "",
                             const Twine &C = "", const Twine &D = "");
+
+  const llvm::opt::ArgList &getArgs() const { return Args; };
   ///@}
 
 public:
@@ -831,6 +833,11 @@ public:
   /// On Windows, returns the MSVC compatibility version.
   virtual VersionTuple computeMSVCVersion(const Driver *D,
                                           const llvm::opt::ArgList &Args) const;
+
+  /// Sets --as-needed or --no-as-needed. Subclasses must add equivalent
+  /// options.
+  virtual void addAsNeededOption(llvm::opt::ArgStringList &CmdArgs,
+                                 bool as_needed) const;
 
   /// Get paths for device libraries.
   virtual llvm::SmallVector<BitCodeLibraryInfo, 12>

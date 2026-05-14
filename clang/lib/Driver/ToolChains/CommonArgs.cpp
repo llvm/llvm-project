@@ -1540,36 +1540,12 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
   return false;
 }
 
-void tools::addAsNeededOption(const ToolChain &TC,
-                              const llvm::opt::ArgList &Args,
-                              llvm::opt::ArgStringList &CmdArgs,
-                              bool as_needed) {
-  assert(!TC.getTriple().isOSAIX() &&
-         "AIX linker does not support any form of --as-needed option yet.");
-  bool LinkerIsGnuLd = solaris::isLinkerGnuLd(TC, Args);
-
-  // While the Solaris 11.2 ld added --as-needed/--no-as-needed as aliases
-  // for the native forms -z ignore/-z record, they are missing in Illumos,
-  // so always use the native form.
-  // GNU ld doesn't support -z ignore/-z record, so don't use them even on
-  // Solaris.
-  // TODO: use the native forms on Solaris 11.2 and test it there, before
-  // changing this branch to only apply to Illumos.
-  auto TT = TC.getTriple();
-  if ((TT.isOSSolaris() || TT.isOSIllumos()) && !LinkerIsGnuLd) {
-    CmdArgs.push_back("-z");
-    CmdArgs.push_back(as_needed ? "ignore" : "record");
-  } else {
-    CmdArgs.push_back(as_needed ? "--as-needed" : "--no-as-needed");
-  }
-}
-
 void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
                                      const llvm::opt::ArgList &Args,
                                      ArgStringList &CmdArgs) {
   // Force linking against the system libraries sanitizers depends on
   // (see PR15823 why this is necessary).
-  addAsNeededOption(TC, Args, CmdArgs, false);
+  TC.addAsNeededOption(CmdArgs, false);
   // There's no libpthread or librt on RTEMS & Android.
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
       !TC.getTriple().isAndroid() && !TC.getTriple().isOHOSFamily()) {
@@ -1853,7 +1829,7 @@ bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringLis
 void tools::linkXRayRuntimeDeps(const ToolChain &TC,
                                 const llvm::opt::ArgList &Args,
                                 ArgStringList &CmdArgs) {
-  addAsNeededOption(TC, Args, CmdArgs, false);
+  TC.addAsNeededOption(CmdArgs, false);
   CmdArgs.push_back("-lpthread");
   if (!TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-lrt");
@@ -2439,7 +2415,7 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
                   !TC.getTriple().isAndroid() &&
                   !TC.getTriple().isOSCygMing() && !TC.getTriple().isOSAIX();
   if (AsNeeded)
-    addAsNeededOption(TC, Args, CmdArgs, true);
+    TC.addAsNeededOption(CmdArgs, true);
 
   switch (UNW) {
   case ToolChain::UNW_None:
@@ -2473,7 +2449,7 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
   }
 
   if (AsNeeded)
-    addAsNeededOption(TC, Args, CmdArgs, false);
+    TC.addAsNeededOption(CmdArgs, false);
 }
 
 static void AddLibgcc(const ToolChain &TC, const Driver &D,
