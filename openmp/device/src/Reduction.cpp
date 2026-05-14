@@ -259,6 +259,8 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
   // increment the teams-done counter.
   if (ThreadId == 0) {
     lgcpyFct(GlobalBuffer, TeamId, reduce_data);
+    // We let the atomic inc wrap around if the value gets larger than
+    // NumTeams-1, which makes the counter self-reset.
     TeamsDoneResult = atomic::inc(&TeamsDone, NumTeams - 1u, atomic::acq_rel,
                                   atomic::MemScopeTy::device);
   }
