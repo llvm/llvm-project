@@ -1171,11 +1171,12 @@ void CXXNameMangler::mangleUnscopedName(GlobalDecl GD, const DeclContext *DC,
 
   assert(!isa<LinkageSpecDecl>(DC) && "unskipped LinkageSpecDecl");
   if (isStdNamespace(DC)) {
-    if (getASTContext().getTargetInfo().getTriple().isOSSolaris()) {
+    auto TT = getASTContext().getTargetInfo().getTriple();
+    if (TT.isOSSolaris() || TT.isOSIllumos()) {
       const NamedDecl *ND = cast<NamedDecl>(GD.getDecl());
       if (const RecordDecl *RD = dyn_cast<RecordDecl>(ND)) {
         // Issue #33114: Need non-standard mangling of std::tm etc. for
-        // Solaris ABI compatibility.
+        // Solaris and Illumos ABI compatibility.
         //
         // <substitution> ::= tm # ::std::tm, same for the others
         if (const IdentifierInfo *II = RD->getIdentifier()) {
