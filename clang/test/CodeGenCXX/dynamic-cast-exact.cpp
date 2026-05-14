@@ -1,15 +1,21 @@
 // RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -std=c++11 -o - -O1 -disable-llvm-passes | FileCheck %s --implicit-check-not='call {{.*}} @__dynamic_cast'
 struct Offset { virtual ~Offset(); };
+Offset::~Offset() { }
 struct A { virtual ~A(); };
-struct B final : Offset, A { };
+A::~A() { }
+struct B final : Offset, A { virtual ~B(); };
+B::~B() { }
 
 struct C { virtual ~C(); int c; };
+C::~C() { }
 struct D : A { int d; };
 struct E : A { int e; };
 struct F : virtual A { int f; };
 struct G : virtual A { int g; };
-struct H final : C, D, E, F, G { int h; };
-struct H1 final: C, private D { int h1; };
+struct H final : C, D, E, F, G { int h; virtual ~H(); };
+H::~H() { }
+struct H1 final: C, private D { int h1; virtual ~H1(); };
+H1::~H1() { }
 
 // CHECK-LABEL: @_Z7inexactP1A
 C *inexact(A *a) {
@@ -103,7 +109,8 @@ H1 &exact_invalid_multi(D& d) {
 
 namespace GH137518 {
   class base { virtual void fn() = 0; };
-  class test final : base { virtual void fn() { } };
+  class test final : base { virtual void fn(); };
+  void test::fn() {}
   test* new_test() { return new test(); }
 
   // CHECK-LABEL: @_ZN8GH1375184castEPNS_4baseE(
@@ -120,8 +127,10 @@ namespace GH137518 {
 namespace GH64088 {
   // Ensure we mark the B vtable as used here, because we're going to emit a
   // reference to it.
-  // CHECK: define {{.*}} void @_ZN7GH640881BD0Ev(
+  // CHECK: define {{.*}}void @_ZN7GH640881BD0Ev(
   struct A { virtual ~A(); };
-  struct B final : A { virtual ~B() = default; };
+  struct B final : A { virtual ~B(); };
+  B::~B() { }
+
   B *cast(A *p) { return dynamic_cast<B*>(p); }
 }

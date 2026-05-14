@@ -3,29 +3,35 @@
 struct A {
   virtual ~A();
 };
+A::~A() {}
 struct B {
   int foo;
   virtual ~B();
 };
 struct C final : A, B {
-  virtual void f(){};
+  virtual void f();
 };
+void C::f() {}
 struct D final : B, A {
-  virtual void f(){};
+  virtual void f();
 };
+void D::f() {}
 
 struct Offset {
   virtual ~Offset();
 };
+Offset::~Offset() {}
 struct E {
   virtual ~E();
 };
+E::~E() {}
 struct F final : Offset, E {
 };
 struct G {
   virtual ~G();
   int g;
 };
+G::~G() {}
 struct H : E {
   int h;
 };
@@ -40,8 +46,11 @@ struct K : virtual E {
 };
 struct L final : G, H, I, J, K {
   int l;
+  virtual ~L();
 };
-struct M final: G, private H { int m; };
+L::~L() {}
+struct M final: G, private H { int m; ~M(); };
+M::~M() {}
 
 // CHECK-LABEL: @_Z10exact_to_CP1A
 C *exact_to_C(A *a) {

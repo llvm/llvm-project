@@ -201,6 +201,7 @@ public:
   /// practice in some cases due to language extensions.
   bool hasUniqueVTablePointer(QualType RecordTy) {
     const CXXRecordDecl *RD = RecordTy->getAsCXXRecordDecl();
+    llvm::GlobalVariable::LinkageTypes Linkage = CGM.getVTableLinkage(RD);
 
     // Under -fapple-kext, multiple definitions of the same vtable may be
     // emitted.
@@ -215,8 +216,15 @@ public:
 
     // If there's only one definition of the vtable in the program, it has a
     // unique address.
-    if (!llvm::GlobalValue::isWeakForLinker(CGM.getVTableLinkage(RD)))
+    if (!llvm::GlobalValue::isWeakForLinker(Linkage))
       return true;
+
+    // Header-defined classes can have a linkonce_odr vtable. ThinLTO can
+    // localize those weak definitions in another linkage unit, so the vtable
+    // address is not a reliable exact dynamic_cast discriminator.
+    // See https://github.com/llvm/llvm-project/issues/71196 for example.
+    if (Linkage == llvm::GlobalValue::LinkOnceODRLinkage)
+      return false;
 
     // Even if there are multiple definitions of the vtable, they are required
     // by the ABI to use the same symbol name, so should be merged at load
