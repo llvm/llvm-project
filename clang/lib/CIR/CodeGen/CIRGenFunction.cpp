@@ -499,6 +499,9 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
+  if (fd && (fd->UsesFPIntrin() || fd->hasAttr<StrictFPAttr>()))
+    cgm.errorNYI(loc, "STDC FENV_ACCESS");
+
   prologueCleanupDepth = ehStack.stable_begin();
 
   mlir::Block *entryBB = &fn.getBlocks().front();
@@ -777,6 +780,8 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
+    if (cgm.getDiags().hasErrorOccurred())
+      return fn;
 
     // Save parameters for coroutine function.
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
@@ -1364,12 +1369,12 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   // TODO(cir): override FP flags once FM configs are guarded.
   assert(!cir::MissingFeatures::fastMathFlags());
 
-  assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
-          isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
-          isa<CXXDestructorDecl>(cgf.curFuncDecl) ||
-          (newExceptionBehavior == llvm::fp::ebIgnore &&
-           newRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
-         "FPConstrained should be enabled on entire function");
+  if (cgf.curFuncDecl && !cgf.builder.getIsFPConstrained() &&
+      !isa<CXXConstructorDecl>(cgf.curFuncDecl) &&
+      !isa<CXXDestructorDecl>(cgf.curFuncDecl) &&
+      (newExceptionBehavior != llvm::fp::ebIgnore ||
+       newRoundingBehavior != llvm::RoundingMode::NearestTiesToEven))
+    cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(), "STDC FENV_ACCESS");
 
   // TODO(cir): mark CIR function with fast math attributes.
   assert(!cir::MissingFeatures::fastMathFuncAttributes());
