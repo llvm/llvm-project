@@ -757,6 +757,20 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
 
   ParsedAttributes Attrs(AttrFactory);
 
+  // If a fatal error has occurred, semantic analysis is no longer reliable
+  // (name lookup may silently fail and wrap references in RecoveryExpr,
+  // producing value-dependent attribute conditions on non-template decls
+  // that later confuse the attribute consumers). Skip the parse and drain
+  // the cached tokens instead. The diagnostics emitted up to this point
+  // already justify failing the compilation.
+  if (Actions.getDiagnostics().hasFatalErrorOccurred()) {
+    while (Tok.isNot(tok::eof))
+      ConsumeAnyToken();
+    if (Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData())
+      ConsumeAnyToken();
+    return;
+  }
+
   if (LA.Decls.size() > 0) {
     Decl *D = LA.Decls[0];
     NamedDecl *ND  = dyn_cast<NamedDecl>(D);
