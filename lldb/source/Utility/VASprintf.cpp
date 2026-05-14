@@ -25,7 +25,7 @@ bool lldb_private::VASprintf(llvm::SmallVectorImpl<char> &buf, const char *fmt,
   va_list copy_args;
   va_copy(copy_args, args);
 
-  buf.resize(buf.capacity());
+  buf.resize_for_overwrite(buf.capacity());
   // Write up to `capacity` bytes, ignoring the current size.
   int length = ::vsnprintf(buf.data(), buf.size(), fmt, args);
   if (length < 0) {
@@ -37,7 +37,7 @@ bool lldb_private::VASprintf(llvm::SmallVectorImpl<char> &buf, const char *fmt,
   if (size_t(length) >= buf.size()) {
     // The error formatted string didn't fit into our buffer, resize it to the
     // exact needed size, and retry
-    buf.resize(length + 1);
+    buf.resize_for_overwrite(length + 1);
     length = ::vsnprintf(buf.data(), buf.size(), fmt, copy_args);
     if (length < 0) {
       buf = error;

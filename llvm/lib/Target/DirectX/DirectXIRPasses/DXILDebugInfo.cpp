@@ -40,5 +40,36 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     }
   }
 
+  std::vector<std::pair<const DICompileUnit *, const Metadata *>> CUSubprograms;
+
+  for (const Function &F : M) {
+    if (const DISubprogram *SP = F.getSubprogram()) {
+      auto *FunctionMD = ConstantAsMetadata::get(const_cast<Function *>(&F));
+      Res.MDExtra.insert({SP, FunctionMD});
+    }
+  }
+
+  for (const DISubprogram *SP : DIF.subprograms()) {
+    if (SP->getUnit())
+      CUSubprograms.push_back(
+          {SP->getUnit(), static_cast<const Metadata *>(SP)});
+  }
+
+  std::stable_sort(
+      CUSubprograms.begin(), CUSubprograms.end(), [](auto &&A, auto &&B) {
+        return std::less<const DICompileUnit *>()(A.first, B.first);
+      });
+  for (auto It = CUSubprograms.begin(), End = CUSubprograms.end(); It != End;) {
+    const DICompileUnit *CU = It->first;
+    const DICompileUnit *NewCU =
+        cast<DICompileUnit>(Res.MDReplace.lookup_or(CU, CU));
+    SmallVector<Metadata *, 16> Subprograms;
+    do {
+      Subprograms.push_back(const_cast<Metadata *>(It->second));
+    } while (++It != End && It->first == CU);
+    const auto *SubprogramsMD = MDTuple::get(M.getContext(), Subprograms);
+    Res.MDExtra.insert({NewCU, SubprogramsMD});
+  }
+
   return Res;
 }
