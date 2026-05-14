@@ -723,27 +723,27 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF) {
 
 namespace llvm {
 
-// Loop vectorization hints how the epilogue/tail loop should be
+// Loop vectorization cost-model hints how the epilogue/tail loop should be
 // lowered.
 enum EpilogueLowering {
 
   // The default: allowing epilogues.
-  EpilogueAllowed,
+  CM_EpilogueAllowed,
 
   // Vectorization with OptForSize: don't allow epilogues.
-  EpilogueNotAllowedOptSize,
+  CM_EpilogueNotAllowedOptSize,
 
   // A special case of vectorisation with OptForSize: loops with a very small
   // trip count are considered for vectorization under OptForSize, thereby
   // making sure the cost of their loop body is dominant, free of runtime
   // guards and scalar iteration overheads.
-  EpilogueNotAllowedLowTripLoop,
+  CM_EpilogueNotAllowedLowTripLoop,
 
   // Loop hint indicating an epilogue is undesired, apply tail folding.
-  EpilogueNotNeededFoldTail,
+  CM_EpilogueNotNeededFoldTail,
 
   // Directive indicating we must either fold the epilogue/tail or not vectorize
-  EpilogueNotAllowedFoldTail
+  CM_EpilogueNotAllowedFoldTail
 };
 
 /// LoopVectorizationCostModel - estimates the expected speedups due to
@@ -1107,13 +1107,13 @@ public:
   /// Returns true if an epilogue is allowed (e.g., not prevented by
   /// optsize or a loop hint annotation).
   bool isEpilogueAllowed() const {
-    return EpilogueLoweringStatus == EpilogueAllowed;
+    return EpilogueLoweringStatus == CM_EpilogueAllowed;
   }
 
   /// Returns true if tail-folding is preferred over an epilogue.
   bool preferTailFoldedLoop() const {
-    return EpilogueLoweringStatus == EpilogueNotNeededFoldTail ||
-           EpilogueLoweringStatus == EpilogueNotAllowedFoldTail;
+    return EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail ||
+           EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail;
   }
 
   /// Returns the TailFoldingStyle that is best for the current loop.
@@ -1147,8 +1147,8 @@ public:
       return;
     // If for some reason EVL mode is unsupported, fallback to an epilogue
     // if it's allowed, or DataWithoutLaneMask otherwise.
-    if (EpilogueLoweringStatus == EpilogueAllowed ||
-        EpilogueLoweringStatus == EpilogueNotNeededFoldTail)
+    if (EpilogueLoweringStatus == CM_EpilogueAllowed ||
+        EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail)
       ChosenTailFoldingStyle = TailFoldingStyle::None;
     else
       ChosenTailFoldingStyle = TailFoldingStyle::DataWithoutLaneMask;
@@ -1308,7 +1308,7 @@ private:
   /// or as a peel-loop to handle gaps in interleave-groups.
   /// Under optsize and when the trip count is very small we don't allow any
   /// iterations to execute in the scalar loop.
-  EpilogueLowering EpilogueLoweringStatus = EpilogueAllowed;
+  EpilogueLowering EpilogueLoweringStatus = CM_EpilogueAllowed;
 
   /// Control finally chosen tail folding style.
   TailFoldingStyle ChosenTailFoldingStyle = TailFoldingStyle::None;
@@ -2836,7 +2836,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   ScalarEvolution *SE = PSE.getSE();
   ElementCount TC = getSmallConstantTripCount(SE, TheLoop);
   unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
-  if (!MaxTC && EpilogueLoweringStatus == EpilogueAllowed)
+  if (!MaxTC && EpilogueLoweringStatus == CM_EpilogueAllowed)
     MaxTC = getMaxTCFromNonZeroRange(PSE, TheLoop);
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
   if (TC != ElementCount::getFixed(MaxTC))
@@ -2870,20 +2870,20 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
          "No cost-modeling decisions should have been taken at this point");
 
   switch (EpilogueLoweringStatus) {
-  case EpilogueAllowed:
+  case CM_EpilogueAllowed:
     return Config.computeFeasibleMaxVF(MaxTC, UserVF, UserIC, false,
                                        requiresScalarEpilogue(true));
-  case EpilogueNotAllowedFoldTail:
+  case CM_EpilogueNotAllowedFoldTail:
     [[fallthrough]];
-  case EpilogueNotNeededFoldTail:
+  case CM_EpilogueNotNeededFoldTail:
     LLVM_DEBUG(dbgs() << "LV: tail-folding hint/switch found.\n"
                       << "LV: Not allowing epilogue, creating tail-folded "
                       << "vector loop.\n");
     break;
-  case EpilogueNotAllowedLowTripLoop:
+  case CM_EpilogueNotAllowedLowTripLoop:
     // fallthrough as a special case of OptForSize
-  case EpilogueNotAllowedOptSize:
-    if (EpilogueLoweringStatus == EpilogueNotAllowedOptSize)
+  case CM_EpilogueNotAllowedOptSize:
+    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize)
       LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to -Os/-Oz.\n");
     else
       LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to low trip "
@@ -2965,7 +2965,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       // If we have a low-trip-count, and the fixed-width VF is known to divide
       // the trip count but the scalable factor does not, use the fixed-width
       // factor in preference to allow the generation of a non-predicated loop.
-      if (EpilogueLoweringStatus == EpilogueNotAllowedLowTripLoop &&
+      if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
           NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
         LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                              "remain for any chosen VF.\n");
@@ -3006,14 +3006,14 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   // If there was a tail-folding hint/switch, but we can't fold the tail by
   // masking, fallback to a vectorization with an epilogue.
-  if (EpilogueLoweringStatus == EpilogueNotNeededFoldTail) {
+  if (EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail) {
     LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with an "
                          "epilogue instead.\n");
-    EpilogueLoweringStatus = EpilogueAllowed;
+    EpilogueLoweringStatus = CM_EpilogueAllowed;
     return MaxFactors;
   }
 
-  if (EpilogueLoweringStatus == EpilogueNotAllowedFoldTail) {
+  if (EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail) {
     LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
     return FixedScalableVFPair::getNone();
   }
@@ -7179,34 +7179,34 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
   // don't look at hints or options, and don't request an epilogue.
   if (F->hasOptSize() ||
       (OptForSize && Hints.getForce() != LoopVectorizeHints::FK_Enabled))
-    return EpilogueNotAllowedOptSize;
+    return CM_EpilogueNotAllowedOptSize;
 
   // 2) If set, obey the directives
   if (TailFoldingPolicy.getNumOccurrences()) {
     switch (TailFoldingPolicy) {
     case TailFoldingPolicyTy::None:
-      return EpilogueAllowed;
+      return CM_EpilogueAllowed;
     case TailFoldingPolicyTy::PreferFoldTail:
-      return EpilogueNotNeededFoldTail;
+      return CM_EpilogueNotNeededFoldTail;
     case TailFoldingPolicyTy::MustFoldTail:
-      return EpilogueNotAllowedFoldTail;
+      return CM_EpilogueNotAllowedFoldTail;
     };
   }
 
   // 3) If set, obey the hints
   switch (Hints.getPredicate()) {
   case LoopVectorizeHints::FK_Enabled:
-    return EpilogueNotNeededFoldTail;
+    return CM_EpilogueNotNeededFoldTail;
   case LoopVectorizeHints::FK_Disabled:
-    return EpilogueAllowed;
+    return CM_EpilogueAllowed;
   };
 
   // 4) if the TTI hook indicates this is profitable, request tail-folding.
   TailFoldingInfo TFI(TLI, &LVL, IAI);
   if (TTI->preferTailFoldingOverEpilogue(&TFI))
-    return EpilogueNotNeededFoldTail;
+    return CM_EpilogueNotNeededFoldTail;
 
-  return EpilogueAllowed;
+  return CM_EpilogueAllowed;
 }
 
 /// Determine how to lower the epilogue for the vector epilogue loop.
@@ -7412,7 +7412,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // is allowed, choose the next closest multiple of VF. This should partly
   // compensate for ignoring the epilogue cost.
   uint64_t MinTC = std::max(MinTC1, MinTC2);
-  if (SEL == EpilogueAllowed)
+  if (SEL == CM_EpilogueAllowed)
     MinTC = alignTo(MinTC, IntVF);
   VF.MinProfitableTripCount = ElementCount::getFixed(MinTC);
 
@@ -7983,12 +7983,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       LLVM_DEBUG(dbgs() << "\n");
       // Tail-folded loops are efficient even when the loop
       // iteration count is low. However, setting the epilogue policy to
-      // `EpilogueNotAllowedLowTripLoop` prevents
+      // `CM_EpilogueNotAllowedLowTripLoop` prevents
       // vectorizing loops with runtime checks. It's more effective to let
       // `isOutsideLoopWorkProfitable` determine if vectorization is
       // beneficial for the loop.
-      if (SEL != EpilogueNotNeededFoldTail)
-        SEL = EpilogueNotAllowedLowTripLoop;
+      if (SEL != CM_EpilogueNotNeededFoldTail)
+        SEL = CM_EpilogueNotAllowedLowTripLoop;
     }
   }
 
