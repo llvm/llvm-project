@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple aarch64_lfi %s | FileCheck %s
-// RUN: llvm-mc -triple aarch64_lfi -mattr=+no-lfi-loads %s | FileCheck %s --check-prefix=NOLOADS
+// RUN: llvm-mc -triple aarch64_lfi -mattr=+no-lfi-loads %s | FileCheck %s
 
 .arch_extension lse
 
@@ -8,8 +8,6 @@
 ldadd x0, x1, [x2]
 // CHECK:      add x28, x27, w2, uxtw
 // CHECK-NEXT: ldadd x0, x1, [x28]
-// NOLOADS:      add x28, x27, w2, uxtw
-// NOLOADS-NEXT: ldadd x0, x1, [x28]
 
 ldadd w0, w1, [x2]
 // CHECK:      add x28, x27, w2, uxtw
@@ -74,7 +72,6 @@ ldseta x0, x1, [x2]
 swp x0, x1, [x2]
 // CHECK:      add x28, x27, w2, uxtw
 // CHECK-NEXT: swp x0, x1, [x28]
-// NOLOADS:      swp x0, x1, [x28]
 
 swpa x0, x1, [x2]
 // CHECK:      add x28, x27, w2, uxtw
@@ -112,7 +109,6 @@ swpal w0, w0, [x1]
 cas x0, x1, [x2]
 // CHECK:      add x28, x27, w2, uxtw
 // CHECK-NEXT: cas x0, x1, [x28]
-// NOLOADS:      cas x0, x1, [x28]
 
 casa x0, x1, [x2]
 // CHECK:      add x28, x27, w2, uxtw

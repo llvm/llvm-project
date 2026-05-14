@@ -36,6 +36,7 @@ sub sp, sp, #1, lsl #12
 // CHECK:      sub x26, sp, #1, lsl #12
 // CHECK-NEXT: add sp, x27, w26, uxtw
 
+// SP-based load that defines LR (x30) still needs LR sandboxed after the load.
 ldp x29, x30, [sp], #16
 // CHECK:      ldp x29, x30, [sp], #16
 // CHECK-NEXT: add x30, x27, w30, uxtw

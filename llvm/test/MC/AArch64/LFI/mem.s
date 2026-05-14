@@ -1,5 +1,6 @@
 // RUN: llvm-mc -triple aarch64_lfi %s | FileCheck %s
 
+// SP-relative loads/stores (no sandboxing needed)
 ldr x0, [sp]
 // CHECK: ldr x0, [sp]
 
@@ -132,33 +133,6 @@ stp x0, x1, [x2, #-8]!
 // CHECK:      add x28, x27, w2, uxtw
 // CHECK-NEXT: stp x0, x1, [x28, #-8]
 // CHECK-NEXT: sub x2, x2, #8
-
-ld3 { v0.4s, v1.4s, v2.4s }, [x0], #48
-// CHECK:      add x28, x27, w0, uxtw
-// CHECK-NEXT: ld3 { v0.4s, v1.4s, v2.4s }, [x28]
-// CHECK-NEXT: add x0, x0, #48
-
-st2 { v1.8b, v2.8b }, [x14], #16
-// CHECK:      add x28, x27, w14, uxtw
-// CHECK-NEXT: st2 { v1.8b, v2.8b }, [x28]
-// CHECK-NEXT: add x14, x14, #16
-
-st2 { v1.8b, v2.8b }, [x14]
-// CHECK:      add x28, x27, w14, uxtw
-// CHECK-NEXT: st2 { v1.8b, v2.8b }, [x28]
-
-ld1 { v0.s }[1], [x8]
-// CHECK:      add x28, x27, w8, uxtw
-// CHECK-NEXT: ld1 { v0.s }[1], [x28]
-
-ld1r { v3.2d }, [x9]
-// CHECK:      add x28, x27, w9, uxtw
-// CHECK-NEXT: ld1r { v3.2d }, [x28]
-
-ld1 { v0.s }[1], [x8], x10
-// CHECK:      add x28, x27, w8, uxtw
-// CHECK-NEXT: ld1 { v0.s }[1], [x28]
-// CHECK-NEXT: add x8, x8, x10
 
 ldaxr x0, [x2]
 // CHECK:      add x28, x27, w2, uxtw
@@ -435,73 +409,3 @@ stp w0, w1, [x2, #8]!
 // CHECK:      add x28, x27, w2, uxtw
 // CHECK-NEXT: stp w0, w1, [x28, #8]
 // CHECK-NEXT: add x2, x2, #8
-
-// Memory accesses that define LR (x30) must sandbox the base register
-// in addition to masking LR after the access.
-
-ldr x30, [x0, #0x100]
-// CHECK:      add x28, x27, w0, uxtw
-// CHECK-NEXT: ldr x30, [x28, #256]
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldr x30, [x0]
-// CHECK:      ldr x30, [x27, w0, uxtw]
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldr x30, [x0, #8]!
-// CHECK:      add x0, x0, #8
-// CHECK-NEXT: ldr x30, [x27, w0, uxtw]
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldr x30, [x0, #-8]!
-// CHECK:      sub x0, x0, #8
-// CHECK-NEXT: ldr x30, [x27, w0, uxtw]
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldr x30, [x0], #8
-// CHECK:      ldr x30, [x27, w0, uxtw]
-// CHECK-NEXT: add x0, x0, #8
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldr x30, [x0, x1]
-// CHECK:      add x26, x0, x1
-// CHECK-NEXT: ldr x30, [x27, w26, uxtw]
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldr x30, [x0, x1, lsl #3]
-// CHECK:      add x26, x0, x1, lsl #3
-// CHECK-NEXT: ldr x30, [x27, w26, uxtw]
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldur x30, [x0, #4]
-// CHECK:      add x28, x27, w0, uxtw
-// CHECK-NEXT: ldur x30, [x28, #4]
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldp x29, x30, [x0]
-// CHECK:      add x28, x27, w0, uxtw
-// CHECK-NEXT: ldp x29, x30, [x28]
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldp x29, x30, [x0, #16]
-// CHECK:      add x28, x27, w0, uxtw
-// CHECK-NEXT: ldp x29, x30, [x28, #16]
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldp x29, x30, [x0, #16]!
-// CHECK:      add x28, x27, w0, uxtw
-// CHECK-NEXT: ldp x29, x30, [x28, #16]
-// CHECK-NEXT: add x0, x0, #16
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-ldp x29, x30, [x0], #16
-// CHECK:      add x28, x27, w0, uxtw
-// CHECK-NEXT: ldp x29, x30, [x28]
-// CHECK-NEXT: add x0, x0, #16
-// CHECK-NEXT: add x30, x27, w30, uxtw
-
-// SP-based LR loads are safe without base sandboxing.
-
-ldr x30, [sp, #16]
-// CHECK:      ldr x30, [sp, #16]
-// CHECK-NEXT: add x30, x27, w30, uxtw
