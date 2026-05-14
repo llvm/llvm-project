@@ -783,7 +783,24 @@ static void threadPrivatizeVars(lower::AbstractConverter &converter,
   }
 }
 
+// Translate a semantics-layer groupprivate device_type to the MLIR enum used
+// by omp.groupprivate. Kept here (rather than in semantics) to avoid making
+// the semantics layer depend on MLIR.
+static mlir::omp::DeclareTargetDeviceType
+toMLIRDeclareTargetDeviceType(semantics::OmpGroupprivateDeviceType deviceType) {
+  switch (deviceType) {
+  case semantics::OmpGroupprivateDeviceType::Any:
+    return mlir::omp::DeclareTargetDeviceType::any;
+  case semantics::OmpGroupprivateDeviceType::Host:
+    return mlir::omp::DeclareTargetDeviceType::host;
+  case semantics::OmpGroupprivateDeviceType::Nohost:
+    return mlir::omp::DeclareTargetDeviceType::nohost;
+  }
+  llvm_unreachable("invalid OmpGroupprivateDeviceType");
+}
+
 static void groupprivatizeVars(lower::AbstractConverter &converter,
+                               semantics::SemanticsContext &semaCtx,
                                lower::pft::Evaluation &eval) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -800,14 +817,16 @@ static void groupprivatizeVars(lower::AbstractConverter &converter,
       return mlir::Value();
     }
 
-    // Look up the device_type recorded when the !$omp groupprivate directive
-    // was lowered. Default to 'any' if no explicit device_type was given.
+    // The device_type modifier was recorded on the symbol during semantic
+    // analysis. Default to 'any' when the directive omitted a device_type
+    // clause (per OpenMP spec) or the symbol was flagged before this
+    // mechanism became available (e.g. a stale module file).
     mlir::omp::DeclareTargetDeviceType deviceTypeEnum =
         mlir::omp::DeclareTargetDeviceType::any;
-    const auto &deviceTypeMap = converter.getOMPGroupprivateDeviceTypeInfo();
-    auto it = deviceTypeMap.find(&sym.GetUltimate());
-    if (it != deviceTypeMap.end())
-      deviceTypeEnum = it->second;
+    if (auto recorded =
+            semaCtx.GetOmpGroupprivateDeviceType(sym.GetUltimate())) {
+      deviceTypeEnum = toMLIRDeclareTargetDeviceType(*recorded);
+    }
     mlir::omp::DeclareTargetDeviceTypeAttr deviceTypeAttr =
         mlir::omp::DeclareTargetDeviceTypeAttr::get(firOpBuilder.getContext(),
                                                     deviceTypeEnum);
@@ -1431,7 +1450,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   }
 
   if (info.dir == llvm::omp::Directive::OMPD_teams) {
-    groupprivatizeVars(info.converter, info.eval);
+    groupprivatizeVars(info.converter, info.semaCtx, info.eval);
   }
 
   if (!info.genSkeletonOnly) {
@@ -4725,21 +4744,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpGroupprivateDirective &directive) {
-  // The omp.groupprivate operation itself is created lazily when the symbol
-  // is referenced inside a teams region (see groupprivatizeVars). Here we
-  // only extract the device_type clause (if any) and record it per-symbol so
-  // that the later op-creation can emit it on omp.groupprivate.
-  ObjectList objects = makeObjects(directive.v.Arguments(), semaCtx);
-  List<Clause> clauses = makeClauses(directive.v.Clauses(), semaCtx);
-  ClauseProcessor cp(converter, semaCtx, clauses);
-  mlir::omp::DeviceTypeClauseOps deviceTypeOps;
-  cp.processDeviceType(deviceTypeOps);
-
-  auto &deviceTypeMap = converter.getOMPGroupprivateDeviceTypeInfo();
-  for (const Object &obj : objects) {
-    if (const semantics::Symbol *sym = obj.sym())
-      deviceTypeMap[&sym->GetUltimate()] = deviceTypeOps.deviceType;
-  }
+  // The OmpGroupPrivate symbol flag and any device_type modifier are
+  // recorded during semantic analysis (see OmpAttributeVisitor::Pre on
+  // OmpGroupprivateDirective). The omp.groupprivate operation itself is
+  // materialised on first use inside a teams region by groupprivatizeVars,
+  // so this declarative directive has no remaining lowering work to do.
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

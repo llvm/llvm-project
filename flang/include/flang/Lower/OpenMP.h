@@ -13,7 +13,6 @@
 #ifndef FORTRAN_LOWER_OPENMP_H
 #define FORTRAN_LOWER_OPENMP_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <cinttypes>
@@ -61,14 +60,6 @@ struct OMPDeferredDeclareTargetInfo {
   bool automap = false;
   const Fortran::semantics::Symbol &sym;
 };
-
-/// Per-converter table that records the `device_type` modifier associated with
-/// each groupprivate symbol on the `!$omp groupprivate` directive that
-/// declared it. Populated when the directive is lowered and consumed when
-/// `omp.groupprivate` operations are emitted inside teams regions.
-using OMPGroupprivateDeviceTypeInfo =
-    llvm::DenseMap<const Fortran::semantics::Symbol *,
-                   mlir::omp::DeclareTargetDeviceType>;
 
 // Generate the OpenMP terminator for Operation at Location.
 mlir::Operation *genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,

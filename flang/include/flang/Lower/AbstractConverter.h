@@ -14,7 +14,6 @@
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
 #include "flang/Lower/LoweringOptions.h"
-#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
@@ -401,12 +400,6 @@ public:
   virtual mlir::SymbolTable *getMLIRSymbolTable() = 0;
 
   virtual mlir::StateStack &getStateStack() = 0;
-
-  /// Return the per-converter table recording the device_type clause
-  /// associated with each groupprivate symbol. Used to communicate state from
-  /// the lowering of a `!$omp groupprivate` directive to the later creation of
-  /// `omp.groupprivate` operations inside teams regions.
-  virtual OMPGroupprivateDeviceTypeInfo &getOMPGroupprivateDeviceTypeInfo() = 0;
 
 private:
   /// Options controlling lowering behavior.

@@ -62,6 +62,8 @@ static void PutShapeSpec(llvm::raw_ostream &, const ShapeSpec &);
 static void PutShape(
     llvm::raw_ostream &, const ArraySpec &, char open, char close);
 static void PutMapper(llvm::raw_ostream &, const Symbol &, SemanticsContext &);
+static void PutOmpGroupprivateDirective(
+    llvm::raw_ostream &, const Symbol &, SemanticsContext &);
 
 static llvm::raw_ostream &PutAttr(llvm::raw_ostream &, Attr);
 static llvm::raw_ostream &PutType(llvm::raw_ostream &, const DeclTypeSpec &);
@@ -590,6 +592,10 @@ void ModFileWriter::PutSymbol(
                   x.isExplicitBindName(), ""s);
               decls_ << "::/" << symbol.name() << "/\n";
             }
+            // Common-block symbols are processed by this branch (not the
+            // generic catch-all below), so emit any per-symbol OpenMP
+            // directives - e.g. `!$omp groupprivate(/blk/)` - here too.
+            PutOmpGroupprivateDirective(decls_, symbol, context_);
           },
           [](const HostAssocDetails &) {},
           [](const MiscDetails &) {},
@@ -1313,15 +1319,53 @@ void PutOpenACCDirective(llvm::raw_ostream &os, const Symbol &symbol) {
   }
 }
 
-void PutOpenMPDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+// Re-emit `!$omp groupprivate` for symbols flagged during the module's own
+// semantic analysis, including the device_type modifier if one was recorded
+// (otherwise omit it so the default `any` semantics apply). This lets a TU
+// that `use`s this module recover the directive's information from the .mod
+// file rather than the original source - mirroring how `requires` is
+// propagated. Handles both ordinary variables and common-block names (which
+// must be wrapped in slashes when reparsed).
+static void PutOmpGroupprivateDirective(
+    llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &context) {
+  if (!symbol.test(Symbol::Flag::OmpGroupPrivate)) {
+    return;
+  }
+  os << "!$omp groupprivate(";
+  if (symbol.detailsIf<CommonBlockDetails>()) {
+    os << '/' << symbol.name() << '/';
+  } else {
+    os << symbol.name();
+  }
+  os << ")";
+  if (auto deviceType{
+          context.GetOmpGroupprivateDeviceType(symbol.GetUltimate())}) {
+    switch (*deviceType) {
+    case OmpGroupprivateDeviceType::Any:
+      // Default - emit nothing.
+      break;
+    case OmpGroupprivateDeviceType::Host:
+      os << " device_type(host)";
+      break;
+    case OmpGroupprivateDeviceType::Nohost:
+      os << " device_type(nohost)";
+      break;
+    }
+  }
+  os << "\n";
+}
+
+void PutOpenMPDirective(
+    llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &context) {
   if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
     os << "!$omp threadprivate(" << symbol.name() << ")\n";
   }
+  PutOmpGroupprivateDirective(os, symbol, context);
 }
 
 void ModFileWriter::PutDirective(llvm::raw_ostream &os, const Symbol &symbol) {
   PutOpenACCDirective(os, symbol);
-  PutOpenMPDirective(os, symbol);
+  PutOpenMPDirective(os, symbol, context_);
 }
 
 struct Temp {

@@ -440,6 +440,20 @@ void SemanticsContext::CheckError(const Symbol &symbol) {
   }
 }
 
+void SemanticsContext::SetOmpGroupprivateDeviceType(
+    const Symbol &symbol, OmpGroupprivateDeviceType deviceType) {
+  ompGroupprivateDeviceTypes_.insert_or_assign(SymbolRef{symbol}, deviceType);
+}
+
+std::optional<OmpGroupprivateDeviceType>
+SemanticsContext::GetOmpGroupprivateDeviceType(const Symbol &symbol) const {
+  auto it{ompGroupprivateDeviceTypes_.find(SymbolRef{symbol})};
+  if (it == ompGroupprivateDeviceTypes_.end()) {
+    return std::nullopt;
+  }
+  return it->second;
+}
+
 bool SemanticsContext::ScopeIndexComparator::operator()(
     parser::CharBlock x, parser::CharBlock y) const {
   return x.begin() < y.begin() ||

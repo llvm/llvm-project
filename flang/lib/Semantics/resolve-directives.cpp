@@ -2191,6 +2191,39 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
       ResolveOmpObject(*object, Symbol::Flag::OmpGroupPrivate);
     }
   }
+
+  // OpenMP 6.0 allows an optional device_type clause on the groupprivate
+  // directive. Decode it once here (defaulting to `any` per the spec) so the
+  // value can be attached to every object listed by the directive.
+  OmpGroupprivateDeviceType deviceType{OmpGroupprivateDeviceType::Any};
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    if (const auto *dt{std::get_if<parser::OmpClause::DeviceType>(&clause.u)}) {
+      switch (dt->v.v) {
+      case parser::OmpDeviceTypeClause::DeviceTypeDescription::Any:
+        deviceType = OmpGroupprivateDeviceType::Any;
+        break;
+      case parser::OmpDeviceTypeClause::DeviceTypeDescription::Host:
+        deviceType = OmpGroupprivateDeviceType::Host;
+        break;
+      case parser::OmpDeviceTypeClause::DeviceTypeDescription::Nohost:
+        deviceType = OmpGroupprivateDeviceType::Nohost;
+        break;
+      }
+      break;
+    }
+  }
+
+  // Record device_type against the ultimate symbol of each resolved object so
+  // it is reachable during lowering regardless of the order in which the
+  // owning unit and its referencing teams regions are lowered within this TU.
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (const parser::OmpObject * object{parser::omp::GetArgumentObject(arg)}) {
+      if (const Symbol * sym{omp::GetObjectSymbol(*object)}) {
+        context_.SetOmpGroupprivateDeviceType(sym->GetUltimate(), deviceType);
+      }
+    }
+  }
+
   return true;
 }
 
