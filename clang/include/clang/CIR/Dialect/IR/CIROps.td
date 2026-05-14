@@ -8181,4 +8181,30 @@ def CIR_MemChrOp : CIR_Op<"libc.memchr"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// LaunderOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LaunderOp : CIR_Op<"launder", [SameOperandsAndResultType]> {
+  let summary = "Launder operation";
+  let description = [{
+    This operation represents a call to 'launder' in C++,
+    which acts as an optimization boundary that breaks type invariance.
+
+  Example:
+  ```
+    %0 = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+    %1 = cir.load align(8) %1 : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+    %2 = cir.launder(%1) : !cir.ptr<!rec_S>
+  ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$arg);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $arg `:` qualified(type($result)) attr-dict
+  }];
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
