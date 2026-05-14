@@ -372,11 +372,11 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
       if (!matchPattern(v, m_Constant(&attr)))
         return false;
       return TypeSwitch<Attribute, bool>(attr)
-          .Case<FloatAttr>([](FloatAttr a) { return a.getValue().isInteger(); })
-          .Case<SplatElementsAttr>([](SplatElementsAttr a) {
+          .Case([](FloatAttr a) { return a.getValue().isInteger(); })
+          .Case([](SplatElementsAttr a) {
             return a.getSplatValue<APFloat>().isInteger();
           })
-          .Case<DenseFPElementsAttr>([](DenseFPElementsAttr a) {
+          .Case([](DenseElementsAttr a) {
             return llvm::all_of(a.getValues<APFloat>(),
                                 [](const APFloat &v) { return v.isInteger(); });
           })
