@@ -103,6 +103,7 @@ public:
     suggestAnnotations();
     reportNoescapeViolations();
     reportLifetimeboundViolations();
+    reportMisplacedLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -412,6 +413,28 @@ public:
              "should escape through return");
       if (!isImplicit && !Escapes)
         SemaHelper->reportLifetimeboundViolation(PVD);
+    }
+  }
+
+  void reportMisplacedLifetimebound() {
+    const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
+    if (!FDef)
+      return;
+
+    const FunctionDecl *FDecl = FDef->getPreviousDecl();
+    if (!FDecl)
+      return;
+
+    if (isa<CXXMethodDecl>(FDef) &&
+        getDirectImplicitObjectLifetimeBoundAttr(FDef) &&
+        !getDirectImplicitObjectLifetimeBoundAttr(FDecl))
+      SemaHelper->reportMisplacedLifetimebound(FDef, FDecl);
+
+    for (auto [PVDDef, PVDDecl] :
+         llvm::zip_equal(FDef->parameters(), FDecl->parameters())) {
+      if (PVDDef->hasAttr<LifetimeBoundAttr>() &&
+          !PVDDecl->hasAttr<LifetimeBoundAttr>())
+        SemaHelper->reportMisplacedLifetimebound(PVDDef, PVDDecl);
     }
   }
 

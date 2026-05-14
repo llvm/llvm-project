@@ -275,6 +275,33 @@ public:
         << 2 << "" << Attr->getRange();
   }
 
+  void reportMisplacedLifetimebound(const FunctionDecl *FDef,
+                                    const FunctionDecl *FDecl) override {
+    const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(FDef);
+    assert(Attr && "Expected lifetimebound attribute");
+    S.Diag(Lexer::getLocForEndOfToken(FDecl->getEndLoc(), 0,
+                                      S.getSourceManager(), S.getLangOpts()),
+           diag::warn_lifetime_safety_misplaced_lifetimebound);
+
+    S.Diag(Attr->getLocation(),
+           diag::note_lifetime_safety_definition_lifetimebound_attribute_here)
+        << Attr->getRange();
+  }
+
+  void reportMisplacedLifetimebound(const ParmVarDecl *PVDDef,
+                                    const ParmVarDecl *PVDDecl) override {
+
+    const auto *Attr = PVDDef->getAttr<LifetimeBoundAttr>();
+    assert(Attr && "Expected lifetimebound attribute");
+    S.Diag(PVDDecl->getBeginLoc(),
+           diag::warn_lifetime_safety_misplaced_lifetimebound)
+        << PVDDecl->getSourceRange();
+
+    S.Diag(Attr->getLocation(),
+           diag::note_lifetime_safety_definition_lifetimebound_attribute_here)
+        << Attr->getRange();
+  }
+
   void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
                                           const CXXMethodDecl *MD,
                                           const Expr *EscapeExpr) override {

@@ -130,6 +130,16 @@ public:
   virtual void
   reportLifetimeboundViolation(const CXXMethodDecl *MDWithLifetimebound) {}
 
+  // Reports a member function definition that has [[clang::lifetimebound]] on
+  // the implicit this parameter when the previous declaration does not.
+  virtual void reportMisplacedLifetimebound(const FunctionDecl *FDef,
+                                            const FunctionDecl *FDecl) {}
+
+  // Reports a function definition parameter that has [[clang::lifetimebound]]
+  // when the corresponding parameter in the previous declaration does not.
+  virtual void reportMisplacedLifetimebound(const ParmVarDecl *PVDDef,
+                                            const ParmVarDecl *PVDDecl) {}
+
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
                                                   const CXXMethodDecl *MD,

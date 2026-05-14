@@ -631,6 +631,12 @@ This warning may produce false-positives diagnostics when it cannot fully model 
   }];
 }
 
+def LifetimeSafetyMisplacedLifetimebound : DiagGroup<"lifetime-safety-misplaced-lifetimebound"> {
+    code Documentation = [{
+Detects function definitions whose parameters or implicit this argument are marked as [[clang::lifetimebound]] when the corresponding declaration is not.
+}];
+}
+
 def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyUseAfterScope,
                                          LifetimeSafetyReturnStackAddr,
@@ -674,7 +680,8 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
 
 def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
                                           [LifetimeSafetyNoescape,
-                                           LifetimeSafetyLifetimeboundViolation]> {
+                                           LifetimeSafetyLifetimeboundViolation,
+                                           LifetimeSafetyMisplacedLifetimebound]> {
   code Documentation = [{
 Verify function implementations adhere to the annotated lifetime contracts through lifetime safety
 like verifying [[clang::noescape]] and [[clang::lifetimebound]].
