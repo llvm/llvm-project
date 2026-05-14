@@ -13317,6 +13317,17 @@ static SDValue PerformVSELECTCombine(SDNode *N,
   if (!Subtarget->hasMVEIntegerOps())
     return SDValue();
 
+  // Constant fold vselect 0, A, B -> B
+  //           and vselect 0xffff, A, B -> A
+  if (N->getOperand(0).getOpcode() == ARMISD::PREDICATE_CAST &&
+      isa<ConstantSDNode>(N->getOperand(0).getOperand(0))) {
+    unsigned C = N->getOperand(0).getConstantOperandVal(0);
+    if (C == 0)
+      return N->getOperand(2);
+    if (C == 0xffff)
+      return N->getOperand(1);
+  }
+
   if (SDValue V = PerformVQDMULHCombine(N, DCI.DAG))
     return V;
 
