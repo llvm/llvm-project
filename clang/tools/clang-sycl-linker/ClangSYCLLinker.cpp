@@ -530,7 +530,7 @@ static SmallString<0> collectEntryPoints(const Module &M,
   return SymbolData;
 }
 
-/// Functor passed to splitModuleTransitiveFromEntryPoints. For each input \p F,
+/// Functor passed to splitModuleTransitiveFromEntryPoints. For each input function \p F,
 /// returns a numeric group ID (if \p F is an entry point) determining which
 /// device image it lands in, or std::nullopt (for non-entry-points).
 /// SPLIT_PER_KERNEL \p Mode gives each kernel its own ID;
