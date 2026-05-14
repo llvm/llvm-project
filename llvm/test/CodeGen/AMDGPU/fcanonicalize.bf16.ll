@@ -87,7 +87,7 @@ define <2 x bfloat> @v_test_canonicalize_build_vector_v2bf16(bfloat %lo, bfloat 
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; FAKE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_build_vector_v2bf16:
@@ -96,7 +96,7 @@ define <2 x bfloat> @v_test_canonicalize_build_vector_v2bf16(bfloat %lo, bfloat 
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
 ; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; REAL16-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %ins0 = insertelement <2 x bfloat> poison, bfloat %lo, i32 0
   %ins1 = insertelement <2 x bfloat> %ins0, bfloat %hi, i32 1
@@ -707,7 +707,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2bf16(ptr addrspace(1) %out)
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -730,7 +730,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2bf16(ptr addrspace(1) 
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -754,7 +754,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2bf16(ptr addrspac
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -777,7 +777,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2bf16(ptr addrspace(1) 
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -796,7 +796,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_v2bf16(ptr addrspace(1) %out,
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, s2, s2
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, s2 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %val = bitcast i32 %val.arg to <2 x bfloat>
@@ -1034,8 +1034,8 @@ define <3 x bfloat> @v_test_canonicalize_var_v3bf16(<3 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <3 x bfloat> @llvm.canonicalize.v3bf16(<3 x bfloat> %val)
   ret <3 x bfloat> %canonicalized
@@ -1046,8 +1046,8 @@ define <4 x bfloat> @v_test_canonicalize_var_v4bf16(<4 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <4 x bfloat> @llvm.canonicalize.v4bf16(<4 x bfloat> %val)
   ret <4 x bfloat> %canonicalized
@@ -1072,7 +1072,7 @@ define <2 x bfloat> @v_test_canonicalize_reg_undef_v2bf16(bfloat %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x bfloat> poison, bfloat %val, i32 0
   %canonicalized = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %vec)
@@ -1086,7 +1086,7 @@ define <2 x bfloat> @v_test_canonicalize_undef_reg_v2bf16(bfloat %val) #1 {
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; FAKE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_undef_reg_v2bf16:
@@ -1095,7 +1095,7 @@ define <2 x bfloat> @v_test_canonicalize_undef_reg_v2bf16(bfloat %val) #1 {
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    v_mov_b16_e32 v0.h, v0.l
 ; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; REAL16-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x bfloat> poison, bfloat %val, i32 1
   %canonicalized = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %vec)
@@ -1158,7 +1158,7 @@ define <2 x bfloat> @v_test_canonicalize_reg_k_v2bf16(bfloat %val) #1 {
 ; FAKE16-NEXT:    s_movk_i32 s0, 0x4000
 ; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; FAKE16-NEXT:    v_perm_b32 v0, s0, v0, 0x5040100
-; FAKE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_reg_k_v2bf16:
@@ -1168,7 +1168,7 @@ define <2 x bfloat> @v_test_canonicalize_reg_k_v2bf16(bfloat %val) #1 {
 ; REAL16-NEXT:    v_mov_b16_e32 v1.h, 0x4000
 ; REAL16-NEXT:    v_mov_b16_e32 v1.l, v0.l
 ; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; REAL16-NEXT:    v_pk_max_num_bf16 v0, v1, v1
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v1 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <2 x bfloat> poison, bfloat %val, i32 0
   %vec1 = insertelement <2 x bfloat> %vec0, bfloat 2.0, i32 1
@@ -1184,7 +1184,7 @@ define <2 x bfloat> @v_test_canonicalize_k_reg_v2bf16(bfloat %val) #1 {
 ; FAKE16-NEXT:    s_movk_i32 s0, 0x4000
 ; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; FAKE16-NEXT:    v_perm_b32 v0, v0, s0, 0x5040100
-; FAKE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_k_reg_v2bf16:
@@ -1194,7 +1194,7 @@ define <2 x bfloat> @v_test_canonicalize_k_reg_v2bf16(bfloat %val) #1 {
 ; REAL16-NEXT:    v_mov_b16_e32 v1.l, 0x4000
 ; REAL16-NEXT:    v_mov_b16_e32 v1.h, v0.l
 ; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; REAL16-NEXT:    v_pk_max_num_bf16 v0, v1, v1
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v1 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <2 x bfloat> poison, bfloat 2.0, i32 0
   %vec1 = insertelement <2 x bfloat> %vec0, bfloat %val, i32 1
@@ -1223,7 +1223,7 @@ define <4 x bfloat> @v_test_canonicalize_reg_undef_undef_undef_v4bf16(bfloat %va
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <4 x bfloat> poison, bfloat %val, i32 0
@@ -1239,7 +1239,7 @@ define <4 x bfloat> @v_test_canonicalize_reg_reg_undef_undef_v4bf16(bfloat %val0
 ; FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; FAKE16-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
 ; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; FAKE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_reg_reg_undef_undef_v4bf16:
@@ -1249,7 +1249,7 @@ define <4 x bfloat> @v_test_canonicalize_reg_reg_undef_undef_v4bf16(bfloat %val0
 ; REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
 ; REAL16-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
 ; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; REAL16-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <4 x bfloat> poison, bfloat %val0, i32 0
   %vec1 = insertelement <4 x bfloat> %vec0, bfloat %val1, i32 1
@@ -1263,9 +1263,9 @@ define <4 x bfloat> @v_test_canonicalize_reg_undef_reg_reg_v4bf16(bfloat %val0, 
 ; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; FAKE16-NEXT:    v_perm_b32 v1, v2, v1, 0x5040100
-; FAKE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; FAKE16-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; FAKE16-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4bf16:
@@ -1273,9 +1273,9 @@ define <4 x bfloat> @v_test_canonicalize_reg_undef_reg_reg_v4bf16(bfloat %val0, 
 ; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    v_mov_b16_e32 v1.h, v2.l
-; REAL16-NEXT:    v_pk_max_num_bf16 v0, v0, v0
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; REAL16-NEXT:    v_pk_max_num_bf16 v1, v1, v1
+; REAL16-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <4 x bfloat> poison, bfloat %val0, i32 0
   %vec1 = insertelement <4 x bfloat> %vec0, bfloat %val1, i32 2
@@ -1289,9 +1289,9 @@ define <6 x bfloat> @v_test_canonicalize_var_v6bf16(<6 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
-; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <6 x bfloat> @llvm.canonicalize.v6bf16(<6 x bfloat> %val)
   ret <6 x bfloat> %canonicalized
@@ -1302,10 +1302,10 @@ define <8 x bfloat> @v_test_canonicalize_var_v8bf16(<8 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
-; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
-; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v3, 1.0, v3 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <8 x bfloat> @llvm.canonicalize.v8bf16(<8 x bfloat> %val)
   ret <8 x bfloat> %canonicalized
@@ -1316,12 +1316,12 @@ define <12 x bfloat> @v_test_canonicalize_var_v12bf16(<12 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
-; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
-; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
-; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v4
-; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v5
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v3, 1.0, v3 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v4, 1.0, v4 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v5, 1.0, v5 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <12 x bfloat> @llvm.canonicalize.v12bf16(<12 x bfloat> %val)
   ret <12 x bfloat> %canonicalized
@@ -1332,14 +1332,14 @@ define <16 x bfloat> @v_test_canonicalize_var_v16bf16(<16 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
-; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
-; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
-; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v4
-; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v5
-; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v6
-; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v7
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v3, 1.0, v3 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v4, 1.0, v4 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v5, 1.0, v5 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v6, 1.0, v6 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v7, 1.0, v7 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <16 x bfloat> @llvm.canonicalize.v16bf16(<16 x bfloat> %val)
   ret <16 x bfloat> %canonicalized
@@ -1350,22 +1350,22 @@ define <32 x bfloat> @v_test_canonicalize_var_v32bf16(<32 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
-; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
-; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
-; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v4
-; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v5
-; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v6
-; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v7
-; GFX1250-NEXT:    v_pk_max_num_bf16 v8, v8, v8
-; GFX1250-NEXT:    v_pk_max_num_bf16 v9, v9, v9
-; GFX1250-NEXT:    v_pk_max_num_bf16 v10, v10, v10
-; GFX1250-NEXT:    v_pk_max_num_bf16 v11, v11, v11
-; GFX1250-NEXT:    v_pk_max_num_bf16 v12, v12, v12
-; GFX1250-NEXT:    v_pk_max_num_bf16 v13, v13, v13
-; GFX1250-NEXT:    v_pk_max_num_bf16 v14, v14, v14
-; GFX1250-NEXT:    v_pk_max_num_bf16 v15, v15, v15
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v3, 1.0, v3 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v4, 1.0, v4 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v5, 1.0, v5 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v6, 1.0, v6 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v7, 1.0, v7 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v8, 1.0, v8 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v9, 1.0, v9 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v10, 1.0, v10 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v11, 1.0, v11 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v12, 1.0, v12 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v13, 1.0, v13 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v14, 1.0, v14 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v15, 1.0, v15 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <32 x bfloat> @llvm.canonicalize.v32bf16(<32 x bfloat> %val)
   ret <32 x bfloat> %canonicalized
@@ -1377,39 +1377,39 @@ define <64 x bfloat> @v_test_canonicalize_var_v64bf16(<64 x bfloat> %val) #1 {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_load_b32 v31, off, s32
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1
-; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v2, v2
-; GFX1250-NEXT:    v_pk_max_num_bf16 v3, v3, v3
-; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v4, v4
-; GFX1250-NEXT:    v_pk_max_num_bf16 v5, v5, v5
-; GFX1250-NEXT:    v_pk_max_num_bf16 v6, v6, v6
-; GFX1250-NEXT:    v_pk_max_num_bf16 v7, v7, v7
-; GFX1250-NEXT:    v_pk_max_num_bf16 v8, v8, v8
-; GFX1250-NEXT:    v_pk_max_num_bf16 v9, v9, v9
-; GFX1250-NEXT:    v_pk_max_num_bf16 v10, v10, v10
-; GFX1250-NEXT:    v_pk_max_num_bf16 v11, v11, v11
-; GFX1250-NEXT:    v_pk_max_num_bf16 v12, v12, v12
-; GFX1250-NEXT:    v_pk_max_num_bf16 v13, v13, v13
-; GFX1250-NEXT:    v_pk_max_num_bf16 v14, v14, v14
-; GFX1250-NEXT:    v_pk_max_num_bf16 v15, v15, v15
-; GFX1250-NEXT:    v_pk_max_num_bf16 v16, v16, v16
-; GFX1250-NEXT:    v_pk_max_num_bf16 v17, v17, v17
-; GFX1250-NEXT:    v_pk_max_num_bf16 v18, v18, v18
-; GFX1250-NEXT:    v_pk_max_num_bf16 v19, v19, v19
-; GFX1250-NEXT:    v_pk_max_num_bf16 v20, v20, v20
-; GFX1250-NEXT:    v_pk_max_num_bf16 v21, v21, v21
-; GFX1250-NEXT:    v_pk_max_num_bf16 v22, v22, v22
-; GFX1250-NEXT:    v_pk_max_num_bf16 v23, v23, v23
-; GFX1250-NEXT:    v_pk_max_num_bf16 v24, v24, v24
-; GFX1250-NEXT:    v_pk_max_num_bf16 v25, v25, v25
-; GFX1250-NEXT:    v_pk_max_num_bf16 v26, v26, v26
-; GFX1250-NEXT:    v_pk_max_num_bf16 v27, v27, v27
-; GFX1250-NEXT:    v_pk_max_num_bf16 v28, v28, v28
-; GFX1250-NEXT:    v_pk_max_num_bf16 v29, v29, v29
-; GFX1250-NEXT:    v_pk_max_num_bf16 v30, v30, v30
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v3, 1.0, v3 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v4, 1.0, v4 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v5, 1.0, v5 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v6, 1.0, v6 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v7, 1.0, v7 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v8, 1.0, v8 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v9, 1.0, v9 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v10, 1.0, v10 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v11, 1.0, v11 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v12, 1.0, v12 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v13, 1.0, v13 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v14, 1.0, v14 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v15, 1.0, v15 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v16, 1.0, v16 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v17, 1.0, v17 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v18, 1.0, v18 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v19, 1.0, v19 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v20, 1.0, v20 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v21, 1.0, v21 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v22, 1.0, v22 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v23, 1.0, v23 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v24, 1.0, v24 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v25, 1.0, v25 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v26, 1.0, v26 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v27, 1.0, v27 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v28, 1.0, v28 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v29, 1.0, v29 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v30, 1.0, v30 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v31, v31, v31
+; GFX1250-NEXT:    v_pk_mul_bf16 v31, 1.0, v31 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <64 x bfloat> @llvm.canonicalize.v64bf16(<64 x bfloat> %val)
   ret <64 x bfloat> %canonicalized

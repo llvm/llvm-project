@@ -890,8 +890,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                          MVT::v2bf16, Legal);
 
       for (MVT VT : {MVT::v4bf16, MVT::v8bf16, MVT::v16bf16, MVT::v32bf16})
-        setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMAXNUM, ISD::FMINNUM,
-                            ISD::FMA, ISD::FNEG, ISD::FABS, ISD::FCANONICALIZE},
+        // Split vector operations.
+        setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE,
+                            ISD::FNEG, ISD::FABS},
                            VT, Custom);
     }
 

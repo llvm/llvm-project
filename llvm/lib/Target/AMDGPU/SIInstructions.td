@@ -3658,6 +3658,12 @@ def : GCNPat<
   (V_PK_MUL_F16 0, (i32 CONST.FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
 >;
 
+let SubtargetPredicate = HasBF16PackedInsts in
+def : GCNPat<
+  (fcanonicalize (v2bf16 (VOP3PMods v2bf16:$src, i32:$src_mods))),
+  (V_PK_MUL_BF16 0, (i32 CONST.BF16_ONE), $src_mods, $src, DSTCLAMP.NONE)
+>;
+
 def : GCNPat<
   (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
   (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), $src_mods, $src)
@@ -3738,12 +3744,6 @@ multiclass SelectCanonicalizeAsMax<
     // FIXME: Should have VOP3P subtarget predicate
     let OtherPredicates = f16_preds;
   }
-
-let SubtargetPredicate = HasBF16PackedInsts in
-  def : GCNPat<
-    (fcanonicalize (v2bf16 (VOP3PMods v2bf16:$src, i32:$src_mods))),
-    (V_PK_MAX_NUM_BF16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)
-  >;
 }
 
 // On pre-gfx9 targets, v_max_*/v_min_* did not respect the denormal
