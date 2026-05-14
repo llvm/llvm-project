@@ -1251,6 +1251,22 @@ FriendTemplateDecl::Create(ASTContext &Context, DeclContext *DC,
 }
 
 FriendTemplateDecl *
+FriendTemplateDecl::Create(ASTContext &Context, DeclContext *DC,
+                           SourceLocation Loc, TemplateName Template,
+                           SourceLocation FriendLoc,
+                           ArrayRef<TemplateParameterList *> FriendTypeTPLists,
+                           SourceLocation EllipsisLoc) {
+  std::size_t Extra =
+      FriendTemplateDecl::additionalSizeToAlloc<TemplateParameterList *>(
+          FriendTypeTPLists.size());
+  auto *FTD = new (Context, DC, Extra)
+      FriendTemplateDecl(DC, Loc, FriendUnion(), FriendLoc, EllipsisLoc,
+                         FriendTypeTPLists, Template);
+  cast<CXXRecordDecl>(DC)->pushFriendDecl(FTD);
+  return FTD;
+}
+
+FriendTemplateDecl *
 FriendTemplateDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                        unsigned NumFriendTypeTPLists) {
   std::size_t Extra =

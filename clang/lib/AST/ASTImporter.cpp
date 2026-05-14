@@ -4687,16 +4687,25 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
         D, ImportedEquivalentFriends[CountAndPosition.IndexOfDecl]);
 
   FriendTemplateDecl::FriendUnion ToFU;
-  if (NamedDecl *FriendD = D->getFriendDecl()) {
-    NamedDecl *ToFriendD;
-    if (Error Err = importInto(ToFriendD, FriendD))
-      return std::move(Err);
-    ToFU = ToFriendD;
+  TemplateName ToTemplate;
+  TemplateName FromTemplate = D->getFriendTemplateName();
+  if (FromTemplate.isNull()) {
+    if (NamedDecl *FriendD = D->getFriendDecl()) {
+      NamedDecl *ToFriendD;
+      if (Error Err = importInto(ToFriendD, FriendD))
+        return std::move(Err);
+      ToFU = ToFriendD;
+    } else {
+      if (auto TSIOrErr = import(D->getFriendType()))
+        ToFU = *TSIOrErr;
+      else
+        return TSIOrErr.takeError();
+    }
   } else {
-    if (auto TSIOrErr = import(D->getFriendType()))
-      ToFU = *TSIOrErr;
+    if (auto TemplateOrErr = import(FromTemplate))
+      ToTemplate = *TemplateOrErr;
     else
-      return TSIOrErr.takeError();
+      return TemplateOrErr.takeError();
   }
 
   ArrayRef<TemplateParameterList *> TPLs =
@@ -4722,10 +4731,17 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     return EllipsisLocOrErr.takeError();
 
   FriendTemplateDecl *FTD;
-  if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,
-                              *LocationOrErr, ToFU, *FriendLocOrErr, ToParams,
-                              *EllipsisLocOrErr))
-    return FTD;
+  if (ToTemplate.isNull()) {
+    if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,
+                                *LocationOrErr, ToFU, *FriendLocOrErr, ToParams,
+                                *EllipsisLocOrErr))
+      return FTD;
+  } else {
+    if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,
+                                *LocationOrErr, ToTemplate, *FriendLocOrErr,
+                                ToParams, *EllipsisLocOrErr))
+      return FTD;
+  }
 
   FTD->setAccess(D->getAccess());
   FTD->setLexicalDeclContext(LexicalDC);

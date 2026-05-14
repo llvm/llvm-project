@@ -4735,7 +4735,7 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     if (SubstTemplateParameterLists(TPLists, TPL))
       return nullptr;
 
-    ClassTemplateDecl *CTD = nullptr;
+    TemplateName Template;
     if (auto DNT = FT->getTypeLoc().getAs<DependentNameTypeLoc>()) {
       NestedNameSpecifierLoc QualifierLoc = SemaRef.SubstNestedNameSpecifierLoc(
           DNT.getQualifierLoc(), TemplateArgs);
@@ -4745,23 +4745,42 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
 
         DeclContext *DC =
             SemaRef.computeDeclContext(SS, /*EnteringContext=*/true);
+        if (DC && !DC->isDependentContext() &&
+            SemaRef.RequireCompleteDeclContext(SS, DC))
+          DC = nullptr;
         if (DC) {
           LookupResult Result(SemaRef, DNT.getTypePtr()->getIdentifier(),
                               DNT.getNameLoc(), Sema::LookupOrdinaryName,
                               SemaRef.forRedeclarationInCurContext());
           SemaRef.LookupQualifiedName(Result, DC);
-          CTD = Result.getAsSingle<ClassTemplateDecl>();
+          if (Result.getResultKind() == LookupResultKind::Found) {
+            NamedDecl *FoundD = *Result.begin();
+            UsingShadowDecl *FoundUsingShadow =
+                dyn_cast<UsingShadowDecl>(FoundD);
+            NamedDecl *Underlying =
+                FoundUsingShadow ? FoundUsingShadow->getTargetDecl() : FoundD;
+            if (auto *CTD = dyn_cast<ClassTemplateDecl>(Underlying)) {
+              Template = FoundUsingShadow ? TemplateName(FoundUsingShadow)
+                                          : TemplateName(CTD);
+              Template = SemaRef.Context.getQualifiedTemplateName(
+                  QualifierLoc.getNestedNameSpecifier(),
+                  /*TemplateKeyword=*/false, Template);
+            }
+          }
         }
       }
     }
 
-    if (CTD) {
-      FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                       CTD, D->getFriendLoc(), TPL);
-    } else if (TypeSourceInfo *InstTy = SemaRef.SubstType(
-                   FT, TemplateArgs, D->getLocation(), DeclarationName())) {
-      FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
+    if (Template.isNull()) {
+      if (TypeSourceInfo *InstTy = SemaRef.SubstType(
+              FT, TemplateArgs, D->getLocation(), DeclarationName())) {
+        FTD =
+            FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
                                        InstTy, D->getFriendLoc(), TPL);
+      }
+    } else {
+      FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
+                                       Template, D->getFriendLoc(), TPL);
     }
   } else {
     SmallVector<TemplateParameterList *, 1> TPL;

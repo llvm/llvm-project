@@ -2407,10 +2407,17 @@ void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
   for (unsigned i = 0; i != D->NumTPLists; ++i)
     D->getTrailingObjects()[i] = Record.readTemplateParameterList();
-  if (Record.readInt()) // HasFriendDecl
-    D->Friend = readDeclAs<NamedDecl>();
-  else
+  switch (Record.readInt()) {
+  case 0:
     D->Friend = readTypeSourceInfo();
+    break;
+  case 1:
+    D->Friend = readDeclAs<NamedDecl>();
+    break;
+  case 2:
+    D->Template = Record.readTemplateName();
+    break;
+  }
   D->NextFriend = readDeclID().getRawValue();
   D->FriendLoc = readSourceLocation();
   D->EllipsisLoc = readSourceLocation();

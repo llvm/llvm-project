@@ -1842,11 +1842,18 @@ void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
   for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
     Record.AddTemplateParameterList(TPL);
-  Record.push_back(D->getFriendDecl() != nullptr);
-  if (D->getFriendDecl())
-    Record.AddDeclRef(D->getFriendDecl());
-  else
-    Record.AddTypeSourceInfo(D->getFriendType());
+  if (D->Template.isNull()) {
+    if (D->getFriendDecl()) {
+      Record.push_back(1);
+      Record.AddDeclRef(D->getFriendDecl());
+    } else {
+      Record.push_back(0);
+      Record.AddTypeSourceInfo(D->getFriendType());
+    }
+  } else {
+    Record.push_back(2);
+    Record.AddTemplateName(D->Template);
+  }
   Record.AddDeclRef(D->getNextFriend());
   Record.AddSourceLocation(D->FriendLoc);
   Record.AddSourceLocation(D->EllipsisLoc);
