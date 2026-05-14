@@ -354,7 +354,7 @@ template <class U> struct A<T>::B {
     A<int>::f();
     // expected-error@-1 {{'f' is a private member of 'GH104057::A<int>'}}
     //   expected-note@#GH104057-A-f {{declared private here}}
-    //   expected-note@#GH104057-A {{candidate template ignored: could not match 'U *' against 'double'}}
+    //   expected-note@#GH104057-A {{candidate friend template ignored: could not match 'U *' against 'double'}}
   }
 };
 

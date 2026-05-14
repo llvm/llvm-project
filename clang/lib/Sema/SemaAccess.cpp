@@ -1895,7 +1895,9 @@ static AccessResult CheckEffectiveAccess(Sema &S, const EffectiveContext &EC,
   if (Entity.isQuiet())
     return CheckEffectiveAccess(S, EC, Loc, Entity, /*FailedTSC=*/nullptr);
 
-  TemplateSpecCandidateSet FailedTSC(Loc);
+  TemplateSpecCandidateSet FailedTSC(
+      Loc, /*ForTakingAddress=*/false,
+      TemplateSpecCandidateSetKind::FriendTemplate);
   return CheckEffectiveAccess(S, EC, Loc, Entity, &FailedTSC);
 }
 

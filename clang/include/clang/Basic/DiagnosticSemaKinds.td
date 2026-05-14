@@ -5264,11 +5264,16 @@ def note_ovl_candidate_deduced_mismatch : Note<
     "adjusted type of %select{|element of }4argument}1,2%3">;
 def note_ovl_candidate_non_deduced_mismatch : Note<
     "candidate template ignored: could not match %diff{$ against $|types}0,1">;
+def note_friend_template_non_deduced_mismatch : Note<
+    "candidate friend template ignored: could not match "
+    "%diff{$ against $|types}0,1">;
 // This note is needed because the above note would sometimes print two
 // different types with the same name.  Remove this note when the above note
 // can handle that case properly.
 def note_ovl_candidate_non_deduced_mismatch_qualified : Note<
     "candidate template ignored: could not match %q0 against %q1">;
+def note_friend_template_non_deduced_mismatch_qualified : Note<
+    "candidate friend template ignored: could not match %q0 against %q1">;
 
 // Note that we don't treat templates differently for this diagnostic.
 def note_ovl_candidate_arity : Note<"candidate "
