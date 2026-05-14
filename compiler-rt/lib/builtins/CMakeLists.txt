@@ -469,6 +469,11 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/mulsf3.S
       arm/divsf3.S
       arm/adddf3.S
+      arm/muldf3.S
+      arm/divdf3.S
+      arm/cmpdf2.S
+      arm/gedf2.S
+      arm/unorddf2.S
       )
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
@@ -521,11 +526,16 @@ set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
     arm/thumb1/mulsf3.S
+    arm/thumb1/cmpdf2.S
+    arm/thumb1/gedf2.S
+    arm/thumb1/unorddf2.S
     arm/fnan2.c
     arm/fnorm2.c
     arm/funder.c
     ${thumb1_base_SOURCES}
   )
+  set_special_properties(arm/thumb1/cmpdf2.S
+    SUPERSEDES comparedf2.c PROVIDES comparedf2)
 endif()
 
 set(arm_EABI_RT_SOURCES
@@ -901,6 +911,8 @@ set(riscv64_SOURCES
 set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 
+set(spirv64_SOURCES ${GENERIC_SOURCES})
+
 set(s390x_SOURCES
   ${GENERIC_SOURCES}
   ${GENERIC_TF_SOURCES}
@@ -969,7 +981,7 @@ else ()
   endif()
 
   # Directly targeting the GPU requires a few extra flags.
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx|spirv64")
     append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)

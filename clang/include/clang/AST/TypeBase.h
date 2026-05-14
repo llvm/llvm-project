@@ -1134,6 +1134,11 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
+  /// Returns true if the type uses postfix declarator syntax, i.e. the
+  /// declarator component appears after the name (arrays, functions).
+  /// Looks through pointer-like types to the pointee.
+  bool hasPostfixDeclaratorSyntax() const;
+
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -1154,6 +1159,10 @@ public:
 
   /// Returns true if it is a OverflowBehaviorType of Trap kind.
   bool isTrapType() const;
+
+  /// Returns true if this type requires laundering by checking if it is a
+  /// dynamic class type, or contains a subobject which is a dynamic class type.
+  bool requiresBuiltinLaunder(const ASTContext &Context) const;
 
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
@@ -1962,7 +1971,7 @@ protected:
     unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
-    static constexpr unsigned NumOfBuiltinTypeBits = 9;
+    static constexpr unsigned NumOfBuiltinTypeBits = 10;
     unsigned Kind : NumOfBuiltinTypeBits;
   };
 

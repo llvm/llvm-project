@@ -1795,6 +1795,11 @@ let TargetPrefix = "nvvm" in {
           
       def int_nvvm_bf16x2_to_ # type # _rn # relu # _satfinite
         : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+      
+      foreach satfinite = ["", "_satfinite"] in {
+        def int_nvvm_ # type # _to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
+            : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
+      }
     }
   }
 
@@ -1820,6 +1825,11 @@ let TargetPrefix = "nvvm" in {
 
     def int_nvvm_bf16x2_to_e2m1x2_rn # relu # _satfinite
       : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+    
+    foreach satfinite = ["", "_satfinite"] in {
+      def int_nvvm_e2m1x2_to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
+        : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
+    }
   }
 
   // RS rounding mode (Stochastic Rounding) conversions for f4x4 type
@@ -1843,6 +1853,11 @@ let TargetPrefix = "nvvm" in {
 
       def int_nvvm_bf16x2_to_ # type # _rn # relu # _satfinite
         : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+      
+      foreach satfinite = ["", "_satfinite"] in {
+        def int_nvvm_ # type # _to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
+            : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
+      }
     }
   }
 

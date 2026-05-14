@@ -153,7 +153,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
 
   MachineInstr *CopyMI = nullptr;
   MachineInstr *FoldMI =
-      TII.foldMemoryOperand(*UseMI, Ops, *DefMI, CopyMI, &LIS);
+      TII.foldMemoryOperand(*UseMI, Ops, *DefMI, CopyMI, &LIS, VRM);
   if (!FoldMI)
     return false;
   LLVM_DEBUG(dbgs() << "                folded: " << *FoldMI);
@@ -174,6 +174,8 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
     if (R.isVirtual()) {
       LiveInterval &SrcLI = LIS.getInterval(R);
       LIS.shrinkToUses(&SrcLI);
+    } else {
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
     }
   }
   return true;

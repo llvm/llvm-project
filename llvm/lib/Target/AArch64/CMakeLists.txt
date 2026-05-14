@@ -42,6 +42,7 @@ add_llvm_target(AArch64CodeGen
   GISel/AArch64PostSelectOptimize.cpp
   GISel/AArch64RegisterBankInfo.cpp
   AArch64A57FPLoadBalancing.cpp
+  AArch64CodeLayoutOpt.cpp
   AArch64AdvSIMDScalarPass.cpp
   AArch64Arm64ECCallLowering.cpp
   AArch64AsmPrinter.cpp

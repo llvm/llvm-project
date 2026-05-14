@@ -628,6 +628,9 @@ void GroupMatcher::optimize() {
 
 //===- SwitchMatcher ------------------------------------------------------===//
 
+SwitchMatcher::SwitchMatcher() : Matcher(MK_Switch) {}
+SwitchMatcher::~SwitchMatcher() = default;
+
 bool SwitchMatcher::recordsOperand() const {
   assert(!isa_and_present<RecordNamedOperandMatcher>(Condition.get()) &&
          "Switch conditions should not record named operands");
@@ -694,10 +697,12 @@ bool SwitchMatcher::addMatcher(Matcher &Candidate) {
 
 void SwitchMatcher::finalize() {
   assert(Condition == nullptr && "Already finalized");
+#ifndef NDEBUG
   unsigned NumBucketedMatchers = 0;
   for (const auto &Entry : Buckets)
     NumBucketedMatchers += Entry.second.Matchers.size();
   assert(NumBucketedMatchers == Matchers.size() && "Broken SwitchMatcher");
+#endif
   if (empty())
     return;
 
@@ -748,10 +753,12 @@ void SwitchMatcher::emitPredicateSpecificOpcodes(const PredicateMatcher &P,
 }
 
 void SwitchMatcher::emit(MatchTable &Table) {
+#ifndef NDEBUG
   unsigned NumBucketedMatchers = 0;
   for (const auto &Entry : Buckets)
     NumBucketedMatchers += Entry.second.Matchers.size();
   assert(NumBucketedMatchers == Matchers.size() && "Broken SwitchMatcher");
+#endif
   if (empty())
     return;
   assert(Condition != nullptr &&
@@ -1542,6 +1549,12 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
     addPredicate<PointerToAnyOperandMatcher>(0);
     return Error::success();
   }
+
+  // Metadata operands have no LLT representation and no runtime type check is
+  // needed — they are guaranteed to be MO_Metadata by the IRTranslator. This
+  // mirrors how srcvalue is handled in importChildMatcher.
+  if (VTy.getMachineValueType() == MVT::Metadata)
+    return Error::success();
 
   auto OpTyOrNone = MVTToLLT(VTy.getMachineValueType().SimpleTy);
   if (!OpTyOrNone)

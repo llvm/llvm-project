@@ -49,6 +49,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  byteswap_macros
+  HDR
+    byteswap-macros.h
+)
+
+add_macro_header(
   error_number_macros
   HDR
     error-number-macros.h
@@ -256,6 +262,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_personality_macros
+  HDR
+    sys-personality-macros.h
+)
+
+add_macro_header(
   sys_queue_macros
   HDR
     sys-queue-macros.h
@@ -371,7 +383,7 @@ add_macro_header(
 add_macro_header(
   nl_types_macros
   HDR
-    nl-types-macros.h
+    nl_types-macros.h
 )
 
 add_macro_header(

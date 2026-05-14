@@ -90,7 +90,7 @@ class ProgramStateManager;
 class RegionAndSymbolInvalidationTraits;
 class SymbolManager;
 
-/// Hints for figuring out of a call should be inlined during evalCall().
+/// Hints for figuring out if a call should be inlined during evalCall().
 struct EvalCallOptions {
   /// This call is a constructor or a destructor for which we do not currently
   /// compute the this-region correctly.
@@ -185,7 +185,7 @@ private:
   /// implicitly never returns.
   ObjCNoReturn ObjCNoRet;
 
-  /// The BugReporter associated with this engine.  It is important that
+  /// The BugReporter associated with this engine. It is important that
   /// this object be placed at the very end of member variables so that its
   /// destructor is called before the rest of the ExprEngine is destroyed.
   PathSensitiveBugReporter BR;
@@ -245,8 +245,8 @@ public:
   void setCurrLocationContextAndBlock(const LocationContext *LC,
                                       const CFGBlock *B) {
     // The current LocationContext and Block is reset at the beginning of
-    // dispacthWorkItem. Ideally, this method should be called only once per
-    // dipatchWorkItem call (= elementary analysis step); so the following
+    // dispatchWorkItem. Ideally, this method should be called only once per
+    // dispatchWorkItem call (= elementary analysis step); so the following
     // assertion is there to catch accidental repeated calls. If the current
     // LocationContext and Block needs to change in the middle of a single step
     // (which currently happens only once, in processCallExit), use an explicit
@@ -412,28 +412,28 @@ public:
                                      const CFGBlock *DstT,
                                      const CFGBlock *DstF);
 
-  /// Called by CoreEngine.  Used to processing branching behavior
+  /// Called by CoreEngine. Used to processing branching behavior
   /// at static initializers.
   void processStaticInitializer(const DeclStmt *DS, ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst, const CFGBlock *DstT,
                                 const CFGBlock *DstF);
 
-  /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
+  /// processIndirectGoto - Called by CoreEngine. Used to generate successor
   ///  nodes by processing the 'effects' of a computed goto jump.
   void processIndirectGoto(ExplodedNodeSet &Dst, const Expr *Tgt,
                            const CFGBlock *Dispatch, ExplodedNode *Pred);
 
-  /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
+  /// ProcessSwitch - Called by CoreEngine. Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
   void processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
                      ExplodedNodeSet &Dst);
 
-  /// Called by CoreEngine.  Used to notify checkers that processing a
+  /// Called by CoreEngine. Used to notify checkers that processing a
   /// function has begun. Called for both inlined and top-level functions.
   void processBeginOfFunction(ExplodedNode *Pred, ExplodedNodeSet &Dst,
                               const BlockEdge &L);
 
-  /// Called by CoreEngine.  Used to notify checkers that processing a
+  /// Called by CoreEngine. Used to notify checkers that processing a
   /// function has ended. Called for both inlined and top-level functions.
   void processEndOfFunction(ExplodedNode *Pred, const ReturnStmt *RS = nullptr);
 
@@ -686,17 +686,17 @@ public:
     return svalBuilder.evalBinOp(ST, Op, LHS, RHS, T);
   }
 
-  /// Retreives which element is being constructed in a non-POD type array.
+  /// Retrieves which element is being constructed in a non-POD type array.
   static std::optional<unsigned>
   getIndexOfElementToConstruct(ProgramStateRef State, const CXXConstructExpr *E,
                                const LocationContext *LCtx);
 
-  /// Retreives which element is being destructed in a non-POD type array.
+  /// Retrieves which element is being destructed in a non-POD type array.
   static std::optional<unsigned>
   getPendingArrayDestruction(ProgramStateRef State,
                              const LocationContext *LCtx);
 
-  /// Retreives the size of the array in the pending ArrayInitLoopExpr.
+  /// Retrieves the size of the array in the pending ArrayInitLoopExpr.
   static std::optional<unsigned>
   getPendingInitLoop(ProgramStateRef State, const CXXConstructExpr *E,
                      const LocationContext *LCtx);
@@ -911,7 +911,7 @@ private:
       SVal *ElementCountVal = nullptr);
 
   /// Checks whether we construct an array of non-POD type, and decides if the
-  /// constructor should be inkoved once again.
+  /// constructor should be invoked once again.
   bool shouldRepeatCtorCall(ProgramStateRef State, const CXXConstructExpr *E,
                             const LocationContext *LCtx);
 

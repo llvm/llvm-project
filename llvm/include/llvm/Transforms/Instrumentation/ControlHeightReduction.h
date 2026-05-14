@@ -18,8 +18,8 @@
 
 namespace llvm {
 
-class ControlHeightReductionPass :
-      public PassInfoMixin<ControlHeightReductionPass> {
+class ControlHeightReductionPass
+    : public OptionalPassInfoMixin<ControlHeightReductionPass> {
 public:
   ControlHeightReductionPass();
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);

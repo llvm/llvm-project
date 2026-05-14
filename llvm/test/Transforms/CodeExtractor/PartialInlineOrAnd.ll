@@ -54,7 +54,7 @@ bb:
 ; LIMIT3: br i1
 ; LIMIT3: br i1
 ; LIMIT3-NOT: br i1
-; LIMIT3: call void @bar.1.
+; LIMIT3: call i32 @bar.1.
 ; LIMIT2-LABEL: @dummy_caller
 ; LIMIT2-NOT: br i1
 ; LIMIT2: call i32 @bar(

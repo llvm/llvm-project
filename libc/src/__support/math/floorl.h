@@ -15,7 +15,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE long double floorl(long double x) { return fputil::floor(x); }
+LIBC_INLINE LIBC_CONSTEXPR long double floorl(long double x) {
+  return fputil::floor(x);
+}
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

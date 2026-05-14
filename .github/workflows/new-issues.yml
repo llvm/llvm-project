@@ -10,12 +10,23 @@ jobs:
   automate-issues-labels:
     permissions:
       issues: write
+    environment:
+      name: main-branch-only
+      deployment: false
     runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+        with:
+          client-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-contents: read
+          permission-issues: write
       - uses: llvm/actions/issue-labeler@89a8cf80982d830faab019237860b344a6390c30 # main
         with:
-          repo-token: ${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}
+          repo-token: ${{ steps.app-token.outputs.token }}
           configuration-path: .github/new-issues-labeler.yml
           include-title: 1
           include-body: 0

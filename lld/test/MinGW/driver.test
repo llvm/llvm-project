@@ -55,6 +55,22 @@ DEF1: -def:foo.def
 RUN: ld.lld -### foo.o -m i386pep -shared FOO.DEF 2>&1 | FileCheck -check-prefix=DEF2 %s
 DEF2: -def:FOO.DEF
 
+RUN: ld.lld -### foo.o -m arm64xpe -shared foo.def 2>&1 | FileCheck -check-prefix=ARM64XDEF %s
+ARM64XDEF:      -def:foo.def
+ARM64XDEF-SAME: -defarm64native:foo.def
+
+RUN: ld.lld -### foo.o -m arm64xpe -shared foo.def --native-def=bar.def 2>&1 | FileCheck -check-prefix=ARM64XDEF2 %s
+ARM64XDEF2: -defarm64native:bar.def
+ARM64XDEF2-SAME:      -def:foo.def
+
+RUN: ld.lld -### foo.o -m arm64xpe -shared foo.def --native-def= 2>&1 | FileCheck -check-prefix=ARM64XDEF3 %s
+ARM64XDEF3-NOT: -defarm64native
+ARM64XDEF3:     -def:foo.def
+
+RUN: ld.lld -### foo.o -m arm64xpe -shared --native-def=foo.def 2>&1 | FileCheck -check-prefix=ARM64XDEF4 %s
+ARM64XDEF4-NOT: -def:
+ARM64XDEF4:     -defarm64native:foo.def
+
 RUN: ld.lld -### foo.o -m i386pep -obar.exe 2>&1 | FileCheck -check-prefix=OUT %s
 RUN: ld.lld -### foo.o -m i386pep -o bar.exe 2>&1 | FileCheck -check-prefix=OUT %s
 OUT: -out:bar.exe
