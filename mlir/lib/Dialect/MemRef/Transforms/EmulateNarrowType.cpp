@@ -872,9 +872,9 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
     // layout when the original offset is non-zero. Rank-0 memrefs carry no
     // strides, so the layout uses an empty stride list.
     if (offset != 0) {
-      SmallVector<int64_t, 1> resultStrides =
-          ty.getRank() == 0 ? SmallVector<int64_t, 1>{}
-                            : SmallVector<int64_t, 1>{1};
+      SmallVector<int64_t, 1> resultStrides = ty.getRank() == 0
+                                                  ? SmallVector<int64_t, 1>{}
+                                                  : SmallVector<int64_t, 1>{1};
       if (offset == ShapedType::kDynamic) {
         layoutAttr =
             StridedLayoutAttr::get(ty.getContext(), offset, resultStrides);
