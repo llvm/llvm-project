@@ -114,6 +114,13 @@ void foo() {
 // CHECK-NEXT:    ret void
 //
 //
+// D mapper for: map(tofrom: sa[0:2]) — per-element entries for struct D
+// (i = array element index, N = __tgt_mapper_num_components()):
+//   &sa[i],   &sa[i].e,     sizeof(e..h),  ALLOC | MEMBER_OF(N) | modifiers
+//   &sa[i],   &sa[i].e,     sizeof(int),   MEMBER_OF(N+1) | TO | FROM | modifiers
+//   &sa[i],   &sa[i].f,     sizeof(C),     MEMBER_OF(N+1) | TO | FROM | modifiers  (dispatches to C mapper)
+//   &sa[i],   &sa[i].h,     sizeof(int),   MEMBER_OF(N+1) | TO | FROM | modifiers
+//
 // CHECK-LABEL: define {{[^@]+}}@.omp_mapper._ZTS1D.default
 // CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]], i64 noundef [[TMP3:%.*]], i64 noundef [[TMP4:%.*]], ptr noundef [[TMP5:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -260,6 +267,10 @@ void foo() {
 // CHECK:       omp.done:
 // CHECK-NEXT:    ret void
 //
+//
+// C mapper for: map(to: s.a) — per-element entries for struct C
+// (i = array element index, N = __tgt_mapper_num_components()):
+//   &c[i],   &c[i].a,   sizeof(int),   MEMBER_OF(N) | TO | modifiers
 //
 // CHECK-LABEL: define {{[^@]+}}@.omp_mapper._ZTS1C.default
 // CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]], i64 noundef [[TMP3:%.*]], i64 noundef [[TMP4:%.*]], ptr noundef [[TMP5:%.*]]) #[[ATTR2]] {

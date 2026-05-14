@@ -4,9 +4,12 @@
 #include <stdio.h>
 
 // Array variant of mapper_map_ptee_only_2_ptr_indirections.c.
-// Exercises the nested-pointer-chain case (s2.s1p->p[0:10]) in an array
-// context, where inner MEMBER_OF bits must be shifted correctly and outer
-// MEMBER_OF must not be applied to the pointee entries.
+// The mapper maps s2.z, s2.s1p->x, s2.s1p->y, and s2.s1p->p[0:10].
+// s2.s1p->dummy and s2.s1p->p itself are not mapped.
+// This exercises the nested-pointer-chain case: the inner MEMBER_OF bits for
+// s2.s1p->x/y/p[0:10] must be shifted correctly, and outer MEMBER_OF must not
+// be applied to the pointee entry (s2.s1p->p[0:10]) or the ATTACH entry
+// (s2.s1p).
 
 int x[2][10];
 

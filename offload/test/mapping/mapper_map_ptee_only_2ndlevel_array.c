@@ -3,9 +3,13 @@
 #include <omp.h>
 #include <stdio.h>
 
-// Test that a mapper on a nested struct maps the right members when applied to
-// an array of structs: s.x and s.p[0:10] are mapped; s.dummy and s.p itself
-// are not (modulo attach FIXME).
+// Test that a mapper on a nested struct correctly maps and deletes data when
+// applied to an array of structs. s2arr[i].s1.x and s2arr[i].s1.p[0:10] are
+// mapped; after delete they are gone.
+// It's not ideal that s2arr[i].s1.dummy and s2arr[i].s1.p are also present
+// after enter-data (the runtime allocates the full contiguous storage of the
+// array, otherwise it's tricky to map an array with "holes"), but everything is
+// correctly removed after delete.
 
 int x[2][10];
 
