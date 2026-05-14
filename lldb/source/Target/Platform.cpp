@@ -24,6 +24,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
@@ -40,6 +41,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/lldb-private-enumerations.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -157,6 +160,19 @@ Status Platform::GetFileWithUUID(const FileSpec &platform_file,
   return Status();
 }
 
+bool Platform::IsSymbolFileTrusted(Module &module) { return false; }
+
+LoadScriptFromSymFile
+Platform::GetScriptLoadStyleForModule(const FileSpec &module_fspec,
+                                      const Target &target) {
+  LoadScriptFromSymFile default_load_style =
+      target.GetLoadScriptFromSymbolFile();
+
+  return target
+      .GetAutoLoadScriptsForModule(module_fspec.GetFileNameStrippingExtension())
+      .value_or(default_load_style);
+}
+
 llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
 Platform::LocateExecutableScriptingResourcesFromSafePaths(
     Stream &feedback_stream, FileSpec module_spec, const Target &target) {
@@ -175,7 +191,7 @@ Platform::LocateExecutableScriptingResourcesFromSafePaths(
           ->GetSanitizedScriptingModuleName(
               module_spec.GetFileNameStrippingExtension().GetStringRef());
 
-  FileSpecList paths = Debugger::GetSafeAutoLoadPaths();
+  FileSpecList paths = target.GetSafeAutoLoadPaths();
 
   // Iterate in reverse so we consider the latest appended path first.
   for (FileSpec path : llvm::reverse(paths)) {
@@ -198,9 +214,11 @@ Platform::LocateExecutableScriptingResourcesFromSafePaths(
     WarnIfInvalidUnsanitizedScriptExists(feedback_stream, sanitized_name,
                                          orig_script_fspec, script_fspec);
 
-    if (FileSystem::Instance().Exists(script_fspec))
-      file_specs.try_emplace(std::move(script_fspec),
-                             target.GetLoadScriptFromSymbolFile());
+    if (FileSystem::Instance().Exists(script_fspec)) {
+      LoadScriptFromSymFile load_style =
+          Platform::GetScriptLoadStyleForModule(module_spec, target);
+      file_specs.try_emplace(std::move(script_fspec), load_style);
+    }
 
     // If we successfully found a directory in a safe auto-load path
     // stop looking at any other paths.
@@ -1896,7 +1914,7 @@ uint32_t Platform::LoadImage(lldb_private::Process *process,
     // Only local file was specified. Install it to the current working
     // directory.
     FileSpec target_file = GetWorkingDirectory();
-    target_file.AppendPathComponent(local_file.GetFilename().AsCString());
+    target_file.AppendPathComponent(local_file.GetFilename());
     if (IsRemote() || local_file != target_file) {
       error = Install(local_file, target_file);
       if (error.Fail())
@@ -2026,121 +2044,99 @@ size_t Platform::ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
   return 0;
 }
 
-size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
-                                                 BreakpointSite *bp_site) {
-  ArchSpec arch = target.GetArchitecture();
-  assert(arch.IsValid());
-  const uint8_t *trap_opcode = nullptr;
-  size_t trap_opcode_size = 0;
+llvm::ArrayRef<uint8_t> Platform::SoftwareTrapOpcodeBytes(const ArchSpec &arch,
+                                                          size_t size_hint) {
+  llvm::ArrayRef<uint8_t> trap_opcode;
 
   switch (arch.GetMachine()) {
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64: {
     static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x20, 0xd4};
-    trap_opcode = g_aarch64_opcode;
-    trap_opcode_size = sizeof(g_aarch64_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_aarch64_opcode, sizeof(g_aarch64_opcode));
   } break;
 
   case llvm::Triple::arc: {
-    static const uint8_t g_hex_opcode[] = { 0xff, 0x7f };
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    static const uint8_t g_hex_opcode[] = {0xff, 0x7f};
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
-  // TODO: support big-endian arm and thumb trap codes.
   case llvm::Triple::arm: {
-    // The ARM reference recommends the use of 0xe7fddefe and 0xdefe but the
-    // linux kernel does otherwise.
+    // ARM CPUs have dedicated BKPT instructions: 0xe7fddefe and 0xdefe.
+    // However, the linux kernel recognizes two different sequences based on
+    // undefined instruction encodings (linux/arch/arm/kernel/ptrace.c)
     static const uint8_t g_arm_breakpoint_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
     static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
 
-    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
-    AddressClass addr_class = AddressClass::eUnknown;
-
-    if (bp_loc_sp) {
-      addr_class = bp_loc_sp->GetAddress().GetAddressClass();
-      if (addr_class == AddressClass::eUnknown &&
-          (bp_loc_sp->GetAddress().GetFileAddress() & 1))
-        addr_class = AddressClass::eCodeAlternateISA;
-    }
-
-    if (addr_class == AddressClass::eCodeAlternateISA) {
-      trap_opcode = g_thumb_breakpoint_opcode;
-      trap_opcode_size = sizeof(g_thumb_breakpoint_opcode);
+    if (size_hint == 2) {
+      trap_opcode = llvm::ArrayRef<uint8_t>(g_thumb_breakpoint_opcode,
+                                            sizeof(g_thumb_breakpoint_opcode));
     } else {
-      trap_opcode = g_arm_breakpoint_opcode;
-      trap_opcode_size = sizeof(g_arm_breakpoint_opcode);
+      trap_opcode = llvm::ArrayRef<uint8_t>(g_arm_breakpoint_opcode,
+                                            sizeof(g_arm_breakpoint_opcode));
     }
   } break;
 
   case llvm::Triple::avr: {
     static const uint8_t g_hex_opcode[] = {0x98, 0x95};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::mips:
   case llvm::Triple::mips64: {
     static const uint8_t g_hex_opcode[] = {0x00, 0x00, 0x00, 0x0d};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64el: {
     static const uint8_t g_hex_opcode[] = {0x0d, 0x00, 0x00, 0x00};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::msp430: {
     static const uint8_t g_msp430_opcode[] = {0x43, 0x43};
-    trap_opcode = g_msp430_opcode;
-    trap_opcode_size = sizeof(g_msp430_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_msp430_opcode, sizeof(g_msp430_opcode));
   } break;
 
   case llvm::Triple::systemz: {
     static const uint8_t g_hex_opcode[] = {0x00, 0x01};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::hexagon: {
     static const uint8_t g_hex_opcode[] = {0x0c, 0xdb, 0x00, 0x54};
-    trap_opcode = g_hex_opcode;
-    trap_opcode_size = sizeof(g_hex_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_hex_opcode, sizeof(g_hex_opcode));
   } break;
 
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64: {
     static const uint8_t g_ppc_opcode[] = {0x7f, 0xe0, 0x00, 0x08};
-    trap_opcode = g_ppc_opcode;
-    trap_opcode_size = sizeof(g_ppc_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_ppc_opcode, sizeof(g_ppc_opcode));
   } break;
 
   case llvm::Triple::ppc64le: {
     static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
-    trap_opcode = g_ppc64le_opcode;
-    trap_opcode_size = sizeof(g_ppc64le_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_ppc64le_opcode, sizeof(g_ppc64le_opcode));
   } break;
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64: {
     static const uint8_t g_i386_opcode[] = {0xCC};
-    trap_opcode = g_i386_opcode;
-    trap_opcode_size = sizeof(g_i386_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_i386_opcode, sizeof(g_i386_opcode));
   } break;
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64: {
     static const uint8_t g_riscv_opcode[] = {0x73, 0x00, 0x10, 0x00}; // ebreak
     static const uint8_t g_riscv_opcode_c[] = {0x02, 0x90}; // c.ebreak
-    if (arch.GetFlags() & ArchSpec::eRISCV_rvc) {
+    if (size_hint == 2) {
       trap_opcode = g_riscv_opcode_c;
-      trap_opcode_size = sizeof(g_riscv_opcode_c);
     } else {
-      trap_opcode = g_riscv_opcode;
-      trap_opcode_size = sizeof(g_riscv_opcode);
+      trap_opcode =
+          llvm::ArrayRef<uint8_t>(g_riscv_opcode, sizeof(g_riscv_opcode));
     }
   } break;
 
@@ -2148,24 +2144,67 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
   case llvm::Triple::loongarch64: {
     static const uint8_t g_loongarch_opcode[] = {0x05, 0x00, 0x2a,
                                                  0x00}; // break 0x5
-    trap_opcode = g_loongarch_opcode;
-    trap_opcode_size = sizeof(g_loongarch_opcode);
+    trap_opcode =
+        llvm::ArrayRef<uint8_t>(g_loongarch_opcode, sizeof(g_loongarch_opcode));
   } break;
 
+  // Unreachable (0x00) triggers an unconditional trap.
   case llvm::Triple::wasm32: {
-    // Unreachable (0x00) triggers an unconditional trap.
     static const uint8_t g_wasm_opcode[] = {0x00};
-    trap_opcode = g_wasm_opcode;
-    trap_opcode_size = sizeof(g_wasm_opcode);
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_wasm_opcode, sizeof(g_wasm_opcode));
   } break;
+  // The default case should not match against anything, so return empty Array.
+  default: {
+    trap_opcode = llvm::ArrayRef<uint8_t>{};
+  };
+  }
+  return trap_opcode;
+}
 
-  default:
-    return 0;
+size_t Platform::GetTrapOpcodeSizeHint(Target &target, Address addr,
+                                       llvm::ArrayRef<uint8_t> bytes) {
+  ArchSpec arch = target.GetArchitecture();
+  assert(arch.IsValid());
+  const auto &triple = arch.GetTriple();
+
+  if (bytes.size() && triple.isRISCV()) {
+    // RISC-V instructions have the two LSB as 0b11 if they are four-byte.
+    return (bytes[0] & 0b11) == 0b11 ? 4 : 2;
   }
 
-  assert(bp_site);
-  if (bp_site->SetTrapOpcode(trap_opcode, trap_opcode_size))
-    return trap_opcode_size;
+  if (triple.isARM()) {
+    if (auto addr_class = addr.GetAddressClass();
+        addr_class == AddressClass::eCodeAlternateISA) {
+      return 2;
+    } else {
+      return 4;
+    }
+  }
+  return 0;
+}
+
+size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
+                                                 BreakpointSite *bp_site) {
+  ArchSpec arch = target.GetArchitecture();
+  assert(arch.IsValid());
+  AddressClass addr_class = AddressClass::eUnknown;
+  if (bp_site) {
+    // TODO: support big-endian arm and thumb trap codes.
+    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
+    if (bp_loc_sp)
+      addr_class = bp_loc_sp->GetAddress().GetAddressClass();
+  }
+
+  size_t size_hint = 0;
+  // Check for either ARM or RISC-V short instruction conditions.
+  if (addr_class == AddressClass::eCodeAlternateISA ||
+      (arch.GetFlags() & ArchSpec::eRISCV_rvc))
+    size_hint = 2;
+  auto trap_opcode = SoftwareTrapOpcodeBytes(arch, size_hint);
+
+  if (bp_site &&
+      bp_site->SetTrapOpcode(trap_opcode.begin(), trap_opcode.size()))
+    return trap_opcode.size();
 
   return 0;
 }

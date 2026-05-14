@@ -1190,6 +1190,30 @@ static StringRef exportSourceName(ExportSource s) {
     return "/export";
   case ExportSource::ModuleDefinition:
     return "/def";
+  case ExportSource::ExportAll:
+    return "/export-all-symbols";
+  default:
+    llvm_unreachable("unknown ExportSource");
+  }
+}
+
+static int exportSourcePriority(ExportSource s) {
+  switch (s) {
+  case ExportSource::Directives:
+    return 1;
+  case ExportSource::ExportAll:
+    // Give directives (embedded in object files, from dllexport attributes)
+    // and linker generated exports (from /export-all-symbols) differing
+    // priority, to avoid warnings about conflicts between the two. In
+    // practice, there shouldn't be any conflicts between the two, as both
+    // should set the DATA flag consistently. Both have lower priority than
+    // def files and explicit export arguments.
+    return 2;
+  case ExportSource::Export:
+  case ExportSource::ModuleDefinition:
+    // Give the same priority to export arguments and def files; this produces
+    // warnings if they are duplicate and if they differ.
+    return 3;
   default:
     llvm_unreachable("unknown ExportSource");
   }
@@ -1262,11 +1286,23 @@ void SymbolTable::fixupExports() {
     // If the existing export comes from .OBJ directives, we are allowed to
     // overwrite it with /DEF: or /EXPORT without any warning, as MSVC link.exe
     // does.
-    if (existing->source == ExportSource::Directives) {
+    // Also silently override exports from /export-all-symbols with ones from
+    // def files and /EXPORT.
+    int existingPriority = exportSourcePriority(existing->source);
+    int newPriority = exportSourcePriority(e.source);
+    if (existingPriority < newPriority) {
+      // New definition with higher priority; don't warn, and replace the
+      // existing definition with this one.
       *existing = e;
       v[pair.first->second.second] = e;
       continue;
     }
+    if (existingPriority > newPriority) {
+      // New definition with lower priority; ignore the new one silently
+      // without warning.
+      continue;
+    }
+
     if (existing->source == e.source) {
       Warn(ctx) << "duplicate " << exportSourceName(existing->source)
                 << " option: " << e.name;
@@ -1437,13 +1473,37 @@ void SymbolTable::compileBitcodeFiles() {
   if (bitcodeFileInstances.empty())
     return;
 
+  // Collect the bitcode library functions that are not safe to call because
+  // they were not yet brought in the link. (Such symbols are lazy.)
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<StringRef> bitcodeLibFuncs;
+  // Triple must be captured before the bitcode is moved into the compiler.
+  // Note that the below assumes that the set of possible libfuncs is roughly
+  // equivalent for all bitcode translation units.
+  llvm::Triple tt =
+      llvm::Triple(bitcodeFileInstances.front()->obj->getTargetTriple());
+  for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver)) {
+    if (Symbol *sym = find(libFunc)) {
+      if (auto *l = dyn_cast<LazyArchive>(sym)) {
+        if (isBitcode(l->getMemberBuffer()))
+          bitcodeLibFuncs.push_back(libFunc);
+      } else if (auto *o = dyn_cast<LazyObject>(sym)) {
+        if (isBitcode(o->file->mb))
+          bitcodeLibFuncs.push_back(libFunc);
+      }
+    }
+  }
+
   ScopedTimer t(ctx.ltoTimer);
   lto.reset(new BitcodeCompiler(ctx));
+  lto->setBitcodeLibFuncs(bitcodeLibFuncs);
   {
     llvm::TimeTraceScope addScope("Add bitcode file instances");
     for (BitcodeFile *f : bitcodeFileInstances)
       lto->add(*f);
   }
+
   for (InputFile *newObj : lto->compile()) {
     ObjFile *obj = cast<ObjFile>(newObj);
     obj->parse();

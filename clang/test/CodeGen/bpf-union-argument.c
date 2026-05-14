@@ -1,5 +1,6 @@
 // REQUIRES: bpf-registered-target
 // RUN: %clang_cc1 -triple bpf -O2 -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple bpf -O2 -emit-llvm -disable-llvm-passes -fexperimental-abi-lowering %s -o - | FileCheck %s
 
 union t1 {};
 union t2 {

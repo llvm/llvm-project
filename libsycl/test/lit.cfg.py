@@ -117,7 +117,7 @@ class test_env:
 config.substitutions.append(
     (
         "%sycl_options",
-        " -lsycl"
+        " -lLLVMSYCL"
         + " -isystem "
         + config.libsycl_include
         + " -isystem "

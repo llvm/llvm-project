@@ -142,8 +142,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
       CI.getCodeGenOpts(), FrontendOpts.ModuleFileExtensions,
       CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
-      FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule,
-      +CI.getLangOpts().CacheGeneratedPCH));
+      FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
 
@@ -207,9 +206,7 @@ GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
       /*IncludeTimestamps=*/
       +CI.getFrontendOpts().BuildingImplicitModule &&
           +CI.getFrontendOpts().IncludeTimestamps,
-      /*BuildingImplicitModule=*/+CI.getFrontendOpts().BuildingImplicitModule,
-      /*ShouldCacheASTInMemory=*/
-      +CI.getFrontendOpts().BuildingImplicitModule));
+      /*BuildingImplicitModule=*/+CI.getFrontendOpts().BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
   return Consumers;
@@ -453,8 +450,6 @@ private:
       return "ConstraintsCheck";
     case CodeSynthesisContext::ConstraintSubstitution:
       return "ConstraintSubstitution";
-    case CodeSynthesisContext::ConstraintNormalization:
-      return "ConstraintNormalization";
     case CodeSynthesisContext::RequirementParameterInstantiation:
       return "RequirementParameterInstantiation";
     case CodeSynthesisContext::ParameterMappingSubstitution:
@@ -963,18 +958,18 @@ void DumpModuleInfoAction::ExecuteAction() {
     if (Primary) {
       if (!Primary->submodules().empty())
         Out << "   Sub Modules:\n";
-      for (auto *MI : Primary->submodules()) {
+      for (Module *MI : Primary->submodules()) {
         PrintSubMapEntry(MI->Name, MI->Kind);
       }
       if (!Primary->Imports.empty())
         Out << "   Imports:\n";
-      for (auto *IMP : Primary->Imports) {
+      for (Module *IMP : Primary->Imports) {
         PrintSubMapEntry(IMP->Name, IMP->Kind);
       }
       if (!Primary->Exports.empty())
         Out << "   Exports:\n";
       for (unsigned MN = 0, N = Primary->Exports.size(); MN != N; ++MN) {
-        if (Module *M = Primary->Exports[MN].getPointer()) {
+        if (Module *M = Primary->Exports[MN].first) {
           PrintSubMapEntry(M->Name, M->Kind);
         }
       }

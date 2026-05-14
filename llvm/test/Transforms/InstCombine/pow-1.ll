@@ -699,7 +699,7 @@ define float @powf_libcall_half_assume_ninf_noerrno(float %x) {
 ; ANY-LABEL: define float @powf_libcall_half_assume_ninf_noerrno(
 ; ANY-SAME: float [[X:%.*]]) {
 ; ANY-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; ANY-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; ANY-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], +inf
 ; ANY-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
 ; ANY-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float [[X]])
 ; ANY-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
@@ -708,7 +708,7 @@ define float @powf_libcall_half_assume_ninf_noerrno(float %x) {
 ; VC32-LABEL: define float @powf_libcall_half_assume_ninf_noerrno(
 ; VC32-SAME: float [[X:%.*]]) {
 ; VC32-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; VC32-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; VC32-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], +inf
 ; VC32-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
 ; VC32-NEXT:    [[RETVAL:%.*]] = call float @powf(float [[X]], float 5.000000e-01) #[[ATTR2]]
 ; VC32-NEXT:    ret float [[RETVAL]]
@@ -716,7 +716,7 @@ define float @powf_libcall_half_assume_ninf_noerrno(float %x) {
 ; VC51-LABEL: define float @powf_libcall_half_assume_ninf_noerrno(
 ; VC51-SAME: float [[X:%.*]]) {
 ; VC51-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; VC51-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; VC51-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], +inf
 ; VC51-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
 ; VC51-NEXT:    [[RETVAL:%.*]] = call float @powf(float [[X]], float 5.000000e-01) #[[ATTR2]]
 ; VC51-NEXT:    ret float [[RETVAL]]
@@ -724,7 +724,7 @@ define float @powf_libcall_half_assume_ninf_noerrno(float %x) {
 ; VC64-LABEL: define float @powf_libcall_half_assume_ninf_noerrno(
 ; VC64-SAME: float [[X:%.*]]) {
 ; VC64-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; VC64-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; VC64-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], +inf
 ; VC64-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
 ; VC64-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float [[X]])
 ; VC64-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
@@ -733,7 +733,7 @@ define float @powf_libcall_half_assume_ninf_noerrno(float %x) {
 ; VC83-LABEL: define float @powf_libcall_half_assume_ninf_noerrno(
 ; VC83-SAME: float [[X:%.*]]) {
 ; VC83-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; VC83-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; VC83-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], +inf
 ; VC83-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
 ; VC83-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float [[X]])
 ; VC83-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
@@ -742,7 +742,7 @@ define float @powf_libcall_half_assume_ninf_noerrno(float %x) {
 ; NOLIB-LABEL: define float @powf_libcall_half_assume_ninf_noerrno(
 ; NOLIB-SAME: float [[X:%.*]]) {
 ; NOLIB-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; NOLIB-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; NOLIB-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], +inf
 ; NOLIB-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
 ; NOLIB-NEXT:    [[RETVAL:%.*]] = call float @powf(float [[X]], float 5.000000e-01) #[[ATTR2]]
 ; NOLIB-NEXT:    ret float [[RETVAL]]
@@ -866,7 +866,7 @@ define double @pow_libcall_half_fromdomcondition(double %x) {
 ; LIB-LABEL: define double @pow_libcall_half_fromdomcondition(
 ; LIB-SAME: double [[X:%.*]]) {
 ; LIB-NEXT:    [[A:%.*]] = call double @llvm.fabs.f64(double [[X]])
-; LIB-NEXT:    [[C:%.*]] = fcmp oeq double [[A]], 0x7FF0000000000000
+; LIB-NEXT:    [[C:%.*]] = fcmp oeq double [[A]], +inf
 ; LIB-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; LIB:       then:
 ; LIB-NEXT:    ret double 0.000000e+00
@@ -878,7 +878,7 @@ define double @pow_libcall_half_fromdomcondition(double %x) {
 ; NOLIB-LABEL: define double @pow_libcall_half_fromdomcondition(
 ; NOLIB-SAME: double [[X:%.*]]) {
 ; NOLIB-NEXT:    [[A:%.*]] = call double @llvm.fabs.f64(double [[X]])
-; NOLIB-NEXT:    [[C:%.*]] = fcmp oeq double [[A]], 0x7FF0000000000000
+; NOLIB-NEXT:    [[C:%.*]] = fcmp oeq double [[A]], +inf
 ; NOLIB-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; NOLIB:       then:
 ; NOLIB-NEXT:    ret double 0.000000e+00
@@ -903,8 +903,8 @@ define double @pow_libcall_half_no_FMF_noerrno(double %x) {
 ; LIB-SAME: double [[X:%.*]]) {
 ; LIB-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X]])
 ; LIB-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
-; LIB-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], 0xFFF0000000000000
-; LIB-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
+; LIB-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], -inf
+; LIB-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double +inf, double [[ABS]]
 ; LIB-NEXT:    ret double [[RETVAL]]
 ;
 ; NOLIB-LABEL: define double @pow_libcall_half_no_FMF_noerrno(
@@ -921,7 +921,7 @@ define double @pow_libcall_half_no_FMF_noerrno(double %x) {
 define float @test_simplify9(float %x) {
 ; CHECK-LABEL: define float @test_simplify9(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %retval = call float @llvm.pow.f32(float 0xFFF0000000000000, float 0.5)
   ret float %retval
@@ -930,7 +930,7 @@ define float @test_simplify9(float %x) {
 define double @test_simplify10(double %x) {
 ; CHECK-LABEL: define double @test_simplify10(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    ret double 0x7FF0000000000000
+; CHECK-NEXT:    ret double +inf
 ;
   %retval = call double @llvm.pow.f64(double 0xFFF0000000000000, double 0.5)
   ret double %retval
@@ -1339,8 +1339,8 @@ define double @pow_intrinsic_half_no_FMF(double %x) {
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], -inf
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[ISINF]], double +inf, double [[ABS]]
 ; CHECK-NEXT:    ret double [[RETVAL]]
 ;
   %retval = call double @llvm.pow.f64(double %x, double 0.5)
@@ -1442,7 +1442,7 @@ define double @test_libcall_pow_10_f64_noerrno(double %x) {
 define half @test_pow_10_f16(half %x) {
 ; CHECK-LABEL: define half @test_pow_10_f16(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[RETVAL:%.*]] = call half @llvm.pow.f16(half 0xH4900, half [[X]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call half @llvm.pow.f16(half 1.000000e+01, half [[X]])
 ; CHECK-NEXT:    ret half [[RETVAL]]
 ;
   %retval = call half @llvm.pow.f16(half 10.0, half %x)
@@ -1482,7 +1482,7 @@ define double @test_pow_10_f64(double %x) {
 define fp128 @test_pow_10_fp128(fp128 %x) {
 ; CHECK-LABEL: define fp128 @test_pow_10_fp128(
 ; CHECK-SAME: fp128 [[X:%.*]]) {
-; CHECK-NEXT:    [[RETVAL:%.*]] = call fp128 @llvm.pow.f128(fp128 0xL00000000000000004002400000000000, fp128 [[X]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call fp128 @llvm.pow.f128(fp128 1.000000e+01, fp128 [[X]])
 ; CHECK-NEXT:    ret fp128 [[RETVAL]]
 ;
   %ten = fpext double 10.0 to fp128
@@ -1493,7 +1493,7 @@ define fp128 @test_pow_10_fp128(fp128 %x) {
 define bfloat @test_pow_10_bf16(bfloat %x) {
 ; CHECK-LABEL: define bfloat @test_pow_10_bf16(
 ; CHECK-SAME: bfloat [[X:%.*]]) {
-; CHECK-NEXT:    [[RETVAL:%.*]] = call bfloat @llvm.pow.bf16(bfloat 0xR4120, bfloat [[X]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call bfloat @llvm.pow.bf16(bfloat 1.000000e+01, bfloat [[X]])
 ; CHECK-NEXT:    ret bfloat [[RETVAL]]
 ;
   %retval = call bfloat @llvm.pow.bf16(bfloat 10.0, bfloat %x)
@@ -1503,7 +1503,7 @@ define bfloat @test_pow_10_bf16(bfloat %x) {
 define <2 x half> @test_pow_10_v2f16(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x half> @test_pow_10_v2f16(
 ; CHECK-SAME: <2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x half> @llvm.pow.v2f16(<2 x half> splat (half 0xH4900), <2 x half> [[X]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x half> @llvm.pow.v2f16(<2 x half> splat (half 1.000000e+01), <2 x half> [[X]])
 ; CHECK-NEXT:    ret <2 x half> [[RETVAL]]
 ;
   %retval = call <2 x half> @llvm.pow.v2f16(<2 x half> <half 10.0, half 10.0>, <2 x half> %x)
@@ -1533,7 +1533,7 @@ define <2 x double> @test_pow_10_v2f64(<2 x double> %x) {
 define <2 x bfloat> @test_pow_10_v2bf16(<2 x bfloat> %x) {
 ; CHECK-LABEL: define <2 x bfloat> @test_pow_10_v2bf16(
 ; CHECK-SAME: <2 x bfloat> [[X:%.*]]) {
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x bfloat> @llvm.pow.v2bf16(<2 x bfloat> splat (bfloat 0xR4120), <2 x bfloat> [[X]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x bfloat> @llvm.pow.v2bf16(<2 x bfloat> splat (bfloat 1.000000e+01), <2 x bfloat> [[X]])
 ; CHECK-NEXT:    ret <2 x bfloat> [[RETVAL]]
 ;
   %retval = call <2 x bfloat> @llvm.pow.v2bf16(<2 x bfloat> <bfloat 10.0, bfloat 10.0>, <2 x bfloat> %x)

@@ -166,14 +166,13 @@ void RedundantBranchConditionCheck::check(
           CondOp->getRHS()->getBeginLoc().getLocWithOffset(-1);
       Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
           CondOp->getLHS()->getBeginLoc(), BeforeRHS));
-    } else {
-      if (const auto NextToken = utils::lexer::findNextTokenSkippingComments(
-              CondOp->getLHS()->getEndLoc(), *Result.SourceManager,
-              getLangOpts())) {
-        const SourceLocation AfterLHS = NextToken->getLocation();
-        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            AfterLHS, CondOp->getRHS()->getEndLoc()));
-      }
+    } else if (const auto NextToken =
+                   utils::lexer::findNextTokenSkippingComments(
+                       CondOp->getLHS()->getEndLoc(), *Result.SourceManager,
+                       getLangOpts())) {
+      const SourceLocation AfterLHS = NextToken->getLocation();
+      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+          AfterLHS, CondOp->getRHS()->getEndLoc()));
     }
   }
 }

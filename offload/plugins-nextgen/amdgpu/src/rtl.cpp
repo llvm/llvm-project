@@ -31,6 +31,7 @@
 #include "Utils/ELF.h"
 
 #include "GlobalHandler.h"
+#include "OffloadAPI.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 #include "UtilitiesRTL.h"
@@ -212,11 +213,22 @@ static Error getTargetTripleAndFeatures(hsa_agent_t Agent,
     if (Status != HSA_STATUS_SUCCESS)
       return Status;
 
-    llvm::StringRef TripleTarget(ISAName.begin(), Length);
-    if (TripleTarget.consume_front("amdgcn-amd-amdhsa")) {
-      auto Target = TripleTarget.ltrim('-').rtrim('\0');
-      Targets.push_back(Target);
+    // The format returned here is a partially malformed triple, e.g.,
+    // "amdgcn-amd-amdhsa--gfx90a", or
+    // "amdgcn-amd-amdhsa--gfx90a:sramecc+:xnack-". The subtarget is in the
+    // position that is supposed to be the object format. Reconstitute the valid
+    // part of the triple for parsing, and take the appended subtarget name.
+    SmallVector<StringRef, 5> Components;
+
+    llvm::StringRef TripleLikeStr(ISAName.data(), ISAName.size() - 1);
+    TripleLikeStr.split(Components, '-', /*MaxSplit=*/4);
+
+    if (Components.size() == 5) {
+      llvm::Triple TripleTarget(Components[0], Components[1], Components[2]);
+      if (TripleTarget.isAMDGCN() && TripleTarget.getOS() == Triple::AMDHSA)
+        Targets.emplace_back(Components[4]);
     }
+
     return HSA_STATUS_SUCCESS;
   });
   return Err;
@@ -279,7 +291,7 @@ struct AMDGPUMemoryPoolTy {
     if (auto Err = getAttr(HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, GlobalFlags))
       return Err;
 
-    return Plugin::success();
+    return getAttr(HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_GRANULE, Granule);
   }
 
   /// Getter of the HSA memory pool.
@@ -308,6 +320,9 @@ struct AMDGPUMemoryPoolTy {
     assert(isGlobal() && "Not global memory");
     return (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT);
   }
+
+  /// Get the allocation granularity of the pool.
+  size_t getGranule() const { return Granule; }
 
   /// Allocate memory on the memory pool.
   Error allocate(size_t Size, void **PtrStorage) {
@@ -389,6 +404,9 @@ private:
   /// The global flags of memory pool. Only valid if the memory pool belongs to
   /// the global segment.
   uint32_t GlobalFlags;
+
+  /// The page size in this memory pool.
+  size_t Granule;
 };
 
 /// Class that implements a memory manager that gets memory from a specific
@@ -2309,6 +2327,91 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  /// Suggest a virtual address for device memory mapping.
+  void *getSuggestedVirtualAddress() override {
+    return reinterpret_cast<void *>(0x1534f7e00000ULL);
+  }
+
+  /// Allocate \p Size bytes on the device and hints the backend to map it to
+  /// virtual address \p VAddr. The function returns the allocated virtual
+  /// address. The memory must be deallocated through
+  /// GenericDeviceTy::deallocateWithVirtualAddress().
+  Expected<void *> allocateWithVirtualAddress(uint64_t Size,
+                                              void *VAddr) override {
+    uint64_t ExpectedVAddr = 0;
+    if (VAddr != nullptr)
+      ExpectedVAddr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(VAddr));
+
+    // Transparently round up to a multiple of the page size.
+    auto *Pool = CoarseGrainedMemoryPools[0];
+    Size = llvm::alignTo(Size, (uint64_t)Pool->getGranule());
+
+    // Reserve the virtual address range.
+    hsa_status_t Status =
+        hsa_amd_vmem_address_reserve(&VAddr, Size, ExpectedVAddr, 0);
+    if (auto Err = Plugin::check(Status,
+                                 "error in hsa_amd_vmem_address_reserve: %s\n"))
+      return Err;
+
+    if (ExpectedVAddr != 0 && reinterpret_cast<void *>(ExpectedVAddr) != VAddr)
+      ODBG(OLDT_Alloc)
+          << "hsa_amd_vmem_address_reserve reserved device virtual address "
+          << VAddr << " instead of " << reinterpret_cast<void *>(ExpectedVAddr);
+
+    // Create a handle of the allocation.
+    hsa_amd_vmem_alloc_handle_t Handle;
+    Status = hsa_amd_vmem_handle_create(Pool->get(), Size, MEMORY_TYPE_PINNED,
+                                        0, &Handle);
+    if (auto Err =
+            Plugin::check(Status, "error in hsa_amd_vmem_handle_create: %s\n"))
+      return Err;
+
+    // Map the virtual address range to the memory allocation.
+    Status = hsa_amd_vmem_map(VAddr, Size, 0, Handle, 0);
+    if (auto Err = Plugin::check(Status, "error in hsa_amd_vmem_map: %s\n"))
+      return Err;
+
+    // Set the memory access properties for the allocation.
+    hsa_amd_memory_access_desc_t Desc;
+    Desc.agent_handle = Agent;
+    Desc.permissions = HSA_ACCESS_PERMISSION_RW;
+    Status = hsa_amd_vmem_set_access(VAddr, Size, &Desc, 1);
+    if (auto Err =
+            Plugin::check(Status, "error in hsa_amd_vmem_set_access: %s\n"))
+      return Err;
+
+    // Register the virtual address range in the tracker.
+    if (auto Err = VMemTracker.registerReservation(VAddr, Size, Handle))
+      return Err;
+
+    return VAddr;
+  }
+
+  /// Deallocate device memory \p VAddr, which was allocated through
+  /// GenericDeviceTy::allocateWithVirtualAddress(), and unmap the virtual
+  /// address range.
+  Error deallocateWithVirtualAddress(void *VAddr, uint64_t) override {
+    // Unregister the virtual address range and obtain the information about
+    // the reservation.
+    auto InfoOrErr = VMemTracker.unregisterReservation(VAddr);
+    if (!InfoOrErr)
+      return InfoOrErr.takeError();
+
+    auto [Size, Handle] = *InfoOrErr;
+
+    hsa_status_t Status = hsa_amd_vmem_unmap(VAddr, Size);
+    if (auto Err = Plugin::check(Status, "error in hsa_amd_vmem_unmap: %s\n"))
+      return Err;
+
+    Status = hsa_amd_vmem_handle_release(Handle);
+    if (auto Err =
+            Plugin::check(Status, "error in hsa_amd_vmem_handle_release: %s\n"))
+      return Err;
+
+    Status = hsa_amd_vmem_address_free(VAddr, Size);
+    return Plugin::check(Status, "error in hsa_amd_vmem_address_free: %s\n");
+  }
+
   Error unloadBinaryImpl(DeviceImageTy *Image) override {
     AMDGPUDeviceImageTy &AMDImage = static_cast<AMDGPUDeviceImageTy &>(*Image);
 
@@ -3193,10 +3296,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (Status == HSA_STATUS_SUCCESS)
         PoolNode.add("Allocatable", TmpBool);
 
-      Status = Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_GRANULE,
-                                TmpSt);
-      if (Status == HSA_STATUS_SUCCESS)
-        PoolNode.add("Runtime Alloc Granule", TmpSt, "bytes");
+      PoolNode.add("Runtime Alloc Granule", Pool->getGranule(), "bytes");
 
       Status = Pool->getAttrRaw(
           HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALIGNMENT, TmpSt);
@@ -3221,6 +3321,27 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Silently consume the error.
     if (Err)
       consumeError(std::move(Err));
+
+    ol_device_fp_capability_flags_t FPFlags =
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
+        OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
+        OL_DEVICE_FP_CAPABILITY_FLAG_DENORM | OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+
+    Info.add("Single FP Support", true, "", DeviceInfo::SINGLE_FP_SUPPORT);
+    Info.add("Single FP Capabilities", FPFlags, "",
+             DeviceInfo::SINGLE_FP_CONFIG);
+
+    Info.add("Double FP Support", true, "", DeviceInfo::DOUBLE_FP_SUPPORT);
+    Info.add("Double FP Capabilities", FPFlags, "",
+             DeviceInfo::DOUBLE_FP_CONFIG);
+
+    // TODO: Use HSA_AGENT_INFO_FAST_F16_OPERATION to detect FP16 support.
+    Info.add("Half FP Support", false, "", DeviceInfo::HALF_FP_SUPPORT);
+    Info.add("Half FP Capabilities", ol_device_fp_capability_flags_t{0}, "",
+             DeviceInfo::HALF_FP_CONFIG);
 
     return Info;
   }
@@ -3343,36 +3464,28 @@ private:
 
     KernelArgsTy KernelArgs = {};
     uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
-    if (auto Err = AMDGPUKernel.launchImpl(
-            *this, NumBlocksAndThreads, NumBlocksAndThreads, 0, KernelArgs,
-            KernelLaunchParamsTy{}, AsyncInfoWrapper))
-      return Err;
+    auto Err = AMDGPUKernel.launchImpl(
+        *this, NumBlocksAndThreads, NumBlocksAndThreads, 0, KernelArgs,
+        KernelLaunchParamsTy{}, AsyncInfoWrapper);
 
-    Error Err = Plugin::success();
     AsyncInfoWrapper.finalize(Err);
-
     return Err;
   }
 
   /// Detect if current architecture is an APU.
   Error checkIfAPU() {
-    // TODO: replace with ROCr API once it becomes available.
-    llvm::StringRef StrGfxName(ComputeUnitKind);
-    bool MayBeAPU = llvm::StringSwitch<bool>(StrGfxName)
-                        .Case("gfx942", true)
-                        .Default(false);
-    if (!MayBeAPU)
-      return Plugin::success();
-
-    // can be MI300A or MI300X
-    uint32_t ChipID = 0;
-    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_CHIP_ID, ChipID))
-      return Err;
-
-    if (!(ChipID & 0x1)) {
-      IsAPU = true;
+    uint8_t MemoryProperties[8];
+    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES,
+                                 MemoryProperties)) {
+      IsAPU = false;
+      ODBG(OLDT_Init) << "HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES is unavailable, "
+                         "assuming not APU";
       return Plugin::success();
     }
+
+    IsAPU = hsa_flag_isset64(MemoryProperties,
+                             HSA_AMD_MEMORY_PROPERTY_AGENT_IS_APU);
+
     return Plugin::success();
   }
 
@@ -3491,6 +3604,9 @@ private:
   /// True is the system is configured with XNACK-Enabled.
   /// False otherwise.
   bool IsXnackEnabled = false;
+
+  /// Tracker for virtual address reservations.
+  VMemTrackerTy<hsa_amd_vmem_alloc_handle_t> VMemTracker;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
@@ -3841,8 +3957,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       return Err;
     for (auto &Target : Targets)
       if (offloading::amdgpu::isImageCompatibleWithEnv(
-              Processor ? *Processor : "", ElfOrErr->getPlatformFlags(),
-              Target.str()))
+              *Processor, ElfOrErr->getPlatformFlags(), Target.str()))
         return true;
     return false;
   }
@@ -4041,7 +4156,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
-  uint64_t ImplArgsOffset = utils::roundUp(
+  uint64_t ImplArgsOffset = llvm::alignTo(
       LaunchParams.Size, alignof(hsa_utils::AMDGPUImplicitArgsTy));
   if (ArgsSize > ImplArgsOffset) {
     hsa_utils::AMDGPUImplicitArgsTy *ImplArgs =

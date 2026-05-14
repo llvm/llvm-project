@@ -303,6 +303,85 @@ func.func @failedParentOneOf_wrong_parent1() {
    }) : () -> ()
 }
 
+// -----
+
+// CHECK: succeededHasAncestor_direct_parent
+func.func @succeededHasAncestor_direct_parent() {
+  "test.parent"() ({
+    "test.child_with_ancestor"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededHasAncestor_indirect
+func.func @succeededHasAncestor_indirect() {
+  "test.parent"() ({
+    "some.intermediate_op"() ({
+      "test.child_with_ancestor"() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedHasAncestor_wrong_ancestor() {
+  "some.op"() ({
+    // expected-error@+1 {{'test.child_with_ancestor' op expects ancestor op 'test.parent'}}
+    "test.child_with_ancestor"() : () -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// CHECK: succeededAncestorOneOf
+func.func @succeededAncestorOneOf() {
+  "test.parent"() ({
+    "test.child_with_ancestor_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededAncestor1OneOf
+func.func @succeededAncestor1OneOf() {
+  "test.parent1"() ({
+    "test.child_with_ancestor_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededAncestorOneOf_indirect
+func.func @succeededAncestorOneOf_indirect() {
+  "test.parent1"() ({
+    "some.intermediate_op"() ({
+      "test.child_with_ancestor_one_of"() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedAncestorOneOf_wrong_ancestor() {
+  "some.otherop"() ({
+    // expected-error@+1 {{'test.child_with_ancestor_one_of' op expects ancestor op to be one of 'test.parent, test.parent1'}}
+    "test.child_with_ancestor_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+}
 
 // -----
 

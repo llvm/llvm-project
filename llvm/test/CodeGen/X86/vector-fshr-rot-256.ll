@@ -401,10 +401,10 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind {
 ; AVX1-NEXT:    vpsllw $5, %xmm5, %xmm5
 ; AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlw $6, %xmm2, %xmm3
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm7 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; AVX1-NEXT:    vpandn %xmm3, %xmm7, %xmm3
-; AVX1-NEXT:    vpsllw $2, %xmm2, %xmm8
-; AVX1-NEXT:    vpand %xmm7, %xmm8, %xmm8
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm7 = [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
+; AVX1-NEXT:    vpand %xmm7, %xmm3, %xmm3
+; AVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm8
+; AVX1-NEXT:    vpaddb %xmm8, %xmm8, %xmm8
 ; AVX1-NEXT:    vpor %xmm3, %xmm8, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm5, %xmm5, %xmm5
 ; AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm2, %xmm2
@@ -424,9 +424,9 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind {
 ; AVX1-NEXT:    vpsllw $5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $6, %xmm0, %xmm3
-; AVX1-NEXT:    vpandn %xmm3, %xmm7, %xmm3
-; AVX1-NEXT:    vpsllw $2, %xmm0, %xmm4
-; AVX1-NEXT:    vpand %xmm7, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm7, %xmm3, %xmm3
+; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm4
+; AVX1-NEXT:    vpaddb %xmm4, %xmm4, %xmm4
 ; AVX1-NEXT:    vpor %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
@@ -452,8 +452,8 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind {
 ; AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrlw $6, %ymm0, %ymm2
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
-; AVX2-NEXT:    vpsllw $2, %ymm0, %ymm3
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
+; AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm3
+; AVX2-NEXT:    vpaddb %ymm3, %ymm3, %ymm3
 ; AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
