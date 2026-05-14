@@ -4077,7 +4077,8 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     D = FriendDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_FRIEND_TEMPLATE:
-    D = FriendTemplateDecl::CreateDeserialized(Context, ID, Record.readInt());
+    D = FriendTemplateDecl::CreateDeserialized(Context, ID,
+                                               /*NumTPLists=*/Record.readInt());
     break;
   case DECL_CLASS_TEMPLATE:
     D = ClassTemplateDecl::CreateDeserialized(Context, ID);

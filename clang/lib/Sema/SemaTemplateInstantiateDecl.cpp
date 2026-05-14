@@ -5264,7 +5264,8 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
         }
 
         ParmVarDecl *Parm = SemaRef.SubstParmVarDecl(
-            OldParam, TemplateArgs, /*indexAdjustment=*/0, std::nullopt,
+            OldParam, TemplateArgs, /*indexAdjustment=*/0,
+            /*NumExpansions=*/std::nullopt,
             /*ExpectParameterPack=*/false, EvaluateConstraints);
         if (!Parm)
           return nullptr;
