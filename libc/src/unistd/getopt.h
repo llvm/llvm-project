@@ -16,8 +16,15 @@
 namespace LIBC_NAMESPACE_DECL {
 
 namespace impl {
-void set_getopt_state(char **, int *, int *, unsigned *, int *, FILE *);
+extern "C" {
+extern char *optarg;
+extern int optind;
+extern int optopt;
+extern int opterr;
 }
+} // namespace impl
+
+void __llvm_libc_getopt_set_errorstream(FILE *);
 
 int getopt(int argc, char *const argv[], const char *optstring);
 
