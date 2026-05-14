@@ -218,8 +218,7 @@ void inferAffineMinOrMaxResultDivisibility(
 } // namespace
 
 void AffineApplyOp::inferResultDivisibility(
-    ArrayRef<IntegerDivisibility> argDivs,
-    SetIntDivisibilityFn setResultDivs) {
+    ArrayRef<IntegerDivisibility> argDivs, SetIntDivisibilityFn setResultDivs) {
   SmallVector<ConstantIntDivisibility> operandDivisibilities;
   for (auto [operand, divisibility] : llvm::zip(getOperands(), argDivs)) {
     operandDivisibilities.push_back(
@@ -234,21 +233,18 @@ void AffineApplyOp::inferResultDivisibility(
   }
 }
 
-void AffineMinOp::inferResultDivisibility(
-    ArrayRef<IntegerDivisibility> argDivs,
-    SetIntDivisibilityFn setResultDivs) {
+void AffineMinOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                          SetIntDivisibilityFn setResultDivs) {
   inferAffineMinOrMaxResultDivisibility(*this, argDivs, setResultDivs);
 }
 
-void AffineMaxOp::inferResultDivisibility(
-    ArrayRef<IntegerDivisibility> argDivs,
-    SetIntDivisibilityFn setResultDivs) {
+void AffineMaxOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                          SetIntDivisibilityFn setResultDivs) {
   inferAffineMinOrMaxResultDivisibility(*this, argDivs, setResultDivs);
 }
 
 void AffineDelinearizeIndexOp::inferResultDivisibility(
-    ArrayRef<IntegerDivisibility> argDivs,
-    SetIntDivisibilityFn setResultDivs) {
+    ArrayRef<IntegerDivisibility> argDivs, SetIntDivisibilityFn setResultDivs) {
   MLIRContext *ctx = getContext();
 
   // Operands are: [linear_index, dynamic_basis_values...]
@@ -273,8 +269,8 @@ void AffineDelinearizeIndexOp::inferResultDivisibility(
        ++i) {
     if (ShapedType::isDynamic(staticBasis[i])) {
       basisExprs.push_back(getAffineSymbolExpr(dynIdx, ctx));
-      operandDivs.push_back(getDivisibilityOfOperand(
-          getDynamicBasis()[dynIdx], argDivs[1 + dynIdx]));
+      operandDivs.push_back(getDivisibilityOfOperand(getDynamicBasis()[dynIdx],
+                                                     argDivs[1 + dynIdx]));
       dynIdx++;
     } else {
       basisExprs.push_back(getAffineConstantExpr(staticBasis[i], ctx));

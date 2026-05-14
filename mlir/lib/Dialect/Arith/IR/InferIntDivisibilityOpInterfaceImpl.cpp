@@ -34,17 +34,16 @@ getDivisibilityOfOperand(Value v, IntegerDivisibility divisibility) {
 
 // Result divisibility is the GCD (union) of the operand divisibilities.
 template <typename OpTy>
-static void inferBinaryGCDResultDivisibility(OpTy op,
-                                             ArrayRef<IntegerDivisibility> argDivs,
-                                             SetIntDivisibilityFn setResultDivs) {
+static void
+inferBinaryGCDResultDivisibility(OpTy op, ArrayRef<IntegerDivisibility> argDivs,
+                                 SetIntDivisibilityFn setResultDivs) {
   auto lhsDiv = getDivisibilityOfOperand(op.getLhs(), argDivs[0]);
   auto rhsDiv = getDivisibilityOfOperand(op.getRhs(), argDivs[1]);
   setResultDivs(op.getResult(), lhsDiv.getUnion(rhsDiv));
 }
 
-void ConstantOp::inferResultDivisibility(
-    ArrayRef<IntegerDivisibility> argDivs,
-    SetIntDivisibilityFn setResultDivs) {
+void ConstantOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
+                                         SetIntDivisibilityFn setResultDivs) {
   auto constAttr = dyn_cast_if_present<IntegerAttr>(getValue());
   if (!constAttr)
     return;
