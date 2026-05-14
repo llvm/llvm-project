@@ -94,8 +94,10 @@ source_set("_unused") {
     # Thumb1
     "arm/addsf3.S",
     "arm/comparesf2.S",
+    "arm/divdf3.S",
     "arm/divsf3.S",
     "arm/divsi3.S",
+    "arm/muldf3.S",
     "arm/fnan2.c",
     "arm/fnorm2.c",
     "arm/funder.c",
