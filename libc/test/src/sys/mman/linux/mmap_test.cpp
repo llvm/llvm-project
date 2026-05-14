@@ -52,30 +52,27 @@ TEST_F(LlvmLibcMMapTest, FileOffsets) {
 
   // Check that we can map a file from offset zero. This succeeds even though
   // the file is empty.
-  void *addr = LIBC_NAMESPACE::mmap(nullptr, 47, PROT_READ,
-                                    MAP_ANONYMOUS | MAP_PRIVATE, fd, 0);
+  void *addr = LIBC_NAMESPACE::mmap(nullptr, 47, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_ERRNO_SUCCESS();
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, 47), Succeeds());
 
   // Mapping negative offsets fails.
-  EXPECT_THAT(LIBC_NAMESPACE::mmap(nullptr, 47, PROT_READ,
-                                   MAP_ANONYMOUS | MAP_PRIVATE, fd, -1),
+  EXPECT_THAT(LIBC_NAMESPACE::mmap(nullptr, 47, PROT_READ, MAP_PRIVATE, fd, -1),
               Fails(EINVAL, MAP_FAILED));
 
   // So do offsets that are not page aligned. This should be rejected in the
   // kernel or by our mmap2 rounding code. Note that POSIX permits (but does not
   // require) mapping at unaligned offsets, but linux does not support it.
-  EXPECT_THAT(LIBC_NAMESPACE::mmap(nullptr, 47, PROT_READ,
-                                   MAP_ANONYMOUS | MAP_PRIVATE, fd, 47),
+  EXPECT_THAT(LIBC_NAMESPACE::mmap(nullptr, 47, PROT_READ, MAP_PRIVATE, fd, 47),
               Fails(EINVAL, MAP_FAILED));
 
   if constexpr (sizeof(off_t) > sizeof(long)) {
     // On 32-bit systems, we need to reject offsets that don't fit into syscall
     // arguments, even after the mmap2 shift.
-    EXPECT_THAT(LIBC_NAMESPACE::mmap(
-                    nullptr, 47, PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, fd,
-                    static_cast<off_t>(1) << (sizeof(off_t) * 8 - 2)),
-                Fails(EINVAL, MAP_FAILED));
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mmap(nullptr, 47, PROT_READ, MAP_PRIVATE, fd,
+                             static_cast<off_t>(1) << (sizeof(off_t) * 8 - 2)),
+        Fails(EINVAL, MAP_FAILED));
   }
 }
