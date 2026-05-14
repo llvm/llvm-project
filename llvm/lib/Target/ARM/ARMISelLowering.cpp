@@ -13782,7 +13782,7 @@ bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(
 
 bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
   if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps()) {
-    if (VT.isVector() && Subtarget->isThumb1Only())
+    if (Subtarget->isThumb1Only())
       return VT.getScalarSizeInBits() <= 32;
     return true;
   }
