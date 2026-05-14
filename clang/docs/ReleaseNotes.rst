@@ -576,7 +576,7 @@ Bug Fixes to C++ Support
 - Fixed a crash on error recovery when dealing with invalid templates. (#GH183075)
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
 - Concepts appearing in the require-clause of a member function no longer have access to non-public members of that class,
-  or to a current class object. (#GH115838) (#GH194803)
+  or to a current class object. (#GH115838) (#GH194803) (#GH197067)
 - We no longer caches invalid variable specializations. (#GH132592)
 - Fixed an incorrect template argument deduction when matching packs of template
   template parameters when one of its parameters is also a pack. (#GH181166)
@@ -587,6 +587,8 @@ Bug Fixes to C++ Support
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
+- Fix a problem where a substitution failure when evaluating a type requirement
+  could directly make the program ill-formed.
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
   when used inside decltype in the return type. (#GH180460)

@@ -44,9 +44,9 @@ class VPRecipeBuilder {
   tryToOptimizeInductionTruncate(VPInstruction *VPI, VFRange &Range);
 
   /// Check if \p VPI has an opcode that can be widened and return a
-  /// VPWidenRecipe if it can. The function should only be called if the
+  /// widened recipe if it can. The function should only be called if the
   /// cost-model indicates that widening should be performed.
-  VPWidenRecipe *tryToWiden(VPInstruction *VPI);
+  VPRecipeWithIRFlags *tryToWiden(VPInstruction *VPI);
 
 public:
   VPRecipeBuilder(VPlan &Plan, LoopVectorizationLegality *Legal,
