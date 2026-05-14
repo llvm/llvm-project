@@ -1339,9 +1339,9 @@ ModuleSpecList SymbolFileDWARFDebugMap::GetSeparateDebugInfoModuleSpecs() {
     ModuleSpec spec;
     FileSpec oso_file;
     ConstString oso_object;
-    if (ObjectFile::SplitArchivePathWithObject(
-            info.oso_path.GetStringRef(), oso_file, oso_object,
-            /*must_exist=*/false)) {
+    if (ObjectFile::SplitArchivePathWithObject(info.oso_path.GetStringRef(),
+                                               oso_file, oso_object,
+                                               /*must_exist=*/false)) {
       spec.GetFileSpec() = oso_file;
       spec.GetObjectName() = oso_object;
     } else {

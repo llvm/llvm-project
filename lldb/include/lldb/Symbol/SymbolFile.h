@@ -153,9 +153,7 @@ public:
   ///
   /// An empty list will be returned if there are no separate debug
   /// info files for this module.
-  virtual ModuleSpecList GetSeparateDebugInfoModuleSpecs() {
-    return {};
-  }
+  virtual ModuleSpecList GetSeparateDebugInfoModuleSpecs() { return {}; }
 
   /// Specify debug info should be loaded.
   ///

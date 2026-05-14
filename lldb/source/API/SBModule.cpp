@@ -677,7 +677,7 @@ lldb::SBModuleSpecList SBModule::GetSeparateDebugInfoFiles() {
   SymbolFile *sym_file = module_sp->GetSymbolFile();
   if (!sym_file)
     return sb_mspec_list;
-  
+
   sb_mspec_list.ref() = sym_file->GetSeparateDebugInfoModuleSpecs();
   return sb_mspec_list;
 }

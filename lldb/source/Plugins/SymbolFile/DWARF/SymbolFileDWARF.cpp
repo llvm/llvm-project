@@ -4590,9 +4590,8 @@ ModuleSpecList SymbolFileDWARF::GetSeparateDebugInfoModuleSpecs() {
 
     FileSpec dwo_file(dwo_name);
     if (!dwo_file.IsAbsolute()) {
-      const char *comp_dir = 
-        die.GetDIE()->GetAttributeValueAsString(dwarf_cu, 
-          DW_AT_comp_dir, nullptr);
+      const char *comp_dir = die.GetDIE()->GetAttributeValueAsString(
+          dwarf_cu, DW_AT_comp_dir, nullptr);
       if (comp_dir)
         dwo_file.PrependPathComponent(comp_dir);
     }
