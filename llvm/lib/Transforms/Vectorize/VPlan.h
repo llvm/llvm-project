@@ -616,8 +616,6 @@ public:
                     Value *UV, DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV) {}
 
-  ~VPSingleDefRecipe() override { removeDefinedValue(this); }
-
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPRecipeID()) {
     case VPRecipeBase::VPDerivedIVSC:
@@ -2873,7 +2871,7 @@ protected:
     if (StoredValues.empty()) {
       for (Instruction *Inst : IG->members()) {
         assert(!Inst->getType()->isVoidTy() && "must have result");
-        new VPStandaloneRecipeValue(this, Inst);
+        new VPMultiDefValue(this, Inst);
       }
     } else {
       for (auto *SV : StoredValues)

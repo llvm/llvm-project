@@ -342,23 +342,24 @@ protected:
                                      Value *UV = nullptr);
 
 public:
+  ~VPSingleDefValue() override;
+
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSingleDefValueSC;
   }
 };
 
-/// A VPRecipeValue that stores a pointer to its defining recipe.
-class VPStandaloneRecipeValue : public VPRecipeValue {
+/// A VPRecipeValue defined by a multi-def recipe, stores a pointer to it.
+class VPMultiDefValue : public VPRecipeValue {
   friend class VPDef;
 
-  /// Pointer to the VPRecipeBase that defines this VPValue.
+  /// Pointer to the multi-def recipe that defines this VPValue, among others.
   VPRecipeBase *Def;
 
 public:
-  LLVM_ABI_FOR_TEST VPStandaloneRecipeValue(VPRecipeBase *Def,
-                                            Value *UV = nullptr);
+  LLVM_ABI_FOR_TEST VPMultiDefValue(VPRecipeBase *Def, Value *UV = nullptr);
 
-  ~VPStandaloneRecipeValue() override;
+  ~VPMultiDefValue() override;
 
   VPRecipeBase *getDef() const { return Def; }
 
@@ -473,9 +474,9 @@ public:
 /// Single-value VPDefs that also inherit from VPValue must make sure to inherit
 /// from VPDef before VPValue.
 class VPDef {
+  friend class VPRecipeValue;
   friend class VPSingleDefValue;
-  friend class VPSingleDefRecipe;
-  friend class VPStandaloneRecipeValue;
+  friend class VPMultiDefValue;
 
   /// The VPValues defined by this VPDef.
   TinyPtrVector<VPRecipeValue *> DefinedValues;
@@ -495,7 +496,7 @@ class VPDef {
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
     llvm::erase(DefinedValues, V);
-    if (auto *SV = dyn_cast<VPStandaloneRecipeValue>(V))
+    if (auto *SV = dyn_cast<VPMultiDefValue>(V))
       SV->Def = nullptr;
   }
 

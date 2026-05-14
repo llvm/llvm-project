@@ -131,8 +131,8 @@ VPRecipeBase *VPValue::getDefiningRecipe() {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
   if (!DefValue)
     return nullptr;
-  if (auto *SV = dyn_cast<VPStandaloneRecipeValue>(DefValue))
-    return SV->getDef();
+  if (auto *MultiDef = dyn_cast<VPMultiDefValue>(DefValue))
+    return MultiDef->getDef();
   return static_cast<VPSingleDefRecipe *>(DefValue);
 }
 
@@ -146,7 +146,11 @@ Value *VPValue::getLiveInIRValue() const {
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
-VPRecipeValue::~VPRecipeValue() = default;
+VPRecipeValue::~VPRecipeValue() {
+  assert(Users.empty() &&
+         "trying to delete a VPRecipeValue with remaining users");
+  getDefiningRecipe()->removeDefinedValue(this);
+}
 
 VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV)
     : VPRecipeValue(VPVSingleDefValueSC, UV) {
@@ -154,15 +158,15 @@ VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV)
   Def->addDefinedValue(this);
 }
 
-VPStandaloneRecipeValue::VPStandaloneRecipeValue(VPRecipeBase *Def, Value *UV)
+VPSingleDefValue::~VPSingleDefValue() {}
+
+VPMultiDefValue::VPMultiDefValue(VPRecipeBase *Def, Value *UV)
     : VPRecipeValue(VPVStandaloneRecipeValueSC, UV), Def(Def) {
-  assert(Def && "VPStandaloneRecipeValue requires a defining recipe");
+  assert(Def && "VPMultiDefValue requires a defining recipe");
   Def->addDefinedValue(this);
 }
 
-VPStandaloneRecipeValue::~VPStandaloneRecipeValue() {
-  Def->removeDefinedValue(this);
-}
+VPMultiDefValue::~VPMultiDefValue() {}
 
 // Get the top-most entry block of \p Start. This is the entry block of the
 // containing VPlan. This function is templated to support both const and non-const blocks
