@@ -66,11 +66,11 @@
 // CUDA-PTH: cir.call @cudaLaunchKernel_ptsz
 
 //
-// HIP-NEW: cir.global constant external @_Z6kernelif = #cir.global_view<@_Z21__device_stub__kernelif> : !cir.func<(!s32i, !cir.float)>
+// HIP-NEW: cir.global constant external @_Z6kernelif = #cir.global_view<@_Z21__device_stub__kernelif> : !cir.ptr<!cir.func<(!s32i, !cir.float)>> {alignment = 8 : i64}
 // HIP-NEW-LABEL: cir.func {{.*}} @_Z21__device_stub__kernelif
 // HIP-NEW: cir.alloca !cir.ptr<!rec_hipStream>, {{.*}} ["stream"]
 // HIP-NEW: cir.call @__hipPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_hipStream>>) -> !s32i
-// HIP-NEW: cir.get_global @_Z6kernelif : !cir.ptr<!cir.func<(!s32i, !cir.float)>>
+// HIP-NEW: cir.get_global @_Z6kernelif : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.float)>>>
 // HIP-NEW: cir.call @hipLaunchKernel({{.*}}) : (!cir.ptr<!void> {{.*}}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_hipStream>{{.*}}) -> (!u32i {llvm.noundef})
 // HIP-PTH: cir.call @hipLaunchKernel_spt
 
@@ -118,13 +118,13 @@ int main(void) {
   // CUDA-NEW: } else {
   // CUDA-NEW:   cir.const #cir.int<42> : !s32i
   // CUDA-NEW:   cir.const #cir.fp<1.000000e+00> : !cir.float
-  // CUDA-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<_Z6kernelif>} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
+  // CUDA-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<"_Z6kernelif">} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
   // CUDA-NEW: }
   // HIP-NEW: cir.if %{{.*}} {
   // HIP-NEW: } else {
   // HIP-NEW:   cir.const #cir.int<42> : !s32i
   // HIP-NEW:   cir.const #cir.fp<1.000000e+00> : !cir.float
-  // HIP-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<_Z6kernelif>} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
+  // HIP-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<"_Z6kernelif">} : (!s32i {llvm.noundef}, !cir.float {llvm.noundef}) -> ()
   // HIP-NEW: }
   kernel<<<1, 1>>>(42, 1.0f);
 }

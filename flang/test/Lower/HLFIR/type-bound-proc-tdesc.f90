@@ -1,6 +1,6 @@
 ! Test lowering of type bound procedure in the derived type descriptors (that
 ! are compiler generated constant structure constructors).
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
 module type_bound_proc_tdesc
   type :: t

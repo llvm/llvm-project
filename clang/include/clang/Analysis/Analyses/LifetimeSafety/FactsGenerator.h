@@ -41,7 +41,7 @@ public:
   void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N);
-  void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
+  void VisitCastExpr(const CastExpr *CE);
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitReturnStmt(const ReturnStmt *RS);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -53,6 +53,8 @@ public:
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
   void VisitLambdaExpr(const LambdaExpr *LE);
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
+  void VisitCXXNewExpr(const CXXNewExpr *NE);
+  void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
@@ -75,6 +77,10 @@ private:
 
   void handleExitBlock();
 
+  /// Mark all fields of the implicit object as used for an instance method
+  /// call, since the callee may access any part of the object.
+  void handleImplicitObjectFieldUses(const Expr *Call, const FunctionDecl *FD);
+
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 
   /// Detects arguments passed to rvalue reference parameters and creates
@@ -93,10 +99,14 @@ private:
                           ArrayRef<const Expr *> Args,
                           bool IsGslConstruction = false);
 
-  // Detect container methods that invalidate iterators/references.
+  // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.
   void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
                               ArrayRef<const Expr *> Args);
+
+  // Detect explicit destructor calls/`std::destroy_at`
+  void handleDestructiveCall(const Expr *Call, const FunctionDecl *FD,
+                             ArrayRef<const Expr *> Args);
 
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {

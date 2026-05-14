@@ -318,7 +318,7 @@ bool AMDGPUCodeGenPrepareImpl::canWidenScalarExtLoad(LoadInst &I) const {
   int TySize = DL.getTypeSizeInBits(Ty);
   Align Alignment = DL.getValueOrABITypeAlignment(I.getAlign(), Ty);
 
-  return I.isSimple() && TySize < 32 && Alignment >= 4 && UA.isUniform(&I);
+  return I.isSimple() && TySize < 32 && Alignment >= 4 && UA.isUniformAtDef(&I);
 }
 
 unsigned
@@ -370,7 +370,7 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
     return false;
 
   // Prefer scalar if this could be s_mul_i32
-  if (UA.isUniform(&I))
+  if (UA.isUniformAtDef(&I))
     return false;
 
   Value *LHS = I.getOperand(0);
@@ -1129,10 +1129,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
   // fr = fabs(fr);
-  FR = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FR, FQ);
+  FR = Builder.CreateFAbs(FR, FQ);
 
   // fb = fabs(fb);
-  FB = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FB, FQ);
+  FB = Builder.CreateFAbs(FB, FQ);
 
   // int cv = fr >= fb;
   Value *CV = Builder.CreateFCmpOGE(FR, FB);

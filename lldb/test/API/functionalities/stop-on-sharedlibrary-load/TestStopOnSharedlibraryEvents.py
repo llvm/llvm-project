@@ -5,6 +5,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestStopOnSharedlibraryEvents(TestBase):
     @skipIfRemote
     @skipIfWindows

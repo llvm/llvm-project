@@ -189,6 +189,9 @@ else()
   # libomp must be a C++ library such that it can link libLLVMSupport
   set(LIBOMP_LINKER_LANGUAGE CXX)
 endif()
+
+openmp_register_meta_dep(omp)
+
 if(LIBOMP_USE_HWLOC)
   # Since we are using an OBJECT library, the PRIVATE and INTERFACE options are split
   # (instead of using PUBLIC): obj.omp for compiling itself, omp for propagating

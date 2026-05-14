@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-- -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgcn-- -verify -Wno-deprecated-declarations -fsyntax-only %s
 
 typedef __attribute__((amdgpu_flat_work_group_size(32, 64))) struct struct_flat_work_group_size_32_64 { // expected-error {{'amdgpu_flat_work_group_size' attribute only applies to kernel functions}}
   int x;

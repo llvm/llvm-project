@@ -28,6 +28,10 @@ void AccessPath::dump(llvm::raw_ostream &OS) const {
   case Kind::PlaceholderThis:
     OS << "$this";
     break;
+  case Kind::NewAllocation:
+    if (const auto *E = getAsNewAllocation())
+      OS << "NewAllocation at " << E;
+    break;
   }
 }
 

@@ -58,7 +58,8 @@ void constexpr_test(void) {
 
 void self_reference_test(void) {
   constexpr int i = i;  // expected-error {{constexpr variable 'i' must be initialized by a constant expression}} \
-                           expected-note {{read of object outside its lifetime is not allowed in a constant expression}}
+                           expected-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                           expected-note {{declared here}}
   auto j = j;           // expected-error {{variable 'j' declared with deduced type 'auto' cannot appear in its own initializer}}
 }
 
@@ -103,7 +104,7 @@ void misc_struct_test(void) {
 
   constexpr struct {
       int b;
-  } b = (struct S { int x; }){ 0 };  // expected-error-re {{initializing 'const struct (unnamed at {{.*}}n3006.c:104:13)' with an expression of incompatible type 'struct S'}}
+  } b = (struct S { int x; }){ 0 };  // expected-error-re {{initializing 'const struct (unnamed at {{.*}}n3006.c:105:13)' with an expression of incompatible type 'struct S'}}
 
   auto z = ({
       int a = 12;

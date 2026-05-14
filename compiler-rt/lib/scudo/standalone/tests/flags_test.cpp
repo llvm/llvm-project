@@ -121,6 +121,19 @@ TEST(ScudoFlagsTest, AllocatorFlags) {
   EXPECT_EQ(2048, Flags.quarantine_max_chunk_size);
 }
 
+TEST(ScudoFlagsTest, InitFlagsEnv) {
+  const char *OldValue = getenv("SCUDO_ALLOCATION_RING_BUFFER_SIZE");
+  setenv("SCUDO_ALLOCATION_RING_BUFFER_SIZE", "123", 1);
+  scudo::initFlags();
+  scudo::Flags *F = scudo::getFlags();
+  EXPECT_EQ(123, F->allocation_ring_buffer_size);
+  if (OldValue) {
+    setenv("SCUDO_ALLOCATION_RING_BUFFER_SIZE", OldValue, 1);
+  } else {
+    unsetenv("SCUDO_ALLOCATION_RING_BUFFER_SIZE");
+  }
+}
+
 #ifdef GWP_ASAN_HOOKS
 TEST(ScudoFlagsTest, GWPASanFlags) {
   scudo::FlagParser Parser;

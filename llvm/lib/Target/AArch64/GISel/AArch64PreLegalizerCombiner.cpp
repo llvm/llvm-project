@@ -324,10 +324,10 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned NumOfDotMI;
   if (SrcTy.getNumElements() % 16 == 0) {
     NumOfDotMI = SrcTy.getNumElements() / 16;
-    MidTy = LLT::fixed_vector(4, 32);
+    MidTy = LLT::fixed_vector(4, LLT::integer(32));
   } else if (SrcTy.getNumElements() % 8 == 0) {
     NumOfDotMI = SrcTy.getNumElements() / 8;
-    MidTy = LLT::fixed_vector(2, 32);
+    MidTy = LLT::fixed_vector(2, LLT::integer(32));
   } else {
     llvm_unreachable("Source type number of elements is not multiple of 8");
   }
@@ -347,7 +347,7 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       SmallVector<Register> Leftover2;
 
       // Split the elements into v16i8 and v8i8
-      LLT MainTy = LLT::fixed_vector(16, 8);
+      LLT MainTy = LLT::fixed_vector(16, LLT::integer(8));
       LLT LeftoverTy1, LeftoverTy2;
       if ((!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
                          LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder,
@@ -365,22 +365,22 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
 
       Ext1UnmergeReg.push_back(
           Builder
-              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+              .buildMergeLikeInstr(LLT::fixed_vector(16, LLT::integer(8)),
                                    {Leftover1[0], v8Zeroes})
               .getReg(0));
       Ext2UnmergeReg.push_back(
           Builder
-              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+              .buildMergeLikeInstr(LLT::fixed_vector(16, LLT::integer(8)),
                                    {Leftover2[0], v8Zeroes})
               .getReg(0));
 
     } else {
       // Unmerge the source vectors to v16i8
       unsigned SrcNumElts = SrcTy.getNumElements();
-      extractParts(Ext1SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
-                   Ext1UnmergeReg, Builder, MRI);
-      extractParts(Ext2SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
-                   Ext2UnmergeReg, Builder, MRI);
+      extractParts(Ext1SrcReg, LLT::fixed_vector(16, LLT::integer(8)),
+                   SrcNumElts / 16, Ext1UnmergeReg, Builder, MRI);
+      extractParts(Ext2SrcReg, LLT::fixed_vector(16, LLT::integer(8)),
+                   SrcNumElts / 16, Ext2UnmergeReg, Builder, MRI);
     }
 
     // Build the UDOT instructions
@@ -390,10 +390,10 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       LLT ZeroesLLT;
       // Check if it is 16 or 8 elements. Set Zeroes to the according size
       if (MRI.getType(Ext1UnmergeReg[i]).getNumElements() == 16) {
-        ZeroesLLT = LLT::fixed_vector(4, 32);
+        ZeroesLLT = LLT::fixed_vector(4, LLT::integer(32));
         NumElements += 4;
       } else {
-        ZeroesLLT = LLT::fixed_vector(2, 32);
+        ZeroesLLT = LLT::fixed_vector(2, LLT::integer(32));
         NumElements += 2;
       }
       auto Zeroes = Builder.buildConstant(ZeroesLLT, 0)->getOperand(0).getReg();
@@ -405,8 +405,8 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
     }
 
     // Merge the output
-    auto ConcatMI =
-        Builder.buildConcatVectors(LLT::fixed_vector(NumElements, 32), DotReg);
+    auto ConcatMI = Builder.buildConcatVectors(
+        LLT::fixed_vector(NumElements, LLT::integer(32)), DotReg);
 
     // Put it through a vector reduction
     Builder.buildVecReduceAdd(MI.getOperand(0).getReg(),
@@ -478,11 +478,11 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     LLT LeftoverTy;
     SmallVector<Register, 4> LeftoverRegs;
     if (SrcScalSize == 8)
-      MainTy = LLT::fixed_vector(16, 8);
+      MainTy = LLT::fixed_vector(16, LLT::integer(8));
     else if (SrcScalSize == 16)
-      MainTy = LLT::fixed_vector(8, 16);
+      MainTy = LLT::fixed_vector(8, LLT::integer(16));
     else if (SrcScalSize == 32)
-      MainTy = LLT::fixed_vector(4, 32);
+      MainTy = LLT::fixed_vector(4, LLT::integer(32));
     else
       llvm_unreachable("Source's Scalar Size not supported");
 
@@ -497,8 +497,8 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
 
   unsigned MidScalarSize = MainTy.getScalarSizeInBits() * 2;
-  LLT MidScalarLLT = LLT::scalar(MidScalarSize);
-  Register ZeroReg = B.buildConstant(LLT::scalar(64), 0).getReg(0);
+  LLT MidScalarLLT = LLT::integer(MidScalarSize);
+  Register ZeroReg = B.buildConstant(LLT::integer(64), 0).getReg(0);
   for (unsigned I = 0; I < WorkingRegisters.size(); I++) {
     // If the number of elements is too small to build an instruction, extend
     // its size before applying addlv
@@ -508,14 +508,15 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
       WorkingRegisters[I] =
           B.buildInstr(std::get<1>(MatchInfo) ? TargetOpcode::G_SEXT
                                               : TargetOpcode::G_ZEXT,
-                       {LLT::fixed_vector(4, 16)}, {WorkingRegisters[I]})
+                       {LLT::fixed_vector(4, LLT::integer(16))},
+                       {WorkingRegisters[I]})
               .getReg(0);
     }
 
     // Generate the {U/S}ADDLV instruction, whose output is always double of the
     // Src's Scalar size
-    LLT AddlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, 32)
-                                      : LLT::fixed_vector(2, 64);
+    LLT AddlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, LLT::integer(32))
+                                      : LLT::fixed_vector(2, LLT::integer(64));
     Register AddlvReg =
         B.buildInstr(Opc, {AddlvTy}, {WorkingRegisters[I]}).getReg(0);
 
@@ -529,9 +530,10 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
                                          {MidScalarLLT}, {AddlvReg, ZeroReg})
                                 .getReg(0);
     } else {
-      Register ExtractReg = B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
-                                         {LLT::scalar(32)}, {AddlvReg, ZeroReg})
-                                .getReg(0);
+      Register ExtractReg =
+          B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT, {LLT::integer(32)},
+                       {AddlvReg, ZeroReg})
+              .getReg(0);
       WorkingRegisters[I] =
           B.buildTrunc({MidScalarLLT}, {ExtractReg}).getReg(0);
     }

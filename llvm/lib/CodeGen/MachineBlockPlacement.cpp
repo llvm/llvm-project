@@ -1452,11 +1452,15 @@ getLayoutSuccessorProbThreshold(const MachineBasicBlock *BB) {
        *   So the threshold T in the calculation below
        *   (1-T) * Prob(BB->Succ) > T * Prob(BB->Pred)
        *   So T / (1 - T) = 2, Yielding T = 2/3
-       * Also adding user specified branch bias, we have
-       *   T = (2/3)*(ProfileLikelyProb/50)
-       *     = (2*ProfileLikelyProb)/150)
+       *
+       * Then remap the user-controlled ProfileLikelyProb into
+       * a triangle-specific threshold T.
+       *   T = (2/3) * (ProfileLikelyProb / 50)
+       *     = (2 * ProfileLikelyProb) / 150
+       * This preserves T = 2/3 at ProfileLikelyProb = 50.
+       * The result is capped at 1.
        */
-      return BranchProbability(2 * ProfileLikelyProb, 150);
+      return BranchProbability(ProfileLikelyProb, 150) * 2;
     }
   }
   return BranchProbability(ProfileLikelyProb, 100);
@@ -1675,12 +1679,13 @@ MachineBlockPlacement::selectBestSuccessor(const MachineBasicBlock *BB,
   // applicable.
   auto FoundEdge = ComputedEdges.find(BB);
   if (FoundEdge != ComputedEdges.end()) {
-    MachineBasicBlock *Succ = FoundEdge->second.BB;
+    BlockAndTailDupResult Result = FoundEdge->second;
     ComputedEdges.erase(FoundEdge);
-    BlockChain *SuccChain = BlockToChain[Succ];
-    if (BB->isSuccessor(Succ) && (!BlockFilter || BlockFilter->count(Succ)) &&
-        SuccChain != &Chain && Succ == *SuccChain->begin())
-      return FoundEdge->second;
+    BlockChain *SuccChain = BlockToChain[Result.BB];
+    if (BB->isSuccessor(Result.BB) &&
+        (!BlockFilter || BlockFilter->count(Result.BB)) &&
+        SuccChain != &Chain && Result.BB == *SuccChain->begin())
+      return Result;
   }
 
   // if BB is part of a trellis, Use the trellis to determine the optimal

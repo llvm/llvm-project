@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; DISABLED-CHECK-DAG: OpName [[SCALAR_FNEG:%.+]] "scalar_fneg"
 ; CHECK-DAG: OpName [[SCALAR_FADD:%.+]] "scalar_fadd"
@@ -7,7 +8,7 @@
 ; CHECK-DAG: OpName [[SCALAR_FDIV:%.+]] "scalar_fdiv"
 ; CHECK-DAG: OpName [[SCALAR_FREM:%.+]] "scalar_frem"
 ; CHECK-DAG: OpName [[SCALAR_FMA:%.+]] "scalar_fma"
-;; FIXME: add test for OpFMod
+; CHECK-DAG: OpName [[SCALAR_FMOD:%.+]] "scalar_fmod"
 
 ; CHECK-NOT: DAG-FENCE
 
@@ -105,6 +106,22 @@ define float @scalar_frem(float %a, float %b) {
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
 ; CHECK:      OpLabel
 ; CHECK:      [[C:%.+]] = OpFRem [[SCALAR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+;; Test fmod on scalar:
+define spir_func float @scalar_fmod(float %a, float %b) {
+    %c = call spir_func float @_Z12__spirv_FModff(float %a, float %b)
+    ret float %c
+}
+
+declare spir_func float @_Z12__spirv_FModff(float, float)
+
+; CHECK:      [[SCALAR_FMOD]] = OpFunction [[SCALAR]] None [[SCALAR_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpFMod [[SCALAR]] [[A]] [[B]]
 ; CHECK:      OpReturnValue [[C]]
 ; CHECK-NEXT: OpFunctionEnd
 

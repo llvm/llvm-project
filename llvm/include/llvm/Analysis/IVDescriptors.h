@@ -46,6 +46,8 @@ enum class RecurKind {
   UMin,     ///< Unsigned integer min implemented in terms of select(cmp()).
   UMax,     ///< Unsigned integer max implemented in terms of select(cmp()).
   FAdd,     ///< Sum of floats.
+  FAddChainWithSubs, ///< A chain of fadds and fsubs.
+  FSub,     ///< Subtraction of floats.
   FMul,     ///< Product of floats.
   FMin,     ///< FP min implemented in terms of select(cmp()).
   FMax,     ///< FP max implemented in terms of select(cmp()).
@@ -245,6 +247,9 @@ public:
   /// Returns true if the recurrence kind is a floating point kind.
   LLVM_ABI static bool isFloatingPointRecurrenceKind(RecurKind Kind);
 
+  /// Returns true if the recurrence kind is for a sub operation.
+  LLVM_ABI static bool isSubRecurrenceKind(RecurKind Kind);
+
   /// Returns true if the recurrence kind is an integer min/max kind.
   static bool isIntMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::UMin || Kind == RecurKind::UMax ||
@@ -380,6 +385,11 @@ public:
   /// Default constructor - creates an invalid induction.
   InductionDescriptor() = default;
 
+  /// Returns the canonical integer induction for type \p Ty with start = 0
+  /// and step = 1.
+  LLVM_ABI static InductionDescriptor
+  getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE);
+
   Value *getStartValue() const { return StartValue; }
   InductionKind getKind() const { return IK; }
   const SCEV *getStep() const { return Step; }
@@ -440,7 +450,8 @@ public:
   ArrayRef<Instruction *> getCastInsts() const { return RedundantCasts; }
 
 private:
-  /// Private constructor - used by \c isInductionPHI.
+  /// Private constructor - used by \c isInductionPHI and
+  /// \c getCanonicalIntInduction.
   InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
                       BinaryOperator *InductionBinOp = nullptr,
                       SmallVectorImpl<Instruction *> *Casts = nullptr);

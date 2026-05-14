@@ -39,15 +39,17 @@ TEST(InMemoryModuleCacheTest, addPCM) {
   auto *RawB = B.get();
 
   InMemoryModuleCache Cache;
-  EXPECT_EQ(RawB, &Cache.addPCM("B", std::move(B)));
+  EXPECT_EQ(RawB, &Cache.addPCM("B", std::move(B), 0, 0));
   EXPECT_EQ(InMemoryModuleCache::Tentative, Cache.getPCMState("B"));
-  EXPECT_EQ(RawB, Cache.lookupPCM("B"));
+  off_t Size;
+  time_t ModTime;
+  EXPECT_EQ(RawB, Cache.lookupPCM("B", Size, ModTime));
   EXPECT_FALSE(Cache.isPCMFinal("B"));
   EXPECT_FALSE(Cache.shouldBuildPCM("B"));
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(Cache.addPCM("B", getBuffer(2)), "Already has a PCM");
-  EXPECT_DEATH(Cache.addBuiltPCM("B", getBuffer(2)),
+  EXPECT_DEATH(Cache.addPCM("B", getBuffer(2), 0, 0), "Already has a PCM");
+  EXPECT_DEATH(Cache.addBuiltPCM("B", getBuffer(2), 0, 0),
                "Trying to override tentative PCM");
 #endif
 }
@@ -57,15 +59,17 @@ TEST(InMemoryModuleCacheTest, addBuiltPCM) {
   auto *RawB = B.get();
 
   InMemoryModuleCache Cache;
-  EXPECT_EQ(RawB, &Cache.addBuiltPCM("B", std::move(B)));
+  EXPECT_EQ(RawB, &Cache.addBuiltPCM("B", std::move(B), 0, 0));
   EXPECT_EQ(InMemoryModuleCache::Final, Cache.getPCMState("B"));
-  EXPECT_EQ(RawB, Cache.lookupPCM("B"));
+  off_t Size;
+  time_t ModTime;
+  EXPECT_EQ(RawB, Cache.lookupPCM("B", Size, ModTime));
   EXPECT_TRUE(Cache.isPCMFinal("B"));
   EXPECT_FALSE(Cache.shouldBuildPCM("B"));
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(Cache.addPCM("B", getBuffer(2)), "Already has a PCM");
-  EXPECT_DEATH(Cache.addBuiltPCM("B", getBuffer(2)),
+  EXPECT_DEATH(Cache.addPCM("B", getBuffer(2), 0, 0), "Already has a PCM");
+  EXPECT_DEATH(Cache.addBuiltPCM("B", getBuffer(2), 0, 0),
                "Trying to override finalized PCM");
 #endif
 }
@@ -79,27 +83,31 @@ TEST(InMemoryModuleCacheTest, tryToDropPCM) {
 
   InMemoryModuleCache Cache;
   EXPECT_EQ(InMemoryModuleCache::Unknown, Cache.getPCMState("B"));
-  EXPECT_EQ(RawB1, &Cache.addPCM("B", std::move(B1)));
+  EXPECT_EQ(RawB1, &Cache.addPCM("B", std::move(B1), 0, 0));
   EXPECT_FALSE(Cache.tryToDropPCM("B"));
-  EXPECT_EQ(nullptr, Cache.lookupPCM("B"));
+  off_t Size1;
+  time_t ModTime1;
+  EXPECT_EQ(nullptr, Cache.lookupPCM("B", Size1, ModTime1));
   EXPECT_EQ(InMemoryModuleCache::ToBuild, Cache.getPCMState("B"));
   EXPECT_FALSE(Cache.isPCMFinal("B"));
   EXPECT_TRUE(Cache.shouldBuildPCM("B"));
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(Cache.addPCM("B", getBuffer(2)), "Already has a PCM");
+  EXPECT_DEATH(Cache.addPCM("B", getBuffer(2), 0, 0), "Already has a PCM");
   EXPECT_DEATH(Cache.tryToDropPCM("B"),
                "PCM to remove is scheduled to be built");
   EXPECT_DEATH(Cache.finalizePCM("B"), "Trying to finalize a dropped PCM");
 #endif
 
   // Add a new one.
-  EXPECT_EQ(RawB2, &Cache.addBuiltPCM("B", std::move(B2)));
+  EXPECT_EQ(RawB2, &Cache.addBuiltPCM("B", std::move(B2), 0, 0));
   EXPECT_TRUE(Cache.isPCMFinal("B"));
 
   // Can try to drop again, but this should error and do nothing.
   EXPECT_TRUE(Cache.tryToDropPCM("B"));
-  EXPECT_EQ(RawB2, Cache.lookupPCM("B"));
+  off_t Size2;
+  time_t ModTime2;
+  EXPECT_EQ(RawB2, Cache.lookupPCM("B", Size2, ModTime2));
 }
 
 TEST(InMemoryModuleCacheTest, finalizePCM) {
@@ -108,7 +116,7 @@ TEST(InMemoryModuleCacheTest, finalizePCM) {
 
   InMemoryModuleCache Cache;
   EXPECT_EQ(InMemoryModuleCache::Unknown, Cache.getPCMState("B"));
-  EXPECT_EQ(RawB, &Cache.addPCM("B", std::move(B)));
+  EXPECT_EQ(RawB, &Cache.addPCM("B", std::move(B), 0, 0));
 
   // Call finalize.
   Cache.finalizePCM("B");

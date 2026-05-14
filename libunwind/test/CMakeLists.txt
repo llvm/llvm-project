@@ -25,6 +25,8 @@ foreach(target IN LISTS libunwind_test_suite_install_targets)
   add_dependencies(unwind-test-depends libunwind-test-suite-install-${target})
 endforeach()
 
+pythonize_bool(HAVE_GETAUXVAL)
+pythonize_bool(HAVE_ELF_AUX_INFO)
 pythonize_bool(LIBUNWIND_ENABLE_CET)
 pythonize_bool(LIBUNWIND_ENABLE_GCS)
 pythonize_bool(LIBUNWIND_ENABLE_THREADS)
