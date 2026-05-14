@@ -118,8 +118,7 @@ static uint32_t gpu_block_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
   // Only L1 parallel region can enter this if condition.
 
   if (NumThreads > mapping::getWarpSize()) {
-    uint32_t WarpsNeeded =
-        (NumThreads + mapping::getWarpSize() - 1) / mapping::getWarpSize();
+    uint32_t WarpsNeeded = utils::roundUp(NumThreads, mapping::getWarpSize());
     // Gather all the reduced values from each warp to the first warp.
     cpyFct(reduce_data, WarpsNeeded);
 
@@ -155,8 +154,7 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
 
 #if __has_builtin(__nvvm_reflect)
   if (__nvvm_reflect("__CUDA_ARCH") >= 700) {
-    uint32_t WarpsNeeded =
-        (NumThreads + mapping::getWarpSize() - 1) / mapping::getWarpSize();
+    uint32_t WarpsNeeded = utils::roundUp(NumThreads, mapping::getWarpSize());
     uint32_t WarpId = mapping::getWarpIdInBlock();
 
     // Volta execution model:

@@ -260,7 +260,8 @@ public:
     ChipStar,
     Firmware,
     QURT,
-    LastOSType = QURT
+    H2,
+    LastOSType = H2
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -774,6 +775,9 @@ public:
   /// Tests whether the OS is QURT.
   bool isOSQurt() const { return getOS() == Triple::QURT; }
 
+  /// Tests whether the OS is H2.
+  bool isOSH2() const { return getOS() == Triple::H2; }
+
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const { return getObjectFormat() == Triple::ELF; }
 
@@ -1283,7 +1287,7 @@ public:
   LLVM_ABI bool isCompatibleWith(const Triple &Other) const;
 
   /// Test whether the target triple is for a GPU.
-  bool isGPU() const { return isSPIRV() || isNVPTX() || isAMDGPU(); }
+  bool isGPU() const { return isSPIROrSPIRV() || isNVPTX() || isAMDGPU(); }
 
   /// Merge target triples.
   LLVM_ABI std::string merge(const Triple &Other) const;

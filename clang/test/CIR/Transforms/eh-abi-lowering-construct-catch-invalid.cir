@@ -1,0 +1,175 @@
+// RUN: cir-opt %s -cir-eh-abi-lowering -split-input-file -verify-diagnostics
+
+// Diagnostics emitted by the Itanium EHABI lowering for unsupported or
+// malformed cir.construct_catch_param ops. Each case must terminate with a
+// clean pass failure (not a crash).
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.global "private" external @_ZTVN10__cxxabiv117__class_type_infoE
+    : !cir.ptr<!cir.ptr<!u8i>>
+cir.global constant linkonce_odr @_ZTI1E
+    = #cir.typeinfo<{
+        #cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]>
+            : !cir.ptr<!u8i>}>
+    : !cir.record<struct  {!cir.ptr<!u8i>}>
+
+cir.func private @_Z8mayThrowv()
+cir.func private @_ZN1EC1ERKS_(!cir.ptr<!rec_E>, !cir.ptr<!rec_E>)
+
+cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E_ok(
+    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>)
+    attributes {cir.eh.catch_copy_thunk} {
+  cir.call @_ZN1EC1ERKS_(%arg0, %arg1)
+      : (!cir.ptr<!rec_E>, !cir.ptr<!rec_E>) -> ()
+  cir.return
+}
+
+// Only non_trivial_copy is currently supported on Itanium.
+cir.func @bad_kind() {
+  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb6
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb5
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  // expected-error @below {{ConstructCatchParam: only non_trivial_copy is supported}}
+  cir.construct_catch_param trivial_copy %eh_token.1 to %0
+      using @__clang_cir_catch_copy__ZTS1E_ok : !cir.ptr<!rec_E>
+  %ct, %exn = cir.begin_catch %eh_token.1
+      : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb6
+^bb5(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+^bb6:
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.global "private" external @_ZTVN10__cxxabiv117__class_type_infoE
+    : !cir.ptr<!cir.ptr<!u8i>>
+cir.global constant linkonce_odr @_ZTI1E
+    = #cir.typeinfo<{
+        #cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]>
+            : !cir.ptr<!u8i>}>
+    : !cir.record<struct  {!cir.ptr<!u8i>}>
+
+cir.func private @_Z8mayThrowv()
+
+// Thunk is properly tagged but is just a declaration (no body to inline).
+cir.func private @__clang_cir_catch_copy__ZTS1E_decl(
+    !cir.ptr<!rec_E>, !cir.ptr<!rec_E>)
+    attributes {cir.eh.catch_copy_thunk}
+
+cir.func @copy_fn_no_body() {
+  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb6
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb5
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  // expected-error @below {{catch-copy thunk has no body to inline}}
+  cir.construct_catch_param non_trivial_copy %eh_token.1 to %0
+      using @__clang_cir_catch_copy__ZTS1E_decl : !cir.ptr<!rec_E>
+  %ct, %exn = cir.begin_catch %eh_token.1
+      : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb6
+^bb5(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+^bb6:
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.global "private" external @_ZTVN10__cxxabiv117__class_type_infoE
+    : !cir.ptr<!cir.ptr<!u8i>>
+cir.global constant linkonce_odr @_ZTI1E
+    = #cir.typeinfo<{
+        #cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]>
+            : !cir.ptr<!u8i>}>
+    : !cir.record<struct  {!cir.ptr<!u8i>}>
+
+cir.func private @_Z8mayThrowv()
+cir.func private @_ZN1EC1ERKS_(!cir.ptr<!rec_E>, !cir.ptr<!rec_E>)
+
+// Multi-block thunks (e.g. those produced for ExprWithCleanups initializers)
+// are not yet supported by the Itanium lowering and must be diagnosed.
+cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E_multi(
+    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>)
+    attributes {cir.eh.catch_copy_thunk} {
+  cir.br ^bb1
+^bb1:
+  cir.call @_ZN1EC1ERKS_(%arg0, %arg1)
+      : (!cir.ptr<!rec_E>, !cir.ptr<!rec_E>) -> ()
+  cir.return
+}
+
+cir.func @multi_block_thunk() {
+  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb6
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb5
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  // expected-error @below {{multi-block catch-copy thunks are NYI}}
+  cir.construct_catch_param non_trivial_copy %eh_token.1 to %0
+      using @__clang_cir_catch_copy__ZTS1E_multi : !cir.ptr<!rec_E>
+  %ct, %exn = cir.begin_catch %eh_token.1
+      : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb6
+^bb5(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+^bb6:
+  cir.return
+}
+
+}

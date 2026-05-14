@@ -222,18 +222,18 @@ TEST_F(AArch64GISelMITest, BuildBitCounts) {
 
   B.buildCTPOP(S32, Copies[0]);
   B.buildCTLZ(S32, Copies[0]);
-  B.buildCTLZ_ZERO_UNDEF(S32, Copies[1]);
+  B.buildCTLZ_ZERO_POISON(S32, Copies[1]);
   B.buildCTTZ(S32, Copies[0]);
-  B.buildCTTZ_ZERO_UNDEF(S32, Copies[1]);
+  B.buildCTTZ_ZERO_POISON(S32, Copies[1]);
 
   auto CheckStr = R"(
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
   ; CHECK: [[CTPOP:%[0-9]+]]:_(s32) = G_CTPOP [[COPY0]]:_
   ; CHECK: [[CTLZ0:%[0-9]+]]:_(s32) = G_CTLZ [[COPY0]]:_
-  ; CHECK: [[CTLZ_UNDEF0:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY1]]:_
+  ; CHECK: [[CTLZ_POISON0:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON [[COPY1]]:_
   ; CHECK: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[COPY0]]:_
-  ; CHECK: [[CTTZ_UNDEF0:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY1]]:_
+  ; CHECK: [[CTTZ_POISON0:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_POISON [[COPY1]]:_
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

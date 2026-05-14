@@ -13892,13 +13892,22 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
     TypeAliasTemplateDecl *OldDecl = nullptr;
     TemplateParameterList *OldTemplateParams = nullptr;
 
+    TemplateParameterList *TemplateParams = TemplateParamLists[0];
     if (TemplateParamLists.size() != 1) {
       Diag(UsingLoc, diag::err_alias_template_extra_headers)
         << SourceRange(TemplateParamLists[1]->getTemplateLoc(),
          TemplateParamLists[TemplateParamLists.size()-1]->getRAngleLoc());
       Invalid = true;
+
+      // Recover by picking the last non-empty template parameter list.
+      auto It = llvm::find_if(
+          llvm::reverse(TemplateParamLists),
+          [](TemplateParameterList *TPL) { return !TPL->empty(); });
+      assert(It != TemplateParamLists.rend() &&
+             "if all template parameter lists were empty, this should have "
+             "been rejected as an explicit specialization");
+      TemplateParams = *It;
     }
-    TemplateParameterList *TemplateParams = TemplateParamLists[0];
 
     // Check that we can declare a template here.
     if (CheckTemplateDeclScope(S, TemplateParams))
@@ -15180,7 +15189,7 @@ buildSingleCopyAssign(Sema &S, SourceLocation Loc, QualType T,
                       const ExprBuilder &To, const ExprBuilder &From,
                       bool CopyingBaseSubobject, bool Copying) {
   // Maybe we should use a memcpy?
-  if (T->isArrayType() && !T.isConstQualified() && !T.isVolatileQualified() &&
+  if (T->isArrayType() && !T.hasQualifiers() &&
       T.isTriviallyCopyableType(S.Context))
     return buildMemcpyForAssignmentOp(S, Loc, T, To, From);
 
@@ -19290,6 +19299,7 @@ bool Sema::DefineUsedVTables() {
         !(Class->getOwningModule() &&
           Class->getOwningModule()->isInterfaceOrPartition()) &&
         ClassTSK != TSK_ImplicitInstantiation &&
+        ClassTSK != TSK_ExplicitInstantiationDeclaration &&
         ClassTSK != TSK_ExplicitInstantiationDefinition) {
       const FunctionDecl *KeyFunctionDef = nullptr;
       if (!KeyFunction || (KeyFunction->hasBody(KeyFunctionDef) &&

@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -483,6 +484,9 @@ void VectorDialect::initialize() {
 
   addInterfaces<VectorInlinerInterface>();
 
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface, LoadOp, StoreOp,
+                            MaskedLoadOp, MaskedStoreOp, ExpandLoadOp,
+                            CompressStoreOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface,
                             TransferReadOp, TransferWriteOp, GatherOp, MaskOp,
                             YieldOp>();
@@ -6577,8 +6581,8 @@ LogicalResult ExpandLoadOp::verify() {
     return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
-    return emitOpError("expected result dim to match mask dim");
+  if (resVType.getShape() != maskVType.getShape())
+    return emitOpError("expected result shape to match mask shape");
   if (resVType != passVType)
     return emitOpError("expected pass_thru of same type as result type");
   return success();
@@ -6631,8 +6635,8 @@ LogicalResult CompressStoreOp::verify() {
     return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
-    return emitOpError("expected valueToStore dim to match mask dim");
+  if (valueVType.getShape() != maskVType.getShape())
+    return emitOpError("expected valueToStore shape to match mask shape");
   return success();
 }
 
@@ -7086,6 +7090,10 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
   }
 
   return {};
+}
+
+std::optional<SmallVector<int64_t, 4>> BitCastOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
 //===----------------------------------------------------------------------===//
@@ -8332,6 +8340,22 @@ Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
 
   return arith::SelectOp::create(builder, newValue.getLoc(), newValue.getType(),
                                  mask, newValue, passthru);
+}
+
+//===----------------------------------------------------------------------===//
+// InterleaveOp
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+//===----------------------------------------------------------------------===//
+// DeinterleaveOp
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>> DeinterleaveOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
 //===----------------------------------------------------------------------===//
