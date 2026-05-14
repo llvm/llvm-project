@@ -2027,8 +2027,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           {ISD::INTRINSIC_WO_CHAIN, ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON},
           VT, Custom);
 
-    if (Subtarget->hasSVE2p1() ||
-        (Subtarget->hasSME2() && Subtarget->isStreaming())) {
+    // Without SubReg Liveness the multi-vector instructions can introduce
+    // unnecessary COPY and/or MOVPFRX instructions.
+    if (Subtarget->enableSubRegLiveness() &&
+        (Subtarget->hasSVE2p1() ||
+         (Subtarget->hasSME2() && Subtarget->isStreaming()))) {
       // 2x loads
       setOperationAction(ISD::LOAD, MVT::nxv32i8, Custom);
       setOperationAction(ISD::LOAD, MVT::nxv16i16, Custom);
