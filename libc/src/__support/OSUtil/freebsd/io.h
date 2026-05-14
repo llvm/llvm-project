@@ -20,8 +20,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
-  freebsd_syscalls::write(2 /* stderr */, msg.data(),
-                                          msg.size());
+  freebsd_syscalls::write(2 /* stderr */, msg.data(), msg.size());
 }
 
 } // namespace LIBC_NAMESPACE_DECL
