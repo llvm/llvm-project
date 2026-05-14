@@ -1,18 +1,25 @@
 # REQUIRES: asserts
 # REQUIRES: aarch64-registered-target
 
-## Note: negative buffer size is not scaled 
+## Check upscaling and downscaling. BufferSize=-1 is not scaled
 # RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -sched-model-reservation-station-scale-factor=2 -debug 2>&1 | FileCheck %s --check-prefix=UPSCALE
 # RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -sched-model-reservation-station-scale-factor=0.5 -debug 2>&1 | FileCheck %s --check-prefix=DOWNSCALE
 
 ## Default scale factor is 1
 # RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -debug 2>&1 | FileCheck %s --check-prefix=ORIGINAL
 
-## Negative scale factor is ignored
+## Zero/negative scale factors are ignored
+# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -sched-model-reservation-station-scale-factor=0 -debug 2>&1 | FileCheck %s --check-prefix=ORIGINAL
 # RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -sched-model-reservation-station-scale-factor=-1 -debug 2>&1 | FileCheck %s --check-prefix=ORIGINAL
 
+## Scaling results <= 1 fall back to the original buffer size
+# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=apple-m1 -sched-model-reservation-station-scale-factor=0.01 -debug 2>&1 | FileCheck %s --check-prefix=ORIGINAL
+
 ## BufferSize=0 is not scaled
-# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=cortex-a53 -sched-model-reservation-station-scale-factor=2 -debug 2>&1 | FileCheck %s --check-prefix=ZERO-BUFFER
+# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=cortex-a53 -sched-model-reservation-station-scale-factor=2 -debug 2>&1 | FileCheck %s --check-prefix=BUFFER-ZERO
+
+## BufferSize=1 is not scaled
+# RUN: llvm-mca < %s -mtriple=aarch64 -mcpu=exynos-m5 -sched-model-reservation-station-scale-factor=2 -debug 2>&1 | FileCheck %s --check-prefix=BUFFER-ONE
 
 # LLVM-MCA-BEGIN foo
 add x2, x0, x1
@@ -69,13 +76,17 @@ add x2, x0, x1
 # UPSCALE-NEXT: [13]  - 0x00000000001000 - CyUnitVM (BufferSize=64)
 # UPSCALE:      [0] Code Region - foo
 
-# ZERO-BUFFER-COUNT-1: Processor resources:
-# ZERO-BUFFER-NEXT: [ 0]  - 0x00000000000000 - InvalidUnit
-# ZERO-BUFFER-NEXT: [ 1]  - 0x00000000000001 - A53UnitALU (BufferSize=0)
-# ZERO-BUFFER-NEXT: [ 2]  - 0x00000000000002 - A53UnitB (BufferSize=0)
-# ZERO-BUFFER-NEXT: [ 3]  - 0x00000000000004 - A53UnitDiv (BufferSize=0)
-# ZERO-BUFFER-NEXT: [ 4]  - 0x00000000000008 - A53UnitFPALU (BufferSize=0)
-# ZERO-BUFFER-NEXT: [ 5]  - 0x00000000000010 - A53UnitFPMDS (BufferSize=0)
-# ZERO-BUFFER-NEXT: [ 6]  - 0x00000000000020 - A53UnitLdSt (BufferSize=0)
-# ZERO-BUFFER-NEXT: [ 7]  - 0x00000000000040 - A53UnitMAC (BufferSize=0)
-# ZERO-BUFFER:      [0] Code Region - foo
+# BUFFER-ZERO-COUNT-1: Processor resources:
+# BUFFER-ZERO-NEXT: [ 0]  - 0x00000000000000 - InvalidUnit
+# BUFFER-ZERO-NEXT: [ 1]  - 0x00000000000001 - A53UnitALU (BufferSize=0)
+# BUFFER-ZERO-NEXT: [ 2]  - 0x00000000000002 - A53UnitB (BufferSize=0)
+# BUFFER-ZERO-NEXT: [ 3]  - 0x00000000000004 - A53UnitDiv (BufferSize=0)
+# BUFFER-ZERO-NEXT: [ 4]  - 0x00000000000008 - A53UnitFPALU (BufferSize=0)
+# BUFFER-ZERO-NEXT: [ 5]  - 0x00000000000010 - A53UnitFPMDS (BufferSize=0)
+# BUFFER-ZERO-NEXT: [ 6]  - 0x00000000000020 - A53UnitLdSt (BufferSize=0)
+# BUFFER-ZERO-NEXT: [ 7]  - 0x00000000000040 - A53UnitMAC (BufferSize=0)
+# BUFFER-ZERO:      [0] Code Region - foo
+
+# BUFFER-ONE-COUNT-1: Processor resources:
+# BUFFER-ONE:        M5UnitD (BufferSize=1)
+# BUFFER-ONE:        [0] Code Region - foo

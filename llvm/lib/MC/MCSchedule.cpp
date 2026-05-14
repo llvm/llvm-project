@@ -23,9 +23,11 @@ using namespace llvm;
 
 static cl::opt<float> ReservationStationScaleFactor(
     "sched-model-reservation-station-scale-factor", cl::Hidden, cl::init(1.0f),
-    cl::desc("Scale buffer size for all reservation stations by a non-negative "
-             "factor. Can only scale non-negative buffer sizes. Computed sizes "
-             "are truncated towards zero"));
+    cl::desc("Scale the buffer size of all reservation stations by a positive "
+             "factor. Buffer sizes of -1/0/1 (unlimited/unbuffered/in-order) "
+             "are preserved. Likewise, if the scaled result is <= 1, the "
+             "original size is kept. Computed sizes "
+             "are truncated towards zero."));
 
 static_assert(std::is_trivial_v<MCSchedModel>,
               "MCSchedModel is required to be a trivial type");
@@ -223,11 +225,15 @@ unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
 int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
   int BufferSize = getProcResource(ProcResourceIdx)->BufferSize;
 
-  // Early exit by default
-  if (ReservationStationScaleFactor == 1)
+  // Skip scaling when factor is 1 (the default)
+  if (ReservationStationScaleFactor == 1.0f)
     return BufferSize;
 
-  if (ReservationStationScaleFactor < 0 || BufferSize <= 0)
+  // Skip scaling for special buffer sizes (-1,0,1)
+  if (BufferSize <= 1)
+    return BufferSize;
+
+  if (ReservationStationScaleFactor <= 0)
     return BufferSize;
 
   // Do not scale load/store queues
@@ -238,6 +244,12 @@ int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
       return BufferSize;
   }
 
-  // Scale and truncate a non-negative computed size towards zero
-  return static_cast<int>(BufferSize * ReservationStationScaleFactor);
+  // Scale and truncate the positive computed size towards zero
+  int Scaled = static_cast<int>(BufferSize * ReservationStationScaleFactor);
+
+  // Avoid producing special buffer sizes (-1,0,1)
+  if (Scaled <= 1)
+    return BufferSize;
+
+  return Scaled;
 }
