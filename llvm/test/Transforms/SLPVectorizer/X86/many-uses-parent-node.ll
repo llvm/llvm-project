@@ -249,7 +249,7 @@ define i32 @test(ptr addrspace(1) %arg) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x ptr addrspace(1)> [ poison, %[[BB142]] ], [ [[TMP4]], %[[BB73]] ], [ poison, %[[BB79]] ], [ poison, %[[BB85]] ]
 ; CHECK-NEXT:    br label %[[BB150]]
 ; CHECK:       [[BB150]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x ptr addrspace(1)> [ [[TMP2]], %[[BB75]] ], [ poison, %[[BB80]] ], [ zeroinitializer, %[[BB146]] ], [ [[TMP3]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x ptr addrspace(1)> [ [[TMP2]], %[[BB75]] ], [ poison, %[[BB80]] ], [ splat (ptr addrspace(1) null), %[[BB146]] ], [ [[TMP3]], %[[BB1]] ]
 ; CHECK-NEXT:    br label %[[BB153]]
 ; CHECK:       [[BB153]]:
 ; CHECK-NEXT:    [[PHI154:%.*]] = phi ptr addrspace(1) [ null, %[[BB150]] ], [ [[GETELEMENTPTR3]], %[[BB76]] ]

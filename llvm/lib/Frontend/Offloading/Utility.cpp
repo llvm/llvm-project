@@ -462,8 +462,12 @@ void sycl::writeSymbolTable(ArrayRef<StringRef> Names, SmallString<0> &Out) {
   uint32_t StringDataOffset =
       sizeof(SymbolTableHeader) + Count * sizeof(SymbolTableEntry);
 
-  // Pre-size the output to hold the header and entry array; string data is
-  // appended below.
+  // Compute total size and reserve to prevent reallocation while writing
+  // entries via pointer (append() could otherwise invalidate the pointer).
+  uint32_t TotalSize = StringDataOffset;
+  for (StringRef N : Names)
+    TotalSize += N.size() + 1;
+  Out.reserve(TotalSize);
   Out.resize(StringDataOffset);
 
   // Write the header.

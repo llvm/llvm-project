@@ -240,8 +240,9 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 def TeamsOp : OpenMP_Op<"teams", traits = [
     AttrSizedOperandSegments, RecursiveMemoryEffects, OutlineableOpenMPOpInterface
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_IfClause, OpenMP_NumTeamsClause,
-    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_ThreadLimitClause
+    OpenMP_AllocateClause, OpenMP_DynGroupprivateClause, OpenMP_IfClause,
+    OpenMP_NumTeamsClause, OpenMP_PrivateClause, OpenMP_ReductionClause,
+    OpenMP_ThreadLimitClause
   ], singleRegion = true> {
   let summary = "teams construct";
   let description = [{
@@ -1579,7 +1580,8 @@ def TargetOp : OpenMP_Op<"target", traits = [
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
     OpenMP_AllocateClause, OpenMP_BareClause, OpenMP_DependClause,
-    OpenMP_DeviceClause, OpenMP_HasDeviceAddrClause, OpenMP_HostEvalClause,
+    OpenMP_DeviceClause, OpenMP_DynGroupprivateClause,
+    OpenMP_HasDeviceAddrClause, OpenMP_HostEvalClause,
     OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_IsDevicePtrClause,
     OpenMP_MapClauseSkip<assemblyFormat = true>, OpenMP_NowaitClause,
     OpenMP_PrivateClause, OpenMP_ThreadLimitClause
@@ -2529,6 +2531,35 @@ def IteratorOp : OpenMP_Op<"iterator",
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// [6.0] groupprivate Directive
+//===----------------------------------------------------------------------===//
+
+def GroupprivateOp : OpenMP_Op<"groupprivate",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "groupprivate directive";
+  let description = [{
+    The groupprivate directive specifies that variables are replicated, with
+    each group having its own copy.
+
+    This operation takes a symbol reference to a global variable and returns
+    the address of its groupprivate copy. The referenced symbol must exist and
+    must not be a function.
+
+    The optional `device_type` attribute specifies where the groupprivate
+    storage should be allocated (host, nohost, or any).
+  }];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$sym_name,
+    OptionalAttr<DeclareTargetDeviceTypeAttr>:$device_type
+  );
+  let results = (outs OpenMP_PointerLikeType:$gp_addr);
+  let assemblyFormat = [{
+    $sym_name (`device_type` $device_type^)? `:` type($gp_addr) attr-dict
+  }];
 }
 
 #endif // OPENMP_OPS
