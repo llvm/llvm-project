@@ -90,6 +90,27 @@ export float3 vec_mat_cm(float2 v, column_major float2x3 m) { return mul(v, m); 
 // CHECK: call {{.*}} <3 x float> @llvm.matrix.multiply.v3f32.v2f32.v6f32(<2 x float> %{{.*}}, <6 x float> %{{.*}}, i32 1, i32 2, i32 3)
 
 // -----------------------------------------------------------------------------
+// __builtin_hlsl_mul (matrix * matrix): mixed per-decl layouts cause a
+// transpose only on the row-major operand.
+// -----------------------------------------------------------------------------
+
+// LHS row-major, RHS column-major: only LHS is transposed.
+export float2x2 mat_mat_rm_cm(row_major float2x3 a, column_major float3x2 b) { return mul(a, b); }
+// CHECK-LABEL: define {{.*}} <4 x float> @_Z13mat_mat_rm_cm
+// CHECK: [[AMat:%.*]] = load <6 x float>, ptr %a.addr, align 4
+// CHECK: [[BMat:%.*]] = load <6 x float>, ptr %b.addr, align 4
+// CHECK: [[T:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[AMat]], i32 3, i32 2)
+// CHECK: call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> [[T]], <6 x float> [[BMat]], i32 2, i32 3, i32 2)
+
+// LHS column-major, RHS row-major: only RHS is transposed.
+export float2x2 mat_mat_cm_rm(column_major float2x3 a, row_major float3x2 b) { return mul(a, b); }
+// CHECK-LABEL: define {{.*}} <4 x float> @_Z13mat_mat_cm_rm
+// CHECK: [[AMat:%.*]] = load <6 x float>, ptr %a.addr, align 4
+// CHECK: [[BMat:%.*]] = load <6 x float>, ptr %b.addr, align 4
+// CHECK: [[T:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[BMat]], i32 2, i32 3)
+// CHECK: call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> [[AMat]], <6 x float> [[T]], i32 2, i32 3, i32 2)
+
+// -----------------------------------------------------------------------------
 // __builtin_hlsl_transpose: row-major operand swaps Rows/Cols passed to the
 // underlying intrinsic.
 // -----------------------------------------------------------------------------
