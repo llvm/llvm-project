@@ -28370,9 +28370,9 @@ Overview:
 
 The '``llvm.speculative.load``' intrinsic loads a value from memory. Unlike a
 regular load, the memory access may extend beyond the bounds of the allocated
-object, provided the pointer has been verified by
-:ref:`llvm.can.load.speculatively <int_can_load_speculatively>` to ensure the
-access is valid.
+object, provided the memory safely accessed on the underlying hardware.
+:ref:`llvm.can.load.speculatively <int_can_load_speculatively>` can be used to
+check if the access is.
 
 Arguments:
 """"""""""
@@ -28450,7 +28450,9 @@ This intrinsic has **target-dependent** semantics. It returns ``true`` if
 ``num_bytes`` bytes starting at ``ptr + I * num_bytes``, for all non-negative
 integers ``I`` where the computed address does not wrap around the address
 space, can be loaded speculatively, even if the memory is beyond the bounds of
-an allocated object. It returns ``false`` otherwise.
+an allocated object. It returns ``false`` otherwise. The first byte of each
+access must be part of the same underlying object as ``ptr`` in order to
+speculatively load the whole range.
 
 The specific conditions under which this intrinsic returns ``true`` are
 determined by the target. For example, a target may check whether the pointer
