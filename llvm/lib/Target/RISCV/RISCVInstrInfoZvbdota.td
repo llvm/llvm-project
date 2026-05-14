@@ -18,6 +18,11 @@
 //===----------------------------------------------------------------------===//
 
 // Base class for Zvbdota integer instructions (uses OPC_OP_VE)
+let hasSideEffects = 0,
+    mayLoad = 0,
+    mayStore = 0,
+    VS1VS2Constraint = Vrgather,
+    Constraints = "@earlyclobber $vd_wb, $vd = $vd_wb" in
 class ZvbdotaVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVV<funct6, opv, (outs VR:$vd_wb),
                (ins VR:$vd, VRM8:$vs2, VR:$vs1, uimm3:$ci, VMaskOp:$vm),
@@ -26,11 +31,6 @@ class ZvbdotaVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
   let Inst{24-23} = vs2{4-3};
   let Inst{22-20} = ci;
   let Inst{6-0} = OPC_OP_VE.Value;
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 0;
-  let VS1VS2Constraint = Vrgather;
-  let Constraints = "@earlyclobber $vd_wb, $vd = $vd_wb";
 }
 
 //===----------------------------------------------------------------------===//
