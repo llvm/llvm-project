@@ -769,6 +769,8 @@ clang-format
   declaration parameters.
 - Add ``EnumAssignments`` option to ``AlignConsecutiveAssignments`` for aligning
   enum assignments without affecting other assignments.
+- Add ``BreakBeforeReturnType`` option to break before the function return
+  type.
 
 libclang
 --------

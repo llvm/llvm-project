@@ -810,7 +810,7 @@ std::string ListInit::getAsString() const {
 }
 
 const Init *OpInit::getBit(unsigned Bit) const {
-  if (getType() == BitRecTy::get(getRecordKeeper()))
+  if (isa<BitRecTy>(getType()))
     return this;
   return VarBitInit::get(this, Bit);
 }
@@ -2390,7 +2390,7 @@ const RecTy *TypedInit::getFieldType(const StringInit *FieldName) const {
 }
 
 const Init *TypedInit::convertInitializerTo(const RecTy *Ty) const {
-  if (getType() == Ty || getType()->typeIsA(Ty))
+  if (getType()->typeIsA(Ty))
     return this;
 
   if (isa<BitRecTy>(getType()) && isa<BitsRecTy>(Ty) &&
@@ -2419,7 +2419,7 @@ TypedInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
 
 const Init *TypedInit::getCastTo(const RecTy *Ty) const {
   // Handle the common case quickly
-  if (getType() == Ty || getType()->typeIsA(Ty))
+  if (getType()->typeIsA(Ty))
     return this;
 
   if (const Init *Converted = convertInitializerTo(Ty)) {
@@ -2453,7 +2453,7 @@ StringRef VarInit::getName() const {
 }
 
 const Init *VarInit::getBit(unsigned Bit) const {
-  if (getType() == BitRecTy::get(getRecordKeeper()))
+  if (isa<BitRecTy>(getType()))
     return this;
   return VarBitInit::get(this, Bit);
 }
@@ -2646,7 +2646,7 @@ const FieldInit *FieldInit::get(const Init *R, const StringInit *FN) {
 }
 
 const Init *FieldInit::getBit(unsigned Bit) const {
-  if (getType() == BitRecTy::get(getRecordKeeper()))
+  if (isa<BitRecTy>(getType()))
     return this;
   return VarBitInit::get(this, Bit);
 }
@@ -2932,7 +2932,7 @@ StringRef RecordVal::getName() const {
 }
 
 std::string RecordVal::getPrintType() const {
-  if (getType() == StringRecTy::get(getRecordKeeper())) {
+  if (isa<StringRecTy>(getType())) {
     if (const auto *StrInit = dyn_cast<StringInit>(Value)) {
       if (StrInit->hasCodeFormat())
         return "code";
