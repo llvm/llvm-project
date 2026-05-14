@@ -37,7 +37,7 @@ makeExprMatcher(const ast_matchers::internal::Matcher<Expr> &ArgumentMatcher,
 }
 
 static ast_matchers::internal::Matcher<Expr> makeMatcherPair() {
-  ast_matchers::internal::Matcher<CallExpr> ArgumentMatcher = allOf(
+  const ast_matchers::internal::Matcher<CallExpr> ArgumentMatcher = allOf(
       hasArgument(
           0, makeExprMatcher(expr(unless(hasSideEffects())).bind(EraseThis),
                              {"begin"}, {"::std::begin"})),
@@ -80,18 +80,14 @@ void UseStdEraseCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ContainerThis = Result.Nodes.getNodeAs<Expr>(EraseThis);
   const auto *ValueOrCond = Result.Nodes.getNodeAs<Expr>("valueOrCond");
 
-  if (!EraseCall || !RemoveCall || !ContainerThis || !ValueOrCond)
-    return;
-
-  const CXXMethodDecl *EraseMethod = EraseCall->getMethodDecl();
-  assert(EraseMethod);
+  assert(EraseCall && RemoveCall && ContainerThis && ValueOrCond);
 
   const StringRef RemoveFuncName = RemoveCall->getDirectCallee()->getName();
 
   const StringRef ReplacementFreeFunc =
       RemoveFuncName == "remove" ? "std::erase" : "std::erase_if";
 
-  std::string Replacement =
+  const std::string Replacement =
       (ReplacementFreeFunc + llvm::Twine{"("} +
        Lexer::getSourceText(
            CharSourceRange::getTokenRange(ContainerThis->getSourceRange()),
