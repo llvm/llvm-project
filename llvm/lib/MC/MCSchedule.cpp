@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -224,20 +226,29 @@ unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
 
 int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
   int BufferSize = getProcResource(ProcResourceIdx)->BufferSize;
+  APFloat Scale(ReservationStationScaleFactor);
 
   // Skip scaling when factor is 1 (the default)
-  if (ReservationStationScaleFactor == 1.0f)
+  if (Scale.isExactlyValue(1.0))
     return BufferSize;
 
   // Skip scaling for special buffer sizes (-1,0,1)
   if (BufferSize <= 1)
     return BufferSize;
 
-  if (ReservationStationScaleFactor <= 0)
+  // Skip invalid (non-positive) scale factors
+  if (Scale.isNegative() || Scale.isZero())
     return BufferSize;
 
   // Scale and truncate the positive computed size towards zero
-  int Scaled = static_cast<int>(BufferSize * ReservationStationScaleFactor);
+  APFloat Product(static_cast<float>(BufferSize));
+  Product.multiply(Scale, APFloat::rmTowardZero);
+  APSInt Result(32, /*IsUnsigned=*/false);
+  bool IsExact;
+  if (Product.convertToInteger(Result, APFloat::rmTowardZero, &IsExact) &
+      APFloat::opInvalidOp)
+    return BufferSize;
+  int Scaled = static_cast<int>(Result.getExtValue());
 
   // Avoid producing special buffer sizes (-1,0,1)
   if (Scaled <= 1)
