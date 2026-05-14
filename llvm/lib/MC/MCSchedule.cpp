@@ -236,14 +236,6 @@ int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
   if (ReservationStationScaleFactor <= 0)
     return BufferSize;
 
-  // Do not scale load/store queues
-  if (hasExtraProcessorInfo()) {
-    const auto &EPI = getExtraProcessorInfo();
-    if (ProcResourceIdx == EPI.LoadQueueID ||
-        ProcResourceIdx == EPI.StoreQueueID)
-      return BufferSize;
-  }
-
   // Scale and truncate the positive computed size towards zero
   int Scaled = static_cast<int>(BufferSize * ReservationStationScaleFactor);
 
