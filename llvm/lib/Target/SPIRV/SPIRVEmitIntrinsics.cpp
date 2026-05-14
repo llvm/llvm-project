@@ -257,6 +257,7 @@ class SPIRVEmitIntrinsics
 
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
+  void preprocessPoisons(IRBuilder<> &B);
   void simplifyNullAddrSpaceCasts();
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
@@ -277,7 +278,8 @@ class SPIRVEmitIntrinsics
   bool shouldTryToAddMemAliasingDecoration(Instruction *Inst);
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void insertConstantsForFPFastMathDefault(Module &M);
-  Value *buildSpvUndefComposite(Type *AggrTy, IRBuilder<> &B);
+  Value *buildSpvUndefOrPoisonComposite(Type *AggrTy, IRBuilder<> &B,
+                                        Intrinsic::ID LeafIntrID);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
@@ -447,6 +449,14 @@ static bool isAggrConstForceInt32(const Value *V) {
          isa<ConstantDataArray>(V) || IsAggrZero || IsUndefAggregate;
 }
 
+// True for the i32-placeholder intrinsics that carry an aggregate's real type
+// in AggrConstTypes.
+static bool isSpvAggrPlaceholder(const Value *V) {
+  return match(V, m_Intrinsic<Intrinsic::spv_undef>()) ||
+         match(V, m_Intrinsic<Intrinsic::spv_poison>()) ||
+         match(V, m_Intrinsic<Intrinsic::spv_const_composite>());
+}
+
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
   if (isa<PHINode>(I))
     B.SetInsertPoint(I->getParent()->getFirstNonPHIOrDbgOrAlloca());
@@ -555,11 +565,11 @@ Type *SPIRVEmitIntrinsics::reconstructType(Value *Op, bool UnknownElemTypeI8,
   Type *Ty = Op->getType();
   if (auto *OpI = dyn_cast<Instruction>(Op)) {
     Ty = restoreMutatedType(GR, OpI, Ty);
-    // Aggregate undef/constant values are lowered to spv_undef/
-    // spv_const_composite intrinsics whose return type is i32; recover the
-    // original aggregate type so downstream pointee deduction sees it.
-    if (match(OpI, m_CombineOr(m_Intrinsic<Intrinsic::spv_undef>(),
-                               m_Intrinsic<Intrinsic::spv_const_composite>())))
+    // Aggregate undef/poison/constant values are lowered to spv_undef/
+    // spv_poison/spv_const_composite intrinsics whose return type is i32;
+    // recover the original aggregate type so downstream pointee deduction
+    // sees it.
+    if (isSpvAggrPlaceholder(OpI))
       if (auto It = AggrConstTypes.find(OpI); It != AggrConstTypes.end())
         Ty = It->second;
   }
@@ -1605,6 +1615,9 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
 }
 
 void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
+  const SPIRVSubtarget *STI = TM.getSubtargetImpl(*CurrF);
+  bool HasPoisonExt =
+      STI->canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze);
   std::queue<Instruction *> Worklist;
   for (auto &I : instructions(CurrF))
     Worklist.push(&I);
@@ -1618,6 +1631,8 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
       auto *AggrUndef = dyn_cast<UndefValue>(Op);
       if (!AggrUndef || !Op->getType()->isAggregateType())
         continue;
+      if (HasPoisonExt && isa<PoisonValue>(AggrUndef))
+        continue;
 
       if (!BPrepared) {
         setInsertPointSkippingPhis(B, I);
@@ -1628,6 +1643,48 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
       I->replaceUsesOfWith(Op, IntrUndef);
       AggrConsts[IntrUndef] = AggrUndef;
       AggrConstTypes[IntrUndef] = AggrUndef->getType();
+    }
+  }
+}
+
+// When SPV_KHR_poison_freeze is enabled, replace each LLVM PoisonValue operand
+// with a spv_poison intrinsic so selection emits OpPoisonKHR.
+void SPIRVEmitIntrinsics::preprocessPoisons(IRBuilder<> &B) {
+  const SPIRVSubtarget *STI = TM.getSubtargetImpl(*CurrF);
+  if (!STI->canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze))
+    return;
+
+  std::queue<Instruction *> Worklist;
+  for (auto &I : instructions(CurrF))
+    Worklist.push(&I);
+
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.front();
+    bool BPrepared = false;
+    Worklist.pop();
+
+    for (auto &Op : I->operands()) {
+      auto *Poison = dyn_cast<PoisonValue>(Op);
+      if (!Poison || Op->getType()->isMetadataTy())
+        continue;
+
+      if (!BPrepared) {
+        setInsertPointSkippingPhis(B, I);
+        BPrepared = true;
+      }
+
+      Value *Replacement = nullptr;
+      if (Op->getType()->isAggregateType()) {
+        Replacement = buildSpvUndefOrPoisonComposite(Op->getType(), B,
+                                                     Intrinsic::spv_poison);
+      } else {
+        auto *IntrPoison = B.CreateIntrinsic(Intrinsic::spv_poison, {});
+        Worklist.push(IntrPoison);
+        AggrConsts[IntrPoison] = Poison;
+        AggrConstTypes[IntrPoison] = Op->getType();
+        Replacement = IntrPoison;
+      }
+      I->replaceUsesOfWith(Op, Replacement);
     }
   }
 }
@@ -2070,12 +2127,12 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     Type *OpTy = Op->getType();
     if (auto *OpI = dyn_cast<Instruction>(Op))
       OpTy = restoreMutatedType(GR, OpI, OpTy);
-    // Aggregate undef/constant values were lowered by preprocessUndefs/
-    // preprocessCompositeConstants to spv_undef/spv_const_composite calls
-    // returning i32; recover the original aggregate type so the pointee type
-    // assigned to the store's pointer operand reflects the value being stored.
-    if (match(Op, m_CombineOr(m_Intrinsic<Intrinsic::spv_undef>(),
-                              m_Intrinsic<Intrinsic::spv_const_composite>())))
+    // Aggregate undef/poison/constant values were lowered by
+    // preprocessUndefs/preprocessPoisons/preprocessCompositeConstants to
+    // spv_undef/spv_poison/spv_const_composite calls returning i32; recover
+    // the original aggregate type so the pointee type assigned to the store's
+    // pointer operand reflects the value being stored.
+    if (isSpvAggrPlaceholder(Op))
       if (auto It = AggrConstTypes.find(cast<Instruction>(Op));
           It != AggrConstTypes.end())
         OpTy = It->second;
@@ -2455,23 +2512,28 @@ shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
   return F == &FirstDefinition;
 }
 
-Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
-                                                   IRBuilder<> &B) {
+// Build an OpConstantComposite whose elements are leaf intrinsics of
+// spv_undef or spv_poison.
+Value *SPIRVEmitIntrinsics::buildSpvUndefOrPoisonComposite(
+    Type *AggrTy, IRBuilder<> &B, Intrinsic::ID LeafIntrID) {
+  assert((LeafIntrID == Intrinsic::spv_undef ||
+          LeafIntrID == Intrinsic::spv_poison) &&
+         "expected spv_undef or spv_poison leaf");
   SmallVector<Value *, 4> Elems;
   if (auto *ArrTy = dyn_cast<ArrayType>(AggrTy)) {
     Type *ElemTy = ArrTy->getElementType();
-    auto *UI = B.CreateIntrinsic(Intrinsic::spv_undef, {});
-    AggrConsts[UI] = PoisonValue::get(ElemTy);
-    AggrConstTypes[UI] = ElemTy;
-    Elems.assign(ArrTy->getNumElements(), UI);
+    auto *Leaf = B.CreateIntrinsic(LeafIntrID, {});
+    AggrConsts[Leaf] = PoisonValue::get(ElemTy);
+    AggrConstTypes[Leaf] = ElemTy;
+    Elems.assign(ArrTy->getNumElements(), Leaf);
   } else {
     auto *StructTy = cast<StructType>(AggrTy);
-    DenseMap<Type *, Instruction *> UndefByType;
+    DenseMap<Type *, Instruction *> LeafByType;
     for (unsigned I = 0; I < StructTy->getNumElements(); ++I) {
       Type *ElemTy = StructTy->getContainedType(I);
-      auto &Entry = UndefByType[ElemTy];
+      auto &Entry = LeafByType[ElemTy];
       if (!Entry) {
-        Entry = B.CreateIntrinsic(Intrinsic::spv_undef, {});
+        Entry = B.CreateIntrinsic(LeafIntrID, {});
         AggrConsts[Entry] = PoisonValue::get(ElemTy);
         AggrConstTypes[Entry] = ElemTy;
       }
@@ -2499,8 +2561,15 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
     deduceElementTypeHelper(&GV, false);
     Init = GV.getInitializer();
     Value *InitOp = Init;
-    if (isa<UndefValue>(Init) && Init->getType()->isAggregateType())
-      InitOp = buildSpvUndefComposite(Init->getType(), B);
+    if (isa<UndefValue>(Init) && Init->getType()->isAggregateType()) {
+      const SPIRVSubtarget *STI = TM.getSubtargetImpl();
+      bool UsePoison =
+          isa<PoisonValue>(Init) &&
+          STI->canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze);
+      InitOp = buildSpvUndefOrPoisonComposite(Init->getType(), B,
+                                              UsePoison ? Intrinsic::spv_poison
+                                                        : Intrinsic::spv_undef);
+    }
     Type *Ty = isAggrConstForceInt32(Init) ? B.getInt32Ty() : Init->getType();
     Constant *Const = isAggrConstForceInt32(Init) ? B.getInt32(1) : Init;
     auto *InitInst = B.CreateIntrinsic(Intrinsic::spv_init_global,
@@ -2594,7 +2663,8 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
     Type *TypeToAssign = Ty;
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
       if (II->getIntrinsicID() == Intrinsic::spv_const_composite ||
-          II->getIntrinsicID() == Intrinsic::spv_undef) {
+          II->getIntrinsicID() == Intrinsic::spv_undef ||
+          II->getIntrinsicID() == Intrinsic::spv_poison) {
         auto It = AggrConstTypes.find(II);
         if (It == AggrConstTypes.end())
           report_fatal_error("Unknown composite intrinsic type");
@@ -3375,6 +3445,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     processGlobalValue(GV, B);
 
   preprocessUndefs(B);
+  preprocessPoisons(B);
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
 

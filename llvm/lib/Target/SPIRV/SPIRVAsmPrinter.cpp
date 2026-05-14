@@ -620,6 +620,18 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(TypeCode));
       outputMCInst(Inst);
     }
+    // Per SPV_KHR_poison_freeze description of PoisonFreezeKHR "If declared,
+    // all entry points must use the ArithmeticPoisonKHR execution mode".
+    if (llvm::is_contained(MAI->Reqs.getMinimalCapabilities(),
+                           SPIRV::Capability::PoisonFreezeKHR)) {
+      MCInst Inst;
+      Inst.setOpcode(SPIRV::OpExecutionMode);
+      Inst.addOperand(MCOperand::createReg(FReg));
+      unsigned EM =
+          static_cast<unsigned>(SPIRV::ExecutionMode::ArithmeticPoisonKHR);
+      Inst.addOperand(MCOperand::createImm(EM));
+      outputMCInst(Inst);
+    }
     if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
         !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
