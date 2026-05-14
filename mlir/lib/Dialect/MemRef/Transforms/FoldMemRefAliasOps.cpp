@@ -223,10 +223,10 @@ AccessOpOfSubViewOpFolder::matchAndRewrite(memref::IndexedAccessOpInterface op,
     return rewriter.notifyMatchFailure(op, "not accessing a subview");
 
   SmallVector<int64_t> accessedShape = op.getAccessedShape();
-  // Note the subtle difference between accesedShape = {1} and accessedShape =
-  // {} here. The former prevents us from fdolding in a subview that doesn't
+  // Note the subtle difference between accessedShape = {1} and accessedShape =
+  // {} here. The former prevents us from folding in a subview that doesn't
   // have a unit stride on the final dimension, while the latter does not (since
-  // it indices scalar accesss).
+  // it indexes scalar accesses).
   int64_t accessedDims = accessedShape.size();
   if (!hasTrailingUnitStrides(subview, accessedDims))
     return rewriter.notifyMatchFailure(
@@ -237,7 +237,7 @@ AccessOpOfSubViewOpFolder::matchAndRewrite(memref::IndexedAccessOpInterface op,
 
   // Ignore outermost access dimension - we only care about dropped dimensions
   // between the accessed op's results, as those could break the accessing op's
-  // sematics.
+  // semantics.
   int64_t secondAccessedDim = sourceRank - (accessedDims - 1);
   if (secondAccessedDim < sourceRank) {
     for (int64_t d : llvm::seq(secondAccessedDim, sourceRank)) {
@@ -268,7 +268,12 @@ LogicalResult AccessOpOfExpandShapeOpFolder::matchAndRewrite(
 
   SmallVector<int64_t> rawAccessedShape = op.getAccessedShape();
   ArrayRef<int64_t> accessedShape = rawAccessedShape;
-  // Cut off the leading dimension, since we don't care about monifying its
+  if (expand.getSrcType().getRank() <
+      static_cast<int64_t>(accessedShape.size()))
+    return rewriter.notifyMatchFailure(
+        op, "expand_shape source rank is too small for the accessed shape");
+
+  // Cut off the leading dimension, since we don't care about modifying its
   // strides.
   if (!accessedShape.empty())
     accessedShape = accessedShape.drop_front();
@@ -278,7 +283,7 @@ LogicalResult AccessOpOfExpandShapeOpFolder::matchAndRewrite(
   if (!hasTrivialReassociationSuffix(reassocs, accessedShape.size()))
     return rewriter.notifyMatchFailure(
         op,
-        "expand_shape folding would merge semanvtically important dimensions");
+        "expand_shape folding would merge semantically important dimensions");
 
   SmallVector<Value> sourceIndices;
   memref::resolveSourceIndicesExpandShape(op.getLoc(), rewriter, expand,
@@ -301,6 +306,11 @@ LogicalResult AccessOpOfCollapseShapeOpFolder::matchAndRewrite(
 
   SmallVector<int64_t> rawAccessedShape = op.getAccessedShape();
   ArrayRef<int64_t> accessedShape = rawAccessedShape;
+  if (collapse.getSrcType().getRank() <
+      static_cast<int64_t>(accessedShape.size()))
+    return rewriter.notifyMatchFailure(
+        op, "collapse_shape source rank is too small for the accessed shape");
+
   // Cut off the leading dimension, since we don't care about its strides being
   // modified and we know that the dimensions within its reassociation group, if
   // it's non-trivial, must be contiguous.
@@ -310,9 +320,8 @@ LogicalResult AccessOpOfCollapseShapeOpFolder::matchAndRewrite(
   SmallVector<ReassociationIndices, 4> reassocs =
       collapse.getReassociationIndices();
   if (!hasTrivialReassociationSuffix(reassocs, accessedShape.size()))
-    return rewriter.notifyMatchFailure(op,
-                                       "collapse_shape folding would merge "
-                                       "semanvtically important dimensions");
+    return rewriter.notifyMatchFailure(op, "collapse_shape folding would merge "
+                                           "semantically important dimensions");
 
   SmallVector<Value> sourceIndices;
   memref::resolveSourceIndicesCollapseShape(op.getLoc(), rewriter, collapse,
