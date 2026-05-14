@@ -188,13 +188,13 @@ static uptr GetAltStackSize() {
   return SIGSTKSZ * 4;
 }
 
-void* SetAlternateSignalStack() {
+void *SetAlternateSignalStack() {
   stack_t altstack, oldstack;
   CHECK_EQ(0, sigaltstack(nullptr, &oldstack));
   // If the alternate stack is already in place, do nothing.
   // Android always sets an alternate stack, but it's too small for us.
   if (!SANITIZER_ANDROID && !(oldstack.ss_flags & SS_DISABLE))
-    return nullptr;
+    return oldstack.ss_sp;
   // TODO(glider): the mapped stack should have the MAP_STACK flag in the
   // future. It is not required by man 2 sigaltstack now (they're using
   // malloc()).
@@ -205,9 +205,9 @@ void* SetAlternateSignalStack() {
   return altstack.ss_sp;
 }
 
-void UnsetAlternateSignalStack(void* altstack_base) {
+void UnsetAlternateSignalStack(void *altstack_base) {
   stack_t altstack, oldstack;
-  altstack.ss_sp = nullptr;
+  altstack.ss_sp = altstack_base;
   altstack.ss_flags = SS_DISABLE;
   altstack.ss_size = GetAltStackSize();  // Some sane value required on Darwin.
   CHECK_EQ(0, sigaltstack(&altstack, &oldstack));
