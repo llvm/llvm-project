@@ -1321,7 +1321,6 @@ static ParseResult parseTargetOpRegion(
   args.mapArgs.emplace(mapVars, mapTypes);
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier, &privateMaps);
-
   return parseBlockArgRegion(parser, region, args);
 }
 
