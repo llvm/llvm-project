@@ -168,7 +168,7 @@ fma(InType x, InType y, InType z) {
   constexpr InStorageType IMPLICIT_MASK =
       InFPBits::SIG_MASK - InFPBits::FRACTION_MASK;
 
-  LIBC_CONSTEXPR InType DENORMAL_SCALING =
+  constexpr InType DENORMAL_SCALING =
       InFPBits::create_value(
           Sign::POS, InFPBits::FRACTION_LEN + InFPBits::EXP_BIAS, IMPLICIT_MASK)
           .get_val();

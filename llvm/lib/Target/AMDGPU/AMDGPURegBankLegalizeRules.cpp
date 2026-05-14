@@ -1946,7 +1946,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniB512}, {{SgprB512}, {IntrId, SgprB512}}})
       .Any({{DivB512}, {{VgprB512}, {IntrId, VgprB512}}});
 
-  addRulesForIOpcs({amdgcn_wqm_demote}).Any({{}, {{}, {IntrId, Vcc}}});
+  addRulesForIOpcs({amdgcn_kill, amdgcn_wqm_demote})
+      .Any({{}, {{}, {IntrId, Vcc}}});
 
   addRulesForIOpcs({amdgcn_ballot}, Standard)
       .Uni(S64, {{Sgpr64}, {IntrId, Vcc}})

@@ -9,6 +9,7 @@
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -29,9 +30,11 @@ DependencyScanningWorker::DependencyScanningWorker(
 
   auto BaseFS = Service.getOpts().MakeVFS();
 
-  if (Service.getOpts().TraceVFS)
-    BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
+  if (Service.getOpts().TraceVFS) {
+    TracingFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
         std::move(BaseFS));
+    BaseFS = TracingFS;
+  }
 
   DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
       Service.getSharedCache(), std::move(BaseFS));
