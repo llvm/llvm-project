@@ -194,7 +194,7 @@ public:
     assert(I < DiagStorage->NumDiagArgs && "Not enough diagnostic args");
     assert(DiagStorage->DiagArgumentsKind[I] !=
                DiagnosticsEngine::ak_std_string &&
-           "Not an integer arg");
+           "Not a value arg");
     return DiagStorage->DiagArgumentsVal[I];
   }
 };

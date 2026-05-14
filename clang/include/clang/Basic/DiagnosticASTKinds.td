@@ -1031,9 +1031,10 @@ def warn_npot_ms_struct : Warning<
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
 def warn_relaxed_constant_fold : Extension<
-  "folding this constant expression is a Microsoft extension">,
+  "folding constant expression involving "
+  "%select{reinterpret_cast|cast that performs the conversions of a reinterpret_cast}0"
+  " is a Microsoft extension">,
   InGroup<MicrosoftRelaxedConstantFold>;
-
 
 def err_itanium_layout_unimplemented : Error<
   "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;
