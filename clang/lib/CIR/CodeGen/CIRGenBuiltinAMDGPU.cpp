@@ -266,9 +266,8 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_sinh:
   case AMDGPU::BI__builtin_amdgcn_sin_bf16: {
     mlir::Value src = emitScalarExpr(expr->getArg(0));
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "amdgcn.sin", src.getType(),
-                                       mlir::ValueRange{src});
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "amdgcn.sin",
+                                       src.getType(), mlir::ValueRange{src});
   }
   case AMDGPU::BI__builtin_amdgcn_cosf:
   case AMDGPU::BI__builtin_amdgcn_cosh:
