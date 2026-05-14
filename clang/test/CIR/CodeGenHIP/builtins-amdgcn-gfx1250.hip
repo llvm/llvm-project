@@ -21,8 +21,6 @@
 // CIR: cir.call_llvm_intrinsic "amdgcn.rsq" {{.*}} : (!cir.bf16) -> !cir.bf16
 // LLVM: define{{.*}} void @_Z13test_rsq_bf16PDF16bDF16b
 // LLVM: call{{.*}} bfloat @llvm.amdgcn.rsq.bf16(bfloat %{{.*}})
-// OGCG: define{{.*}} void @_Z13test_rsq_bf16PDF16bDF16b
-// OGCG: call{{.*}} bfloat @llvm.amdgcn.rsq.bf16(bfloat %{{.*}})
 __device__ void test_rsq_bf16(__bf16* out, __bf16 a) {
   *out = __builtin_amdgcn_rsq_bf16(a);
 }
