@@ -189,6 +189,14 @@ public:
              == DiagnosticsEngine::ak_std_string && "Not a string arg");
     return DiagStorage->DiagArgumentsStr[I];
   }
+  uint64_t getValueArg(unsigned I) {
+    assert(DiagStorage && "No diagnostic storage?");
+    assert(I < DiagStorage->NumDiagArgs && "Not enough diagnostic args");
+    assert(DiagStorage->DiagArgumentsKind[I] !=
+               DiagnosticsEngine::ak_std_string &&
+           "Not an integer arg");
+    return DiagStorage->DiagArgumentsVal[I];
+  }
 };
 
 inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
