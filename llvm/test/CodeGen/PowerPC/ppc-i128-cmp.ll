@@ -3,6 +3,8 @@
 ; RUN:   FileCheck %s --check-prefix=CHECK-AIX
 ; RUN: llc -mcpu=pwr8 -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu < %s | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-LINUX
+; RUN: llc -mcpu=pwr8 -ppc-asm-full-reg-names -mtriple=powerpc-ibm-aix < %s | \
+; RUN:   FileCheck %s --check-prefix=CHECK-AIX32
 
 define i1 @test1() {
 ; CHECK-AIX-LABEL: test1:
@@ -22,6 +24,16 @@ define i1 @test1() {
 ; CHECK-LINUX-NEXT:    cntlzd r3, r3
 ; CHECK-LINUX-NEXT:    rldicl r3, r3, 58, 63
 ; CHECK-LINUX-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test1:
+; CHECK-AIX32:       # %bb.0: # %bb
+; CHECK-AIX32-NEXT:    li r3, 0
+; CHECK-AIX32-NEXT:    xxlxor vs35, vs35, vs35
+; CHECK-AIX32-NEXT:    lxvw4x vs34, 0, r3
+; CHECK-AIX32-NEXT:    vcmpequb. v2, v2, v3
+; CHECK-AIX32-NEXT:    mfocrf r3, 2
+; CHECK-AIX32-NEXT:    rlwinm r3, r3, 25, 31, 31
+; CHECK-AIX32-NEXT:    blr
 bb:
   %load = load i128, ptr null, align 16
   %icmp = icmp eq i128 %load, 0
@@ -48,6 +60,17 @@ define i1 @test2() {
 ; CHECK-LINUX-NEXT:    cntlzd r3, r3
 ; CHECK-LINUX-NEXT:    rldicl r3, r3, 58, 63
 ; CHECK-LINUX-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test2:
+; CHECK-AIX32:       # %bb.0: # %bb
+; CHECK-AIX32-NEXT:    li r3, 0
+; CHECK-AIX32-NEXT:    lxvw4x vs34, 0, r3
+; CHECK-AIX32-NEXT:    lwz r3, L..C0(r2) # %const.0
+; CHECK-AIX32-NEXT:    lxvw4x vs35, 0, r3
+; CHECK-AIX32-NEXT:    vcmpequb. v2, v2, v3
+; CHECK-AIX32-NEXT:    mfocrf r3, 2
+; CHECK-AIX32-NEXT:    rlwinm r3, r3, 25, 31, 31
+; CHECK-AIX32-NEXT:    blr
 bb:
   %load = load i128, ptr null, align 16
   %icmp = icmp eq i128 %load, 10
@@ -74,6 +97,17 @@ define i1 @test3() {
 ; CHECK-LINUX-NEXT:    cntlzd r3, r3
 ; CHECK-LINUX-NEXT:    rldicl r3, r3, 58, 63
 ; CHECK-LINUX-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test3:
+; CHECK-AIX32:       # %bb.0: # %bb
+; CHECK-AIX32-NEXT:    li r3, 0
+; CHECK-AIX32-NEXT:    lxvw4x vs34, 0, r3
+; CHECK-AIX32-NEXT:    lwz r3, L..C1(r2) # %const.0
+; CHECK-AIX32-NEXT:    lxvw4x vs35, 0, r3
+; CHECK-AIX32-NEXT:    vcmpequb. v2, v2, v3
+; CHECK-AIX32-NEXT:    mfocrf r3, 2
+; CHECK-AIX32-NEXT:    rlwinm r3, r3, 25, 31, 31
+; CHECK-AIX32-NEXT:    blr
 bb:
   %load = load i128, ptr null, align 16
   %icmp = icmp eq i128 %load, 65535
@@ -103,6 +137,17 @@ define i1 @test4() {
 ; CHECK-LINUX-NEXT:    mfocrf r3, 2
 ; CHECK-LINUX-NEXT:    rlwinm r3, r3, 25, 31, 31
 ; CHECK-LINUX-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test4:
+; CHECK-AIX32:       # %bb.0: # %bb
+; CHECK-AIX32-NEXT:    li r3, 0
+; CHECK-AIX32-NEXT:    lxvw4x vs34, 0, r3
+; CHECK-AIX32-NEXT:    lwz r3, L..C2(r2) # %const.0
+; CHECK-AIX32-NEXT:    lxvw4x vs35, 0, r3
+; CHECK-AIX32-NEXT:    vcmpequb. v2, v2, v3
+; CHECK-AIX32-NEXT:    mfocrf r3, 2
+; CHECK-AIX32-NEXT:    rlwinm r3, r3, 25, 31, 31
+; CHECK-AIX32-NEXT:    blr
 bb:
   %load = load i128, ptr null, align 16
   %icmp = icmp eq i128 %load, 65536
@@ -128,6 +173,16 @@ define i1 @test5() {
 ; CHECK-LINUX-NEXT:    cntlzd r3, r3
 ; CHECK-LINUX-NEXT:    rldicl r3, r3, 58, 63
 ; CHECK-LINUX-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test5:
+; CHECK-AIX32:       # %bb.0: # %bb
+; CHECK-AIX32-NEXT:    li r3, 0
+; CHECK-AIX32-NEXT:    xxlxor vs35, vs35, vs35
+; CHECK-AIX32-NEXT:    lxvw4x vs34, 0, r3
+; CHECK-AIX32-NEXT:    vcmpequb. v2, v2, v3
+; CHECK-AIX32-NEXT:    mfocrf r3, 2
+; CHECK-AIX32-NEXT:    rlwinm r3, r3, 25, 31, 31
+; CHECK-AIX32-NEXT:    blr
 bb:
   %load = load i128, ptr null, align 16, !range !0
   %icmp = icmp eq i128 %load, 0
@@ -154,6 +209,17 @@ define i1 @test6() {
 ; CHECK-LINUX-NEXT:    cntlzd r3, r3
 ; CHECK-LINUX-NEXT:    rldicl r3, r3, 58, 63
 ; CHECK-LINUX-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test6:
+; CHECK-AIX32:       # %bb.0: # %bb
+; CHECK-AIX32-NEXT:    li r3, 0
+; CHECK-AIX32-NEXT:    lxvw4x vs34, 0, r3
+; CHECK-AIX32-NEXT:    lwz r3, L..C3(r2) # %const.0
+; CHECK-AIX32-NEXT:    lxvw4x vs35, 0, r3
+; CHECK-AIX32-NEXT:    vcmpequb. v2, v2, v3
+; CHECK-AIX32-NEXT:    mfocrf r3, 2
+; CHECK-AIX32-NEXT:    rlwinm r3, r3, 25, 31, 31
+; CHECK-AIX32-NEXT:    blr
 bb:
   %load = load i128, ptr null, align 16, !range !1
   %icmp = icmp eq i128 %load, 65535
@@ -170,6 +236,11 @@ define i1 @test7() {
 ; CHECK-LINUX:       # %bb.0: # %bb
 ; CHECK-LINUX-NEXT:    li r3, 0
 ; CHECK-LINUX-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test7:
+; CHECK-AIX32:       # %bb.0: # %bb
+; CHECK-AIX32-NEXT:    li r3, 0
+; CHECK-AIX32-NEXT:    blr
 bb:
   %load = load i128, ptr null, align 16, !range !1
   %icmp = icmp eq i128 %load, 65536
@@ -199,6 +270,17 @@ define i1 @test8() {
 ; CHECK-LINUX-NEXT:    mfocrf r3, 2
 ; CHECK-LINUX-NEXT:    rlwinm r3, r3, 25, 31, 31
 ; CHECK-LINUX-NEXT:    blr
+;
+; CHECK-AIX32-LABEL: test8:
+; CHECK-AIX32:       # %bb.0: # %bb
+; CHECK-AIX32-NEXT:    li r3, 0
+; CHECK-AIX32-NEXT:    lxvw4x vs34, 0, r3
+; CHECK-AIX32-NEXT:    lwz r3, L..C4(r2) # %const.0
+; CHECK-AIX32-NEXT:    lxvw4x vs35, 0, r3
+; CHECK-AIX32-NEXT:    vcmpequb. v2, v2, v3
+; CHECK-AIX32-NEXT:    mfocrf r3, 2
+; CHECK-AIX32-NEXT:    rlwinm r3, r3, 25, 31, 31
+; CHECK-AIX32-NEXT:    blr
 bb:
   %load = load i128, ptr null, align 16, !range !2
   %icmp = icmp eq i128 %load, 65536
