@@ -1569,24 +1569,24 @@ static bool parseLangOptionsArgs(CompilerInvocation &invoc,
 }
 
 // Copied from clang/lib/Frontend/CompilerInvocation.cpp.
-static void addDiagnosticArgs(llvm::opt::ArgList &Args,
-                              llvm::opt::OptSpecifier Group,
-                              llvm::opt::OptSpecifier GroupWithValue,
-                              std::vector<std::string> &Diagnostics) {
-  for (auto *A : Args.filtered(Group)) {
-    if (A->getOption().getKind() == llvm::opt::Option::FlagClass) {
+static void addDiagnosticArgs(llvm::opt::ArgList &args,
+                              llvm::opt::OptSpecifier group,
+                              llvm::opt::OptSpecifier groupWithValue,
+                              std::vector<std::string> &diagnostics) {
+  for (auto *a : args.filtered(group)) {
+    if (a->getOption().getKind() == llvm::opt::Option::FlagClass) {
       // The argument is a pure flag (such as OPT_Wall or OPT_Wdeprecated). Add
       // its name (minus the "W" or "R" at the beginning) to the diagnostics.
-      Diagnostics.push_back(
-          std::string(A->getOption().getName().drop_front(1)));
-    } else if (A->getOption().matches(GroupWithValue)) {
+      diagnostics.push_back(
+          std::string(a->getOption().getName().drop_front(1)));
+    } else if (a->getOption().matches(groupWithValue)) {
       // This is -Wfoo= or -Rfoo=, where foo is the name of the diagnostic
       // group. Add only the group name to the diagnostics.
-      Diagnostics.push_back(
-          std::string(A->getOption().getName().drop_front(1).rtrim("=-")));
+      diagnostics.push_back(
+          std::string(a->getOption().getName().drop_front(1).rtrim("=-")));
     } else {
       // Otherwise, add its value (for OPT_W_Joined and similar).
-      Diagnostics.push_back(A->getValue());
+      diagnostics.push_back(a->getValue());
     }
   }
 }
