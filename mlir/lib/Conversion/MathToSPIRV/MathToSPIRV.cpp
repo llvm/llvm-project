@@ -19,6 +19,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "math-to-spirv-pattern"
@@ -370,12 +371,16 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
       Attribute attr;
       if (!matchPattern(v, m_Constant(&attr)))
         return false;
-      if (auto fAttr = dyn_cast<FloatAttr>(attr))
-        return fAttr.getValue().isInteger();
-      if (auto dense = dyn_cast<DenseFPElementsAttr>(attr))
-        return llvm::all_of(dense.getValues<APFloat>(),
-                            [](const APFloat &v) { return v.isInteger(); });
-      return false;
+      return TypeSwitch<Attribute, bool>(attr)
+          .Case<FloatAttr>([](FloatAttr a) { return a.getValue().isInteger(); })
+          .Case<SplatElementsAttr>([](SplatElementsAttr a) {
+            return a.getSplatValue<APFloat>().isInteger();
+          })
+          .Case<DenseFPElementsAttr>([](DenseFPElementsAttr a) {
+            return llvm::all_of(a.getValues<APFloat>(),
+                                [](const APFloat &v) { return v.isInteger(); });
+          })
+          .Default(false);
     };
 
     if (!isIntegerValuedConstant(adaptor.getRhs())) {
