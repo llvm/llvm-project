@@ -3774,11 +3774,12 @@ getSingleAccDeclareMappingFlag(const Fortran::semantics::Symbol &ultimate) {
 }
 
 template <typename EntryOp, typename ExitOp>
-static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
-                           mlir::OpBuilder &modBuilder,
-                           const Fortran::parser::AccObjectList &accObjectList,
-                           mlir::acc::DataClause clause,
-                           Fortran::semantics::Symbol::Flag declareMappingFlag) {
+static void
+genGlobalCtors(Fortran::lower::AbstractConverter &converter,
+               mlir::OpBuilder &modBuilder,
+               const Fortran::parser::AccObjectList &accObjectList,
+               mlir::acc::DataClause clause,
+               Fortran::semantics::Symbol::Flag declareMappingFlag) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto genCtors = [&](const mlir::Location operandLocation,
                       const Fortran::semantics::Symbol &symbol) {
