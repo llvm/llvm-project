@@ -628,6 +628,11 @@ void AArch64MCLFIRewriter::rewriteSPModification(const MCInst &Inst,
   if (SkipLoads && SkipStores)
     return emitInst(Inst, Out, STI);
 
+  // Special case: mov sp, xN -> add sp, x27, wN, uxtw
+  if (Inst.getOpcode() == AArch64::ADDXri && Inst.getOperand(2).getImm() == 0 &&
+      Inst.getOperand(3).getImm() == 0)
+    return emitAddMask(AArch64::SP, Inst.getOperand(1).getReg(), Out, STI);
+
   // Redirect SP modification destination to scratch, then sandbox.
   MCInst ModInst = replaceRegAt(Inst, 0, LFIScratchReg);
   emitInst(ModInst, Out, STI);

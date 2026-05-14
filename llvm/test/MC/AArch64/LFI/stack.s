@@ -13,8 +13,7 @@ str x0, [sp], #16
 // CHECK: str x0, [sp], #16
 
 mov sp, x0
-// CHECK:      add x26, x0, #0
-// CHECK-NEXT: add sp, x27, w26, uxtw
+// CHECK: add sp, x27, w0, uxtw
 
 add sp, sp, #8
 // CHECK:      add x26, sp, #8
