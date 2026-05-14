@@ -4044,34 +4044,36 @@ protected:
 #endif
 };
 
+/// CastInfo helper for casting from VPRecipeBase to a mixin class that is not
+/// part of the VPRecipeBase class hierarchy (e.g. VPPhiAccessors,
+/// VPIRMetadata).
+namespace vpdetail {
+template <typename VPMixin, typename... RecipeTys>
+struct CastInfoMixinImpl
+    : public DefaultDoCastIfPossible<VPMixin *, VPRecipeBase *,
+                                     CastInfoMixinImpl<VPMixin, RecipeTys...>> {
+  static_assert((std::is_base_of_v<VPMixin, RecipeTys> && ...),
+                "Each type in RecipeTys must derive from VPMixin");
+
+  /// Used by isa.
+  static bool isPossible(VPRecipeBase *R) { return isa<RecipeTys...>(R); }
+
+  /// Used by cast.
+  static VPMixin *doCast(VPRecipeBase *R) {
+    VPMixin *Out = nullptr;
+    ((Out = dyn_cast<RecipeTys>(R)) || ...);
+    assert(Out && "Illegal recipe for cast");
+    return Out;
+  }
+  static VPMixin *castFailed() { return nullptr; }
+};
+} // namespace vpdetail
+
 /// Support casting from VPRecipeBase -> VPPhiAccessors.
 template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase *>
-    : DefaultDoCastIfPossible<VPPhiAccessors *, VPRecipeBase *,
-                              CastInfo<VPPhiAccessors, VPRecipeBase *>> {
-  /// Used by isa.
-  static inline bool isPossible(VPRecipeBase *R) {
-    // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
-    return isa<VPPhi, VPIRPhi, VPWidenPHIRecipe, VPHeaderPHIRecipe>(R);
-  }
-
-  /// Used by cast.
-  static inline VPPhiAccessors *doCast(VPRecipeBase *R) {
-    switch (R->getVPRecipeID()) {
-    case VPRecipeBase::VPInstructionSC:
-      return cast<VPPhi>(R);
-    case VPRecipeBase::VPIRInstructionSC:
-      return cast<VPIRPhi>(R);
-    case VPRecipeBase::VPWidenPHISC:
-      return cast<VPWidenPHIRecipe>(R);
-    default:
-      return cast<VPHeaderPHIRecipe>(R);
-    }
-  }
-
-  /// Used by inherited doCastIfPossible to dyn_cast.
-  static inline VPPhiAccessors *castFailed() { return nullptr; }
-};
+    : vpdetail::CastInfoMixinImpl<VPPhiAccessors, VPPhi, VPIRPhi,
+                                  VPWidenPHIRecipe, VPHeaderPHIRecipe> {};
 
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
@@ -4086,49 +4088,10 @@ struct CastInfo<VPPhiAccessors, VPRecipeBase>
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>
-    : public DefaultDoCastIfPossible<VPIRMetadata *, VPRecipeBase *,
-                                     CastInfo<VPIRMetadata, VPRecipeBase *>> {
-  /// Used by isa.
-  static inline bool isPossible(VPRecipeBase *R) {
-    // NOTE: Each recipe inheriting from VPIRMetadata must be listed here.
-    return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-               VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPReplicateRecipe,
-               VPInterleaveRecipe, VPInterleaveEVLRecipe, VPWidenLoadRecipe,
-               VPWidenLoadEVLRecipe, VPWidenStoreRecipe, VPWidenStoreEVLRecipe>(
-        R);
-  }
-
-  /// Used by cast.
-  static inline VPIRMetadata *doCast(VPRecipeBase *R) {
-    switch (R->getVPRecipeID()) {
-    case VPRecipeBase::VPInstructionSC:
-      return cast<VPInstruction>(R);
-    case VPRecipeBase::VPWidenSC:
-      return cast<VPWidenRecipe>(R);
-    case VPRecipeBase::VPWidenCastSC:
-      return cast<VPWidenCastRecipe>(R);
-    case VPRecipeBase::VPWidenIntrinsicSC:
-      return cast<VPWidenIntrinsicRecipe>(R);
-    case VPRecipeBase::VPWidenCallSC:
-      return cast<VPWidenCallRecipe>(R);
-    case VPRecipeBase::VPReplicateSC:
-      return cast<VPReplicateRecipe>(R);
-    case VPRecipeBase::VPInterleaveSC:
-    case VPRecipeBase::VPInterleaveEVLSC:
-      return cast<VPInterleaveBase>(R);
-    case VPRecipeBase::VPWidenLoadSC:
-    case VPRecipeBase::VPWidenLoadEVLSC:
-    case VPRecipeBase::VPWidenStoreSC:
-    case VPRecipeBase::VPWidenStoreEVLSC:
-      return cast<VPWidenMemoryRecipe>(R);
-    default:
-      llvm_unreachable("Illegal recipe for VPIRMetadata cast");
-    }
-  }
-
-  /// Used by inherited doCastIfPossible to dyn_cast.
-  static inline VPIRMetadata *castFailed() { return nullptr; }
-};
+    : vpdetail::CastInfoMixinImpl<VPIRMetadata, VPInstruction, VPWidenRecipe,
+                                  VPWidenCastRecipe, VPWidenIntrinsicRecipe,
+                                  VPWidenCallRecipe, VPReplicateRecipe,
+                                  VPInterleaveBase, VPWidenMemoryRecipe> {};
 
 template <>
 struct CastInfo<VPIRMetadata, const VPRecipeBase *>

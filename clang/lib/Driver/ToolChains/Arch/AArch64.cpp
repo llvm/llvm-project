@@ -180,8 +180,7 @@ static bool DecodeAArch64HostFeatures(llvm::AArch64::ExtensionSet &Extensions) {
 static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
                               llvm::AArch64::ExtensionSet &Extensions,
                               std::optional<std::string> &InvalidArg) {
-  std::pair<StringRef, StringRef> Split = Mcpu.split("+");
-  StringRef CPU = Split.first;
+  auto [CPU, features] = Mcpu.split("+");
   const bool IsNative = CPU == "native";
 
   if (IsNative)
@@ -190,7 +189,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
   const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
       llvm::AArch64::parseCpu(CPU);
   if (!CpuInfo) {
-    InvalidArg.emplace(Split.first.str());
+    InvalidArg.emplace(CPU.str());
     return false;
   }
 
@@ -199,8 +198,8 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
   if (IsNative && !DecodeAArch64HostFeatures(Extensions))
     return false;
 
-  if (Split.second.size() &&
-      !DecodeAArch64Features(D, Split.second, Extensions, InvalidArg))
+  if (features.size() &&
+      !DecodeAArch64Features(D, features, Extensions, InvalidArg))
     return false;
 
   return true;
@@ -212,22 +211,22 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
                                 llvm::AArch64::ExtensionSet &Extensions,
                                 std::optional<std::string> &InvalidArg) {
   std::string MarchLowerCase = March.lower();
-  std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
+  auto [CPU, features] = StringRef(MarchLowerCase).split("+");
 
-  if (Split.first == "native")
+  if (CPU == "native")
     return DecodeAArch64Mcpu(D, MarchLowerCase, Extensions, InvalidArg);
 
   const llvm::AArch64::ArchInfo *ArchInfo =
-      llvm::AArch64::parseArch(Split.first);
+      llvm::AArch64::parseArch(CPU);
   if (!ArchInfo) {
-    InvalidArg.emplace(Split.first.str());
+    InvalidArg.emplace(CPU.str());
     return false;
   }
 
   Extensions.addArchDefaults(*ArchInfo);
 
-  if ((Split.second.size() &&
-       !DecodeAArch64Features(D, Split.second, Extensions, InvalidArg)))
+  if ((features.size() &&
+       !DecodeAArch64Features(D, features, Extensions, InvalidArg)))
     return false;
 
   return true;

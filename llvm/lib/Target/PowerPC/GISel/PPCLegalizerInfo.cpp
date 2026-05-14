@@ -84,5 +84,10 @@ PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
   getActionDefinitionsBuilder(G_FCONSTANT).lowerFor({S32, S64});
   getActionDefinitionsBuilder(G_CONSTANT_POOL).legalFor({P0});
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
+
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+
   getLegacyLegalizerInfo().computeTables();
 }
