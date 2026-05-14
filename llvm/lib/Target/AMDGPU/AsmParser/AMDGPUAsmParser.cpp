@@ -5156,6 +5156,14 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
         return false;
       }
 
+      // Only src0 can use lit64 in VOP* encoding.
+      if (!IsForcedFP64 && (IsForcedLit64 || !IsValid32Op) &&
+          OpIdx != getNamedOperandIdx(Opcode, OpName::src0)) {
+        Error(getOperandLoc(Operands, OpIdx),
+              "invalid operand for instruction");
+        return false;
+      }
+
       if (IsFP64 && IsValid32Op && !IsForcedFP64)
         Value = Hi_32(Value);
 
