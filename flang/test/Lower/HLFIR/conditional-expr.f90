@@ -355,3 +355,30 @@ subroutine test_polymorphic_extends(flag, x, y)
   ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: }
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_chained_char_conditional(
+subroutine test_chained_char_conditional(flag1, flag2, flag3)
+  logical :: flag1, flag2, flag3
+  character(len=:), allocatable :: s1, s2, s3, s4, result
+  s1 = "A"
+  s2 = "BB"
+  s3 = "CCC"
+  s4 = "DDDD"
+  ! Chained conditional with different-length character branches.
+  result = (flag1 ? s1 : flag2 ? s2 : flag3 ? s3 : s4)
+  ! CHECK: %[[OUTER:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<!fir.char<1,?>> {
+  ! CHECK:   hlfir.yield %{{.*}}
+  ! CHECK: } else {
+  ! CHECK:   %[[MID:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<!fir.char<1,?>> {
+  ! CHECK:     hlfir.yield %{{.*}}
+  ! CHECK:   } else {
+  ! CHECK:     %[[INNER:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<!fir.char<1,?>> {
+  ! CHECK:       hlfir.yield %{{.*}}
+  ! CHECK:     } else {
+  ! CHECK:       hlfir.yield %{{.*}}
+  ! CHECK:     }
+  ! CHECK:     hlfir.yield %[[INNER]] : !hlfir.expr<!fir.char<1,?>>
+  ! CHECK:   }
+  ! CHECK:   hlfir.yield %[[MID]] : !hlfir.expr<!fir.char<1,?>>
+  ! CHECK: }
+end subroutine

@@ -2471,8 +2471,8 @@ void hlfir::ConditionalOp::build(mlir::OpBuilder &builder,
   odsState.addTypes(resultType);
   odsState.addOperands(condition);
   // Create the then and else regions, each with one empty block.
-  odsState.addRegion()->push_back(new mlir::Block{});
-  odsState.addRegion()->push_back(new mlir::Block{});
+  odsState.addRegion()->emplaceBlock();
+  odsState.addRegion()->emplaceBlock();
 }
 
 llvm::LogicalResult hlfir::ConditionalOp::verify() {

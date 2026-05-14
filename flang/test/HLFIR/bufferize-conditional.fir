@@ -300,3 +300,58 @@ func.func @test_asymmetric_poly(%cond: i1, %a: !fir.ref<!fir.type<_Tt{x:i32}>>, 
 // Helper declarations for test 3.
 func.func private @_QPmake_poly() -> !fir.class<!fir.heap<!fir.type<_Tt{x:i32}>>>
 func.func private @_FortranADestroy(!fir.box<none>) -> ()
+
+// --- Test 10: Forwarding with non-empty cleanup region ---
+// When forwarding (as_expr move, type matches), the cleanup region may
+// contain ops beyond the destroy of the forwarded entity — e.g.,
+// freeing argument temporaries after a function call.
+// The forwarding path must replay those cleanups while skipping only
+// the destroy whose operand is the forwarded entity.
+// Uses FIR-level cleanup ops (fir.freemem) so they survive lowering and
+// are visible in the CHECK output.
+func.func @test_forwarding_with_cleanup(%cond: i1, %arg: !fir.boxchar<1>) {
+  %result_alloca = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = ".result"}
+  %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<!fir.char<1,?>> {
+    // Simulate a heap-allocated argument temporary.
+    %c10 = arith.constant 10 : index
+    %heap = fir.allocmem !fir.char<1,?>(%c10 : index) {uniq_name = ".tmp.arg"}
+    // Simulate function call returning allocatable character result.
+    %call = fir.call @_QPfunc_alloc_char(%arg) : (!fir.boxchar<1>) -> !fir.box<!fir.heap<!fir.char<1,?>>>
+    fir.save_result %call to %result_alloca : !fir.box<!fir.heap<!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+    %loaded = fir.load %result_alloca : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+    %addr = fir.box_addr %loaded : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
+    %len = fir.box_elesize %loaded : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
+    %boxchar = fir.emboxchar %addr, %len : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+    %true = arith.constant true
+    %expr = hlfir.as_expr %boxchar move %true : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
+    hlfir.yield %expr : !hlfir.expr<!fir.char<1,?>> cleanup {
+      hlfir.destroy %expr : !hlfir.expr<!fir.char<1,?>>
+      fir.freemem %heap : !fir.heap<!fir.char<1,?>>
+    }
+  } else {
+    hlfir.yield %arg : !fir.boxchar<1>
+  }
+  hlfir.assign %0 to %arg : !hlfir.expr<!fir.char<1,?>>, !fir.boxchar<1>
+  hlfir.destroy %0 : !hlfir.expr<!fir.char<1,?>>
+  return
+}
+func.func private @_QPfunc_alloc_char(!fir.boxchar<1>) -> !fir.box<!fir.heap<!fir.char<1,?>>>
+// CHECK-LABEL: func.func @test_forwarding_with_cleanup(
+// CHECK-SAME:    %[[COND:.*]]: i1, %[[ARG:.*]]: !fir.boxchar<1>)
+// CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.boxchar<1>, i1) {
+// Forwarding: var and mustFree forwarded directly, no temp copy:
+// CHECK:         %[[HEAP:.*]] = fir.allocmem !fir.char<1,?>
+// CHECK:         fir.call @_QPfunc_alloc_char
+// CHECK:         %[[BOXCHAR:.*]] = fir.emboxchar
+// CHECK:         %[[TRUE:.*]] = arith.constant true
+// Cleanup replayed — arg temp freed (destroy of forwarded expr is skipped):
+// CHECK:         fir.freemem %[[HEAP]]
+// CHECK:         fir.result %[[BOXCHAR]], %[[TRUE]] : !fir.boxchar<1>, i1
+// CHECK:       } else {
+// Non-forwarding: copy the variable into a temp:
+// CHECK:         fir.unboxchar %[[ARG]]
+// CHECK:         fir.alloca !fir.char<1,?>
+// CHECK:         hlfir.assign %[[ARG]] to %{{.*}}#0 temporary_lhs
+// CHECK:         %[[FALSE:.*]] = arith.constant false
+// CHECK:         fir.result %{{.*}}, %[[FALSE]] : !fir.boxchar<1>, i1
+// CHECK:       }

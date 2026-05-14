@@ -52,15 +52,8 @@ static hlfir::Entity castTempToResultType(mlir::Location loc,
                                           mlir::Type targetType) {
   if (temp.getType() == targetType)
     return temp;
-  if (mlir::isa<fir::BoxCharType>(targetType)) {
-    llvm::SmallVector<mlir::Value> lenParams;
-    hlfir::genLengthParameters(loc, builder, temp, lenParams);
-    assert(!lenParams.empty() && "character must have length");
-    const mlir::Value ref{builder.createConvert(
-        loc, builder.getRefType(temp.getFortranElementType()), temp)};
-    return hlfir::Entity{
-        fir::EmboxCharOp::create(builder, loc, targetType, ref, lenParams[0])};
-  }
+  if (mlir::isa<fir::BoxCharType>(targetType))
+    return hlfir::Entity{hlfir::genVariableBoxChar(loc, builder, temp)};
   if (mlir::isa<fir::BaseBoxType>(targetType) &&
       !mlir::isa<fir::BaseBoxType>(temp.getType())) {
     return hlfir::genVariableBox(loc, builder, temp,
@@ -912,6 +905,22 @@ struct ConditionalOpConversion
       mlir::IRMapping mapper;
       auto yield{mlir::cast<hlfir::YieldOp>(region.front().getTerminator())};
       const mlir::Value yieldedEntity{yield.getEntity()};
+
+      // Clone cleanup region ops. If skipDestroyOf is set, skip any
+      // hlfir.destroy whose operand matches it (used by the forwarding
+      // path where ownership of that entity transfers to the caller).
+      auto replayCleanups = [&](mlir::Value skipDestroyOf = nullptr) {
+        if (yield.getCleanup().empty())
+          return;
+        for (auto &op : yield.getCleanup().front().without_terminator()) {
+          if (skipDestroyOf)
+            if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(&op);
+                destroy && destroy.getExpr() == skipDestroyOf)
+              continue;
+          builder.clone(op, mapper);
+        }
+      };
+
       // Try to forward the yielded entity's storage directly to avoid using a
       // temp.
       hlfir::AsExprOp asExprToForward;
@@ -939,6 +948,7 @@ struct ConditionalOpConversion
             mapper.lookupOrDefault(asExprToForward.getVar())};
         const mlir::Value fwdMustFree{
             mapper.lookupOrDefault(asExprToForward.getMustFree())};
+        replayCleanups(/*skipDestroyOf=*/yieldedEntity);
         fir::ResultOp::create(builder, loc,
                               mlir::ValueRange{fwdVar, fwdMustFree});
         return;
@@ -956,9 +966,7 @@ struct ConditionalOpConversion
                               /*keep_lhs_length_if_realloc=*/false,
                               /*temporary_lhs=*/true);
       // Replay cleanup ops after the assign to avoid use-after-free.
-      if (!yield.getCleanup().empty())
-        for (auto &op : yield.getCleanup().front().without_terminator())
-          builder.clone(op, mapper);
+      replayCleanups();
       temp = castTempToResultType(loc, builder, temp, tempBaseType);
       const mlir::Value mustFreeVal{builder.createBool(loc, isHeapAlloc)};
       fir::ResultOp::create(builder, loc, mlir::ValueRange{temp, mustFreeVal});
