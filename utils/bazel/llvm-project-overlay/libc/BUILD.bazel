@@ -1085,6 +1085,7 @@ libc_support_library(
         "src/__support/CPP/utility/declval.h",
         "src/__support/CPP/utility/forward.h",
     ],
+    features = ["-parse_headers"],
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",

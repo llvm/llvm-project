@@ -244,6 +244,7 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
         # need proper -I flags for header validation, which are specified in
         # libc_common_copts().
         copts = libc_common_copts(),
+        features = ["-parse_headers"],
         **kwargs
     )
 
