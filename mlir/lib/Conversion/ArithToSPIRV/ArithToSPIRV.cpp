@@ -1318,64 +1318,34 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// AddUIExtendedOp
+// AddUIExtendedOp/SubUIExtendedOp
 //===----------------------------------------------------------------------===//
 
-/// Converts arith.addui_extended to spirv.IAddCarry.
-class AddUIExtendedOpPattern final
-    : public OpConversionPattern<arith::AddUIExtendedOp> {
+/// Converts arith.addui_extended/arith.subui_extended to spirv.IAddCarry/
+/// spirv.ISubBorrow.
+template <typename ArithExtendedOp, typename SPIRVExtendedOp>
+class ExtendedBinaryOpPattern final
+    : public OpConversionPattern<ArithExtendedOp> {
 public:
-  using Base::Base;
+  using OpConversionPattern<ArithExtendedOp>::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(arith::AddUIExtendedOp op, OpAdaptor adaptor,
+  matchAndRewrite(ArithExtendedOp op, typename ArithExtendedOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type dstElemTy = adaptor.getLhs().getType();
     Location loc = op->getLoc();
-    Value result = spirv::IAddCarryOp::create(rewriter, loc, adaptor.getLhs(),
-                                              adaptor.getRhs());
+    Value result = SPIRVExtendedOp::create(rewriter, loc, adaptor.getLhs(),
+                                           adaptor.getRhs());
 
-    Value sumResult = spirv::CompositeExtractOp::create(rewriter, loc, result,
-                                                        llvm::ArrayRef(0));
-    Value carryValue = spirv::CompositeExtractOp::create(rewriter, loc, result,
-                                                         llvm::ArrayRef(1));
+    Value valueResult = spirv::CompositeExtractOp::create(rewriter, loc, result,
+                                                          llvm::ArrayRef(0));
+    Value flagValue = spirv::CompositeExtractOp::create(rewriter, loc, result,
+                                                        llvm::ArrayRef(1));
 
-    // Convert the carry value to boolean.
+    // Convert the carry/borrow value to boolean.
     Value one = spirv::ConstantOp::getOne(dstElemTy, loc, rewriter);
-    Value carryResult = spirv::IEqualOp::create(rewriter, loc, carryValue, one);
+    Value flagResult = spirv::IEqualOp::create(rewriter, loc, flagValue, one);
 
-    rewriter.replaceOp(op, {sumResult, carryResult});
-    return success();
-  }
-};
-
-//===----------------------------------------------------------------------===//
-// SubUIExtendedOp
-//===----------------------------------------------------------------------===//
-
-/// Converts arith.subui_extended to spirv.ISubBorrow.
-class SubUIExtendedOpPattern final
-    : public OpConversionPattern<arith::SubUIExtendedOp> {
-public:
-  using Base::Base;
-  LogicalResult
-  matchAndRewrite(arith::SubUIExtendedOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type dstElemTy = adaptor.getLhs().getType();
-    Location loc = op->getLoc();
-    Value result = spirv::ISubBorrowOp::create(rewriter, loc, adaptor.getLhs(),
-                                               adaptor.getRhs());
-
-    Value diffResult = spirv::CompositeExtractOp::create(rewriter, loc, result,
-                                                         llvm::ArrayRef(0));
-    Value borrowValue = spirv::CompositeExtractOp::create(rewriter, loc, result,
-                                                          llvm::ArrayRef(1));
-
-    // Convert the borrow value to boolean.
-    Value one = spirv::ConstantOp::getOne(dstElemTy, loc, rewriter);
-    Value borrowResult =
-        spirv::IEqualOp::create(rewriter, loc, borrowValue, one);
-
-    rewriter.replaceOp(op, {diffResult, borrowResult});
+    rewriter.replaceOp(op, {valueResult, flagResult});
     return success();
   }
 };
@@ -1584,8 +1554,8 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
     CmpFOpNanNonePattern, CmpFOpPattern,
-    AddUIExtendedOpPattern,
-    SubUIExtendedOpPattern,
+    ExtendedBinaryOpPattern<arith::AddUIExtendedOp, spirv::IAddCarryOp>,
+    ExtendedBinaryOpPattern<arith::SubUIExtendedOp, spirv::ISubBorrowOp>,
     MulIExtendedOpPattern<arith::MulSIExtendedOp, spirv::SMulExtendedOp>,
     MulIExtendedOpPattern<arith::MulUIExtendedOp, spirv::UMulExtendedOp>,
     SelectOpPattern,
