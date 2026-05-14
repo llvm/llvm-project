@@ -94,13 +94,20 @@ public:
 
   llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
 
+  /// Returns the worker tracing VFS, if it was requested via the service.
+  llvm::vfs::TracingFileSystem *getTracingVFS() const {
+    return TracingFS.get();
+  }
+
 private:
   /// The parent dependency scanning service.
   DependencyScanningService &Service;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   /// This is the caching (and optionally dependency-directives-providing) VFS
-  /// overlaid on top of the base VFS passed in the constructor.
+  /// overlaid on top of the base VFS.
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
+  /// The tracing VFS overlaid on top of the base VFS.
+  IntrusiveRefCntPtr<llvm::vfs::TracingFileSystem> TracingFS;
 
   friend tooling::CompilerInstanceWithContext;
 };
