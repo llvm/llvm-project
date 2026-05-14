@@ -1153,7 +1153,13 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value converted,
   Type ty = firMemref.getType();
 
   for (auto op : worklist) {
-    rewriter.setInsertionPoint(op);
+    // If op is directly inside a LoopWrapperInterface region, inserting before
+    // op would violate the single-nested-op invariant. Walk up the wrapper
+    // chain and insert before the outermost wrapper instead.
+    Operation *insertBefore = op;
+    while (mlir::isa<omp::LoopWrapperInterface>(insertBefore->getParentOp()))
+      insertBefore = insertBefore->getParentOp();
+    rewriter.setInsertionPoint(insertBefore);
     Location loc = op->getLoc();
     Value replaceConvert = fir::ConvertOp::create(rewriter, loc, ty, converted);
     op->replaceUsesOfWith(firMemref, replaceConvert);
