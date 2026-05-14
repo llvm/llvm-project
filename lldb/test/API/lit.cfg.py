@@ -354,7 +354,7 @@ if "XDG_CACHE_HOME" in os.environ:
 
 # Transfer some environment variables into the tests on Windows build host.
 if platform.system() == "Windows":
-    for v in ["SystemDrive"]:
+    for v in ["SystemDrive", "LLDB_USE_LLDB_SERVER"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
     # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT

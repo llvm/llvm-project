@@ -54,6 +54,7 @@ llvm_config.with_system_environment(
         "TEMP",
         "TMP",
         "XDG_CACHE_HOME",
+        "LLDB_USE_LLDB_SERVER",
     ]
 )
 
