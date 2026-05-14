@@ -8,7 +8,6 @@
 
 #include "src/sys/socket/sendmsg.h"
 
-#include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers.
 
 #include "hdr/types/ssize_t.h"
