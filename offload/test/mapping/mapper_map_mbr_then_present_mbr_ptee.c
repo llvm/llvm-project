@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 // Check that the present check fails if we map a struct member, then do a
-// do a map(present) on a mapper that maps both a member and a pointee.
+// map(present) on a mapper that maps both a member and a pointee.
 
 int x[10];
 

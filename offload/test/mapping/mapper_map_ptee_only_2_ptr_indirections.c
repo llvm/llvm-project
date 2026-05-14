@@ -3,8 +3,9 @@
 #include <omp.h>
 #include <stdio.h>
 
-// Check that the mapping of members of a struct and pointee data using a mapper
-// properly allocates/deletes all fields.
+// The mapper maps s2.z, s2.s1p->x, s2.s1p->y, and s2.s1p->p[0:10].
+// Check that s2.s1p->dummy and s2.s1p->p itself are not mapped, and that all
+// mapped fields are correctly removed on delete.
 
 int x[10];
 

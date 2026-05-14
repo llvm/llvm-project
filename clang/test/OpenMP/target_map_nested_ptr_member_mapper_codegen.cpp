@@ -7,16 +7,18 @@
 #ifndef HEADER
 #define HEADER
 
-//   &arr[i],        &arr[i].z,      sizeof(int),        MEMBER_OF(N) | TO | FROM
-//   &arr[i].s1p[0], &arr[i].s1p->x, sizeof(s1p->x..y),  ALLOC (*)
-//   &arr[i].s1p[0], &arr[i].s1p->x, sizeof(int),        MEMBER_OF(N+2) | TO | FROM (**)
-//   &arr[i].s1p[0], &arr[i].s1p->y, sizeof(int),        MEMBER_OF(N+2) | TO | FROM (**)
+// S2 mapper for: map(to: arr[0:2])
+// Per-element entries (i = array element index; N = __tgt_mapper_num_components()):
+//   &arr[i],        &arr[i].z,      sizeof(int),        MEMBER_OF(N) | TO | FROM | modifiers
+//   &arr[i].s1p[0], &arr[i].s1p->x, sizeof(s1p->x..y),  ALLOC | modifiers (*)
+//   &arr[i].s1p[0], &arr[i].s1p->x, sizeof(int),        MEMBER_OF(N+2) | TO | FROM | modifiers (**)
+//   &arr[i].s1p[0], &arr[i].s1p->y, sizeof(int),        MEMBER_OF(N+2) | TO | FROM | modifiers (**)
 //   &arr[i].s1p,    &arr[i].s1p->x, sizeof(ptr),        ATTACH (***)
-// (*) Pointee (combined entry): No MEMBER_OF addition
-// (**) Inner MEMBER_OF(2) entries: Shifted by N.
-// (***) ATTACH entry: No MEMBER_OF bit; no inherited map-type-modifying bits
-//                     (DELETE/ALWAYS/CLOSE/PRESENT).
-// (i = array element index; N = __tgt_mapper_num_components()):
+// (*) Pointee (combined entry): No MEMBER_OF addition; modifiers (ALWAYS/DELETE/CLOSE/PRESENT)
+//     propagated from the outer map type.
+// (**) Inner MEMBER_OF(2) entries: Shifted by N; modifiers (ALWAYS/DELETE/CLOSE/PRESENT)
+//      propagated from the outer map type.
+// (***) ATTACH entry: No MEMBER_OF bit; no propagated modifiers.
 
 typedef struct {
   int x;
