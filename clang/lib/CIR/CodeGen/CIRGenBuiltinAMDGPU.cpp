@@ -177,33 +177,12 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_permlane16:
-  case AMDGPU::BI__builtin_amdgcn_permlanex16: {
-    llvm::StringRef intrinsicName =
-        builtinId == AMDGPU::BI__builtin_amdgcn_permlane16
-            ? "amdgcn.permlane16"
-            : "amdgcn.permlanex16";
-    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
-    mlir::Value src1 = emitScalarExpr(expr->getArg(1));
-    mlir::Value src2 = emitScalarExpr(expr->getArg(2));
-    mlir::Value src3 = emitScalarExpr(expr->getArg(3));
-    mlir::Value src4 = emitScalarExpr(expr->getArg(4));
-    mlir::Value src5 = emitScalarExpr(expr->getArg(5));
-    mlir::Value result =
-        cir::LLVMIntrinsicCallOp::create(builder, getLoc(expr->getExprLoc()),
-                                         builder.getStringAttr(intrinsicName),
-                                         src0.getType(),
-                                         {src0, src1, src2, src3, src4, src5})
-            .getResult();
-    return result;
-  }
+  case AMDGPU::BI__builtin_amdgcn_permlanex16:
   case AMDGPU::BI__builtin_amdgcn_permlane64: {
-    mlir::Value src = emitScalarExpr(expr->getArg(0));
-    mlir::Value result =
-        cir::LLVMIntrinsicCallOp::create(
-            builder, getLoc(expr->getExprLoc()),
-            builder.getStringAttr("amdgcn.permlane64"), src.getType(), {src})
-            .getResult();
-    return result;
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AMDGPU builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_readlane:
   case AMDGPU::BI__builtin_amdgcn_readfirstlane:
