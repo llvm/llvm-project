@@ -2966,10 +2966,13 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
       getContext().getLangOpts().getClangABICompat() >
           LangOptions::ClangABI::Ver22;
 
-  if (shouldRespectFunctionAVXLevel &&
-      FI.getX86AVXABILevel() != static_cast<unsigned>(AVXLevel)) {
-    auto EffectiveAVXLevel =
-        static_cast<X86AVXABILevel>(FI.getX86AVXABILevel());
+  X86AVXABILevel EffectiveAVXLevel = AVXLevel;
+  if (shouldRespectFunctionAVXLevel && FI.getABIInfoFD()) {
+    EffectiveAVXLevel = static_cast<X86AVXABILevel>(
+        CGT.getCGM().getEffectiveX86AVXABILevel(FI.getABIInfoFD()));
+  }
+
+  if (EffectiveAVXLevel != AVXLevel) {
     X86_64ABIInfo EffectiveABIInfo(CGT, EffectiveAVXLevel);
     EffectiveABIInfo.computeInfo(FI);
     return;

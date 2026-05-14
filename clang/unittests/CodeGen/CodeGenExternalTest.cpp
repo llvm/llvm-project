@@ -312,7 +312,7 @@ static void test_x86_avx_abi_codegen_fns(MyASTConsumer *my) {
           CGM, Ctx.getCanonicalType(FPT->getReturnType()), ArgTypes,
           FPT->getExtInfo(), {},
           CodeGen::RequiredArgs::forPrototypePlus(FPT, 0), callerDecl);
-      ASSERT_EQ(FnInfo.getX86AVXABILevel(), 1U);
+      ASSERT_EQ(FnInfo.getABIInfoFD(), callerDecl);
       ASSERT_TRUE(FnInfo.getReturnInfo().isDirect());
       ASSERT_TRUE(FnInfo.arg_begin()->info.isDirect());
       mytest_avx_fn_ok = true;
@@ -332,7 +332,7 @@ static void test_x86_avx_abi_codegen_fns(MyASTConsumer *my) {
           CGM, Ctx.getCanonicalType(FPT->getReturnType()), ArgTypes,
           FPT->getExtInfo(), {},
           CodeGen::RequiredArgs::forPrototypePlus(FPT, 1), callerDecl);
-      ASSERT_EQ(FnInfo.getX86AVXABILevel(), 1u);
+      ASSERT_EQ(FnInfo.getABIInfoFD(), callerDecl);
       ASSERT_TRUE(FnInfo.getReturnInfo().isDirect());
       ASSERT_TRUE(FnInfo.arg_begin()[1].info.isDirect());
       mytest_avx_method_ok = true;

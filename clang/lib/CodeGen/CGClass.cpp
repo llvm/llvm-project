@@ -2317,7 +2317,7 @@ static bool canEmitDelegateCallArgs(CodeGenFunction &CGF,
 
     // Likewise if they're inalloca.
     const CGFunctionInfo &Info = CGF.CGM.getTypes().arrangeCXXConstructorCall(
-        Args, Ctor, Type, 0, 0, CGF.getCurrentFunctionX86AVXABILevel());
+        Args, Ctor, Type, 0, 0, CGF.getCurrentFunctionDecl());
     if (Info.usesInAlloca())
       return false;
   }
@@ -2378,7 +2378,7 @@ void CodeGenFunction::EmitCXXConstructorCall(
   llvm::Constant *CalleePtr = CGM.getAddrOfCXXStructor(GlobalDecl(D, Type));
   const CGFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix,
-      getCurrentFunctionX86AVXABILevel(), PassPrototypeArgs);
+      getCurrentFunctionDecl(), PassPrototypeArgs);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
   EmitCall(Info, Callee, ReturnValueSlot(), Args, CallOrInvoke, false, Loc);
 
