@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class ShrinkWrapPass : public PassInfoMixin<ShrinkWrapPass> {
+class ShrinkWrapPass : public OptionalPassInfoMixin<ShrinkWrapPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

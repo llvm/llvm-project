@@ -66,12 +66,12 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 static constexpr uint64_t ALIGNMENT = alignof(double);
 static constexpr uint64_t MEMORY_SIZE = 256 * 1024 /* 256 KiB */;
 alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
-static size_t ptr = 0;
+static size_t global_ptr = 0;
 
 extern "C" {
 
 void *malloc(size_t size) {
-  LIBC_NAMESPACE::cpp::AtomicRef<size_t> ref(ptr);
+  LIBC_NAMESPACE::cpp::AtomicRef<size_t> ref(global_ptr);
   size = (size + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
   size_t old_ptr =
       ref.fetch_add(size, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);

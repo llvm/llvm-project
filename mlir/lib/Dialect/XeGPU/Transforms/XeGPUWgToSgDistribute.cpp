@@ -325,9 +325,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         }
 
         ArrayRef<int64_t> aVecShape =
-            llvm::cast<VectorType>(aVec.getType()).getShape();
+            cast<VectorType>(aVec.getType()).getShape();
         ArrayRef<int64_t> bVecShape =
-            llvm::cast<VectorType>(bVec.getType()).getShape();
+            cast<VectorType>(bVec.getType()).getShape();
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
         auto newDpasOp = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
@@ -339,6 +339,58 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
       }
     }
     rewriter.replaceOpWithMultiple(op, {newDpasOps});
+    return success();
+  }
+};
+
+/// This pattern transforms the DpasMxOp to work at subgroup level.
+struct WgToSgDpasMxOp : public OpConversionPattern<xegpu::DpasMxOp> {
+  using OpConversionPattern<xegpu::DpasMxOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::DpasMxOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Location loc = op.getLoc();
+    VectorType resultTy = op.getResult().getType();
+
+    if (resultTy.getRank() != 2)
+      return failure();
+
+    auto layoutCd = op.getLayoutCdAttr();
+    auto layoutA = op.getLayoutAAttr();
+    auto layoutB = op.getLayoutBAttr();
+    auto layoutAScale = op.getLayoutAScaleAttr();
+    auto layoutBScale = op.getLayoutBScaleAttr();
+
+    if (!layoutCd || !layoutA || !layoutB || !layoutAScale || !layoutBScale)
+      return failure();
+
+    size_t index_c = 0;
+    SmallVector<Value> newDpasMxOps;
+    for (auto [index_a, aVec] : llvm::enumerate(adaptor.getA())) {
+      for (auto [index_b, bVec] : llvm::enumerate(adaptor.getB())) {
+        Value accVal = (op.getAcc()) ? adaptor.getAcc()[index_c++] : Value();
+        Value scaleAVal =
+            (op.getScaleA()) ? adaptor.getScaleA()[index_a] : Value();
+        Value scaleBVal =
+            (op.getScaleB()) ? adaptor.getScaleB()[index_b] : Value();
+
+        ArrayRef<int64_t> aVecShape =
+            cast<VectorType>(aVec.getType()).getShape();
+        ArrayRef<int64_t> bVecShape =
+            cast<VectorType>(bVec.getType()).getShape();
+        VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
+                                           resultTy.getElementType());
+        auto newDpasMxOp = xegpu::DpasMxOp::create(
+            rewriter, loc, resTy, aVec, bVec, accVal, scaleAVal, scaleBVal,
+            layoutA.dropSgLayoutAndData(), layoutB.dropSgLayoutAndData(),
+            layoutCd.dropSgLayoutAndData(), layoutAScale.dropSgLayoutAndData(),
+            layoutBScale.dropSgLayoutAndData());
+
+        newDpasMxOps.push_back(newDpasMxOp);
+      }
+    }
+    rewriter.replaceOpWithMultiple(op, {newDpasMxOps});
     return success();
   }
 };
@@ -1403,19 +1455,111 @@ struct WgToSgVectorMaskOp : public OpConversionPattern<MaskOpType> {
 
 using WgToSgVectorConstantMaskOp = WgToSgVectorMaskOp<vector::ConstantMaskOp>;
 using WgToSgVectorCreateMaskOp = WgToSgVectorMaskOp<vector::CreateMaskOp>;
+
+// This pattern transforms vector.bitcast ops to work at subgroup level.
+struct WgToSgVectorBitCastOp : public OpConversionPattern<vector::BitCastOp> {
+  using OpConversionPattern<vector::BitCastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::BitCastOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType resultType = op.getResultVectorType();
+
+    ArrayRef<int64_t> wgShape = resultType.getShape();
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+    if (!layout || !layout.isForWorkgroup())
+      return failure();
+
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+    VectorType newResultType =
+        VectorType::get(sgShape, resultType.getElementType());
+
+    SmallVector<Value> newBitCastOps;
+    for (auto src : adaptor.getSource()) {
+      auto newBitCast =
+          vector::BitCastOp::create(rewriter, op.getLoc(), newResultType, src);
+      newBitCastOps.push_back(newBitCast.getResult());
+    }
+
+    rewriter.replaceOpWithMultiple(op, {newBitCastOps});
+    return success();
+  }
+};
+
+// This pattern transforms vector.interleave ops to work at subgroup level.
+struct WgToSgVectorInterleaveOp
+    : public OpConversionPattern<vector::InterleaveOp> {
+  using OpConversionPattern<vector::InterleaveOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::InterleaveOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType resultType = op.getResultVectorType();
+
+    ArrayRef<int64_t> wgShape = resultType.getShape();
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+    if (!layout || !layout.isForWorkgroup())
+      return failure();
+
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+    VectorType newResultType =
+        VectorType::get(sgShape, resultType.getElementType());
+
+    SmallVector<Value> newInterleaveOps;
+    // Interleave operates pairwise: each lhs value is interleaved with
+    // corresponding rhs value
+    for (auto [lhs, rhs] : llvm::zip(adaptor.getLhs(), adaptor.getRhs())) {
+      auto newInterleave = vector::InterleaveOp::create(
+          rewriter, op.getLoc(), newResultType, lhs, rhs);
+      newInterleaveOps.push_back(newInterleave.getResult());
+    }
+
+    rewriter.replaceOpWithMultiple(op, {newInterleaveOps});
+    return success();
+  }
+};
+
+// This pattern transforms vector.deinterleave ops to work at subgroup level.
+struct WgToSgVectorDeinterleaveOp
+    : public OpConversionPattern<vector::DeinterleaveOp> {
+  using OpConversionPattern<vector::DeinterleaveOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::DeinterleaveOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> newRes1Ops;
+    SmallVector<Value> newRes2Ops;
+
+    for (auto src : adaptor.getSource()) {
+      auto newDeinterleave =
+          vector::DeinterleaveOp::create(rewriter, op.getLoc(), src);
+      newRes1Ops.push_back(newDeinterleave.getRes1());
+      newRes2Ops.push_back(newDeinterleave.getRes2());
+    }
+
+    SmallVector<SmallVector<Value>> results = {newRes1Ops, newRes2Ops};
+    rewriter.replaceOpWithMultiple(op, results);
+    return success();
+  }
+};
+
 } // namespace
 
 namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp, WgToSgDpasOp,
-               WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
-               WgToSgElementwiseOp, WgToSgVectorBroadcastOp,
-               WgToSgConvertLayoutOp, WgToSgArithConstantOp, WgToSgLoadGatherOp,
-               WgToSgStoreScatterOp, WgToSgLoadMatrixOp, WgToSgStoreMatrixOp,
-               WgToSgVectorStepOp, WgToSgVectorShapeCastOp,
-               WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp,
-               WgToSgVectorConstantMaskOp, WgToSgVectorCreateMaskOp>(
+               WgToSgDpasMxOp, WgToSgPrefetchNdOp,
+               UnrealizedConversionCastOpPattern, WgToSgElementwiseOp,
+               WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
+               WgToSgArithConstantOp, WgToSgLoadGatherOp, WgToSgStoreScatterOp,
+               WgToSgLoadMatrixOp, WgToSgStoreMatrixOp, WgToSgVectorStepOp,
+               WgToSgVectorShapeCastOp, WgToSgMultiDimReductionOp,
+               WgToSgVectorTransposeOp, WgToSgVectorConstantMaskOp,
+               WgToSgVectorCreateMaskOp, WgToSgVectorBitCastOp,
+               WgToSgVectorInterleaveOp, WgToSgVectorDeinterleaveOp>(
       patterns.getContext());
 }
 } // namespace xegpu
@@ -1539,6 +1683,12 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     return isLegal(layout);
   });
 
+  target.addDynamicallyLegalOp<xegpu::DpasMxOp>(
+      [=](xegpu::DpasMxOp op) -> bool {
+        auto layout = op.getLayoutCdAttr();
+        return isLegal(layout);
+      });
+
   target.addDynamicallyLegalOp<xegpu::LoadMatrixOp>(
       [=](xegpu::LoadMatrixOp op) -> bool {
         return isLegal(op.getLayoutAttr());
@@ -1560,16 +1710,16 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         return isLegal(layout);
       });
 
-  target.addDynamicallyLegalOp<vector::ShapeCastOp, vector::StepOp,
-                               vector::TransposeOp, vector::BroadcastOp,
-                               vector::MultiDimReductionOp,
-                               vector::ConstantMaskOp, vector::CreateMaskOp>(
-      [=](Operation *op) -> bool {
-        // Check for either a SliceAttr or LayoutAttr on the result.
-        auto layout =
-            xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
-        return isLegal(layout);
-      });
+  target.addDynamicallyLegalOp<
+      vector::ShapeCastOp, vector::StepOp, vector::TransposeOp,
+      vector::BroadcastOp, vector::MultiDimReductionOp, vector::ConstantMaskOp,
+      vector::CreateMaskOp, vector::BitCastOp, vector::InterleaveOp,
+      vector::DeinterleaveOp>([=](Operation *op) -> bool {
+    // Check for either a SliceAttr or LayoutAttr on the result.
+    auto layout =
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
+    return isLegal(layout);
+  });
 
   target.addDynamicallyLegalOp<xegpu::LoadGatherOp>(
       [=](xegpu::LoadGatherOp op) -> bool {

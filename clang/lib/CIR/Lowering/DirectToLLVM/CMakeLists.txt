@@ -20,6 +20,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   ${dialect_libs}
   MLIRCIR
   MLIRCIRTargetLowering
+  MLIRCIRTransforms
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPToLLVM
