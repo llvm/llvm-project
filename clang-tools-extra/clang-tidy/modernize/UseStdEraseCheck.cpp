@@ -99,7 +99,7 @@ void UseStdEraseCheck::check(const MatchFinder::MatchResult &Result) {
        llvm::Twine{")"})
           .str();
 
-  DiagnosticBuilder Diag =
+  const DiagnosticBuilder Diag =
       diag(EraseCall->getExprLoc(), "prefer %0 over the erase-%1 idiom")
       << ReplacementFreeFunc << RemoveFuncName;
 
