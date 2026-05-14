@@ -911,36 +911,6 @@ CodeGenAction::~CodeGenAction() {
     delete VMContext;
 }
 
-bool CodeGenAction::loadLinkModules(CompilerInstance &CI) {
-  if (!LinkModules.empty())
-    return false;
-
-  for (const CodeGenOptions::BitcodeFileToLink &F :
-       CI.getCodeGenOpts().LinkBitcodeFiles) {
-    auto BCBuf = CI.getFileManager().getBufferForFile(F.Filename);
-    if (!BCBuf) {
-      CI.getDiagnostics().Report(diag::err_cannot_open_file)
-          << F.Filename << BCBuf.getError().message();
-      LinkModules.clear();
-      return true;
-    }
-
-    Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
-        getOwningLazyBitcodeModule(std::move(*BCBuf), *VMContext);
-    if (!ModuleOrErr) {
-      handleAllErrors(ModuleOrErr.takeError(), [&](ErrorInfoBase &EIB) {
-        CI.getDiagnostics().Report(diag::err_cannot_open_file)
-            << F.Filename << EIB.message();
-      });
-      LinkModules.clear();
-      return true;
-    }
-    LinkModules.push_back({std::move(ModuleOrErr.get()), F.PropagateAttrs,
-                           F.Internalize, F.LinkFlags});
-  }
-  return false;
-}
-
 bool CodeGenAction::hasIRSupport() const { return true; }
 
 void CodeGenAction::EndSourceFileAction() {
@@ -1004,7 +974,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     return nullptr;
 
   // Load bitcode modules to link with, if we need to.
-  if (loadLinkModules(CI))
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
     return nullptr;
 
   CoverageSourceInfo *CoverageInfo = nullptr;
@@ -1082,7 +1052,7 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   }
 
   // Load bitcode modules to link with, if we need to.
-  if (loadLinkModules(CI))
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
     return nullptr;
 
   // Handle textual IR and bitcode file with one single module.
