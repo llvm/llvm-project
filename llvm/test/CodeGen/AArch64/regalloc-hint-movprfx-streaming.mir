@@ -69,10 +69,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $pn8 = PTRUE_C_B implicit $vg
     ; CHECK-NEXT: renamable $z16_z24 = LD1B_2Z_IMM_PSEUDO killed renamable $pn8, killed renamable $x2, 0
-    ; CHECK-NEXT: renamable $z0 = ADD_ZI_B_PSEUDO renamable $z16, 5, 0
-    ; CHECK-NEXT: renamable $z1 = ADD_ZI_B_PSEUDO killed renamable $z24, 5, 0
-    ; CHECK-NEXT: STR_ZXI killed renamable $z0, killed renamable $x0, 0
-    ; CHECK-NEXT: STR_ZXI killed renamable $z1, killed renamable $x1, 0
+    ; CHECK-NEXT: renamable $z16 = ADD_ZI_B_PSEUDO renamable $z16, 5, 0
+    ; CHECK-NEXT: renamable $z24 = ADD_ZI_B_PSEUDO killed renamable $z24, 5, 0
+    ; CHECK-NEXT: STR_ZXI killed renamable $z16, killed renamable $x0, 0
+    ; CHECK-NEXT: STR_ZXI killed renamable $z24, killed renamable $x1, 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:gpr64common = COPY $x1
