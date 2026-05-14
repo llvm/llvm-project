@@ -340,9 +340,10 @@ DependencyScanningTool::getModuleDependencies(
       ModuleName, AlreadySeen, Controller);
 }
 
-static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
-    ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+static std::optional<SmallVector<std::string, 0>>
+getFirstCC1CommandLine(ArrayRef<std::string> CommandLine,
+                       DiagnosticsEngine &Diags,
+                       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
   // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation. Arguments to commands may be
   // owned by Alloc when expanded from response files.
@@ -371,8 +372,8 @@ CompilerInstanceWithContext::initializeFromCommandline(
   auto FS = Tool.Worker.makeEffectiveVFS(CWD, OverlayFS);
 
   auto DiagEngineWithCmdAndOpts =
-      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
-                                                      FS, DC);
+      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine, FS,
+                                                      DC);
 
   if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
     // The input command line is already a -cc1 invocation; initialize the
