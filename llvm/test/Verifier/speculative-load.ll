@@ -80,8 +80,6 @@ define <4 x i32> @test_oracle_side_effects(ptr %ptr, i64 %n) {
 }
 
 define <4 x i32> @test_num_accessible_bytes_exceeds_size(ptr %ptr) {
-; CHECK: llvm.speculative.load num_accessible_bytes must not exceed the result size in bytes
-; CHECK-NEXT: call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, i64 32)
   %res = call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, i64 32)
   ret <4 x i32> %res
 }

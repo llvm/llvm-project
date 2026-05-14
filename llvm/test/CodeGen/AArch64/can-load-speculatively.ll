@@ -8,7 +8,7 @@
 
 define i1 @can_load_speculatively_16(ptr %ptr) {
 ; CHECK-LABEL: @can_load_speculatively_16(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 15
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TMP3]]
@@ -20,7 +20,7 @@ define i1 @can_load_speculatively_16(ptr %ptr) {
 
 define i1 @can_load_speculatively_8_ptr_aligned(ptr align 8 %ptr) {
 ; CHECK-LABEL: @can_load_speculatively_8_ptr_aligned(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 15
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TMP3]]
@@ -31,7 +31,7 @@ define i1 @can_load_speculatively_8_ptr_aligned(ptr align 8 %ptr) {
 
 define i1 @can_load_speculatively_16_ptr_aligned(ptr align 16 %ptr) {
 ; CHECK-LABEL: @can_load_speculatively_16_ptr_aligned(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 15
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TMP3]]
@@ -42,7 +42,7 @@ define i1 @can_load_speculatively_16_ptr_aligned(ptr align 16 %ptr) {
 
 define i1 @can_load_speculatively_16_ptr_aligned2(ptr align 16 %ptr) {
 ; CHECK-LABEL: @can_load_speculatively_16_ptr_aligned2(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 15
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TMP3]]
@@ -53,7 +53,7 @@ define i1 @can_load_speculatively_16_ptr_aligned2(ptr align 16 %ptr) {
 
 define i1 @can_load_speculatively_32_ptr_aligned(ptr align 32 %ptr) {
 ; CHECK-LABEL: @can_load_speculatively_32_ptr_aligned(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 15
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TMP3]]
@@ -92,7 +92,7 @@ define i1 @can_load_speculatively_addrspace1(ptr addrspace(1) %ptr) {
 ; Test size 8 (within limit, power-of-2)
 define i1 @can_load_speculatively_8(ptr %ptr) {
 ; CHECK-LABEL: @can_load_speculatively_8(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TMP3]]
@@ -104,7 +104,7 @@ define i1 @can_load_speculatively_8(ptr %ptr) {
 ; Test with runtime size - checks size <= 16 and alignment
 define i1 @can_load_speculatively_runtime(ptr %ptr, i64 %size) {
 ; CHECK-LABEL: @can_load_speculatively_runtime(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[SIZE:%.*]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[SIZE]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP1]], [[TMP3]]
