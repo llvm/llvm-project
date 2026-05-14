@@ -274,6 +274,22 @@ void CIRGenFunction::LexicalScope::cleanup() {
   if (curBlock->mightHaveTerminator() && curBlock->getTerminator())
     return;
 
+  // If the builder's current block lives in a region nested below this
+  // lexical scope's region, popCleanup has left the insertion point past
+  // a cir.cleanup.scope inside that nested region (for example, inside a
+  // cir.for body when the body cleanup was registered there). Emitting a
+  // cir.yield at the current position would terminate the nested region
+  // instead of this scope's region. Reposition to the back block of this
+  // scope's region so the terminator below lands in the correct place.
+  if (mlir::Region *scopeRegion = entryBlock->getParent();
+      scopeRegion && !scopeRegion->empty() &&
+      curBlock->getParent() != scopeRegion) {
+    builder.setInsertionPointToEnd(&scopeRegion->back());
+    curBlock = builder.getBlock();
+    if (curBlock->mightHaveTerminator() && curBlock->getTerminator())
+      return;
+  }
+
   // Get rid of any empty block at the end of the scope. An empty non-entry
   // block is created when a terminator (return/break/continue) is followed
   // by unreachable code.
