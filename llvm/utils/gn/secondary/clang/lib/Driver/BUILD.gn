@@ -103,6 +103,7 @@ static_library("Driver") {
     "ToolChains/SYCL.cpp",
     "ToolChains/Serenity.cpp",
     "ToolChains/Solaris.cpp",
+    "ToolChains/Illumos.cpp",
     "ToolChains/TCE.cpp",
     "ToolChains/UEFI.cpp",
     "ToolChains/VEToolchain.cpp",

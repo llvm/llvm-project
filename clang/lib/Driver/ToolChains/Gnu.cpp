@@ -604,12 +604,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   llvm::Reloc::Model RelocationModel;
   unsigned PICLevel;
   bool IsPIE;
-  const char *DefaultAssembler = "as";
-  // Enforce GNU as on Solaris; the native assembler's input syntax isn't fully
-  // compatible.
-  auto TT = getToolChain().getTriple();
-  if (TT.isOSSolaris() || TT.isOSIllumos())
-    DefaultAssembler = "gas";
+  const char *DefaultAssembler = this->DefaultAssembler.value_or("as");
   std::tie(RelocationModel, PICLevel, IsPIE) =
       ParsePICArgs(getToolChain(), Args);
 
@@ -2468,7 +2463,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   using std::begin;
   using std::end;
 
-  if (TargetTriple.isOSSolaris() || TargetTriple.isOSIllumos()) {
+  if (TargetTriple.isOSSolaris()) {
     static const char *const SolarisLibDirs[] = {"/lib"};
     static const char *const SolarisSparcV8Triples[] = {
         "sparc-sun-solaris2.11"};

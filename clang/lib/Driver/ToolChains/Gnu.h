@@ -50,6 +50,9 @@ public:
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
+
+  /// The assembler to use by default, if any.
+  std::optional<const char *> DefaultAssembler = std::nullopt;
 };
 
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {

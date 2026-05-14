@@ -88,6 +88,7 @@ add_clang_library(clangDriver
   ToolChains/PS4CPU.cpp
   ToolChains/Serenity.cpp
   ToolChains/Solaris.cpp
+  ToolChains/Illumos.cpp
   ToolChains/SPIRV.cpp
   ToolChains/SPIRVOpenMP.cpp
   ToolChains/SYCL.cpp
