@@ -117,8 +117,10 @@ GetThreadContextHelper(lldb::thread_t thread_handle, DWORD context_flags,
 
   if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
     error = Status(GetLastError(), eErrorTypeWin32);
-    LLDB_LOG(log, "{0} InitializeContext failed with error {1}", __FUNCTION__,
-             error);
+    LLDB_LOG(log,
+             "{0} InitializeContext failed with unexpected error {1}, expected "
+             "ERROR_INSUFFICIENT_BUFFER",
+             __FUNCTION__, error);
     return error;
   }
 
@@ -762,8 +764,10 @@ Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
 
   if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
     error = Status(GetLastError(), eErrorTypeWin32);
-    LLDB_LOG(log, "{0} InitializeContext failed with error {1}", __FUNCTION__,
-             error);
+    LLDB_LOG(log,
+             "{0} InitializeContext failed with unexpected error {1}, expected "
+             "ERROR_INSUFFICIENT_BUFFER",
+             __FUNCTION__, error);
     return error;
   }
 
@@ -784,9 +788,7 @@ Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
 
   ::memcpy(context_buffer->GetBytes(), data_sp->GetBytes(), context_length);
 
-  error = SetThreadContextHelper(GetThreadHandle(), context);
-
-  return error;
+  return SetThreadContextHelper(GetThreadHandle(), context);
 }
 
 llvm::Error NativeRegisterContextWindows_arm64::ReadHardwareDebugInfo() {
