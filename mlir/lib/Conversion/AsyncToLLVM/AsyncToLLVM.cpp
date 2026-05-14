@@ -78,8 +78,8 @@ struct AsyncAPI {
     return LLVM::LLVMPointerType::get(ctx);
   }
 
-  static LLVM::LLVMTokenType tokenType(MLIRContext *ctx) {
-    return LLVM::LLVMTokenType::get(ctx);
+  static mlir::TokenType tokenType(MLIRContext *ctx) {
+    return mlir::TokenType::get(ctx);
   }
 
   static FunctionType addOrDropRefFunctionType(MLIRContext *ctx) {

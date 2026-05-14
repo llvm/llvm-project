@@ -125,12 +125,12 @@ LogicalResult OperationVerifier::verifyTokenValue(
   if (value.getType() != tokenType)
     return success();
 
-  if (!producer.hasTrait<OpTrait::TokenProducerTrait>())
+  if (!producer.mightHaveTrait<OpTrait::TokenProducerTrait>())
     return emitProducerError();
 
   for (OpOperand &use : value.getUses()) {
     Operation *user = use.getOwner();
-    if (user->hasTrait<OpTrait::TokenConsumerTrait>())
+    if (user->mightHaveTrait<OpTrait::TokenConsumerTrait>())
       continue;
 
     return user->emitOpError()
@@ -185,7 +185,7 @@ LogicalResult OperationVerifier::verifyTokenBlockArgument(Block &block,
            << idx << " is only allowed in a region entry block";
 
   Operation *parentOp = parentRegion->getParentOp();
-  if (!parentOp || !parentOp->hasTrait<OpTrait::TokenProducerTrait>())
+  if (!parentOp || !parentOp->mightHaveTrait<OpTrait::TokenProducerTrait>())
     return emitError(arg.getLoc(), "token entry block argument #")
            << idx
            << " requires the parent operation to define the "
