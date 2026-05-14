@@ -2913,10 +2913,10 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
           !symbol->test(Symbol::Flag::Function) &&
           !symbol->test(Symbol::Flag::Subroutine)) {
         // Symbol is still unspecialized EntityDetails - promote to external
-        // proc
+        // proc. Don't set Subroutine flag - let the actual definition
+        // determine whether it's a subroutine or function.
         symbol->attrs().set(Attr::EXTERNAL);
         symbol->set_details(ProcEntityDetails{});
-        symbol->set(Symbol::Flag::Subroutine);
       }
     }
     if (directive == llvm::omp::Directive::OMPD_target_data) {

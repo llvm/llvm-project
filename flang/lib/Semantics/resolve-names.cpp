@@ -9334,7 +9334,9 @@ bool DeclarationVisitor::FindAndMarkDeclareTargetSymbol(
       // subroutine. Only apply this at program/module scope level, not inside
       // subprograms where local variables could be forward-declared.
       // Also skip if a common block with the same name exists.
-      if (!isImplicitNoneType() &&
+      // Use isImplicitNoneExternal() since this creates an implicit external,
+      // not an implicit type.
+      if (!isImplicitNoneExternal() &&
           currScope().kind() != Scope::Kind::Subprogram &&
           currScope().kind() != Scope::Kind::BlockConstruct &&
           !currScope().FindCommonBlock(name.source)) {
@@ -9343,7 +9345,8 @@ bool DeclarationVisitor::FindAndMarkDeclareTargetSymbol(
         Symbol &symbol{*it->second};
         if (inserted || symbol.has<ProcEntityDetails>()) {
           name.symbol = &symbol;
-          symbol.set(Symbol::Flag::Subroutine);
+          // Don't set Subroutine flag - let the actual definition determine
+          // whether it's a subroutine or function
           SetImplicitAttr(symbol, Attr::EXTERNAL);
           return true;
         }
