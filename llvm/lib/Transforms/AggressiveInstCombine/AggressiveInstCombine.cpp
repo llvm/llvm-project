@@ -623,8 +623,7 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
   // Condition (1) is straightforward. The reason behind condition
   // (2) is that we don't care any 8-bit chunks but the first one
   // in the original divide-and-conquer algorithm.
-  if (!MaskRes->getLoBits(NumLenBits).isMask(NumLenBits) ||
-      !MaskRes->getHiBits(Len - 8).isZero())
+  if (MaskRes->countTrailingOnes() < NumLenBits || MaskRes->getActiveBits() > 8)
     return false;
 
   Value *Add2;
