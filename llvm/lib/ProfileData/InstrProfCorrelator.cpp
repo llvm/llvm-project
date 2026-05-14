@@ -600,7 +600,6 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
                          Probe.NumBitmapBytes);
     }
   }
-  Probes.clear();
   if (!UnlimitedWarnings && NumSuppressedWarnings > 0)
     WithColor::warning() << format("Suppressed %d additional warnings\n",
                                    NumSuppressedWarnings);
