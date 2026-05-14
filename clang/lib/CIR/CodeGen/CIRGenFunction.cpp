@@ -531,8 +531,12 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
   }
 
+  // Only implicit-object member functions (without an explicit `this`
+  // parameter) receive an implicit `this` argument that the CXXABI prolog has
+  // to set up. C++23 explicit-object members (P0847R7) carry their object via a
+  // regular parameter and use the standard parameter prolog instead.
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
-      cast<CXXMethodDecl>(d)->isInstance()) {
+      cast<CXXMethodDecl>(d)->isImplicitObjectMemberFunction()) {
     cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
 
     const auto *md = cast<CXXMethodDecl>(d);
@@ -1017,8 +1021,11 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
   QualType retTy = fd->getReturnType();
 
+  // Only implicit-object member functions need the CXXABI-supplied `this`
+  // parameter prepended to the arg list.  Explicit-object members carry the
+  // object as a regular parameter that fd->parameters() already enumerates.
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
-  if (md && md->isInstance()) {
+  if (md && md->isImplicitObjectMemberFunction()) {
     if (cgm.getCXXABI().hasThisReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "this return");
     else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
