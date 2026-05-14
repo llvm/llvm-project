@@ -4769,17 +4769,53 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
   llvm::AtomicOrdering atomicOrdering =
       convertAtomicOrdering(atomicCompareOp.getMemoryOrder());
 
-  // Trace back through load operations and generate load instructions
+  auto isAtomicComparePatternOp = [](Operation &op) {
+    return llvm::isa<LLVM::ICmpOp, LLVM::FCmpOp, LLVM::SelectOp,
+                     LLVM::AndOp, LLVM::OrOp>(op);
+  };
+
+  // Pre-translate operations inside the region that compute intermediate values
+  // (e.g., memcpy, GEP, loads for dereferencing Fortran pointers) but are not
+  // part of the atomic compare-and-swap pattern itself. This ensures all
+  // intermediate values are available in the moduleTranslation mapping when
+  // extracting eVal and dVal below.
+  for (Operation &op : block.without_terminator()) {
+    // Skip operations that form the atomic compare pattern — these are
+    // analyzed separately below.
+    if (isAtomicComparePatternOp(op))
+      continue;
+
+    // Avoid translating ops that depend on the unmapped block argument.
+    bool allOperandsMapped = llvm::all_of(op.getOperands(), [&](mlir::Value v) {
+      return moduleTranslation.lookupValue(v) != nullptr;
+    });
+    if (!allOperandsMapped)
+      continue;
+
+    if (failed(moduleTranslation.convertOperation(op, builder)))
+      return atomicCompareOp.emitError(
+          "failed to translate operation inside atomic compare region");
+  }
+
+  // Look up a value that may have been pre-translated or defined outside the
+  // region.
   auto materializeValue = [&](mlir::Value val) -> llvm::Value * {
+    // Check if the value is already mapped (pre-translated or defined outside).
+    if (llvm::Value *existing = moduleTranslation.lookupValue(val))
+      return existing;
+    // Fallback for a single LoadOp whose address is mapped but whose result
+    // was not pre-translated.
     if (auto loadOp = val.getDefiningOp<LLVM::LoadOp>()) {
       if (loadOp->getParentRegion() == &region) {
         llvm::Value *loadAddr = moduleTranslation.lookupValue(loadOp.getAddr());
+        if (!loadAddr)
+          return nullptr;
         llvm::Type *loadType =
             moduleTranslation.convertType(loadOp.getResult().getType());
         return builder.CreateLoad(loadType, loadAddr);
       }
     }
-    return moduleTranslation.lookupValue(val);
+    return nullptr;
   };
 
   // Walk the region to extract comparison predicate, eVal, and dVal.

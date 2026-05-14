@@ -191,3 +191,59 @@ subroutine atomic_compare_complex4_seq_cst(x, e, d)
   !$omp atomic compare seq_cst
   if (x == e) x = d
 end
+
+! CHECK-LABEL: define void @omp_atomic_compare_ptr_
+! CHECK-SAME: (ptr %[[X_DESC_ARG:.*]], ptr %[[E_DESC_ARG:.*]], ptr %[[D_DESC_ARG:.*]])
+
+! CHECK: %[[D_COPY:.*]] = alloca { ptr, {{.*}} }
+! CHECK: %[[E_COPY:.*]] = alloca { ptr, {{.*}} }
+! CHECK: %[[X_COPY:.*]] = alloca { ptr, {{.*}} }
+! CHECK: %[[D_TMP_DESC:.*]] = alloca { ptr, {{.*}} }
+! CHECK: %[[E_TMP_DESC:.*]] = alloca { ptr, {{.*}} }
+! CHECK: %[[X_TMP_DESC:.*]] = alloca { ptr, {{.*}} }
+! CHECK: %[[TX:.*]] = alloca i32
+! CHECK: %[[TE:.*]] = alloca i32
+! CHECK: %[[TD:.*]] = alloca i32
+
+! CHECK: %[[X_INIT:.*]] = insertvalue { ptr, {{.*}} } {{.*}}, ptr %[[TX]], 0
+! CHECK: store { ptr, {{.*}} } %[[X_INIT]], ptr %[[X_TMP_DESC]]
+! CHECK: call void @llvm.memcpy.{{.*}}(ptr{{.*}} %[[X_DESC_ARG]], ptr{{.*}} %[[X_TMP_DESC]], {{.*}})
+
+! CHECK: %[[E_INIT:.*]] = insertvalue { ptr, {{.*}} } {{.*}}, ptr %[[TE]], 0
+! CHECK: store { ptr, {{.*}} } %[[E_INIT]], ptr %[[E_TMP_DESC]]
+! CHECK: call void @llvm.memcpy.{{.*}}(ptr{{.*}} %[[E_DESC_ARG]], ptr{{.*}} %[[E_TMP_DESC]], {{.*}})
+
+! CHECK: %[[D_INIT:.*]] = insertvalue { ptr, {{.*}} } {{.*}}, ptr %[[TD]], 0
+! CHECK: store { ptr, {{.*}} } %[[D_INIT]], ptr %[[D_TMP_DESC]]
+! CHECK: call void @llvm.memcpy.{{.*}}(ptr{{.*}} %[[D_DESC_ARG]], ptr{{.*}} %[[D_TMP_DESC]], {{.*}})
+
+! CHECK: call void @llvm.memcpy.{{.*}}(ptr{{.*}} %[[X_COPY]], ptr{{.*}} %[[X_DESC_ARG]], {{.*}})
+! CHECK: %[[X_FIELD:.*]] = getelementptr { ptr, {{.*}} }, ptr %[[X_COPY]], {{.*}}
+! CHECK: %[[X_ADDR:.*]] = load ptr, ptr %[[X_FIELD]]
+
+! CHECK: call void @llvm.memcpy.{{.*}}(ptr{{.*}} %[[E_COPY]], ptr{{.*}} %[[E_DESC_ARG]], {{.*}})
+! CHECK: %[[E_FIELD:.*]] = getelementptr { ptr, {{.*}} }, ptr %[[E_COPY]], {{.*}}
+! CHECK: %[[E_ADDR:.*]] = load ptr, ptr %[[E_FIELD]]
+! CHECK: %[[E_VAL:.*]] = load i32, ptr %[[E_ADDR]]
+
+! CHECK: call void @llvm.memcpy.{{.*}}(ptr{{.*}} %[[D_COPY]], ptr{{.*}} %[[D_DESC_ARG]], {{.*}})
+! CHECK: %[[D_FIELD:.*]] = getelementptr { ptr, {{.*}} }, ptr %[[D_COPY]], {{.*}}
+! CHECK: %[[D_ADDR:.*]] = load ptr, ptr %[[D_FIELD]]
+! CHECK: %[[D_VAL:.*]] = load i32, ptr %[[D_ADDR]]
+
+! CHECK: cmpxchg ptr %[[X_ADDR]], i32 %[[E_VAL]], i32 %[[D_VAL]] monotonic monotonic{{.*}}
+! CHECK: ret void
+subroutine omp_atomic_compare_ptr(x, e, d)
+  implicit none
+  integer, target :: tx, te, td
+  integer, pointer :: x, e, d
+
+  x => tx
+  e => te
+  d => td
+
+  !$omp atomic compare
+    if (x == e) x = d
+  !$omp end atomic
+
+end subroutine
