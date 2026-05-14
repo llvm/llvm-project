@@ -2743,7 +2743,11 @@ def : AMDGPUPatIgnoreCopies <
                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
-multiclass BFI64_Pattern <ValueType vt, PatFrag not_frag, PatFrag not_oneuse_frag> {
+// 64-bit versions (i64 and v2i32)
+foreach vt = [i64, v2i32] in {
+  defvar not_frag = !if(!eq(vt, i64), not, vnot);
+  defvar not_oneuse_frag = !if(!eq(vt, i64), not_oneuse, vnot_oneuse);
+
   // (y & x) | (z & ~x)
   def : AMDGPUPatIgnoreCopies <
     (DivergentBinFrag<or> (and vt:$y, vt:$x), (and vt:$z, (not_frag vt:$x))),
@@ -2789,11 +2793,6 @@ multiclass BFI64_Pattern <ValueType vt, PatFrag not_frag, PatFrag not_oneuse_fra
                 (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
   >;
 }
-
-// 64-bit version
-defm : BFI64_Pattern<i64, not, not_oneuse>;
-// v2i32 version
-defm : BFI64_Pattern<v2i32, vnot, vnot_oneuse>;
 
 def : AMDGPUPat <
   (fcopysign f32:$src0, f32:$src1),

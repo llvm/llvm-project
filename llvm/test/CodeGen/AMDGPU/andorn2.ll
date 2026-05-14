@@ -522,10 +522,45 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}vector_bfi_v2i32
-; GCN: v_bfi_b32
-; GCN: v_bfi_b32
 define <2 x i32> @vector_bfi_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
+; GFX6-LABEL: vector_bfi_v2i32:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_bfi_b32 v1, v1, v3, v5
+; GFX6-NEXT:    v_bfi_b32 v0, v0, v2, v4
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: vector_bfi_v2i32:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfi_b32 v1, v1, v3, v5
+; GFX7-NEXT:    v_bfi_b32 v0, v0, v2, v4
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_bfi_v2i32:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_bfi_b32 v1, v1, v3, v5
+; GFX8-NEXT:    v_bfi_b32 v0, v0, v2, v4
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: vector_bfi_v2i32:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v1, v1, v3, v5
+; GFX9-NEXT:    v_bfi_b32 v0, v0, v2, v4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: vector_bfi_v2i32:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_bfi_b32 v0, v0, v2, v4
+; GFX12-NEXT:    v_bfi_b32 v1, v1, v3, v5
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %ny = and <2 x i32> %y, %x
   %nx = xor <2 x i32> %x, <i32 -1, i32 -1>
@@ -534,23 +569,461 @@ entry:
   ret <2 x i32> %r
 }
 
-; GCN-LABEL: {{^}}vector_andn2_v2i32_one_use
-; GCN: v_bfi_b32
-; GCN: v_bfi_b32
 define <2 x i32> @vector_andn2_v2i32_one_use(<2 x i32> %v, <2 x i32> %s) {
+; GFX6-LABEL: vector_andn2_v2i32_one_use:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_bfi_b32 v1, v1, 0, v3
+; GFX6-NEXT:    v_bfi_b32 v0, v0, 0, v2
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: vector_andn2_v2i32_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfi_b32 v1, v1, 0, v3
+; GFX7-NEXT:    v_bfi_b32 v0, v0, 0, v2
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_andn2_v2i32_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_bfi_b32 v1, v1, 0, v3
+; GFX8-NEXT:    v_bfi_b32 v0, v0, 0, v2
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: vector_andn2_v2i32_one_use:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v1, v1, 0, v3
+; GFX9-NEXT:    v_bfi_b32 v0, v0, 0, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: vector_andn2_v2i32_one_use:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_bfi_b32 v0, v0, 0, v2
+; GFX12-NEXT:    v_bfi_b32 v1, v1, 0, v3
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %not = xor <2 x i32> %v, <i32 -1, i32 -1>
   %r = and <2 x i32> %s, %not
   ret <2 x i32> %r
 }
 
-; GCN-LABEL: {{^}}vector_orn2_v2i32_one_use
-; GCN: v_bfi_b32
-; GCN: v_bfi_b32
+define <3 x i32> @vector_andn2_v3i32_one_use(<3 x i32> %v, <3 x i32> %s) {
+; GFX6-LABEL: vector_andn2_v3i32_one_use:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_bfi_b32 v0, v0, 0, v3
+; GFX6-NEXT:    v_bfi_b32 v1, v1, 0, v4
+; GFX6-NEXT:    v_bfi_b32 v2, v2, 0, v5
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: vector_andn2_v3i32_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfi_b32 v0, v0, 0, v3
+; GFX7-NEXT:    v_bfi_b32 v1, v1, 0, v4
+; GFX7-NEXT:    v_bfi_b32 v2, v2, 0, v5
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_andn2_v3i32_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_bfi_b32 v0, v0, 0, v3
+; GFX8-NEXT:    v_bfi_b32 v1, v1, 0, v4
+; GFX8-NEXT:    v_bfi_b32 v2, v2, 0, v5
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: vector_andn2_v3i32_one_use:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v0, v0, 0, v3
+; GFX9-NEXT:    v_bfi_b32 v1, v1, 0, v4
+; GFX9-NEXT:    v_bfi_b32 v2, v2, 0, v5
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: vector_andn2_v3i32_one_use:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_bfi_b32 v0, v0, 0, v3
+; GFX12-NEXT:    v_bfi_b32 v1, v1, 0, v4
+; GFX12-NEXT:    v_bfi_b32 v2, v2, 0, v5
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %not = xor <3 x i32> %v, <i32 -1, i32 -1, i32 -1>
+  %r = and <3 x i32> %s, %not
+  ret <3 x i32> %r
+}
+
+define <4 x i32> @vector_andn2_v4i32_one_use(<4 x i32> %v, <4 x i32> %s) {
+; GFX6-LABEL: vector_andn2_v4i32_one_use:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_bfi_b32 v0, v0, 0, v4
+; GFX6-NEXT:    v_bfi_b32 v1, v1, 0, v5
+; GFX6-NEXT:    v_bfi_b32 v2, v2, 0, v6
+; GFX6-NEXT:    v_bfi_b32 v3, v3, 0, v7
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: vector_andn2_v4i32_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfi_b32 v0, v0, 0, v4
+; GFX7-NEXT:    v_bfi_b32 v1, v1, 0, v5
+; GFX7-NEXT:    v_bfi_b32 v2, v2, 0, v6
+; GFX7-NEXT:    v_bfi_b32 v3, v3, 0, v7
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_andn2_v4i32_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_bfi_b32 v0, v0, 0, v4
+; GFX8-NEXT:    v_bfi_b32 v1, v1, 0, v5
+; GFX8-NEXT:    v_bfi_b32 v2, v2, 0, v6
+; GFX8-NEXT:    v_bfi_b32 v3, v3, 0, v7
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: vector_andn2_v4i32_one_use:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v0, v0, 0, v4
+; GFX9-NEXT:    v_bfi_b32 v1, v1, 0, v5
+; GFX9-NEXT:    v_bfi_b32 v2, v2, 0, v6
+; GFX9-NEXT:    v_bfi_b32 v3, v3, 0, v7
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: vector_andn2_v4i32_one_use:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_bfi_b32 v0, v0, 0, v4
+; GFX12-NEXT:    v_bfi_b32 v1, v1, 0, v5
+; GFX12-NEXT:    v_bfi_b32 v2, v2, 0, v6
+; GFX12-NEXT:    v_bfi_b32 v3, v3, 0, v7
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %not = xor <4 x i32> %v, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %r = and <4 x i32> %s, %not
+  ret <4 x i32> %r
+}
+
+define <2 x i32> @vector_andn2_v2i32_multi_use(<2 x i32> %v, <2 x i32> %s1, <2 x i32> %s2) {
+; GFX6-LABEL: vector_andn2_v2i32_multi_use:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX6-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX6-NEXT:    v_and_b32_e32 v3, v3, v1
+; GFX6-NEXT:    v_and_b32_e32 v2, v2, v0
+; GFX6-NEXT:    v_or_b32_e32 v1, v5, v1
+; GFX6-NEXT:    v_or_b32_e32 v0, v4, v0
+; GFX6-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX6-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: vector_andn2_v2i32_multi_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX7-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX7-NEXT:    v_and_b32_e32 v3, v3, v1
+; GFX7-NEXT:    v_and_b32_e32 v2, v2, v0
+; GFX7-NEXT:    v_or_b32_e32 v1, v5, v1
+; GFX7-NEXT:    v_or_b32_e32 v0, v4, v0
+; GFX7-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX7-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_andn2_v2i32_multi_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX8-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX8-NEXT:    v_and_b32_e32 v3, v3, v1
+; GFX8-NEXT:    v_and_b32_e32 v2, v2, v0
+; GFX8-NEXT:    v_or_b32_e32 v1, v5, v1
+; GFX8-NEXT:    v_or_b32_e32 v0, v4, v0
+; GFX8-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX8-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: vector_andn2_v2i32_multi_use:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX9-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX9-NEXT:    v_and_b32_e32 v3, v3, v1
+; GFX9-NEXT:    v_and_b32_e32 v2, v2, v0
+; GFX9-NEXT:    v_or_b32_e32 v1, v5, v1
+; GFX9-NEXT:    v_or_b32_e32 v0, v4, v0
+; GFX9-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX9-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: vector_andn2_v2i32_multi_use:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX12-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_and_b32_e32 v3, v3, v1
+; GFX12-NEXT:    v_and_b32_e32 v2, v2, v0
+; GFX12-NEXT:    v_or_b32_e32 v0, v4, v0
+; GFX12-NEXT:    v_or_b32_e32 v1, v5, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX12-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %not = xor <2 x i32> %v, <i32 -1, i32 -1>
+  %r1 = and <2 x i32> %s1, %not
+  %r2 = or  <2 x i32> %s2, %not
+  %r = xor <2 x i32> %r1, %r2
+  ret <2 x i32> %r
+}
+
 define <2 x i32> @vector_orn2_v2i32_one_use(<2 x i32> %v, <2 x i32> %s) {
+; GFX6-LABEL: vector_orn2_v2i32_one_use:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_bfi_b32 v1, v1, v3, -1
+; GFX6-NEXT:    v_bfi_b32 v0, v0, v2, -1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: vector_orn2_v2i32_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfi_b32 v1, v1, v3, -1
+; GFX7-NEXT:    v_bfi_b32 v0, v0, v2, -1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_orn2_v2i32_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_bfi_b32 v1, v1, v3, -1
+; GFX8-NEXT:    v_bfi_b32 v0, v0, v2, -1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: vector_orn2_v2i32_one_use:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v1, v1, v3, -1
+; GFX9-NEXT:    v_bfi_b32 v0, v0, v2, -1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: vector_orn2_v2i32_one_use:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_bfi_b32 v0, v0, v2, -1
+; GFX12-NEXT:    v_bfi_b32 v1, v1, v3, -1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %not = xor <2 x i32> %v, <i32 -1, i32 -1>
   %r = or <2 x i32> %s, %not
+  ret <2 x i32> %r
+}
+
+define <3 x i32> @vector_orn2_v3i32_one_use(<3 x i32> %v, <3 x i32> %s) {
+; GFX6-LABEL: vector_orn2_v3i32_one_use:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_bfi_b32 v0, v0, v3, -1
+; GFX6-NEXT:    v_bfi_b32 v1, v1, v4, -1
+; GFX6-NEXT:    v_bfi_b32 v2, v2, v5, -1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: vector_orn2_v3i32_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfi_b32 v0, v0, v3, -1
+; GFX7-NEXT:    v_bfi_b32 v1, v1, v4, -1
+; GFX7-NEXT:    v_bfi_b32 v2, v2, v5, -1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_orn2_v3i32_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_bfi_b32 v0, v0, v3, -1
+; GFX8-NEXT:    v_bfi_b32 v1, v1, v4, -1
+; GFX8-NEXT:    v_bfi_b32 v2, v2, v5, -1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: vector_orn2_v3i32_one_use:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v0, v0, v3, -1
+; GFX9-NEXT:    v_bfi_b32 v1, v1, v4, -1
+; GFX9-NEXT:    v_bfi_b32 v2, v2, v5, -1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: vector_orn2_v3i32_one_use:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_bfi_b32 v0, v0, v3, -1
+; GFX12-NEXT:    v_bfi_b32 v1, v1, v4, -1
+; GFX12-NEXT:    v_bfi_b32 v2, v2, v5, -1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %not = xor <3 x i32> %v, <i32 -1, i32 -1, i32 -1>
+  %r = or <3 x i32> %s, %not
+  ret <3 x i32> %r
+}
+
+define <4 x i32> @vector_orn2_v4i32_one_use(<4 x i32> %v, <4 x i32> %s) {
+; GFX6-LABEL: vector_orn2_v4i32_one_use:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_bfi_b32 v0, v0, v4, -1
+; GFX6-NEXT:    v_bfi_b32 v1, v1, v5, -1
+; GFX6-NEXT:    v_bfi_b32 v2, v2, v6, -1
+; GFX6-NEXT:    v_bfi_b32 v3, v3, v7, -1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: vector_orn2_v4i32_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfi_b32 v0, v0, v4, -1
+; GFX7-NEXT:    v_bfi_b32 v1, v1, v5, -1
+; GFX7-NEXT:    v_bfi_b32 v2, v2, v6, -1
+; GFX7-NEXT:    v_bfi_b32 v3, v3, v7, -1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_orn2_v4i32_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_bfi_b32 v0, v0, v4, -1
+; GFX8-NEXT:    v_bfi_b32 v1, v1, v5, -1
+; GFX8-NEXT:    v_bfi_b32 v2, v2, v6, -1
+; GFX8-NEXT:    v_bfi_b32 v3, v3, v7, -1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: vector_orn2_v4i32_one_use:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v0, v0, v4, -1
+; GFX9-NEXT:    v_bfi_b32 v1, v1, v5, -1
+; GFX9-NEXT:    v_bfi_b32 v2, v2, v6, -1
+; GFX9-NEXT:    v_bfi_b32 v3, v3, v7, -1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: vector_orn2_v4i32_one_use:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_bfi_b32 v0, v0, v4, -1
+; GFX12-NEXT:    v_bfi_b32 v1, v1, v5, -1
+; GFX12-NEXT:    v_bfi_b32 v2, v2, v6, -1
+; GFX12-NEXT:    v_bfi_b32 v3, v3, v7, -1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %not = xor <4 x i32> %v, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %r = or <4 x i32> %s, %not
+  ret <4 x i32> %r
+}
+
+define <2 x i32> @vector_orn2_v2i32_multi_use(<2 x i32> %v, <2 x i32> %s1, <2 x i32> %s2) {
+; GFX6-LABEL: vector_orn2_v2i32_multi_use:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX6-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX6-NEXT:    v_or_b32_e32 v3, v3, v1
+; GFX6-NEXT:    v_or_b32_e32 v2, v2, v0
+; GFX6-NEXT:    v_and_b32_e32 v1, v5, v1
+; GFX6-NEXT:    v_and_b32_e32 v0, v4, v0
+; GFX6-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX6-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: vector_orn2_v2i32_multi_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX7-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX7-NEXT:    v_or_b32_e32 v3, v3, v1
+; GFX7-NEXT:    v_or_b32_e32 v2, v2, v0
+; GFX7-NEXT:    v_and_b32_e32 v1, v5, v1
+; GFX7-NEXT:    v_and_b32_e32 v0, v4, v0
+; GFX7-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX7-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_orn2_v2i32_multi_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX8-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX8-NEXT:    v_or_b32_e32 v3, v3, v1
+; GFX8-NEXT:    v_or_b32_e32 v2, v2, v0
+; GFX8-NEXT:    v_and_b32_e32 v1, v5, v1
+; GFX8-NEXT:    v_and_b32_e32 v0, v4, v0
+; GFX8-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX8-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: vector_orn2_v2i32_multi_use:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX9-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX9-NEXT:    v_or_b32_e32 v3, v3, v1
+; GFX9-NEXT:    v_or_b32_e32 v2, v2, v0
+; GFX9-NEXT:    v_and_b32_e32 v1, v5, v1
+; GFX9-NEXT:    v_and_b32_e32 v0, v4, v0
+; GFX9-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX9-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: vector_orn2_v2i32_multi_use:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX12-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_or_b32_e32 v3, v3, v1
+; GFX12-NEXT:    v_or_b32_e32 v2, v2, v0
+; GFX12-NEXT:    v_and_b32_e32 v0, v4, v0
+; GFX12-NEXT:    v_and_b32_e32 v1, v5, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX12-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %not = xor <2 x i32> %v, <i32 -1, i32 -1>
+  %r1 = or  <2 x i32> %s1, %not
+  %r2 = and <2 x i32> %s2, %not
+  %r = xor <2 x i32> %r1, %r2
   ret <2 x i32> %r
 }
 
