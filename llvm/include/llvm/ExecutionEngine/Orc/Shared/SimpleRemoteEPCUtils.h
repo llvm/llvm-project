@@ -96,7 +96,7 @@ public:
   /// Trigger disconnection from the transport. The implementation should
   /// respond by calling handleDisconnect on the client once disconnection
   /// is complete. May be called more than once and from different threads.
-  virtual void disconnect(Error Err = Error::success()) = 0;
+  virtual void disconnect() = 0;
 };
 
 /// Uses read/write on FileDescriptors for transport.
@@ -121,7 +121,7 @@ public:
   Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                     ExecutorAddr TagAddr, ArrayRef<char> ArgBytes) override;
 
-  void disconnect(Error Err) override;
+  void disconnect() override;
 
 private:
   FDSimpleRemoteEPCTransport(SimpleRemoteEPCTransportClient &C, int InFD,

@@ -111,39 +111,37 @@ Error FDSimpleRemoteEPCTransport::sendMessage(SimpleRemoteEPCOpcode OpC,
   return Error::success();
 }
 
-void FDSimpleRemoteEPCTransport::disconnect(Error Err) {
-  if (!Disconnected) {
-    Disconnected = true;
-    bool CloseOutFD = InFD != OutFD;
+void FDSimpleRemoteEPCTransport::disconnect() {
+  if (Disconnected)
+    return; // Return if already disconnected.
 
-    // Close InFD.
+  Disconnected = true;
+  bool CloseOutFD = InFD != OutFD;
+
 #ifndef _WIN32
-    // We need to shutdown the socket to wake up (and terminate) any ongoing
-    // blocking read on this FD. If the FD is not a socket, shutdown will just
-    // complain through errno (instead of crashing).
-    // FIXME: what about Windows?
-    ::shutdown(InFD, CloseOutFD ? SHUT_RD : SHUT_RDWR);
+  // We need to shutdown the socket to wake up (and terminate) any ongoing
+  // blocking read on this FD. If the FD is not a socket, shutdown will just
+  // complain through errno (instead of crashing).
+  // FIXME: what about Windows?
+  ::shutdown(InFD, CloseOutFD ? SHUT_RD : SHUT_RDWR);
 #endif
-    while (close(InFD) == -1) {
+  // Close InFD.
+  while (close(InFD) == -1) {
+    if (errno == EBADF)
+      break;
+  }
+
+  // Close OutFD.
+  if (CloseOutFD) {
+#ifndef _WIN32
+    // FIXME: what about Windows?
+    ::shutdown(OutFD, SHUT_WR);
+#endif
+    while (close(OutFD) == -1) {
       if (errno == EBADF)
         break;
     }
-
-    // Close OutFD.
-    if (CloseOutFD) {
-#ifndef _WIN32
-      // FIXME: what about Windows?
-      ::shutdown(OutFD, SHUT_WR);
-#endif
-      while (close(OutFD) == -1) {
-        if (errno == EBADF)
-          break;
-      }
-    }
   }
-
-  // Call up to the client to handle the disconnection.
-  C.handleDisconnect(std::move(Err));
 }
 
 static Error makeUnexpectedEOFError() {
@@ -257,7 +255,10 @@ void FDSimpleRemoteEPCTransport::listenLoop() {
 
   // Attempt to close FDs, set Disconnected to true so that subsequent
   // sendMessage calls fail.
-  disconnect(std::move(Err));
+  disconnect();
+
+  // Call up to the client to handle the disconnection.
+  C.handleDisconnect(std::move(Err));
 }
 
 } // end namespace orc
