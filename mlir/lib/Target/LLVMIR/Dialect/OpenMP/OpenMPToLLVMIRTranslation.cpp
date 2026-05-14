@@ -4770,8 +4770,8 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
       convertAtomicOrdering(atomicCompareOp.getMemoryOrder());
 
   auto isAtomicComparePatternOp = [](Operation &op) {
-    return llvm::isa<LLVM::ICmpOp, LLVM::FCmpOp, LLVM::SelectOp,
-                     LLVM::AndOp, LLVM::OrOp>(op);
+    return llvm::isa<LLVM::ICmpOp, LLVM::FCmpOp, LLVM::SelectOp, LLVM::AndOp,
+                     LLVM::OrOp>(op);
   };
 
   // Pre-translate operations inside the region that compute intermediate values
