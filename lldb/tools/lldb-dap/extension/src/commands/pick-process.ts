@@ -7,8 +7,6 @@ import { createDebugAdapterExecutable } from "../debug-adapter-factory";
 import { LogFilePathProvider } from "../logging";
 import { LldbDapProcessTree, Process } from "../process-tree";
 
-import { takePickProcessContext } from "./pick-process-context";
-
 const exec = promisify(execFile);
 
 /**
@@ -45,27 +43,25 @@ interface ProcessQuickPick extends vscode.QuickPickItem {
 
 /**
  * Prompts the user to select a running process, enumerated by `lldb-dap
- * --list-processes`. When invoked as `${command:pickProcess}` from a
- * launch.json the matching {@link PickProcessContext} stashed by
- * `resolveDebugConfiguration` lets us target the right lldb-dap binary and
- * platform (for remote attach).
+ * --list-processes`. When invoked from `resolveDebugConfiguration` the caller
+ * forwards the in-flight configuration so we can target the right lldb-dap
+ * binary and platform (for remote attach).
  *
- * The return value must be a string so that it is compatible with VS Code's
- * variable substitution infrastructure. The debug configuration provider
- * converts it to a number before the attach request reaches lldb-dap.
- *
- * @returns the pid of the process as a string, or `undefined` if cancelled.
+ * @returns the pid of the selected process, or `undefined` if the user
+ *   cancelled or the picker failed (in which case an error has already been
+ *   shown).
  */
 export async function pickProcess(
   logger: vscode.LogOutputChannel,
   logFilePath: LogFilePathProvider,
-): Promise<string | undefined> {
-  const ctx = takePickProcessContext();
+  folder?: vscode.WorkspaceFolder,
+  debugConfiguration?: vscode.DebugConfiguration,
+): Promise<number | undefined> {
   const executable = await createDebugAdapterExecutable(
     logger,
     logFilePath,
-    ctx?.folder,
-    ctx?.debugConfiguration ?? {
+    folder,
+    debugConfiguration ?? {
       type: "lldb-dap",
       request: "attach",
       name: "Attach",
@@ -82,8 +78,8 @@ export async function pickProcess(
   }
 
   const tree = new LldbDapProcessTree(executable.command, {
-    platformName: ctx?.debugConfiguration.platformName,
-    platformUrl: ctx?.debugConfiguration.platformUrl,
+    platformName: debugConfiguration?.platformName,
+    platformUrl: debugConfiguration?.platformUrl,
   });
 
   let processes: Process[];
@@ -106,7 +102,7 @@ export async function pickProcess(
       matchOnDetail: true,
     },
   );
-  return selectedProcess?.processId.toString();
+  return selectedProcess?.processId;
 }
 
 /**

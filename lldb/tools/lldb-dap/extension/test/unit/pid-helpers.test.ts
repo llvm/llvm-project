@@ -1,9 +1,6 @@
 import * as assert from "assert";
 
-import {
-  convertToInteger,
-  pidMayInvokePicker,
-} from "../../src/commands/pid-helpers";
+import { convertToInteger } from "../../src/commands/pid-helpers";
 
 suite("convertToInteger", function () {
   test("passes through integers", function () {
@@ -36,34 +33,5 @@ suite("convertToInteger", function () {
     assert.strictEqual(convertToInteger(true), undefined);
     assert.strictEqual(convertToInteger({}), undefined);
     assert.strictEqual(convertToInteger([1]), undefined);
-  });
-});
-
-suite("pidMayInvokePicker", function () {
-  test("matches ${command:pickProcess}", function () {
-    assert.strictEqual(pidMayInvokePicker("${command:pickProcess}"), true);
-  });
-
-  test("matches when the variable is embedded in a larger string", function () {
-    assert.strictEqual(
-      pidMayInvokePicker("prefix-${command:pickProcess}-suffix"),
-      true,
-    );
-  });
-
-  test("is case-sensitive", function () {
-    assert.strictEqual(pidMayInvokePicker("${command:PickProcess}"), false);
-  });
-
-  test("does not match unrelated variables", function () {
-    assert.strictEqual(pidMayInvokePicker("${command:SomethingElse}"), false);
-    assert.strictEqual(pidMayInvokePicker("1234"), false);
-    assert.strictEqual(pidMayInvokePicker(""), false);
-  });
-
-  test("rejects non-strings", function () {
-    assert.strictEqual(pidMayInvokePicker(1234), false);
-    assert.strictEqual(pidMayInvokePicker(undefined), false);
-    assert.strictEqual(pidMayInvokePicker(null), false);
   });
 });

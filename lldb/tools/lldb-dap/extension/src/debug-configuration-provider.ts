@@ -2,11 +2,8 @@ import * as child_process from "child_process";
 import * as os from "os";
 import * as util from "util";
 import * as vscode from "vscode";
-import {
-  clearPickProcessContext,
-  setPickProcessContext,
-} from "./commands/pick-process-context";
-import { convertToInteger, pidMayInvokePicker } from "./commands/pid-helpers";
+import { pickProcess } from "./commands/pick-process";
+import { convertToInteger } from "./commands/pid-helpers";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { LogFilePathProvider } from "./logging";
@@ -116,10 +113,7 @@ export class LLDBDapConfigurationProvider
     folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
     token?: vscode.CancellationToken,
-  ): Promise<vscode.DebugConfiguration> {
-    // Drop any context left over from a cancelled prior session before we
-    // consider stashing fresh context below.
-    clearPickProcessContext();
+  ): Promise<vscode.DebugConfiguration | null | undefined> {
     this.logger.info(
       `Resolving debug configuration for "${debugConfiguration.name}"`,
     );
@@ -167,11 +161,22 @@ export class LLDBDapConfigurationProvider
       debugConfiguration[key] = value;
     }
 
-    // Stash the in-flight configuration so that a subsequent
-    // ${command:pickProcess} substitution can target the right lldb-dap
-    // binary and platform. See pick-process-context.ts for details.
-    if (pidMayInvokePicker(debugConfiguration.pid)) {
-      setPickProcessContext({ folder, debugConfiguration });
+    // If the user asked for the process picker, run it here — while we still
+    // have the workspace folder and platform fields — rather than deferring
+    // to VS Code's variable substitution, which doesn't pass the
+    // configuration to the command handler.
+    if (debugConfiguration.pid === "${command:pickProcess}") {
+      const pid = await pickProcess(
+        this.logger,
+        this.logFilePath,
+        folder,
+        debugConfiguration,
+      );
+      if (pid === undefined) {
+        // User cancelled, or the picker surfaced its own error.
+        return null;
+      }
+      debugConfiguration.pid = pid;
     }
 
     return debugConfiguration;

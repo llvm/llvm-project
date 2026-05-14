@@ -16,12 +16,3 @@ export function convertToInteger(value: unknown): number | undefined {
   }
   return Number.isInteger(result) ? result : undefined;
 }
-
-/**
- * Heuristic: does this `pid` value look like it will trigger our process
- * picker command? The picker command is declared in package.json as
- * `${command:pickProcess}`.
- */
-export function pidMayInvokePicker(pid: unknown): boolean {
-  return typeof pid === "string" && pid.includes("${command:pickProcess}");
-}
