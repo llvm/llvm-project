@@ -89,6 +89,8 @@ do_configure() {
         -DLLVM_OPTIMIZED_TABLEGEN=ON \
         "-DLLVM_TARGETS_TO_BUILD=${target}" \
         -DLLVM_ENABLE_PROJECTS="clang;lld" \
+        -DLLVM_ENABLE_ZLIB=OFF \
+        -DLLVM_ENABLE_ZSTD=OFF \
         -DCMAKE_C_COMPILER=clang \
         -DCMAKE_CXX_COMPILER=clang++ \
         ${ccache_opts}
@@ -102,6 +104,8 @@ do_configure() {
         "-DLLVM_TARGETS_TO_BUILD=${target}" \
         -DLLVM_ENABLE_PROJECTS="clang;lld" \
         -DLLVM_USE_SPLIT_DWARF=ON \
+        -DLLVM_ENABLE_ZLIB=OFF \
+        -DLLVM_ENABLE_ZSTD=OFF \
         -DCMAKE_C_COMPILER=clang \
         -DCMAKE_CXX_COMPILER=clang++ \
         ${ccache_opts}
