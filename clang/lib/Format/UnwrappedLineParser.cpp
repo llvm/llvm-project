@@ -3374,6 +3374,7 @@ void UnwrappedLineParser::parseDoWhile() {
 
 void UnwrappedLineParser::parseLabel(
     FormatStyle::IndentGotoLabelStyle IndentGotoLabels) {
+  const bool IsGotoLabel = FormatTok->is(TT_GotoLabelColon);
   nextToken();
   unsigned OldLineLevel = Line->Level;
 
@@ -3390,9 +3391,8 @@ void UnwrappedLineParser::parseLabel(
     break;
   }
 
-  if (!Style.IndentCaseBlocks && CommentsBeforeNextToken.empty() &&
-      FormatTok->is(tok::l_brace)) {
-
+  if (!IsGotoLabel && !Style.IndentCaseBlocks &&
+      CommentsBeforeNextToken.empty() && FormatTok->is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Line->Level,
                                        Style.BraceWrapping.AfterCaseLabel,
                                        Style.BraceWrapping.IndentBraces);
