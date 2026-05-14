@@ -2480,13 +2480,15 @@ class FriendTemplateDecl final
 
 private:
   unsigned NumTPLists : 31;
+  TemplateName Template;
 
   FriendTemplateDecl(DeclContext *DC, SourceLocation Loc, FriendUnion Friend,
                      SourceLocation FriendLoc, SourceLocation EllipsisLoc,
-                     ArrayRef<TemplateParameterList *> FriendTypeTPLists)
+                     ArrayRef<TemplateParameterList *> FriendTypeTPLists,
+                     TemplateName Template = {})
       : FriendDecl(Decl::FriendTemplate, DC, Loc, Friend, FriendLoc,
                    EllipsisLoc),
-        NumTPLists(FriendTypeTPLists.size()) {
+        NumTPLists(FriendTypeTPLists.size()), Template(Template) {
     llvm::copy(FriendTypeTPLists, getTrailingObjects());
   }
 
@@ -2502,6 +2504,12 @@ public:
   static FriendTemplateDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
          FriendUnion Friend, SourceLocation FriendLoc,
+         ArrayRef<TemplateParameterList *> FriendTypeTPLists = {},
+         SourceLocation EllipsisLoc = {});
+
+  static FriendTemplateDecl *
+  Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
+         TemplateName Template, SourceLocation FriendLoc,
          ArrayRef<TemplateParameterList *> FriendTypeTPLists = {},
          SourceLocation EllipsisLoc = {});
 
@@ -2521,8 +2529,12 @@ public:
   /// a member function of a templated type), return that type;
   /// otherwise return null.
   NamedDecl *getFriendDecl() const {
-    return Friend.dyn_cast<NamedDecl*>();
+    if (TemplateDecl *TD = Template.getAsTemplateDecl())
+      return TD;
+    return Friend.dyn_cast<NamedDecl *>();
   }
+
+  TemplateName getFriendTemplateName() const { return Template; }
 
   ArrayRef<TemplateParameterList *>
   getFriendTypeTemplateParameterLists() const {

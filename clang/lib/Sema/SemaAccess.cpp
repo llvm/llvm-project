@@ -735,10 +735,11 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   FriendTemplateDecl *FriendTD,
                                   ClassTemplateDecl *FriendCTD,
+                                  NestedNameSpecifier Qualifier,
                                   TemplateSpecCandidateSet *FailedTSC) {
   AccessResult OnFailure = AR_inaccessible;
-  const auto *FriendTST = GetCanonicalQualifierTemplateSpecializationType(
-      S, FriendCTD->getTemplatedDecl()->getQualifier());
+  const auto *FriendTST =
+      GetCanonicalQualifierTemplateSpecializationType(S, Qualifier);
   if (!FriendTST)
     return MatchesFriend(S, EC, FriendCTD);
 
@@ -776,6 +777,26 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   }
 
   return OnFailure;
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FriendTD,
+                                  TemplateName Template,
+                                  ClassTemplateDecl *FriendCTD,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  NestedNameSpecifier Qualifier = Template.getQualifier();
+  if (Template.getAsUsingShadowDecl())
+    Qualifier = FriendCTD->getTemplatedDecl()->getQualifier();
+  return MatchesFriend(S, EC, FriendTD, FriendCTD, Qualifier, FailedTSC);
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FriendTD,
+                                  ClassTemplateDecl *FriendCTD,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  return MatchesFriend(S, EC, FriendTD, FriendCTD,
+                       FriendCTD->getTemplatedDecl()->getQualifier(),
+                       FailedTSC);
 }
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
@@ -867,6 +888,11 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   FriendTemplateDecl *FTD, NamedDecl *ND,
                                   TemplateSpecCandidateSet *FailedTSC) {
+  TemplateName Template = FTD->getFriendTemplateName();
+  if (auto *CTD =
+          dyn_cast_if_present<ClassTemplateDecl>(Template.getAsTemplateDecl()))
+    return MatchesFriend(S, EC, FTD, Template, CTD, FailedTSC);
+
   if (auto *CTD = dyn_cast<ClassTemplateDecl>(ND))
     return MatchesFriend(S, EC, FTD, CTD, FailedTSC);
 
