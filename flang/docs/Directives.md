@@ -30,16 +30,16 @@ A list of non-standard directives supported by Flang
   The letter (P) ignores pointer and allocatable matching, so that one can pass
   an allocatable array to routine with pointer array argument and vice versa.
   The letter (M) disables matching of the actual argument's CUDA storage
-  (managed/unified) against the dummy's. Combined with a `device`-typed dummy,
-  this is most often used to mark a specific as an overload discriminator in
-  host modules that pair host- and device-typed specifics for the same
-  routine. Under `-gpu=mem:unified` or `-gpu=mem:managed` the compiler
-  normally relaxes host-to-device attribute mismatches so that an unattributed
-  host actual may bind to a device dummy; placing (M) on that dummy opts it
-  out of that relaxation. Actuals with an explicit `device`, `managed`, or
-  `unified` attribute still pick the device-typed specific, while plain host
-  actuals fall back to the host-typed specific in the same overload set. For
-  example:
+  (managed/unified) against the dummy's. Its main use is in host modules that
+  overload the same routine with both a host-typed and a `device`-typed
+  specific: placing (M) on the device-typed dummy turns that specific into an
+  overload discriminator. Under `-gpu=mem:unified` or `-gpu=mem:managed`, an
+  unattributed host actual is normally allowed to bind to a `device` dummy
+  (the host-to-device attribute check is relaxed). (M) on that dummy opts it
+  out of the relaxation: an unattributed host actual then binds to the
+  host-typed specific in the same overload set, while actuals with an
+  explicit `device`, `managed`, or `unified` attribute continue to bind to
+  the device-typed specific. For example:
 ```
   interface compute
     module procedure compute_host
@@ -59,13 +59,12 @@ contains
   call compute(a)      ! always binds to compute_host
   call compute(d)      ! always binds to compute_device
 ```
-  Without the `ignore_tkr(m)` on `compute_device`, `call compute(a)`
-  compiled with `-gpu=mem:unified` would resolve to `compute_device`:
-  under that flag the CUDA Fortran attribute-matching rules let an
-  unattributed actual bind to a device dummy, and they then rank the
-  device dummy as a closer match than the host one (see the
-  "Attributed Argument Matching Distance Values" table in section
-  3.2.3 of the CUDA Fortran Programming Guide).
+  For contrast: without `ignore_tkr(m)` on `compute_device`,
+  `call compute(a)` compiled with `-gpu=mem:unified` would instead resolve
+  to `compute_device`, because the matching rules let `a` bind to the
+  device dummy and rank it as a closer match than the host one (see the
+  "Attributed Argument Matching Distance Values" table in section 3.2.3
+  of the CUDA Fortran Programming Guide).
   For example, if one wanted to call a "set all bytes to zero" utility that
   could be applied to arrays of any type or rank:
 ```
