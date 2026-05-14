@@ -139,8 +139,8 @@ Status CreateHostSysRootModuleLink(const FileSpec &root_dir_spec,
     DecrementRefExistingModule(root_dir_spec, sysroot_module_path_spec);
   }
 
-  Status error = MakeDirectory(
-      FileSpec(sysroot_module_path_spec.GetDirectory().AsCString()));
+  Status error =
+      MakeDirectory(FileSpec(sysroot_module_path_spec.GetDirectory()));
   if (error.Fail())
     return error;
 
@@ -194,7 +194,7 @@ Status ModuleCache::Put(const FileSpec &root_dir_spec, const char *hostname,
   const auto module_spec_dir =
       GetModuleDirectory(root_dir_spec, module_spec.GetUUID());
   const auto module_file_path =
-      JoinPath(module_spec_dir, target_file.GetFilename().AsCString());
+      JoinPath(module_spec_dir, target_file.GetFilename().AsCString(nullptr));
 
   const auto tmp_file_path = tmp_file.GetPath();
   const auto err_code =
@@ -227,8 +227,9 @@ Status ModuleCache::Get(const FileSpec &root_dir_spec, const char *hostname,
 
   const auto module_spec_dir =
       GetModuleDirectory(root_dir_spec, module_spec.GetUUID());
-  const auto module_file_path = JoinPath(
-      module_spec_dir, module_spec.GetFileSpec().GetFilename().AsCString());
+  const auto module_file_path =
+      JoinPath(module_spec_dir,
+               module_spec.GetFileSpec().GetFilename().AsCString(nullptr));
 
   if (!FileSystem::Instance().Exists(module_file_path))
     return Status::FromErrorStringWithFormat(

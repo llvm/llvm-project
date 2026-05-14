@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 import lldbdap_testcase
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_setFunctionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_set_and_clear(self):

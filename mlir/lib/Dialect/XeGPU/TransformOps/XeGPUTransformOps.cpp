@@ -405,11 +405,6 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   if (!maybeDescOp)
     return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
   auto descOp = *maybeDescOp;
-  if (descOp.getMixedOffsets().size() > 0) {
-    auto diag = emitSilenceableFailure(getLoc())
-                << "desc op with offsets is not supported.";
-    diag.attachNote(descOp.getLoc()) << "desc op";
-  }
 
   // Clone desc op outside the loop.
   rewriter.setInsertionPoint(forOp);
@@ -442,7 +437,7 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
         llvm::map_to_vector(loadOp.getOffsets(), [&](Value v) {
           return mapping.lookupOrDefault(v);
         });
-    auto constOffsets = loadOp.getConstOffsets().value();
+    auto constOffsets = loadOp.getConstOffsets();
     return getMixedValues(constOffsets, dynamicOffsets, ctx);
   };
 

@@ -73,8 +73,8 @@ define void @scalable() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4f32 = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 8 undef, <vscale x 4 x i1> undef, <vscale x 4 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2f64 = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 undef, <vscale x 2 x i1> undef, <vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr align 8 undef, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0(ptr align 8 undef, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0(ptr align 8 undef, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0(ptr align 8 undef, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0(ptr align 8 undef, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv4i1 = call <vscale x 4 x i1> @llvm.masked.load.nxv4i1.p0(ptr align 16 undef, <vscale x 4 x i1> undef, <vscale x 4 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;

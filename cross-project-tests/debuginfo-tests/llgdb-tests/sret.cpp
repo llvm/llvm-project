@@ -1,6 +1,9 @@
 // REQUIRES: system-darwin || has-gdb
 // XFAIL: system-darwin
 //
+// TODO: llvm-project/issues/188957
+// UNSUPPORTED: system-linux
+//
 // RUN: %clangxx %target_itanium_abi_host_triple -O0 -g %s -c -o %t.o
 // RUN: %clangxx %target_itanium_abi_host_triple %t.o -o %t.out
 // RUN: %test_debuginfo %s %t.out

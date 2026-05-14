@@ -21,8 +21,8 @@
 //
 // op0h, op0l, op1h, op1l: register aliases (via .req) for the registers
 // containing the input operands.
-//  - For most comparisons, op0h,op0l will correspond to ah,al, and op1h,op1l
-//    to bh,bl (as defined in turn in endian.h).
+//  - For most comparisons, op0h,op0l will correspond to xh,xl, and op1h,op1l
+//    to yh,yl (as defined in turn in crt_endian.h).
 //  - But a function with the reversed semantics of __aeabi_cdrcmple wil define
 //    them the other way round.
 //

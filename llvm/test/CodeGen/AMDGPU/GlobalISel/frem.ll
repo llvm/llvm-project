@@ -3320,8 +3320,8 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_or_b32_e32 v3, s3, v3
 ; CI-NEXT:  .LBB13_16: ; %Flow50
 ; CI-NEXT:    v_cmp_nlg_f64_e64 vcc, s[8:9], 0
-; CI-NEXT:    v_mov_b32_e32 v4, 0
 ; CI-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
+; CI-NEXT:    v_mov_b32_e32 v4, 0
 ; CI-NEXT:    v_mov_b32_e32 v5, 0x7ff00000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
@@ -3522,8 +3522,8 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_or_b32_e32 v3, s3, v3
 ; VI-NEXT:  .LBB13_16: ; %Flow50
 ; VI-NEXT:    v_cmp_nlg_f64_e64 vcc, s[8:9], 0
-; VI-NEXT:    v_mov_b32_e32 v4, 0
 ; VI-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
+; VI-NEXT:    v_mov_b32_e32 v4, 0
 ; VI-NEXT:    v_mov_b32_e32 v5, 0x7ff00000
 ; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v6, vcc

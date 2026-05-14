@@ -1134,6 +1134,11 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
+  /// Returns true if the type uses postfix declarator syntax, i.e. the
+  /// declarator component appears after the name (arrays, functions).
+  /// Looks through pointer-like types to the pointee.
+  bool hasPostfixDeclaratorSyntax() const;
+
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -1154,6 +1159,10 @@ public:
 
   /// Returns true if it is a OverflowBehaviorType of Trap kind.
   bool isTrapType() const;
+
+  /// Returns true if this type requires laundering by checking if it is a
+  /// dynamic class type, or contains a subobject which is a dynamic class type.
+  bool requiresBuiltinLaunder(const ASTContext &Context) const;
 
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
@@ -1962,7 +1971,7 @@ protected:
     unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
-    static constexpr unsigned NumOfBuiltinTypeBits = 9;
+    static constexpr unsigned NumOfBuiltinTypeBits = 10;
     unsigned Kind : NumOfBuiltinTypeBits;
   };
 
@@ -3133,7 +3142,7 @@ public:
   /// Note that nullability is only captured as sugar within the type
   /// system, not as part of the canonical type, so nullability will
   /// be lost by canonicalization and desugaring.
-  std::optional<NullabilityKind> getNullability() const;
+  NullabilityKindOrNone getNullability() const;
 
   /// Determine whether the given type can have a nullability
   /// specifier applied to it, i.e., if it is any kind of pointer type.
@@ -6716,7 +6725,7 @@ public:
 
   bool isCallingConv() const;
 
-  std::optional<NullabilityKind> getImmediateNullability() const;
+  NullabilityKindOrNone getImmediateNullability() const;
 
   /// Strip off the top-level nullability annotation on the given
   /// type, if it's there.
@@ -6727,7 +6736,7 @@ public:
   /// to the underlying modified type.
   ///
   /// \returns the top-level nullability, if present.
-  static std::optional<NullabilityKind> stripOuterNullability(QualType &T);
+  static NullabilityKindOrNone stripOuterNullability(QualType &T);
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getAttrKind(), ModifiedType, EquivalentType, Attribute);

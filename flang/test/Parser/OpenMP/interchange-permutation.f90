@@ -20,7 +20,7 @@ subroutine openmp_interchange(x)
 !$omp end interchange
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE:  OmpDirectiveName -> llvm::omp::Directive = interchange
 !PARSE-TREE:   OmpClauseList -> OmpClause -> Permutation -> Scalar -> Integer -> Constant -> Expr = '2_4'
 !PARSE-TREE:     LiteralConstant -> IntLiteralConstant = '2'
@@ -29,7 +29,7 @@ subroutine openmp_interchange(x)
 !PARSE-TREE:     Flags = {}
 !PARSE-TREE:   DoConstruct
 !PARSE-TREE:   EndDoStmt
-!PARSE-TREE: OmpEndLoopDirective
+!PARSE-TREE: OmpEndDirective
 !PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = interchange
 
 END subroutine openmp_interchange
