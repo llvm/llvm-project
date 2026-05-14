@@ -603,20 +603,19 @@ void ObjectFile::ClearSymtab() {
 }
 
 SectionList *ObjectFile::GetSectionList(bool update_module_section_list) {
-  if (update_module_section_list) {
-    ModuleSP module_sp(GetModule());
-    if (module_sp) {
-      // The module mutex guards m_sections_up: check and populate under the
-      // lock so concurrent first-time initialization from multiple threads
-      // that share this Module doesn't race.
-      std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-      if (m_sections_up == nullptr)
-        CreateSections(*module_sp->GetUnifiedSectionList());
-      return m_sections_up.get();
-    }
+  // Don't take the module lock here: DWARF indexing workers call into this
+  // path while the main thread holds the module lock during PreloadSymbols,
+  // which would deadlock. See ObjectFile::GetSymtab() for the analogous
+  // pattern. Use a per-ObjectFile recursive mutex instead, since some plugin
+  // implementations of CreateSections re-enter GetSectionList on the same
+  // ObjectFile (e.g. ObjectFileELF's .gnu_debugdata path).
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+  if (m_sections_up)
     return m_sections_up.get();
-  }
-  if (m_sections_up == nullptr) {
+  if (update_module_section_list) {
+    if (ModuleSP module_sp = GetModule())
+      CreateSections(*module_sp->GetUnifiedSectionList());
+  } else {
     SectionList unified_section_list;
     CreateSections(unified_section_list);
   }
