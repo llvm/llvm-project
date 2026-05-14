@@ -125,7 +125,8 @@ static std::vector<T> &GetOrCreateOffsetCache(void *&OffsetCache,
 }
 
 template <typename T>
-unsigned SourceMgr::SrcBuffer::getLineNumberSpecialized(const char *Ptr) const {
+std::pair<unsigned, unsigned>
+SourceMgr::SrcBuffer::getLineAndColumnSpecialized(const char *Ptr) const {
   std::vector<T> &Offsets =
       GetOrCreateOffsetCache<T>(OffsetCache, Buffer.get());
 
@@ -138,21 +139,28 @@ unsigned SourceMgr::SrcBuffer::getLineNumberSpecialized(const char *Ptr) const {
 
   // llvm::lower_bound gives the number of EOL before PtrOffset. Add 1 to get
   // the line number.
-  return llvm::lower_bound(Offsets, PtrOffset) - Offsets.begin() + 1;
+  auto I = llvm::lower_bound(Offsets, PtrOffset);
+  unsigned LineNo = I - Offsets.begin() + 1;
+
+  // The column number is the distance from the previous EOL (or the start of
+  // the buffer) to the pointer.
+  T LineStartOffs = (I == Offsets.begin()) ? 0 : (I[-1] + 1);
+  unsigned ColNo = PtrOffset - LineStartOffs + 1;
+  return {LineNo, ColNo};
 }
 
-/// Look up a given \p Ptr in the buffer, determining which line it came
-/// from.
-unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
+/// Look up a given \p Ptr in the buffer, determining which line and column
+/// it came from.
+LLVM_ABI std::pair<unsigned, unsigned>
+SourceMgr::SrcBuffer::getLineAndColumn(const char *Ptr) const {
   size_t Sz = Buffer->getBufferSize();
   if (Sz <= std::numeric_limits<uint8_t>::max())
-    return getLineNumberSpecialized<uint8_t>(Ptr);
-  else if (Sz <= std::numeric_limits<uint16_t>::max())
-    return getLineNumberSpecialized<uint16_t>(Ptr);
-  else if (Sz <= std::numeric_limits<uint32_t>::max())
-    return getLineNumberSpecialized<uint32_t>(Ptr);
-  else
-    return getLineNumberSpecialized<uint64_t>(Ptr);
+    return getLineAndColumnSpecialized<uint8_t>(Ptr);
+  if (Sz <= std::numeric_limits<uint16_t>::max())
+    return getLineAndColumnSpecialized<uint16_t>(Ptr);
+  if (Sz <= std::numeric_limits<uint32_t>::max())
+    return getLineAndColumnSpecialized<uint32_t>(Ptr);
+  return getLineAndColumnSpecialized<uint64_t>(Ptr);
 }
 
 template <typename T>
@@ -221,12 +229,7 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   auto &SB = getBufferInfo(BufferID);
   const char *Ptr = Loc.getPointer();
 
-  unsigned LineNo = SB.getLineNumber(Ptr);
-  const char *BufStart = SB.Buffer->getBufferStart();
-  size_t NewlineOffs = StringRef(BufStart, Ptr - BufStart).find_last_of("\n\r");
-  if (NewlineOffs == StringRef::npos)
-    NewlineOffs = ~(size_t)0;
-  return {LineNo, Ptr - BufStart - NewlineOffs};
+  return SB.getLineAndColumn(Ptr);
 }
 
 // FIXME: Note that the formatting of source locations is spread between
