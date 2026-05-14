@@ -590,8 +590,10 @@ FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
     auto write_res = write_unlocked_impl(buffer, char_size);
     if (write_res.has_error())
       return {written, write_res.error};
-    if (write_res.value < 1)
-      return {written, 0};
+    if (write_res.value < char_size) {
+      err = true;
+      return {written, EIO};
+    }
     ++written;
   }
   return {written, 0};

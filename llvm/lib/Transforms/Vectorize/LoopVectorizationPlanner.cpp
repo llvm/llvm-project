@@ -64,13 +64,9 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
 bool VFSelectionContext::isLegalMaskedLoadOrStore(Instruction *I,
                                                   ElementCount VF) const {
   assert(isa<LoadInst>(I) || isa<StoreInst>(I));
-  auto *Ptr = getLoadStorePointerOperand(I);
   auto *Ty = getLoadStoreType(I);
   const unsigned AS = getLoadStoreAddressSpace(I);
   const Align Alignment = getLoadStoreAlignment(I);
-
-  if (!Legal->isConsecutivePtr(Ty, Ptr))
-    return false;
 
   return ForceTargetSupportsMaskedMemoryOps ||
          (isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment, AS)

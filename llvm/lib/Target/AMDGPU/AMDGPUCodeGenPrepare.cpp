@@ -320,7 +320,7 @@ bool AMDGPUCodeGenPrepareImpl::canWidenScalarExtLoad(LoadInst &I) const {
   int TySize = DL.getTypeSizeInBits(Ty);
   Align Alignment = DL.getValueOrABITypeAlignment(I.getAlign(), Ty);
 
-  return I.isSimple() && TySize < 32 && Alignment >= 4 && UA.isUniform(&I);
+  return I.isSimple() && TySize < 32 && Alignment >= 4 && UA.isUniformAtDef(&I);
 }
 
 unsigned
@@ -372,7 +372,7 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
     return false;
 
   // Prefer scalar if this could be s_mul_i32
-  if (UA.isUniform(&I))
+  if (UA.isUniformAtDef(&I))
     return false;
 
   Value *LHS = I.getOperand(0);

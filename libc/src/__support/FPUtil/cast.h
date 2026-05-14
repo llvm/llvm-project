@@ -51,8 +51,9 @@ cast(InType x) {
         }
 
         InStorageType x_mant = x_bits.get_mantissa();
-        if (InFPBits::FRACTION_LEN > OutFPBits::FRACTION_LEN)
+        if constexpr (InFPBits::FRACTION_LEN > OutFPBits::FRACTION_LEN) {
           x_mant >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+        }
         return OutFPBits::quiet_nan(x_bits.sign(),
                                     static_cast<OutStorageType>(x_mant))
             .get_val();
