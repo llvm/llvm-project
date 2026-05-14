@@ -1338,7 +1338,16 @@ public:
     /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
     MaskedCond,
-    OpsEnd = MaskedCond,
+
+    /// Extracts a sub-vector from a wider vector. Operands: (wide_vec,
+    /// start_idx_constant, subvec_len_constant). The start index and
+    /// sub-vector length are VPValues wrapping ConstantInt live-ins.
+    ExtractSubvector,
+    /// Concatenates two vectors into a single wider vector by creating a
+    /// shufflevector with an identity mask. Operands: (vec_a, vec_b).
+    ConcatVectors,
+
+    OpsEnd = ConcatVectors,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -1991,6 +2000,12 @@ class LLVM_ABI_FOR_TEST VPWidenCallRecipe : public VPRecipeWithIRFlags,
   /// different VPlan for each VF with a valid variant.
   Function *Variant;
 
+  /// When legalization is needed, LegalVariant stores the legal-width vector
+  /// function and LegalVF stores the legal vectorization factor.
+  Function *LegalVariant = nullptr;
+  ElementCount LegalVF = ElementCount::getFixed(0);
+  bool NeedsLegalization = false;
+
 public:
   VPWidenCallRecipe(Value *UV, Function *Variant,
                     ArrayRef<VPValue *> CallArguments,
@@ -2008,8 +2023,12 @@ public:
   ~VPWidenCallRecipe() override = default;
 
   VPWidenCallRecipe *clone() override {
-    return new VPWidenCallRecipe(getUnderlyingValue(), Variant, operands(),
-                                 *this, *this, getDebugLoc());
+    auto *R = new VPWidenCallRecipe(getUnderlyingValue(), Variant, operands(),
+                                    *this, *this, getDebugLoc());
+    R->LegalVariant = LegalVariant;
+    R->LegalVF = LegalVF;
+    R->NeedsLegalization = NeedsLegalization;
+    return R;
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCallSC)
@@ -2024,6 +2043,18 @@ public:
   Function *getCalledScalarFunction() const {
     return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
   }
+
+  Function *getVariant() const { return Variant; }
+
+  void setLegalizationInfo(Function *LegalFunc, ElementCount VF) {
+    LegalVariant = LegalFunc;
+    LegalVF = VF;
+    NeedsLegalization = true;
+  }
+
+  bool needsLegalization() const { return NeedsLegalization; }
+  Function *getLegalVariant() const { return LegalVariant; }
+  ElementCount getLegalVF() const { return LegalVF; }
 
   operand_range args() { return drop_end(operands()); }
   const_operand_range args() const { return drop_end(operands()); }

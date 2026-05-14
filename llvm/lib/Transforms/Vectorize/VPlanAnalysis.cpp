@@ -95,6 +95,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Reverse:
+  case VPInstruction::ExtractSubvector:
+  case VPInstruction::ConcatVectors:
     return inferScalarType(R->getOperand(0));
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));

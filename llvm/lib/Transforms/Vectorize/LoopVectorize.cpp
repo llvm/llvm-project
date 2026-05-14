@@ -316,6 +316,11 @@ static cl::opt<bool> PreferPredicatedReductionSelect(
     cl::desc(
         "Prefer predicating a reduction operation over an after loop select."));
 
+static cl::opt<bool> LegalizeVectorLibraryCalls(
+    "legalize-vector-library-calls", cl::init(false), cl::Hidden,
+    cl::desc("Legalize vector library calls by splitting oversized vector "
+             "calls into multiple calls with a legal vector factor"));
+
 cl::opt<bool> llvm::EnableVPlanNativePath(
     "enable-vplan-native-path", cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
@@ -854,6 +859,26 @@ public:
   /// decision in a map for use in planning and plan execution.
   void setVectorizedCallDecision(ElementCount VF);
 
+  /// Returns true if \p VF elements of the given scalar type exceed the
+  /// target's vector register width.
+  bool exceedsRegisterWidth(ElementCount VF, Type *ScalarRetTy,
+                            ArrayRef<Type *> ScalarParamTys) const;
+
+  /// Find the largest TLI-known vector variant of \p CI's callee whose VF
+  /// evenly divides \p VF. Returns {nullptr, 0} if none found.
+  std::pair<Function *, ElementCount>
+  findLargestLegalVariant(CallInst *CI, ElementCount VF, Type *ScalarRetTy,
+                          ArrayRef<Type *> ScalarParamTys) const;
+
+  /// Compute the cost of splitting a vector call at \p VF into multiple
+  /// legal-width calls. Populates \p LegalVecFunc and \p LegalVecVF.
+  InstructionCost getLegalizedCallCost(CallInst *CI, ElementCount VF,
+                                      Type *ScalarRetTy,
+                                      ArrayRef<Type *> ScalarTys,
+                                      bool NeedsLegalization,
+                                      Function *&LegalVecFunc,
+                                      ElementCount &LegalVecVF) const;
+
   /// Collect values we want to ignore in the cost model.
   void collectValuesToIgnore();
 
@@ -929,7 +954,8 @@ public:
     CM_GatherScatter,
     CM_Scalarize,
     CM_VectorCall,
-    CM_IntrinsicCall
+    CM_IntrinsicCall,
+    CM_VectorCallLegalized
   };
 
   /// Save vectorization decision \p W and \p Cost taken by the cost model for
@@ -996,14 +1022,19 @@ public:
     Intrinsic::ID IID;
     std::optional<unsigned> MaskPos;
     InstructionCost Cost;
+    Function *LegalVariant = nullptr;
+    ElementCount LegalVF = ElementCount::getFixed(0);
   };
 
   void setCallWideningDecision(CallInst *CI, ElementCount VF, InstWidening Kind,
                                Function *Variant, Intrinsic::ID IID,
                                std::optional<unsigned> MaskPos,
-                               InstructionCost Cost) {
+                               InstructionCost Cost,
+                               Function *LegalVariant = nullptr,
+                               ElementCount LegalVF = ElementCount::getFixed(0)) {
     assert(!VF.isScalar() && "Expected vector VF");
-    CallWideningDecisions[{CI, VF}] = {Kind, Variant, IID, MaskPos, Cost};
+    CallWideningDecisions[{CI, VF}] = {Kind,    Variant, IID,  MaskPos,
+                                        Cost, LegalVariant, LegalVF};
   }
 
   CallWideningDecision getCallWideningDecision(CallInst *CI,
@@ -4921,6 +4952,109 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   }
 }
 
+/// Returns true if VF elements of the given scalar type exceed the target's
+/// fixed-width vector register.
+bool LoopVectorizationCostModel::exceedsRegisterWidth(
+    ElementCount VF, Type *ScalarRetTy, ArrayRef<Type *> ScalarParamTys) const {
+  unsigned RegWidth =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+          .getFixedValue();
+  Type *ElemTy = ScalarRetTy->isVoidTy() ? ScalarParamTys[0] : ScalarRetTy;
+  unsigned ElemBits =
+      TheLoop->getHeader()->getDataLayout().getTypeSizeInBits(ElemTy);
+  return VF.getKnownMinValue() * ElemBits > RegWidth;
+}
+
+/// Search TLI for the largest vector variant of \p CI's callee whose VF is
+/// smaller than \p VF and evenly divides it. Returns {nullptr, 0} if none.
+std::pair<Function *, ElementCount>
+LoopVectorizationCostModel::findLargestLegalVariant(
+    CallInst *CI, ElementCount VF, Type *ScalarRetTy,
+    ArrayRef<Type *> ScalarParamTys) const {
+  Function *ScalarFn = CI->getCalledFunction();
+  if (!ScalarFn || !TLI)
+    return {nullptr, ElementCount::getFixed(0)};
+
+  StringRef ScalarName = ScalarFn->getName();
+  for (unsigned CandVF = VF.getKnownMinValue() / 2; CandVF >= 2;
+       CandVF /= 2) {
+    if (VF.getKnownMinValue() % CandVF != 0)
+      continue;
+    ElementCount CandEC = ElementCount::getFixed(CandVF);
+    if (exceedsRegisterWidth(CandEC, ScalarRetTy, ScalarParamTys))
+      continue;
+    StringRef VecName = TLI->getVectorizedFunction(ScalarName, CandEC);
+    if (VecName.empty())
+      continue;
+
+    Function *VecFunc = CI->getModule()->getFunction(VecName);
+    if (!VecFunc) {
+      Type *RetTy = toVectorizedTy(ScalarRetTy, CandEC);
+      SmallVector<Type *, 4> ParamTys;
+      for (Type *T : ScalarParamTys)
+        ParamTys.push_back(toVectorizedTy(T, CandEC));
+      VecFunc = Function::Create(FunctionType::get(RetTy, ParamTys, false),
+                                 Function::ExternalLinkage, VecName,
+                                 CI->getModule());
+      VecFunc->copyAttributesFrom(ScalarFn);
+    }
+    return {VecFunc, CandEC};
+  }
+  return {nullptr, ElementCount::getFixed(0)};
+}
+
+/// Compute the cost of legalizing a vector call at \p VF by splitting it into
+/// multiple calls to a smaller legal-width variant. Populates \p LegalVecFunc
+/// and \p LegalVecVF with the chosen variant. Returns Invalid if legalization
+/// is not applicable or no suitable variant exists.
+InstructionCost LoopVectorizationCostModel::getLegalizedCallCost(
+    CallInst *CI, ElementCount VF, Type *ScalarRetTy,
+    ArrayRef<Type *> ScalarTys, bool NeedsLegalization,
+    Function *&LegalVecFunc, ElementCount &LegalVecVF) const {
+  if (!NeedsLegalization || !LegalizeVectorLibraryCalls || !VF.isFixed() ||
+      !TLI || CI->isNoBuiltin())
+    return InstructionCost::getInvalid();
+
+  std::tie(LegalVecFunc, LegalVecVF) =
+      findLargestLegalVariant(CI, VF, ScalarRetTy, ScalarTys);
+  if (!LegalVecFunc)
+    return InstructionCost::getInvalid();
+
+  unsigned WideLen = VF.getKnownMinValue();
+  unsigned LegalLen = LegalVecVF.getKnownMinValue();
+  unsigned NumParts = WideLen / LegalLen;
+
+  InstructionCost CallCost =
+      NumParts *
+      TTI.getCallInstrCost(nullptr, LegalVecFunc->getReturnType(),
+                           LegalVecFunc->getFunctionType()->params(),
+                           Config.CostKind);
+
+  // Extract-subvector cost per argument, using each argument's actual type.
+  InstructionCost ExtractCost = 0;
+  for (Type *ScalarTy : ScalarTys) {
+    auto *WideArgTy = FixedVectorType::get(ScalarTy, WideLen);
+    auto *SubArgTy = FixedVectorType::get(ScalarTy, LegalLen);
+    ExtractCost +=
+        NumParts * TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                      WideArgTy, WideArgTy, {}, Config.CostKind,
+                                      0, SubArgTy);
+  }
+
+  // Reassembly cost: NumParts-1 insert-subvector shuffles on the return type.
+  InstructionCost InsertCost = 0;
+  if (!ScalarRetTy->isVoidTy()) {
+    auto *WideRetTy = FixedVectorType::get(ScalarRetTy, WideLen);
+    auto *SubRetTy = FixedVectorType::get(ScalarRetTy, LegalLen);
+    InsertCost =
+        (NumParts - 1) *
+        TTI.getShuffleCost(TargetTransformInfo::SK_InsertSubvector, WideRetTy,
+                           WideRetTy, {}, Config.CostKind, 0, SubRetTy);
+  }
+
+  return CallCost + ExtractCost + InsertCost;
+}
+
 void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
   assert(!VF.isScalar() &&
          "Trying to set a vectorization decision for a scalar VF");
@@ -5059,6 +5193,37 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       if (IID != Intrinsic::not_intrinsic)
         IntrinsicCost = getVectorIntrinsicCost(CI, VF);
 
+      // When legalization is enabled, invalidate exact-match vector variants
+      // that exceed the target's register width (e.g., __svml_sin8 on AVX).
+      if (VecFunc && LegalizeVectorLibraryCalls && VF.isFixed() &&
+          exceedsRegisterWidth(VF, ScalarRetTy, ScalarTys))  {
+        VecFunc = nullptr;
+        VectorCost = InstructionCost::getInvalid();
+      }
+
+      // If no usable variant exists, try to find a smaller legal-width variant
+      // that the call can be split into (e.g., 2 x __svml_sin4 for VF=8).
+      Function *LegalVecFunc = nullptr;
+      ElementCount LegalVecVF = ElementCount::getFixed(0);
+      InstructionCost LegalizedCallCost =
+          getLegalizedCallCost(CI, VF, ScalarRetTy, ScalarTys,
+                              !VecFunc, LegalVecFunc, LegalVecVF);
+
+      LLVM_DEBUG({
+        dbgs() << "LV(CallCost): VF=" << VF << " "
+               << CI->getCalledFunction()->getName()
+               << ": ScalarCost=" << ScalarCost
+               << " VectorCost=" << VectorCost
+               << " IntrinsicCost=" << IntrinsicCost
+               << " LegalizedCallCost=" << LegalizedCallCost;
+        if (LegalVecFunc)
+          dbgs() << " (via " << LegalVecFunc->getName()
+                 << ", LegalVF=" << LegalVecVF << ", NumParts="
+                 << VF.getKnownMinValue() / LegalVecVF.getKnownMinValue()
+                 << ")";
+        dbgs() << "\n";
+      });
+
       InstructionCost Cost = ScalarCost;
       InstWidening Decision = CM_Scalarize;
 
@@ -5072,8 +5237,17 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         Decision = CM_IntrinsicCall;
       }
 
-      setCallWideningDecision(CI, VF, Decision, VecFunc, IID,
-                              FuncInfo.getParamIndexForOptionalMask(), Cost);
+      if (LegalizedCallCost.isValid() && LegalizedCallCost <= Cost) {
+        Cost = LegalizedCallCost;
+        Decision = CM_VectorCallLegalized;
+      }
+
+      if (Decision == CM_VectorCallLegalized)
+        setCallWideningDecision(CI, VF, Decision, nullptr, IID, std::nullopt,
+                                Cost, LegalVecFunc, LegalVecVF);
+      else
+        setCallWideningDecision(CI, VF, Decision, VecFunc, IID,
+                                FuncInfo.getParamIndexForOptionalMask(), Cost);
     }
   }
 }
@@ -6141,6 +6315,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, BestVPlan);
 
+  RUN_VPLAN_PASS(VPlanTransforms::legalizeVecLibCalls, BestVPlan, BestVF);
   RUN_VPLAN_PASS(VPlanTransforms::convertToConcreteRecipes, BestVPlan);
   // Convert the exit condition to AVLNext == 0 for EVL tail folded loops.
   RUN_VPLAN_PASS(VPlanTransforms::convertEVLExitCond, BestVPlan);
@@ -6511,6 +6686,34 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
     Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     return new VPWidenCallRecipe(CI, Variant, Ops, *VPI, *VPI,
                                  VPI->getDebugLoc());
+  }
+
+  // Check if we should legalize (split) the vector call into multiple
+  // calls at a smaller legal VF.
+  Function *LegalVariant = nullptr;
+  ElementCount LegalVF = ElementCount::getFixed(0);
+  auto ShouldLegalizeCall =
+      LoopVectorizationPlanner::getDecisionAndClampRange(
+          [&](ElementCount VF) -> bool {
+            if (LegalVariant)
+              return false;
+            LoopVectorizationCostModel::CallWideningDecision Decision =
+                CM.getCallWideningDecision(CI, VF);
+            if (Decision.Kind ==
+                LoopVectorizationCostModel::CM_VectorCallLegalized) {
+              LegalVariant = Decision.LegalVariant;
+              LegalVF = Decision.LegalVF;
+              return true;
+            }
+            return false;
+          },
+          Range);
+  if (ShouldLegalizeCall) {
+    Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
+    auto *Recipe = new VPWidenCallRecipe(CI, LegalVariant, Ops, *VPI, *VPI,
+                                         VPI->getDebugLoc());
+    Recipe->setLegalizationInfo(LegalVariant, LegalVF);
+    return Recipe;
   }
 
   return nullptr;

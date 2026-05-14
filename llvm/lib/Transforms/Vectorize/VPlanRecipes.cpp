@@ -516,6 +516,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
+  case VPInstruction::ConcatVectors:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
@@ -527,6 +528,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::InsertElement:
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
+  case VPInstruction::ExtractSubvector:
   case VPInstruction::ReductionStartVector:
     return 3;
   case Instruction::Call:
@@ -926,6 +928,27 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return State.get(getOperand(0), true);
   case VPInstruction::Reverse:
     return Builder.CreateVectorReverse(State.get(getOperand(0)), "reverse");
+  case VPInstruction::ExtractSubvector: {
+    Value *WideVec = State.get(getOperand(0));
+    unsigned StartIdx =
+        cast<ConstantInt>(getOperand(1)->getLiveInIRValue())->getZExtValue();
+    unsigned SubVecLen =
+        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())->getZExtValue();
+    SmallVector<int, 16> Mask;
+    for (unsigned K = 0; K < SubVecLen; ++K)
+      Mask.push_back(StartIdx + K);
+    return Builder.CreateShuffleVector(WideVec, Mask, "extract.subvec");
+  }
+  case VPInstruction::ConcatVectors: {
+    Value *VecA = State.get(getOperand(0));
+    Value *VecB = State.get(getOperand(1));
+    unsigned LenA = cast<FixedVectorType>(VecA->getType())->getNumElements();
+    unsigned LenB = cast<FixedVectorType>(VecB->getType())->getNumElements();
+    SmallVector<int, 16> Mask;
+    for (unsigned K = 0; K < LenA + LenB; ++K)
+      Mask.push_back(K);
+    return Builder.CreateShuffleVector(VecA, VecB, Mask, "concat.vec");
+  }
   case VPInstruction::ExtractLastActive: {
     Value *Result = State.get(getOperand(0), /*IsScalar=*/true);
     for (unsigned Idx = 1; Idx < getNumOperands(); Idx += 2) {
@@ -1412,6 +1435,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Reverse:
   case VPInstruction::VScale:
   case VPInstruction::Unpack:
+  case VPInstruction::ExtractSubvector:
+  case VPInstruction::ConcatVectors:
     return false;
   case Instruction::Call:
     return !getCalledFunction(*this)->doesNotAccessMemory();
@@ -1600,6 +1625,12 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractLastActive:
     O << "extract-last-active";
+    break;
+  case VPInstruction::ExtractSubvector:
+    O << "extract-subvector";
+    break;
+  case VPInstruction::ConcatVectors:
+    O << "concat-vectors";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -1847,25 +1878,21 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
   assert(Variant != nullptr && "Can't create vector function.");
 
+  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
+  SmallVector<OperandBundleDef, 1> OpBundles;
+  if (CI)
+    CI->getOperandBundlesAsDefs(OpBundles);
+
   FunctionType *VFTy = Variant->getFunctionType();
-  // Add return type if intrinsic is overloaded on it.
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(args())) {
     Value *Arg;
-    // Some vectorized function variants may also take a scalar argument,
-    // e.g. linear parameters for pointers. This needs to be the scalar value
-    // from the start of the respective part when interleaving.
     if (!VFTy->getParamType(I.index())->isVectorTy())
       Arg = State.get(I.value(), VPLane(0));
     else
       Arg = State.get(I.value(), usesFirstLaneOnly(I.value()));
     Args.push_back(Arg);
   }
-
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
-  SmallVector<OperandBundleDef, 1> OpBundles;
-  if (CI)
-    CI->getOperandBundlesAsDefs(OpBundles);
 
   CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
   applyFlags(*V);
@@ -1878,6 +1905,15 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
+  if (NeedsLegalization && LegalVariant) {
+    unsigned WideVF = VF.getKnownMinValue();
+    unsigned LegalWidth = LegalVF.getKnownMinValue();
+    unsigned NumParts = WideVF / LegalWidth;
+    InstructionCost PerPartCost = Ctx.TTI.getCallInstrCost(
+        nullptr, LegalVariant->getReturnType(),
+        LegalVariant->getFunctionType()->params(), Ctx.CostKind);
+    return NumParts * PerPartCost;
+  }
   return Ctx.TTI.getCallInstrCost(nullptr, Variant->getReturnType(),
                                   Variant->getFunctionType()->params(),
                                   Ctx.CostKind);

@@ -354,6 +354,13 @@ struct VPlanTransforms {
   //   * Removes CanonicalIV and increment.
   static void convertToVariableLengthStep(VPlan &Plan);
 
+  /// Legalize vector library calls by replacing VPWidenCallRecipes marked as
+  /// needing legalization with a sequence of ExtractSubvector + legal-width
+  /// VPWidenCallRecipe + ConcatVectors recipes. This splits oversized vector
+  /// calls (e.g., VF=8 sin on AVX) into multiple legal-width calls (e.g.,
+  /// 2 x VF=4 sin calls). \p VF is the chosen vectorization factor.
+  static void legalizeVecLibCalls(VPlan &Plan, ElementCount VF);
+
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
 

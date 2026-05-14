@@ -3862,6 +3862,107 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
   }
 }
 
+void VPlanTransforms::legalizeVecLibCalls(VPlan &Plan, ElementCount VF) {
+  if (!VF.isFixed())
+    return;
+
+  SmallVector<VPWidenCallRecipe *> ToLegalize;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      auto *WC = dyn_cast<VPWidenCallRecipe>(&R);
+      if (WC && WC->needsLegalization())
+        ToLegalize.push_back(WC);
+    }
+  }
+
+  for (VPWidenCallRecipe *WC : ToLegalize) {
+    Function *LegalVariant = WC->getLegalVariant();
+    ElementCount LegalVFEC = WC->getLegalVF();
+    assert(LegalVariant && "Legalization requires a legal variant");
+    assert(LegalVFEC.isFixed() && "Legalization only supports fixed-width VFs");
+
+    FunctionType *LegalFTy = LegalVariant->getFunctionType();
+    LLVMContext &Ctx = LegalVariant->getContext();
+    unsigned LegalWidth = LegalVFEC.getKnownMinValue();
+    unsigned WideVF = VF.getKnownMinValue();
+
+    if (WideVF <= LegalWidth)
+      continue;
+
+    unsigned NumParts = WideVF / LegalWidth;
+    assert(NumParts > 1 && "Legalization requires at least 2 parts");
+    assert(WideVF % LegalWidth == 0 && "VF must be a multiple of LegalVF");
+
+    // Collect the wide argument VPValues (excluding the last callee operand).
+    SmallVector<VPValue *, 4> WideArgVPVs;
+    for (VPValue *Arg : WC->args())
+      WideArgVPVs.push_back(Arg);
+
+    // Get the callee function operand (last operand).
+    VPValue *CalleeVPV = WC->getOperand(WC->getNumOperands() - 1);
+
+    // Create the sequence: for each Part, extract sub-vectors from wide args,
+    // call the legal variant, then combine partial results.
+    SmallVector<VPValue *, 4> PartialResults;
+    VPBuilder Builder(WC);
+
+    for (unsigned Part = 0; Part < NumParts; ++Part) {
+      SmallVector<VPValue *, 4> PartOps;
+      unsigned StartIdx = Part * LegalWidth;
+
+      for (unsigned ArgIdx = 0; ArgIdx < WideArgVPVs.size(); ++ArgIdx) {
+        if (!LegalFTy->getParamType(ArgIdx)->isVectorTy()) {
+          PartOps.push_back(WideArgVPVs[ArgIdx]);
+        } else {
+          VPValue *StartIdxVPV = Plan.getOrAddLiveIn(
+              ConstantInt::get(Type::getInt32Ty(Ctx), StartIdx));
+          VPValue *SubVecLenVPV = Plan.getOrAddLiveIn(
+              ConstantInt::get(Type::getInt32Ty(Ctx), LegalWidth));
+          auto *Extract = new VPInstruction(VPInstruction::ExtractSubvector,
+                                            {WideArgVPVs[ArgIdx], StartIdxVPV,
+                                             SubVecLenVPV});
+          Extract->insertBefore(WC);
+          PartOps.push_back(Extract);
+        }
+      }
+
+      // Add the callee function operand.
+      PartOps.push_back(CalleeVPV);
+
+      auto *PartCall = new VPWidenCallRecipe(
+          WC->getUnderlyingValue(), LegalVariant, PartOps, *WC, *WC,
+          WC->getDebugLoc());
+      PartCall->insertBefore(WC);
+
+      if (!LegalVariant->getReturnType()->isVoidTy())
+        PartialResults.push_back(PartCall);
+    }
+
+    // Combine partial results using a tree of ConcatVectors.
+    if (!PartialResults.empty()) {
+      while (PartialResults.size() > 1) {
+        SmallVector<VPValue *, 4> NewResults;
+        for (unsigned I = 0; I < PartialResults.size(); I += 2) {
+          if (I + 1 < PartialResults.size()) {
+            auto *Concat = new VPInstruction(VPInstruction::ConcatVectors,
+                                             {PartialResults[I],
+                                              PartialResults[I + 1]});
+            Concat->insertBefore(WC);
+            NewResults.push_back(Concat);
+          } else {
+            NewResults.push_back(PartialResults[I]);
+          }
+        }
+        PartialResults = std::move(NewResults);
+      }
+      WC->replaceAllUsesWith(PartialResults[0]);
+    }
+
+    WC->eraseFromParent();
+  }
+}
+
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   VPTypeAnalysis TypeInfo(Plan);
   SmallVector<VPRecipeBase *> ToRemove;

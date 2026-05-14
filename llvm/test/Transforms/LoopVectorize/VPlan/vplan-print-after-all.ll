@@ -58,6 +58,7 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::removeBranchOnConst
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::removeDeadRecipes
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::legalizeVecLibCalls
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToConcreteRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertEVLExitCond
 ; CHECK: VPlan for loop in 'foo' after printFinalVPlan
