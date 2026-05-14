@@ -29690,8 +29690,9 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
   // Expand 128-bit shuffle tree + reduction binops.
   unsigned NumSrcElts = SrcVT.getVectorNumElements();
   for (unsigned NumElts = NumSrcElts; NumElts != 1; NumElts /= 2) {
-    // SSE only - scalarize the last 2 elements if the vector binop isn't legal.
-    if (NumElts == 2 && !Subtarget.hasAVX() &&
+    // Scalarize the last 2 elements if the vector binop isn't legal.
+    if (NumElts == 2 &&
+        (!Subtarget.hasAVX() || BinOp == ISD::UMIN || BinOp == ISD::UMAX) &&
         !TLI.isOperationLegal(BinOp, SrcVT) && TLI.isTypeLegal(ExtractVT)) {
       return DAG.getNode(BinOp, DL, ExtractVT,
                          DAG.getExtractVectorElt(DL, ExtractVT, Src, 0),

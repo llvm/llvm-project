@@ -95,25 +95,18 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX1-LABEL: test_reduce_v2i64:
 ; X64-AVX1:       ## %bb.0:
-; X64-AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
-; X64-AVX1-NEXT:    ## xmm1 = mem[0,0]
-; X64-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm2
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X64-AVX1-NEXT:    vpxor %xmm1, %xmm3, %xmm1
-; X64-AVX1-NEXT:    vpcmpgtq %xmm2, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vblendvpd %xmm1, %xmm0, %xmm3, %xmm0
-; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX1-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX1-NEXT:    cmpq %rax, %rcx
+; X64-AVX1-NEXT:    cmovbq %rcx, %rax
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: test_reduce_v2i64:
 ; X64-AVX2:       ## %bb.0:
-; X64-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
-; X64-AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm2
-; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X64-AVX2-NEXT:    vpxor %xmm1, %xmm3, %xmm1
-; X64-AVX2-NEXT:    vpcmpgtq %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vblendvpd %xmm1, %xmm0, %xmm3, %xmm0
-; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX2-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX2-NEXT:    cmpq %rax, %rcx
+; X64-AVX2-NEXT:    cmovbq %rcx, %rax
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512-LABEL: test_reduce_v2i64:
@@ -518,15 +511,13 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) nounwind {
 ; X64-AVX1-NEXT:    ## xmm1 = mem[0,0]
 ; X64-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm2
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-AVX1-NEXT:    vpxor %xmm1, %xmm3, %xmm4
-; X64-AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm2
-; X64-AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm3, %xmm0
-; X64-AVX1-NEXT:    vxorpd %xmm1, %xmm0, %xmm2
-; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X64-AVX1-NEXT:    vxorpd %xmm1, %xmm3, %xmm1
+; X64-AVX1-NEXT:    vpxor %xmm1, %xmm3, %xmm1
 ; X64-AVX1-NEXT:    vpcmpgtq %xmm2, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vblendvpd %xmm1, %xmm0, %xmm3, %xmm0
-; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX1-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX1-NEXT:    cmpq %rax, %rcx
+; X64-AVX1-NEXT:    cmovbq %rcx, %rax
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
@@ -535,15 +526,13 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) nounwind {
 ; X64-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; X64-AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; X64-AVX2-NEXT:    vpxor %xmm1, %xmm3, %xmm4
-; X64-AVX2-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm2
-; X64-AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm3, %xmm0
-; X64-AVX2-NEXT:    vxorpd %xmm1, %xmm0, %xmm2
-; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X64-AVX2-NEXT:    vxorpd %xmm1, %xmm3, %xmm1
+; X64-AVX2-NEXT:    vpxor %xmm1, %xmm3, %xmm1
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vblendvpd %xmm1, %xmm0, %xmm3, %xmm0
-; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX2-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX2-NEXT:    cmpq %rax, %rcx
+; X64-AVX2-NEXT:    cmovbq %rcx, %rax
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
@@ -1224,12 +1213,10 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) nounwind {
 ; X64-AVX1-NEXT:    vxorpd %xmm2, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vpcmpgtq %xmm4, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vblendvpd %xmm1, %xmm3, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vxorpd %xmm2, %xmm0, %xmm1
-; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X64-AVX1-NEXT:    vxorpd %xmm2, %xmm3, %xmm2
-; X64-AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm1
-; X64-AVX1-NEXT:    vblendvpd %xmm1, %xmm0, %xmm3, %xmm0
-; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX1-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX1-NEXT:    cmpq %rax, %rcx
+; X64-AVX1-NEXT:    cmovbq %rcx, %rax
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1242,15 +1229,13 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) nounwind {
 ; X64-AVX2-NEXT:    vblendvpd %ymm3, %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    vxorpd %xmm2, %xmm0, %xmm1
 ; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-AVX2-NEXT:    vxorpd %xmm2, %xmm3, %xmm4
-; X64-AVX2-NEXT:    vpcmpgtq %xmm1, %xmm4, %xmm1
-; X64-AVX2-NEXT:    vblendvpd %xmm1, %xmm0, %xmm3, %xmm0
-; X64-AVX2-NEXT:    vxorpd %xmm2, %xmm0, %xmm1
-; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; X64-AVX2-NEXT:    vxorpd %xmm2, %xmm3, %xmm2
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm1
 ; X64-AVX2-NEXT:    vblendvpd %xmm1, %xmm0, %xmm3, %xmm0
-; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; X64-AVX2-NEXT:    vmovq %xmm0, %rcx
+; X64-AVX2-NEXT:    cmpq %rax, %rcx
+; X64-AVX2-NEXT:    cmovbq %rcx, %rax
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
