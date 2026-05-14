@@ -136,9 +136,8 @@ void SYCLToolChain::addClangTargetOptions(
 
     // Add each device library with the appropriate linking flag.
     for (const auto &BCFile : BCLibs) {
-      // Use -mlink-builtin-bitcode for internalized libraries (standard libs)
-      // Use -mlink-bitcode-file for non-internalized libraries (e.g.,
-      // sanitizers)
+      // Use -mlink-builtin-bitcode for internalized libraries and
+      // -mlink-bitcode-file for non-internalized libraries.
       CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                  : "-mlink-bitcode-file");
       CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));

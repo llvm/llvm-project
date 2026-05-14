@@ -16,5 +16,3 @@
 // CHECK-NO-DEVICE-LIBS-SAME: "-fsycl-is-device"
 // CHECK-NO-DEVICE-LIBS-NOT: "-mlink-builtin-bitcode"
 // CHECK-NO-DEVICE-LIBS-NOT: "libsycl-crt.bc"
-
-void foo() {}
