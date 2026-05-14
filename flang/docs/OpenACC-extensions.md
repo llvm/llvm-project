@@ -59,6 +59,3 @@ regardless of this flag.
 
 When a scalar is implicitly attributed under this extension, a warning is
 emitted at `-pedantic` level (or explicitly via `-Wacc-implicit-scalar`).
-
-**Motivation:** NVIDIA Fortran (`nvfortran`) implements the pre-3.2 behavior.
-This flag provides a migration path for legacy code that relied on it.
