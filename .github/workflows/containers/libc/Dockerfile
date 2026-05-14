@@ -80,11 +80,14 @@ RUN wget https://ftp.gnu.org/gnu/mpc/mpc-1.4.1.tar.xz && \
 # Install gcc-7 and g++-7.
 RUN wget https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
     tar -xf gcc-7.5.0.tar.xz && \
+    cd gcc-7.5.0 && \
+    ./contrib/download_prerequisites && \
+    cd .. && \
     mkdir gcc-7 && \
     cd gcc-7 && \
     ../gcc-7.5.0/configure --prefix=/usr/local/gcc7 --enable-languages=c,c++ \
     --disable-multilib && \
-    make -j8 && \
+    make && \
     sudo make install && \
     cd .. && \
     rm -rf gcc-7 && \
@@ -94,11 +97,14 @@ RUN wget https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
 # Install gcc-8 and g++-8.
 RUN wget https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz && \
     tar -xf gcc-8.5.0.tar.xz && \
+    cd gcc-8.5.0 && \
+    ./contrib/download_prerequisites && \
+    cd .. && \
     mkdir gcc-8 && \
     cd gcc-8 && \
     ../gcc-8.5.0/configure --prefix=/usr/local/gcc8 --enable-languages=c,c++ \
     --disable-multilib && \
-    make -j8 && \
+    make && \
     sudo make install && \
     cd .. && \
     rm -rf gcc-8 && \
