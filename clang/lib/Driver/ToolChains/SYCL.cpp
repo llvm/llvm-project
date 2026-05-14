@@ -144,9 +144,8 @@ void SYCLToolChain::addClangTargetOptions(
       CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
     }
 
-    // If we linked any device libraries, add the flag to link them after
-    // the middle-end optimization passes. This ensures that device library
-    // functions are available after user code has been instrumented.
+    // Link device libraries after middle-end optimization passes so their
+    // symbols are preserved and not eliminated by the optimizer.
     if (!BCLibs.empty()) {
       CC1Args.push_back("-mlink-builtin-bitcode-postopt");
       // Suppress linker warnings that may occur due to library/target
@@ -229,66 +228,44 @@ void SYCLToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
   HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
 }
 
-SmallVector<ToolChain::BitCodeLibraryInfo, 8>
-SYCLToolChain::getDeviceLibNames(const Driver &D,
-                                 const llvm::opt::ArgList &Args,
-                                 const llvm::Triple &TargetTriple) const {
-  SmallVector<ToolChain::BitCodeLibraryInfo, 8> LibraryList;
-  bool NoOffloadLib =
-      !Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true);
-  // Default internalization to 'true' for these libraries, as they are
-  // expected to link with -mlink-builtin-bitcode.
-  auto addLibToList = [&LibraryList](StringRef LibName,
-                                     bool Internalize = true) {
-    BitCodeLibraryInfo BitCodeLibrary({LibName, Internalize});
-    LibraryList.emplace_back(BitCodeLibrary);
-  };
-
-  // For SPIR/SPIRV targets, add SYCL device libraries.
-  if (TargetTriple.isSPIROrSPIRV()) {
-    // TODO: Update this list when SYCL device libraries are added to
-    // compiler-rt/libc. This placeholder demonstrates the infrastructure for
-    // linking device libraries at compile time.
-    if (!NoOffloadLib) {
-      addLibToList("libsycl-crt.bc");
-    }
-  }
-
-  return LibraryList;
-}
-
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 SYCLToolChain::getDeviceLibs(
     const llvm::opt::ArgList &DriverArgs,
-    const Action::OffloadKind DeviceOffloadingKind) const {
+    const Action::OffloadKind /*DeviceOffloadingKind*/) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
+
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
+    return BCLibs;
 
   // Get candidate paths where device libraries may be located.
   SmallVector<SmallString<128>, 4> LibraryPaths;
   SYCLInstallation.getSYCLDeviceLibPath(LibraryPaths);
 
-  // Get the list of device library names for this target.
-  SmallVector<BitCodeLibraryInfo, 8> DeviceLibs =
-      getDeviceLibNames(getDriver(), DriverArgs, getTriple());
-
-  // Resolve full paths and validate that each library exists.
-  for (const auto &DeviceLib : DeviceLibs) {
-    bool DeviceLibFound = false;
+  // Resolve a library name to its full path and append it to BCLibs.
+  // Emits an error if the library is not found in any candidate path.
+  // Default internalization to 'true' for these libraries, as they are
+  // expected to link with -mlink-builtin-bitcode.
+  auto addLib = [&](StringRef LibName, bool Internalize = true) {
     for (const auto &LibraryPath : LibraryPaths) {
       SmallString<128> FullLibName(LibraryPath);
-      llvm::sys::path::append(FullLibName, DeviceLib.Path);
+      llvm::sys::path::append(FullLibName, LibName);
       if (llvm::sys::fs::exists(FullLibName)) {
-        BitCodeLibraryInfo BitCodeLibrary(FullLibName,
-                                          DeviceLib.ShouldInternalize);
-        BCLibs.emplace_back(BitCodeLibrary);
-        DeviceLibFound = true;
-        break;
+        BCLibs.emplace_back(FullLibName.str(), Internalize);
+        return;
       }
     }
     // If a device library is not found, emit an error with a helpful message.
-    // The user can pass --no-offloadlib to build without device libraries.
-    if (!DeviceLibFound)
-      getDriver().Diag(diag::err_drv_no_sycl_device_lib) << DeviceLib.Path;
+    // The user can pass '--no-offloadlib' to build without device libraries.
+    getDriver().Diag(diag::err_drv_no_sycl_device_lib) << LibName;
+  };
+
+  // For SPIR/SPIRV targets, add SYCL device libraries.
+  if (getTriple().isSPIROrSPIRV()) {
+    // TODO: Update this list when SYCL device libraries are added to
+    // compiler-rt/libc. This placeholder demonstrates the infrastructure for
+    // linking device libraries at compile time.
+    addLib("libsycl-crt.bc");
   }
 
   return BCLibs;
