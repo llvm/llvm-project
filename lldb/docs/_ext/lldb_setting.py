@@ -8,20 +8,6 @@ from sphinx.util.docfields import Field, GroupedField
 import llvm_slug
 
 
-class LiteralField(Field):
-    """A field that wraps the content in <code></code>"""
-
-    def make_field(self, types, domain, item, env=None, inliner=None, location=None):
-        fieldarg, content = item
-        fieldname = nodes.field_name("", self.label)
-        if fieldarg:
-            fieldname += nodes.Text(" ")
-            fieldname += nodes.Text(fieldarg)
-
-        fieldbody = nodes.field_body("", nodes.literal("", "", *content))
-        return nodes.field("", fieldname, fieldbody)
-
-
 # Example:
 # ```{lldbsetting} dwim-print-verbosity
 # :type: "enum"
@@ -38,12 +24,7 @@ class LLDBSetting(ObjectDescription):
         "type": directives.unchanged,
     }
     doc_field_types = [
-        LiteralField(
-            "default",
-            label="Default",
-            has_arg=False,
-            names=("default",),
-        ),
+        Field("default", label="Default", has_arg=False, names=("default",)),
         GroupedField("enum", label="Enumerations", names=("enum",)),
     ]
 

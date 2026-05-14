@@ -634,6 +634,10 @@ public:
   /// A biased RetainCountConventionKind, where 0 means "unspecified".
   unsigned RawRetainCountConvention : 3;
 
+  /// Whether the function has the [[clang::unsafe_buffer_usage]] attribute
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned UnsafeBufferUsage : 1;
+
   // NullabilityKindSize bits are used to encode the nullability. The info
   // about the return type is stored at position 0, followed by the nullability
   // of the parameters.
@@ -652,7 +656,7 @@ public:
 
   FunctionInfo()
       : NullabilityAudited(false), NumAdjustedNullable(0),
-        RawRetainCountConvention() {}
+        RawRetainCountConvention(), UnsafeBufferUsage(0) {}
 
   static unsigned getMaxNullabilityIndex() {
     return ((sizeof(NullabilityPayload) * CHAR_BIT) / NullabilityKindSize);
@@ -724,6 +728,7 @@ public:
 inline bool operator==(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   return static_cast<const CommonEntityInfo &>(LHS) == RHS &&
          LHS.NullabilityAudited == RHS.NullabilityAudited &&
+         LHS.UnsafeBufferUsage == RHS.UnsafeBufferUsage &&
          LHS.NumAdjustedNullable == RHS.NumAdjustedNullable &&
          LHS.NullabilityPayload == RHS.NullabilityPayload &&
          LHS.ResultType == RHS.ResultType && LHS.Params == RHS.Params &&

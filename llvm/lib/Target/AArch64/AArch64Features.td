@@ -590,9 +590,6 @@ def FeatureLSCP : ExtensionWithMArch<"lscp", "LSCP", "FEAT_LSCP",
 def FeatureTLBID: ExtensionWithMArch<"tlbid", "TLBID", "FEAT_TLBID",
   "Enable Armv9.7-A TLBI Domains extension">;
 
-def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
-  "Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions">;
-
 def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
   "Enable Virtual Memory Tagging Extension", [FeatureMTE]>;
 
@@ -795,6 +792,10 @@ def FeatureFuseCmpCSet : SubtargetFeature<
 def FeatureFuseFCmpFCSel : SubtargetFeature<
     "fuse-fcsel", "HasFuseFCmpFCSel", "true",
     "CPU can fuse FCMP and FCSEL operations">;
+
+def FeatureAlignCmpCSelPairs : SubtargetFeature<
+    "align-cmp-csel-pairs", "HasAlignCmpCSelPairs", "true",
+    "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs">;
 
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",

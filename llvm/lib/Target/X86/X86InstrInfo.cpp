@@ -6028,7 +6028,7 @@ static bool ExpandMOVImmSExti8(MachineInstrBuilder &MIB,
   // Build CFI if necessary.
   MachineFunction &MF = *MBB.getParent();
   const X86FrameLowering *TFL = Subtarget.getFrameLowering();
-  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo().usesWindowsCFI();
   bool NeedsDwarfCFI = !IsWin64Prologue && MF.needsFrameMoves();
   bool EmitCFI = !TFL->hasFP(MF) && NeedsDwarfCFI;
   if (EmitCFI) {
@@ -7488,15 +7488,21 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     unsigned Size, Align Alignment, bool AllowCommute, MachineInstr *&CopyMI,
     VirtRegMap *VRM) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
+  bool isSlowIndirectCall = Subtarget.slowIndirectCall();
   unsigned Opc = MI.getOpcode();
 
-  // For CPUs that favor the register form of a call or push,
-  // do not fold loads into calls or pushes, unless optimizing for size
-  // aggressively.
-  if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
+  // For CPUs that favor the register form of a call,
+  // do not fold loads into calls, unless optimizing for size aggressively.
+  if ((isSlowTwoMemOps || isSlowIndirectCall) &&
+      !MF.getFunction().hasMinSize() &&
       (Opc == X86::CALL32r || Opc == X86::CALL64r ||
-       Opc == X86::CALL64r_ImpCall || Opc == X86::PUSH16r ||
-       Opc == X86::PUSH32r || Opc == X86::PUSH64r))
+       Opc == X86::CALL64r_ImpCall))
+    return nullptr;
+
+  // For CPUs that favor the register form of a push,
+  // do not fold loads into pushes, unless optimizing for size aggressively.
+  if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
+      (Opc == X86::PUSH16r || Opc == X86::PUSH32r || Opc == X86::PUSH64r))
     return nullptr;
 
   // Avoid partial and undef register update stalls unless optimizing for size.
@@ -7558,8 +7564,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
     // Bail out if dst has been assigned a physical register. Otherwise, we
     // cannot update LiveRegMatrix properly.
-    if (VRM && VRM->getPhys(MI.getOperand(0).getReg()) &&
-        MI.getOperand(0).getReg() != MI.getOperand(1).getReg())
+    Register Dst = MI.getOperand(0).getReg();
+    if (VRM && Dst != MI.getOperand(1).getReg() &&
+        (!Dst.isVirtual() || VRM->getPhys(Dst)))
       return nullptr;
   }
 
@@ -7620,15 +7627,18 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
           MI.getOperand(0).getReg() == SrcReg)
         return NewMI;
 
-      const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-      Register NewSrc = MRI.isSSA() ? MRI.createVirtualRegister(&RC)
-                                    : MI.getOperand(0).getReg();
+      Register NewSrc = MI.getOperand(0).getReg();
+      if (MRI.isSSA()) {
+        const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
+        NewSrc = MRI.createVirtualRegister(&RC);
+      }
 
       CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
                        get(TargetOpcode::COPY))
                    .addDef(NewSrc)
                    .addReg(SrcReg, {}, SrcSub);
       NewMI->getOperand(1).setReg(NewSrc);
+      NewMI->getOperand(1).setSubReg(0);
     }
     return NewMI;
   }
@@ -7654,10 +7664,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   return nullptr;
 }
 
-MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
-    LiveIntervals *LIS, VirtRegMap *VRM) const {
+MachineInstr *
+X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                    ArrayRef<unsigned> Ops, int FrameIndex,
+                                    MachineInstr *&CopyMI, LiveIntervals *LIS,
+                                    VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
   // Check switch flag
   if (NoFusing)
     return nullptr;
@@ -8169,10 +8181,12 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
   return false;
 }
 
-MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    MachineInstr *&CopyMI, LiveIntervals *LIS) const {
+MachineInstr *
+X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                    ArrayRef<unsigned> Ops,
+                                    MachineInstr &LoadMI, MachineInstr *&CopyMI,
+                                    LiveIntervals *LIS, VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
 
   // If LoadMI is a masked load, check MI having the same mask.
   const MCInstrDesc &MCID = get(LoadMI.getOpcode());
@@ -8224,8 +8238,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (isLoadFromStackSlot(LoadMI, FrameIndex)) {
     if (isNonFoldablePartialRegisterLoad(LoadMI, MI, MF))
       return nullptr;
-    return foldMemoryOperandImpl(MF, MI, Ops, InsertPt, FrameIndex, CopyMI,
-                                 LIS);
+    return foldMemoryOperandImpl(MF, MI, Ops, FrameIndex, CopyMI, LIS, VRM);
   }
 
   // Check switch flag

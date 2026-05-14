@@ -97,8 +97,7 @@ define void @v4i8(ptr %p1) {
 ; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
 ; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
 ; CHECK-GI-NEXT:    cnt v0.8b, v2.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x0]
+; CHECK-GI-NEXT:    str s0, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = load <4 x i8>, ptr %p1
@@ -312,9 +311,8 @@ define <3 x i64> @v3i64(<3 x i64> %d) {
 ; CHECK-SD-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i64:
@@ -572,7 +570,7 @@ define i32 @i32_mask(i32 %x) {
 ; CHECK-GI-LABEL: i32_mask:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xff
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uaddlv h0, v0.8b
 ; CHECK-GI-NEXT:    fmov w0, s0
@@ -596,7 +594,7 @@ define i32 @i32_mask_negative(i32 %x) {
 ; CHECK-GI-LABEL: i32_mask_negative:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xffff
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uaddlv h0, v0.8b
 ; CHECK-GI-NEXT:    fmov w0, s0

@@ -3,6 +3,8 @@
 ; RUN: llc -mattr=+fp16fml < %s | FileCheck %s --check-prefixes=CHECK-FMLAL
 ; RUN: llc -mattr=+f16f32dot < %s | FileCheck %s --check-prefixes=CHECK-FDOT
 ; RUN: llc -mattr=+f16f32dot,+fp16fml < %s | FileCheck %s --check-prefixes=CHECK-FDOT
+; RUN: llc -mattr=+f16f32dot,+sve2 < %s | FileCheck %s --check-prefixes=CHECK-FDOT
+; RUN: llc -mattr=+f16f32dot,+sme -force-streaming < %s | FileCheck %s --check-prefixes=CHECK-SVE-FMLALBT
 
 target triple = "aarch64-linux-gnu"
 
@@ -29,6 +31,12 @@ define <4 x float> @fixed_fdot_wide(<4 x float> %acc, <8 x half> %a, <8 x half> 
 ; CHECK-FDOT:       // %bb.0: // %entry
 ; CHECK-FDOT-NEXT:    fdot v0.4s, v1.8h, v2.8h
 ; CHECK-FDOT-NEXT:    ret
+;
+; CHECK-SVE-FMLALBT-LABEL: fixed_fdot_wide:
+; CHECK-SVE-FMLALBT:       // %bb.0: // %entry
+; CHECK-SVE-FMLALBT-NEXT:    fmlalb z0.s, z1.h, z2.h
+; CHECK-SVE-FMLALBT-NEXT:    fmlalt z0.s, z1.h, z2.h
+; CHECK-SVE-FMLALBT-NEXT:    ret
 entry:
   %a.wide = fpext <8 x half> %a to <8 x float>
   %b.wide = fpext <8 x half> %b to <8 x float>
@@ -44,7 +52,7 @@ define <2 x float> @fixed_fdot(<2 x float> %acc, <4 x half> %a, <4 x half> %b) {
 ; CHECK-EXPAND-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-EXPAND-NEXT:    fmul v1.4s, v1.4s, v2.4s
 ; CHECK-EXPAND-NEXT:    fadd v0.2s, v0.2s, v1.2s
-; CHECK-EXPAND-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-EXPAND-NEXT:    mov d1, v1.d[1]
 ; CHECK-EXPAND-NEXT:    fadd v0.2s, v1.2s, v0.2s
 ; CHECK-EXPAND-NEXT:    ret
 ;
@@ -58,6 +66,12 @@ define <2 x float> @fixed_fdot(<2 x float> %acc, <4 x half> %a, <4 x half> %b) {
 ; CHECK-FDOT:       // %bb.0: // %entry
 ; CHECK-FDOT-NEXT:    fdot v0.2s, v1.4h, v2.4h
 ; CHECK-FDOT-NEXT:    ret
+;
+; CHECK-SVE-FMLALBT-LABEL: fixed_fdot:
+; CHECK-SVE-FMLALBT:       // %bb.0: // %entry
+; CHECK-SVE-FMLALBT-NEXT:    fmlalb z0.s, z1.h, z2.h
+; CHECK-SVE-FMLALBT-NEXT:    fmlalt z0.s, z1.h, z2.h
+; CHECK-SVE-FMLALBT-NEXT:    ret
 entry:
   %a.wide = fpext <4 x half> %a to <4 x float>
   %b.wide = fpext <4 x half> %b to <4 x float>

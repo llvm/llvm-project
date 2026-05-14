@@ -4,6 +4,10 @@
 # the two files.
 
 set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR}")
+if(APPLE AND CMAKE_OSX_SYSROOT AND (LLVM_TARGET_TRIPLE STREQUAL LLVM_HOST_TRIPLE))
+  # Only propagate the host sysroot for native runtimes builds.
+  list(APPEND RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT}")
+endif()
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   string(TOUPPER "${proj}" canon_name)
   STRING(REGEX REPLACE "-" "_" canon_name ${canon_name})
@@ -303,7 +307,6 @@ function(runtime_default_target)
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 CUDA CMAKE_CUDA # For runtimes that may look for the CUDA compiler and/or SDK (libc, offload, flang-rt)
-                                                FFI # offload uses libffi
                                                 FLANG_RUNTIME # Shared between Flang and Flang-RT
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
@@ -462,6 +465,15 @@ function(runtime_register_target name)
     if(TARGET builtins-${name})
       add_dependencies(check-builtins check-builtins-${name})
     endif()
+
+    foreach(runtime_name ${runtime_names})
+      if(TARGET check-${runtime_name}-${name})
+        if(NOT TARGET check-${runtime_name})
+          add_custom_target(check-${runtime_name})
+        endif()
+        add_dependencies(check-${runtime_name} check-${runtime_name}-${name})
+      endif()
+    endforeach()
   endif()
   foreach(runtime_name ${runtime_names})
     if(NOT TARGET ${runtime_name})
@@ -569,6 +581,12 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+    # Pass the location of LLVM tools to the runtime build so libclc can find them
+    if (LLVM_NATIVE_TOOL_DIR)
+      list(APPEND extra_cmake_args "-DLLVM_NATIVE_TOOL_DIR=${LLVM_NATIVE_TOOL_DIR}")
+    else()
+      list(APPEND extra_cmake_args "-DLLVM_NATIVE_TOOL_DIR=${LLVM_RUNTIME_OUTPUT_INTDIR}")
+    endif()
   endif()
   # Tools needed by build_symbolizer.sh.
   if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
@@ -708,6 +726,76 @@ if(build_runtimes)
           EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
       endforeach()
     endforeach()
+
+    # Generate a default multilib.yaml for each runtime target that has one.
+    if(LLVM_RUNTIME_MULTILIBS)
+      set(_multilib_yaml_outputs)
+      foreach(name ${LLVM_RUNTIME_TARGETS})
+        set(_multilibs_for_target)
+        foreach(multilib ${LLVM_RUNTIME_MULTILIBS})
+          if("${name}" IN_LIST LLVM_RUNTIME_MULTILIB_${multilib}_TARGETS)
+            list(APPEND _multilibs_for_target "${multilib}")
+          endif()
+        endforeach()
+
+        # Generate the file into a temporary. We only copy this if the user has
+        # not provided one either in the build tree or the install directory.
+        if(_multilibs_for_target)
+          set(_yaml [=[
+MultilibVersion: 1.0
+
+Variants:
+- Dir: .
+  Flags: []
+]=])
+          set(_flag_values "")
+          foreach(multilib ${_multilibs_for_target})
+            string(APPEND _yaml "\
+- Dir: ${multilib}
+  Flags: [-fmultilib-flag=${multilib}]
+")
+            string(APPEND _flag_values "\
+  - Name: ${multilib}
+")
+          endforeach()
+          string(APPEND _yaml "
+Mappings: []
+
+Flags:
+- Name: multilib
+  Values:
+  - Name: none
+${_flag_values}\
+  Default: none
+")
+
+          set(_staged_dir "${CMAKE_CURRENT_BINARY_DIR}/multilib-yaml/${name}")
+          set(_staged "${_staged_dir}/multilib.yaml")
+          set(_dest "${LLVM_LIBRARY_DIR}/${name}/multilib.yaml")
+          file(GENERATE OUTPUT "${_staged}" CONTENT "${_yaml}")
+
+          # Omitting DEPENDS so the command only runs when OUTPUT is absent.
+          add_custom_command(
+            OUTPUT "${_dest}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${_staged}" "${_dest}"
+            COMMENT "Generating default multilib.yaml for ${name}")
+          list(APPEND _multilib_yaml_outputs "${_dest}")
+
+          install(CODE "
+            set(_inst \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/lib/${name}/multilib.yaml\")
+            if(NOT EXISTS \"\${_inst}\")
+              file(INSTALL \"${_staged}\"
+                   DESTINATION \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/lib/${name}\")
+            endif()
+          ")
+        endif()
+      endforeach()
+
+      if(_multilib_yaml_outputs)
+        add_custom_target(runtimes-multilib-yaml ALL DEPENDS ${_multilib_yaml_outputs})
+        set_target_properties(runtimes-multilib-yaml PROPERTIES FOLDER "Runtimes")
+      endif()
+    endif()
   endif()
 
   if(NOT LLVM_BUILD_INSTRUMENTED AND CLANG_ENABLE_BOOTSTRAP)

@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @skipUnlessDarwin
     def test_synthetic(self):
         self.build()
         if self.TraceOn():
@@ -22,7 +21,6 @@ class TestCase(TestBase):
 
         self.expect("v acc", matching=False, substrs=["password"])
 
-    @skipUnlessDarwin
     def test_update_reuse(self):
         self.build()
 
@@ -37,5 +35,5 @@ class TestCase(TestBase):
         account = frame.var("acc")
         self.assertEqual(account.num_children, 1)
 
-        self.filecheck(f"platform shell cat {log}", __file__)
+        self.filecheck_log(log, __file__)
         # CHECK: Bytecode formatter can reuse @update: true (type: `Account`, name: `acc`)

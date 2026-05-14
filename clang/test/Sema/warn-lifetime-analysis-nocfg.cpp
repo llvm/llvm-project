@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdangling -Wdangling-field -Wreturn-stack-address -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=cfg %s
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=cfg,tu %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -173,6 +173,16 @@ void initLocalGslPtrWithTempOwner() {
                                           // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
   use(global2, p2);                       // cfg-note 2 {{later used here}}
 }
+
+struct LifetimeBoundCtor {
+  LifetimeBoundCtor(const MyIntOwner& obj1 [[clang::lifetimebound]]);
+  LifetimeBoundCtor(std::string_view sv [[clang::lifetimebound]]);
+};
+
+auto lifetimebound_make_unique_single_param() {
+  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // tu-warning {{address of stack memory is returned later}} tu-note {{returned here}}
+}
+
 
 
 struct Unannotated {

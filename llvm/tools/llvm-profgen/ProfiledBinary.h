@@ -200,6 +200,8 @@ struct MMapEvent {
 };
 
 class ProfiledBinary {
+  // The executable binary file.
+  object::OwningBinary<object::Binary> OBinary;
   // Absolute path of the executable binary.
   std::string Path;
   // Path of the debug info binary.
@@ -283,6 +285,10 @@ class ProfiledBinary {
   std::set<uint64_t> UncondBranchAddrSet;
   // A set of branch instruction addresses.
   std::unordered_set<uint64_t> BranchAddressSet;
+  // A set of indirect branch instruction addresses.
+  std::unordered_set<uint64_t> IndirectBranchAddressSet;
+  // A set of branch target addresses (destinations of branches/calls).
+  std::unordered_set<uint64_t> BranchTargetAddressSet;
 
   // Estimate and track function prolog and epilog ranges.
   PrologEpilogTracker ProEpilogTracker;
@@ -410,6 +416,11 @@ class ProfiledBinary {
   SampleContextFrameVector symbolize(const InstructionPointer &IP,
                                      bool UseCanonicalFnName = false,
                                      bool UseProbeDiscriminator = false);
+
+public:
+  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
+  ~ProfiledBinary();
+
   /// Decode the interesting parts of the binary and build internal data
   /// structures. On high level, the parts of interest are:
   ///   1. Text sections, including the main code section and the PLT
@@ -417,11 +428,7 @@ class ProfiledBinary {
   ///   2. The .debug_line section, used by Dwarf-based profile generation.
   ///   3. Pseudo probe related sections, used by probe-based profile
   ///   generation.
-  void load();
-
-public:
-  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
-  ~ProfiledBinary();
+  void load(StringRef TripleStr = "");
 
   /// Symbolize an address and return the symbol name. The returned StringRef is
   /// owned by this ProfiledBinary object.
@@ -431,6 +438,8 @@ public:
 
   StringRef getPath() const { return Path; }
   StringRef getName() const { return llvm::sys::path::filename(Path); }
+  const Triple &getTriple() const { return TheTriple; }
+  const object::Binary &getBinary() const { return *OBinary.getBinary(); }
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
 
@@ -479,6 +488,12 @@ public:
     return ProEpilogTracker.PrologEpilogSet.count(Address);
   }
 
+  bool addressIsBranchTarget(uint64_t Address) const {
+    return BranchTargetAddressSet.count(Address);
+  }
+  bool addressIsIndirectBranch(uint64_t Address) const {
+    return IndirectBranchAddressSet.count(Address);
+  }
   bool addressIsTransfer(uint64_t Address) {
     return BranchAddressSet.count(Address) || RetAddressSet.count(Address) ||
            CallAddressSet.count(Address);
