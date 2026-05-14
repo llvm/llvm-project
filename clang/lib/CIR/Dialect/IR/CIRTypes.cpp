@@ -382,7 +382,23 @@ RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
     mlir::Type largest = getLargestMember(dataLayout);
     if (!largest)
       return llvm::TypeSize::getFixed(0);
-    return dataLayout.getTypeSizeInBits(largest);
+    // `getLargestMember` returns the highest-aligned variant (which dictates
+    // the union's alignment), not necessarily the largest by size.  When the
+    // union is `padded` -- i.e., its highest-aligned variant is strictly
+    // smaller than its layout size, as happens for any union containing both
+    // a small high-alignment scalar and a larger low-alignment array (e.g.,
+    // `union { char[16]; size_t; }`) -- `lowerUnion` appended a trailing
+    // byte-array member to extend the highest-aligned variant up to the
+    // layout size, and `LowerToLLVM` mirrors this by emitting the union as
+    // `{largest, padding}`.  Include that padding here so `getTypeSize`
+    // reports the same size `LowerToLLVM` produces; otherwise a parent
+    // record containing the union gets a spurious tail-padding member added
+    // by `insertPadding`, making `sizeof(parent)` and array GEPs off by the
+    // missing bytes.
+    llvm::TypeSize size = dataLayout.getTypeSizeInBits(largest);
+    if (getPadded())
+      size += dataLayout.getTypeSizeInBits(*getMembers().rbegin());
+    return size;
   }
 
   auto recordSize = static_cast<uint64_t>(computeStructSize(dataLayout));
