@@ -411,7 +411,15 @@ def invoke_process(
         )
 
     if piped_input:
-        os.write(proc.stdin.fileno(), piped_input)
+        try:
+            os.write(proc.stdin.fileno(), piped_input)
+        except BrokenPipeError:
+            # There are some tests which pipe the output of echo into a
+            # subsequent command which isn't actually reading STDIN.
+            # This can result in a broken pipe error if the process
+            # has already closed by now, so we can just swallow
+            # the exception.
+            pass
 
     # Immediately close stdin for any process taking stdin from us.
     if stdin == subprocess.PIPE:
