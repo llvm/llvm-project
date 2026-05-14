@@ -242,7 +242,7 @@ LLVM dialect:
 
 -   `!llvm.ppc_fp128` (`LLVMPPCFP128Type`) - 128-bit floating-point value (two
     64 bits).
--   `!llvm.token` (`LLVMTokenType`) - a non-inspectable value associated with an
+-   `!builtin.token` (`TokenType`) - a non-inspectable value associated with an
     operation.
 -   `!llvm.metadata` (`LLVMMetadataType`) - LLVM IR metadata, to be used only if
     the metadata cannot be represented as structured MLIR attributes.
