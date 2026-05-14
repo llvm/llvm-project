@@ -84,7 +84,7 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
     beganReadingRecord_ = false;
   }
   if (IsAfterEndfile()) {
-    handler.SignalPendingIoStat(IostatWriteAfterEndfile);
+    handler.SignalError(IostatWriteAfterEndfile);
     return false;
   }
   CheckDirectAccess(handler);

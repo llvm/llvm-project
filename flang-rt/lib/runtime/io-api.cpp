@@ -187,6 +187,11 @@ RT_API_ATTRS Cookie BeginExternalFormattedIO(const char *format,
       iostat = unit->SetDirection(DIR);
     }
     if (iostat == IostatOk) {
+      if (unit->IsAfterEndfile() && DIR == Direction::Output) {
+        iostat = IostatWriteAfterEndfile;
+      }
+    }
+    if (iostat == IostatOk) {
       return &unit->BeginIoStatement<ExternalFormattedIoStatementState<DIR>>(
           terminator, *unit, format, formatLength, formatDescriptor, sourceFile,
           sourceLine);
@@ -242,6 +247,11 @@ RT_API_ATTRS Cookie BeginUnformattedIO(
   } else {
     if (iostat == IostatOk) {
       iostat = unit->SetDirection(DIR);
+    }
+    if (iostat == IostatOk) {
+      if (unit->IsAfterEndfile() && DIR == Direction::Output) {
+        iostat = IostatWriteAfterEndfile;
+      }
     }
     if (iostat == IostatOk) {
       IoStatementState &io{

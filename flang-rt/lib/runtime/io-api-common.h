@@ -84,6 +84,11 @@ RT_API_ATTRS Cookie BeginExternalListIO(
       iostat = unit->SetDirection(DIR);
     }
     if (iostat == IostatOk) {
+      if (unit->IsAfterEndfile() && DIR == Direction::Output) {
+        iostat = IostatWriteAfterEndfile;
+      }
+    }
+    if (iostat == IostatOk) {
       return &unit->BeginIoStatement<STATE<DIR>>(
           terminator, std::forward<A>(xs)..., *unit, sourceFile, sourceLine);
     } else {
