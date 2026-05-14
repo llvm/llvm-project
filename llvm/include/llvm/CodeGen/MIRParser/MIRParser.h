@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ToolInterface.h"
 #include <functional>
 #include <memory>
 #include <optional>
@@ -88,7 +89,8 @@ public:
 /// loaded from the MIR file.
 LLVM_ABI std::unique_ptr<MIRParser> createMIRParserFromFile(
     StringRef Filename, SMDiagnostic &Error, LLVMContext &Context,
-    std::function<void(Function &)> ProcessIRFunction = nullptr);
+    std::function<void(Function &)> ProcessIRFunction = nullptr,
+    const StandardInputSource &StdinSource = StandardInputSource::fromStdin());
 
 /// This function is another interface to the MIR serialization format parser.
 ///
