@@ -11605,16 +11605,6 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getStore(Op.getOperand(0), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }
-  case Intrinsic::ppc_amo_stwat:
-  case Intrinsic::ppc_amo_stdat: {
-    SDLoc dl(Op);
-    SDValue Chain = Op.getOperand(0);
-    SDValue Ptr = Op.getOperand(ArgStart + 1);
-    SDValue Val = Op.getOperand(ArgStart + 2);
-    SDValue FC = Op.getOperand(ArgStart + 3);
-
-    return DAG.getNode(PPCISD::STAT, dl, MVT::Other, Chain, Val, Ptr, FC);
-  }
   default:
     break;
   }
@@ -14812,75 +14802,6 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(Val, getDefRegState(MI.getOpcode() == PPC::LQX_PSEUDO))
         .addImm(0)
         .addReg(Ptr);
-    break;
-  }
-  case PPC::LWAT_PSEUDO:
-  case PPC::LDAT_PSEUDO: {
-    DebugLoc DL = MI.getDebugLoc();
-    Register DstReg = MI.getOperand(0).getReg();
-    Register PtrReg = MI.getOperand(1).getReg();
-    Register ValReg = MI.getOperand(2).getReg();
-    unsigned FC = MI.getOperand(3).getImm();
-    bool IsLwat = MI.getOpcode() == PPC::LWAT_PSEUDO;
-    Register Val64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (IsLwat)
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), Val64)
-          .addReg(ValReg)
-          .addImm(PPC::sub_32);
-    else
-      Val64 = ValReg;
-
-    Register G8rPair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    Register UndefG8r = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), UndefG8r);
-    BuildMI(*BB, MI, DL, TII->get(PPC::REG_SEQUENCE), G8rPair)
-        .addReg(UndefG8r)
-        .addImm(PPC::sub_gp8_x0)
-        .addReg(Val64)
-        .addImm(PPC::sub_gp8_x1);
-
-    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(IsLwat ? PPC::LWAT : PPC::LDAT), PairResult)
-        .addReg(G8rPair)
-        .addReg(PtrReg)
-        .addImm(FC);
-    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
-        .addReg(PairResult, {}, PPC::sub_gp8_x0);
-    if (IsLwat)
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64, {}, PPC::sub_32);
-    else
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64);
-    break;
-  }
-  case PPC::LWAT_COND_PSEUDO:
-  case PPC::LDAT_COND_PSEUDO: {
-    DebugLoc DL = MI.getDebugLoc();
-    Register DstReg = MI.getOperand(0).getReg();
-    Register PtrReg = MI.getOperand(1).getReg();
-    unsigned FC = MI.getOperand(2).getImm();
-    bool IsLwat_Cond = MI.getOpcode() == PPC::LWAT_COND_PSEUDO;
-
-    Register Pair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Pair);
-
-    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(IsLwat_Cond ? PPC::LWAT : PPC::LDAT),
-            PairResult)
-        .addReg(Pair)
-        .addReg(PtrReg)
-        .addImm(FC);
-    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
-        .addReg(PairResult, {}, PPC::sub_gp8_x0);
-    if (IsLwat_Cond)
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64, {}, PPC::sub_32);
-    else
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64);
     break;
   }
   default:

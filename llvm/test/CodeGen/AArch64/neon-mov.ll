@@ -5,10 +5,10 @@
 ; RUN: llc -mattr=+neon,+fullfp16 -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-GI
 
 ; This are copies of the above RUN lines but with vector constants enabled.
-; RUN: llc -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat < %s -verify-machineinstrs -mattr=+neon | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16,CHECK-NOFP16-SD
-; RUN: llc -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat < %s -verify-machineinstrs -mattr=+neon,+fullfp16 | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-SD
-; RUN: llc -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat -mattr=+neon -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16,CHECK-NOFP16-GI
-; RUN: llc -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat -mattr=+neon,+fullfp16 -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-GI
+; RUN: llc -use-constant-int-for-fixed-length-splat < %s -verify-machineinstrs -mattr=+neon | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16,CHECK-NOFP16-SD
+; RUN: llc -use-constant-int-for-fixed-length-splat < %s -verify-machineinstrs -mattr=+neon,+fullfp16 | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-SD
+; RUN: llc -use-constant-int-for-fixed-length-splat -mattr=+neon -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16,CHECK-NOFP16-GI
+; RUN: llc -use-constant-int-for-fixed-length-splat -mattr=+neon,+fullfp16 -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-GI
 
 target triple = "aarch64-none-linux-gnu"
 

@@ -633,6 +633,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, P64VecVTs, Custom);
       setOperationAction(ISD::SSHLSAT, {MVT::v2i32, MVT::v4i16}, Custom);
+      setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::BUILD_VECTOR, MVT::v2i32, Legal);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, {MVT::v4i16, MVT::v8i8}, Legal);
@@ -9006,9 +9007,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     MVT VT = Op.getSimpleValueType();
     MVT ContainerVT = getContainerForFixedLengthVector(VT);
     SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
-    return DAG.getNode(getRISCVVLOp(Op), DL, ContainerVT, Op.getOperand(0),
-                       Op.getOperand(1), DAG.getUNDEF(ContainerVT),
-                       Op.getOperand(2), VL);
+    SDValue Res = DAG.getNode(getRISCVVLOp(Op), DL, ContainerVT,
+                              Op.getOperand(0), Op.getOperand(1),
+                              DAG.getUNDEF(ContainerVT), Op.getOperand(2), VL);
+    return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
   case ISD::FABS:
   case ISD::FNEG:

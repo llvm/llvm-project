@@ -5,7 +5,9 @@
     "runtime_stubs_file": "",
     "runtime_stubs_file.description": "The file into which runtime stubs should be written.",
     "target_regex": "",
-    "target_regex.description": "Regular expression to be matched against the module target. Only targets that match this regex will be instrumented",
+    "target_regex.description": "Regular expression to be matched against the module target. Only targets that match this regex will be instrumented.",
+    "function_regex": "",
+    "function_regex.description": "Regular expression to be matched against a function name. Only functions that match this regex will be instrumented.",
     "demangle_function_names": true,
     "demangle_function_names.description": "Demangle functions names passed to the runtime.",
     "host_enabled": true,
@@ -49,6 +51,11 @@
     }
   },
   "instruction_pre": {
+    "unreachable": {
+      "enabled": true,
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
     "load": {
       "enabled": true,
       "pointer": true,

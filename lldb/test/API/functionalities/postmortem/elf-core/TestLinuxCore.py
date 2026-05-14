@@ -1101,7 +1101,7 @@ class LinuxCoreTestCase(TestBase):
         libraries are available. The "image list" output should look like:
 
         (lldb) image list
-        [  0] 7BCC1101 0x000055bb04288000 /data/users/gclayton/args/elf-crash (0x000055bb04288000)
+        [  0] 9FD61477 0x000055bb04288000 /data/users/gclayton/args/elf-crash (0x000055bb04288000)
         [  1]                                      0x00007f27db200000 /libxx/libstdc++.so.6
         [  2] AF275675-4671-8B49-24C8-A9A657D74115-C80DEE65 0x00007f27db51b000 /libxx/libm.so.6 (0x00007f27db51b000)
         [  3]                                      0x00007f27db4fe000 /libxx/libgcc_s.so.1
@@ -1119,7 +1119,7 @@ class LinuxCoreTestCase(TestBase):
         self.assertEqual(
             m.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x000055BB04288000
         )
-        self.assertEqual(m.GetUUIDString(), "7BCC1101")
+        self.assertEqual(m.GetUUIDString(), "9FD61477")
 
         m = target.module["/libxx/libstdc++.so.6"]
         self.assertTrue(m.IsValid())
@@ -1283,6 +1283,55 @@ class LinuxCoreTestCase(TestBase):
         self.check_all(process, pid, region_count, thread_name)
 
         self.dbg.DeleteTarget(target)
+
+    def test_exe_name_extraction_nt_file(self):
+        # This core file has:
+        # - NT_FILE entry for the executable with path '/path/nt_file_foo
+        # - AT_EXECFN that points to "/path/execfn_foo"
+        # - NT_PRPSINFO with a pr_fname member set to 'prpsinfo_foo'
+        # We expect the NT_FILE version to be found since this is a resolved
+        # file path and it is the best information we can use for the executable
+        # name.
+        yaml_path = self.getSourcePath("elf-NT_FILE-NT_PRPSINFO-AT_EXECFN.yaml")
+        core_path = self.getBuildArtifact("elf-NT_FILE-NT_PRPSINFO-AT_EXECFN.core")
+        self.yaml2obj(yaml_path, core_path)
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        exe_module = target.modules[0]
+        self.assertEqual(exe_module.GetFileSpec().fullpath, "/path/nt_file_foo")
+        self.dbg.DeleteTarget(target)
+
+    def test_exe_name_extraction_at_execfn(self):
+        # This core file has:
+        # - AT_EXECFN that points to "/path/execfn_foo"
+        # - NT_PRPSINFO with a pr_fname member set to 'prpsinfo_foo'
+        # There is no NT_FILE in this core file, so we expect the fall back to
+        # the AT_EXECFN name in memory as it has a full path to the executable.
+        # This path can differ from the path found in NT_FILE as it might not
+        # be resolved as it can be a symlink path.
+        yaml_path = self.getSourcePath("elf-NT_PRPSINFO-AT_EXECFN.yaml")
+        core_path = self.getBuildArtifact("elf-NT_PRPSINFO-AT_EXECFN.core")
+        self.yaml2obj(yaml_path, core_path)
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        exe_module = target.modules[0]
+        self.assertEqual(exe_module.GetFileSpec().fullpath, "/path/execfn_foo")
+        self.dbg.DeleteTarget(target)
+
+    def test_exe_name_extraction_nt_prpsinfo(self):
+        # This core file has:
+        # - NT_PRPSINFO with a pr_fname member set to 'prpsinfo_foo'
+        # There is no NT_FILE or AT_EXECFN in the aux vector in this core file.
+        # We expect the fall back to the info in the NT_PRPSINFO note.
+        yaml_path = self.getSourcePath("elf-NT_PRPSINFO.yaml")
+        core_path = self.getBuildArtifact("elf-NT_PRPSINFO.core")
+        self.yaml2obj(yaml_path, core_path)
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        exe_module = target.modules[0]
+        self.assertEqual(exe_module.GetFileSpec().fullpath, "prpsinfo_foo")
+        self.dbg.DeleteTarget(target)
+
 
 
 def replace_path(binary, replace_from, replace_to):

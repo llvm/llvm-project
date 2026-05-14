@@ -105,52 +105,32 @@ static llvm::Expected<OwnedPtr<Info>> reduce(OwningPtrArray<Info> &Values) {
   return std::move(Merged);
 }
 
-// Return the index of the matching child in the vector, or -1 if merge is not
-// necessary.
-template <typename T>
-static int getChildIndexIfExists(OwningVec<T> &Children, T &ChildToMerge) {
-  for (unsigned long I = 0; I < Children.size(); I++) {
-    if (ChildToMerge.USR == Children[I].USR)
-      return I;
-  }
-  return -1;
-}
-
-template <typename T>
-static void reduceChildren(llvm::simple_ilist<T> &Children,
-                           llvm::simple_ilist<T> &&ChildrenToMerge) {
-  while (!ChildrenToMerge.empty()) {
-    T *ChildToMerge = &ChildrenToMerge.front();
-    ChildrenToMerge.pop_front();
-
-    auto It = llvm::find_if(
-        Children, [&](const T &C) { return C.USR == ChildToMerge->USR; });
-    if (It == Children.end()) {
-      Children.push_back(*ChildToMerge);
-    } else {
-      It->merge(std::move(*ChildToMerge));
-    }
-  }
-}
-
 template <typename T>
 static void reduceChildren(OwningVec<T> &Children,
                            OwningVec<T> &&ChildrenToMerge) {
-  for (auto &ChildToMerge : ChildrenToMerge) {
-    int MergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (MergeIdx == -1) {
-      Children.push_back(std::move(ChildToMerge));
-      continue;
+  while (!ChildrenToMerge.empty()) {
+    T *Ptr = ChildrenToMerge.front().Ptr;
+    ChildrenToMerge.pop_front();
+
+    auto It = llvm::find_if(
+        Children, [Ptr](const auto &C) { return C.Ptr->USR == Ptr->USR; });
+
+    if (It == Children.end()) {
+      Children.push_back(*allocateListNodeTransient<T>(Ptr));
+    } else {
+      It->Ptr->merge(std::move(*Ptr));
     }
-    Children[MergeIdx].merge(std::move(ChildToMerge));
   }
 }
 
-template <typename Container>
-static void mergeUnkeyed(Container &Target, Container &&Source) {
-  for (auto &Item : Source) {
-    if (llvm::none_of(Target, [&](const auto &E) { return E == Item; }))
-      Target.push_back(std::move(Item));
+template <typename T>
+static void mergeUnkeyed(OwningVec<T> &Target, OwningVec<T> &&Source) {
+  while (!Source.empty()) {
+    T *Ptr = Source.front().Ptr;
+    Source.pop_front();
+
+    if (!llvm::any_of(Target, [Ptr](const auto &E) { return *E.Ptr == *Ptr; }))
+      Target.push_back(*allocateListNodeTransient<T>(Ptr));
   }
 }
 
@@ -217,6 +197,28 @@ bool CommentInfo::operator<(const CommentInfo &Other) const {
   }
 
   return false;
+}
+
+CommentInfo::CommentInfo(const CommentInfo &Other,
+                         llvm::BumpPtrAllocator &Arena) {
+  Kind = Other.Kind;
+  Direction = Other.Direction;
+  Name = Other.Name;
+  ParamName = Other.ParamName;
+  CloseName = Other.CloseName;
+  SelfClosing = Other.SelfClosing;
+  Explicit = Other.Explicit;
+  Text = Other.Text;
+  AttrKeys = allocateArray(Other.AttrKeys, Arena);
+  AttrValues = allocateArray(Other.AttrValues, Arena);
+  Args = allocateArray(Other.Args, Arena);
+  if (!Other.Children.empty()) {
+    CommentInfo *NewArray = Arena.Allocate<CommentInfo>(Other.Children.size());
+    for (size_t Idx = 0; Idx < Other.Children.size(); ++Idx) {
+      new (NewArray + Idx) CommentInfo(Other.Children[Idx], Arena);
+    }
+    Children = llvm::ArrayRef<CommentInfo>(NewArray, Other.Children.size());
+  }
 }
 
 static llvm::SmallString<64>
@@ -315,11 +317,11 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
   assert(mergeable(Other));
   if (!DefLoc)
     DefLoc = std::move(Other.DefLoc);
+  if (MangledName.empty())
+    MangledName = std::move(Other.MangledName);
   // Unconditionally extend the list of locations, since we want all of them.
   mergeUnkeyed(Loc, std::move(Other.Loc));
   mergeBase(std::move(Other));
-  if (MangledName.empty())
-    MangledName = std::move(Other.MangledName);
 }
 
 NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
@@ -361,9 +363,9 @@ void RecordInfo::merge(RecordInfo &&Other) {
   reduceChildren(Children.Functions, std::move(Other.Children.Functions));
   reduceChildren(Children.Enums, std::move(Other.Children.Enums));
   reduceChildren(Children.Typedefs, std::move(Other.Children.Typedefs));
-  SymbolInfo::merge(std::move(Other));
   if (!Template)
     Template = Other.Template;
+  SymbolInfo::merge(std::move(Other));
 }
 
 void EnumInfo::merge(EnumInfo &&Other) {
@@ -387,9 +389,9 @@ void FunctionInfo::merge(FunctionInfo &&Other) {
     Parent = std::move(Other.Parent);
   if (Params.empty())
     Params = std::move(Other.Params);
-  SymbolInfo::merge(std::move(Other));
   if (!Template)
     Template = Other.Template;
+  SymbolInfo::merge(std::move(Other));
 }
 
 void TypedefInfo::merge(TypedefInfo &&Other) {
@@ -484,8 +486,8 @@ bool Index::operator<(const Index &Other) const {
   return Name < Other.Name;
 }
 
-OwningVec<const Index *> Index::getSortedChildren() const {
-  OwningVec<const Index *> SortedChildren;
+std::vector<const Index *> Index::getSortedChildren() const {
+  std::vector<const Index *> SortedChildren;
   SortedChildren.reserve(Children.size());
   for (const auto &[_, C] : Children)
     SortedChildren.push_back(&C);
@@ -529,12 +531,12 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
 
 void ScopeChildren::sort() {
   Namespaces.sort();
-  llvm::sort(Records);
-  llvm::sort(Functions);
-  llvm::sort(Enums);
-  llvm::sort(Typedefs);
-  llvm::sort(Concepts);
-  llvm::sort(Variables);
+  Records.sort();
+  Functions.sort();
+  Enums.sort();
+  Typedefs.sort();
+  Concepts.sort();
+  Variables.sort();
 }
 } // namespace doc
 } // namespace clang

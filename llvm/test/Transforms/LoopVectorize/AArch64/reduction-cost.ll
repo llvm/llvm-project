@@ -60,8 +60,6 @@ exit:
   ret i64 %res
 }
 
-; The scalar cost of this loop must include the freeze's cost, otherwise VF=2
-; is incorrectly rejected as unprofitable.
 define i32 @or_reduction_with_freeze(ptr %dst, ptr %src) {
 ; CHECK-LABEL: define i32 @or_reduction_with_freeze(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
@@ -75,7 +73,7 @@ define i32 @or_reduction_with_freeze(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST6]], [[SRC7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 18
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 10
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[DST1]] to i3

@@ -6012,8 +6012,9 @@ class InitListTransformer {
             Inits.push_back(generateInitListsImpl(FD->getType()));
       }
     }
-    auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
-                                           Inits, Inits.back()->getEndLoc());
+    auto *NewInit =
+        new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(), Inits,
+                               Inits.back()->getEndLoc(), /*isExplicit=*/false);
     NewInit->setType(Ty);
     return NewInit;
   }
@@ -6049,8 +6050,9 @@ public:
     while (ArgIt != ArgExprs.end())
       Inits.push_back(generateInitListsImpl(InitTy));
 
-    auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
-                                           Inits, Inits.back()->getEndLoc());
+    auto *NewInit =
+        new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(), Inits,
+                               Inits.back()->getEndLoc(), /*isExplicit=*/false);
     llvm::APInt ArySize(64, Inits.size());
     NewInit->setType(Ctx.getConstantArrayType(InitTy, ArySize, nullptr,
                                               ArraySizeModifier::Normal, 0));

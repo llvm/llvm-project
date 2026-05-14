@@ -188,7 +188,7 @@ define void @NonIcmp(ptr %a) {
 ; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp sle i64 [[LSR_IV2]], 0
 ; CHECK-NEXT:    [[FIND_COND:%.*]] = and i1 [[EXITCOND_NOT]], true
-; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add nsw i64 [[LSR_IV2]], -1
+; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add i64 [[LSR_IV2]], -1
 ; CHECK-NEXT:    br i1 [[FIND_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void

@@ -71,6 +71,7 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
@@ -1046,8 +1047,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::ModulePassManager mpm;
   // The module summary should be emitted by default for regular LTO
   // except for ld64 targets.
-  bool emitSummary =
-      opts.PrepareForFullLTO && (triple.getVendor() != llvm::Triple::Apple);
+  bool emitSummary = (opts.PrepareForFullLTO || opts.PrepareForThinLTO) &&
+                     (triple.getVendor() != llvm::Triple::Apple);
   if (opts.PrepareForFatLTO)
     mpm = pb.buildFatLTODefaultPipeline(level, opts.PrepareForThinLTO,
                                         emitSummary);
@@ -1060,22 +1061,23 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC ||
       action == BackendActionTy::Backend_EmitLL || opts.PrepareForFatLTO) {
-    if (opts.PrepareForThinLTO) {
-      // TODO: ThinLTO module summary support is yet to be enabled.
-      if (action == BackendActionTy::Backend_EmitBC)
-        mpm.addPass(llvm::BitcodeWriterPass(os));
-      else if (action == BackendActionTy::Backend_EmitLL)
-        mpm.addPass(llvm::PrintModulePass(os));
-    } else {
-      if (emitSummary && !llvmModule->getModuleFlag("ThinLTO"))
-        llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
-      if (action == BackendActionTy::Backend_EmitBC)
+    // If it is not ThinLTO, emits the module flag and sets it to be off.
+    if (!opts.PrepareForThinLTO && emitSummary &&
+        !llvmModule->getModuleFlag("ThinLTO")) {
+      llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+    }
+
+    if (action == BackendActionTy::Backend_EmitBC) {
+      if (opts.PrepareForThinLTO) {
+        mpm.addPass(llvm::ThinLTOBitcodeWriterPass(os, nullptr));
+      } else {
         mpm.addPass(llvm::BitcodeWriterPass(
             os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
-      else if (action == BackendActionTy::Backend_EmitLL)
-        mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
-                                          /*ShouldPreserveUseListOrder=*/false,
-                                          emitSummary));
+      }
+    } else if (action == BackendActionTy::Backend_EmitLL) {
+      mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
+                                        /*ShouldPreserveUseListOrder=*/false,
+                                        emitSummary));
     }
   }
 

@@ -2205,6 +2205,18 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_scalbn:
     return emitBinaryExpMaybeConstrainedFPBuiltin(
         *this, E, Intrinsic::ldexp, Intrinsic::experimental_constrained_ldexp);
+  case AMDGPU::BI__builtin_amdgcn_permlane_bcast:
+    return emitBuiltinWithOneOverloadedType<3>(
+        *this, E, Intrinsic::amdgcn_permlane_bcast);
+  case AMDGPU::BI__builtin_amdgcn_permlane_up:
+    return emitBuiltinWithOneOverloadedType<3>(*this, E,
+                                               Intrinsic::amdgcn_permlane_up);
+  case AMDGPU::BI__builtin_amdgcn_permlane_down:
+    return emitBuiltinWithOneOverloadedType<3>(*this, E,
+                                               Intrinsic::amdgcn_permlane_down);
+  case AMDGPU::BI__builtin_amdgcn_permlane_xor:
+    return emitBuiltinWithOneOverloadedType<3>(*this, E,
+                                               Intrinsic::amdgcn_permlane_xor);
   default:
     return nullptr;
   }

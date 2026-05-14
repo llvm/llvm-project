@@ -29,6 +29,42 @@ A list of non-standard directives supported by Flang
   argument's descriptor and passed as a raw pointer.
   The letter (P) ignores pointer and allocatable matching, so that one can pass
   an allocatable array to routine with pointer array argument and vice versa.
+  The letter (M) disables matching of the actual argument's CUDA storage
+  (managed/unified) against the dummy's. Its main use is in host modules that
+  overload the same routine with both a host-typed and a `device`-typed
+  specific: placing (M) on the device-typed dummy turns that specific into an
+  overload discriminator. Under `-gpu=mem:unified` or `-gpu=mem:managed`, an
+  unattributed host actual is normally allowed to bind to a `device` dummy
+  (the host-to-device attribute check is relaxed). (M) on that dummy opts it
+  out of the relaxation: an unattributed host actual then binds to the
+  host-typed specific in the same overload set, while actuals with an
+  explicit `device`, `managed`, or `unified` attribute continue to bind to
+  the device-typed specific. For example:
+```
+  interface compute
+    module procedure compute_host
+    module procedure compute_device
+  end interface
+contains
+  subroutine compute_host(alpha)
+    real :: alpha
+  end
+  subroutine compute_device(alpha)
+    real, device :: alpha
+    !dir$ ignore_tkr(m) alpha
+  end
+  ! ...
+  real :: a            ! plain host scalar
+  real, device :: d    ! device scalar
+  call compute(a)      ! always binds to compute_host
+  call compute(d)      ! always binds to compute_device
+```
+  For contrast: without `ignore_tkr(m)` on `compute_device`,
+  `call compute(a)` compiled with `-gpu=mem:unified` would instead resolve
+  to `compute_device`, because the matching rules let `a` bind to the
+  device dummy and rank it as a closer match than the host one (see the
+  "Attributed Argument Matching Distance Values" table in section 3.2.3
+  of the CUDA Fortran Programming Guide).
   For example, if one wanted to call a "set all bytes to zero" utility that
   could be applied to arrays of any type or rank:
 ```

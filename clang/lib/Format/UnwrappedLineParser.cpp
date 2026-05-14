@@ -1451,6 +1451,17 @@ void UnwrappedLineParser::parseStructuralElement(
     while (FormatTok->is(tok::l_square) && handleCppAttributes()) {
     }
   } else if (Style.isVerilog()) {
+    // Skip attributes.
+    while (FormatTok->is(tok::l_paren) &&
+           Tokens->peekNextToken()->is(tok::star)) {
+      parseParens();
+    }
+    // Skip things that can exist before keywords like 'if' and 'case'.
+    if (FormatTok->isOneOf(Keywords.kw_priority, Keywords.kw_unique,
+                           Keywords.kw_unique0)) {
+      nextToken();
+    }
+
     if (Keywords.isVerilogStructuredProcedure(*FormatTok)) {
       parseForOrWhileLoop(/*HasParens=*/false);
       return;
@@ -1463,19 +1474,6 @@ void UnwrappedLineParser::parseStructuralElement(
                            Keywords.kw_assume, Keywords.kw_cover)) {
       parseIfThenElse(IfKind, /*KeepBraces=*/false, /*IsVerilogAssert=*/true);
       return;
-    }
-
-    // Skip things that can exist before keywords like 'if' and 'case'.
-    while (true) {
-      if (FormatTok->isOneOf(Keywords.kw_priority, Keywords.kw_unique,
-                             Keywords.kw_unique0)) {
-        nextToken();
-      } else if (FormatTok->is(tok::l_paren) &&
-                 Tokens->peekNextToken()->is(tok::star)) {
-        parseParens();
-      } else {
-        break;
-      }
     }
   }
 
@@ -3376,6 +3374,7 @@ void UnwrappedLineParser::parseDoWhile() {
 
 void UnwrappedLineParser::parseLabel(
     FormatStyle::IndentGotoLabelStyle IndentGotoLabels) {
+  const bool IsGotoLabel = FormatTok->is(TT_GotoLabelColon);
   nextToken();
   unsigned OldLineLevel = Line->Level;
 
@@ -3392,9 +3391,8 @@ void UnwrappedLineParser::parseLabel(
     break;
   }
 
-  if (!Style.IndentCaseBlocks && CommentsBeforeNextToken.empty() &&
-      FormatTok->is(tok::l_brace)) {
-
+  if (!IsGotoLabel && !Style.IndentCaseBlocks &&
+      CommentsBeforeNextToken.empty() && FormatTok->is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Line->Level,
                                        Style.BraceWrapping.AfterCaseLabel,
                                        Style.BraceWrapping.IndentBraces);

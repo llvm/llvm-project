@@ -51,6 +51,22 @@ functions:
       - type: int
       - type: const struct sockaddr *
       - type: socklen_t
+  - name: getpeername
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct sockaddr *__restrict
+      - type: socklen_t *__restrict
+  - name: getsockname
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct sockaddr *__restrict
+      - type: socklen_t *__restrict
   - name: getsockopt
     standards:
       - POSIX

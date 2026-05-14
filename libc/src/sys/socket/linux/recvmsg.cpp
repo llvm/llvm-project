@@ -8,7 +8,6 @@
 
 #include "src/sys/socket/recvmsg.h"
 
-#include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers.
 
 #include "hdr/types/ssize_t.h"
@@ -21,18 +20,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, recvmsg, (int sockfd, msghdr *msg, int flags)) {
-#ifdef SYS_recvmsg
-  ssize_t ret =
-      LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_recvmsg, sockfd, msg, flags);
-#elif defined(SYS_socketcall)
-  unsigned long sockcall_args[3] = {static_cast<unsigned long>(sockfd),
-                                    reinterpret_cast<unsigned long>(msg),
-                                    static_cast<unsigned long>(flags)};
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
-      SYS_socketcall, SYS_RECVMSG, sockcall_args);
-#else
-#error "socket and socketcall syscalls unavailable for this platform."
-#endif
+  ssize_t ret = syscall_impl<ssize_t>(SYS_recvmsg, sockfd, msg, flags);
   if (ret < 0) {
     libc_errno = static_cast<int>(-ret);
     return -1;

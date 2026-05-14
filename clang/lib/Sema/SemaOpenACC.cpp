@@ -2662,8 +2662,9 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
     return nullptr;
 
   if (IK == InitKind::Zero) {
-    Expr *InitExpr = new (Context)
-        InitListExpr(Context, ExprRange.getBegin(), {}, ExprRange.getEnd());
+    Expr *InitExpr =
+        new (Context) InitListExpr(Context, ExprRange.getBegin(), {},
+                                   ExprRange.getEnd(), /*isExplicit=*/false);
     InitExpr->setType(Context.VoidTy);
     return InitExpr;
   }
@@ -2739,8 +2740,9 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
     }
   }
 
-  Expr *InitExpr = new (Context)
-      InitListExpr(Context, ExprRange.getBegin(), Exprs, ExprRange.getEnd());
+  Expr *InitExpr =
+      new (Context) InitListExpr(Context, ExprRange.getBegin(), Exprs,
+                                 ExprRange.getEnd(), /*isExplicit=*/false);
   InitExpr->setType(Ty);
   return InitExpr;
 }
@@ -2889,8 +2891,9 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
     Args.push_back(ElemRes.get());
   }
 
-  Expr *InitExpr = new (getASTContext()) InitListExpr(
-      getASTContext(), VarExpr->getBeginLoc(), Args, VarExpr->getEndLoc());
+  Expr *InitExpr = new (getASTContext())
+      InitListExpr(getASTContext(), VarExpr->getBeginLoc(), Args,
+                   VarExpr->getEndLoc(), /*isExplicit=*/false);
   InitExpr->setType(VarTy);
 
   ExprResult Init = FinishValueInit(SemaRef.SemaRef, Entity,

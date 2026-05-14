@@ -1029,8 +1029,10 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
         static_cast<SPIRV::LinkageType::LinkageType>(LinkageOp);
     if (LnkType == SPIRV::LinkageType::LinkOnceODR)
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_linkonce_odr);
-    else if (LnkType == SPIRV::LinkageType::Weak)
+    else if (LnkType == SPIRV::LinkageType::WeakAMD) {
       Reqs.addExtension(SPIRV::Extension::SPV_AMD_weak_linkage);
+      Reqs.addCapability(SPIRV::Capability::WeakLinkageAMD);
+    }
   } else if (Dec == SPIRV::Decoration::CacheControlLoadINTEL ||
              Dec == SPIRV::Decoration::CacheControlStoreINTEL) {
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_cache_controls);

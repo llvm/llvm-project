@@ -2458,7 +2458,7 @@ define amdgpu_kernel void @icmp64(i32 %n, i32 %s) {
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX1032-NEXT:    s_sub_i32 s1, 0, s0
-; GFX1032-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX1032-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX1032-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX1032-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1032-NEXT:    v_mul_lo_u32 v2, s1, v1
@@ -2492,7 +2492,7 @@ define amdgpu_kernel void @icmp64(i32 %n, i32 %s) {
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX1064-NEXT:    s_sub_i32 s1, 0, s0
-; GFX1064-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX1064-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX1064-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX1064-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1064-NEXT:    v_mul_lo_u32 v2, s1, v1
@@ -2765,7 +2765,7 @@ define amdgpu_kernel void @icmp32(i32 %n, i32 %s) {
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX1032-NEXT:    s_sub_i32 s1, 0, s0
-; GFX1032-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX1032-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX1032-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX1032-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1032-NEXT:    v_mul_lo_u32 v2, s1, v1
@@ -2799,7 +2799,7 @@ define amdgpu_kernel void @icmp32(i32 %n, i32 %s) {
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX1064-NEXT:    s_sub_i32 s1, 0, s0
-; GFX1064-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX1064-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX1064-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX1064-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1064-NEXT:    v_mul_lo_u32 v2, s1, v1

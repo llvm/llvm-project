@@ -12,6 +12,7 @@
 #include "allocator_config_wrapper.h"
 #include "common.h"
 #include "secondary.h"
+#include "string_utils.h"
 
 #include <type_traits>
 
@@ -84,6 +85,15 @@ TEST(ScudoAllocatorConfigTest, VerifyOptionalFlags) {
                 TestBaseConfigEnableOptionalFlag>::getMaySupportMemoryTagging(),
             TestBaseConfigEnableOptionalFlag::getMaySupportMemoryTagging());
 
+  EXPECT_FALSE(scudo::BaseConfig<TestBaseConfig>::getQuarantineDisabled());
+  EXPECT_TRUE(scudo::BaseConfig<TestBaseConfig>::getExactUsableSize());
+  EXPECT_TRUE(
+      scudo::BaseConfig<TestBaseConfig>::getAbortOnDeallocTypeMismatch());
+  EXPECT_TRUE(
+      scudo::BaseConfig<TestBaseConfig>::getAbortOnDeallocSizeMismatch());
+  EXPECT_TRUE(
+      scudo::BaseConfig<TestBaseConfig>::getAbortOnDeallocAlignmentMismatch());
+
   // Test primary optional config.
   //
   // `EnableRandomeOffset` is default off.
@@ -105,6 +115,11 @@ TEST(ScudoAllocatorConfigTest, VerifyOptionalFlags) {
                typename TestPrimaryConfigEnableOptionalType::Primary::
                    ConditionVariableT>));
 
+  EXPECT_TRUE(scudo::PrimaryConfig<TestPrimaryConfig>::getEnableBlockCache());
+  EXPECT_EQ(scudo::PrimaryConfig<TestPrimaryConfig>::getCompactPtrScale(), 0U);
+  EXPECT_TRUE(
+      scudo::PrimaryConfig<TestPrimaryConfig>::getEnableContiguousRegions());
+
   // Test secondary cache optional config.
   using NoCacheConfig =
       scudo::SecondaryConfig<TestSecondaryConfig>::CacheConfig;
@@ -116,4 +131,14 @@ TEST(ScudoAllocatorConfigTest, VerifyOptionalFlags) {
   EXPECT_EQ(CacheConfig::getEntriesArraySize(),
             TestSecondaryCacheConfigEnableOptionalFlag::Secondary::Cache::
                 getEntriesArraySize());
+
+  EXPECT_TRUE(
+      scudo::SecondaryConfig<TestSecondaryConfig>::getEnableGuardPages());
+
+  EXPECT_EQ(CacheConfig::getQuarantineSize(), 0U);
+  EXPECT_EQ(CacheConfig::getDefaultMaxEntriesCount(), 0U);
+  EXPECT_EQ(CacheConfig::getDefaultMaxEntrySize(), 0U);
+  EXPECT_EQ(CacheConfig::getMinReleaseToOsIntervalMs(), INT32_MIN);
+  EXPECT_EQ(CacheConfig::getMaxReleaseToOsIntervalMs(), INT32_MAX);
+  EXPECT_EQ(CacheConfig::getDefaultReleaseToOsIntervalMs(), INT32_MIN);
 }

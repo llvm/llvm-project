@@ -927,6 +927,18 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevelDefinitions",
               BreakAfterReturnType, FormatStyle::RTBS_TopLevelDefinitions);
 
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_All;
+  CHECK_PARSE("BreakBeforeReturnType: None", BreakBeforeReturnType,
+              FormatStyle::BBRTS_None);
+  CHECK_PARSE("BreakBeforeReturnType: All", BreakBeforeReturnType,
+              FormatStyle::BBRTS_All);
+  CHECK_PARSE("BreakBeforeReturnType: TopLevel", BreakBeforeReturnType,
+              FormatStyle::BBRTS_TopLevel);
+  CHECK_PARSE("BreakBeforeReturnType: AllDefinitions", BreakBeforeReturnType,
+              FormatStyle::BBRTS_AllDefinitions);
+  CHECK_PARSE("BreakBeforeReturnType: TopLevelDefinitions",
+              BreakBeforeReturnType, FormatStyle::BBRTS_TopLevelDefinitions);
+
   Style.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   CHECK_PARSE("BreakTemplateDeclarations: Leave", BreakTemplateDeclarations,
               FormatStyle::BTDS_Leave);

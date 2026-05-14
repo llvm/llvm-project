@@ -1232,7 +1232,7 @@ void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
   SDLoc SL(N);
   bool Signed = N->getOpcode() == AMDGPUISD::MAD_I64_I32;
   unsigned Opc;
-  bool UseNoCarry = Subtarget->hasMadU64U32NoCarry() && !N->hasAnyUseOfValue(1);
+  bool UseNoCarry = Subtarget->hasMadNC64_32Insts() && !N->hasAnyUseOfValue(1);
   if (Subtarget->hasMADIntraFwdBug())
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
                  : AMDGPU::V_MAD_U64_U32_gfx11_e64;
@@ -1262,7 +1262,7 @@ void AMDGPUDAGToDAGISel::SelectMUL_LOHI(SDNode *N) {
   bool Signed = N->getOpcode() == ISD::SMUL_LOHI;
   SDVTList VTList;
   unsigned Opc;
-  if (Subtarget->hasMadU64U32NoCarry()) {
+  if (Subtarget->hasMadNC64_32Insts()) {
     VTList = CurDAG->getVTList(MVT::i64);
     Opc = Signed ? AMDGPU::V_MAD_NC_I64_I32_e64 : AMDGPU::V_MAD_NC_U64_U32_e64;
   } else {

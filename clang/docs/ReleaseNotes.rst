@@ -576,7 +576,7 @@ Bug Fixes to C++ Support
 - Fixed a crash on error recovery when dealing with invalid templates. (#GH183075)
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
 - Concepts appearing in the require-clause of a member function no longer have access to non-public members of that class,
-  or to a current class object. (#GH115838) (#GH194803)
+  or to a current class object. (#GH115838) (#GH194803) (#GH197067)
 - We no longer caches invalid variable specializations. (#GH132592)
 - Fixed an incorrect template argument deduction when matching packs of template
   template parameters when one of its parameters is also a pack. (#GH181166)
@@ -587,12 +587,16 @@ Bug Fixes to C++ Support
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
+- Fix a problem where a substitution failure when evaluating a type requirement
+  could directly make the program ill-formed.
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
 - Fixed a crash when `explicit(bool)` is used with an incomplete enumeration. (#GH183887)
 - Fixed a crash on ``typeid`` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
+- Fixed spurious diagnostics produced when checking if constraints are equivalent for redeclarations,
+  which could make the program mistakenly ill-formed.
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
 - Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
 
@@ -767,6 +771,8 @@ clang-format
   declaration parameters.
 - Add ``EnumAssignments`` option to ``AlignConsecutiveAssignments`` for aligning
   enum assignments without affecting other assignments.
+- Add ``BreakBeforeReturnType`` option to break before the function return
+  type.
 
 libclang
 --------

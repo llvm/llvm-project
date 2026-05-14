@@ -104,7 +104,7 @@ define void @test_vpinstruction_freeze_cost(ptr %src, ptr noalias %dst) {
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: %g.src = getelementptr inbounds i64, ptr %src, i64 %iv
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %l = load i64, ptr %g.src, align 8
-; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %fr = freeze i64 %l
+; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: %fr = freeze i64 %l
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: %g.dst = getelementptr inbounds i64, ptr %dst, i64 %iv
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %fr, ptr %g.dst, align 8
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %iv.next = add nuw nsw i64 %iv, 1
@@ -117,7 +117,7 @@ define void @test_vpinstruction_freeze_cost(ptr %src, ptr noalias %dst) {
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%g.src>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<[[VP5]]>
-; CHECK:  Cost of 2 for VF 2: WIDEN ir<%fr> = freeze ir<%l>
+; CHECK:  Cost of 0 for VF 2: WIDEN ir<%fr> = freeze ir<%l>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%g.dst>
 ; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP6]]>, ir<%fr>
@@ -142,7 +142,7 @@ define void @test_vpinstruction_freeze_cost(ptr %src, ptr noalias %dst) {
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds ir<%g.src>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<[[VP5]]>
-; CHECK:  Cost of 2 for VF 4: WIDEN ir<%fr> = freeze ir<%l>
+; CHECK:  Cost of 0 for VF 4: WIDEN ir<%fr> = freeze ir<%l>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer inbounds ir<%g.dst>
 ; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP6]]>, ir<%fr>

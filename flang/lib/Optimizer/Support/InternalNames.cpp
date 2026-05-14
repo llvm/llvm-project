@@ -351,13 +351,16 @@ bool fir::NameUniquer::belongsToModule(llvm::StringRef uniquedName,
 /// uniqued root produced by \c fir::NameUniquer; \c deconstruct exposes that
 /// as \c parts.modules. A non-empty module path means the symbol was declared
 /// under a module or submodule, not only at program or internal unit scope.
+/// Procedure nesting is encoded as \c F<proc> ancestors in \c parts.procs;
+/// those must be empty so we do not classify locals inside module procedures
+/// (including \c SAVE locals) as module-scope data.
 /// We then require \c VARIABLE, \c CONSTANT, or \c COMMON so we match
 /// module-level data (including common), not procedures or other name kinds
 /// that can also carry a module prefix.
 bool fir::NameUniquer::isModuleScopeDataUniquedName(
     llvm::StringRef uniquedName) {
   auto [kind, parts] = fir::NameUniquer::deconstruct(uniquedName);
-  if (parts.modules.empty())
+  if (parts.modules.empty() || !parts.procs.empty())
     return false;
 
   switch (kind) {

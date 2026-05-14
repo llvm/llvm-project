@@ -1582,6 +1582,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                       {V4S32, ConstantPtr, V4S32, GlobalAlign32},
                                       {S64, ConstantPtr, S64, GlobalAlign32},
                                       {V2S32, ConstantPtr, V2S32, GlobalAlign32}});
+
+    Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
+                                     {{S16, GlobalPtr, S8, GlobalAlign8},
+                                      {S16, GlobalPtr, S16, GlobalAlign16},
+                                      {S16, LocalPtr, S8, 8},
+                                      {S16, LocalPtr, S16, 16},
+                                      {S16, PrivatePtr, S8, 8},
+                                      {S16, PrivatePtr, S16, 16}});
+
     Actions.legalIf(
       [=](const LegalityQuery &Query) -> bool {
         return isLoadStoreLegal(ST, Query);
@@ -1750,6 +1759,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // inserting addrspacecasts.
   ExtLoads.customIf(typeIs(1, Constant32Ptr));
 
+  ExtLoads.narrowScalarIf(
+      [](const LegalityQuery &Query) {
+        LLT MemTy = Query.MMODescrs[0].MemoryTy;
+        return MemTy.isAnyScalar() && MemTy.getSizeInBits() > 32 &&
+               Query.Types[0].getSizeInBits() > MemTy.getSizeInBits();
+      }, // For large MemSize, narrowscalar to MemSize (load MemSize + ext)
+      getScalarTypeFromMemDesc(0));
   ExtLoads.clampScalar(0, S32, S32)
           .widenScalarToNextPow2(0)
           .lower();
@@ -4626,7 +4642,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
-  if (ST.hasVectorMulU64() && Size == 64)
+  if (ST.hasVMulU64Inst() && Size == 64)
     return true;
 
   unsigned NumParts = Size / 32;
@@ -6130,6 +6146,10 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
                       IID == Intrinsic::amdgcn_permlanex16;
   bool IsSetInactive = IID == Intrinsic::amdgcn_set_inactive ||
                        IID == Intrinsic::amdgcn_set_inactive_chain_arg;
+  bool IsPermlaneShuffle = IID == Intrinsic::amdgcn_permlane_bcast ||
+                           IID == Intrinsic::amdgcn_permlane_up ||
+                           IID == Intrinsic::amdgcn_permlane_down ||
+                           IID == Intrinsic::amdgcn_permlane_xor;
 
   auto createLaneOp = [&IID, &B, &MI](Register Src0, Register Src1,
                                       Register Src2, LLT VT) -> Register {
@@ -6143,6 +6163,10 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     case Intrinsic::amdgcn_set_inactive_chain_arg:
       return LaneOp.addUse(Src1).getReg(0);
     case Intrinsic::amdgcn_writelane:
+    case Intrinsic::amdgcn_permlane_bcast:
+    case Intrinsic::amdgcn_permlane_up:
+    case Intrinsic::amdgcn_permlane_down:
+    case Intrinsic::amdgcn_permlane_xor:
       return LaneOp.addUse(Src1).addUse(Src2).getReg(0);
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16: {
@@ -6174,9 +6198,11 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   Register Src0 = MI.getOperand(2).getReg();
   Register Src1, Src2;
   if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
-      IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16) {
+      IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16 ||
+      IsPermlaneShuffle) {
     Src1 = MI.getOperand(3).getReg();
-    if (IID == Intrinsic::amdgcn_writelane || IsPermLane16) {
+    if (IID == Intrinsic::amdgcn_writelane || IsPermLane16 ||
+        IsPermlaneShuffle) {
       Src2 = MI.getOperand(4).getReg();
     }
   }
@@ -8451,6 +8477,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_set_inactive_chain_arg:
   case Intrinsic::amdgcn_mov_dpp8:
   case Intrinsic::amdgcn_update_dpp:
+  case Intrinsic::amdgcn_permlane_bcast:
+  case Intrinsic::amdgcn_permlane_up:
+  case Intrinsic::amdgcn_permlane_down:
+  case Intrinsic::amdgcn_permlane_xor:
     return legalizeLaneOp(Helper, MI, IntrID);
   case Intrinsic::amdgcn_s_buffer_prefetch_data:
     return legalizeSBufferPrefetch(Helper, MI);

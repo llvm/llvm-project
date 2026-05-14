@@ -237,7 +237,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
 
 AMDGPUTargetAsmStreamer::AMDGPUTargetAsmStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS)
-    : AMDGPUTargetStreamer(S), OS(OS) { }
+    : AMDGPUTargetStreamer(S), OS(OS) {}
 
 // A hook for emitting stuff at the end.
 // We use it for emitting the accumulated PAL metadata as directives.
@@ -276,10 +276,11 @@ void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
 void AMDGPUTargetAsmStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
                                                    unsigned Type) {
   switch (Type) {
-    default: llvm_unreachable("Invalid AMDGPU symbol type");
-    case ELF::STT_AMDGPU_HSA_KERNEL:
-      OS << "\t.amdgpu_hsa_kernel " << SymbolName << '\n' ;
-      break;
+  default:
+    llvm_unreachable("Invalid AMDGPU symbol type");
+  case ELF::STT_AMDGPU_HSA_KERNEL:
+    OS << "\t.amdgpu_hsa_kernel " << SymbolName << '\n';
+    break;
   }
 }
 
@@ -337,8 +338,8 @@ bool AMDGPUTargetAsmStreamer::EmitISAVersion() {
   return true;
 }
 
-bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
-    msgpack::Document &HSAMetadataDoc, bool Strict) {
+bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(msgpack::Document &HSAMetadataDoc,
+                                              bool Strict) {
   HSAMD::V3::MetadataVerifier Verifier(Strict);
   if (!Verifier.verify(HSAMetadataDoc.getRoot()))
     return false;
@@ -548,7 +549,8 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   case AMDGPU::AMDHSA_COV4:
   case AMDGPU::AMDHSA_COV5:
     if (getTargetID()->isXnackSupported())
-      OS << "\t\t.amdhsa_reserve_xnack_mask " << getTargetID()->isXnackOnOrAny() << '\n';
+      OS << "\t\t.amdhsa_reserve_xnack_mask " << getTargetID()->isXnackOnOrAny()
+         << '\n';
     break;
   }
 
@@ -815,13 +817,13 @@ void AMDGPUTargetELFStreamer::EmitNote(
   S.pushSection();
   S.switchSection(
       Context.getELFSection(ElfNote::SectionName, ELF::SHT_NOTE, NoteFlags));
-  S.emitInt32(NameSZ);                                        // namesz
-  S.emitValue(DescSZ, 4);                                     // descz
-  S.emitInt32(NoteType);                                      // type
-  S.emitBytes(Name);                                          // name
-  S.emitValueToAlignment(Align(4), 0, 1, 0);                  // padding 0
-  EmitDesc(S);                                                // desc
-  S.emitValueToAlignment(Align(4), 0, 1, 0);                  // padding 0
+  S.emitInt32(NameSZ);                       // namesz
+  S.emitValue(DescSZ, 4);                    // descz
+  S.emitInt32(NoteType);                     // type
+  S.emitBytes(Name);                         // name
+  S.emitValueToAlignment(Align(4), 0, 1, 0); // padding 0
+  EmitDesc(S);                               // desc
+  S.emitValueToAlignment(Align(4), 0, 1, 0); // padding 0
   S.popSection();
 }
 
@@ -1027,8 +1029,8 @@ bool AMDGPUTargetELFStreamer::EmitISAVersion() {
   auto *DescBegin = Context.createTempSymbol();
   auto *DescEnd = Context.createTempSymbol();
   auto *DescSZ = MCBinaryExpr::createSub(
-    MCSymbolRefExpr::create(DescEnd, Context),
-    MCSymbolRefExpr::create(DescBegin, Context), Context);
+      MCSymbolRefExpr::create(DescEnd, Context),
+      MCSymbolRefExpr::create(DescBegin, Context), Context);
 
   EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_HSA_ISA_NAME,
            [&](MCELFStreamer &OS) {

@@ -128,8 +128,7 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:    store i64 [[MUL2]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i64 12
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 true, i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], %[[LOOP]] ], [ [[TMP25]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i1 [[CMP_LCSSA]]
@@ -148,8 +147,7 @@ loop:
   store i64 %mul2, ptr %dst, align 1
   %ptr.iv.next = getelementptr nusw i8, ptr %ptr.iv, i64 12
   %cmp = icmp eq ptr %ptr.iv.next, %end
-  %or.cond = select i1 %cmp, i1 true, i1 false
-  br i1 %or.cond, label %exit, label %loop
+  br i1 %cmp, label %exit, label %loop
 
 exit:
   ret i1 %cmp

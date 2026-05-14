@@ -968,6 +968,7 @@ public:
     FIND,
     SETDAGARG,
     SETDAGNAME,
+    SORT,
   };
 
 private:

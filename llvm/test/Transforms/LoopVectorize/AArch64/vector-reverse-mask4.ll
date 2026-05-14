@@ -11,7 +11,7 @@
 
 ; The test checks if the mask is being correctly created, reverted  and used
 
-; RUN: opt -passes=loop-vectorize,instcombine -mtriple aarch64-linux-gnu -S \
+; RUN: opt -passes=loop-vectorize -mtriple aarch64-linux-gnu -S \
 ; RUN:   -tail-folding-policy=dont-fold-tail < %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -26,31 +26,36 @@ define void @vector_reverse_mask_v4i1(ptr noalias %a, ptr noalias %cond, i64 %N)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], 9223372036854775800
-; CHECK-NEXT:    [[IND_END:%.*]] = and i64 [[N]], 7
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[IND_END:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i64 [[INDEX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [8 x i8], ptr [[COND:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 -24
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 -56
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[COND:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 -3
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 -7
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x double> [[WIDE_LOAD]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x double> [[WIDE_LOAD1]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp une <4 x double> [[REVERSE]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp une <4 x double> [[REVERSE2]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [8 x i8], ptr [[A:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 -24
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP7]], i64 -56
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr double, ptr [[TMP15]], i64 -3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr double, ptr [[TMP15]], i64 -7
 ; CHECK-NEXT:    [[REVERSE3:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[REVERSE5:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP8]], <4 x i1> [[REVERSE3]], <4 x double> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD6:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP9]], <4 x i1> [[REVERSE5]], <4 x double> poison)
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> [[WIDE_MASKED_LOAD]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x double> [[WIDE_MASKED_LOAD6]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[REVERSE6:%.*]] = shufflevector <4 x double> [[WIDE_MASKED_LOAD]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[REVERSE7:%.*]] = shufflevector <4 x double> [[WIDE_MASKED_LOAD6]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd <4 x double> [[REVERSE6]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd <4 x double> [[REVERSE7]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP16]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP17]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[TMP10]], ptr align 8 [[TMP8]], <4 x i1> [[REVERSE3]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[TMP11]], ptr align 8 [[TMP9]], <4 x i1> [[REVERSE5]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -69,12 +74,12 @@ define void @vector_reverse_mask_v4i1(ptr noalias %a, ptr noalias %cond, i64 %N)
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08_IN:%.*]] = phi i64 [ [[I_08:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[I_08]] = add nsw i64 [[I_08_IN]], -1
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[COND]], i64 [[I_08]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[COND]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp une double [[TMP13]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[I_08]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load double, ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP14]], 1.000000e+00
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ARRAYIDX1]], align 8

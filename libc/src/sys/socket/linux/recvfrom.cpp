@@ -8,7 +8,6 @@
 
 #include "src/sys/socket/recvfrom.h"
 
-#include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers.
 
 #include "hdr/types/socklen_t.h"
@@ -34,21 +33,8 @@ LLVM_LIBC_FUNCTION(ssize_t, recvfrom,
     srcaddr_sz = *addrlen;
   (void)srcaddr_sz; // prevent "set but not used" warning
 
-#ifdef SYS_recvfrom
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
-      SYS_recvfrom, sockfd, buf, len, flags, src_addr, addrlen);
-#elif defined(SYS_socketcall)
-  unsigned long sockcall_args[6] = {static_cast<unsigned long>(sockfd),
-                                    reinterpret_cast<unsigned long>(buf),
-                                    static_cast<unsigned long>(len),
-                                    static_cast<unsigned long>(flags),
-                                    reinterpret_cast<unsigned long>(src_addr),
-                                    static_cast<unsigned long>(addrlen)};
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
-      SYS_socketcall, SYS_RECVFROM, sockcall_args);
-#else
-#error "socket and socketcall syscalls unavailable for this platform."
-#endif
+  ssize_t ret = syscall_impl<ssize_t>(SYS_recvfrom, sockfd, buf, len, flags,
+                                      src_addr, addrlen);
   if (ret < 0) {
     libc_errno = static_cast<int>(-ret);
     return -1;

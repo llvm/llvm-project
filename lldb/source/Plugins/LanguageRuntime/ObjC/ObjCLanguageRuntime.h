@@ -353,7 +353,7 @@ protected:
                 uint32_t class_name_hash) {
     if (isa != 0) {
       m_isa_to_descriptor.insert_or_assign(isa, descriptor_sp);
-      m_hash_to_isa_map.insert(std::make_pair(class_name_hash, isa));
+      m_hash_to_isa_map[class_name_hash].push_back(isa);
       return true;
     }
     return false;
@@ -420,9 +420,8 @@ private:
   typedef std::map<ClassAndSel, lldb::addr_t> MsgImplMap;
   typedef std::map<ClassAndSelStr, lldb::addr_t> MsgImplStrMap;
   typedef llvm::DenseMap<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
-  typedef std::multimap<uint32_t, ObjCISA> HashToISAMap;
+  typedef llvm::DenseMap<uint32_t, llvm::SmallVector<ObjCISA, 2>> HashToISAMap;
   typedef ISAToDescriptorMap::iterator ISAToDescriptorIterator;
-  typedef HashToISAMap::iterator HashToISAIterator;
   typedef ThreadSafeDenseMap<void *, uint64_t> TypeSizeCache;
 
   MsgImplMap m_impl_cache;

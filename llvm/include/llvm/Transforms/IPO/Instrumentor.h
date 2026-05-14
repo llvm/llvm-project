@@ -348,7 +348,16 @@ struct InstrumentationConfig {
   virtual ~InstrumentationConfig() {}
 
   /// Construct an instrumentation configuration with the base options.
-  InstrumentationConfig() : SS(StringAllocator) {
+  InstrumentationConfig() : SS(StringAllocator) {}
+
+  /// Initialize the config to a clean base state without loosing cached values
+  /// that can be reused across configurations.
+  void init(InstrumentorIRBuilderTy &IIRB) {
+    // Clear previous configurations but not the caches.
+    BaseConfigurationOptions.clear();
+    for (auto &Map : IChoices)
+      Map.clear();
+
     RuntimePrefix = BaseConfigurationOption::createStringOption(
         *this, "runtime_prefix", "The runtime API prefix.", "__instrumentor_");
     RuntimeStubsFile = BaseConfigurationOption::createStringOption(
@@ -357,7 +366,12 @@ struct InstrumentationConfig {
     TargetRegex = BaseConfigurationOption::createStringOption(
         *this, "target_regex",
         "Regular expression to be matched against the module target. "
-        "Only targets that match this regex will be instrumented",
+        "Only targets that match this regex will be instrumented.",
+        "");
+    FunctionRegex = BaseConfigurationOption::createStringOption(
+        *this, "function_regex",
+        "Regular expression to be matched against a function name. "
+        "Only functions that match this regex will be instrumented.",
         "");
     DemangleFunctionNames = BaseConfigurationOption::createBoolOption(
         *this, "demangle_function_names",
@@ -366,6 +380,7 @@ struct InstrumentationConfig {
         *this, "host_enabled", "Instrument non-GPU targets", true);
     GPUEnabled = BaseConfigurationOption::createBoolOption(
         *this, "gpu_enabled", "Instrument GPU targets", true);
+    populate(IIRB);
   }
 
   /// Populate the instrumentation opportunities.
@@ -424,6 +439,7 @@ struct InstrumentationConfig {
   std::unique_ptr<BaseConfigurationOption> RuntimeStubsFile;
   std::unique_ptr<BaseConfigurationOption> DemangleFunctionNames;
   std::unique_ptr<BaseConfigurationOption> TargetRegex;
+  std::unique_ptr<BaseConfigurationOption> FunctionRegex;
   std::unique_ptr<BaseConfigurationOption> HostEnabled;
   std::unique_ptr<BaseConfigurationOption> GPUEnabled;
 
@@ -649,6 +665,27 @@ struct AllocaIO final : public InstructionIO<Instruction::Alloca> {
     PreIO->init(IConf, IIRB);
     auto *PostIO = IConf.allocate<AllocaIO>(false);
     PostIO->init(IConf, IIRB);
+  }
+};
+
+struct UnreachableIO final : public InstructionIO<Instruction::Unreachable> {
+  UnreachableIO() : InstructionIO<Instruction::Unreachable>(/*IsPRE=*/true) {}
+
+  enum ConfigKind {
+    PassId,
+    NumConfig,
+  };
+
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+
+  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+            ConfigTy *UserConfig = nullptr);
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO = IConf.allocate<UnreachableIO>();
+    PreIO->init(IConf, IIRB);
   }
 };
 

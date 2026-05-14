@@ -59,9 +59,6 @@ NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
   g_register_flags_detector.UpdateRegisterInfo(
       GetRegisterInfoInterface().GetRegisterInfo(),
       GetRegisterInfoInterface().GetRegisterCount());
-
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
 }
 
 RegisterInfoPOSIX_arm64 &

@@ -194,12 +194,6 @@ struct VPTransformState {
   /// The chosen Vectorization Factor of the loop being vectorized.
   ElementCount VF;
 
-  /// Hold the index to generate specific scalar instructions. Null indicates
-  /// that all instances are to be generated, using either scalar or vector
-  /// instructions.
-  /// TODO: This is now only used in asserts. Remove as follow-up.
-  std::optional<VPLane> Lane;
-
   struct DataState {
     // Each value from the original loop, when vectorized, is represented by a
     // vector value in the map.

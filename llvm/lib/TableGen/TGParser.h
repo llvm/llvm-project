@@ -326,8 +326,8 @@ private: // Parser methods.
   const Init *ParseOperation(Record *CurRec, const RecTy *ItemType);
   const Init *ParseOperationSubstr(Record *CurRec, const RecTy *ItemType);
   const Init *ParseOperationFind(Record *CurRec, const RecTy *ItemType);
-  const Init *ParseOperationForEachFilter(Record *CurRec,
-                                          const RecTy *ItemType);
+  const Init *ParseOperationListComprehension(Record *CurRec,
+                                              const RecTy *ItemType);
   const Init *ParseOperationCond(Record *CurRec, const RecTy *ItemType);
   const RecTy *ParseOperatorType();
   const Init *ParseObjectName(MultiClass *CurMultiClass);

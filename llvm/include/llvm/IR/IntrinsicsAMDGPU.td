@@ -3763,27 +3763,27 @@ def int_amdgcn_sat_pk4_u4_u8 : ClangBuiltin<"__builtin_amdgcn_sat_pk4_u4_u8">,
   PureIntrinsic<[llvm_i16_ty], [llvm_i32_ty]>;
 
 // llvm.amdgcn.permlane.bcast <src0> <src1> <src2>
-def int_amdgcn_permlane_bcast : ClangBuiltin<"__builtin_amdgcn_permlane_bcast">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+def int_amdgcn_permlane_bcast :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.permlane.up <src0> <src1> <src2>
-def int_amdgcn_permlane_up : ClangBuiltin<"__builtin_amdgcn_permlane_up">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+def int_amdgcn_permlane_up :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.permlane.down <src0> <src1> <src2>
-def int_amdgcn_permlane_down : ClangBuiltin<"__builtin_amdgcn_permlane_down">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+def int_amdgcn_permlane_down :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.permlane.xor <src0> <src1> <src2>
-def int_amdgcn_permlane_xor : ClangBuiltin<"__builtin_amdgcn_permlane_xor">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+def int_amdgcn_permlane_xor :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.permlane.idx.gen <src0> <src1>

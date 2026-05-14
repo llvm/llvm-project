@@ -11,7 +11,7 @@
 // CHECK-SPIRV: define hidden spir_func void @
 void test_AllMemoryBarrier() {
 // CHECK-DXIL: call void @llvm.[[TARGET]].all.memory.barrier()
-// CHECK-SPIRV: call spir_func void @llvm.[[TARGET]].all.memory.barrier()
+// CHECK-SPIRV: call void @llvm.[[TARGET]].all.memory.barrier()
   AllMemoryBarrier();
 }
 

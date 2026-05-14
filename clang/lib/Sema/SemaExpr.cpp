@@ -7611,12 +7611,12 @@ Sema::ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
     }
   }
 
-  return BuildInitList(LBraceLoc, InitArgList, RBraceLoc);
+  return BuildInitList(LBraceLoc, InitArgList, RBraceLoc, /*IsExplicit=*/true);
 }
 
-ExprResult
-Sema::BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
-                    SourceLocation RBraceLoc) {
+ExprResult Sema::BuildInitList(SourceLocation LBraceLoc,
+                               MultiExprArg InitArgList,
+                               SourceLocation RBraceLoc, bool IsExplicit) {
   // Semantic analysis for initializers is done by ActOnDeclarator() and
   // CheckInitializer() - it requires knowledge of the object being initialized.
 
@@ -7634,8 +7634,8 @@ Sema::BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
     }
   }
 
-  InitListExpr *E =
-      new (Context) InitListExpr(Context, LBraceLoc, InitArgList, RBraceLoc);
+  InitListExpr *E = new (Context)
+      InitListExpr(Context, LBraceLoc, InitArgList, RBraceLoc, IsExplicit);
   E->setType(Context.VoidTy); // FIXME: just a place holder for now.
   return E;
 }
@@ -8304,8 +8304,9 @@ ExprResult Sema::BuildVectorLiteral(SourceLocation LParenLoc,
   }
   // FIXME: This means that pretty-printing the final AST will produce curly
   // braces instead of the original commas.
-  InitListExpr *initE = new (Context) InitListExpr(Context, LiteralLParenLoc,
-                                                   initExprs, LiteralRParenLoc);
+  InitListExpr *initE =
+      new (Context) InitListExpr(Context, LiteralLParenLoc, initExprs,
+                                 LiteralRParenLoc, /*isExplicit=*/false);
   initE->setType(Ty);
   return BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc, initE);
 }
@@ -10062,8 +10063,8 @@ static void ConstructTransparentUnion(Sema &S, ASTContext &C,
   // Build an initializer list that designates the appropriate member
   // of the transparent union.
   Expr *E = EResult.get();
-  InitListExpr *Initializer = new (C) InitListExpr(C, SourceLocation(),
-                                                   E, SourceLocation());
+  InitListExpr *Initializer = new (C) InitListExpr(
+      C, SourceLocation(), E, SourceLocation(), /*isExplicit=*/false);
   Initializer->setType(UnionType);
   Initializer->setInitializedFieldInUnion(Field);
 

@@ -14,24 +14,13 @@
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 
-#include <linux/net.h>   // For SYS_SHUTDOWN socketcall number.
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> shutdown(int sockfd, int how) {
-#ifdef SYS_shutdown
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_shutdown, sockfd, how);
-#elif defined(SYS_socketcall)
-  unsigned long sockcall_args[2] = {static_cast<unsigned long>(sockfd),
-                                    static_cast<unsigned long>(how)};
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_SHUTDOWN,
-                                              sockcall_args);
-#else
-#error "shutdown and socketcall syscalls unavailable for this platform."
-#endif
-
+  int ret = syscall_impl<int>(SYS_shutdown, sockfd, how);
   if (ret < 0)
     return Error(-static_cast<int>(ret));
   return ret;

@@ -216,6 +216,13 @@ cl::opt<bool> HotText(
         "will put hot code into 2M pages. This requires relocation."),
     cl::ZeroOrMore, cl::cat(BoltCategory));
 
+cl::opt<bool> Hugify(
+    "hugify",
+    cl::desc("Automatically put hot code on 2MB page(s) (hugify) at runtime. "
+             "No manual call to hugify is needed in the binary (which is what "
+             "--hot-text relies on)."),
+    cl::cat(BoltOptCategory));
+
 cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),

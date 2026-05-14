@@ -2008,6 +2008,21 @@ and non-0 as true.
     This operator produces the size of the string, list, or dag *a*.
     The size of a DAG is the number of arguments; the operator does not count.
 
+``!sort(``\ *var*\ ``,`` *list*\ ``,`` *key*\ ``)``
+    This operator creates a new ``list`` containing the same elements as *list*
+    but in sorted order. To determine the order, TableGen binds the variable
+    *var* to each element and evaluates the *key* expression, which presumably
+    refers to *var*. The key must produce a ``string`` or integer value
+    (``bit``, ``bits``, or ``int``); all keys must be of the same type. Elements
+    with equal keys preserve their original relative order, resulting in a
+    stable sort.
+
+    For example, to sort a list of records by their ``Name`` field::
+
+    .. code-block:: text
+
+      list<Thing> sorted = !sort(t, Things, t.Name);
+
 ``!sra(``\ *a*\ ``,`` *count*\ ``)``
     This operator shifts *a* right arithmetically by *count* bits and produces the resulting
     value. The operation is performed on a 64-bit integer; the result

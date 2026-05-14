@@ -399,7 +399,7 @@ public:
     if (!isa<FunctionDecl>(FD))
       return;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-        MD && implicitObjectParamIsLifetimeBound(MD) &&
+        MD && getImplicitObjectParamLifetimeBoundAttr(MD) &&
         !VerifiedLiftimeboundEscapes.contains(MD))
       SemaHelper->reportLifetimeboundViolation(MD);
     for (const ParmVarDecl *PVD : cast<FunctionDecl>(FD)->parameters()) {

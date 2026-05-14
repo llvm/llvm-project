@@ -2303,6 +2303,7 @@ cc_library(
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
         ":PluginObjectFileELF",
+        ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Target",

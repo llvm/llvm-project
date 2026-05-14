@@ -67,6 +67,36 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpeername
+  SRCS
+    getpeername.cpp
+  HDRS
+    ../getpeername.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpeername
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getsockname
+  SRCS
+    getsockname.cpp
+  HDRS
+    ../getsockname.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getsockname
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   getsockopt
   SRCS
     getsockopt.cpp

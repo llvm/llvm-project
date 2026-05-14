@@ -986,12 +986,9 @@ define i32 @wb_in_loop(ptr %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH:%.*]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
-; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[COND_0:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP5]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP5]], [[TMP3:%.*]]
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP6]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
@@ -1013,7 +1010,7 @@ define i32 @wb_in_loop(ptr %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    [[WITHIN_BOUNDS2:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
 ; CHECK-NEXT:    [[WB_COND:%.*]] = and i1 [[WITHIN_BOUNDS2]], true
-; CHECK-NEXT:    br i1 true, label [[GUARDED2]], label [[DEOPT3:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[WB_COND]], label [[GUARDED2]], label [[DEOPT3:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt3:
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    [[DEOPTRET3:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]

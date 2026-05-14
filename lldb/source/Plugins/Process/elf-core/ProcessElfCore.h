@@ -172,8 +172,8 @@ private:
 
   lldb_private::UUID FindModuleUUID(const llvm::StringRef path) override;
 
-  // Returns the main executable path.
-  std::string GetMainExecutablePath();
+  // Extract the executable module spec for the executable in this core file.
+  bool GetMainExecutableModuleSpec(lldb_private::ModuleSpec &exe_spec);
 
   // Returns the value of certain type of note of a given start address
   lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address);
@@ -192,6 +192,12 @@ private:
   llvm::Error parseNetBSDNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
   llvm::Error parseOpenBSDNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
   llvm::Error parseLinuxNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
+
+  /// Find the NT_FILE entry that contains an address.
+  std::optional<NT_FILE_Entry>
+  GetNTFileEntryContainingAddress(lldb::addr_t addr);
+  /// Intelligently find the NT_FILE entry for the executable's ELF header.
+  std::optional<NT_FILE_Entry> GetNTFileEntryForExecutableELFHeader();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H

@@ -64,17 +64,25 @@ using namespace llvm::instrumentor;
 namespace {
 
 /// The user option to specify an output JSON file to write the configuration.
-static cl::opt<std::string> WriteConfigFile(
+static cl::opt<std::string> OutputConfigFile(
     "instrumentor-write-config-file",
     cl::desc(
         "Write the instrumentor configuration into the specified JSON file"),
     cl::init(""));
 
-/// The user option to specify an input JSON file to read the configuration.
-static cl::opt<std::string> ReadConfigFile(
-    "instrumentor-read-config-file",
-    cl::desc(
-        "Read the instrumentor configuration from the specified JSON file"),
+/// The user option to specify input JSON files to read the configuration from.
+static cl::list<std::string>
+    ConfigFiles("instrumentor-read-config-files",
+                cl::desc("Read the instrumentor configuration from the "
+                         "specified JSON files (comma separated)"),
+                cl::ZeroOrMore, cl::CommaSeparated);
+
+/// The user option to specify an input file to read the configuration file
+/// paths from.
+static cl::opt<std::string> ConfigPathsFile(
+    "instrumentor-read-config-paths-file",
+    cl::desc("Read the instrumentor configuration file "
+             "paths from the specified file (newline separated)"),
     cl::init(""));
 
 /// Set the debug location, if not set, after changing the insertion point of
@@ -132,12 +140,18 @@ public:
   /// Construct an instrumentor implementation using the configuration \p IConf.
   InstrumentorImpl(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
                    Module &M)
-      : IConf(IConf), M(M), IIRB(IIRB) {
-    IConf.populate(IIRB);
-  }
+      : IConf(IConf), M(M), IIRB(IIRB) {}
 
   /// Instrument the module, public entry point.
   bool instrument();
+
+  // Reset the state to allow reuse of the instrumentor with a different
+  // configuration.
+  void clear() {
+    InstChoicesPRE.clear();
+    InstChoicesPOST.clear();
+    ParsedFunctionRegex = Regex();
+  }
 
 private:
   /// Indicate if the module should be instrumented based on the target.
@@ -161,6 +175,9 @@ private:
   /// The instrumentor configuration.
   InstrumentationConfig &IConf;
 
+  /// The function regex filter, if any.
+  Regex ParsedFunctionRegex;
+
   /// The underlying module.
   Module &M;
 
@@ -171,22 +188,28 @@ protected:
 
 } // end anonymous namespace
 
+static Regex createRegex(StringRef Str, StringRef Name, LLVMContext &Ctx) {
+  if (!Str.empty()) {
+    Regex RX(Str);
+    std::string ErrMsg;
+    if (!RX.isValid(ErrMsg)) {
+      Ctx.diagnose(DiagnosticInfoInstrumentation(
+          Twine("failed to parse ") + Name + " regex: " + ErrMsg, DS_Error));
+      return Regex();
+    }
+    return RX;
+  }
+  return Regex();
+}
+
 bool InstrumentorImpl::shouldInstrumentTarget() {
   const Triple &T = M.getTargetTriple();
   const bool IsGPU = T.isAMDGPU() || T.isNVPTX();
 
   bool RegexMatches = true;
-  const auto TargetRegexStr = IConf.TargetRegex->getString();
-  if (!TargetRegexStr.empty()) {
-    llvm::Regex TargetRegex(TargetRegexStr);
-    std::string ErrMsg;
-    if (!TargetRegex.isValid(ErrMsg)) {
-      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
-          Twine("failed to parse target regex: ") + ErrMsg, DS_Warning));
-      return false;
-    }
-    RegexMatches = TargetRegex.match(T.str());
-  }
+  Regex RX = createRegex(IConf.TargetRegex->getString(), "target", IIRB.Ctx);
+  if (RX.isValid())
+    RegexMatches = RX.match(T.str());
 
   // Only instrument the module if the target has to be instrumented.
   return ((IsGPU && IConf.GPUEnabled->getBool()) ||
@@ -197,7 +220,10 @@ bool InstrumentorImpl::shouldInstrumentTarget() {
 bool InstrumentorImpl::shouldInstrumentFunction(Function &Fn) {
   if (Fn.isDeclaration())
     return false;
-  return !Fn.getName().starts_with(IConf.getRTName()) ||
+  bool RegexMatches = true;
+  if (ParsedFunctionRegex.isValid())
+    RegexMatches = ParsedFunctionRegex.match(Fn.getName());
+  return (RegexMatches && !Fn.getName().starts_with(IConf.getRTName())) ||
          Fn.hasFnAttribute("instrument");
 }
 
@@ -283,6 +309,9 @@ bool InstrumentorImpl::instrument() {
   if (!shouldInstrumentTarget())
     return Changed;
 
+  StringRef FunctionRegexStr = IConf.FunctionRegex->getString();
+  ParsedFunctionRegex = createRegex(FunctionRegexStr, "function", IIRB.Ctx);
+
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_PRE])
     if (IO->Enabled)
@@ -309,15 +338,39 @@ InstrumentorPass::InstrumentorPass(IntrusiveRefCntPtr<vfs::FileSystem> FS,
 PreservedAnalyses InstrumentorPass::run(Module &M, InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB,
                                         bool ReadConfig) {
+  bool Changed = false;
   InstrumentorImpl Impl(IConf, IIRB, M);
-  if (ReadConfig && !readConfigFromJSON(IConf, ReadConfigFile, IIRB.Ctx, *FS))
-    return PreservedAnalyses::all();
 
-  writeConfigToJSON(IConf, WriteConfigFile, IIRB.Ctx);
+  // If this is a configuration driven run, iterate over all configurations
+  // provided by the user, if not, use the config as is and run the instrumentor
+  // once.
+  if (ReadConfig)
+    readConfigPathsFile(ConfigPathsFile, ConfigFiles, IIRB.Ctx, *FS);
 
-  printRuntimeStub(IConf, IConf.RuntimeStubsFile->getString(), IIRB.Ctx);
+  bool MultipleConfigs = ConfigFiles.size() > 1;
+  unsigned Idx = 0;
+  do {
+    std::string ConfigFile =
+        ReadConfig && !ConfigFiles.empty() ? ConfigFiles[Idx] : "";
 
-  bool Changed = Impl.instrument();
+    // Initialize the config to the base state but keep the caches around.
+    Impl.clear();
+    IConf.init(IIRB);
+
+    if (!readConfigFromJSON(IConf, ConfigFile, IIRB.Ctx, *FS))
+      continue;
+
+    writeConfigToJSON(IConf,
+                      MultipleConfigs
+                          ? OutputConfigFile + "." + std::to_string(Idx)
+                          : OutputConfigFile,
+                      IIRB.Ctx);
+
+    printRuntimeStub(IConf, IConf.RuntimeStubsFile->getString(), IIRB.Ctx);
+
+    Changed |= Impl.instrument();
+  } while (++Idx < ConfigFiles.size());
+
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
@@ -366,6 +419,7 @@ void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   /// List of all instrumentation opportunities.
   FunctionIO::populate(*this, IIRB);
   AllocaIO::populate(*this, IIRB);
+  UnreachableIO::populate(*this, IIRB);
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
 }
@@ -754,6 +808,17 @@ Value *FunctionIO::isMainFunction(Value &V, Type &Ty,
   return getCI(&Ty, Fn.getName() == "main");
 }
 
+///}
+
+/// UnreachableIO
+///{
+void UnreachableIO::init(InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
 ///}
 
 /// AllocaIO

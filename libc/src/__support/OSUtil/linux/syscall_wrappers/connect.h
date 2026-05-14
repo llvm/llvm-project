@@ -16,7 +16,6 @@
 
 #include "hdr/types/socklen_t.h"
 #include "hdr/types/struct_sockaddr.h"
-#include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
@@ -24,19 +23,7 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> connect(int sockfd, const struct sockaddr *addr,
                                  socklen_t addrlen) {
-#ifdef SYS_connect
-  int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_connect, sockfd, addr, addrlen);
-#elif defined(SYS_socketcall)
-  unsigned long sockcall_args[3] = {static_cast<unsigned long>(sockfd),
-                                    reinterpret_cast<unsigned long>(addr),
-                                    static_cast<unsigned long>(addrlen)};
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_CONNECT,
-                                              sockcall_args);
-#else
-#error "socket and socketcall syscalls unavailable for this platform."
-#endif
-
+  int ret = syscall_impl<int>(SYS_connect, sockfd, addr, addrlen);
   if (ret < 0)
     return Error(-static_cast<int>(ret));
   return ret;

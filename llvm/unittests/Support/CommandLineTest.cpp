@@ -1015,7 +1015,7 @@ TEST(CommandLineTest, ResponseFiles) {
 TEST(CommandLineTest, RecursiveResponseFiles) {
   vfs::InMemoryFileSystem FS;
 #ifdef _WIN32
-  const char *TestRoot = "C:\\";
+  const char *TestRoot = LLVM_WINDOWS_PREFER_FORWARD_SLASH ? "C:/" : "C:\\";
 #else
   const char *TestRoot = "/";
 #endif
@@ -1085,7 +1085,7 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 TEST(CommandLineTest, ResponseFilesAtArguments) {
   vfs::InMemoryFileSystem FS;
 #ifdef _WIN32
-  const char *TestRoot = "C:\\";
+  const char *TestRoot = LLVM_WINDOWS_PREFER_FORWARD_SLASH ? "C:/" : "C:\\";
 #else
   const char *TestRoot = "/";
 #endif

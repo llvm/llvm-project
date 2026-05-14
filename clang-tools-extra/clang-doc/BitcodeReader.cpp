@@ -12,6 +12,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <utility>
 
 namespace clang {
 namespace doc {
@@ -36,9 +37,15 @@ static llvm::Error decodeRecord(const Record &R, llvm::StringRef &Field,
 
 static llvm::Error decodeRecord(const Record &R, SymbolID &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for SymbolID");
   if (R[0] != BitCodeConstants::USRHashSize)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "incorrect USR size");
+  if (R.size() < R[0] + 1)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "record too short for SymbolID");
 
   // First position in the record is the length of the following array, so we
   // copy the following elements to the field.
@@ -49,12 +56,18 @@ static llvm::Error decodeRecord(const Record &R, SymbolID &Field,
 
 static llvm::Error decodeRecord(const Record &R, bool &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for bool");
   Field = R[0] != 0;
   return llvm::Error::success();
 }
 
 static llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for AccessSpecifier");
   switch (R[0]) {
   case AS_public:
   case AS_private:
@@ -68,6 +81,9 @@ static llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
 
 static llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for TagTypeKind");
   switch (static_cast<TagTypeKind>(R[0])) {
   case TagTypeKind::Struct:
   case TagTypeKind::Interface:
@@ -83,6 +99,9 @@ static llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
 
 static llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
                                 llvm::StringRef Blob) {
+  if (R.size() < 3)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "record too short for Location");
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
@@ -93,6 +112,9 @@ static llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
 
 static llvm::Error decodeRecord(const Record &R, InfoType &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for InfoType");
   switch (auto IT = static_cast<InfoType>(R[0])) {
   case InfoType::IT_namespace:
   case InfoType::IT_record:
@@ -112,6 +134,9 @@ static llvm::Error decodeRecord(const Record &R, InfoType &Field,
 
 static llvm::Error decodeRecord(const Record &R, FieldId &Field,
                                 llvm::StringRef Blob) {
+  if (R.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty record for FieldId");
   switch (auto F = static_cast<FieldId>(R[0])) {
   case FieldId::F_namespace:
   case FieldId::F_parent:
@@ -129,14 +154,18 @@ static llvm::Error decodeRecord(const Record &R, FieldId &Field,
                                  "invalid value for FieldId");
 }
 
-static llvm::Error decodeRecord(const Record &R,
-                                llvm::SmallVectorImpl<Location> &Field,
+static llvm::Error decodeRecord(const Record &R, OwningVec<Location> &Field,
                                 llvm::StringRef Blob) {
+  if (R.size() < 3)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "record too short for Location");
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
-  Field.emplace_back(static_cast<int>(R[0]), static_cast<int>(R[1]), Blob,
-                     static_cast<bool>(R[2]));
+
+  Field.push_back(*allocateListNodeTransient<Location>(
+      static_cast<int>(R[0]), static_cast<int>(R[1]), Blob,
+      static_cast<bool>(R[2])));
   return llvm::Error::success();
 }
 
@@ -425,6 +454,99 @@ ClangDocBitcodeReader::parseBlock(unsigned ID, T I, BlockBeginHandler &&BBH,
   }
 }
 
+template <typename T, typename BlockBeginHandler, typename BlockEndHandler>
+llvm::Error ClangDocBitcodeReader::parseBlock(unsigned ID, T I,
+                                              BlockBeginHandler &&BBH,
+                                              BlockEndHandler &&BEH) {
+  return parseBlock(ID, I, std::forward<BlockBeginHandler>(BBH),
+                    std::forward<BlockEndHandler>(BEH),
+                    [&](unsigned Code) { return readRecord(Code, I); });
+}
+
+template <typename ChildType>
+llvm::Expected<bool> ClangDocBitcodeReader::readSubBlockIfMatch(
+    unsigned ID, unsigned TargetID, llvm::SmallVectorImpl<ChildType> &V) {
+  if (ID != TargetID)
+    return false;
+  ChildType Val;
+  if (auto Err = readBlock(ID, &Val))
+    return std::move(Err);
+  V.push_back(std::move(Val));
+  return true;
+}
+
+template <typename T>
+static llvm::Error addReference(T I, Reference &&R, FieldId F);
+
+template <> llvm::Error addReference(VarInfo *I, Reference &&R, FieldId F);
+template <> llvm::Error addReference(TypeInfo *I, Reference &&R, FieldId F);
+template <>
+llvm::Error addReference(FieldTypeInfo *I, Reference &&R, FieldId F);
+template <>
+llvm::Error addReference(MemberTypeInfo *I, Reference &&R, FieldId F);
+template <> llvm::Error addReference(EnumInfo *I, Reference &&R, FieldId F);
+template <> llvm::Error addReference(TypedefInfo *I, Reference &&R, FieldId F);
+template <>
+llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F);
+template <> llvm::Error addReference(FunctionInfo *I, Reference &&R, FieldId F);
+template <> llvm::Error addReference(RecordInfo *I, Reference &&R, FieldId F);
+template <>
+llvm::Error addReference(ConstraintInfo *I, Reference &&R, FieldId F);
+template <>
+llvm::Error addReference(FriendInfo *Friend, Reference &&R, FieldId F);
+
+template <typename InfoT>
+llvm::Expected<bool> ClangDocBitcodeReader::routeReferenceBlock(
+    unsigned ID, llvm::SmallVectorImpl<Reference> &Namespaces, InfoT *I,
+    std::initializer_list<ReferenceMap> Mappings) {
+  if (ID != BI_REFERENCE_BLOCK_ID)
+    return false;
+  Reference R;
+  if (auto Err = readBlock(ID, &R))
+    return std::move(Err);
+
+  for (const auto &Map : Mappings) {
+    if (CurrentReferenceField == Map.Field) {
+      Map.Vec->push_back(std::move(R));
+      return true;
+    }
+  }
+
+  if (CurrentReferenceField == FieldId::F_namespace) {
+    Namespaces.push_back(std::move(R));
+    return true;
+  }
+
+  if (auto Err = addReference(I, std::move(R), CurrentReferenceField))
+    return std::move(Err);
+
+  return true;
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FunctionInfo *I);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, EnumInfo *I);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, BaseRecordInfo *I);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, RecordInfo *I);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, TemplateInfo *I);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID,
+                                             TemplateSpecializationInfo *I);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, VarInfo *I);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, TypedefInfo *I);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, NamespaceInfo *I);
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FriendInfo *I);
+
 template <>
 llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I) {
   llvm::SmallVector<CommentInfo> LocalChildren;
@@ -448,25 +570,13 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I) {
         if (!LocalChildren.empty())
           I->Children =
               allocateArray<CommentInfo>(LocalChildren, TransientArena);
-        if (!AttrKeys.empty()) {
-          StringRef *KeysMem =
-              TransientArena.Allocate<StringRef>(AttrKeys.size());
-          std::uninitialized_copy(AttrKeys.begin(), AttrKeys.end(), KeysMem);
-          I->AttrKeys = llvm::ArrayRef<StringRef>(KeysMem, AttrKeys.size());
-        }
-        if (!AttrValues.empty()) {
-          StringRef *ValuesMem =
-              TransientArena.Allocate<StringRef>(AttrValues.size());
-          std::uninitialized_copy(AttrValues.begin(), AttrValues.end(),
-                                  ValuesMem);
-          I->AttrValues =
-              llvm::ArrayRef<StringRef>(ValuesMem, AttrValues.size());
-        }
-        if (!Args.empty()) {
-          StringRef *ArgsMem = TransientArena.Allocate<StringRef>(Args.size());
-          std::uninitialized_copy(Args.begin(), Args.end(), ArgsMem);
-          I->Args = llvm::ArrayRef<StringRef>(ArgsMem, Args.size());
-        }
+        if (!AttrKeys.empty())
+          I->AttrKeys = allocateArray(AttrKeys, TransientArena);
+        if (!AttrValues.empty())
+          I->AttrValues = allocateArray(AttrValues, TransientArena);
+        if (!Args.empty())
+          I->Args = allocateArray(Args, TransientArena);
+
         return llvm::Error::success();
       },
       [&](unsigned BlockOrCode) -> llvm::Error {
@@ -478,6 +588,219 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I) {
           return MaybeRecID.takeError();
         return parseRecord(R, MaybeRecID.get(), Blob, I, AttrKeys, AttrValues,
                            Args);
+      });
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FunctionInfo *I) {
+  llvm::SmallVector<FieldTypeInfo, 4> LocalParams;
+  llvm::SmallVector<Reference> LocalNamespaces;
+
+  return parseBlock(
+      ID, I,
+      [&](unsigned BlockOrCode) -> llvm::Expected<bool> {
+        auto B = readSubBlockIfMatch(BlockOrCode, BI_FIELD_TYPE_BLOCK_ID,
+                                     LocalParams);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+        return routeReferenceBlock(BlockOrCode, LocalNamespaces, I);
+      },
+      [&]() -> llvm::Error {
+        I->Params = allocateArray(LocalParams, TransientArena);
+        if (!LocalNamespaces.empty())
+          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
+        return llvm::Error::success();
+      });
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, EnumInfo *I) {
+  llvm::SmallVector<EnumValueInfo, 4> LocalMembers;
+  llvm::SmallVector<Reference> LocalNamespaces;
+
+  return parseBlock(
+      ID, I,
+      [&](unsigned BlockOrCode) -> llvm::Expected<bool> {
+        auto B = readSubBlockIfMatch(BlockOrCode, BI_ENUM_VALUE_BLOCK_ID,
+                                     LocalMembers);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+        return routeReferenceBlock(BlockOrCode, LocalNamespaces, I);
+      },
+      [&]() -> llvm::Error {
+        I->Members = allocateArray(LocalMembers, TransientArena);
+        if (!LocalNamespaces.empty())
+          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
+        return llvm::Error::success();
+      });
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, BaseRecordInfo *I) {
+  // BaseRecordInfo and FriendInfo are over 256 bytes and require a size.
+  llvm::SmallVector<BaseRecordInfo, 4> LocalBases;
+  llvm::SmallVector<FriendInfo, 4> LocalFriends;
+  llvm::SmallVector<MemberTypeInfo> LocalMembers;
+  llvm::SmallVector<Reference> LocalParents;
+  llvm::SmallVector<Reference> LocalVirtualParents;
+
+  return parseBlock(
+      ID, I,
+      [&](unsigned BlockOrCode) -> llvm::Expected<bool> {
+        auto B = readSubBlockIfMatch(BlockOrCode, BI_MEMBER_TYPE_BLOCK_ID,
+                                     LocalMembers);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+
+        B = readSubBlockIfMatch(BlockOrCode, BI_BASE_RECORD_BLOCK_ID,
+                                LocalBases);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+
+        B = readSubBlockIfMatch(BlockOrCode, BI_FRIEND_BLOCK_ID, LocalFriends);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+
+        llvm::SmallVector<Reference> Dummy;
+        return routeReferenceBlock(
+            BlockOrCode, Dummy, I,
+            {{FieldId::F_parent, &LocalParents},
+             {FieldId::F_vparent, &LocalVirtualParents}});
+      },
+      [&]() -> llvm::Error {
+        if (!LocalMembers.empty())
+          I->Members = allocateArray(LocalMembers, TransientArena);
+        if (!LocalParents.empty())
+          I->Parents = allocateArray(LocalParents, TransientArena);
+        if (!LocalVirtualParents.empty())
+          I->VirtualParents =
+              allocateArray(LocalVirtualParents, TransientArena);
+        I->Bases = allocateArray(LocalBases, TransientArena);
+        I->Friends = allocateArray(LocalFriends, TransientArena);
+        return llvm::Error::success();
+      });
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, RecordInfo *I) {
+  llvm::SmallVector<BaseRecordInfo, 4> LocalBases;
+  llvm::SmallVector<FriendInfo, 4> LocalFriends;
+  llvm::SmallVector<MemberTypeInfo> LocalMembers;
+  llvm::SmallVector<Reference> LocalParents;
+  llvm::SmallVector<Reference> LocalVirtualParents;
+  llvm::SmallVector<Reference> LocalNamespaces;
+
+  return parseBlock(
+      ID, I,
+      [&](unsigned BlockOrCode) -> llvm::Expected<bool> {
+        auto B = readSubBlockIfMatch(BlockOrCode, BI_MEMBER_TYPE_BLOCK_ID,
+                                     LocalMembers);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+
+        B = readSubBlockIfMatch(BlockOrCode, BI_BASE_RECORD_BLOCK_ID,
+                                LocalBases);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+
+        B = readSubBlockIfMatch(BlockOrCode, BI_FRIEND_BLOCK_ID, LocalFriends);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+
+        return routeReferenceBlock(
+            BlockOrCode, LocalNamespaces, I,
+            {{FieldId::F_parent, &LocalParents},
+             {FieldId::F_vparent, &LocalVirtualParents}});
+      },
+      [&]() -> llvm::Error {
+        if (!LocalMembers.empty())
+          I->Members = allocateArray(LocalMembers, TransientArena);
+        if (!LocalParents.empty())
+          I->Parents = allocateArray(LocalParents, TransientArena);
+        if (!LocalVirtualParents.empty())
+          I->VirtualParents =
+              allocateArray(LocalVirtualParents, TransientArena);
+        if (!LocalNamespaces.empty())
+          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
+        I->Bases = allocateArray(LocalBases, TransientArena);
+        I->Friends = allocateArray(LocalFriends, TransientArena);
+        return llvm::Error::success();
+      });
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, TemplateInfo *I) {
+  llvm::SmallVector<TemplateParamInfo> LocalParams;
+  llvm::SmallVector<ConstraintInfo> LocalConstraints;
+
+  return parseBlock(
+      ID, I,
+      [&](unsigned BlockOrCode) -> llvm::Expected<bool> {
+        auto B = readSubBlockIfMatch(BlockOrCode, BI_TEMPLATE_PARAM_BLOCK_ID,
+                                     LocalParams);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+
+        B = readSubBlockIfMatch(BlockOrCode, BI_CONSTRAINT_BLOCK_ID,
+                                LocalConstraints);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+
+        return false;
+      },
+      [&]() -> llvm::Error {
+        I->Params = allocateArray(LocalParams, TransientArena);
+        I->Constraints = allocateArray(LocalConstraints, TransientArena);
+        return llvm::Error::success();
+      },
+      [&](unsigned BlockOrCode) -> llvm::Error {
+        return readRecord(BlockOrCode, I);
+      });
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID,
+                                             TemplateSpecializationInfo *I) {
+  llvm::SmallVector<TemplateParamInfo> LocalParams;
+
+  return parseBlock(
+      ID, I,
+      [&](unsigned BlockOrCode) -> llvm::Expected<bool> {
+        auto B = readSubBlockIfMatch(BlockOrCode, BI_TEMPLATE_PARAM_BLOCK_ID,
+                                     LocalParams);
+        if (!B)
+          return B.takeError();
+        if (*B)
+          return true;
+
+        return false;
+      },
+      [&]() -> llvm::Error {
+        I->Params = allocateArray(LocalParams, TransientArena);
+        return llvm::Error::success();
+      },
+      [&](unsigned BlockOrCode) -> llvm::Error {
+        return readRecord(BlockOrCode, I);
       });
 }
 
@@ -579,49 +902,23 @@ static llvm::Error parseRecord(const Record &R, unsigned ID, StringRef Blob,
                                  "invalid field for Friend");
 }
 
+template <typename, typename = void>
+struct has_description : std::false_type {};
+template <typename T>
+struct has_description<T, std::void_t<decltype(std::declval<T>().Description)>>
+    : std::true_type {};
+
 template <typename T> static llvm::Expected<CommentInfo *> getCommentInfo(T I) {
+  if constexpr (std::is_pointer_v<T>) {
+    using Pointee = std::remove_pointer_t<T>;
+    if constexpr (has_description<Pointee>::value) {
+      auto *NewComment = allocateListNodeTransient<CommentInfo>();
+      I->Description.push_back(*NewComment);
+      return NewComment->Ptr;
+    }
+  }
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid type cannot contain CommentInfo");
-}
-
-template <> llvm::Expected<CommentInfo *> getCommentInfo(FunctionInfo *I) {
-  return &I->Description.emplace_back();
-}
-
-template <> llvm::Expected<CommentInfo *> getCommentInfo(NamespaceInfo *I) {
-  return &I->Description.emplace_back();
-}
-
-template <> llvm::Expected<CommentInfo *> getCommentInfo(RecordInfo *I) {
-  return &I->Description.emplace_back();
-}
-
-template <> llvm::Expected<CommentInfo *> getCommentInfo(MemberTypeInfo *I) {
-  return &I->Description.emplace_back();
-}
-
-template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumInfo *I) {
-  return &I->Description.emplace_back();
-}
-
-template <> llvm::Expected<CommentInfo *> getCommentInfo(TypedefInfo *I) {
-  return &I->Description.emplace_back();
-}
-
-template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumValueInfo *I) {
-  return &I->Description.emplace_back();
-}
-
-template <> llvm::Expected<CommentInfo *> getCommentInfo(ConceptInfo *I) {
-  return &I->Description.emplace_back();
-}
-
-template <> Expected<CommentInfo *> getCommentInfo(VarInfo *I) {
-  return &I->Description.emplace_back();
-}
-
-template <> Expected<CommentInfo *> getCommentInfo(FriendInfo *I) {
-  return &I->Description.emplace_back();
 }
 
 // When readSubBlock encounters a TypeInfo sub-block, it calls addTypeInfo on
@@ -633,23 +930,8 @@ static llvm::Error addTypeInfo(T I, TTypeInfo &&TI) {
                                  "invalid type cannot contain TypeInfo");
 }
 
-template <> llvm::Error addTypeInfo(RecordInfo *I, MemberTypeInfo &&T) {
-  I->Members.emplace_back(std::move(T));
-  return llvm::Error::success();
-}
-
-template <> llvm::Error addTypeInfo(BaseRecordInfo *I, MemberTypeInfo &&T) {
-  I->Members.emplace_back(std::move(T));
-  return llvm::Error::success();
-}
-
 template <> llvm::Error addTypeInfo(FunctionInfo *I, TypeInfo &&T) {
   I->ReturnType = std::move(T);
-  return llvm::Error::success();
-}
-
-template <> llvm::Error addTypeInfo(FunctionInfo *I, FieldTypeInfo &&T) {
-  I->Params.emplace_back(std::move(T));
   return llvm::Error::success();
 }
 
@@ -681,9 +963,6 @@ static llvm::Error addReference(T I, Reference &&R, FieldId F) {
 
 template <> llvm::Error addReference(VarInfo *I, Reference &&R, FieldId F) {
   switch (F) {
-  case FieldId::F_namespace:
-    I->Namespace.emplace_back(std::move(R));
-    return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "VarInfo cannot contain this Reference");
@@ -727,9 +1006,6 @@ llvm::Error addReference(MemberTypeInfo *I, Reference &&R, FieldId F) {
 
 template <> llvm::Error addReference(EnumInfo *I, Reference &&R, FieldId F) {
   switch (F) {
-  case FieldId::F_namespace:
-    I->Namespace.emplace_back(std::move(R));
-    return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid type cannot contain Reference");
@@ -738,9 +1014,6 @@ template <> llvm::Error addReference(EnumInfo *I, Reference &&R, FieldId F) {
 
 template <> llvm::Error addReference(TypedefInfo *I, Reference &&R, FieldId F) {
   switch (F) {
-  case FieldId::F_namespace:
-    I->Namespace.emplace_back(std::move(R));
-    return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid type cannot contain Reference");
@@ -750,16 +1023,13 @@ template <> llvm::Error addReference(TypedefInfo *I, Reference &&R, FieldId F) {
 template <>
 llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
   switch (F) {
-  case FieldId::F_namespace:
-    I->Namespace.emplace_back(std::move(R));
+  case FieldId::F_child_namespace:
+    I->Children.Namespaces.push_back(
+        *allocateListNodeTransient<Reference>(std::move(R)));
     return llvm::Error::success();
-  case FieldId::F_child_namespace: {
-    Reference *NewR = allocatePtr<Reference>(TransientArena, std::move(R));
-    I->Children.Namespaces.push_back(*NewR);
-    return llvm::Error::success();
-  }
   case FieldId::F_child_record:
-    I->Children.Records.emplace_back(std::move(R));
+    I->Children.Records.push_back(
+        *allocateListNodeTransient<Reference>(std::move(R)));
     return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -770,9 +1040,6 @@ llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
 template <>
 llvm::Error addReference(FunctionInfo *I, Reference &&R, FieldId F) {
   switch (F) {
-  case FieldId::F_namespace:
-    I->Namespace.emplace_back(std::move(R));
-    return llvm::Error::success();
   case FieldId::F_parent:
     I->Parent = std::move(R);
     return llvm::Error::success();
@@ -784,17 +1051,9 @@ llvm::Error addReference(FunctionInfo *I, Reference &&R, FieldId F) {
 
 template <> llvm::Error addReference(RecordInfo *I, Reference &&R, FieldId F) {
   switch (F) {
-  case FieldId::F_namespace:
-    I->Namespace.emplace_back(std::move(R));
-    return llvm::Error::success();
-  case FieldId::F_parent:
-    I->Parents.emplace_back(std::move(R));
-    return llvm::Error::success();
-  case FieldId::F_vparent:
-    I->VirtualParents.emplace_back(std::move(R));
-    return llvm::Error::success();
   case FieldId::F_child_record:
-    I->Children.Records.emplace_back(std::move(R));
+    I->Children.Records.push_back(
+        *allocateListNodeTransient<Reference>(std::move(R)));
     return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -823,52 +1082,54 @@ llvm::Error addReference(FriendInfo *Friend, Reference &&R, FieldId F) {
                                  "Friend cannot contain this Reference");
 }
 
-template <typename T, typename ChildInfoType>
-static void addChild(T I, ChildInfoType &&R) {
+static auto &getList(ScopeChildren &C, FunctionInfo *) { return C.Functions; }
+static auto &getList(ScopeChildren &C, EnumInfo *) { return C.Enums; }
+static auto &getList(ScopeChildren &C, TypedefInfo *) { return C.Typedefs; }
+static auto &getList(ScopeChildren &C, ConceptInfo *) { return C.Concepts; }
+static auto &getList(ScopeChildren &C, VarInfo *) { return C.Variables; }
+
+template <typename T, typename = void> struct has_children : std::false_type {};
+template <typename T>
+struct has_children<T, std::void_t<decltype(std::declval<T>().Children)>>
+    : std::is_same<decltype(std::declval<T>().Children), ScopeChildren> {};
+
+template <typename TargetChild, typename = void>
+struct is_valid_child : std::false_type {};
+template <typename TargetChild>
+struct is_valid_child<
+    TargetChild, std::void_t<decltype(getList(std::declval<ScopeChildren &>(),
+                                              std::declval<TargetChild *>()))>>
+    : std::true_type {};
+
+template <typename Target, typename Child>
+static void addChild(Target I, Child &&R) {
+  if constexpr (std::is_pointer_v<Target>) {
+    using Pointee = std::remove_pointer_t<Target>;
+    if constexpr (has_children<Pointee>::value) {
+      using BareChild = std::remove_cv_t<std::remove_reference_t<Child>>;
+      if constexpr (is_valid_child<BareChild>::value) {
+        auto *Node = allocatePtr<BareChild>(std::forward<Child>(R));
+        getList(I->Children, Node).push_back(*allocateListNodeTransient(Node));
+        return;
+      }
+    }
+  }
   ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
                                     "invalid child type for info"));
 }
 
-// Namespace children:
-template <> void addChild(NamespaceInfo *I, FunctionInfo &&R) {
-  I->Children.Functions.emplace_back(std::move(R));
-}
-template <> void addChild(NamespaceInfo *I, EnumInfo &&R) {
-  I->Children.Enums.emplace_back(std::move(R));
-}
-template <> void addChild(NamespaceInfo *I, TypedefInfo &&R) {
-  I->Children.Typedefs.emplace_back(std::move(R));
-}
-template <> void addChild(NamespaceInfo *I, ConceptInfo &&R) {
-  I->Children.Concepts.emplace_back(std::move(R));
-}
-template <> void addChild(NamespaceInfo *I, VarInfo &&R) {
-  I->Children.Variables.emplace_back(std::move(R));
-}
-
-// Record children:
-template <> void addChild(RecordInfo *I, FunctionInfo &&R) {
-  I->Children.Functions.emplace_back(std::move(R));
-}
-template <> void addChild(RecordInfo *I, EnumInfo &&R) {
-  I->Children.Enums.emplace_back(std::move(R));
-}
-template <> void addChild(RecordInfo *I, TypedefInfo &&R) {
-  I->Children.Typedefs.emplace_back(std::move(R));
-}
-template <> void addChild(RecordInfo *I, FriendInfo &&R) {
-  I->Friends.emplace_back(std::move(R));
-}
-
-// Other types of children:
-template <> void addChild(EnumInfo *I, EnumValueInfo &&R) {
-  I->Members.emplace_back(std::move(R));
-}
-template <> void addChild(RecordInfo *I, BaseRecordInfo &&R) {
-  I->Bases.emplace_back(std::move(R));
-}
-template <> void addChild(BaseRecordInfo *I, FunctionInfo &&R) {
-  I->Children.Functions.emplace_back(std::move(R));
+template <typename Target, typename Child>
+static void addChildPtr(Target I, Child *Node) {
+  if constexpr (std::is_pointer_v<Target>) {
+    using Pointee = std::remove_pointer_t<Target>;
+    if constexpr (has_children<Pointee>::value &&
+                  is_valid_child<Child>::value) {
+      getList(I->Children, Node).push_back(*allocateListNodeTransient(Node));
+      return;
+    }
+  }
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid child type for info"));
 }
 
 // TemplateParam children. These go into either a TemplateInfo (for template
@@ -878,13 +1139,6 @@ template <typename T> static void addTemplateParam(T I, TemplateParamInfo &&P) {
   ExitOnErr(
       llvm::createStringError(llvm::inconvertibleErrorCode(),
                               "invalid container for template parameter"));
-}
-template <> void addTemplateParam(TemplateInfo *I, TemplateParamInfo &&P) {
-  I->Params.emplace_back(std::move(P));
-}
-template <>
-void addTemplateParam(TemplateSpecializationInfo *I, TemplateParamInfo &&P) {
-  I->Params.emplace_back(std::move(P));
 }
 
 // Template info. These apply to either records or functions.
@@ -925,9 +1179,6 @@ template <typename T> static void addConstraint(T I, ConstraintInfo &&C) {
   ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
                                     "invalid container for constraint info"));
 }
-template <> void addConstraint(TemplateInfo *I, ConstraintInfo &&C) {
-  I->Constraints.emplace_back(std::move(C));
-}
 
 // Read records from bitcode into a given info.
 template <typename T>
@@ -952,6 +1203,37 @@ llvm::Error ClangDocBitcodeReader::readRecord(unsigned ID, Reference *I) {
 }
 
 // Read a block of records into a single info.
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, VarInfo *I) {
+  return readBlockWithNamespace(ID, I);
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, TypedefInfo *I) {
+  return readBlockWithNamespace(ID, I);
+}
+
+template <>
+llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, NamespaceInfo *I) {
+  return readBlockWithNamespace(ID, I);
+}
+
+template <typename T>
+llvm::Error ClangDocBitcodeReader::readBlockWithNamespace(unsigned ID, T I) {
+  llvm::SmallVector<Reference> LocalNamespaces;
+  return parseBlock(
+      ID, I,
+      [&](unsigned BlockOrCode) -> llvm::Expected<bool> {
+        return routeReferenceBlock(BlockOrCode, LocalNamespaces, I);
+      },
+      [&]() -> llvm::Error {
+        if (!LocalNamespaces.empty())
+          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
+        return llvm::Error::success();
+      });
+}
+
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
   return parseBlock(
@@ -969,13 +1251,13 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FriendInfo *I) {
   return parseBlock(
       ID, I,
       [&](unsigned BlockOrCode) -> llvm::Expected<bool> {
-        if (BlockOrCode == BI_FIELD_TYPE_BLOCK_ID) {
-          FieldTypeInfo FI;
-          if (auto Err = readBlock(BlockOrCode, &FI))
-            return std::move(Err);
-          LocalParams.push_back(std::move(FI));
+        auto B = readSubBlockIfMatch(BlockOrCode, BI_FIELD_TYPE_BLOCK_ID,
+                                     LocalParams);
+        if (!B)
+          return B.takeError();
+        if (*B)
           return true;
-        }
+
         return false;
       },
       [&]() -> llvm::Error {
@@ -988,26 +1270,27 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FriendInfo *I) {
       });
 }
 
-// TODO: fix inconsistentent returning of errors in add callbacks.
-// Once that's fixed, we only need one handleSubBlock.
 template <typename InfoType, typename T, typename Callback>
 llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent,
                                                   Callback Function) {
   InfoType Info;
   if (auto Err = readBlock(ID, &Info))
     return Err;
-  Function(Parent, std::move(Info));
-  return llvm::Error::success();
+  if constexpr (std::is_void_v<
+                    std::invoke_result_t<Callback, T, InfoType &&>>) {
+    Function(Parent, std::move(Info));
+    return llvm::Error::success();
+  } else {
+    return Function(Parent, std::move(Info));
+  }
 }
 
-template <typename InfoType, typename T, typename Callback>
-llvm::Error ClangDocBitcodeReader::handleTypeSubBlock(unsigned ID, T Parent,
-                                                      Callback Function) {
-  InfoType Info;
-  if (auto Err = readBlock(ID, &Info))
+template <typename InfoType, typename T>
+llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent) {
+  InfoType *Info = allocatePtr<InfoType>();
+  if (auto Err = readBlock(ID, Info))
     return Err;
-  if (auto Err = Function(Parent, std::move(Info)))
-    return Err;
+  addChildPtr(Parent, Info);
   return llvm::Error::success();
 }
 
@@ -1032,15 +1315,15 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     return llvm::Error::success();
   }
   case BI_TYPE_BLOCK_ID: {
-    return handleTypeSubBlock<TypeInfo>(
-        ID, I, CreateAddFunc(addTypeInfo<T, TypeInfo>));
+    return handleSubBlock<TypeInfo>(ID, I,
+                                    CreateAddFunc(addTypeInfo<T, TypeInfo>));
   }
   case BI_FIELD_TYPE_BLOCK_ID: {
-    return handleTypeSubBlock<FieldTypeInfo>(
+    return handleSubBlock<FieldTypeInfo>(
         ID, I, CreateAddFunc(addTypeInfo<T, FieldTypeInfo>));
   }
   case BI_MEMBER_TYPE_BLOCK_ID: {
-    return handleTypeSubBlock<MemberTypeInfo>(
+    return handleSubBlock<MemberTypeInfo>(
         ID, I, CreateAddFunc(addTypeInfo<T, MemberTypeInfo>));
   }
   case BI_REFERENCE_BLOCK_ID: {
@@ -1052,16 +1335,14 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     return llvm::Error::success();
   }
   case BI_FUNCTION_BLOCK_ID: {
-    return handleSubBlock<FunctionInfo>(
-        ID, I, CreateAddFunc(addChild<T, FunctionInfo>));
+    return handleSubBlock<FunctionInfo>(ID, I);
   }
   case BI_BASE_RECORD_BLOCK_ID: {
     return handleSubBlock<BaseRecordInfo>(
         ID, I, CreateAddFunc(addChild<T, BaseRecordInfo>));
   }
   case BI_ENUM_BLOCK_ID: {
-    return handleSubBlock<EnumInfo>(ID, I,
-                                    CreateAddFunc(addChild<T, EnumInfo>));
+    return handleSubBlock<EnumInfo>(ID, I);
   }
   case BI_ENUM_VALUE_BLOCK_ID: {
     return handleSubBlock<EnumValueInfo>(
@@ -1079,19 +1360,17 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
         ID, I, CreateAddFunc(addTemplateParam<T>));
   }
   case BI_TYPEDEF_BLOCK_ID: {
-    return handleSubBlock<TypedefInfo>(ID, I,
-                                       CreateAddFunc(addChild<T, TypedefInfo>));
+    return handleSubBlock<TypedefInfo>(ID, I);
   }
   case BI_CONSTRAINT_BLOCK_ID: {
     return handleSubBlock<ConstraintInfo>(ID, I,
                                           CreateAddFunc(addConstraint<T>));
   }
   case BI_CONCEPT_BLOCK_ID: {
-    return handleSubBlock<ConceptInfo>(ID, I,
-                                       CreateAddFunc(addChild<T, ConceptInfo>));
+    return handleSubBlock<ConceptInfo>(ID, I);
   }
   case BI_VAR_BLOCK_ID: {
-    return handleSubBlock<VarInfo>(ID, I, CreateAddFunc(addChild<T, VarInfo>));
+    return handleSubBlock<VarInfo>(ID, I);
   }
   case BI_FRIEND_BLOCK_ID: {
     return handleSubBlock<FriendInfo>(ID, I,

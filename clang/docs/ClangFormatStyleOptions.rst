@@ -3694,6 +3694,38 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakBeforeReturnType:
+
+**BreakBeforeReturnType** (``BreakBeforeReturnTypeStyle``) :versionbadge:`clang-format 23` :ref:`¶ <BreakBeforeReturnType>`
+  The function declaration/definition return type breaking style to use.
+  Trailing return types (``auto f() -> T``) are not affected. To have
+  identifier macros (e.g. ``__always_inline``) treated as specifiers,
+  add them to ``AttributeMacros``.
+
+  Possible values:
+
+  * ``BBRTS_None`` (in configuration: ``None``)
+    Do not force a break before the return type.
+
+  * ``BBRTS_All`` (in configuration: ``All``)
+    Always break before the return type.
+
+    .. code-block:: c++
+
+      static inline
+      void f();
+
+  * ``BBRTS_TopLevel`` (in configuration: ``TopLevel``)
+    Break before the return type of top-level functions only.
+
+  * ``BBRTS_AllDefinitions`` (in configuration: ``AllDefinitions``)
+    Break before the return type of function definitions only.
+
+  * ``BBRTS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
+    Break before the return type of top-level definitions only.
+
+
+
 .. _BreakBeforeTemplateCloser:
 
 **BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`

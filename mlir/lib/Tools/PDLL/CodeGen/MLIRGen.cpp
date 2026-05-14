@@ -147,12 +147,7 @@ OwningOpRef<ModuleOp> CodeGen::generate(const ast::Module &module) {
 Location CodeGen::genLoc(llvm::SMLoc loc) {
   unsigned fileID = sourceMgr.FindBufferContainingLoc(loc);
 
-  // TODO: Fix performance issues in SourceMgr::getLineAndColumn so that we can
-  //       use it here.
-  auto &bufferInfo = sourceMgr.getBufferInfo(fileID);
-  unsigned lineNo = bufferInfo.getLineNumber(loc.getPointer());
-  unsigned column =
-      (loc.getPointer() - bufferInfo.getPointerForLineNumber(lineNo)) + 1;
+  auto [lineNo, column] = sourceMgr.getLineAndColumn(loc);
   auto *buffer = sourceMgr.getMemoryBuffer(fileID);
 
   return FileLineColLoc::get(builder.getContext(),
