@@ -51,9 +51,9 @@ body:             |
   ; GCN-NEXT:   S_WAITCNT .Lgkmcnt_0
   ; GCN-NEXT:   $sgpr0 = S_LSHL_B32 killed $sgpr0, 2, implicit-def dead $scc
   ; GCN-NEXT:   $vgpr0 = V_ADD_CO_U32_e32 killed $sgpr0, killed $vgpr0, implicit-def dead $vcc, implicit $exec
-  ; GCN-NEXT:   S_WAITCNT_soft 3952
+  ; GCN-NEXT:   S_WAITCNT_soft .Vmcnt_0
   ; GCN-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 1, 0, implicit $exec :: (load syncscope("agent-one-as") unordered (s32) from `ptr addrspace(1) poison`, addrspace 1), (load syncscope("workgroup-one-as") seq_cst (s32) from `ptr addrspace(5) poison`, addrspace 5)
-  ; GCN-NEXT:   S_WAITCNT_soft 3952
+  ; GCN-NEXT:   S_WAITCNT_soft .Vmcnt_0
   ; GCN-NEXT:   BUFFER_WBINVL1_VOL implicit $exec
   ; GCN-NEXT:   $vgpr1 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr4_sgpr5
   ; GCN-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr5, implicit $exec, implicit $sgpr4_sgpr5, implicit $exec

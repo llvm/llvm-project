@@ -185,29 +185,28 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     }
     if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
       // DpasMxOp has operands: a, b, optional acc, optional scale_a, optional
-      // scale_b Use AttrSizedOperandSegments to determine which operand this is
-      auto segmentSizesAttr = dpasMxOp->getAttrOfType<DenseI32ArrayAttr>(
-          dpasMxOp.getOperandSegmentSizesAttrName());
-      if (!segmentSizesAttr)
-        return nullptr;
+      // scale_b
+      unsigned currentIdx = 0;
 
-      auto segmentSizes = segmentSizesAttr.asArrayRef();
-      unsigned aSize = segmentSizes[0];
-      unsigned bSize = segmentSizes[1];
-      unsigned accSize = segmentSizes[2];
-      unsigned scaleASize = segmentSizes[3];
-
-      if (idx < aSize) {
+      if (idx == currentIdx++)
         return dpasMxOp.getLayoutAAttr();
-      } else if (idx < aSize + bSize) {
+
+      if (idx == currentIdx++)
         return dpasMxOp.getLayoutBAttr();
-      } else if (idx < aSize + bSize + accSize) {
-        return dpasMxOp.getLayoutCdAttr();
-      } else if (idx < aSize + bSize + accSize + scaleASize) {
-        return dpasMxOp.getLayoutAScaleAttr();
-      } else {
-        return dpasMxOp.getLayoutBScaleAttr();
-      }
+
+      if (dpasMxOp.getAcc())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutCdAttr();
+
+      if (dpasMxOp.getScaleA())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutAScaleAttr();
+
+      if (dpasMxOp.getScaleB())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutBScaleAttr();
+
+      return nullptr;
     }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
       return convertOp.getInputLayoutAttr();
@@ -923,7 +922,8 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
   if (uArch->getName().equals_insensitive("pvc") &&
-      uArch->getName().equals_insensitive("bmg"))
+      uArch->getName().equals_insensitive("bmg") &&
+      uArch->getName().equals_insensitive("cri"))
     return false;
   if (!layout)
     return false;

@@ -583,7 +583,6 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case ExceptionSpecEvaluation:
   case ConstraintSubstitution:
   case ParameterMappingSubstitution:
-  case ConstraintNormalization:
   case RewritingOperatorAsSpaceship:
   case InitializingStructuredBinding:
   case MarkingClassDllexported:
@@ -792,14 +791,6 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::ConstraintSubstitution,
           PointOfInstantiation, InstantiationRange, Template, nullptr, {}) {}
-
-Sema::InstantiatingTemplate::InstantiatingTemplate(
-    Sema &SemaRef, SourceLocation PointOfInstantiation,
-    ConstraintNormalization, NamedDecl *Template,
-    SourceRange InstantiationRange)
-    : InstantiatingTemplate(
-          SemaRef, CodeSynthesisContext::ConstraintNormalization,
-          PointOfInstantiation, InstantiationRange, Template) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
@@ -1243,12 +1234,6 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
     case CodeSynthesisContext::ConstraintSubstitution:
       DiagFunc(Active->PointOfInstantiation,
                PDiag(diag::note_constraint_substitution_here)
-                   << Active->InstantiationRange);
-      break;
-    case CodeSynthesisContext::ConstraintNormalization:
-      DiagFunc(Active->PointOfInstantiation,
-               PDiag(diag::note_constraint_normalization_here)
-                   << cast<NamedDecl>(Active->Entity)
                    << Active->InstantiationRange);
       break;
     case CodeSynthesisContext::ParameterMappingSubstitution:
@@ -1763,7 +1748,22 @@ namespace {
           if (TA.isDependent())
             return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
       }
+      if (auto *CD = dyn_cast_if_present<ImplicitConceptSpecializationDecl>(
+              LSI->Lambda->getLambdaContextDecl())) {
+        if (llvm::any_of(CD->getTemplateArguments(),
+                         [](const auto &TA) { return TA.isDependent(); }))
+          return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
+      }
       return inherited::ComputeLambdaDependency(LSI);
+    }
+
+    ExprResult TransformConstraint(Expr *AC) {
+      // We don't want the template argument substitution into parameter
+      // mappings to preserve the outer depths.
+      if (AC && SemaRef.inConstraintSubstitution())
+        return TransformExpr(const_cast<Expr *>(AC));
+
+      return AC;
     }
 
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
@@ -1876,11 +1876,24 @@ namespace {
                               TemplateParameterList *OrigTPL)  {
       if (!OrigTPL || !OrigTPL->size()) return OrigTPL;
 
+      std::optional<MultiLevelTemplateArgumentList> OldMLTAL;
+      // We need to preserve the lambda depth in parameter mapping.
+      // Otherwise the template argument deduction would fail, if we reduced the
+      // depth too early.
+      if (SemaRef.inParameterMappingSubstitution() &&
+          OrigTPL->getDepth() >= TemplateArgs.getNumSubstitutedLevels())
+        OldMLTAL = ForgetSubstitution();
+
       DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
-      TemplateDeclInstantiator  DeclInstantiator(getSema(),
-                        /* DeclContext *Owner */ Owner, TemplateArgs);
-      DeclInstantiator.setEvaluateConstraints(EvaluateConstraints);
-      return DeclInstantiator.SubstTemplateParams(OrigTPL);
+      TemplateDeclInstantiator DeclInstantiator(getSema(), Owner, TemplateArgs);
+      // We don't want the template argument substitution into parameter
+      // mappings to preserve the outer depths.
+      DeclInstantiator.setEvaluateConstraints(
+          SemaRef.inConstraintSubstitution() || EvaluateConstraints);
+      auto *Transformed = DeclInstantiator.SubstTemplateParams(OrigTPL);
+      if (OldMLTAL)
+        RememberSubstitution(std::move(*OldMLTAL));
+      return Transformed;
     }
 
     concepts::TypeRequirement *
@@ -2834,7 +2847,7 @@ TypeSourceInfo *Sema::SubstType(TypeSourceInfo *T,
                                 SourceLocation Loc,
                                 DeclarationName Entity,
                                 bool AllowDeducedTST) {
-  assert(!CodeSynthesisContexts.empty() &&
+  assert((!CodeSynthesisContexts.empty() || isSFINAEContext()) &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
 
@@ -2851,7 +2864,7 @@ TypeSourceInfo *Sema::SubstType(TypeLoc TL,
                                 const MultiLevelTemplateArgumentList &Args,
                                 SourceLocation Loc,
                                 DeclarationName Entity) {
-  assert(!CodeSynthesisContexts.empty() &&
+  assert((!CodeSynthesisContexts.empty() || isSFINAEContext()) &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
 
@@ -2882,7 +2895,7 @@ QualType Sema::SubstType(QualType T,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
                          SourceLocation Loc, DeclarationName Entity,
                          bool *IsIncompleteSubstitution) {
-  assert(!CodeSynthesisContexts.empty() &&
+  assert((!CodeSynthesisContexts.empty() || isSFINAEContext()) &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
 
@@ -2929,7 +2942,7 @@ TypeSourceInfo *Sema::SubstFunctionDeclType(TypeSourceInfo *T,
                                 CXXRecordDecl *ThisContext,
                                 Qualifiers ThisTypeQuals,
                                 bool EvaluateConstraints) {
-  assert(!CodeSynthesisContexts.empty() &&
+  assert((!CodeSynthesisContexts.empty() || isSFINAEContext()) &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
 
@@ -3246,7 +3259,7 @@ bool Sema::SubstParmTypes(
     SmallVectorImpl<QualType> &ParamTypes,
     SmallVectorImpl<ParmVarDecl *> *OutParams,
     ExtParameterInfoBuilder &ParamInfos) {
-  assert(!CodeSynthesisContexts.empty() &&
+  assert((!CodeSynthesisContexts.empty() || isSFINAEContext()) &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
 
@@ -4474,22 +4487,14 @@ ExprResult Sema::SubstConstraintExprWithoutSatisfaction(
 ExprResult Sema::SubstConceptTemplateArguments(
     const ConceptSpecializationExpr *CSE, const Expr *ConstraintExpr,
     const MultiLevelTemplateArgumentList &MLTAL) {
+  assert(isSFINAEContext());
+
   TemplateInstantiator Instantiator(*this, MLTAL, SourceLocation(),
                                     DeclarationName());
   const ASTTemplateArgumentListInfo *ArgsAsWritten =
       CSE->getTemplateArgsAsWritten();
   TemplateArgumentListInfo SubstArgs(ArgsAsWritten->getLAngleLoc(),
                                      ArgsAsWritten->getRAngleLoc());
-
-  NonSFINAEContext _(*this);
-  Sema::InstantiatingTemplate Inst(
-      *this, ArgsAsWritten->arguments().front().getSourceRange().getBegin(),
-      Sema::InstantiatingTemplate::ConstraintNormalization{},
-      CSE->getNamedConcept(),
-      ArgsAsWritten->arguments().front().getSourceRange());
-
-  if (Inst.isInvalid())
-    return ExprError();
 
   if (Instantiator.TransformConceptTemplateArguments(
           ArgsAsWritten->getTemplateArgs(),
