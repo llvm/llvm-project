@@ -319,7 +319,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
     Changed |= processReg(Reg);
   }
 
-  const bool HasBVHStack = ST.hasImageInsts() && ST.hasBVHDualAndBVH8Insts();
+  const bool HasBVHStack = ST.hasBVHDualAndBVH8Insts();
   const bool HasRealTrue16 = ST.useRealTrue16Insts();
 
   if (!HasRealTrue16 && !HasBVHStack)
