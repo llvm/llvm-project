@@ -6963,12 +6963,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       // Direct form: (ptr, i1 from_end, i64 num_accessible_bytes)
       Check(NumArgs == 3,
             "llvm.speculative.load direct form has too many arguments", &Call);
-      if (auto *CI = dyn_cast<ConstantInt>(PayloadArg)) {
-        Check(Size.isScalable() || CI->getZExtValue() <= Size.getFixedValue(),
-              "llvm.speculative.load num_accessible_bytes must not exceed "
-              "the result size in bytes",
-              &Call);
-      }
     } else {
       // Oracle form: (ptr, i1 from_end, oracle_fn_ptr, args...)
       auto *OracleFn = dyn_cast<Function>(PayloadArg);
@@ -6998,16 +6992,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "llvm.speculative.load oracle function argument type mismatch",
               &Call);
       }
-    }
-    break;
-  }
-  case Intrinsic::can_load_speculatively: {
-    // If size is a constant, verify it's a positive power of 2.
-    if (auto *SizeCI = dyn_cast<ConstantInt>(Call.getArgOperand(1))) {
-      uint64_t Size = SizeCI->getZExtValue();
-      Check(Size > 0 && isPowerOf2_64(Size),
-            "llvm.can.load.speculatively size must be a positive power of 2",
-            &Call);
     }
     break;
   }

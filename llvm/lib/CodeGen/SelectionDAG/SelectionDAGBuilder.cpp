@@ -5158,16 +5158,13 @@ void SelectionDAGBuilder::visitSpeculativeLoad(const CallInst &I) {
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   Align Alignment = I.getParamAlign(0).valueOrOne();
   AAMDNodes AAInfo = I.getAAMetadata();
-  TypeSize StoreSize = VT.getStoreSize();
 
   SDValue InChain = DAG.getRoot();
 
   // Use MOLoad but NOT MODereferenceable - the memory may not be
   // fully dereferenceable.
   MachineMemOperand::Flags MMOFlags = MachineMemOperand::MOLoad;
-  LocationSize LocSize = StoreSize.isScalable()
-                             ? LocationSize::beforeOrAfterPointer()
-                             : LocationSize::upperBound(StoreSize);
+  LocationSize LocSize = LocationSize::upperBound(VT.getStoreSize());
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags, LocSize, Alignment, AAInfo);
 
