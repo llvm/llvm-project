@@ -151,6 +151,18 @@ void SBExpressionOptions::SetTrapExceptions(bool trap_exceptions) {
   m_opaque_up->SetTrapExceptions(trap_exceptions);
 }
 
+bool SBExpressionOptions::GetStopOnFork() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetStopOnFork();
+}
+
+void SBExpressionOptions::SetStopOnFork(bool stop_on_fork) {
+  LLDB_INSTRUMENT_VA(this, stop_on_fork);
+
+  m_opaque_up->SetStopOnFork(stop_on_fork);
+}
+
 void SBExpressionOptions::SetLanguage(lldb::LanguageType language) {
   LLDB_INSTRUMENT_VA(this, language);
 

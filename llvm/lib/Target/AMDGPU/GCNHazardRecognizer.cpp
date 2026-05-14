@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNHazardRecognizer.h"
+#include "AMDGPUWaitcntUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
@@ -332,6 +333,10 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   fixHazards(MI);
   CurrCycleInstr = nullptr;
   return std::max(W, NopPadding.getValue());
+}
+
+unsigned GCNHazardRecognizer::getHazardWaitStates(MachineInstr *MI) const {
+  return this->PreEmitNoopsCommon(MI);
 }
 
 unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) const {

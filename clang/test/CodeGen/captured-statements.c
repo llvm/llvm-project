@@ -19,7 +19,7 @@ void test1(void) {
     i++;
   }
   // CHECK-1: %struct.anon = type { ptr }
-  // CHECK-1: {{.+}} global float 3.0
+  // CHECK-1: {{.+}} global float 3.000000e+00
   //
   // CHECK-1: @test1(
   // CHECK-1: alloca %struct.anon

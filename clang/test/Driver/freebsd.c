@@ -219,3 +219,13 @@
 // RUN: %clang --target=riscv64-unknown-freebsd -mno-relax -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
 // RISCV64-FLAGS: "-X" "--no-relax"
+
+/// -rdynamic becomes -export-dynamic; -s, -t, and -T are forwarded.
+// RUN: %clang --target=x86_64-unknown-freebsd -rdynamic -s -t -T a.lds -### %s \
+// RUN:   2>&1 | FileCheck --check-prefix=PASS %s
+// PASS:      "--eh-frame-hdr"
+// PASS-SAME: "-export-dynamic"
+// PASS-SAME: "-s" "-t" "-T" "a.lds"
+
+// RUN: %clang -target riscv32be-unknown-freebsd -### -c %s 2>&1 | FileCheck %s --check-prefix=RV32BE
+// RV32BE-NOT: elf32briscv

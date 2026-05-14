@@ -50,6 +50,7 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // hlsl_private
     0,   // hlsl_device
     0,   // hlsl_input
+    0,   // hlsl_output
     0,   // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
@@ -967,6 +968,8 @@ public:
       : WindowsX86_64TargetInfo(Triple, Opts) {
     LongDoubleWidth = LongDoubleAlign = 64;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    LargeArrayMinWidth = 0;
+    LargeArrayAlign = 0;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -980,6 +983,9 @@ public:
   getCallingConvKind(bool ClangABICompat4) const override {
     return CCK_MicrosoftWin64;
   }
+
+  unsigned getMinGlobalAlign(uint64_t TypeSize,
+                             bool HasNonWeakDef) const override;
 };
 
 // x86-64 MinGW target

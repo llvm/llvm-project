@@ -142,6 +142,11 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   // If this is a non-scalar-integer type, we don't care enough to try.
   if (!E->getType()->isIntegralOrEnumerationType()) return false;
 
+  if (!Semantic)
+    if (const auto *BIT = E->getType()->getAs<BitIntType>();
+        BIT && BIT->isUnsigned() && BIT->getNumBits() == 1)
+      return true;
+
   if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
     switch (UO->getOpcode()) {
     case UO_Plus:
@@ -2255,7 +2260,7 @@ SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Kind,
   SourceLocExprBits.Kind = llvm::to_underlying(Kind);
   // In dependent contexts, function names may change.
   setDependence(MayBeDependent(Kind) && ParentContext->isDependentContext()
-                    ? ExprDependence::Value
+                    ? ExprDependence::ValueInstantiation
                     : ExprDependence::None);
 }
 
@@ -3504,6 +3509,24 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     if (Exp->getOpcode() == UO_Extension)
       return Exp->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
     break;
+  }
+  case ObjCBoxedExprClass: {
+    const ObjCBoxedExpr *BE = cast<ObjCBoxedExpr>(this);
+    if (Culprit)
+      *Culprit = this;
+    return BE->isExpressibleAsConstantInitializer();
+  }
+  case ObjCArrayLiteralClass: {
+    const ObjCArrayLiteral *ALE = cast<ObjCArrayLiteral>(this);
+    if (Culprit)
+      *Culprit = this;
+    return ALE->isExpressibleAsConstantInitializer();
+  }
+  case ObjCDictionaryLiteralClass: {
+    const ObjCDictionaryLiteral *DLE = cast<ObjCDictionaryLiteral>(this);
+    if (Culprit)
+      *Culprit = this;
+    return DLE->isExpressibleAsConstantInitializer();
   }
   case PackIndexingExprClass: {
     return cast<PackIndexingExpr>(this)

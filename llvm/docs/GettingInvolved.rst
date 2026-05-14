@@ -204,9 +204,13 @@ what to add to your calendar invite.
      - Every 2 weeks on Mondays
      - `gcal <https://calendar.google.com/calendar/u/0?cid=c3ljbC5sbHZtLndnQGdtYWlsLmNvbQ>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1ivYDSn_5ChTeiZ7TiO64WC_jYJnGwAUiT9Ngi9cAdFU/edit?usp=sharing>`__
+   * - Formal Semantics Working Group
+     - Every 2 weeks on Mondays
+     - `gcal <https://calendar.google.com/calendar/event?eid=aHJpNnNzb3Zia3FtNzNuYjdpbmJtZG5nZGVfMjAyNjA1MDRUMTUzMDAwWiBjYWxlbmRhckBsbHZtLm9yZw>`__
+     - `Meeting notes <https://docs.google.com/document/d/1muS2gZ7PUhbypbl0bmjb2J-UUzY7K8AO9a8RHVw_Mjo/edit?tab=t.0>`__
    * - Vectorizer Improvement Working Group
      - 3rd Tuesday of the month
-     - `ics <https://drive.google.com/file/d/1ten-u-4yjOcCoONUtR4_AxsFxRDTUp1b/view?usp=sharing>`__
+     - `ics <https://www.icloud.com/iclouddrive/032PeZzdN6U4uRMwJRJPrS2Lw#Vectorizer_Improvements>`__
      - `Meeting details/agenda: <https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit>`__
    * - `LLVM Qualification Working Group <https://llvm.org/docs/QualGroup.html>`__
      - Monthly: 2nd Tuesday (EU/Asia) and 2nd Friday JST / Thursday (Americas)

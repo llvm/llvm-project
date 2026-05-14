@@ -6,6 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class TestSignal(gdbremote_testcase.GdbRemoteTestCaseBase):
     def start_threads(self, num):
         procs = self.prep_debug_monitor_and_inferior(inferior_args=[str(num)])

@@ -13,9 +13,8 @@ Navigate to the links below for information on the respective topics:
    code_style
    source_tree_layout
    entrypoints
-   cmake_build_rules
+   implementing_a_function
    config_options
-   clang_tidy_checks
    fuzzing
    header_generation
    implementation_standard

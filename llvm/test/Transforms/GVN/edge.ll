@@ -230,7 +230,7 @@ define float @fcmp_oeq_denormal(float %x, float %y) {
 ; CHECK-LABEL: define float @fcmp_oeq_denormal(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y]], 0x3800000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y]], f0x00400000
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[X]], [[Y]]

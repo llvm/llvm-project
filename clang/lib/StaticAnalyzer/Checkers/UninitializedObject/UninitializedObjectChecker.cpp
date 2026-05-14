@@ -172,7 +172,7 @@ void UninitializedObjectChecker::checkEndFunction(
     return;
 
   PathDiagnosticLocation LocUsedForUniqueing;
-  const Stmt *CallSite = Context.getStackFrame()->getCallSite();
+  const Expr *CallSite = Context.getStackFrame()->getCallSite();
   if (CallSite)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
         CallSite, Context.getSourceManager(), Node->getLocationContext());
@@ -451,26 +451,44 @@ static void printTail(llvm::raw_ostream &Out,
 //                           Utility functions.
 //===----------------------------------------------------------------------===//
 
+static const SubRegion *
+getConstructedSubRegion(const CXXConstructorDecl *CtorDecl,
+                        CheckerContext &Context) {
+  Loc ThisLoc =
+      Context.getSValBuilder().getCXXThis(CtorDecl, Context.getStackFrame());
+  SVal ObjectV = Context.getState()->getSVal(ThisLoc);
+  return ObjectV.getAsRegion()->getAs<SubRegion>();
+}
+
 static const TypedValueRegion *
 getConstructedRegion(const CXXConstructorDecl *CtorDecl,
                      CheckerContext &Context) {
 
-  Loc ThisLoc =
-      Context.getSValBuilder().getCXXThis(CtorDecl, Context.getStackFrame());
-
-  SVal ObjectV = Context.getState()->getSVal(ThisLoc);
-
-  auto *R = ObjectV.getAsRegion()->getAs<TypedValueRegion>();
-  if (R && !R->getValueType()->getAsCXXRecordDecl())
+  const SubRegion *SR = getConstructedSubRegion(CtorDecl, Context);
+  if (!SR)
     return nullptr;
 
-  return R;
+  if (const auto *TVR = SR->getAs<TypedValueRegion>()) {
+    return TVR->getValueType()->getAsCXXRecordDecl() ? TVR : nullptr;
+  }
+
+  QualType ThisPointeeTy = CtorDecl->getThisType()->getPointeeType();
+  if (!ThisPointeeTy->getAsCXXRecordDecl())
+    return nullptr;
+
+  auto &MemMgr = Context.getState()->getStateManager().getRegionManager();
+  auto &SVB = Context.getSValBuilder();
+
+  const auto *ElemR = MemMgr.getElementRegion(
+      ThisPointeeTy, SVB.makeZeroArrayIndex(), SR, Context.getASTContext());
+
+  return ElemR;
 }
 
 static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
                                       CheckerContext &Context) {
 
-  const TypedValueRegion *CurrRegion = getConstructedRegion(Ctor, Context);
+  const SubRegion *CurrRegion = getConstructedSubRegion(Ctor, Context);
   if (!CurrRegion)
     return false;
 
@@ -482,8 +500,7 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
     if (!OtherCtor)
       continue;
 
-    const TypedValueRegion *OtherRegion =
-        getConstructedRegion(OtherCtor, Context);
+    const SubRegion *OtherRegion = getConstructedSubRegion(OtherCtor, Context);
     if (!OtherRegion)
       continue;
 

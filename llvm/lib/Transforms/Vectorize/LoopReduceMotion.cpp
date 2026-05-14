@@ -27,6 +27,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/LoopReduceMotion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -228,16 +229,11 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
       continue;
 
     // Don't match if the Recurrence Value has other use in loop
-    bool hasOtherUse = false;
-    for (User *U : RecurrenceValueFromPHI->users()) {
-      if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-        BasicBlock *BB = Inst->getParent();
-        if (Inst != PN && L.contains(BB)) {
-          hasOtherUse = true;
-          break;
-        }
-      }
-    }
+    bool hasOtherUse = llvm::any_of(
+        make_early_inc_range(RecurrenceValueFromPHI->users()), [&](User *U) {
+          auto *Inst = dyn_cast<Instruction>(U);
+          return Inst && Inst != PN && L.contains(Inst->getParent());
+        });
     if (hasOtherUse)
       continue;
 
@@ -255,8 +251,8 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
     Instruction *VecIn = dyn_cast<Instruction>(ReduceOperand);
     VectorType *VecTy = cast<VectorType>(VecIn->getType());
 
-    auto TTI = &AR.TTI;
-    if (TTI->preferInLoopReduction(RecurKind::Add, RecDesc.getRecurrenceType()))
+    TargetTransformInfo &TTI = AR.TTI;
+    if (TTI.preferInLoopReduction(RecurKind::Add, RecDesc.getRecurrenceType()))
       continue;
     if (!compareCost(AR, L, VecTy, ReduceCall))
       continue;
@@ -304,14 +300,11 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
     // delete the dead PHI Node
     if (!PN->use_empty())
       PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
-    llvm::RecursivelyDeleteDeadPHINode(PN);
+    RecursivelyDeleteDeadPHINode(PN);
 
     if (!RecurrenceInst->use_empty()) {
-      // Copy users to a temporary vector to avoid iterator invalidation
-      SmallVector<User *, 8> Users(RecurrenceInst->user_begin(),
-                                   RecurrenceInst->user_end());
-      for (auto *U : Users) {
-        auto *phi = llvm::dyn_cast<llvm::PHINode>(U);
+      for (User *U : make_early_inc_range(RecurrenceInst->users())) {
+        auto *phi = dyn_cast<llvm::PHINode>(U);
         if (phi && phi->getParent() == LandingPad && !phi->use_empty()) {
           phi->replaceAllUsesWith(FinalNode);
           llvm::RecursivelyDeleteDeadPHINode(phi);

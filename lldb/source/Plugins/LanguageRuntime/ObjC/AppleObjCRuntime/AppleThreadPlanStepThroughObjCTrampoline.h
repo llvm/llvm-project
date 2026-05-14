@@ -83,8 +83,7 @@ private:
 class AppleThreadPlanStepThroughDirectDispatch: public ThreadPlanStepOut {
 public:
   AppleThreadPlanStepThroughDirectDispatch(Thread &thread,
-                                           AppleObjCTrampolineHandler &handler,
-                                           llvm::StringRef dispatch_func_name);
+                                           AppleObjCTrampolineHandler &handler);
 
   ~AppleThreadPlanStepThroughDirectDispatch() override;
 
@@ -106,8 +105,6 @@ protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
   AppleObjCTrampolineHandler &m_trampoline_handler;
-  std::string m_dispatch_func_name;  /// Which dispatch function we're stepping
-                                     /// through.
   lldb::ThreadPlanSP m_objc_step_through_sp; /// When we hit an objc_msgSend,
                                              /// we'll use this plan to get to
                                              /// its target.

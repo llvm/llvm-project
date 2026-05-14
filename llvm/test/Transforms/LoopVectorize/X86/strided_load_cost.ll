@@ -5,13 +5,12 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; This test checks that the given loop still beneficial for vecotization
+; This test checks that the given loop still beneficial for vectorization
 ; even if it contains scalarized load (gather on AVX2)
 
-; Function Attrs: norecurse nounwind readonly uwtable
-define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_unnamed_addr #0 {
+define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ; CHECK-LABEL: define i32 @matrix_row_col(
-; CHECK-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[J]] to i64
@@ -61,10 +60,10 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 8
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 16
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 24
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP32]], align 4, !tbaa [[INT_TBAA1:![0-9]+]]
-; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i32>, ptr [[TMP33]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i32>, ptr [[TMP34]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i32>, ptr [[TMP35]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP32]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i32>, ptr [[TMP33]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i32>, ptr [[TMP34]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i32>, ptr [[TMP35]], align 4
 ; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDEX]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP1]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP2]], i64 [[IDXPROM5]]
@@ -97,14 +96,14 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP29]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP30]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP31]], i64 [[IDXPROM5]]
-; CHECK-NEXT:    [[TMP72:%.*]] = load i32, ptr [[TMP40]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP73:%.*]] = load i32, ptr [[TMP41]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP74:%.*]] = load i32, ptr [[TMP42]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP75:%.*]] = load i32, ptr [[TMP43]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP76:%.*]] = load i32, ptr [[TMP44]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP77:%.*]] = load i32, ptr [[TMP45]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP78:%.*]] = load i32, ptr [[TMP46]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP79:%.*]] = load i32, ptr [[TMP47]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[TMP72:%.*]] = load i32, ptr [[TMP40]], align 4
+; CHECK-NEXT:    [[TMP73:%.*]] = load i32, ptr [[TMP41]], align 4
+; CHECK-NEXT:    [[TMP74:%.*]] = load i32, ptr [[TMP42]], align 4
+; CHECK-NEXT:    [[TMP75:%.*]] = load i32, ptr [[TMP43]], align 4
+; CHECK-NEXT:    [[TMP76:%.*]] = load i32, ptr [[TMP44]], align 4
+; CHECK-NEXT:    [[TMP77:%.*]] = load i32, ptr [[TMP45]], align 4
+; CHECK-NEXT:    [[TMP78:%.*]] = load i32, ptr [[TMP46]], align 4
+; CHECK-NEXT:    [[TMP79:%.*]] = load i32, ptr [[TMP47]], align 4
 ; CHECK-NEXT:    [[TMP80:%.*]] = insertelement <8 x i32> poison, i32 [[TMP72]], i32 0
 ; CHECK-NEXT:    [[TMP81:%.*]] = insertelement <8 x i32> [[TMP80]], i32 [[TMP73]], i32 1
 ; CHECK-NEXT:    [[TMP82:%.*]] = insertelement <8 x i32> [[TMP81]], i32 [[TMP74]], i32 2
@@ -113,14 +112,14 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP85:%.*]] = insertelement <8 x i32> [[TMP84]], i32 [[TMP77]], i32 5
 ; CHECK-NEXT:    [[TMP86:%.*]] = insertelement <8 x i32> [[TMP85]], i32 [[TMP78]], i32 6
 ; CHECK-NEXT:    [[TMP87:%.*]] = insertelement <8 x i32> [[TMP86]], i32 [[TMP79]], i32 7
-; CHECK-NEXT:    [[TMP88:%.*]] = load i32, ptr [[TMP48]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP89:%.*]] = load i32, ptr [[TMP49]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP90:%.*]] = load i32, ptr [[TMP50]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP91:%.*]] = load i32, ptr [[TMP51]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP92:%.*]] = load i32, ptr [[TMP52]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP93:%.*]] = load i32, ptr [[TMP53]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP94:%.*]] = load i32, ptr [[TMP54]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP95:%.*]] = load i32, ptr [[TMP55]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[TMP88:%.*]] = load i32, ptr [[TMP48]], align 4
+; CHECK-NEXT:    [[TMP89:%.*]] = load i32, ptr [[TMP49]], align 4
+; CHECK-NEXT:    [[TMP90:%.*]] = load i32, ptr [[TMP50]], align 4
+; CHECK-NEXT:    [[TMP91:%.*]] = load i32, ptr [[TMP51]], align 4
+; CHECK-NEXT:    [[TMP92:%.*]] = load i32, ptr [[TMP52]], align 4
+; CHECK-NEXT:    [[TMP93:%.*]] = load i32, ptr [[TMP53]], align 4
+; CHECK-NEXT:    [[TMP94:%.*]] = load i32, ptr [[TMP54]], align 4
+; CHECK-NEXT:    [[TMP95:%.*]] = load i32, ptr [[TMP55]], align 4
 ; CHECK-NEXT:    [[TMP96:%.*]] = insertelement <8 x i32> poison, i32 [[TMP88]], i32 0
 ; CHECK-NEXT:    [[TMP97:%.*]] = insertelement <8 x i32> [[TMP96]], i32 [[TMP89]], i32 1
 ; CHECK-NEXT:    [[TMP98:%.*]] = insertelement <8 x i32> [[TMP97]], i32 [[TMP90]], i32 2
@@ -129,14 +128,14 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP101:%.*]] = insertelement <8 x i32> [[TMP100]], i32 [[TMP93]], i32 5
 ; CHECK-NEXT:    [[TMP102:%.*]] = insertelement <8 x i32> [[TMP101]], i32 [[TMP94]], i32 6
 ; CHECK-NEXT:    [[TMP103:%.*]] = insertelement <8 x i32> [[TMP102]], i32 [[TMP95]], i32 7
-; CHECK-NEXT:    [[TMP104:%.*]] = load i32, ptr [[TMP56]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP105:%.*]] = load i32, ptr [[TMP57]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP106:%.*]] = load i32, ptr [[TMP58]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP107:%.*]] = load i32, ptr [[TMP59]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP108:%.*]] = load i32, ptr [[TMP60]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP109:%.*]] = load i32, ptr [[TMP61]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP110:%.*]] = load i32, ptr [[TMP62]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP111:%.*]] = load i32, ptr [[TMP63]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[TMP104:%.*]] = load i32, ptr [[TMP56]], align 4
+; CHECK-NEXT:    [[TMP105:%.*]] = load i32, ptr [[TMP57]], align 4
+; CHECK-NEXT:    [[TMP106:%.*]] = load i32, ptr [[TMP58]], align 4
+; CHECK-NEXT:    [[TMP107:%.*]] = load i32, ptr [[TMP59]], align 4
+; CHECK-NEXT:    [[TMP108:%.*]] = load i32, ptr [[TMP60]], align 4
+; CHECK-NEXT:    [[TMP109:%.*]] = load i32, ptr [[TMP61]], align 4
+; CHECK-NEXT:    [[TMP110:%.*]] = load i32, ptr [[TMP62]], align 4
+; CHECK-NEXT:    [[TMP111:%.*]] = load i32, ptr [[TMP63]], align 4
 ; CHECK-NEXT:    [[TMP112:%.*]] = insertelement <8 x i32> poison, i32 [[TMP104]], i32 0
 ; CHECK-NEXT:    [[TMP113:%.*]] = insertelement <8 x i32> [[TMP112]], i32 [[TMP105]], i32 1
 ; CHECK-NEXT:    [[TMP114:%.*]] = insertelement <8 x i32> [[TMP113]], i32 [[TMP106]], i32 2
@@ -145,14 +144,14 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP117:%.*]] = insertelement <8 x i32> [[TMP116]], i32 [[TMP109]], i32 5
 ; CHECK-NEXT:    [[TMP118:%.*]] = insertelement <8 x i32> [[TMP117]], i32 [[TMP110]], i32 6
 ; CHECK-NEXT:    [[TMP119:%.*]] = insertelement <8 x i32> [[TMP118]], i32 [[TMP111]], i32 7
-; CHECK-NEXT:    [[TMP120:%.*]] = load i32, ptr [[TMP64]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP121:%.*]] = load i32, ptr [[TMP65]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP122:%.*]] = load i32, ptr [[TMP66]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP123:%.*]] = load i32, ptr [[TMP67]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP124:%.*]] = load i32, ptr [[TMP68]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP125:%.*]] = load i32, ptr [[TMP69]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP126:%.*]] = load i32, ptr [[TMP70]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP127:%.*]] = load i32, ptr [[TMP71]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[TMP120:%.*]] = load i32, ptr [[TMP64]], align 4
+; CHECK-NEXT:    [[TMP121:%.*]] = load i32, ptr [[TMP65]], align 4
+; CHECK-NEXT:    [[TMP122:%.*]] = load i32, ptr [[TMP66]], align 4
+; CHECK-NEXT:    [[TMP123:%.*]] = load i32, ptr [[TMP67]], align 4
+; CHECK-NEXT:    [[TMP124:%.*]] = load i32, ptr [[TMP68]], align 4
+; CHECK-NEXT:    [[TMP125:%.*]] = load i32, ptr [[TMP69]], align 4
+; CHECK-NEXT:    [[TMP126:%.*]] = load i32, ptr [[TMP70]], align 4
+; CHECK-NEXT:    [[TMP127:%.*]] = load i32, ptr [[TMP71]], align 4
 ; CHECK-NEXT:    [[TMP128:%.*]] = insertelement <8 x i32> poison, i32 [[TMP120]], i32 0
 ; CHECK-NEXT:    [[TMP129:%.*]] = insertelement <8 x i32> [[TMP128]], i32 [[TMP121]], i32 1
 ; CHECK-NEXT:    [[TMP130:%.*]] = insertelement <8 x i32> [[TMP129]], i32 [[TMP122]], i32 2
@@ -175,7 +174,7 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP147]] = add <8 x i32> [[TMP143]], [[TMP139]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP148:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
-; CHECK-NEXT:    br i1 [[TMP148]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP148]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP145]], [[TMP144]]
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add <8 x i32> [[TMP146]], [[BIN_RDX]]
@@ -183,7 +182,7 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP149:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX8]])
 ; CHECK-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF8:![0-9]+]]
+; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -196,15 +195,15 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP174:%.*]] = add i64 [[INDEX9]], 2
 ; CHECK-NEXT:    [[TMP175:%.*]] = add i64 [[INDEX9]], 3
 ; CHECK-NEXT:    [[TMP152:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDEX9]]
-; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i32>, ptr [[TMP152]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i32>, ptr [[TMP152]], align 4
 ; CHECK-NEXT:    [[TMP154:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDEX9]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP155:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP173]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP156:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP174]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP157:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP175]], i64 [[IDXPROM5]]
-; CHECK-NEXT:    [[TMP158:%.*]] = load i32, ptr [[TMP154]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP159:%.*]] = load i32, ptr [[TMP155]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP160:%.*]] = load i32, ptr [[TMP156]], align 4, !tbaa [[INT_TBAA1]]
-; CHECK-NEXT:    [[TMP161:%.*]] = load i32, ptr [[TMP157]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[TMP158:%.*]] = load i32, ptr [[TMP154]], align 4
+; CHECK-NEXT:    [[TMP159:%.*]] = load i32, ptr [[TMP155]], align 4
+; CHECK-NEXT:    [[TMP160:%.*]] = load i32, ptr [[TMP156]], align 4
+; CHECK-NEXT:    [[TMP161:%.*]] = load i32, ptr [[TMP157]], align 4
 ; CHECK-NEXT:    [[TMP162:%.*]] = insertelement <4 x i32> poison, i32 [[TMP158]], i32 0
 ; CHECK-NEXT:    [[TMP163:%.*]] = insertelement <4 x i32> [[TMP162]], i32 [[TMP159]], i32 1
 ; CHECK-NEXT:    [[TMP164:%.*]] = insertelement <4 x i32> [[TMP163]], i32 [[TMP160]], i32 2
@@ -214,33 +213,33 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP168]] = add <4 x i32> [[TMP167]], [[TMP166]]
 ; CHECK-NEXT:    [[INDEX_NEXT12]] = add nuw i64 [[INDEX9]], 4
 ; CHECK-NEXT:    [[TMP169:%.*]] = icmp eq i64 [[INDEX_NEXT12]], 100
-; CHECK-NEXT:    br i1 [[TMP169]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP169]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP170:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP168]])
 ; CHECK-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX15:%.*]] = phi i32 [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX13:%.*]] = phi i32 [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    [[ADD7_LCSSA:%.*]] = phi i32 [ [[ADD7:%.*]], %[[FOR_BODY]] ], [ [[TMP149]], %[[MIDDLE_BLOCK]] ], [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[ADD7_LCSSA]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_015:%.*]] = phi i32 [ [[BC_MERGE_RDX15]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD7]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_015:%.*]] = phi i32 [ [[BC_MERGE_RDX13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD7]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP150:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[TMP150:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDVARS_IV]], i64 [[IDXPROM5]]
-; CHECK-NEXT:    [[TMP151:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4, !tbaa [[INT_TBAA1]]
+; CHECK-NEXT:    [[TMP151:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP151]], [[TMP150]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUM_015]], 4
 ; CHECK-NEXT:    [[ADD7]] = add i32 [[ADD]], [[MUL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ;
 ; MAX-BW-LABEL: define i32 @matrix_row_col(
-; MAX-BW-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; MAX-BW-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) #[[ATTR0:[0-9]+]] {
 ; MAX-BW-NEXT:  [[ITER_CHECK:.*]]:
 ; MAX-BW-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 ; MAX-BW-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[J]] to i64
@@ -290,10 +289,10 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 8
 ; MAX-BW-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 16
 ; MAX-BW-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 24
-; MAX-BW-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP32]], align 4, !tbaa [[INT_TBAA1:![0-9]+]]
-; MAX-BW-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i32>, ptr [[TMP33]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i32>, ptr [[TMP34]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i32>, ptr [[TMP35]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP32]], align 4
+; MAX-BW-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i32>, ptr [[TMP33]], align 4
+; MAX-BW-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i32>, ptr [[TMP34]], align 4
+; MAX-BW-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i32>, ptr [[TMP35]], align 4
 ; MAX-BW-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDEX]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP1]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP2]], i64 [[IDXPROM5]]
@@ -326,14 +325,14 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP29]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP30]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP31]], i64 [[IDXPROM5]]
-; MAX-BW-NEXT:    [[TMP72:%.*]] = load i32, ptr [[TMP40]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP73:%.*]] = load i32, ptr [[TMP41]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP74:%.*]] = load i32, ptr [[TMP42]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP75:%.*]] = load i32, ptr [[TMP43]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP76:%.*]] = load i32, ptr [[TMP44]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP77:%.*]] = load i32, ptr [[TMP45]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP78:%.*]] = load i32, ptr [[TMP46]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP79:%.*]] = load i32, ptr [[TMP47]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[TMP72:%.*]] = load i32, ptr [[TMP40]], align 4
+; MAX-BW-NEXT:    [[TMP73:%.*]] = load i32, ptr [[TMP41]], align 4
+; MAX-BW-NEXT:    [[TMP74:%.*]] = load i32, ptr [[TMP42]], align 4
+; MAX-BW-NEXT:    [[TMP75:%.*]] = load i32, ptr [[TMP43]], align 4
+; MAX-BW-NEXT:    [[TMP76:%.*]] = load i32, ptr [[TMP44]], align 4
+; MAX-BW-NEXT:    [[TMP77:%.*]] = load i32, ptr [[TMP45]], align 4
+; MAX-BW-NEXT:    [[TMP78:%.*]] = load i32, ptr [[TMP46]], align 4
+; MAX-BW-NEXT:    [[TMP79:%.*]] = load i32, ptr [[TMP47]], align 4
 ; MAX-BW-NEXT:    [[TMP80:%.*]] = insertelement <8 x i32> poison, i32 [[TMP72]], i32 0
 ; MAX-BW-NEXT:    [[TMP81:%.*]] = insertelement <8 x i32> [[TMP80]], i32 [[TMP73]], i32 1
 ; MAX-BW-NEXT:    [[TMP82:%.*]] = insertelement <8 x i32> [[TMP81]], i32 [[TMP74]], i32 2
@@ -342,14 +341,14 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP85:%.*]] = insertelement <8 x i32> [[TMP84]], i32 [[TMP77]], i32 5
 ; MAX-BW-NEXT:    [[TMP86:%.*]] = insertelement <8 x i32> [[TMP85]], i32 [[TMP78]], i32 6
 ; MAX-BW-NEXT:    [[TMP87:%.*]] = insertelement <8 x i32> [[TMP86]], i32 [[TMP79]], i32 7
-; MAX-BW-NEXT:    [[TMP88:%.*]] = load i32, ptr [[TMP48]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP89:%.*]] = load i32, ptr [[TMP49]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP90:%.*]] = load i32, ptr [[TMP50]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP91:%.*]] = load i32, ptr [[TMP51]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP92:%.*]] = load i32, ptr [[TMP52]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP93:%.*]] = load i32, ptr [[TMP53]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP94:%.*]] = load i32, ptr [[TMP54]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP95:%.*]] = load i32, ptr [[TMP55]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[TMP88:%.*]] = load i32, ptr [[TMP48]], align 4
+; MAX-BW-NEXT:    [[TMP89:%.*]] = load i32, ptr [[TMP49]], align 4
+; MAX-BW-NEXT:    [[TMP90:%.*]] = load i32, ptr [[TMP50]], align 4
+; MAX-BW-NEXT:    [[TMP91:%.*]] = load i32, ptr [[TMP51]], align 4
+; MAX-BW-NEXT:    [[TMP92:%.*]] = load i32, ptr [[TMP52]], align 4
+; MAX-BW-NEXT:    [[TMP93:%.*]] = load i32, ptr [[TMP53]], align 4
+; MAX-BW-NEXT:    [[TMP94:%.*]] = load i32, ptr [[TMP54]], align 4
+; MAX-BW-NEXT:    [[TMP95:%.*]] = load i32, ptr [[TMP55]], align 4
 ; MAX-BW-NEXT:    [[TMP96:%.*]] = insertelement <8 x i32> poison, i32 [[TMP88]], i32 0
 ; MAX-BW-NEXT:    [[TMP97:%.*]] = insertelement <8 x i32> [[TMP96]], i32 [[TMP89]], i32 1
 ; MAX-BW-NEXT:    [[TMP98:%.*]] = insertelement <8 x i32> [[TMP97]], i32 [[TMP90]], i32 2
@@ -358,14 +357,14 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP101:%.*]] = insertelement <8 x i32> [[TMP100]], i32 [[TMP93]], i32 5
 ; MAX-BW-NEXT:    [[TMP102:%.*]] = insertelement <8 x i32> [[TMP101]], i32 [[TMP94]], i32 6
 ; MAX-BW-NEXT:    [[TMP103:%.*]] = insertelement <8 x i32> [[TMP102]], i32 [[TMP95]], i32 7
-; MAX-BW-NEXT:    [[TMP104:%.*]] = load i32, ptr [[TMP56]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP105:%.*]] = load i32, ptr [[TMP57]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP106:%.*]] = load i32, ptr [[TMP58]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP107:%.*]] = load i32, ptr [[TMP59]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP108:%.*]] = load i32, ptr [[TMP60]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP109:%.*]] = load i32, ptr [[TMP61]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP110:%.*]] = load i32, ptr [[TMP62]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP111:%.*]] = load i32, ptr [[TMP63]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[TMP104:%.*]] = load i32, ptr [[TMP56]], align 4
+; MAX-BW-NEXT:    [[TMP105:%.*]] = load i32, ptr [[TMP57]], align 4
+; MAX-BW-NEXT:    [[TMP106:%.*]] = load i32, ptr [[TMP58]], align 4
+; MAX-BW-NEXT:    [[TMP107:%.*]] = load i32, ptr [[TMP59]], align 4
+; MAX-BW-NEXT:    [[TMP108:%.*]] = load i32, ptr [[TMP60]], align 4
+; MAX-BW-NEXT:    [[TMP109:%.*]] = load i32, ptr [[TMP61]], align 4
+; MAX-BW-NEXT:    [[TMP110:%.*]] = load i32, ptr [[TMP62]], align 4
+; MAX-BW-NEXT:    [[TMP111:%.*]] = load i32, ptr [[TMP63]], align 4
 ; MAX-BW-NEXT:    [[TMP112:%.*]] = insertelement <8 x i32> poison, i32 [[TMP104]], i32 0
 ; MAX-BW-NEXT:    [[TMP113:%.*]] = insertelement <8 x i32> [[TMP112]], i32 [[TMP105]], i32 1
 ; MAX-BW-NEXT:    [[TMP114:%.*]] = insertelement <8 x i32> [[TMP113]], i32 [[TMP106]], i32 2
@@ -374,14 +373,14 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP117:%.*]] = insertelement <8 x i32> [[TMP116]], i32 [[TMP109]], i32 5
 ; MAX-BW-NEXT:    [[TMP118:%.*]] = insertelement <8 x i32> [[TMP117]], i32 [[TMP110]], i32 6
 ; MAX-BW-NEXT:    [[TMP119:%.*]] = insertelement <8 x i32> [[TMP118]], i32 [[TMP111]], i32 7
-; MAX-BW-NEXT:    [[TMP120:%.*]] = load i32, ptr [[TMP64]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP121:%.*]] = load i32, ptr [[TMP65]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP122:%.*]] = load i32, ptr [[TMP66]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP123:%.*]] = load i32, ptr [[TMP67]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP124:%.*]] = load i32, ptr [[TMP68]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP125:%.*]] = load i32, ptr [[TMP69]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP126:%.*]] = load i32, ptr [[TMP70]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP127:%.*]] = load i32, ptr [[TMP71]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[TMP120:%.*]] = load i32, ptr [[TMP64]], align 4
+; MAX-BW-NEXT:    [[TMP121:%.*]] = load i32, ptr [[TMP65]], align 4
+; MAX-BW-NEXT:    [[TMP122:%.*]] = load i32, ptr [[TMP66]], align 4
+; MAX-BW-NEXT:    [[TMP123:%.*]] = load i32, ptr [[TMP67]], align 4
+; MAX-BW-NEXT:    [[TMP124:%.*]] = load i32, ptr [[TMP68]], align 4
+; MAX-BW-NEXT:    [[TMP125:%.*]] = load i32, ptr [[TMP69]], align 4
+; MAX-BW-NEXT:    [[TMP126:%.*]] = load i32, ptr [[TMP70]], align 4
+; MAX-BW-NEXT:    [[TMP127:%.*]] = load i32, ptr [[TMP71]], align 4
 ; MAX-BW-NEXT:    [[TMP128:%.*]] = insertelement <8 x i32> poison, i32 [[TMP120]], i32 0
 ; MAX-BW-NEXT:    [[TMP129:%.*]] = insertelement <8 x i32> [[TMP128]], i32 [[TMP121]], i32 1
 ; MAX-BW-NEXT:    [[TMP130:%.*]] = insertelement <8 x i32> [[TMP129]], i32 [[TMP122]], i32 2
@@ -404,7 +403,7 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP147]] = add <8 x i32> [[TMP143]], [[TMP139]]
 ; MAX-BW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; MAX-BW-NEXT:    [[TMP148:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
-; MAX-BW-NEXT:    br i1 [[TMP148]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; MAX-BW-NEXT:    br i1 [[TMP148]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; MAX-BW:       [[MIDDLE_BLOCK]]:
 ; MAX-BW-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP145]], [[TMP144]]
 ; MAX-BW-NEXT:    [[BIN_RDX7:%.*]] = add <8 x i32> [[TMP146]], [[BIN_RDX]]
@@ -412,7 +411,7 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP149:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX8]])
 ; MAX-BW-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; MAX-BW:       [[VEC_EPILOG_ITER_CHECK]]:
-; MAX-BW-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF8:![0-9]+]]
+; MAX-BW-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; MAX-BW:       [[VEC_EPILOG_PH]]:
 ; MAX-BW-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; MAX-BW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -425,15 +424,15 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP174:%.*]] = add i64 [[INDEX9]], 2
 ; MAX-BW-NEXT:    [[TMP175:%.*]] = add i64 [[INDEX9]], 3
 ; MAX-BW-NEXT:    [[TMP152:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDEX9]]
-; MAX-BW-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i32>, ptr [[TMP152]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i32>, ptr [[TMP152]], align 4
 ; MAX-BW-NEXT:    [[TMP154:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDEX9]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP155:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP173]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP156:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP174]], i64 [[IDXPROM5]]
 ; MAX-BW-NEXT:    [[TMP157:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[TMP175]], i64 [[IDXPROM5]]
-; MAX-BW-NEXT:    [[TMP158:%.*]] = load i32, ptr [[TMP154]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP159:%.*]] = load i32, ptr [[TMP155]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP160:%.*]] = load i32, ptr [[TMP156]], align 4, !tbaa [[INT_TBAA1]]
-; MAX-BW-NEXT:    [[TMP161:%.*]] = load i32, ptr [[TMP157]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[TMP158:%.*]] = load i32, ptr [[TMP154]], align 4
+; MAX-BW-NEXT:    [[TMP159:%.*]] = load i32, ptr [[TMP155]], align 4
+; MAX-BW-NEXT:    [[TMP160:%.*]] = load i32, ptr [[TMP156]], align 4
+; MAX-BW-NEXT:    [[TMP161:%.*]] = load i32, ptr [[TMP157]], align 4
 ; MAX-BW-NEXT:    [[TMP162:%.*]] = insertelement <4 x i32> poison, i32 [[TMP158]], i32 0
 ; MAX-BW-NEXT:    [[TMP163:%.*]] = insertelement <4 x i32> [[TMP162]], i32 [[TMP159]], i32 1
 ; MAX-BW-NEXT:    [[TMP164:%.*]] = insertelement <4 x i32> [[TMP163]], i32 [[TMP160]], i32 2
@@ -443,48 +442,48 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP168]] = add <4 x i32> [[TMP167]], [[TMP166]]
 ; MAX-BW-NEXT:    [[INDEX_NEXT12]] = add nuw i64 [[INDEX9]], 4
 ; MAX-BW-NEXT:    [[TMP169:%.*]] = icmp eq i64 [[INDEX_NEXT12]], 100
-; MAX-BW-NEXT:    br i1 [[TMP169]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; MAX-BW-NEXT:    br i1 [[TMP169]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; MAX-BW:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; MAX-BW-NEXT:    [[TMP170:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP168]])
 ; MAX-BW-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; MAX-BW:       [[VEC_EPILOG_SCALAR_PH]]:
 ; MAX-BW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; MAX-BW-NEXT:    [[BC_MERGE_RDX15:%.*]] = phi i32 [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; MAX-BW-NEXT:    [[BC_MERGE_RDX13:%.*]] = phi i32 [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; MAX-BW-NEXT:    br label %[[FOR_BODY:.*]]
 ; MAX-BW:       [[FOR_COND_CLEANUP]]:
 ; MAX-BW-NEXT:    [[ADD7_LCSSA:%.*]] = phi i32 [ [[ADD7:%.*]], %[[FOR_BODY]] ], [ [[TMP149]], %[[MIDDLE_BLOCK]] ], [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; MAX-BW-NEXT:    ret i32 [[ADD7_LCSSA]]
 ; MAX-BW:       [[FOR_BODY]]:
 ; MAX-BW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; MAX-BW-NEXT:    [[SUM_015:%.*]] = phi i32 [ [[BC_MERGE_RDX15]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD7]], %[[FOR_BODY]] ]
+; MAX-BW-NEXT:    [[SUM_015:%.*]] = phi i32 [ [[BC_MERGE_RDX13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD7]], %[[FOR_BODY]] ]
 ; MAX-BW-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDVARS_IV]]
-; MAX-BW-NEXT:    [[TMP150:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[TMP150:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; MAX-BW-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDVARS_IV]], i64 [[IDXPROM5]]
-; MAX-BW-NEXT:    [[TMP151:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4, !tbaa [[INT_TBAA1]]
+; MAX-BW-NEXT:    [[TMP151:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4
 ; MAX-BW-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP151]], [[TMP150]]
 ; MAX-BW-NEXT:    [[ADD:%.*]] = add i32 [[SUM_015]], 4
 ; MAX-BW-NEXT:    [[ADD7]] = add i32 [[ADD]], [[MUL]]
 ; MAX-BW-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; MAX-BW-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 100
-; MAX-BW-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; MAX-BW-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ;
 entry:
   %idxprom = sext i32 %i to i64
   %idxprom5 = sext i32 %j to i64
   br label %for.body
 
-  for.cond.cleanup:                                 ; preds = %for.body
+  for.cond.cleanup:
   ret i32 %add7
 
-  for.body:                                         ; preds = %for.body, %entry
+  for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %sum.015 = phi i32 [ 0, %entry ], [ %add7, %for.body ]
   ; first consecutive load as vector load
   %arrayidx2 = getelementptr inbounds [100 x i32], ptr %data, i64 %idxprom, i64 %indvars.iv
-  %0 = load i32, ptr %arrayidx2, align 4, !tbaa !1
+  %0 = load i32, ptr %arrayidx2, align 4
   ; second strided load scalarized
   %arrayidx6 = getelementptr inbounds [100 x i32], ptr %data, i64 %indvars.iv, i64 %idxprom5
-  %1 = load i32, ptr %arrayidx6, align 4, !tbaa !1
+  %1 = load i32, ptr %arrayidx6, align 4
   %mul = mul nsw i32 %1, %0
   %add = add i32 %sum.015, 4
   %add7 = add i32 %add, %mul
@@ -502,7 +501,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -516,14 +515,14 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NEXT:    [[TMP18:%.*]] = add <8 x i32> [[STRIDED_VEC]], [[STRIDED_VEC1]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc <8 x i32> [[TMP18]] to <8 x i8>
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i8> [[TMP19]], i32 0
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <8 x i8> [[TMP19]], i32 1
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <8 x i8> [[TMP19]], i32 2
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <8 x i8> [[TMP19]], i32 3
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <8 x i8> [[TMP19]], i32 4
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i8> [[TMP19]], i32 5
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i8> [[TMP19]], i32 6
-; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <8 x i8> [[TMP19]], i32 7
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i8> [[TMP19]], i64 0
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <8 x i8> [[TMP19]], i64 1
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <8 x i8> [[TMP19]], i64 2
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <8 x i8> [[TMP19]], i64 3
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <8 x i8> [[TMP19]], i64 4
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i8> [[TMP19]], i64 5
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i8> [[TMP19]], i64 6
+; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <8 x i8> [[TMP19]], i64 7
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP2]]
@@ -542,7 +541,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-NEXT:    store i8 [[TMP35]], ptr [[TMP27]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
-; CHECK-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
@@ -556,7 +555,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MAX-BW:       [[VECTOR_BODY]]:
 ; MAX-BW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; MAX-BW-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; MAX-BW-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; MAX-BW-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; MAX-BW-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; MAX-BW-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -578,22 +577,22 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <32 x i32> [[WIDE_VEC]], <32 x i32> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
 ; MAX-BW-NEXT:    [[TMP34:%.*]] = add <16 x i32> [[STRIDED_VEC]], [[STRIDED_VEC1]]
 ; MAX-BW-NEXT:    [[TMP35:%.*]] = trunc <16 x i32> [[TMP34]] to <16 x i8>
-; MAX-BW-NEXT:    [[TMP52:%.*]] = extractelement <16 x i8> [[TMP35]], i32 0
-; MAX-BW-NEXT:    [[TMP53:%.*]] = extractelement <16 x i8> [[TMP35]], i32 1
-; MAX-BW-NEXT:    [[TMP54:%.*]] = extractelement <16 x i8> [[TMP35]], i32 2
-; MAX-BW-NEXT:    [[TMP55:%.*]] = extractelement <16 x i8> [[TMP35]], i32 3
-; MAX-BW-NEXT:    [[TMP56:%.*]] = extractelement <16 x i8> [[TMP35]], i32 4
-; MAX-BW-NEXT:    [[TMP57:%.*]] = extractelement <16 x i8> [[TMP35]], i32 5
-; MAX-BW-NEXT:    [[TMP58:%.*]] = extractelement <16 x i8> [[TMP35]], i32 6
-; MAX-BW-NEXT:    [[TMP59:%.*]] = extractelement <16 x i8> [[TMP35]], i32 7
-; MAX-BW-NEXT:    [[TMP60:%.*]] = extractelement <16 x i8> [[TMP35]], i32 8
-; MAX-BW-NEXT:    [[TMP61:%.*]] = extractelement <16 x i8> [[TMP35]], i32 9
-; MAX-BW-NEXT:    [[TMP62:%.*]] = extractelement <16 x i8> [[TMP35]], i32 10
-; MAX-BW-NEXT:    [[TMP63:%.*]] = extractelement <16 x i8> [[TMP35]], i32 11
-; MAX-BW-NEXT:    [[TMP64:%.*]] = extractelement <16 x i8> [[TMP35]], i32 12
-; MAX-BW-NEXT:    [[TMP65:%.*]] = extractelement <16 x i8> [[TMP35]], i32 13
-; MAX-BW-NEXT:    [[TMP66:%.*]] = extractelement <16 x i8> [[TMP35]], i32 14
-; MAX-BW-NEXT:    [[TMP67:%.*]] = extractelement <16 x i8> [[TMP35]], i32 15
+; MAX-BW-NEXT:    [[TMP52:%.*]] = extractelement <16 x i8> [[TMP35]], i64 0
+; MAX-BW-NEXT:    [[TMP53:%.*]] = extractelement <16 x i8> [[TMP35]], i64 1
+; MAX-BW-NEXT:    [[TMP54:%.*]] = extractelement <16 x i8> [[TMP35]], i64 2
+; MAX-BW-NEXT:    [[TMP55:%.*]] = extractelement <16 x i8> [[TMP35]], i64 3
+; MAX-BW-NEXT:    [[TMP56:%.*]] = extractelement <16 x i8> [[TMP35]], i64 4
+; MAX-BW-NEXT:    [[TMP57:%.*]] = extractelement <16 x i8> [[TMP35]], i64 5
+; MAX-BW-NEXT:    [[TMP58:%.*]] = extractelement <16 x i8> [[TMP35]], i64 6
+; MAX-BW-NEXT:    [[TMP59:%.*]] = extractelement <16 x i8> [[TMP35]], i64 7
+; MAX-BW-NEXT:    [[TMP60:%.*]] = extractelement <16 x i8> [[TMP35]], i64 8
+; MAX-BW-NEXT:    [[TMP61:%.*]] = extractelement <16 x i8> [[TMP35]], i64 9
+; MAX-BW-NEXT:    [[TMP62:%.*]] = extractelement <16 x i8> [[TMP35]], i64 10
+; MAX-BW-NEXT:    [[TMP63:%.*]] = extractelement <16 x i8> [[TMP35]], i64 11
+; MAX-BW-NEXT:    [[TMP64:%.*]] = extractelement <16 x i8> [[TMP35]], i64 12
+; MAX-BW-NEXT:    [[TMP65:%.*]] = extractelement <16 x i8> [[TMP35]], i64 13
+; MAX-BW-NEXT:    [[TMP66:%.*]] = extractelement <16 x i8> [[TMP35]], i64 14
+; MAX-BW-NEXT:    [[TMP67:%.*]] = extractelement <16 x i8> [[TMP35]], i64 15
 ; MAX-BW-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[OFFSET_IDX]]
 ; MAX-BW-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP1]]
 ; MAX-BW-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP2]]
@@ -628,7 +627,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    store i8 [[TMP67]], ptr [[TMP51]], align 1
 ; MAX-BW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; MAX-BW-NEXT:    [[TMP68:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
-; MAX-BW-NEXT:    br i1 [[TMP68]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; MAX-BW-NEXT:    br i1 [[TMP68]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; MAX-BW:       [[MIDDLE_BLOCK]]:
 ; MAX-BW-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MAX-BW:       [[FOR_COND_CLEANUP]]:
@@ -666,35 +665,20 @@ for.cond.cleanup:
 
 attributes #0 = { "target-cpu"="core-avx2" "target-features"="+avx,+avx2,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3" }
 
-!llvm.ident = !{!0}
-
-!0 = !{!"clang version 4.0.0 (cfe/trunk 284570)"}
-!1 = !{!2, !2, i64 0}
-!2 = !{!"int", !3, i64 0}
-!3 = !{!"omnipotent char", !4, i64 0}
-!4 = !{!"Simple C/C++ TBAA"}
 ;.
-; CHECK: [[INT_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-; CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
-; CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-; CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
-; CHECK: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[PROF8]] = !{!"branch_weights", i32 4, i32 28}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META7]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META7]], [[META6]]}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META6]], [[META7]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 4, i32 28}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ;.
-; MAX-BW: [[INT_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-; MAX-BW: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
-; MAX-BW: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-; MAX-BW: [[META4]] = !{!"Simple C/C++ TBAA"}
-; MAX-BW: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
-; MAX-BW: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; MAX-BW: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
-; MAX-BW: [[PROF8]] = !{!"branch_weights", i32 4, i32 28}
-; MAX-BW: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META7]]}
-; MAX-BW: [[LOOP10]] = distinct !{[[LOOP10]], [[META7]], [[META6]]}
-; MAX-BW: [[LOOP11]] = distinct !{[[LOOP11]], [[META6]], [[META7]]}
+; MAX-BW: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; MAX-BW: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; MAX-BW: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; MAX-BW: [[PROF3]] = !{!"branch_weights", i32 4, i32 28}
+; MAX-BW: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; MAX-BW: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; MAX-BW: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ;.

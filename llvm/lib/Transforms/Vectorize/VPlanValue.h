@@ -25,6 +25,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 
@@ -39,15 +40,17 @@ class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
 class VPPhiAccessors;
+class VPRegionValue;
+class VPRegionBlock;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
-  friend class VPlan;
   friend struct VPIRValue;
   friend struct VPSymbolicValue;
   friend class VPRecipeValue;
+  friend class VPRegionValue;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -79,6 +82,8 @@ public:
     VPVIRValueSC,     /// A live-in VPValue wrapping an IR Value.
     VPVSymbolicSC,    /// A symbolic live-in VPValue without IR backing.
     VPVRecipeValueSC, /// A VPValue defined by a recipe.
+    VPRegionValueSC,  /// A VPValue sub-class that is defined by a region, like
+                      /// the canonical IV of a loop region.
   };
 
   VPValue(const VPValue &) = delete;
@@ -200,6 +205,33 @@ public:
   }
 };
 
+/// VPValues defined by a VPRegionBlock, like the canonical IV.
+class VPRegionValue : public VPValue {
+  VPRegionBlock *DefiningRegion;
+  Type *Ty;
+  DebugLoc DL;
+
+public:
+  VPRegionValue(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
+      : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty),
+        DL(DL) {}
+
+  ~VPRegionValue() override = default;
+
+  /// Returns the region that defines this value.
+  VPRegionBlock *getDefiningRegion() const { return DefiningRegion; }
+
+  /// Returns the type of the VPRegionValue.
+  Type *getType() const { return Ty; }
+
+  /// Returns the debug location of the VPRegionValue.
+  DebugLoc getDebugLoc() const { return DL; }
+
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPRegionValueSC;
+  }
+};
+
 LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
                                           const VPRecipeBase &R);
 
@@ -246,11 +278,14 @@ struct VPConstantInt : public VPIRValue {
 /// A symbolic live-in VPValue, used for values like vector trip count, VF, and
 /// VFxUF.
 struct VPSymbolicValue : public VPValue {
-  VPSymbolicValue() : VPValue(VPVSymbolicSC, nullptr) {}
+  VPSymbolicValue(Type *Ty) : VPValue(VPVSymbolicSC, nullptr), Ty(Ty) {}
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSymbolicSC;
   }
+
+  /// Returns the scalar type of this symbolic value.
+  Type *getType() const { return Ty; }
 
   /// Returns true if this symbolic value has been materialized.
   bool isMaterialized() const { return Materialized; }
@@ -262,6 +297,9 @@ struct VPSymbolicValue : public VPValue {
   }
 
 private:
+  /// The scalar type of this symbolic value.
+  Type *Ty;
+
   /// Track whether this symbolic value has been materialized (replaced).
   /// After materialization, accessing users should trigger an assertion.
   bool Materialized = false;

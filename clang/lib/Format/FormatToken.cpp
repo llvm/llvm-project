@@ -33,10 +33,10 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
-static constexpr std::array<StringRef, 14> QtPropertyKeywords = {
-    "BINDABLE",   "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",
-    "NOTIFY",     "READ",     "REQUIRED",   "RESET", "REVISION",
-    "SCRIPTABLE", "STORED",   "USER",       "WRITE",
+static constexpr std::array<StringRef, 16> QtPropertyKeywords = {
+    "BINDABLE", "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",   "NOTIFY",
+    "OVERRIDE", "READ",     "REQUIRED",   "RESET", "REVISION", "SCRIPTABLE",
+    "STORED",   "USER",     "VIRTUAL",    "WRITE",
 };
 
 bool FormatToken::isQtProperty() const {
@@ -186,7 +186,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // have many items (20 or more) or we allow bin-packing of function call
   // arguments.
   if (Style.Cpp11BracedListStyle != FormatStyle::BLS_Block &&
-      !Style.BinPackArguments &&
+      Style.PackArguments.BinPack == FormatStyle::BPAS_OnePerLine &&
       (Commas.size() < 19 || !Style.BinPackLongBracedList)) {
     return;
   }
