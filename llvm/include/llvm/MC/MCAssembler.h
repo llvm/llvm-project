@@ -114,6 +114,7 @@ private:
   /// Perform relaxation on a single fragment.
   void relaxFragment(MCFragment &F);
   void relaxAlign(MCFragment &F);
+  void relaxPrefAlign(MCFragment &F);
   void relaxInstruction(MCFragment &F);
   void relaxLEB(MCFragment &F);
   void relaxBoundaryAlign(MCBoundaryAlignFragment &BF);

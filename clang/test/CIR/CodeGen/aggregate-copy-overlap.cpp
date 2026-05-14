@@ -38,7 +38,7 @@ struct Outer : virtual VBase {
 // CIR:         cir.copy %{{.+}} to %{{.+}} skip_tail_padding : !cir.ptr<!rec_HasPadding>
 
 // LLVM-LABEL: define {{.*}} void @_ZN5OuterC1ERK10HasPaddingc(
-// LLVM:         %[[GEP:.*]] = getelementptr %struct.Outer, ptr %{{.+}}, i32 0, i32 1
+// LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 1
 // LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr %[[GEP]], ptr %{{.+}}, i64 5, i1 false)
 
 // OGCG-LABEL: define {{.*}} void @_ZN5OuterC1ERK10HasPaddingc(
@@ -61,7 +61,7 @@ struct NonOverlapping {
 // CIR:         cir.copy %{{.+}} to %{{.+}} : !cir.ptr<!rec_HasPadding>
 
 // LLVM-LABEL: define {{.*}} void @_ZN14NonOverlappingC2ERK10HasPaddingc(
-// LLVM:         %[[GEP:.*]] = getelementptr %struct.NonOverlapping, ptr %{{.+}}, i32 0, i32 0
+// LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.NonOverlapping, ptr %{{.+}}, i32 0, i32 0
 // LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr %[[GEP]], ptr %{{.+}}, i64 8, i1 false)
 
 // OGCG-LABEL: define {{.*}} void @_ZN14NonOverlappingC2ERK10HasPaddingc(

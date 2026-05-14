@@ -16,40 +16,38 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-redundantcondbranch"
 
 namespace {
-class AArch64RedundantCondBranch : public MachineFunctionPass {
+
+class AArch64RedundantCondBranchLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  AArch64RedundantCondBranch() : MachineFunctionPass(ID) {}
+  AArch64RedundantCondBranchLegacy() : MachineFunctionPass(ID) {}
 
+  StringRef getPassName() const override {
+    return "AArch64 Redundant Conditional Branch Elimination";
+  }
+
+protected:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
   }
-  StringRef getPassName() const override {
-    return "AArch64 Redundant Conditional Branch Elimination";
-  }
 };
-char AArch64RedundantCondBranch::ID = 0;
+char AArch64RedundantCondBranchLegacy::ID = 0;
 } // namespace
 
-INITIALIZE_PASS(AArch64RedundantCondBranch, "aarch64-redundantcondbranch",
+INITIALIZE_PASS(AArch64RedundantCondBranchLegacy, "aarch64-redundantcondbranch",
                 "AArch64 Redundant Conditional Branch Elimination pass", false,
                 false)
 
-bool AArch64RedundantCondBranch::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+static bool runAArch64RedundantCondBranch(MachineFunction &MF) {
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   bool Changed = false;
@@ -58,6 +56,23 @@ bool AArch64RedundantCondBranch::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
+bool AArch64RedundantCondBranchLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return runAArch64RedundantCondBranch(MF);
+}
+
+PreservedAnalyses
+AArch64RedundantCondBranchPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &) {
+  if (runAArch64RedundantCondBranch(MF)) {
+    return getMachineFunctionPassPreservedAnalyses();
+  }
+  return PreservedAnalyses::all();
+}
+
 FunctionPass *llvm::createAArch64RedundantCondBranchPass() {
-  return new AArch64RedundantCondBranch();
+  return new AArch64RedundantCondBranchLegacy();
 }

@@ -246,6 +246,24 @@ the C runtime before ``main`` and it:
   during program termination and use the stored handle to unregister the fat
   binary from the HIP runtime.
 
+The compiler-generated wrapper object is placed in the ``.hipFatBinSegment``
+section. Its layout is:
+
+.. code-block:: c++
+
+  struct {
+    uint32_t magic;
+    uint32_t version;
+    void *image;
+    void *reserved;
+  };
+
+The section is an internal ABI between Clang-generated host objects, the HIP
+runtime, and binary tools that need to find HIP fat binaries. Consumers may
+walk the raw section contents as a packed array of wrapper records, so compiler
+and instrumentation passes must preserve the wrapper object layout in the
+section.
+
 The module destructor (for example ``__hip_module_dtor`` or a
 ``.hip.fatbin_unreg`` function) loads the stored handle, checks that it is
 non-null, calls ``__hipUnregisterFatBinary`` to unregister the fat binary from

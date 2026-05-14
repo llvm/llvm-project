@@ -222,3 +222,43 @@ template <template <typename> class Template, typename Argument>
 using Bind = Instantiate<Internal<Template>::template Bind, Argument>;
 #endif
 } // namespace cwg1794
+
+namespace cwg1780 { // cwg1780: 23
+#if __cplusplus >= 201103L
+
+#if __cplusplus >= 201703L
+#define CONSTEXPR constexpr
+#elif __cplusplus >= 201103L
+#define CONSTEXPR
+#endif
+
+auto l = []() -> int { return 5; };
+using L = decltype(l);
+class A {
+    friend CONSTEXPR auto L::operator()() const -> int;
+    // since-cxx11-error@-1 {{a member of a lambda should not be the target of a friend declaration}}
+};
+
+#undef CONSTEXPR
+
+#if __cplusplus >= 201402L
+auto gl = [](auto a) { return 5; }; // #cwg1780-spec
+using GL = decltype(gl);
+
+template <>
+auto GL::operator()(int a) const {
+// since-cxx11-error@-1 {{a member of a lambda should not be explicitly specialized}}
+//   since-cxx11-note-re@#cwg1780-spec {{{{'\(lambda at .+\)'}} defined here}}
+    return 6;
+}
+
+auto gll = [](auto a) -> int { return 5; }; // #cwg1780-inst
+
+using GLL = decltype(gll);
+template auto GLL::operator()<int>(int a) const -> int;
+// since-cxx11-error@-1 {{a member of a lambda should not be explicitly instantiated}}
+//   since-cxx11-note-re@#cwg1780-inst {{{{'\(lambda at .+\)'}} defined here}}
+#endif
+
+#endif
+} // namespace cwg1780

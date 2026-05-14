@@ -59,22 +59,39 @@ class TosaSpecificationVersion {
 public:
   TosaSpecificationVersion() = default;
 
-  TosaSpecificationVersion(uint32_t major, uint32_t minor)
-      : majorVersion(major), minorVersion(minor) {}
+  TosaSpecificationVersion(uint32_t major, uint32_t minor, bool draft = false)
+      : majorVersion(major), minorVersion(minor), draft(draft) {}
   TosaSpecificationVersion(SpecificationVersion version)
       : TosaSpecificationVersion(fromVersionEnum(version)) {}
 
   bool isBackwardsCompatibleWith(TosaSpecificationVersion baseVersion) const {
-    return this->majorVersion == baseVersion.majorVersion &&
-           this->minorVersion >= baseVersion.minorVersion;
+    if (this->majorVersion != baseVersion.majorVersion)
+      return false;
+    if (this->minorVersion < baseVersion.minorVersion)
+      return false;
+    // An unreleased version is not expected to be backwards compatible with
+    // a corresponding released version. However, an unreleased version is
+    // expected to be backwards compatible with all released versions prior to
+    // it.
+    //
+    // For example:
+    // - 1.1.draft is not expected to be backwards compatible with 1.1
+    // - 1.1.draft is expected to be backwards compatible with 1.0
+    // - 1.1.draft is not expected to be backwards compatible with 1.0.draft
+    if (this->draft && !baseVersion.draft &&
+        this->minorVersion == baseVersion.minorVersion)
+      return false;
+    return true;
   }
 
   uint32_t getMajor() const { return majorVersion; }
   uint32_t getMinor() const { return minorVersion; }
+  bool isDraft() const { return draft; }
 
 private:
   uint32_t majorVersion = 0;
   uint32_t minorVersion = 0;
+  bool draft = false;
 
   static TosaSpecificationVersion
   fromVersionEnum(SpecificationVersion version) {
@@ -82,7 +99,7 @@ private:
     case SpecificationVersion::V_1_0:
       return TosaSpecificationVersion(1, 0);
     case SpecificationVersion::V_1_1_DRAFT:
-      return TosaSpecificationVersion(1, 1);
+      return TosaSpecificationVersion(1, 1, true);
     }
     llvm_unreachable("Unknown TOSA version");
   }

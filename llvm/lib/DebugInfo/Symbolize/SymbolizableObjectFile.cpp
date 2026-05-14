@@ -47,8 +47,7 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
         Expected<StringRef> E = Section->getContents();
         if (!E)
           return E.takeError();
-        OpdExtractor.reset(new DataExtractor(*E, Obj->isLittleEndian(),
-                                             Obj->getBytesInAddress()));
+        OpdExtractor.reset(new DataExtractor(*E, Obj->isLittleEndian()));
         OpdAddress = Section->getAddress();
         break;
       }
@@ -205,8 +204,9 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
     // For the purposes of symbolization, pretend the symbol's address is that
     // of the function's code, not the descriptor.
     uint64_t OpdOffset = SymbolAddress - OpdAddress;
-    if (OpdExtractor->isValidOffsetForAddress(OpdOffset))
-      SymbolAddress = OpdExtractor->getAddress(&OpdOffset);
+    unsigned AddressSize = Obj.getBytesInAddress();
+    if (OpdExtractor->isValidOffsetForDataOfSize(OpdOffset, AddressSize))
+      SymbolAddress = OpdExtractor->getUnsigned(&OpdOffset, AddressSize);
   }
   // Mach-O symbol table names have leading underscore, skip it.
   if (Module->isMachO())
@@ -273,13 +273,26 @@ object::SectionedAddress SymbolizableObjectFile::convertDwarfOffsetForWasm(
     object::SectionedAddress ModuleOffset) const {
   if (!Module->isWasm())
     return ModuleOffset;
+
+  // For Wasm object files, addresses are already section-relative.
+  if (Module->isRelocatableObject())
+    return ModuleOffset;
+
+  // We are dealing with a linked Wasm file, which uses file offsets.
   for (const SectionRef &Sec : Module->sections()) {
     if (Sec.getIndex() == ModuleOffset.SectionIndex) {
-      if (Sec.isText())
+      if (Sec.isText()) {
         ModuleOffset.Address -= Sec.getAddress();
+        return ModuleOffset;
+      }
       break;
     }
   }
+
+  // If the address is not in a text section, or we couldn't find a
+  // matching section, invalidate it. This prevents it from incorrectly
+  // being interpreted as as section-relative DWARF offset.
+  ModuleOffset.Address = UINT64_MAX;
   return ModuleOffset;
 }
 

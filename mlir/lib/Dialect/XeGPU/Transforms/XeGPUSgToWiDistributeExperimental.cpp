@@ -234,14 +234,12 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
   LogicalResult
   matchAndRewrite(xegpu::DpasOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // llvm::errs() << "DpasOpPattern matchAndRewrite called\n";
     // Check if the op has A, B and CD layouts attached.
     auto layoutA = cast<xegpu::LayoutAttr>(op.getLayoutAAttr());
     auto layoutB = cast<xegpu::LayoutAttr>(op.getLayoutBAttr());
     auto layoutCd = cast<xegpu::LayoutAttr>(op.getLayoutCdAttr());
     if (!layoutA || !layoutB || !layoutCd)
       return failure();
-    // llvm::errs() << "tryning to calculate wi types for dpas op\n";
     auto wiResultTyOrFailure =
         xegpu::getDistributedVectorType(op.getType(), layoutCd);
     auto wiATypeOrFailure =
@@ -259,6 +257,38 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
       return rewriter.notifyMatchFailure(
           op, "unable to compute expected workitem vector type for DpasOp from "
               "lane layout");
+
+    // Validate bit widths match uArch packed format requirements
+    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    if (uArch) {
+      const auto *uArchInstruction =
+          dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(
+              uArch->getInstruction(
+                  xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
+      if (uArchInstruction) {
+        auto wiAType = wiATypeOrFailure.value();
+        auto wiBType = wiBTypeOrFailure.value();
+        // Calculate total packed bit width = element bit width * vector size
+        unsigned aPackedBitWidth =
+            wiAType.getElementTypeBitWidth() * wiAType.getNumElements();
+        unsigned bPackedBitWidth =
+            wiBType.getElementTypeBitWidth() * wiBType.getNumElements();
+        unsigned expectedABitSize = uArchInstruction->getPackedFormatBitSizeA();
+        unsigned expectedBBitSize = uArchInstruction->getPackedFormatBitSizeB();
+
+        if (aPackedBitWidth % expectedABitSize != 0)
+          return rewriter.notifyMatchFailure(
+              op,
+              "A operand packed bit width must be a multiple of uArch packed "
+              "format requirement");
+        if (bPackedBitWidth % expectedBBitSize != 0)
+          return rewriter.notifyMatchFailure(
+              op,
+              "B operand packed bit width must be a multiple of uArch packed "
+              "format requirement");
+      }
+    }
+
     auto newOp = xegpu::DpasOp::create(
         rewriter, op->getLoc(), wiResultTyOrFailure.value(),
         castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getLhs()),
@@ -590,15 +620,14 @@ struct SgToWiMultiDimReduction
         result = vector::makeArithReduction(rewriter, op.getLoc(), op.getKind(),
                                             result, adaptor.getAcc());
     } else if (isReductionLaneLocal(op)) {
-      auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
-      VectorType resVecTy = dyn_cast<VectorType>(op.getType());
-      auto resDistVecTyOrFailure =
-          getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
-      // For lane local reduction, simply create a new MultiDimReductionOp using
-      // adaptor operands and the new result type.
-      result = vector::MultiDimReductionOp::create(
-          rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
-          adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
+      // For lane-local reduction, lower to a sequence of vector.reduction ops
+      // over 1D slices extracted from the distributed source vector. This is
+      // required so we dont have 2D source vectors at xegpu-linearize.
+      auto reductionDim = reductionDims[0];
+      result = xegpu::lowerToVectorReductions(
+          cast<TypedValue<VectorType>>(adaptor.getSource()),
+          cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
+          reductionDim, op.getLoc(), rewriter);
     } else {
       auto reductionDim = reductionDims[0];
       VectorType sourceType = op.getSourceVectorType();
@@ -1610,6 +1639,8 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
       }
     });
   }
+
+  xegpu::removeTemporaryLayoutAttrs(getOperation());
 }
 
 void xegpu::populateXeGPUSgToWiDistributeTypeConversions(

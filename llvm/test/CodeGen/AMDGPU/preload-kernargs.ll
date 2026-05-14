@@ -1241,11 +1241,11 @@ define amdgpu_kernel void @fp128_kernel_preload_arg(ptr addrspace(1) inreg %out,
 ; GFX942-NEXT:    .p2align 8
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB25_0:
-; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX942-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX942-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX942-NEXT:    v_mov_b32_e32 v3, s9
+; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
 ; GFX942-NEXT:    s_endpgm
 ;
@@ -1257,20 +1257,20 @@ define amdgpu_kernel void @fp128_kernel_preload_arg(ptr addrspace(1) inreg %out,
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB25_0:
-; GFX90a-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, s14
 ; GFX90a-NEXT:    v_mov_b32_e32 v3, s15
+; GFX90a-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX90a-NEXT:    global_store_dwordx4 v4, v[0:3], s[8:9]
 ; GFX90a-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: fp128_kernel_preload_arg:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s6
-; GFX1250-NEXT:    v_dual_mov_b32 v1, s7 :: v_dual_mov_b32 v2, s8
-; GFX1250-NEXT:    v_mov_b32_e32 v3, s9
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX1250-NEXT:    v_dual_mov_b32 v2, s8 :: v_dual_mov_b32 v3, s9
+; GFX1250-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1250-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   store fp128 %in, ptr addrspace(1) %out

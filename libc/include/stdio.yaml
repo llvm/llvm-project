@@ -218,6 +218,12 @@ functions:
       - type: FILE *
       - type: long
       - type: int
+  - name: rewind
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: FILE *
   - name: fseeko
     standards:
       - POSIX

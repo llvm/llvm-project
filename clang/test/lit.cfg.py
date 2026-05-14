@@ -15,6 +15,9 @@ from lit.llvm.subst import FindTool
 
 # Configuration file for the 'lit' test runner.
 
+if lit.util.pythonize_bool(lit_config.params.get("use_normalized_slashes")):
+    config.available_features.add("windows-prefer-forward-slash")
+
 # name: The name of this test suite.
 config.name = "Clang"
 
@@ -118,7 +121,6 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
-    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -145,6 +147,9 @@ tools = [
     "clang-ssaf-linker",
     "clang-ssaf-format",
 ]
+
+if config.clang_enable_cir:
+    tools.append("cir-opt")
 
 if config.clang_examples:
     config.available_features.add("examples")
@@ -267,6 +272,10 @@ if config.clang_staticanalyzer:
 # ClangIR support
 if config.clang_enable_cir:
     config.available_features.add("cir-support")
+
+# SPIRV-Tools validator availability (e.g. built with -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+if lit.util.which("spirv-val", config.llvm_tools_dir):
+    config.available_features.add("spirv-val")
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
