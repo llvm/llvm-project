@@ -156,8 +156,9 @@ void test_cxx_brace_init(AGG *src) {
 // CXX-NEXT: [[AND:%.*]] = and i64 [[INT]], 3, !nosanitize
 // CXX-NEXT: [[ALIGN:%.*]] = icmp eq i64 [[AND]], 0, !nosanitize
 // CXX-NEXT: [[OK:%.*]] = and i1 [[CMP]], [[ALIGN]], !nosanitize
-// CXX-NEXT: br i1 [[OK]]
-// CXX: call void @__ubsan_handle_type_mismatch_v1_abort
+// CXX-NEXT: br i1 [[OK]], label %{{.*}}, label %handler.type_mismatch
+// CXX: handler.type_mismatch
+// CXX-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
 // CXX: call void @llvm.memcpy
 void test_cxx_new(AGG *src) {
   AGG *p = new AGG(*src);
