@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvasm && cat %t.spvasm && FileCheck %s --check-prefix=CHECK < %t.spvasm
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK
 ; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpCapability Kernel
@@ -115,8 +115,6 @@
 ; CHECK-DAG: %[[#InvokeKernel4]] = OpFunction %[[#typeVoid]] {{Pure|None}} %[[#typeFnVoidPtrLocal1]]
 ; CHECK-DAG: %[[#InvokeKernel5]] = OpFunction %[[#typeVoid]] {{Pure|None}} %[[#typeFnVoidPtrLocal3]]
 ; CHECK-DAG: %[[#InvokeKernel6]] = OpFunction %[[#typeVoid]] {{Pure|None}} %[[#typeFnVoidPtr]]
-; ModuleID = '/work2/idubinov/tasks/EMPTYKERNEL/enqueuekernel.ll'
-source_filename = "/work2/idubinov/tasks/EMPTYKERNEL/enqueuekernel.cl"
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
 target triple = "spirv64-unknown-unknown"
 
@@ -127,7 +125,7 @@ target triple = "spirv64-unknown-unknown"
 @__block_literal_global.1 = internal addrspace(1) constant { i32, i32, ptr addrspace(4) } { i32 16, i32 8, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_4 to ptr addrspace(4)) }, align 8
 @__block_literal_global.2 = internal addrspace(1) constant { i32, i32, ptr addrspace(4) } { i32 16, i32 8, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_5 to ptr addrspace(4)) }, align 8
 
-define spir_kernel void @device_side_enqueue(ptr addrspace(1) align 4 %a, ptr addrspace(1) align 4 %b, i32 %i, i8 %c0) {
+define spir_kernel void @device_side_enqueue(ptr addrspace(1) align 4 %a, ptr addrspace(1) align 4 %b, i32 %i, i8 %c0, target("spirv.Queue") %default_queue) {
 entry:
   %clk_event.i = alloca target("spirv.DeviceEvent"), align 8
   %event_wait_list.i = alloca target("spirv.DeviceEvent"), align 8
@@ -146,7 +144,7 @@ entry:
   %block17.i = alloca <{ i32, i32, ptr addrspace(4), ptr addrspace(1), ptr addrspace(1), i32 }>, align 8
   call void @llvm.memcpy.p0.p2.i64(ptr align 8 %gs.i, ptr addrspace(2) align 8 @__const.device_side_enqueue.gs, i64 24, i1 false)
   call spir_func void @_Z10ndrange_3DPKm(ptr sret(%struct.ndrange_t) align 8 %tmp.i, ptr %gs.i)
-  %0 = call spir_func i32 @__enqueue_kernel_basic_events(target("spirv.Queue") undef, i32 1, ptr %tmp.i, i32 0, ptr addrspace(4) null, ptr addrspace(4) null, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global to ptr addrspace(4)))
+  %0 = call spir_func i32 @__enqueue_kernel_basic_events(target("spirv.Queue") %default_queue, i32 1, ptr %tmp.i, i32 0, ptr addrspace(4) null, ptr addrspace(4) null, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global to ptr addrspace(4)))
   store i32 29, ptr %block.i, align 8
   %block.align.i = getelementptr inbounds i8, ptr %block.i, i64 4
   store i32 8, ptr %block.align.i, align 4
@@ -159,7 +157,7 @@ entry:
   %block.captured3.i = getelementptr inbounds i8, ptr %block.i, i64 28
   store i8 %c0, ptr %block.captured3.i, align 4
   %1 = addrspacecast ptr %block.i to ptr addrspace(4)
-  %2 = call spir_func i32 @__enqueue_kernel_basic(target("spirv.Queue") undef, i32 0, ptr %tmp1.i, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_2_kernel to ptr addrspace(4)), ptr addrspace(4) %1)
+  %2 = call spir_func i32 @__enqueue_kernel_basic(target("spirv.Queue") %default_queue, i32 0, ptr %tmp1.i, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_2_kernel to ptr addrspace(4)), ptr addrspace(4) %1)
   %3 = addrspacecast ptr %event_wait_list.i to ptr addrspace(4)
   %4 = addrspacecast ptr %clk_event.i to ptr addrspace(4)
   store i32 36, ptr %block5.i, align 8
@@ -174,16 +172,16 @@ entry:
   %block.captured11.i = getelementptr inbounds i8, ptr %block5.i, i64 24
   store ptr addrspace(1) %b, ptr %block.captured11.i, align 8
   %5 = addrspacecast ptr %block5.i to ptr addrspace(4)
-  %6 = call spir_func i32 @__enqueue_kernel_basic_events(target("spirv.Queue") undef, i32 0, ptr %tmp4.i, i32 2, ptr addrspace(4) %3, ptr addrspace(4) %4, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_3_kernel to ptr addrspace(4)), ptr addrspace(4) %5)
+  %6 = call spir_func i32 @__enqueue_kernel_basic_events(target("spirv.Queue") %default_queue, i32 0, ptr %tmp4.i, i32 2, ptr addrspace(4) %3, ptr addrspace(4) %4, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_3_kernel to ptr addrspace(4)), ptr addrspace(4) %5)
   %7 = addrspacecast ptr %event_wait_list2.i to ptr addrspace(4)
   store i64 0, ptr %block_sizes.i, align 8
-  %8 = call spir_func i32 @__enqueue_kernel_events_varargs(target("spirv.Queue") undef, i32 0, ptr %tmp12.i, i32 2, ptr addrspace(4) %7, ptr addrspace(4) %4, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_4_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.1 to ptr addrspace(4)), i32 1, ptr %block_sizes.i)
+  %8 = call spir_func i32 @__enqueue_kernel_events_varargs(target("spirv.Queue") %default_queue, i32 0, ptr %tmp12.i, i32 2, ptr addrspace(4) %7, ptr addrspace(4) %4, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_4_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.1 to ptr addrspace(4)), i32 1, ptr %block_sizes.i)
   store i64 101, ptr %block_sizes15.i, align 8
   %9 = getelementptr inbounds i8, ptr %block_sizes15.i, i64 8
   store i64 102, ptr %9, align 8
   %10 = getelementptr inbounds i8, ptr %block_sizes15.i, i64 16
   store i64 104, ptr %10, align 8
-  %11 = call spir_func i32 @__enqueue_kernel_varargs(target("spirv.Queue") undef, i32 0, ptr %tmp14.i, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_5_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.2 to ptr addrspace(4)), i32 3, ptr %block_sizes15.i)
+  %11 = call spir_func i32 @__enqueue_kernel_varargs(target("spirv.Queue") %default_queue, i32 0, ptr %tmp14.i, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_5_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.2 to ptr addrspace(4)), i32 3, ptr %block_sizes15.i)
   store i32 36, ptr %block17.i, align 8
   %block.align19.i = getelementptr inbounds i8, ptr %block17.i, i64 4
   store i32 8, ptr %block.align19.i, align 4
@@ -196,7 +194,7 @@ entry:
   %block.captured23.i = getelementptr inbounds i8, ptr %block17.i, i64 24
   store ptr addrspace(1) %b, ptr %block.captured23.i, align 8
   %12 = addrspacecast ptr %block17.i to ptr addrspace(4)
-  %13 = call spir_func i32 @__enqueue_kernel_basic_events(target("spirv.Queue") undef, i32 0, ptr %tmp16.i, i32 0, ptr addrspace(4) null, ptr addrspace(4) %4, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_6_kernel to ptr addrspace(4)), ptr addrspace(4) %12)
+  %13 = call spir_func i32 @__enqueue_kernel_basic_events(target("spirv.Queue") %default_queue, i32 0, ptr %tmp16.i, i32 0, ptr addrspace(4) null, ptr addrspace(4) %4, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_6_kernel to ptr addrspace(4)), ptr addrspace(4) %12)
   ret void
 }
 
