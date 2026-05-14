@@ -1,14 +1,23 @@
 //===- LoopVectorizationUtils.cpp - Utilities for LoopVectorize -----------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 ///
 /// \file
 /// This file implements stateless functions that are used by the LoopVectorize
 /// and its related files.
 //===----------------------------------------------------------------------===//
 
-#include "LoopVectorizationUtils.h"
+#include "LoopVectorizationPlanner.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -52,33 +61,31 @@ createLVAnalysis(const char *PassName, StringRef RemarkName,
 }
 
 void LoopVectorizationUtils::reportVectorizationFailure(
-    const char *PassName, const StringRef DebugMsg, const StringRef OREMsg,
-    const StringRef ORETag, OptimizationRemarkEmitter *ORE, const Loop *TheLoop,
-    Instruction *I) {
+    const LoopVectorizeHints *Hints, const StringRef DebugMsg,
+    const StringRef OREMsg, const StringRef ORETag,
+    OptimizationRemarkEmitter *ORE, const Loop *TheLoop, Instruction *I) {
   LLVM_DEBUG(debugVectorizationMessage("Not vectorizing: ", DebugMsg, I));
-  ORE->emit(createLVAnalysis(PassName, ORETag, TheLoop, I)
+  ORE->emit(createLVAnalysis(DEBUG_TYPE, ORETag, TheLoop, I)
             << "loop not vectorized: " << OREMsg);
 }
 
 void LoopVectorizationUtils::reportVectorizationInfo(
-    const char *PassName, const StringRef Msg, const StringRef ORETag,
-    OptimizationRemarkEmitter *ORE, const Loop *TheLoop, Instruction *I,
-    DebugLoc DL) {
+    const LoopVectorizeHints *Hints, const StringRef Msg,
+    const StringRef ORETag, OptimizationRemarkEmitter *ORE, const Loop *TheLoop,
+    Instruction *I, DebugLoc DL) {
   LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
-  ORE->emit(createLVAnalysis(PassName, ORETag, TheLoop, I, DL) << Msg);
+  ORE->emit(createLVAnalysis(DEBUG_TYPE, ORETag, TheLoop, I, DL) << Msg);
 }
 
-void LoopVectorizationUtils::reportVectorization(const char *PassName,
-                                                 OptimizationRemarkEmitter *ORE,
-                                                 Loop *TheLoop,
-                                                 ElementCount VFWidth,
-                                                 unsigned IC) {
+void LoopVectorizationUtils::reportVectorization(
+    const LoopVectorizeHints *Hints, OptimizationRemarkEmitter *ORE,
+    Loop *TheLoop, ElementCount VFWidth, unsigned IC) {
   LLVM_DEBUG(debugVectorizationMessage(
       "Vectorizing: ", TheLoop->isInnermost() ? "innermost loop" : "outer loop",
       nullptr));
   StringRef LoopType = TheLoop->isInnermost() ? "" : "outer ";
   ORE->emit([&]() {
-    return OptimizationRemark(PassName, "Vectorized", TheLoop->getStartLoc(),
+    return OptimizationRemark(DEBUG_TYPE, "Vectorized", TheLoop->getStartLoc(),
                               TheLoop->getHeader())
            << "vectorized " << LoopType << "loop (vectorization width: "
            << ore::NV("VectorizationFactor", VFWidth)
