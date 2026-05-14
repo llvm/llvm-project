@@ -15666,8 +15666,11 @@ void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
 
 bool ASTContext::maybeFoldMSConstexpr(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) {
-  bool Fold = getLangOpts().MSVCCompat && Notes.size() == 1 &&
-              Notes[0].second.getDiagID() == diag::note_constexpr_invalid_cast;
+  bool Fold =
+      getLangOpts().MSVCCompat && Notes.size() == 1 &&
+      Notes[0].second.getDiagID() == diag::note_constexpr_invalid_cast &&
+      Notes[0].second.getValueArg(0) != diag::ConstexprInvalidCastKind::Dynamic;
+
   if (Fold) {
     getDiagnostics().Report(Notes[0].first, diag::warn_relaxed_constant_fold);
     Notes.clear();
