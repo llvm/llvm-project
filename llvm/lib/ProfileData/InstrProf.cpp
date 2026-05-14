@@ -1370,17 +1370,14 @@ void annotateValueSite(Module &M, Instruction &Inst,
   // These are rare and should only come from corrupted profiles, so we
   // just skip them. Remove this when they are fixed properly in
   // llvm-profdata.
-  std::optional<uint64_t> ZeroCount = std::nullopt;
+  uint64_t ZeroCount = 0;
   DenseSet<uint64_t> VisitedValues;
   for (const auto &VD : VDs) {
     if (VD.Value != 0 && VisitedValues.contains(VD.Value))
       continue;
     VisitedValues.insert(VD.Value);
     if (VD.Value == 0) {
-      if (ZeroCount.has_value())
-        ZeroCount = *ZeroCount + VD.Count;
-      else
-        ZeroCount = VD.Count;
+      ZeroCount += VD.Count;
     } else {
       Vals.push_back(MDHelper.createConstant(
           ConstantInt::get(Type::getInt64Ty(Ctx), VD.Value)));
@@ -1390,11 +1387,11 @@ void annotateValueSite(Module &M, Instruction &Inst,
     if (--MDCount == 0)
       break;
   }
-  if (ZeroCount.has_value()) {
+  if (ZeroCount != 0) {
     Vals.push_back(
         MDHelper.createConstant(ConstantInt::get(Type::getInt64Ty(Ctx), 0)));
     Vals.push_back(MDHelper.createConstant(
-        ConstantInt::get(Type::getInt64Ty(Ctx), *ZeroCount)));
+        ConstantInt::get(Type::getInt64Ty(Ctx), ZeroCount)));
   }
   Inst.setMetadata(LLVMContext::MD_prof, MDNode::get(Ctx, Vals));
 }
