@@ -10,12 +10,6 @@
 #   *** Bad machine code: Illegal virtual register for instruction ***
 #   Expected a VGPR_32 register, but got a AV_32 register
 
---- |
-  declare void @callee()
-  define void @waterfall_si_call_inreg_av32() { ret void }
-  define void @waterfall_si_call_inreg_vgpr32() { ret void }
-...
-
 # AV_32 ScalarOp: a COPY to VGPR_32 must be inserted in the loop header
 # before V_READFIRSTLANE_B32 reads the lane, so the readfirstlane
 # source is a pure VGPR class.
@@ -43,7 +37,7 @@ body:             |
   ; CHECK: bb.2:
   ; CHECK:   ADJCALLSTACKUP
   ; CHECK:   $sgpr16 = COPY [[LANE]]
-  ; CHECK:   SI_CALL_ISEL [[DEST]], @callee, csr_amdgpu_gfx90ainsts, implicit killed $sgpr16
+  ; CHECK:   SI_CALL_ISEL [[DEST]], 0, csr_amdgpu_gfx90ainsts, implicit killed $sgpr16
   ; CHECK:   ADJCALLSTACKDOWN
   ; CHECK:   SI_WATERFALL_LOOP %bb.1
   bb.0:
@@ -54,7 +48,7 @@ body:             |
 
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     $sgpr16 = COPY %0
-    SI_CALL_ISEL killed %1, @callee, csr_amdgpu_gfx90ainsts, implicit $sgpr16
+    SI_CALL_ISEL killed %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     S_ENDPGM 0
 ...
@@ -90,7 +84,7 @@ body:             |
 
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     $sgpr16 = COPY %0
-    SI_CALL_ISEL killed %1, @callee, csr_amdgpu_gfx90ainsts, implicit $sgpr16
+    SI_CALL_ISEL killed %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     S_ENDPGM 0
 ...
