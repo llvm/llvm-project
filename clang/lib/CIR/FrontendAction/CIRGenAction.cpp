@@ -8,12 +8,22 @@
 
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
 #include "CIRDiagnosticHandler.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/Parser/Parser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticCodeGen.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
+#include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleLinker.h"
@@ -27,7 +37,9 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 
@@ -279,6 +291,17 @@ bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
+static void registerCIRInputDialects(mlir::MLIRContext &ctx) {
+  mlir::DialectRegistry registry;
+  registry.insert<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
+                  mlir::omp::OpenMPDialect, cir::CIRDialect>();
+  cir::acc::registerOpenACCExtensions(registry);
+  cir::omp::registerOpenMPExtensions(registry);
+  ctx.appendDialectRegistry(registry);
+  ctx.loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
+                  mlir::omp::OpenMPDialect, cir::CIRDialect>();
+}
+
 static std::unique_ptr<raw_pwrite_stream>
 getOutputStream(CompilerInstance &CI, StringRef InFile,
                 CIRGenAction::OutputType Action) {
@@ -295,6 +318,101 @@ getOutputStream(CompilerInstance &CI, StringRef InFile,
     return CI.createDefaultOutputFile(true, InFile, "o");
   }
   llvm_unreachable("Invalid CIRGenAction::OutputType");
+}
+
+void CIRGenAction::ExecuteAction() {
+  // Source-based inputs run through the AST pipeline as before.
+  if (getCurrentFileKind().getLanguage() != Language::CIR) {
+    this->ASTFrontendAction::ExecuteAction();
+    return;
+  }
+
+  // .cir input: parse the serialized module, skip CIRGen, and continue with
+  // the existing CIR-to-LLVM lowering and backend codegen path.
+  CompilerInstance &CI = getCompilerInstance();
+
+  std::unique_ptr<raw_pwrite_stream> OS = CI.takeOutputStream();
+  if (!OS)
+    OS = getOutputStream(CI, getCurrentFileOrBufferName(), Action);
+  if (!OS)
+    return;
+
+  SourceManager &SM = CI.getSourceManager();
+  std::optional<llvm::MemoryBufferRef> MainFile =
+      SM.getBufferOrNone(SM.getMainFileID());
+  if (!MainFile)
+    return;
+
+  registerCIRInputDialects(*MLIRCtx);
+
+  llvm::SourceMgr SrcMgr;
+  SrcMgr.AddNewSourceBuffer(
+      llvm::MemoryBuffer::getMemBufferCopy(MainFile->getBuffer(),
+                                           MainFile->getBufferIdentifier()),
+      llvm::SMLoc());
+
+  MLIRMod = mlir::parseSourceFile<mlir::ModuleOp>(SrcMgr, MLIRCtx);
+  if (!MLIRMod) {
+    CI.getDiagnostics().Report(diag::err_invalid_cir)
+        << MainFile->getBufferIdentifier();
+    return;
+  }
+
+  mlir::ModuleOp Mod = MLIRMod.get();
+
+  // Honor the cc1 -triple flag: rewrite cir.triple if it disagrees so the
+  // downstream lowering sees the invocation's target.
+  llvm::StringRef invocationTriple = CI.getTargetOpts().Triple;
+  if (auto modTriple = Mod->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getTripleAttrName())) {
+    if (modTriple.getValue() != invocationTriple) {
+      CI.getDiagnostics().Report(diag::warn_fe_override_module)
+          << invocationTriple;
+      Mod->setAttr(cir::CIRDialect::getTripleAttrName(),
+                   mlir::StringAttr::get(MLIRCtx, invocationTriple));
+    }
+  } else {
+    Mod->setAttr(cir::CIRDialect::getTripleAttrName(),
+                 mlir::StringAttr::get(MLIRCtx, invocationTriple));
+  }
+
+  // For now, the CIR-to-CIR pipeline (target-lowering, cxxabi-lowering,
+  // lowering-prepare) still requires a live ASTContext. On .cir input that
+  // ASTContext is unavailable, so this path only supports formats whose
+  // emission does not rely on those passes:
+  //   * EmitCIR: round-trip the parsed module.
+  //   * EmitLLVM/EmitBC/EmitObj/EmitAssembly: lower directly via the existing
+  //     CIR-to-LLVM dialect translation, which itself does not require an
+  //     ASTContext, and hand the result to the LLVM backend.
+  // Lifting the remaining ASTContext dependency from LoweringPrepare is
+  // tracked separately and will let this entry point run the full pipeline.
+
+  if (Action == OutputType::EmitCIR) {
+    mlir::OpPrintingFlags flags;
+    flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
+    Mod.print(*OS, flags);
+    return;
+  }
+
+  llvm::LLVMContext LLVMCtx;
+  std::unique_ptr<llvm::Module> LLVMModule =
+      lowerFromCIRToLLVMIR(Mod, LLVMCtx, /*mlirSaveTempsOutFile=*/{},
+                           &CI.getVirtualFileSystem());
+  if (!LLVMModule) {
+    CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
+    return;
+  }
+
+  // emitBackendOutput compares the module's data layout against the target's
+  // expected description. The .cir input path bypasses BeginSourceFile, which
+  // is normally where the target gets created, so set it up here.
+  if (!CI.hasTarget() && !CI.createTarget())
+    return;
+
+  BackendAction BEAction = getBackendActionFromOutputType(Action);
+  emitBackendOutput(CI, CI.getCodeGenOpts(),
+                    CI.getTarget().getDataLayoutString(), LLVMModule.get(),
+                    BEAction, &CI.getVirtualFileSystem(), std::move(OS));
 }
 
 std::unique_ptr<ASTConsumer>
