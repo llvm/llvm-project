@@ -178,7 +178,8 @@ struct InstrumentationLocation {
     BASIC_BLOCK_POST,
     INSTRUCTION_PRE,
     INSTRUCTION_POST,
-    Last = INSTRUCTION_POST,
+    SPECIAL_VALUE,
+    Last = SPECIAL_VALUE,
   };
 
   /// Construct an instrumentation location that is not instrumenting an
@@ -220,6 +221,8 @@ struct InstrumentationLocation {
       return "instruction_pre";
     case INSTRUCTION_POST:
       return "instruction_post";
+    case SPECIAL_VALUE:
+      return "special_value";
     }
     llvm_unreachable("Invalid kind!");
   }
@@ -237,6 +240,7 @@ struct InstrumentationLocation {
         .Case("basic_block_post", BASIC_BLOCK_POST)
         .Case("instruction_pre", INSTRUCTION_PRE)
         .Case("instruction_post", INSTRUCTION_POST)
+        .Case("special_value", SPECIAL_VALUE)
         .Default(Last);
   }
 
@@ -254,6 +258,7 @@ struct InstrumentationLocation {
     case FUNCTION_POST:
     case BASIC_BLOCK_POST:
     case INSTRUCTION_POST:
+    case SPECIAL_VALUE:
       return false;
     }
     llvm_unreachable("Invalid kind!");
@@ -413,6 +418,15 @@ struct InstrumentationConfig {
     new (Obj) Ty(std::forward<ArgsTy>(Args)...);
     return Obj;
   }
+
+  /// Map to remember underlying objects for pointers.
+  DenseMap<Value *, Value *> UnderlyingObjsMap;
+
+  /// Map to remember base pointer info for values in a specific function.
+  DenseMap<std::pair<Value *, Function *>, Value *> BasePointerInfoMap;
+
+  /// Return the base pointer info for \p V.
+  Value *getBasePointerInfo(Value &V, InstrumentorIRBuilderTy &IIRB);
 
   /// Mapping to remember global strings passed to the runtime.
   DenseMap<StringRef, Constant *> GlobalStringsMap;
@@ -710,6 +724,46 @@ struct UnreachableIO final : public InstructionIO<Instruction::Unreachable> {
   }
 };
 
+// Special instrumentation opportunity for base pointers of memory operations.
+struct BasePointerIO final : public InstrumentationOpportunity {
+  BasePointerIO()
+      : InstrumentationOpportunity(
+            InstrumentationLocation(InstrumentationLocation::SPECIAL_VALUE)) {}
+  virtual ~BasePointerIO() {};
+
+  enum ConfigKind {
+    PassPointer = 0,
+    PassPointerKind,
+    PassId,
+    NumConfig,
+  };
+
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+
+  StringRef getName() const override { return "base_pointer_info"; }
+
+  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+            ConfigTy *UserConfig = nullptr);
+
+  static Value *getPointerKind(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB);
+
+  /// This is necessary to produce a return value that can be used by other IOs.
+  /// No replacement is actually happening.
+  static Value *setValueNoop(Value &V, Value &NewV,
+                             InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB) {
+    return &NewV;
+  }
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *BPIO = IConf.allocate<BasePointerIO>();
+    BPIO->init(IConf, IIRB);
+  }
+};
+
 // Module instrumentation opportunity.
 struct ModuleIO final : public InstrumentationOpportunity {
   ModuleIO(bool IsPRE)
@@ -819,6 +873,7 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
     PassPointer = 0,
     ReplacePointer,
     PassPointerAS,
+    PassBasePointerInfo,
     PassStoredValue,
     PassStoredValueSize,
     PassAlignment,
@@ -853,6 +908,9 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
                            InstrumentorIRBuilderTy &IIRB);
   static Value *getPointerAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
                              InstrumentorIRBuilderTy &IIRB);
+  static Value *getBasePointerInfo(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB);
   static Value *getValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
                          InstrumentorIRBuilderTy &IIRB);
   static Value *getValueSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
@@ -895,6 +953,7 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
     PassPointer = 0,
     ReplacePointer,
     PassPointerAS,
+    PassBasePointerInfo,
     PassValue,
     ReplaceValue,
     PassValueSize,
@@ -930,6 +989,9 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
                            InstrumentorIRBuilderTy &IIRB);
   static Value *getPointerAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
                              InstrumentorIRBuilderTy &IIRB);
+  static Value *getBasePointerInfo(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB);
   static Value *getValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
                          InstrumentorIRBuilderTy &IIRB);
   static Value *getValueSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
