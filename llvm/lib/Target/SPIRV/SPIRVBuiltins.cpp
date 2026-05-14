@@ -2921,17 +2921,6 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       .addUse(TmpReg);
 }
 
-// TODO: maybe move to the global register.
-static SPIRVTypeInst
-getOrCreateSPIRVDeviceEventPointer(MachineIRBuilder &MIRBuilder,
-                                   SPIRVGlobalRegistry *GR) {
-  LLVMContext &Context = MIRBuilder.getMF().getFunction().getContext();
-  unsigned SC1 = storageClassToAddressSpace(SPIRV::StorageClass::Generic);
-  Type *PtrType = PointerType::get(Context, SC1);
-  return GR->getOrCreateSPIRVType(PtrType, MIRBuilder,
-                                  SPIRV::AccessQualifier::ReadWrite, true);
-}
-
 static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
                                MachineIRBuilder &MIRBuilder,
                                SPIRVGlobalRegistry *GR) {
@@ -2995,15 +2984,35 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
     RetEventReg = Call->Arguments[RetEventIdx];
   } else {
     NumEventsReg = buildConstantIntReg32(0, MIRBuilder, GR);
-    Register NullPtr = GR->getOrCreateConstNullPtr(
-        MIRBuilder, getOrCreateSPIRVDeviceEventPointer(MIRBuilder, GR));
+    // Per SPIR-V spec, OpEnqueueKernel's Wait Events / Ret Event operands
+    // must be pointers to OpTypeDeviceEvent. Build the LLVM TargetExtType
+    // for spirv.DeviceEvent so getOrCreateSPIRVPointerType can register
+    // both the SPIR-V type and the LLVM-side mapping; deriving the pointer
+    // from an opaque LLVM PointerType would lose the pointee and deduce
+    // to <Generic i8*>.
+    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
+    Type *DeviceEventTy = TargetExtType::get(Ctx, "spirv.DeviceEvent");
+    SPIRVTypeInst DeviceEventPtrTy = GR->getOrCreateSPIRVPointerType(
+        DeviceEventTy, MIRBuilder, SPIRV::StorageClass::Generic);
+    Register NullPtr =
+        GR->getOrCreateConstNullPtr(MIRBuilder, DeviceEventPtrTy);
     WaitEventsReg = NullPtr;
     RetEventReg = NullPtr;
   }
 
   // 2.2 Invoke (Kernel)
-  assert(getBlockStructInstr(Call->Arguments[InvokeIdx], MRI)->getOpcode() ==
-         TargetOpcode::G_GLOBAL_VALUE);
+  // The Invoke operand of OpEnqueueKernel must be the function's <id>
+  // (per SPIR-V spec). The frontend hands us the result of an
+  // addrspacecast of @block_invoke_kernel; bypass that cast so the
+  // operand references the underlying G_GLOBAL_VALUE register, which
+  // selectGlobalValue lowers to a placeholder later rewritten by
+  // SPIRVModuleAnalysis to the OpFunction <id>.
+  MachineInstr *InvokeGlobalMI =
+      getBlockStructInstr(Call->Arguments[InvokeIdx], MRI);
+  assert(InvokeGlobalMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE);
+  Register InvokeReg = InvokeGlobalMI->getOperand(0).getReg();
+  // OpEnqueueKernel's Invoke operand uses the pID register class.
+  MRI->setRegClass(InvokeReg, &SPIRV::pIDRegClass);
 
   // 2.3 Param, Param Size, Param Align
   Register BlockLiteralReg = Call->Arguments[ParamIdx];
@@ -3058,7 +3067,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
                  .addUse(NumEventsReg)
                  .addUse(WaitEventsReg)
                  .addUse(RetEventReg)
-                 .addUse(Call->Arguments[InvokeIdx])
+                 .addUse(InvokeReg)
                  .addUse(ParamReg)
                  .addUse(ParamSizeReg)
                  .addUse(ParamAlignReg);

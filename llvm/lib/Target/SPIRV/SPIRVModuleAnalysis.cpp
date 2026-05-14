@@ -341,7 +341,23 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
     return true;
   }
   if (GR->hasConstFunPtr() && Opcode == SPIRV::OpUndef) {
+    // The OpUndef may be a placeholder for a function reference recorded by
+    // selectGlobalValue. Skip emitting it if any user consumes it as a
+    // function-pointer-like operand (OpConstantFunctionPointerINTEL operand 2,
+    // or OpEnqueueKernel's Invoke operand at index 8). The rewrite happens
+    // in visitFunPtrUse, which aliases the OpUndef's vreg to the function's
+    // global <id>.
     Register DefReg = MI.getOperand(0).getReg();
+    if (GR->getFunctionDefinitionByUse(&MI.getOperand(0))) {
+      for (MachineInstr &UseMI : MRI.use_instructions(DefReg)) {
+        unsigned UseOp = UseMI.getOpcode();
+        if (UseOp == SPIRV::OpConstantFunctionPointerINTEL ||
+            UseOp == SPIRV::OpEnqueueKernel) {
+          MAI.setSkipEmission(&MI);
+          return false;
+        }
+      }
+    }
     for (MachineInstr &UseMI : MRI.use_instructions(DefReg)) {
       if (UseMI.getOpcode() != SPIRV::OpConstantFunctionPointerINTEL)
         continue;
@@ -360,12 +376,15 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
 // This is a special case of a function pointer refering to a possibly
 // forward function declaration. The operand is a dummy OpUndef that
 // requires a special treatment.
+// FunPtrOp is the MachineOperand previously recorded via
+// SPIRVGlobalRegistry::recordFunctionPointer, identifying which Function
+// this placeholder refers to.
 void SPIRVModuleAnalysis::visitFunPtrUse(
-    Register OpReg, InstrGRegsMap &SignatureToGReg,
+    Register OpReg, const MachineOperand *FunPtrOp,
+    InstrGRegsMap &SignatureToGReg,
     std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
     const MachineInstr &MI) {
-  const MachineOperand *OpFunDef =
-      GR->getFunctionDefinitionByUse(&MI.getOperand(2));
+  const MachineOperand *OpFunDef = GR->getFunctionDefinitionByUse(FunPtrOp);
   assert(OpFunDef && OpFunDef->isReg());
   // find the actual function definition and number it globally in advance
   const MachineInstr *OpDefMI = OpFunDef->getParent();
@@ -401,7 +420,8 @@ void SPIRVModuleAnalysis::visitDecl(
     // Handle function pointers special case
     if (Opcode == SPIRV::OpConstantFunctionPointerINTEL &&
         MRI.getRegClass(OpReg) == &SPIRV::pIDRegClass) {
-      visitFunPtrUse(OpReg, SignatureToGReg, GlobalToGReg, MF, MI);
+      visitFunPtrUse(OpReg, &MI.getOperand(2), SignatureToGReg, GlobalToGReg,
+                     MF, MI);
       continue;
     }
     // Skip already processed instructions
@@ -559,6 +579,26 @@ void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
           if (DefMO.isReg() && isDeclSection(MRI, MI) &&
               !MAI.hasRegisterAlias(MF, DefMO.getReg()))
             visitDecl(MRI, SignatureToGReg, GlobalToGReg, MF, MI);
+          // OpEnqueueKernel is not a decl, but its Invoke operand may be a
+          // function-pointer placeholder OpUndef recorded by selectGlobalValue.
+          // Resolve it to the OpFunction's global <id> via visitFunPtrUse.
+          if (Opcode == SPIRV::OpEnqueueKernel && MI.getNumOperands() > 8) {
+            const MachineOperand &InvokeMO = MI.getOperand(8);
+            if (InvokeMO.isReg()) {
+              Register InvokeReg = InvokeMO.getReg();
+              if (!MAI.hasRegisterAlias(MF, InvokeReg)) {
+                if (const MachineInstr *DefMI =
+                        MRI.getUniqueVRegDef(InvokeReg)) {
+                  if (DefMI->getOpcode() == SPIRV::OpUndef) {
+                    const MachineOperand *FunPtrOp = &DefMI->getOperand(0);
+                    if (GR->getFunctionDefinitionByUse(FunPtrOp))
+                      visitFunPtrUse(InvokeReg, FunPtrOp, SignatureToGReg,
+                                     GlobalToGReg, MF, MI);
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
