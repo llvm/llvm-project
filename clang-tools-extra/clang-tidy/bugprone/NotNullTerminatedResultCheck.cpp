@@ -298,7 +298,7 @@ static void lengthExprHandle(const Expr *LengthExpr,
 
   // See whether we work with a macro.
   const StringRef LengthExprStr = exprToStr(LengthExpr, Result);
-  bool IsMacroDefinition = llvm::any_of(PP->macros(), [=](const auto &M) {
+  const bool IsMacroDefinition = llvm::any_of(PP->macros(), [=](const auto &M) {
     return M.first->getName() == LengthExprStr;
   });
 
