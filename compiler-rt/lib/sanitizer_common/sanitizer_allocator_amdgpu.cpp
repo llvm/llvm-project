@@ -99,17 +99,19 @@ bool AmdgpuMemFuncs::Init() {
 
 void* AmdgpuMemFuncs::Allocate(uptr size, uptr alignment,
                                DeviceAllocationInfo* da_info) {
+  AmdgpuAllocationInfo* aa_info =
+      reinterpret_cast<AmdgpuAllocationInfo*>(da_info);
+
   // Do not allocate if AMDGPU runtime is shutdown
   if (UNLIKELY(IsAmdgpuRuntimeShutdown())) {
     VReport(1,
             "Amdgpu Allocate: Runtime shutdown, skipping allocation for size "
             "%zu alignment %zu\n",
             size, alignment);
+    aa_info->EnsureFailureStatus(HSA_STATUS_ERROR_INVALID_RUNTIME_STATE);
     return nullptr;
   }
 
-  AmdgpuAllocationInfo* aa_info =
-      reinterpret_cast<AmdgpuAllocationInfo*>(da_info);
   if (!aa_info->memory_pool.handle) {
     aa_info->status = hsa_amd.vmem_address_reserve_align(
         &aa_info->ptr, size, aa_info->address, aa_info->alignment,

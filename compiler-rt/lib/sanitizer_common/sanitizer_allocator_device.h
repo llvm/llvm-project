@@ -57,8 +57,12 @@ class DeviceAllocatorT {
 
   void* Allocate(AllocatorStats* stat, uptr size, uptr alignment,
                  DeviceAllocationInfo* da_info) {
-    if (!da_info || !InitMemFuncs())
+    if (!da_info || !InitMemFuncs()) {
+      if (da_info && da_info->type_ == DAT_AMDGPU)
+        reinterpret_cast<AmdgpuAllocationInfo*>(da_info)->EnsureFailureStatus(
+            HSA_STATUS_ERROR_NOT_INITIALIZED);
       return nullptr;
+    }
 
     // Allocate an extra page for Metadata
     if (kMetadataSize_ + (size % page_size_) > page_size_) {
@@ -74,11 +78,18 @@ class DeviceAllocatorT {
           "WARNING: %s: DeviceAllocator allocation overflow: "
           "0x%zx bytes with 0x%zx alignment requested\n",
           SanitizerToolName, map_size, alignment);
+      if (da_info->type_ == DAT_AMDGPU)
+        reinterpret_cast<AmdgpuAllocationInfo*>(da_info)->EnsureFailureStatus(
+            HSA_STATUS_ERROR_OUT_OF_RESOURCES);
       return nullptr;
     }
     void* ptr = DeviceMemFuncs::Allocate(map_size, alignment, da_info);
-    if (!ptr)
+    if (!ptr) {
+      if (da_info->type_ == DAT_AMDGPU)
+        reinterpret_cast<AmdgpuAllocationInfo*>(da_info)->EnsureFailureStatus(
+            HSA_STATUS_ERROR_OUT_OF_RESOURCES);
       return nullptr;
+    }
     uptr map_beg = reinterpret_cast<uptr>(ptr);
     CHECK(IsAligned(map_beg, page_size_));
     MapUnmapCallback().OnMap(map_beg, map_size);
