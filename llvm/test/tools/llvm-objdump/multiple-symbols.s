@@ -55,7 +55,7 @@
 
 @ RUN: llvm-objdump --triple armv8a --disassemble-symbols=aaaa -d %t.o | FileCheck --check-prefixes=HEAD,AAAA,AABB %s
 @ RUN: llvm-objdump --triple armv8a --disassemble-symbols=bbbb -d %t.o | FileCheck --check-prefixes=HEAD,BBBB,AABB %s
-@ RUN: llvm-objdump --triple armv8a --disassemble=aaaa --disassemble=bbbb -d %t.o | FileCheck --check-prefixes=HEAD,AAAA,BBBB,AABB %s
+@ RUN: llvm-objdump --triple armv8a --disassemble-symbols=aaaa,bbbb -d %t.o | FileCheck --check-prefixes=HEAD,AAAA,BBBB,AABB %s
 
 // With _any_ of those three options and also --show-all-symbols, the
 // disassembled code is still limited to just the symbol(s) you asked about,
