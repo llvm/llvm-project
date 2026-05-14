@@ -3,7 +3,7 @@
 // -----
 
 llvm.func @sqrt_invalid_no_rnd(%a : f32) -> f32 {
-  // expected-error@+1 {{rounding mode must be specified}}
+  // expected-error@+1 {{rounding mode cannot be None}}
   %0 = nvvm.sqrt %a {rnd = #nvvm.fp_rnd_mode<none>} : f32
   llvm.return %0 : f32
 }

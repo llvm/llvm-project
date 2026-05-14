@@ -6552,7 +6552,7 @@ def NVVM_SqrtOp
     : NVVM_SingleResultIntrinsicOp<"sqrt", [Pure, SameOperandsAndResultType]> {
   let summary = "Take the square root of a value";
   let description = [{
-    Compute sqrt(a) and store the result in d.
+    Compute sqrt(src) and store the result in res.
 
     For more information, see PTX ISA:
     [sqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sqrt)
@@ -6568,7 +6568,7 @@ def NVVM_SqrtApproxOp : NVVM_F32UnaryApproxOp<"sqrt.approx"> {
   let summary = "Square root (fast approximation)";
   let description = [{
     Computes a fast approximation of the square root of the input value
-    (`d = sqrt(a)`). The maximum relative error over the entire positive
+    (`res = sqrt(src)`). The maximum relative error over the entire positive
     finite range is 2^-23.
 
     The `ftz` attribute, when set, flushes subnormal inputs and results to
