@@ -513,8 +513,6 @@ static bool isEntryPoint(const Function &F, bool EmitOnlyKernelsAsEntryPoints) {
   if (EmitOnlyKernelsAsEntryPoints)
     return false;
   // sycl_external functions carry the "sycl-module-id" attribute.
-  // This branch is not reachable while EmitOnlyKernelsAsEntryPoints is
-  // hardcoded to true (see TODO in runSYCLLink).
   return F.hasFnAttribute(AttrSYCLModuleId);
 }
 
@@ -530,10 +528,10 @@ static SmallString<0> collectEntryPoints(const Module &M,
   return SymbolData;
 }
 
-/// Functor passed to splitModuleTransitiveFromEntryPoints. For each input function \p F,
-/// returns a numeric group ID (if \p F is an entry point) determining which
-/// device image it lands in, or std::nullopt (for non-entry-points).
-/// SPLIT_PER_KERNEL \p Mode gives each kernel its own ID;
+/// Functor passed to splitModuleTransitiveFromEntryPoints. For each input
+/// function \p F, returns a numeric group ID (if \p F is an entry point)
+/// determining which device image it lands in, or std::nullopt (for
+/// non-entry-points). SPLIT_PER_KERNEL \p Mode gives each kernel its own ID;
 /// SPLIT_PER_TU \p Mode groups kernels by their "sycl-module-id" attribute
 /// value.
 class EntryPointCategorizer {
@@ -619,8 +617,8 @@ splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
 
 /// Returns true if module splitting can be skipped: either \p Mode is
 /// SPLIT_NONE, or \p M contains no entry points (nothing to split from).
-static bool checkModuleSplitCanBeSkipped(IRSplitMode Mode, const Module &M,
-                                         bool EmitOnlyKernelsAsEntryPoints) {
+static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
+                               bool EmitOnlyKernelsAsEntryPoints) {
   if (Mode == IRSplitMode::SPLIT_NONE)
     return true;
   return llvm::none_of(M.functions(), [&](const Function &F) {
@@ -659,8 +657,8 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   bool EmitOnlyKernelsAsEntryPoints = true;
 
   SmallVector<SplitModule, 0> SplitModules;
-  if (checkModuleSplitCanBeSkipped(SplitMode, *LinkedModule,
-                                   EmitOnlyKernelsAsEntryPoints)) {
+  if (canSkipModuleSplit(SplitMode, *LinkedModule,
+                         EmitOnlyKernelsAsEntryPoints)) {
     SplitModules.push_back(
         {SmallString<256>(LinkedFile),
          collectEntryPoints(*LinkedModule, EmitOnlyKernelsAsEntryPoints)});
