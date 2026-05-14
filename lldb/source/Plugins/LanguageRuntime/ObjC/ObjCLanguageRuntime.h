@@ -420,7 +420,7 @@ private:
   typedef std::map<ClassAndSel, lldb::addr_t> MsgImplMap;
   typedef std::map<ClassAndSelStr, lldb::addr_t> MsgImplStrMap;
   typedef llvm::DenseMap<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
-  typedef llvm::DenseMap<uint32_t, llvm::SmallVector<ObjCISA, 3>> HashToISAMap;
+  typedef llvm::DenseMap<uint32_t, llvm::SmallVector<ObjCISA, 2>> HashToISAMap;
   typedef ISAToDescriptorMap::iterator ISAToDescriptorIterator;
   typedef ThreadSafeDenseMap<void *, uint64_t> TypeSizeCache;
 
