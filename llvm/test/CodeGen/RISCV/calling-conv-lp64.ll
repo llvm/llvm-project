@@ -91,7 +91,7 @@ define i64 @callee_float_on_stack(i128 %a, i128 %b, i128 %c, i128 %d, float %e) 
 ; RV64I-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-WITHFP-NEXT:    addi s0, sp, 16
-; RV64I-WITHFP-NEXT:    lw a0, 0(s0)
+; RV64I-WITHFP-NEXT:    lw a0, 16(sp)
 ; RV64I-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-WITHFP-NEXT:    addi sp, sp, 16

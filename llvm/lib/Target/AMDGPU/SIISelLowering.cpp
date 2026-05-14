@@ -848,8 +848,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         ISD::UADDSAT, ISD::USUBSAT, ISD::SADDSAT, ISD::SSUBSAT},
                        MVT::v2i16, Legal);
 
-    setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMINNUM_IEEE,
-                        ISD::FMAXNUM_IEEE, ISD::FCANONICALIZE},
+    setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FABS,
+                        ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
+                        ISD::FCANONICALIZE},
                        MVT::v2f16, Legal);
 
     setOperationAction(ISD::EXTRACT_VECTOR_ELT,
@@ -871,7 +872,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     for (MVT VT : {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16})
       // Split vector operations.
-      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FABS,
+                          ISD::FCANONICALIZE},
                          VT, Custom);
 
     setOperationAction(
@@ -10118,6 +10120,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
   bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
   bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
+  bool IsGFX13 = AMDGPU::isGFX13(*Subtarget);
 
   SmallVector<EVT, 3> ResultTypes(Op->values());
   SmallVector<EVT, 3> OrigResultTypes(Op->values());
@@ -10445,7 +10448,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       UseNSA ? VAddrs.size() : VAddr.getValueType().getSizeInBits() / 32;
   int Opcode = -1;
 
-  if (IsGFX12Plus) {
+  if (IsGFX13) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else if (IsGFX12Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
                                    NumVDataDwords, NumVAddrDwords);
   } else if (IsGFX11Plus) {
@@ -15461,12 +15467,6 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
                                  SDLoc(N), VT);
   }
 
-  if (VT == MVT::f32 && (N0.getOpcode() == ISD::UINT_TO_FP ||
-                         N0.getOpcode() == ISD::SINT_TO_FP)) {
-    return DCI.DAG.getNode(AMDGPUISD::RCP_IFLAG, SDLoc(N), VT, N0,
-                           N->getFlags());
-  }
-
   // TODO: Could handle f32 + amdgcn.sqrt but probably never reaches here.
   if ((VT == MVT::f16 && N0.getOpcode() == ISD::FSQRT) &&
       N->getFlags().hasAllowContract() && N0->getFlags().hasAllowContract()) {
@@ -19810,7 +19810,7 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
       return !TRI->isSGPRReg(MRI, Reg);
 
     if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
-      return UA->isDivergent(V);
+      return UA->isDivergentAtDef(V);
 
     assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
     return !TRI->isSGPRReg(MRI, Reg);
