@@ -533,6 +533,18 @@ cc_library(
     features = ["-parse_headers"],
 )
 
+# This exists to avoid circular dependencies.
+cc_library(
+    name = "object_headers",
+    hdrs = glob([
+        "include/llvm/Object/*.h",
+    ]) + [
+        "include/llvm-c/Object.h",
+    ],
+    copts = llvm_copts,
+    features = ["-parse_headers"],
+)
+
 cc_library(
     name = "BinaryFormatELF",
     srcs = [
@@ -726,6 +738,7 @@ cc_library(
         ":TargetParser",
         ":config",
         ":ir_headers",
+        ":object_headers",
     ],
 )
 
@@ -6932,6 +6945,7 @@ cc_binary(
         ":BinaryFormat",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":MC",
         ":Object",
         ":ObjectYAML",
         ":Support",
