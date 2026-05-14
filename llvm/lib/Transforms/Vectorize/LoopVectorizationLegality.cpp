@@ -253,13 +253,7 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
 }
 
 const char *LoopVectorizeHints::vectorizeAnalysisPassName() const {
-  if (getWidth() == ElementCount::getFixed(1))
-    return LV_NAME;
-  if (getForce() == LoopVectorizeHints::FK_Disabled)
-    return LV_NAME;
-  if (getForce() == LoopVectorizeHints::FK_Undefined && getWidth().isZero())
-    return LV_NAME;
-  return OptimizationRemarkAnalysis::AlwaysPrint;
+  return LV_NAME;
 }
 
 bool LoopVectorizeHints::allowReordering() const {
