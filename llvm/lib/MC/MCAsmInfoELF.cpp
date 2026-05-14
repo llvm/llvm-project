@@ -28,9 +28,10 @@ using namespace llvm;
 void MCAsmInfoELF::anchor() {}
 
 MCSection *MCAsmInfoELF::getStackSection(MCContext &Ctx, bool Exec) const {
-  // Solaris doesn't know/doesn't care about .note.GNU-stack sections, so
-  // don't emit them.
-  if (Ctx.getTargetTriple().isOSSolaris())
+  // Solaris and Illumos don't know/doesn't care about .note.GNU-stack sections,
+  // so don't emit them.
+  if (Ctx.getTargetTriple().isOSSolaris() ||
+      Ctx.getTargetTriple().isOSIllumos())
     return nullptr;
   return Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS,
                            Exec ? ELF::SHF_EXECINSTR : 0U);
