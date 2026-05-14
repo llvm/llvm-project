@@ -15,6 +15,9 @@
 #define IATTR __attribute__((const))
 #define AATTR(S) __attribute__((overloadable, const, alias(S)))
 
+// Aliases below intentionally sign-pun unsigned/signed OpenCL overloads.
+#pragma clang diagnostic ignored "-Wattribute-alias"
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 #define char_mask ((char)1 << 7)

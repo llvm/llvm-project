@@ -25,6 +25,9 @@
 #define IATTR __attribute__((const))
 #define AATTR(A) __attribute__((overloadable, const, alias(A)))
 
+// Aliases below intentionally sign-pun unsigned OpenCL overloads.
+#pragma clang diagnostic ignored "-Wattribute-alias"
+
 #define LIST2 t[m.s0], t[m.s1]
 #define LIST4 LIST2, t[m.s2], t[m.s3]
 #define LIST8 LIST4, t[m.s4], t[m.s5], t[m.s6], t[m.s7]

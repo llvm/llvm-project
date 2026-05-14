@@ -14,6 +14,9 @@
 #define IATTR
 #define AATTR(A) __attribute__((overloadable, alias(A)))
 
+// Aliases below intentionally sign-pun unsigned OpenCL overloads.
+#pragma clang diagnostic ignored "-Wattribute-alias"
+
 #define BODY(D,S) \
     size_t i; \
     size_t d = mul24(mul24((int)get_local_size(0), (int)get_local_size(1)), (int)get_local_size(2)); \
