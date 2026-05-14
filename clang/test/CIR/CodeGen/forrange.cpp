@@ -151,14 +151,16 @@ void for_range4() {
 // CIR:        %[[ITER_NE:.*]] = cir.call @_ZNK8IteratorneERKS_(%[[BEGIN_ADDR]], %[[END_ADDR]])
 // CIR:        cir.condition(%[[ITER_NE]])
 // CIR:      } body {
-// CIR:        %[[HD:.*]] = cir.alloca !rec_HasDtor, !cir.ptr<!rec_HasDtor>, ["hd"]
 // CIR:        %[[E:.*]] = cir.call @_ZN8IteratordeEv(%[[BEGIN_ADDR]])
 // CIR:        cir.store{{.*}} %[[E]], %[[E_ADDR]]
-// CIR:        cir.cleanup.scope {
-// CIR:          cir.yield
-// CIR:        } cleanup normal {
-// CIR:          cir.call @_ZN7HasDtorD1Ev(%[[HD]]) nothrow 
-// CIR:          cir.yield
+// CIR:        cir.scope {
+// CIR:          %[[HD:.*]] = cir.alloca !rec_HasDtor, !cir.ptr<!rec_HasDtor>, ["hd"]
+// CIR:          cir.cleanup.scope {
+// CIR:            cir.yield
+// CIR:          } cleanup normal {
+// CIR:            cir.call @_ZN7HasDtorD1Ev(%[[HD]]) nothrow 
+// CIR:            cir.yield
+// CIR:          }
 // CIR:        }
 // CIR:        cir.yield
 // CIR:      } step {

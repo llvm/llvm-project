@@ -918,7 +918,9 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
     // We probably already do the right thing because of ScopeOp, but make
     // sure we handle all cases.
     assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
-
+    // https://en.cppreference.com/w/cpp/language/for
+    // Given: 
+    // for ( init-statement condition ﻿(optional) ; expression ﻿(optional) ) statement
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
         /*condBuilder=*/
@@ -930,14 +932,13 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
         },
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // https://en.cppreference.com/w/cpp/language/for
-          // In C++ the scope of the init-statement and the scope of
-          // statement are one and the same.
+          // https://en.cppreference.com/cpp/language/range-for
+          // The scope of statement and the scope of expression are disjoint
+          // and nested within the scope of init-statement and condition.
           bool useCurrentScope = true;
           if (emitStmt(s.getLoopVarStmt(), useCurrentScope).failed())
             loopRes = mlir::failure();
-          LexicalScope lexScope{*this, loc, builder.getInsertionBlock()};
-          if (emitStmt(s.getBody(), useCurrentScope).failed())
+          if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&s);
         },
