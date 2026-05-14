@@ -2105,8 +2105,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprShiftMask<riscv_psra, PSRA_HS, shiftMask16, XLenVecI16VT>;
 
   // // splat pattern
-  def : Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))), (PADD_BS (XLenVT X0), GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))), (PADD_HS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_BS (XLenVecI8VT X0), GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_HS (XLenVecI16VT X0), GPR:$rs2)>;
 
   // 8/16-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b
@@ -2339,6 +2341,13 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprPairGprPair<umax, PMAXU_DH, v4i16>;
   def : PatGprPairGprPair<smax, PMAX_DW, v2i32>;
   def : PatGprPairGprPair<umax, PMAXU_DW, v2i32>;
+
+  // splat pattern
+  def : Pat<(v8i8 (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_DBS (v8i8 X0_Pair), GPR:$rs2)>;
+  def : Pat<(v4i16 (splat_vector (XLenVT GPR:$rs2))),
+            (PADD_DHS (v4i16 X0_Pair), GPR:$rs2)>;
+  // v2i32 on RV32 is handled by buildGPRPair in RISCVISelDAGToDAG.cpp
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
@@ -2448,7 +2457,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : PatGprShiftMask<riscv_psra, PSRA_WS, shiftMask32, v2i32>;
 
   // splat pattern
-  def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (v2i32 X0), GPR:$rs2)>;
 
   // 32-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b
