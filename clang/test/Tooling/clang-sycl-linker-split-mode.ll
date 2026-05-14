@@ -27,6 +27,7 @@
 ; SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT0]].bc, output: {{.*}}_0.spv
 ; SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT1]].bc, output: {{.*}}_1.spv
 ; SPLIT-KERNEL-NEXT: LLVM backend: input: [[SPLIT2]].bc, output: {{.*}}_2.spv
+; SPLIT-KERNEL-NOT:  {{.+}}
 ;
 ; Test default split mode ('source'): no --module-split-mode flag needed.
 ; Two kernels with different sycl-module-id values produce two device images.
