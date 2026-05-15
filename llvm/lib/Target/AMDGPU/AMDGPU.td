@@ -1371,6 +1371,10 @@ defm Clusters : AMDGPUSubtargetFeature<"clusters",
   /*GenPredicate=*/0
 >;
 
+defm Wave32Only : AMDGPUSubtargetFeature<"wave32-only",
+  "Target supports only Wave32."
+>;
+
 def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
   "waits-before-system-scope-stores",
   "RequiresWaitsBeforeSystemScopeStores",
@@ -2078,6 +2082,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureWavefrontSize32,
+   FeatureWave32Only,
    FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,

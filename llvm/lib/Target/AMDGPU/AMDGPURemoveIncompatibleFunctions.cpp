@@ -204,7 +204,7 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
     return true;
   }
   // gfx125x only support FeatureWavefrontSize32.
-  if (!ST->supportsWave64() && ST->hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+  if (ST->hasWave32Only() && ST->hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     reportFunctionRemoved(F, AMDGPU::FeatureWavefrontSize64);
     return true;
   }
