@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-linux-gnu -std=c++2c | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=%itanium_abi_triple -std=c++2c | FileCheck %s
 
 namespace GH112003 {
 

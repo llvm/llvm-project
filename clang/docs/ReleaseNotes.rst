@@ -155,7 +155,7 @@ C++2c Feature Support
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Implement Itanium mangling for pack indexing. (#GH112003)
+- Partially implement Itanium mangling for pack indexing. Partially substituted packs are not yet supported. (#GH112003)
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
