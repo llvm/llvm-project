@@ -678,6 +678,12 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
                    MI.getOperand(2).getImm() ==
                        SPIRV::InstructionSet::
                            NonSemantic_Shader_DebugInfo_100) {
+          // TODO: This branch is dead. SPIRVNonSemanticDebugHandler emits NSDI
+          // instructions directly as MCInsts at print time; no
+          // MachineInstructions with the NSDI ext set are created anymore.
+          // Remove this block and
+          // MB_NonSemanticGlobalDI once per-function NSDI emission is confirmed
+          // not to need MIR routing.
           MachineOperand Ins = MI.getOperand(3);
           namespace NS = SPIRV::NonSemanticExtInst;
           static constexpr int64_t GlobalNonSemanticDITy[] = {
@@ -956,16 +962,26 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
     const SPIRVSubtarget &ST) {
 
   // Core in Vulkan 1.1 and earlier.
-  addAvailableCaps({Capability::Int64, Capability::Float16, Capability::Float64,
-                    Capability::GroupNonUniform, Capability::Image1D,
-                    Capability::SampledBuffer, Capability::ImageBuffer,
+  addAvailableCaps({Capability::Int64,
+                    Capability::Float16,
+                    Capability::Float64,
+                    Capability::GroupNonUniform,
+                    Capability::Image1D,
+                    Capability::SampledBuffer,
+                    Capability::ImageBuffer,
                     Capability::UniformBufferArrayDynamicIndexing,
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
-                    Capability::DerivativeControl, Capability::MinLod,
-                    Capability::ImageQuery, Capability::ImageGatherExtended,
-                    Capability::Addresses, Capability::VulkanMemoryModelKHR});
+                    Capability::DerivativeControl,
+                    Capability::MinLod,
+                    Capability::ImageQuery,
+                    Capability::ImageGatherExtended,
+                    Capability::Addresses,
+                    Capability::VulkanMemoryModelKHR,
+                    Capability::StorageImageExtendedFormats,
+                    Capability::StorageImageMultisample,
+                    Capability::ImageMSArray});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1013,6 +1029,10 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
         static_cast<SPIRV::LinkageType::LinkageType>(LinkageOp);
     if (LnkType == SPIRV::LinkageType::LinkOnceODR)
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_linkonce_odr);
+    else if (LnkType == SPIRV::LinkageType::WeakAMD) {
+      Reqs.addExtension(SPIRV::Extension::SPV_AMD_weak_linkage);
+      Reqs.addCapability(SPIRV::Capability::WeakLinkageAMD);
+    }
   } else if (Dec == SPIRV::Decoration::CacheControlLoadINTEL ||
              Dec == SPIRV::Decoration::CacheControlStoreINTEL) {
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_cache_controls);
@@ -1059,7 +1079,11 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
     break;
   case SPIRV::Dim::DIM_2D:
     if (IsMultisampled && NoSampler)
+      Reqs.addRequirements(SPIRV::Capability::StorageImageMultisample);
+    if (IsMultisampled && IsArrayed)
       Reqs.addRequirements(SPIRV::Capability::ImageMSArray);
+    break;
+  case SPIRV::Dim::DIM_3D:
     break;
   case SPIRV::Dim::DIM_Cube:
     Reqs.addRequirements(SPIRV::Capability::Shader);
@@ -1944,6 +1968,14 @@ void addInstrRequirements(const MachineInstr &MI,
                          false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_shader_clock);
     Reqs.addCapability(SPIRV::Capability::ShaderClockKHR);
+    break;
+  case SPIRV::OpAbortKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
+      report_fatal_error("OpAbortKHR instruction requires the "
+                         "following SPIR-V extension: SPV_KHR_abort",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_abort);
+    Reqs.addCapability(SPIRV::Capability::AbortKHR);
     break;
   case SPIRV::OpFunctionPointerCallINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {

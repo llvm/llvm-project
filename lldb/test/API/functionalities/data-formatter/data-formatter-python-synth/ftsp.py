@@ -19,9 +19,9 @@ class ftsp:
         if index == 0:
             return self.x.Cast(self.char)
         if index == 4:
-            return self.valobj.CreateValueFromExpression(
-                str(index), "(char)(" + str(self.count) + ")"
-            )
+            data = lldb.SBData.CreateDataFromInt(self.count)
+            type = self.valobj.target.FindFirstType("char")
+            return self.valobj.CreateValueFromData(str(index), data, type)
         return self.x.CreateChildAtOffset(str(index), index, self.char)
 
     def update(self):

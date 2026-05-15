@@ -2,7 +2,6 @@
 // UNSUPPORTED: hwasan
 // UNSUPPORTED: lsan
 // UNSUPPORTED: msan
-// UNSUPPORTED: tysan
 // UNSUPPORTED: ubsan
 #include <stdio.h>
 int main() {

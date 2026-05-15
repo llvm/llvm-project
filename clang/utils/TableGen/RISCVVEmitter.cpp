@@ -431,6 +431,17 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
   OS << "#pragma clang riscv intrinsic vector\n\n";
 
+  // This array includes all extensions that have intrinsics implemented. We
+  // need to update the list when any new intrinsic are defined.
+  static const char *const Exts[] = {
+      "v",        "zvabd",  "zvbb",    "zvbc",       "zvdot4a8i", "zve32f",
+      "zve32x",   "zve64d", "zve64f",  "zve64x",     "zvfbfa",    "zvfbfmin",
+      "zvfbfwma", "zvfh",   "zvfhmin", "zvfofp8min", "zvkb",      "zvkg",
+      "zvkn",     "zvknc",  "zvkned",  "zvkng",      "zvknha",    "zvknhb",
+      "zvks",     "zvksc",  "zvksed",  "zvksg",      "zvksh"};
+  for (const char *Ext : Exts)
+    OS << "#define __riscv_intrinsic_" << Ext << " 1\n";
+
   printHeaderCode(OS);
 
   auto printType = [&](auto T) {
@@ -493,6 +504,15 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
         if (TupleT)
           printType(*TupleT);
       }
+    }
+  }
+
+  // TODO: Support tuple types for ofp8?
+  for (BasicType BT : {BasicType::F8E4M3, BasicType::F8E5M2}) {
+    for (int Log2LMUL : Log2LMULs) {
+      auto T = TypeCache.computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
+      if (T)
+        printType(*T);
     }
   }
 

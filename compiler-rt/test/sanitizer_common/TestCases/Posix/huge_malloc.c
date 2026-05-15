@@ -7,7 +7,7 @@
 // UNSUPPORTED: android-26
 
 // FIXME: Hangs.
-// UNSUPPORTED: tsan, tysan
+// UNSUPPORTED: tsan
 
 // Hwasan requires tagging of new allocations, so needs RSS for shadow.
 // UNSUPPORTED: hwasan

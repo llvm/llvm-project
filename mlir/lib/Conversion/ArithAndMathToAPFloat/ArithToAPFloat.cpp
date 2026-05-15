@@ -447,12 +447,17 @@ struct CmpFOpToAPFloatConversion final : OpRewritePattern<arith::CmpFOp> {
   SymbolOpInterface symTable;
 };
 
-struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
-  NegFOpToAPFloatConversion(MLIRContext *context, SymbolOpInterface symTable,
-                            PatternBenefit benefit = 1)
-      : OpRewritePattern<arith::NegFOp>(context, benefit), symTable(symTable) {}
+/// Rewrite a unary floating-point op (same input/output float type) to an
+/// APFloat runtime call of the form `(i32 semantics, i64 bits) -> i64 bits`.
+template <typename OpTy>
+struct UnaryFloatOpToAPFloatConversion final : OpRewritePattern<OpTy> {
+  UnaryFloatOpToAPFloatConversion(MLIRContext *context, const char *APFloatName,
+                                  SymbolOpInterface symTable,
+                                  PatternBenefit benefit = 1)
+      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
+        APFloatName(APFloatName) {}
 
-  LogicalResult matchAndRewrite(arith::NegFOp op,
+  LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
     if (failed(checkPreconditions(rewriter, op)))
       return failure();
@@ -460,8 +465,9 @@ struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
     // Get APFloat function from runtime library.
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
-    FailureOr<FuncOp> fn = lookupOrCreateFnDecl(
-        rewriter, symTable, "_mlir_apfloat_neg", {i32Type, i64Type});
+    std::string funcName = (llvm::Twine("_mlir_apfloat_") + APFloatName).str();
+    FailureOr<FuncOp> fn =
+        lookupOrCreateFnDecl(rewriter, symTable, funcName, {i32Type, i64Type});
     if (failed(fn))
       return fn;
 
@@ -481,14 +487,14 @@ struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
           // Call APFloat function.
           Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
           SmallVector<Value> params = {semValue, operandBits};
-          Value negatedBits =
+          Value resultBits =
               func::CallOp::create(rewriter, loc, TypeRange(i64Type),
                                    SymbolRefAttr::get(*fn), params)
                   ->getResult(0);
 
           // Truncate result to the original width.
           Value truncatedBits =
-              arith::TruncIOp::create(rewriter, loc, intWType, negatedBits);
+              arith::TruncIOp::create(rewriter, loc, intWType, resultBits);
           return arith::BitcastOp::create(rewriter, loc, floatTy,
                                           truncatedBits);
         });
@@ -497,6 +503,7 @@ struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
   }
 
   SymbolOpInterface symTable;
+  const char *APFloatName;
 };
 
 namespace {
@@ -528,10 +535,13 @@ void ArithToAPFloatConversionPass::runOnOperation() {
       context, "minimum", getOperation());
   patterns.add<BinaryArithOpToAPFloatConversion<arith::MaximumFOp>>(
       context, "maximum", getOperation());
-  patterns
-      .add<FpToFpConversion<arith::ExtFOp>, FpToFpConversion<arith::TruncFOp>,
-           CmpFOpToAPFloatConversion, NegFOpToAPFloatConversion>(
-          context, getOperation());
+  patterns.add<FpToFpConversion<arith::ExtFOp>,
+               FpToFpConversion<arith::TruncFOp>, CmpFOpToAPFloatConversion>(
+      context, getOperation());
+  patterns.add<UnaryFloatOpToAPFloatConversion<arith::NegFOp>>(context, "neg",
+                                                               getOperation());
+  patterns.add<UnaryFloatOpToAPFloatConversion<arith::FlushDenormalsOp>>(
+      context, "flush_denormals", getOperation());
   patterns.add<FpToIntConversion<arith::FPToSIOp>>(context, getOperation(),
                                                    /*isUnsigned=*/false);
   patterns.add<FpToIntConversion<arith::FPToUIOp>>(context, getOperation(),

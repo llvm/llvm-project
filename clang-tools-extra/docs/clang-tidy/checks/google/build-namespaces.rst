@@ -1,6 +1,4 @@
 .. title:: clang-tidy - google-build-namespaces
-.. meta::
-   :http-equiv=refresh: 5;URL=../misc/anonymous-namespace-in-header.html
 
 google-build-namespaces
 =======================

@@ -7,6 +7,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 declare void @llvm.assume(i1) #1
+declare ptr @get_ptr()
+declare void @use_i64(i64)
 
 ; Check that the assume has not been removed:
 
@@ -77,6 +79,57 @@ entry:
   %trunc = trunc i64 %0 to i63
   %cmp = icmp eq i63 0, %trunc
   call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @align_with_offset_less_than_align(ptr %ptr) {
+; CHECK-LABEL: @align_with_offset_less_than_align(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
+; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %int = ptrtoint ptr %ptr to i64
+  %add = add i64 %int, 3
+  %and = and i64 %add, 7
+  %cmp = icmp eq i64 0, %and
+  call void @llvm.assume(i1 %cmp)
+  call void @use_i64(i64 %and)
+  ret void
+}
+
+define void @align_with_offset_greater_than_align(ptr %ptr) {
+; CHECK-LABEL: @align_with_offset_greater_than_align(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 6
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 2) ]
+; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %int = ptrtoint ptr %ptr to i64
+  %add = add i64 %int, 14
+  %and = and i64 %add, 7
+  %cmp = icmp eq i64 0, %and
+  call void @llvm.assume(i1 %cmp)
+  call void @use_i64(i64 %and)
+  ret void
+}
+
+define void @redundant_align() {
+; CHECK-LABEL: @redundant_align(
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr = call ptr @get_ptr()
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
   ret void
 }
 
@@ -461,7 +514,6 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
-; CHECK-NEXT:      #dbg_value(i32 5, [[META7:![0-9]+]], !DIExpression(), [[META9:![0-9]+]])
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -610,6 +662,29 @@ define void @nonnull_only_ephemeral_use(ptr %p) {
   %a = load ptr, ptr %p
   %cmp = icmp ne ptr %a, null
   tail call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @nonnull_gep_inbounds(ptr %p, i64 %i) {
+; CHECK-LABEL: @nonnull_gep_inbounds(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  %p2 = getelementptr inbounds i8, ptr %p, i64 %i
+  %cmp = icmp ne ptr %p2, null
+  call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @nonnull_gep_not_inbounds(ptr %p, i64 %i) {
+; CHECK-LABEL: @nonnull_gep_not_inbounds(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[P1:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
+; CHECK-NEXT:    ret void
+;
+  %p2 = getelementptr i8, ptr %p, i64 %i
+  %cmp = icmp ne ptr %p2, null
+  call void @llvm.assume(i1 %cmp)
   ret void
 }
 
@@ -1058,7 +1133,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !3, producer: "Me", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: null, retainedTypes: null, imports: null)
 !1 = !DILocalVariable(name: "", arg: 1, scope: !2, file: null, line: 1, type: null)
-!2 = distinct !DISubprogram(name: "debug", linkageName: "debug", scope: null, file: null, line: 0, type: null, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
+!2 = distinct !DISubprogram(name: "debug", linkageName: "debug", scope: null, file: null, line: 0, type: !10, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
 !3 = !DIFile(filename: "consecutive-fences.ll", directory: "")
 !5 = !{i32 2, !"Dwarf Version", i32 4}
 !6 = !{i32 2, !"Debug Info Version", i32 3}
@@ -1069,3 +1144,5 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
+!10 = !DISubroutineType(types: !11)
+!11 = !{null}

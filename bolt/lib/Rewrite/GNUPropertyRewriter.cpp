@@ -41,8 +41,7 @@ Error GNUPropertyRewriter::sectionInitializer() {
   uint32_t FeaturesAcc = 0;
 
   StringRef Buf = Sec->getContents();
-  DataExtractor DE(Buf, BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor DE(Buf, BC.AsmInfo->isLittleEndian());
   DataExtractor::Cursor Cursor(0);
   while (Cursor && !DE.eof(Cursor)) {
     const uint32_t NameSz = DE.getU32(Cursor);

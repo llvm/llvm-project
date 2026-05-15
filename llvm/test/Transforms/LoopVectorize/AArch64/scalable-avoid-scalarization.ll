@@ -36,7 +36,7 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[IDX]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[A:%.*]], <vscale x 2 x i32> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i64 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[B:%.*]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store <vscale x 2 x double> [[WIDE_LOAD]], ptr [[TMP18]], align 8
@@ -45,10 +45,10 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP22:%.*]] = mul nuw i32 [[TMP21]], 2
-; CHECK-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP22]], 1
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i32 [[TMP23]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP13:%.*]] = mul nuw i32 [[TMP12]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], 1
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i32 [[TMP14]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[L_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

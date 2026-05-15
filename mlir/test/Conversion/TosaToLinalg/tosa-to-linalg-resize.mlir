@@ -218,13 +218,13 @@ func.func @resize_nearest_int(%arg0: tensor<1x15x13x1xi8>) -> () {
 
   // CHECK: %[[TEMP_Y:.*]] = arith.muli %[[Y]], %[[SCALE_Y_D]]
   // CHECK: %[[Y:.*]] = arith.addi %[[TEMP_Y]], %[[OFFSET_Y]]
-  // CHECK: %[[I_Y:.*]] = arith.divsi %[[Y]], %[[SCALE_Y_N]]
+  // CHECK: %[[I_Y:.*]] = arith.floordivsi %[[Y]], %[[SCALE_Y_N]]
   // CHECK: %[[TEMP_Y:.*]] = arith.muli %[[I_Y]], %[[SCALE_Y_N]]
   // CHECK: %[[D_Y:.*]] = arith.subi %[[Y]], %[[TEMP_Y]]
 
   // CHECK: %[[TEMP_X:.*]] = arith.muli %[[X]], %[[SCALE_X_D]]
   // CHECK: %[[X:.*]] = arith.addi %[[TEMP_X]], %[[OFFSET_X]]
-  // CHECK: %[[I_X:.*]] = arith.divsi %[[X]], %[[SCALE_X_N]]
+  // CHECK: %[[I_X:.*]] = arith.floordivsi %[[X]], %[[SCALE_X_N]]
   // CHECK: %[[TEMP_X:.*]] = arith.muli %[[I_X]], %[[SCALE_X_N]]
   // CHECK: %[[D_X:.*]] = arith.subi %[[X]], %[[TEMP_X]]
 
@@ -285,13 +285,13 @@ func.func @resize_bilinear_int(%arg0: tensor<1x19x20x1xi8>) {
 
   // CHECK: %[[TEMP_Y:.*]] = arith.muli %[[Y]], %[[SCALE_Y_D]]
   // CHECK: %[[Y:.*]] = arith.addi %[[TEMP_Y]], %[[OFFSET_Y]]
-  // CHECK: %[[I_Y:.*]] = arith.divsi %[[Y]], %[[SCALE_Y_N]]
+  // CHECK: %[[I_Y:.*]] = arith.floordivsi %[[Y]], %[[SCALE_Y_N]]
   // CHECK: %[[TEMP_Y:.*]] = arith.muli %[[I_Y]], %[[SCALE_Y_N]]
   // CHECK: %[[D_Y:.*]] = arith.subi %[[Y]], %[[TEMP_Y]]
 
   // CHECK: %[[TEMP_X:.*]] = arith.muli %[[X]], %[[SCALE_X_D]]
   // CHECK: %[[X:.*]] = arith.addi %[[TEMP_X]], %[[OFFSET_X]]
-  // CHECK: %[[I_X:.*]] = arith.divsi %[[X]], %[[SCALE_X_N]]
+  // CHECK: %[[I_X:.*]] = arith.floordivsi %[[X]], %[[SCALE_X_N]]
   // CHECK: %[[TEMP_X:.*]] = arith.muli %[[I_X]], %[[SCALE_X_N]]
   // CHECK: %[[D_X:.*]] = arith.subi %[[X]], %[[TEMP_X]]
 
@@ -605,3 +605,4 @@ func.func @skip_interpolate_bilinear_f32(%arg0 : tensor<3x1x2x7xf32>) -> tensor<
   // CHECK:  return %[[GENERIC]]
   return %resize : tensor<3x1x4x7xf32>
 }
+

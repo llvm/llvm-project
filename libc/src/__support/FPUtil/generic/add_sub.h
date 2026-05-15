@@ -98,7 +98,7 @@ add_or_sub(InType x, InType y) {
       if (y_bits.is_zero()) {
         if (is_effectively_add)
           return OutFPBits::zero(x_bits.sign()).get_val();
-        switch (quick_get_round()) {
+        switch (fputil::quick_get_round()) {
         case FE_DOWNWARD:
           return OutFPBits::zero(Sign::NEG).get_val();
         default:
@@ -108,16 +108,20 @@ add_or_sub(InType x, InType y) {
 
       if constexpr (cpp::is_same_v<InType, bfloat16> &&
                     cpp::is_same_v<OutType, bfloat16>) {
-        OutFPBits y_bits(y);
+        OutFPBits out_y_bits(y);
         if constexpr (IsSub)
-          y_bits.set_sign(y_bits.sign().negate());
-        return y_bits.get_val();
+          out_y_bits.set_sign(out_y_bits.sign().negate());
+        return out_y_bits.get_val();
       } else {
 
+#ifdef LIBC_USE_CONSTEXPR
+        InType tmp = y;
+#else
         // volatile prevents Clang from converting tmp to OutType and then
         // immediately back to InType before negating it, resulting in double
         // rounding.
         volatile InType tmp = y;
+#endif // LIBC_USE_CONSTEXPR
         if constexpr (IsSub)
           tmp = -tmp;
         return cast<OutType>(tmp);
@@ -132,7 +136,7 @@ add_or_sub(InType x, InType y) {
   InType y_abs = y_bits.abs().get_val();
 
   if (x_abs == y_abs && !is_effectively_add) {
-    switch (quick_get_round()) {
+    switch (fputil::quick_get_round()) {
     case FE_DOWNWARD:
       return OutFPBits::zero(Sign::NEG).get_val();
     default:
@@ -155,7 +159,7 @@ add_or_sub(InType x, InType y) {
   InFPBits max_bits(cpp::max(x_abs, y_abs));
   InFPBits min_bits(cpp::min(x_abs, y_abs));
 
-  InStorageType result_mant;
+  InStorageType result_mant{};
 
   if (max_bits.is_subnormal()) {
     // min_bits must be subnormal too.
