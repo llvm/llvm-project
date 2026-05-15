@@ -829,6 +829,13 @@ public:
     return nullptr;
   }
 
+  /// Returns the target-defined minimal register class for an untyped physical
+  /// register query or nullptr if the register is not in any register class.
+  virtual const TargetRegisterClass *
+  getDefaultMinimalPhysRegClass(MCRegister Reg) const {
+    return nullptr;
+  }
+
 protected:
   /// Overridden by TableGen in targets that have sub-registers.
   virtual unsigned composeSubRegIndicesImpl(unsigned, unsigned) const {

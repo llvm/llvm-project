@@ -1298,14 +1298,19 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                                     VecTy, Ctx.CostKind, 0);
   }
   case Instruction::FCmp:
-  case Instruction::ICmp:
-    // FIXME: We don't handle scalar compares here yet. Scalar compares used for
-    // the loop exit condition are handled by the legacy cost model, but other
-    // scalar compares (e.g. in the middle block deciding whether to execute the
-    // scalar epilogue) aren't accounted for.
-    if (vputils::onlyFirstLaneUsed(this))
+  case Instruction::ICmp: {
+    // FIXME: We don't handle scalar compares inside the loop here yet, as loop
+    // exit conditions are handled by the legacy cost model and avoiding all
+    // scalar compares is the simplest way to avoid double-counting compares
+    // that compute the loop exit condition.
+    bool IsScalar = vputils::onlyFirstLaneUsed(this);
+    const VPRegionBlock *Region = getRegion();
+    if (IsScalar && Region &&
+        Region == Region->getPlan()->getVectorLoopRegion())
       return 0;
-    return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
+    return getCostForRecipeWithOpcode(
+        getOpcode(), IsScalar ? ElementCount::getFixed(1) : VF, Ctx);
+  }
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
