@@ -13,7 +13,6 @@
 // RUN:            -target-cpu gfx1250 -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-
 //===----------------------------------------------------------------------===//
 // Test AMDGPU builtins
 //===----------------------------------------------------------------------===//
