@@ -221,7 +221,19 @@ jobs:
 
       - name: Fetch sources
         timeout-minutes: 30
-        run: ./build_tools/fetch_sources.py --stage ${STAGE_NAME} --jobs 12 --depth 1
+        run: |
+             commit_log=$(./build_tools/fetch_sources.py --stage ${STAGE_NAME} --jobs 12 --depth 1)
+             echo "$commit_log" | grep "^Submodule path" | \
+             grep "checked out" | sed "s/Submodule path '\([^']*\)': checked out '\([^']*\)'/\1 \2/" \
+             > submodule-commit-${{ inputs.stage_name }}.txt
+
+      - name: Upload submodule commit file
+        uses: actions/upload-artifact@v4
+        with:
+          name: submodule-commit-${{ inputs.stage_name }}
+          path: submodule-commit-${{ inputs.stage_name }}.txt
+          overwrite: true
+          retention-days: 1
 
       - name: TheRock and llvm SHA
         if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_type != 'full') }}

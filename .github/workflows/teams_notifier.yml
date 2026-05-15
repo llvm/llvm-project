@@ -18,6 +18,10 @@ jobs:
         with:
             sparse-checkout: .github
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: submodule-commit-all
+
       - name: Calculate URLs and Fetch Manifest
         id: extract_urls
         env:
@@ -41,7 +45,7 @@ jobs:
           curl -H "Authorization: token $GITHUB_TOKEN" -L "$LOG_URL" -o logs.txt
 
           # Parse URLs from the logs using grep
-          THE_ROCK_MANIFEST_URL=$(grep -oP '\[TheRock Manifest\]\(\K[^\)]+' "logs.txt" || echo "")
+          #THE_ROCK_MANIFEST_URL=$(grep -oP '\[TheRock Manifest\]\(\K[^\)]+' "logs.txt" || echo "")
           #ARTIFACTS_URL=$(grep -oP '\[Artifacts\]\(\K[^\)]+' "logs.txt" || echo "") 
           #BUILD_LOGS_URL=$(grep -oP '\[Build Logs\]\(\K[^\)]+' "logs.txt" || echo "")
           ARTIFACTS_URL="https://therock-ci-artifacts-external.s3.amazonaws.com/ROCm-llvm-project/$RUN_ID-linux/index.html"
@@ -65,7 +69,7 @@ jobs:
           echo "ORG_NAME=ROCm" >> $GITHUB_ENV
           echo "PROJECT_NAME=llvm-project" >> $GITHUB_ENV
           echo "RUN_ID=${{ github.run_id }}" >> $GITHUB_ENV
-          echo "MANIFEST_FILE=manifest.json" >> $GITHUB_ENV
+          echo "MANIFEST_FILE=manifest.txt" >> $GITHUB_ENV
           echo "OUTPUT_FILE=results.json" >> $GITHUB_ENV
 
       - name: Execute Python script for Notification Content
@@ -74,7 +78,7 @@ jobs:
           ORG_NAME: ${{ env.ORG_NAME }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           RUN_ID: ${{ env.RUN_ID }}
-          #MANIFEST_FILE: ${{ env.MANIFEST_FILE }}
+          MANIFEST_FILE: ${{ env.MANIFEST_FILE }}
           #ROCK_MANIFEST_URL: ${{ env.THE_ROCK_MANIFEST_URL }}
           ARTIFACTS_URL: ${{ env.ARTIFACTS_URL }}
           BUILD_LOGS_URL: ${{ env.BUILD_LOGS_URL }}

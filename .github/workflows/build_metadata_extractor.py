@@ -41,12 +41,13 @@ import requests
 
 
 class BuildMetadataExtractor:
-    def __init__(self, org_name, project_name, run_id, github_token, artifacts_url, build_logs_url, output_file):
+    def __init__(self, org_name, project_name, run_id, github_token, manifest_path, artifacts_url, build_logs_url, output_file):
         """Initialize the extractor with organization, project info, and additional inputs."""
         self.org_name = org_name
         self.project_name = project_name
         self.run_id = run_id
         self.github_token = github_token
+        self.manifest_path = manifest_path
         self.artifacts_url = artifacts_url
         self.build_logs_url = build_logs_url
         self.output_file = output_file
@@ -58,24 +59,30 @@ class BuildMetadataExtractor:
         if not os.path.exists(self.manifest_path):
             print(f"Manifest file '{self.manifest_path}' does not exist.")
             return None
+        submodules = {}
         with open(self.manifest_path, 'r') as f:
-            return json.load(f)
+           for component in f:
+              component = component.strip()
+              if not component:
+                 continue
+              component_list = component.split(None, 1)  # this will split on component name and sha
+              if len(component_list) == 2:
+                 submodule_name = component_list[0]
+                 pin_sha = component_list[1]
+                 submodules[submodule_name] = pin_sha
+        return submodules
 
     def extract_submodule_table(self, manifest_data):
         """Generates a table detailing submodules and URLs."""
-        the_rock_commit = manifest_data.get('the_rock_commit', '')
-        commit_url = f"{self.base_url}/commit/{the_rock_commit}"
+        #the_rock_commit = manifest_data.get('the_rock_commit', '')
+        #commit_url = f"{self.base_url}/commit/{the_rock_commit}"
         table = '| Submodule | URL |\n|-----------|-----|\n'
-
-        for submodule in manifest_data.get('submodules', []):
-            submodule_name = submodule['submodule_name']
+        for submodule_name,pin_sha in manifest_data.items():
             if submodule_name == 'rccl':  # Filter out specific submodules
-                continue
-            pin_sha = submodule.get('pin_sha')
-            if pin_sha:
-                submodule_url = submodule['submodule_url']
-                commit_url = f"{submodule_url.replace('.git', '')}/commit/{pin_sha}"
-                table += f'| {submodule_name} | ({commit_url}) |\\n'
+               continue
+            submodule_url = f"{self.base_url}/{submodule_name}"
+            commit_url = f"{submodule_url}/commit/{pin_sha}"
+            table += f'| {submodule_name} | ({commit_url}) |\n'
 
         return table
 
@@ -112,10 +119,10 @@ class BuildMetadataExtractor:
             failure_table += f'| {job_name} | ({job_url}) |\\n'
         return failure_table
 
-    def save_results_to_file(self, manifest_artifacts_table, failure_table):
+    def save_results_to_file(self,submodule_table, manifest_artifacts_table, failure_table):
         """Saves the results to a file in structured JSON format."""
         results = {
-            #"submodule_table": submodule_table,
+            "submodule_table": submodule_table,
             "manifest_artifacts_table": manifest_artifacts_table,
             "failure_table": failure_table or "No failures found"
         }
@@ -129,7 +136,7 @@ if __name__ == "__main__":
     PROJECT_NAME = os.getenv("PROJECT_NAME", "llvm-project")
     RUN_ID = os.getenv("RUN_ID", "")
     GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-    #MANIFEST_FILE = os.getenv("MANIFEST_FILE", "manifest.json")
+    MANIFEST_FILE = os.getenv("MANIFEST_FILE", "manifest.txt")
     #ROCK_MANIFEST_URL = os.getenv("ROCK_MANIFEST_URL")
     ARTIFACTS_URL = os.getenv("ARTIFACTS_URL")
     BUILD_LOGS_URL = os.getenv("BUILD_LOGS_URL")
@@ -142,18 +149,17 @@ if __name__ == "__main__":
     #)
 
     extractor = BuildMetadataExtractor(
-        ORG_NAME, PROJECT_NAME, RUN_ID, GITHUB_TOKEN, ARTIFACTS_URL, BUILD_LOGS_URL, OUTPUT_FILE
+        ORG_NAME, PROJECT_NAME, RUN_ID, GITHUB_TOKEN, MANIFEST_FILE, ARTIFACTS_URL, BUILD_LOGS_URL, OUTPUT_FILE
     )
 
 
     # Process the manifest file
-    #manifest_data = extractor.read_manifest_file()
-    #if manifest_data:
-    #submodule_table = extractor.extract_submodule_table(manifest_data)
-    manifest_artifacts_table = extractor.generate_manifest_artifact_logs_table()
-    failure_table = extractor.list_failures()
+    manifest_data = extractor.read_manifest_file()
+    if manifest_data:
+      submodule_table = extractor.extract_submodule_table(manifest_data)
+      manifest_artifacts_table = extractor.generate_manifest_artifact_logs_table()
+      failure_table = extractor.list_failures()
 
-        # Save results to an output file
-    #extractor.save_results_to_file(submodule_table, manifest_artifacts_table, failure_table)
-    extractor.save_results_to_file(manifest_artifacts_table, failure_table)
+    # Save results to an output file
+    extractor.save_results_to_file(submodule_table, manifest_artifacts_table, failure_table)
 

@@ -285,3 +285,33 @@ jobs:
     permissions:
       contents: read
       id-token: write
+
+  # ==========================================================================
+  # STAGE: Manifest commit log (generic)
+  # ==========================================================================
+  manifest_summary:
+    needs: [compiler-runtime, foundation, math-libs, comm-libs]
+    if: ${{ !cancelled() && !failure() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all stage submodule commit
+        uses: actions/download-artifact@v4
+        with:
+          pattern: submodule-commit-*
+          merge-multiple: true
+
+      - name: Merge all submodule commit
+        run: |
+          for f in submodule-commit-*.txt; do
+            echo "--- $f ---"
+            cat "$f"
+          done
+
+          cat submodule-commit-*.txt | sort -u > manifest.txt
+
+          cat manifest.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: submodule-commit-all
+          path: manifest.txt
