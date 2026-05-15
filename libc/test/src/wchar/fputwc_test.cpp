@@ -1,9 +1,14 @@
-//===-- Unittests for fputwc ----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for fputwc
+///
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
@@ -56,12 +61,13 @@ TEST_F(LlvmLibcFputwcTest, WriteUtf8) {
   // 2-byte character: '¢' (L'¢', 0xA2) -> UTF-8: 0xC2 0xA2
   EXPECT_EQ(LIBC_NAMESPACE::fputwc(L'¢', file), static_cast<wint_t>(L'¢'));
 
+#if WCHAR_MAX > 0xFFFF
   // 3-byte character: '€' (L'€', 0x20AC) -> UTF-8: 0xE2 0x82 0xAC
   EXPECT_EQ(LIBC_NAMESPACE::fputwc(L'€', file), static_cast<wint_t>(L'€'));
 
   // 4-byte character: '𐍈' (L'𐍈', 0x10348) -> UTF-8: 0xF0 0x90 0x8D 0x88
   EXPECT_EQ(LIBC_NAMESPACE::fputwc(L'𐍈', file), static_cast<wint_t>(L'𐍈'));
-
+#endif
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 
   // Open again to read raw bytes
