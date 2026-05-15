@@ -64,16 +64,12 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @ext_add_trunc_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: ext_add_trunc_i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov.f32 s6, s7
-; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmov.f32 s8, s2
-; CHECK-NEXT:    vmov.f32 s2, s3
-; CHECK-NEXT:    vmov r1, s8
-; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r2, s3
 ; CHECK-NEXT:    vmov.f32 s2, s5
 ; CHECK-NEXT:    add.w r12, r1, r0
-; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    vmov r1, s7
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    add r1, r2
 ; CHECK-NEXT:    vmov r2, s2
@@ -184,19 +180,17 @@ define arm_aapcs_vfpcc <4 x i32> @ext_add_ashr_trunc_i32(<4 x i32> %a, <4 x i32>
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    vmov.f32 s12, s6
 ; CHECK-NEXT:    vmov.i64 q2, #0xffffffff
-; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    vmov.f32 s14, s7
-; CHECK-NEXT:    vand q1, q1, q2
-; CHECK-NEXT:    vmov r3, r7, d2
 ; CHECK-NEXT:    vand q3, q3, q2
-; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    vmov r0, r1, d6
-; CHECK-NEXT:    vmov.f32 s2, s3
+; CHECK-NEXT:    vmov.f32 s6, s5
+; CHECK-NEXT:    vand q1, q1, q2
 ; CHECK-NEXT:    vmov lr, r12, d7
-; CHECK-NEXT:    vmov r2, s4
+; CHECK-NEXT:    vmov r3, r7, d2
 ; CHECK-NEXT:    asrs r5, r2, #31
 ; CHECK-NEXT:    adds r2, r2, r0
-; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    adcs r1, r5
 ; CHECK-NEXT:    vmov r5, s0
 ; CHECK-NEXT:    asrl r2, r1, #1
@@ -302,26 +296,24 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, lr}
-; CHECK-NEXT:    vmov.f32 s12, s2
-; CHECK-NEXT:    vmov.f32 s2, s3
-; CHECK-NEXT:    vmov.f32 s10, s7
+; CHECK-NEXT:    vmov r10, s3
+; CHECK-NEXT:    vmov.i64 q3, #0xffffffff
+; CHECK-NEXT:    vmov r2, s7
 ; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov.f32 s6, s5
-; CHECK-NEXT:    vmov r10, s2
-; CHECK-NEXT:    vmov r2, s10
-; CHECK-NEXT:    vmov.f32 s2, s1
+; CHECK-NEXT:    vmov.f32 s10, s7
+; CHECK-NEXT:    vand q2, q2, q3
 ; CHECK-NEXT:    adds.w r6, r10, r2
 ; CHECK-NEXT:    asr.w r0, r10, #31
 ; CHECK-NEXT:    adc r3, r0, #0
 ; CHECK-NEXT:    eor.w r1, r10, r2
 ; CHECK-NEXT:    asrl r6, r3, r2
 ; CHECK-NEXT:    subs r0, r6, r2
-; CHECK-NEXT:    vmov r6, s12
+; CHECK-NEXT:    vmov r6, s2
 ; CHECK-NEXT:    sbc lr, r3, #0
-; CHECK-NEXT:    vmov r3, s8
+; CHECK-NEXT:    vmov r3, s6
 ; CHECK-NEXT:    umull r0, r8, r0, r2
-; CHECK-NEXT:    vmov.i64 q3, #0xffffffff
-; CHECK-NEXT:    vand q2, q2, q3
+; CHECK-NEXT:    vmov.f32 s2, s1
+; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    adds r4, r6, r3
 ; CHECK-NEXT:    asr.w r7, r6, #31
 ; CHECK-NEXT:    adc r5, r7, #0

@@ -2,7 +2,7 @@
 ;RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=fiji | FileCheck -check-prefix=VI %s
 ;RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx900 | FileCheck -check-prefix=GFX9 %s
 ;RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1010 | FileCheck -check-prefix=GFX10 %s
-;RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 | FileCheck -check-prefix=GFX10 %s
+;RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 | FileCheck -check-prefixes=GFX10,GFX11-NODELAY %s
 
 ; ===================================================================================
 ; V_AND_OR_B32
@@ -191,12 +191,12 @@ define <2 x i32> @v_and_or_v2i32_b(<2 x i32> inreg %a, <2 x i32> %b, <2 x i32> i
 ; GFX9-NEXT:    v_or_b32_e32 v0, s18, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_and_or_v2i32_b:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DAG:     v_and_or_b32 v0, s{{[0-9]+}}, v0, s{{[0-9]+}}
-; GFX10-DAG:     v_and_or_b32 v1, s{{[0-9]+}}, v1, s{{[0-9]+}}
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-NODELAY-LABEL: v_and_or_v2i32_b:
+; GFX11-NODELAY:       ; %bb.0:
+; GFX11-NODELAY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NODELAY-NEXT:    v_and_or_b32 v0, s0, v0, s2
+; GFX11-NODELAY-NEXT:    v_and_or_b32 v1, s1, v1, s3
+; GFX11-NODELAY-NEXT:    s_setpc_b64 s[30:31]
   %x = and <2 x i32> %a, %b
   %result = or <2 x i32> %x, %c
   ret <2 x i32> %result
@@ -219,12 +219,12 @@ define <2 x i32> @v_and_or_v2i32_ab(<2 x i32> %a, <2 x i32> %b, <2 x i32> inreg 
 ; GFX9-NEXT:    v_and_or_b32 v0, v0, v2, s16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_and_or_v2i32_ab:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DAG:     v_and_or_b32 v1, v1, v3, {{s[0-9]+}}
-; GFX10-DAG:     v_and_or_b32 v0, v0, v2, {{s[0-9]+}}
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-NODELAY-LABEL: v_and_or_v2i32_ab:
+; GFX11-NODELAY:       ; %bb.0:
+; GFX11-NODELAY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NODELAY-NEXT:    v_and_or_b32 v0, v0, v2, s0
+; GFX11-NODELAY-NEXT:    v_and_or_b32 v1, v1, v3, s1
+; GFX11-NODELAY-NEXT:    s_setpc_b64 s[30:31]
   %x = and <2 x i32> %a, %b
   %result = or <2 x i32> %x, %c
   ret <2 x i32> %result
@@ -272,9 +272,9 @@ define <2 x i32> @v_and_or_v2i32_inline_const(<2 x i32> %a, <2 x i32> %b) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_movk_i32 s4, 0x809
+; GFX9-NEXT:    s_movk_i32 s5, 0x808
 ; GFX9-NEXT:    v_and_or_b32 v1, v1, s4, v3
-; GFX9-NEXT:    s_movk_i32 s4, 0x808
-; GFX9-NEXT:    v_and_or_b32 v0, v0, s4, v2
+; GFX9-NEXT:    v_and_or_b32 v0, v0, s5, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_and_or_v2i32_inline_const:
@@ -337,12 +337,13 @@ define <2 x i32> @v_and_or_v2i32_inline_const_x3(<2 x i32> %a) {
 ; GFX9-NEXT:    v_or_b32_e32 v0, 0x81, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_and_or_v2i32_inline_const_x3:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_movk_i32 [[SR:s[0-9]+]], 0x808
-; GFX10-DAG:     v_and_or_b32 v0, v0, [[SR]], 0x81
-; GFX10-DAG:     v_and_or_b32 v1, 0x809, v1, 16
+; GFX11-NODELAY-LABEL: v_and_or_v2i32_inline_const_x3:
+; GFX11-NODELAY:       ; %bb.0:
+; GFX11-NODELAY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NODELAY-NEXT:    s_movk_i32 s0, 0x81
+; GFX11-NODELAY-NEXT:    v_and_or_b32 v1, 0x809, v1, 16
+; GFX11-NODELAY-NEXT:    v_and_or_b32 v0, 0x808, v0, s0
+; GFX11-NODELAY-NEXT:    s_setpc_b64 s[30:31]
   %x = and <2 x i32> %a, <i32 2056, i32 2057>
   %result = or <2 x i32> %x, <i32 129, i32 16>
   ret <2 x i32> %result
@@ -367,14 +368,15 @@ define <2 x i32> @v_and_or_v2i32_inline_const_x4(<2 x i32> %a) {
 ; GFX9-NEXT:    v_or_b32_e32 v0, 0x81, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_and_or_v2i32_inline_const_x4:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DAG:     s_movk_i32 [[SR0:s[0-9]+]], 0x808
-; GFX10-DAG:     s_movk_i32 [[SR1:s[0-9]+]], 0x809
+; GFX11-NODELAY-LABEL: v_and_or_v2i32_inline_const_x4:
+; GFX11-NODELAY:       ; %bb.0:
+; GFX11-NODELAY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NODELAY-NEXT:    s_movk_i32 s0, 0x81
+; GFX11-NODELAY-NEXT:    s_movk_i32 s1, 0x101
+; GFX11-NODELAY-NEXT:    v_and_or_b32 v0, 0x808, v0, s0
+; GFX11-NODELAY-NEXT:    v_and_or_b32 v1, 0x809, v1, s1
+; GFX11-NODELAY-NEXT:    s_setpc_b64 s[30:31]
 ; GFX10-CHECK-NOT: {{.}}
-; GFX10-DAG:     v_and_or_b32 v0, v0, [[SR0]], 0x81
-; GFX10-DAG:     v_and_or_b32 v1, v1, [[SR1]], 0x101
   %x = and <2 x i32> %a, <i32 2056, i32 2057>
   %result = or <2 x i32> %x, <i32 129, i32 257>
   ret <2 x i32> %result

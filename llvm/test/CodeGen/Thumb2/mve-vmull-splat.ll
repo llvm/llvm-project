@@ -242,12 +242,10 @@ define arm_aapcs_vfpcc <4 x i64> @sext32_0213_ext0(<8 x i32> %src1, i32 %src2) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov.f32 s4, s1
-; CHECK-NEXT:    vmov.f32 s6, s3
-; CHECK-NEXT:    vmov r3, s4
-; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    umull r2, r5, r3, r0
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    umull lr, r12, r1, r0
+; CHECK-NEXT:    umull r2, r5, r3, r0
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, lr
 ; CHECK-NEXT:    asrs r2, r0, #31
 ; CHECK-NEXT:    mla r4, r1, r2, r12
@@ -285,13 +283,11 @@ define arm_aapcs_vfpcc <4 x i64> @sext32_ext0_0213(<8 x i32> %src1, i32 %src2) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov.f32 s4, s1
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    asrs r4, r0, #31
-; CHECK-NEXT:    vmov.f32 s6, s3
-; CHECK-NEXT:    vmov r3, s4
-; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    umull r2, r5, r0, r3
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    umull lr, r12, r0, r1
+; CHECK-NEXT:    umull r2, r5, r0, r3
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, lr
 ; CHECK-NEXT:    asrs r2, r1, #31
 ; CHECK-NEXT:    mla r2, r0, r2, r12
@@ -528,13 +524,11 @@ define arm_aapcs_vfpcc <4 x i64> @zext32_0213_ext0(<8 x i32> %src1, i32 %src2) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    vmov r3, s0
-; CHECK-NEXT:    vmov.f32 s0, s1
-; CHECK-NEXT:    vmov.f32 s2, s3
 ; CHECK-NEXT:    umull r1, r12, r1, r0
 ; CHECK-NEXT:    umull r3, r2, r3, r0
 ; CHECK-NEXT:    vmov q2[2], q2[0], r3, r1
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    vmov r3, s0
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    vmov q2[3], q2[1], r2, r12
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    umull r1, r2, r1, r0
@@ -557,13 +551,11 @@ define arm_aapcs_vfpcc <4 x i64> @zext32_ext0_0213(<8 x i32> %src1, i32 %src2) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    vmov r3, s0
-; CHECK-NEXT:    vmov.f32 s0, s1
-; CHECK-NEXT:    vmov.f32 s2, s3
 ; CHECK-NEXT:    umull r1, r12, r0, r1
 ; CHECK-NEXT:    umull r3, r2, r0, r3
 ; CHECK-NEXT:    vmov q2[2], q2[0], r3, r1
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    vmov r3, s0
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    vmov q2[3], q2[1], r2, r12
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    umull r1, r2, r0, r1

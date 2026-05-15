@@ -168,12 +168,6 @@ define <2 x i32> @v_or3_v2i32_b(<2 x i32> inreg %a, <2 x i32> %b, <2 x i32> inre
 ; GFX9-NEXT:    v_or_b32_e32 v1, s19, v1
 ; GFX9-NEXT:    v_or_b32_e32 v0, s18, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-LABEL: v_or3_v2i32_b:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DAG:     v_or3_b32 v0, s{{[0-9]+}}, v0, s{{[0-9]+}}
-; GFX10-DAG:     v_or3_b32 v1, s{{[0-9]+}}, v1, s{{[0-9]+}}
   %x = or <2 x i32> %a, %b
   %result = or <2 x i32> %x, %c
   ret <2 x i32> %result
@@ -195,12 +189,6 @@ define <2 x i32> @v_or3_v2i32_ab(<2 x i32> %a, <2 x i32> %b, <2 x i32> inreg %c)
 ; GFX9-NEXT:    v_or3_b32 v1, v1, v3, s17
 ; GFX9-NEXT:    v_or3_b32 v0, v0, v2, s16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-LABEL: v_or3_v2i32_ab:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DAG:     v_or3_b32 v0, v0, v2, s{{[0-9]+}}
-; GFX10-DAG:     v_or3_b32 v1, v1, v3, s{{[0-9]+}}
   %x = or <2 x i32> %a, %b
   %result = or <2 x i32> %x, %c
   ret <2 x i32> %result
@@ -248,9 +236,9 @@ define <2 x i32> @v_or3_v2i32_inline_const(<2 x i32> %a, <2 x i32> %b) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_movk_i32 s4, 0x809
+; GFX9-NEXT:    s_movk_i32 s5, 0x808
 ; GFX9-NEXT:    v_or3_b32 v1, v1, v3, s4
-; GFX9-NEXT:    s_movk_i32 s4, 0x808
-; GFX9-NEXT:    v_or3_b32 v0, v0, v2, s4
+; GFX9-NEXT:    v_or3_b32 v0, v0, v2, s5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_or3_v2i32_inline_const:

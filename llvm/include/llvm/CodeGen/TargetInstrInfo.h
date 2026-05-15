@@ -614,6 +614,21 @@ public:
         : RegSubRegPair(Reg, SubReg), SubIdx(SubIdx) {}
   };
 
+  /// Check if \p MO can be used as operand \p OpIdx for \p MI.
+  ///
+  /// \param MI    The instruction to validate against.
+  /// \param OpIdx The operand position to check.
+  /// \param MO    The operand to validate. Does not need to have a parent.
+  ///              If nullptr, checks MI.getOperand(OpIdx).
+  ///
+  /// \returns true if the operand would be legal at the given position.
+  ///
+  /// \note The generic implementation returns true.
+  virtual bool isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
+                              const MachineOperand *MO) const {
+    return true;
+  }
+
   /// Build the equivalent inputs of a REG_SEQUENCE for the given \p MI
   /// and \p DefIdx.
   /// \p [out] InputRegs of the equivalent REG_SEQUENCE. Each element of
