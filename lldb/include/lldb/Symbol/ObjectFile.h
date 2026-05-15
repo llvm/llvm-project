@@ -771,7 +771,10 @@ protected:
   lldb::ProcessWP m_process_wp;
   /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
+
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
+  std::recursive_mutex m_sections_mutex;
+
   std::unique_ptr<lldb_private::Symtab> m_symtab_up;
   /// We need a llvm::once_flag that we can use to avoid locking the module
   /// lock and deadlocking LLDB. See comments in ObjectFile::GetSymtab() for
@@ -779,12 +782,6 @@ protected:
   /// need to use a std::unique_ptr to a llvm::once_flag so if we clear the
   /// symbol table, we can have a new once flag to use when it is created again.
   std::unique_ptr<llvm::once_flag> m_symtab_once_up;
-  /// Same rationale as m_symtab_once_up: taking the module mutex in
-  /// GetSectionList would deadlock against DWARF indexing workers. Use a
-  /// per-ObjectFile recursive mutex instead, since CreateSections in some
-  /// plugins (e.g. ELF's .gnu_debugdata path) re-enters GetSectionList on
-  /// the same ObjectFile.
-  std::recursive_mutex m_sections_mutex;
   std::optional<uint32_t> m_cache_hash;
 
   /// Sets the architecture for a module.  At present the architecture can
