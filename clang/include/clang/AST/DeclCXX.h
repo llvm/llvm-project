@@ -1987,7 +1987,7 @@ public:
 
   /// Check for equivalence of explicit specifiers.
   /// \return true if the explicit specifier are equivalent, false otherwise.
-  bool isEquivalent(const ExplicitSpecifier Other) const;
+  bool isEquivalent(ExplicitSpecifier Other) const;
   /// Determine whether this specifier is known to correspond to an explicit
   /// declaration. Returns false if the specifier is absent or has an
   /// expression that is value-dependent or evaluates to false.
@@ -2003,10 +2003,7 @@ public:
   void setKind(ExplicitSpecKind Kind) { ExplicitSpec.setInt(Kind); }
   void setExpr(Expr *E) { ExplicitSpec.setPointer(E); }
   // Retrieve the explicit specifier in the given declaration, if any.
-  static ExplicitSpecifier getFromDecl(FunctionDecl *Function);
-  static const ExplicitSpecifier getFromDecl(const FunctionDecl *Function) {
-    return getFromDecl(const_cast<FunctionDecl *>(Function));
-  }
+  static ExplicitSpecifier getFromDecl(const FunctionDecl *Function);
   static ExplicitSpecifier Invalid() {
     return ExplicitSpecifier(nullptr, ExplicitSpecKind::Unresolved);
   }
@@ -2080,8 +2077,7 @@ public:
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);
 
-  ExplicitSpecifier getExplicitSpecifier() { return ExplicitSpec; }
-  const ExplicitSpecifier getExplicitSpecifier() const { return ExplicitSpec; }
+  ExplicitSpecifier getExplicitSpecifier() const { return ExplicitSpec; }
 
   /// Return true if the declaration is already resolved to be explicit.
   bool isExplicit() const { return ExplicitSpec.isExplicit(); }
@@ -2732,10 +2728,7 @@ public:
       CXXConstructorDeclBits.IsSimpleExplicit = ES.isExplicit();
   }
 
-  ExplicitSpecifier getExplicitSpecifier() {
-    return getCanonicalDecl()->getExplicitSpecifierInternal();
-  }
-  const ExplicitSpecifier getExplicitSpecifier() const {
+  ExplicitSpecifier getExplicitSpecifier() const {
     return getCanonicalDecl()->getExplicitSpecifierInternal();
   }
 
@@ -3022,11 +3015,7 @@ public:
          const AssociatedConstraint &TrailingRequiresClause = {});
   static CXXConversionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
-  ExplicitSpecifier getExplicitSpecifier() {
-    return getCanonicalDecl()->ExplicitSpec;
-  }
-
-  const ExplicitSpecifier getExplicitSpecifier() const {
+  ExplicitSpecifier getExplicitSpecifier() const {
     return getCanonicalDecl()->ExplicitSpec;
   }
 

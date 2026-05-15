@@ -2234,8 +2234,6 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
   // Check the type for a cleanup.
   if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext())) {
     // Check if we're in a SEH block with /EH, prevent it
-    // TODO: /EHs* differs from /EHa, the former may not be executed to this
-    // point.
     if (getLangOpts().CXXExceptions && currentFunctionUsesSEHTry())
       getContext().getDiagnostics().Report(D.getLocation(),
                                            diag::err_seh_object_unwinding);
@@ -2720,9 +2718,6 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   if (Arg.isIndirect()) {
     DeclPtr = Arg.getIndirectAddress();
     DeclPtr = DeclPtr.withElementType(ConvertTypeForMem(Ty));
-    // Indirect argument is in alloca address space, which may be different
-    // from the default address space.
-    auto AllocaAS = CGM.getASTAllocaAddressSpace();
     auto *V = DeclPtr.emitRawPointer(*this);
     AllocaPtr = RawAddress(V, DeclPtr.getElementType(), DeclPtr.getAlignment());
 
@@ -2738,13 +2733,9 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       EmitStoreOfScalar(V, AllocaPtr, /* Volatile */ false, PtrTy);
     }
 
-    auto SrcLangAS = getLangOpts().OpenCL ? LangAS::opencl_private : AllocaAS;
-    auto DestLangAS =
-        getLangOpts().OpenCL ? LangAS::opencl_private : LangAS::Default;
-    if (SrcLangAS != DestLangAS) {
-      assert(getContext().getTargetAddressSpace(SrcLangAS) ==
-             CGM.getDataLayout().getAllocaAddrSpace());
-      auto DestAS = getContext().getTargetAddressSpace(DestLangAS);
+    LangAS DestLangAS = Ty.getAddressSpace();
+    unsigned DestAS = getContext().getTargetAddressSpace(DestLangAS);
+    if (DeclPtr.getAddressSpace() != DestAS) {
       auto *T = llvm::PointerType::get(getLLVMContext(), DestAS);
       DeclPtr = DeclPtr.withPointer(performAddrSpaceCast(V, T),
                                     DeclPtr.isKnownNonNull());
@@ -2859,8 +2850,13 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       (CGM.getCodeGenOpts().getExtendVariableLiveness() ==
            CodeGenOptions::ExtendVariableLivenessKind::This &&
        &D == CXXABIThisDecl)) {
-    if (shouldExtendLifetime(getContext(), CurCodeDecl, D, CXXABIThisDecl))
-      EHStack.pushCleanup<FakeUse>(NormalFakeUse, DeclPtr);
+    // We don't emit fake uses for coroutine parameters, other than `this`.
+    if (auto *FnDecl = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+        &D == CXXABIThisDecl || !FnDecl ||
+        FnDecl->getBody()->getStmtClass() != Stmt::CoroutineBodyStmtClass) {
+      if (shouldExtendLifetime(getContext(), CurCodeDecl, D, CXXABIThisDecl))
+        EHStack.pushCleanup<FakeUse>(NormalFakeUse, DeclPtr);
+    }
   }
 
   // Emit debug info for param declarations in non-thunk functions.
