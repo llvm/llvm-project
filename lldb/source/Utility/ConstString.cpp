@@ -15,17 +15,70 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/FormatProviders.h"
-#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 
 #include <array>
+#include <mutex>
+#include <shared_mutex>
 #include <utility>
 
 #include <cinttypes>
 #include <cstdint>
 #include <cstring>
 
+#if defined(__APPLE__)
+#include <os/lock.h>
+#endif
+
 using namespace lldb_private;
+
+namespace {
+/// Lock guarding each shard of the ConstString pool. On Apple platforms it
+/// wraps os_unfair_lock, which is significantly faster than pthread_rwlock for
+/// concurrent writes, and roughly on par for concurrent reads. On all other
+/// platforms, it wraps std::shared_mutex, preserving reader/writer concurrency.
+///
+/// The class satisfies both Lockable and SharedLockable so it composes with
+/// std::lock_guard and std::shared_lock.
+class PoolMutex {
+public:
+  void lock() {
+#if defined(__APPLE__)
+    os_unfair_lock_lock(&m_lock);
+#else
+    m_lock.lock();
+#endif
+  }
+  void unlock() {
+#if defined(__APPLE__)
+    os_unfair_lock_unlock(&m_lock);
+#else
+    m_lock.unlock();
+#endif
+  }
+  void lock_shared() {
+#if defined(__APPLE__)
+    os_unfair_lock_lock(&m_lock);
+#else
+    m_lock.lock_shared();
+#endif
+  }
+  void unlock_shared() {
+#if defined(__APPLE__)
+    os_unfair_lock_unlock(&m_lock);
+#else
+    m_lock.unlock_shared();
+#endif
+  }
+
+private:
+#if defined(__APPLE__)
+  os_unfair_lock m_lock = OS_UNFAIR_LOCK_INIT;
+#else
+  std::shared_mutex m_lock;
+#endif
+};
+} // namespace
 
 class Pool {
 public:
@@ -80,7 +133,7 @@ public:
   StringPoolValueType GetMangledCounterpart(const char *ccstr) {
     if (ccstr != nullptr) {
       const PoolEntry &pool = selectPool(llvm::StringRef(ccstr));
-      llvm::sys::SmartScopedReader<false> rlock(pool.m_mutex);
+      std::shared_lock<PoolMutex> lock(pool.m_mutex);
       return GetStringMapEntryFromKeyData(ccstr).getValue();
     }
     return nullptr;
@@ -104,13 +157,13 @@ public:
       PoolEntry &pool = selectPool(string_hash);
 
       {
-        llvm::sys::SmartScopedReader<false> rlock(pool.m_mutex);
+        std::shared_lock<PoolMutex> lock(pool.m_mutex);
         auto it = pool.m_string_map.find(string_ref, string_hash);
         if (it != pool.m_string_map.end())
           return it->getKeyData();
       }
 
-      llvm::sys::SmartScopedWriter<false> wlock(pool.m_mutex);
+      std::lock_guard<PoolMutex> lock(pool.m_mutex);
       StringPoolEntryType &entry =
           *pool.m_string_map
                .insert(std::make_pair(string_ref, nullptr), string_hash)
@@ -128,7 +181,7 @@ public:
     {
       const uint32_t demangled_hash = StringPool::hash(demangled);
       PoolEntry &pool = selectPool(demangled_hash);
-      llvm::sys::SmartScopedWriter<false> wlock(pool.m_mutex);
+      std::lock_guard<PoolMutex> lock(pool.m_mutex);
 
       // Make or update string pool entry with the mangled counterpart
       StringPool &map = pool.m_string_map;
@@ -145,7 +198,7 @@ public:
       // Now assign the demangled const string as the counterpart of the
       // mangled const string...
       PoolEntry &pool = selectPool(llvm::StringRef(mangled_ccstr));
-      llvm::sys::SmartScopedWriter<false> wlock(pool.m_mutex);
+      std::lock_guard<PoolMutex> lock(pool.m_mutex);
       GetStringMapEntryFromKeyData(mangled_ccstr).setValue(demangled_ccstr);
     }
 
@@ -165,7 +218,7 @@ public:
   ConstString::MemoryStats GetMemoryStats() const {
     ConstString::MemoryStats stats;
     for (const auto &pool : m_string_pools) {
-      llvm::sys::SmartScopedReader<false> rlock(pool.m_mutex);
+      std::shared_lock<PoolMutex> lock(pool.m_mutex);
       const Allocator &alloc = pool.m_string_map.getAllocator();
       stats.bytes_total += alloc.getTotalMemory();
       stats.bytes_used += alloc.getBytesAllocated();
@@ -175,7 +228,7 @@ public:
 
 protected:
   struct PoolEntry {
-    mutable llvm::sys::SmartRWMutex<false> m_mutex;
+    mutable PoolMutex m_mutex;
     StringPool m_string_map;
   };
 
