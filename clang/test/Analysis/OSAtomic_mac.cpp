@@ -35,6 +35,5 @@ bool OSAtomicCompareAndSwapMismatchedPointee(int __oldValue, int __newValue,
                                              volatile long *_theValue);
 long gh197211_long_flag;
 void gh197211_test2() {
-  if (OSAtomicCompareAndSwapMismatchedPointee(0, 0, &gh197211_long_flag))
-    ;
+  OSAtomicCompareAndSwapMismatchedPointee(0, 0, &gh197211_long_flag);
 }
