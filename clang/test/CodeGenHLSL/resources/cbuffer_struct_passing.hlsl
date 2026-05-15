@@ -125,7 +125,7 @@ void case1() {
 
 // CHECK-NEXT: ret void
 void case2() {
-  S AggTemp = (S)cbs;
+  S LocalS = (S)cbs;
 }
 
 // CHECK-LABEL: case3
@@ -135,8 +135,8 @@ void case3() {
 
 // CHECK-NEXT: [[LocalT:%.*]] = alloca %struct.T, align 1
 // CHECK-NEXT: [[LocalTCopy:%.*]] = alloca %struct.T, align 1
-// CHECK-NEXT: [[AggTemp:%.*]] = alloca %struct.S, align 1
-// CHECK-NEXT: [[AggTempCopy:%.*]] = alloca %struct.S, align 1
+// CHECK-NEXT: [[LocalS:%.*]] = alloca %struct.S, align 1
+// CHECK-NEXT: [[LocalSCopy:%.*]] = alloca %struct.S, align 1
 
 // Check that constant to default address space copies the struct field by field
 //
@@ -170,21 +170,70 @@ void case3() {
 
 // Check that constant to default address space copies the struct field by field
 //
-// CHECK-NEXT: [[Ptr_a1:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 0
+// CHECK-NEXT: [[Ptr_a1:%.*]] = getelementptr inbounds %struct.S, ptr [[LocalS]], i32 0, i32 0
 // CHECK-NEXT: [[CbufLoad_a1:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, align 4
 // CHECK-NEXT: store <3 x float> [[CbufLoad_a1]], ptr [[Ptr_a1]], align 4
-// CHECK-NEXT: [[Ptr_b1:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 1
+// CHECK-NEXT: [[Ptr_b1:%.*]] = getelementptr inbounds %struct.S, ptr [[LocalS]], i32 0, i32 1
 // CHECK-NEXT: [[CbufLoad_b1:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 16), align 8
 // CHECK-NEXT: store double [[CbufLoad_b1]], ptr [[Ptr_b1]], align 8
-// CHECK-NEXT: [[Ptr_c1:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 2
+// CHECK-NEXT: [[Ptr_c1:%.*]] = getelementptr inbounds %struct.S, ptr [[LocalS]], i32 0, i32 2
 // CHECK-NEXT: [[CbufLoad_c1:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 32), align 4
 // CHECK-NEXT: store <4 x float> [[CbufLoad_c1]], ptr [[Ptr_c1]], align 4
-  S AggTemp = cbt.s;
+  S localS = cbt.s;
 
 // Check that default to default address space copy uses memcpy
 //
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.{{i32|i64}}(ptr align 1 [[AggTempCopy]], ptr align 1 [[AggTemp]], {{i32|i64}} 36, i1 false)
-  S AggTempCopy = AggTemp;
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.{{i32|i64}}(ptr align 1 [[LocalSCopy]], ptr align 1 [[LocalS]], {{i32|i64}} 36, i1 false)
+  S localSCopy = localS;
+
+// CHECK-NEXT: ret void
+}
+
+// CHECK-LABEL: case4
+// CHECK-NEXT: entry:
+// SPIRV-NEXT: call token @llvm.experimental.convergence.entry()
+void case4() {
+
+// CHECK-NEXT: [[LocalP1:%.*]] = alloca %struct.P, align 1
+// CHECK-NEXT: [[Tmp0:%.*]] = alloca %struct.S, align 1
+// CHECK-NEXT: [[LocalP2:%.*]] = alloca %struct.P, align 1
+// CHECK-NEXT: [[Tmp1:%.*]] = alloca %struct.P, align 1
+// CHECK-NEXT: [[Tmp2:%.*]] = alloca %struct.S, align 1
+
+// CHECK-NEXT: [[Tmp0Ptr_a1:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp0]], i32 0, i32 0
+// CHECK-NEXT: [[CbufLoad_a1:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, align 4
+// CHECK-NEXT: store <3 x float> [[CbufLoad_a1]], ptr [[Tmp0Ptr_a1]], align 4
+
+// CHECK-NEXT: [[Tmp0Ptr_b1:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp0]], i32 0, i32 1
+// CHECK-NEXT: [[CbufLoad_b1:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 16), align 8
+// CHECK-NEXT: store double [[CbufLoad_b1]], ptr [[Tmp0Ptr_b1]], align 8
+
+// CHECK-NEXT: [[Tmp0Ptr_c1:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp0]], i32 0, i32 2
+// CHECK-NEXT: [[CbufLoad_c1:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 32), align 4
+// CHECK-NEXT: store <4 x float> [[CbufLoad_c1]], ptr [[Tmp0Ptr_c1]], align 4
+
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.{{i32|i64}}(ptr align 1 [[LocalP1]], ptr align 1 [[Tmp0]], {{i32|i64}} 12, i1 false)
+
+  // Derived to base conversion in initialization. Size of S in memory layout is 36 bytes and
+  // size of P is 12 bytes. The memcpy should only copy the 12 bytes of P.
+  P LocalP1 = cbs;
+
+// CHECK-NEXT: [[Tmp2Ptr_a1:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp2]], i32 0, i32 0
+// CHECK-NEXT: [[CbufLoad_a1:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, align 4
+// CHECK-NEXT: store <3 x float> [[CbufLoad_a1]], ptr [[Tmp2Ptr_a1]], align 4
+// CHECK-NEXT: [[Tmp2Ptr_b1:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp2]], i32 0, i32 1
+// CHECK-NEXT: [[CbufLoad_b1:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 16), align 8
+// CHECK-NEXT: store double [[CbufLoad_b1]], ptr [[Tmp2Ptr_b1]], align 8
+// CHECK-NEXT: [[Tmp2Ptr_c1:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp2]], i32 0, i32 2
+// CHECK-NEXT: [[CbufLoad_c1:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 32), align 4
+// CHECK-NEXT: store <4 x float> [[CbufLoad_c1]], ptr [[Tmp2Ptr_c1]], align 4
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.{{i32|i64}}(ptr align 1 [[LocalP2]], ptr align 1 [[Tmp2]], {{i32|i64}} 12, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.{{i32|i64}}(ptr align 1 [[Tmp1]], ptr align 1 [[LocalP2]], {{i32|i64}} 12, i1 false)
+
+  // Derived to base conversion in assignment. Size of S in memory layout is 36 bytes and
+  // size of P is 12 bytes. The memcpy should only copy the 12 bytes of P.
+  P LocalP2;
+  LocalP2 = cbs;
 
 // CHECK-NEXT: ret void
 }
