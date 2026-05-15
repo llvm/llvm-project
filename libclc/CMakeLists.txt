@@ -26,7 +26,7 @@ option(
 set( LIBCLC_ARCHS_NVPTX nvptx64 )
 set( LIBCLC_ARCHS_AMDGPU amdgpu amdgcn )
 set( LIBCLC_ARCHS_SPIRV spirv spirv32 spirv64 )
-list( APPEND LIBCLC_ARCHS_ALL ${LIBCLC_ARCHS_AMDGPU} ${LIBCLC_ARCHS_NVPTX} ${LIBCLC_ARCHS_SPIRV} )
+set( LIBCLC_ARCHS_ALL ${LIBCLC_ARCHS_AMDGPU} ${LIBCLC_ARCHS_NVPTX} ${LIBCLC_ARCHS_SPIRV} )
 
 set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
@@ -162,6 +162,10 @@ if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
 elseif(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_AMDGPU)
   list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")
 endif()
+if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_AMDGPU OR LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_NVPTX)
+  list(APPEND target_compile_flags -fvisibility=hidden)
+  list(APPEND target_compile_flags "SHELL:-Xclang -fapply-global-visibility-to-externs")
+endif()
 
 # Common compile options shared by CLC and OpenCL libraries.
 set(compile_flags
@@ -197,35 +201,28 @@ libclc_add_builtin_library(${LIBCLC_CLC_TARGET}
   COMPILE_OPTIONS ${compile_flags}
   INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
   COMPILE_DEFINITIONS ${common_defs}
+  SOURCE_SUB_DIR clc
   FOLDER "libclc/Device IR/CLC"
 )
 
+# Build, link, and install the final OpenCL builtins library.
 set(LIBCLC_OPENCL_TARGET opencl)
-libclc_add_builtin_library(${LIBCLC_OPENCL_TARGET}
+libclc_add_library(libclc-${LIBCLC_TARGET}
+  ARCH ${LIBCLC_TARGET_ARCH}
+  TRIPLE ${clang_triple}
+  TARGET_TRIPLE ${LIBCLC_TARGET}
   COMPILE_OPTIONS ${compile_flags} "SHELL:-Xclang -fdeclare-opencl-builtins"
   INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
     ${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
   COMPILE_DEFINITIONS ${common_defs}
-  FOLDER "libclc/Device IR/Intermediate"
-)
-
-add_subdirectory(clc)
-add_subdirectory(opencl)
-
-# Link and install the final OpenCL builtins library.
-libclc_add_library(libclc-${LIBCLC_TARGET}
-  ARCH ${LIBCLC_TARGET_ARCH}
-  TRIPLE ${clang_triple}
-  TARGET_TRIPLE ${LIBCLC_TARGET}
-  LIBRARIES ${LIBCLC_OPENCL_TARGET}
   INTERNALIZE_LIBRARIES ${LIBCLC_CLC_TARGET}
   OPT_FLAGS ${opt_flags}
+  SOURCE_TARGET ${LIBCLC_OPENCL_TARGET}
+  SOURCE_SUB_DIR opencl
   OUTPUT_FILENAME libclc
   PARENT_TARGET libclc-opencl-builtins
 )
-
-set(LIBCLC_UNRESOLVED_SYMBOL_TEST_TARGETS libclc-${LIBCLC_TARGET})
 
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)

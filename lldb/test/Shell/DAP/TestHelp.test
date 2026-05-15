@@ -3,6 +3,9 @@
 # CHECK: -g
 # CHECK: --help
 # CHECK: -h
+# CHECK: --list-processes
+# CHECK: --platform
+# CHECK: --platform-url
 # CHECK: --repl-mode
 # CHECK: --version
 # CHECK: --wait-for-debugger

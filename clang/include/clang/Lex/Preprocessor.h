@@ -1518,15 +1518,8 @@ public:
   /// MacroInfo::getUndefLoc() at the head of the list.
   using macro_iterator = MacroMap::const_iterator;
 
-  macro_iterator macro_begin(bool IncludeExternalMacros = true) const;
-  macro_iterator macro_end(bool IncludeExternalMacros = true) const;
-
   llvm::iterator_range<macro_iterator>
-  macros(bool IncludeExternalMacros = true) const {
-    macro_iterator begin = macro_begin(IncludeExternalMacros);
-    macro_iterator end = macro_end(IncludeExternalMacros);
-    return llvm::make_range(begin, end);
-  }
+  macros(bool IncludeExternalMacros = true) const;
 
   /// \}
 
