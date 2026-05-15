@@ -39,6 +39,7 @@
 ; CHECK-NEXT:   experimental-zvfbfa              - 'Zvfbfa' (Additional BF16 vector compute support).
 ; CHECK-NEXT:   experimental-zvfofp8min          - 'Zvfofp8min' (Vector OFP8 Converts).
 ; CHECK-NEXT:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
+; CHECK-NEXT:   experimental-zvvfmm              - 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate).
 ; CHECK-NEXT:   experimental-zvvmm               - 'Zvvmm' (Integer Matrix Multiply-Accumulate).
 ; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
@@ -305,6 +306,7 @@
 ; CHECK-NEXT:   zicboz                           - 'Zicboz' (Cache-Block Zero Instructions).
 ; CHECK-NEXT:   ziccamoa                         - 'Ziccamoa' (Main Memory Supports All Atomics in A).
 ; CHECK-NEXT:   ziccamoc                         - 'Ziccamoc' (Main Memory Supports Atomics in Zacas).
+; CHECK-NEXT:   ziccid                           - 'Ziccid' (Instruction/Data Coherence and Consistency).
 ; CHECK-NEXT:   ziccif                           - 'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement).
 ; CHECK-NEXT:   zicclsm                          - 'Zicclsm' (Main Memory Supports Misaligned Loads/Stores).
 ; CHECK-NEXT:   ziccrse                          - 'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences).

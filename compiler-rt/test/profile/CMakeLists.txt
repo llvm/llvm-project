@@ -22,6 +22,17 @@ pythonize_bool(LLVM_ENABLE_CURL)
 foreach(arch ${PROFILE_TEST_ARCH})
   set(PROFILE_TEST_TARGET_ARCH ${arch})
   get_test_cc_for_arch(${arch} PROFILE_TEST_TARGET_CC PROFILE_TEST_TARGET_CFLAGS)
+  # On MSVC, Profile-* tests must link with the same CRT model as the
+  # clang_rt.profile static archive they exercise. When that archive pulls
+  # in RTInterception / RTSanitizerCommon object libraries, those are built
+  # with MultiThreadedDLL (/MD), so the .objs reference __imp_* symbols;
+  # the test binary defaults to /MT and fails to link (LNK2019 __imp__stricmp
+  # from interception_win.cpp, LNK4098 default-lib conflicts). Match the
+  # DLL CRT here so test executables link against the same runtime.
+  if(MSVC AND COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL)
+    string(APPEND PROFILE_TEST_TARGET_CFLAGS
+           " -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames")
+  endif()
   set(CONFIG_NAME Profile-${arch})
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in

@@ -4825,7 +4825,7 @@ bool
 ARMBaseInstrInfo::isFpMLxInstruction(unsigned Opcode, unsigned &MulOpc,
                                      unsigned &AddSubOpc,
                                      bool &NegAcc, bool &HasLane) const {
-  DenseMap<unsigned, unsigned>::const_iterator I = MLxEntryMap.find(Opcode);
+  auto I = MLxEntryMap.find(Opcode);
   if (I == MLxEntryMap.end())
     return false;
 

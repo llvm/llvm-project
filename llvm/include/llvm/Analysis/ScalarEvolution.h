@@ -2106,9 +2106,10 @@ private:
                                          Value *ExitCond, bool ExitIfTrue,
                                          bool ControlsOnlyExit,
                                          bool AllowPredicates);
-  std::optional<ScalarEvolution::ExitLimit> computeExitLimitFromCondFromBinOp(
-      ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
-      bool ControlsOnlyExit, bool AllowPredicates);
+  std::optional<ScalarEvolution::ExitLimit>
+  computeExitLimitFromCondFromBinOp(ExitLimitCacheTy &Cache, const Loop *L,
+                                    Value *ExitCond, bool ExitIfTrue,
+                                    bool AllowPredicates);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of the ICmpInst
@@ -2549,23 +2550,20 @@ public:
 
 /// Verifier pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionVerifierPass
-    : public PassInfoMixin<ScalarEvolutionVerifierPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionPrinterPass
-    : public PassInfoMixin<ScalarEvolutionPrinterPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI ScalarEvolutionWrapperPass : public FunctionPass {

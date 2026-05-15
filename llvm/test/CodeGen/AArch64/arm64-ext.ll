@@ -101,7 +101,7 @@ define <8 x i16> @test_vextRq_undef2(<8 x i16> %tmp1) nounwind {
 define <4 x i16> @test_undef(<8 x i16> %tmp1, <8 x i16> %tmp2) {
 ; CHECK-SD-LABEL: test_undef:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    ret
 ;
@@ -146,7 +146,7 @@ define <16 x i8> @reverse_vector_s8x16b(<16 x i8> noundef %x) {
 ; CHECK-GI-LABEL: reverse_vector_s8x16b:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    rev64 v1.16b, v0.16b
-; CHECK-GI-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d0, v1.d[1]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -167,7 +167,7 @@ define <8 x i16> @reverse_vector_s16x8b(<8 x i16> noundef %x) {
 ; CHECK-GI-LABEL: reverse_vector_s16x8b:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    rev64 v1.8h, v0.8h
-; CHECK-GI-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d0, v1.d[1]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -188,7 +188,7 @@ define <4 x i32> @reverse_vector_s32x4b(<4 x i32> noundef %x) {
 ; CHECK-GI-LABEL: reverse_vector_s32x4b:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    rev64 v1.4s, v0.4s
-; CHECK-GI-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d0, v1.d[1]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
