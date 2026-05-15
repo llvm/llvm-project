@@ -183,10 +183,16 @@ private:
   /// one if the module does not contain it.
   MCRegister findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Emit a DebugTypePointer instruction for PT. Returns std::nullopt when the
-  /// pointer is skipped (no DWARF address space). If the base DI type has an
-  /// entry in DebugTypeRegs, use it as the Base Type operand; otherwise use
-  /// DebugInfoNone.
+  /// Emit \c DebugTypePointer for pointer metadata \p PT.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p PT has no DWARF address space (needed to pick the
+  /// SPIR-V storage class), or if \p PT has a non-null base DI type that is not
+  /// yet in \c DebugTypeRegs (the pointee was not emitted as a debug type).
+  ///
+  /// Base Type operand: the register from \c DebugTypeRegs for \p PT's base
+  /// type when it is set and mapped; \c DebugInfoNone when there is no base
+  /// type (e.g. \c void * in IR), consistent with SPIRV-LLVM-Translator.
   std::optional<MCRegister>
   emitDebugTypePointer(const DIDerivedType *PT, MCRegister ExtInstSetReg,
                        SPIRV::ModuleAnalysisInfo &MAI);
