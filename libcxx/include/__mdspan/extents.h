@@ -291,7 +291,7 @@ private:
   template <class _OtherIndexType>
   _LIBCPP_HIDE_FROM_ABI static constexpr index_type __checked_index_cast(_OtherIndexType&& __value) noexcept {
     using _OtherType = remove_cvref_t<_OtherIndexType>;
-    if constexpr (integral<_OtherType>) {
+    if constexpr (integral<_OtherType> && !std::same_as<_OtherType, bool>) {
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __mdspan_detail::__is_representable_as<index_type>(__value),
           "extents ctor: arguments must be representable as index_type and nonnegative");

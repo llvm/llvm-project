@@ -47,9 +47,20 @@ struct IntegralCtorTest {
   }
 };
 
+constexpr bool test_ctor_from_bool() {
+  constexpr size_t D = std::dynamic_extent;
+  std::extents<int, D, D> e(false, true);
+  assert(e.extent(0) == 0);
+  assert(e.extent(1) == 1);
+
+  return true;
+}
+
 int main(int, char**) {
   test_index_type_combo<IntegralCtorTest>();
   static_assert(test_index_type_combo<IntegralCtorTest>());
+  test_ctor_from_bool();
+  static_assert(test_ctor_from_bool());
 
   constexpr size_t D = std::dynamic_extent;
   using E            = std::extents<int, 1, D, 3, D>;
