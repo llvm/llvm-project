@@ -206,12 +206,12 @@ end subroutine
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %[[VAL_10]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_12:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32> {
 ! CHECK:           ^bb0(%[[VAL_13:.*]]: index):
-! CHECK:             %[[VAL_14:.*]] = hlfir.as_expr %[[VAL_11]]#0 : (!fir.ref<!fir.char<1,5>>) -> !hlfir.expr<!fir.char<1,5>>
-! CHECK:             %[[VAL_15:.*]]:3 = hlfir.associate %[[VAL_14]] typeparams %[[VAL_10]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>, i1)
-! CHECK:             %[[VAL_16:.*]] = fir.emboxchar %[[VAL_15]]#0, %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
+! CHECK-NOT:         hlfir.as_expr
+! CHECK-NOT:         hlfir.associate
+! CHECK:             %[[VAL_16:.*]] = fir.emboxchar %[[VAL_11]]#0, %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_17:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:             %[[VAL_18:.*]] = fir.call @_QPelem2(%[[VAL_16]], %[[VAL_17]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.boxchar<1>, !fir.ref<i32>) -> i32
-! CHECK:             hlfir.end_associate %[[VAL_15]]#1, %[[VAL_15]]#2 : !fir.ref<!fir.char<1,5>>, i1
+! CHECK-NOT:         hlfir.end_associate
 ! CHECK:             hlfir.yield_element %[[VAL_18]] : i32
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_12]] to %[[VAL_5]]#0 : !hlfir.expr<10xi32>, !fir.ref<!fir.array<10xi32>>
