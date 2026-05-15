@@ -1,9 +1,14 @@
-//===-- Unittests for fgetws ----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for fgetws
+///
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
@@ -25,7 +30,7 @@ using LlvmLibcFgetwsTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 // assert macros (e.g., EXPECT_STREQ for wchar_t) once they are supported
 // natively by the LLVM-libc test framework, instead of calling wcscmp.
 TEST_F(LlvmLibcFgetwsTest, ReadWideString) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_string.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -61,7 +66,7 @@ TEST_F(LlvmLibcFgetwsTest, ReadWideString) {
 }
 
 TEST_F(LlvmLibcFgetwsTest, ReadBounded) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_bounded.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -96,7 +101,7 @@ TEST_F(LlvmLibcFgetwsTest, ReadBounded) {
 }
 
 TEST_F(LlvmLibcFgetwsTest, NewlineStops) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_newline.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -121,7 +126,7 @@ TEST_F(LlvmLibcFgetwsTest, NewlineStops) {
 }
 
 TEST_F(LlvmLibcFgetwsTest, InvalidStream) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_invalid.test"));
 
   // Create the file first
@@ -145,7 +150,7 @@ TEST_F(LlvmLibcFgetwsTest, InvalidStream) {
 }
 
 TEST_F(LlvmLibcFgetwsTest, EncodingErrorEILSEQ) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_eilseq.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -172,7 +177,7 @@ TEST_F(LlvmLibcFgetwsTest, EncodingErrorEILSEQ) {
 }
 
 TEST_F(LlvmLibcFgetwsTest, ByteModeFailure) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_bytemode.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
