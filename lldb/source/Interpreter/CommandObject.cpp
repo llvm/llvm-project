@@ -779,15 +779,26 @@ Target &CommandObject::GetDummyTarget() {
   return m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target &CommandObject::GetTarget() {
-  // Prefer the frozen execution context in the command object.
-  if (Target *target = m_exe_ctx.GetTargetPtr())
-    return *target;
+Target *CommandObject::GetTarget() {
+  // Prefer the frozen execution context in the command object, falling back
+  // to the interpreter's execution context for paths like multi-line
+  // expressions or breakpoint callbacks that run after DoExecute has
+  // finished.
+  Target *target = m_exe_ctx.GetTargetPtr();
+  if (!target)
+    target = m_interpreter.GetExecutionContext().GetTargetPtr();
 
-  // Fallback to the command interpreter's execution context in case we get
-  // called after DoExecute has finished. For example, when doing multi-line
-  // expression that uses an input reader or breakpoint callbacks.
-  return m_interpreter.GetExecutionContext().GetTargetRef();
+  // CheckRequirements has already guaranteed a real (non-dummy) target for
+  // commands declaring any of the Requires flags, so we can return it as-is.
+  // Commands that legitimately operate on the dummy target opt in via
+  // eCommandAllowsDummyTarget. Otherwise, filter the dummy out so commands
+  // can't accidentally act on it.
+  const uint32_t flags = GetFlags().Get();
+  if (flags & (eCommandRequiresTarget | eCommandRequiresProcess |
+               eCommandRequiresThread | eCommandRequiresFrame |
+               eCommandAllowsDummyTarget))
+    return target;
+  return (target && target->IsDummyTarget()) ? nullptr : target;
 }
 
 Thread *CommandObject::GetDefaultThread() {
