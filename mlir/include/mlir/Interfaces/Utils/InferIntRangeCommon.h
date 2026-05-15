@@ -34,8 +34,8 @@ using InferRangeFn =
 using InferIntegerValueRangeFn =
     std::function<IntegerValueRange(ArrayRef<IntegerValueRange>)>;
 
-static constexpr unsigned indexMinWidth = 32;
-static constexpr unsigned indexMaxWidth = 64;
+inline constexpr unsigned indexMinWidth = 32;
+inline constexpr unsigned indexMaxWidth = 64;
 
 enum class CmpMode : uint32_t { Both, Signed, Unsigned };
 

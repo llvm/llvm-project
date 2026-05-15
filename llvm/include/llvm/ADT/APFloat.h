@@ -427,29 +427,29 @@ using opStatus = APFloatBase::opStatus;
 using cmpResult = APFloatBase::cmpResult;
 using fltCategory = APFloatBase::fltCategory;
 using ExponentType = APFloatBase::ExponentType;
-static constexpr uninitializedTag uninitialized = APFloatBase::uninitialized;
-static constexpr roundingMode rmNearestTiesToEven =
+inline constexpr uninitializedTag uninitialized = APFloatBase::uninitialized;
+inline constexpr roundingMode rmNearestTiesToEven =
     APFloatBase::rmNearestTiesToEven;
-static constexpr roundingMode rmNearestTiesToAway =
+inline constexpr roundingMode rmNearestTiesToAway =
     APFloatBase::rmNearestTiesToAway;
-static constexpr roundingMode rmTowardNegative = APFloatBase::rmTowardNegative;
-static constexpr roundingMode rmTowardPositive = APFloatBase::rmTowardPositive;
-static constexpr roundingMode rmTowardZero = APFloatBase::rmTowardZero;
-static constexpr unsigned integerPartWidth = APFloatBase::integerPartWidth;
-static constexpr cmpResult cmpEqual = APFloatBase::cmpEqual;
-static constexpr cmpResult cmpLessThan = APFloatBase::cmpLessThan;
-static constexpr cmpResult cmpGreaterThan = APFloatBase::cmpGreaterThan;
-static constexpr cmpResult cmpUnordered = APFloatBase::cmpUnordered;
-static constexpr opStatus opOK = APFloatBase::opOK;
-static constexpr opStatus opInvalidOp = APFloatBase::opInvalidOp;
-static constexpr opStatus opDivByZero = APFloatBase::opDivByZero;
-static constexpr opStatus opOverflow = APFloatBase::opOverflow;
-static constexpr opStatus opUnderflow = APFloatBase::opUnderflow;
-static constexpr opStatus opInexact = APFloatBase::opInexact;
-static constexpr fltCategory fcInfinity = APFloatBase::fcInfinity;
-static constexpr fltCategory fcNaN = APFloatBase::fcNaN;
-static constexpr fltCategory fcNormal = APFloatBase::fcNormal;
-static constexpr fltCategory fcZero = APFloatBase::fcZero;
+inline constexpr roundingMode rmTowardNegative = APFloatBase::rmTowardNegative;
+inline constexpr roundingMode rmTowardPositive = APFloatBase::rmTowardPositive;
+inline constexpr roundingMode rmTowardZero = APFloatBase::rmTowardZero;
+inline constexpr unsigned integerPartWidth = APFloatBase::integerPartWidth;
+inline constexpr cmpResult cmpEqual = APFloatBase::cmpEqual;
+inline constexpr cmpResult cmpLessThan = APFloatBase::cmpLessThan;
+inline constexpr cmpResult cmpGreaterThan = APFloatBase::cmpGreaterThan;
+inline constexpr cmpResult cmpUnordered = APFloatBase::cmpUnordered;
+inline constexpr opStatus opOK = APFloatBase::opOK;
+inline constexpr opStatus opInvalidOp = APFloatBase::opInvalidOp;
+inline constexpr opStatus opDivByZero = APFloatBase::opDivByZero;
+inline constexpr opStatus opOverflow = APFloatBase::opOverflow;
+inline constexpr opStatus opUnderflow = APFloatBase::opUnderflow;
+inline constexpr opStatus opInexact = APFloatBase::opInexact;
+inline constexpr fltCategory fcInfinity = APFloatBase::fcInfinity;
+inline constexpr fltCategory fcNaN = APFloatBase::fcNaN;
+inline constexpr fltCategory fcNormal = APFloatBase::fcNormal;
+inline constexpr fltCategory fcZero = APFloatBase::fcZero;
 
 class IEEEFloat final {
 public:

@@ -297,7 +297,7 @@ inferFromExprList(ArrayRef<AffineExprContainer> exprsList,
   if (exprsList.empty())
     return {};
   int64_t maxDim = -1, maxSym = -1;
-  getMaxDimAndSymbol(exprsList, maxDim, maxSym);
+  detail::getMaxDimAndSymbol(exprsList, maxDim, maxSym);
   SmallVector<AffineMap, 4> maps;
   maps.reserve(exprsList.size());
   for (const auto &exprs : exprsList)

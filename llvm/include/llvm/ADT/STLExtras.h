@@ -398,7 +398,7 @@ using check_has_free_function_rbegin =
     decltype(adl_rbegin(std::declval<Range &>()));
 
 template <typename Range>
-static constexpr bool HasFreeFunctionRBegin =
+inline constexpr bool HasFreeFunctionRBegin =
     is_detected<check_has_free_function_rbegin, Range>::value;
 } // namespace detail
 
@@ -1680,7 +1680,7 @@ using check_has_free_function_size =
     decltype(adl_size(std::declval<Range &>()));
 
 template <typename Range>
-static constexpr bool HasFreeFunctionSize =
+inline constexpr bool HasFreeFunctionSize =
     is_detected<check_has_free_function_size, Range>::value;
 } // namespace detail
 
@@ -1923,7 +1923,7 @@ using check_has_member_contains_t =
     decltype(std::declval<Range &>().contains(std::declval<const Element &>()));
 
 template <typename Range, typename Element>
-static constexpr bool HasMemberContains =
+inline constexpr bool HasMemberContains =
     is_detected<check_has_member_contains_t, Range, Element>::value;
 
 template <typename Range, typename Element>
@@ -1932,7 +1932,7 @@ using check_has_member_find_t =
              std::declval<Range &>().end());
 
 template <typename Range, typename Element>
-static constexpr bool HasMemberFind =
+inline constexpr bool HasMemberFind =
     is_detected<check_has_member_find_t, Range, Element>::value;
 
 } // namespace detail

@@ -31,6 +31,24 @@ namespace mlir {
 
 namespace detail {
 struct AffineMapStorage;
+
+/// Calculates maximum dimension and symbol positions from the expressions
+/// in `exprsLists` and stores them in `maxDim` and `maxSym` respectively.
+template <typename AffineExprContainer>
+void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
+                        int64_t &maxDim, int64_t &maxSym) {
+  for (const auto &exprs : exprsList) {
+    for (auto expr : exprs) {
+      expr.walk([&maxDim, &maxSym](AffineExpr e) {
+        if (auto d = dyn_cast<AffineDimExpr>(e))
+          maxDim = std::max(maxDim, static_cast<int64_t>(d.getPosition()));
+        if (auto s = dyn_cast<AffineSymbolExpr>(e))
+          maxSym = std::max(maxSym, static_cast<int64_t>(s.getPosition()));
+      });
+    }
+  }
+}
+
 } // namespace detail
 
 class Attribute;
@@ -689,23 +707,6 @@ SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
     }
   }
   return result;
-}
-
-/// Calculates maximum dimension and symbol positions from the expressions
-/// in `exprsLists` and stores them in `maxDim` and `maxSym` respectively.
-template <typename AffineExprContainer>
-static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
-                               int64_t &maxDim, int64_t &maxSym) {
-  for (const auto &exprs : exprsList) {
-    for (auto expr : exprs) {
-      expr.walk([&maxDim, &maxSym](AffineExpr e) {
-        if (auto d = dyn_cast<AffineDimExpr>(e))
-          maxDim = std::max(maxDim, static_cast<int64_t>(d.getPosition()));
-        if (auto s = dyn_cast<AffineSymbolExpr>(e))
-          maxSym = std::max(maxSym, static_cast<int64_t>(s.getPosition()));
-      });
-    }
-  }
 }
 
 } // namespace mlir
