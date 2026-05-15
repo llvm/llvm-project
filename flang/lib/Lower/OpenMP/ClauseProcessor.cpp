@@ -1544,14 +1544,15 @@ template <typename T>
 void collectReductionObjects(const T &reduction,
                              llvm::SmallVectorImpl<Object> &reductionObjects) {
   const omp::ObjectList &objectList{std::get<omp::ObjectList>(reduction.t)};
+  reductionObjects.reserve(objectList.size());
   llvm::copy(objectList, std::back_inserter(reductionObjects));
 }
 
 static llvm::SmallVector<const semantics::Symbol *>
 getObjectsSyms(llvm::ArrayRef<Object> objects) {
   llvm::SmallVector<const semantics::Symbol *> syms;
-  for (const Object &object : objects)
-    syms.push_back(object.sym());
+  syms.reserve(objects.size());
+  llvm::transform(objects, std::back_inserter(syms), [](const Fortran::lower::omp::Object &object) { return object.sym(); });
   return syms;
 }
 

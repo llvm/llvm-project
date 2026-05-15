@@ -77,9 +77,10 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
 static llvm::SmallVector<Object>
 makeObjects(llvm::ArrayRef<const semantics::Symbol *> syms) {
   llvm::SmallVector<Object> objects;
-  for (const semantics::Symbol *sym : syms)
-    objects.push_back(
-        Object{const_cast<semantics::Symbol *>(sym), std::nullopt});
+  objects.reserve(syms.size());
+  llvm::transform(syms, std::back_inserter(objects), [](const semantics::Symbol *sym) {
+    return Object{const_cast<semantics::Symbol *>(sym), std::nullopt};
+  });
   return objects;
 }
 
