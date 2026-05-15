@@ -54,3 +54,11 @@ def ocloc_options_EQ : Joined<["--", "-"], "ocloc-options=">,
 def opencl_aot_options_EQ : Joined<["--", "-"], "opencl-aot-options=">,
   Flags<[LinkerOnlyOption]>,
   HelpText<"Options passed to opencl-aot for Intel CPU AOT compilation">;
+
+def module_split_mode_EQ : Joined<["--", "-"], "module-split-mode=">,
+  Flags<[LinkerOnlyOption]>, MetaVarName<"<mode>">,
+  HelpText<"SYCL device code module split mode. Valid values:\n"
+           "- 'source' (default) emits one device image per translation unit that contains "
+           "at least one entry point;\n"
+           "- 'kernel' emits one device image per kernel function;\n"
+           "- 'none' emits a single device image.">;

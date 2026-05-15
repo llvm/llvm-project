@@ -275,9 +275,9 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
-  static cir::GlobalOp
-  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, llvm::StringRef name,
-                 mlir::Type t, bool isConstant = false,
+  cir::GlobalOp
+  createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,
+                 bool isConstant = false,
                  mlir::ptr::MemorySpaceAttrInterface addrSpace = {},
                  mlir::Operation *insertPoint = nullptr);
 
@@ -360,6 +360,9 @@ public:
   /// Get the GlobalOp of a template parameter object.
   cir::GlobalOp
   getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo);
+  // Get the GlobalOp of a source_location object.
+  cir::GlobalOp
+  getAddrOfUnnamedGlobalConstantDecl(const UnnamedGlobalConstantDecl *gcd);
 
   CharUnits computeNonVirtualBaseClassOffset(
       const CXXRecordDecl *derivedClass,
@@ -429,6 +432,8 @@ public:
   }
 
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
+  llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
+      unnamedGlobalConstantDeclMap;
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -591,6 +596,9 @@ public:
                           GlobalDecl aliasGD, cir::FuncOp aliasee,
                           cir::GlobalLinkageKind linkage);
 
+  /// Emit a definition for an `__attribute__((alias))` declaration.
+  void emitAliasDefinition(GlobalDecl gd);
+
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
@@ -640,6 +648,7 @@ public:
   void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
                                 bool performInit);
 
+  void setGlobalTlsReferences(const VarDecl &vd, cir::GlobalOp globalOp);
   void emitCXXGlobalVarDeclInitFunc(const VarDecl *vd, cir::GlobalOp addr,
                                     bool performInit);
 
@@ -892,6 +901,9 @@ private:
   /// Call replaceAllUsesWith on all pairs in replacements.
   void applyReplacements();
 
+  bool getCPUAndFeaturesAttributes(GlobalDecl gd,
+                                   llvm::StringMap<std::string> &attrs,
+                                   bool setTargetFeatures = true);
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 
   /// Map source language used to a CIR attribute.

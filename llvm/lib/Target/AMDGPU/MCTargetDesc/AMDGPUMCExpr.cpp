@@ -116,8 +116,6 @@ evaluateMCExprs(ArrayRef<const MCExpr *> Exprs, const MCAssembler *Asm,
 
 bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
                                       const MCAssembler *Asm) const {
-  assert(Args.size() == 3 &&
-         "AMDGPUMCExpr Argument count incorrect for ExtraSGPRs");
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
   uint64_t VCCUsed = 0, FlatScrUsed = 0, XNACKUsed = 0;
 
@@ -132,8 +130,6 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
 
 bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
                                         const MCAssembler *Asm) const {
-  assert(Args.size() == 2 &&
-         "AMDGPUMCExpr Argument count incorrect for TotalNumVGPRs");
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
   uint64_t NumAGPR = 0, NumVGPR = 0;
 
@@ -149,8 +145,6 @@ bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
 }
 
 bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
-  assert(Args.size() == 2 &&
-         "AMDGPUMCExpr Argument count incorrect for AlignTo");
   uint64_t Value = 0, Align = 0;
   if (!evaluateMCExprs(Args, Asm, {Value, Align}))
     return false;
@@ -161,8 +155,6 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
 
 bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
                                      const MCAssembler *Asm) const {
-  assert(Args.size() == 7 &&
-         "AMDGPUMCExpr Argument count incorrect for Occupancy");
   uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, Generation,
       NumSGPRs, NumVGPRs;
 
@@ -685,4 +677,11 @@ int64_t AMDGPU::getLitValue(const MCExpr *Expr) {
   assert(isLitExpr(Expr));
   return cast<MCConstantExpr>(cast<AMDGPUMCExpr>(Expr)->getArgs()[0])
       ->getValue();
+}
+
+AMDGPUMCExpr::VariantKind AMDGPU::getExprKind(const MCExpr *Expr) {
+  const auto *E = dyn_cast<AMDGPUMCExpr>(Expr);
+  if (!E)
+    return AMDGPUMCExpr::AGVK_None;
+  return E->getKind();
 }

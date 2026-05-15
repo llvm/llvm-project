@@ -97,7 +97,7 @@ private:
   bool selectIntrinsicWithSideEffects(MachineInstr &I) const;
   bool selectIntrinsic(MachineInstr &I) const;
   bool selectExtractSubvector(MachineInstr &MI) const;
-
+  bool selectInsertSubVector(MachineInstr &I) const;
   ComplexRendererFns selectShiftMask(MachineOperand &Root,
                                      unsigned ShiftWidth) const;
   ComplexRendererFns selectShiftMaskXLen(MachineOperand &Root) const {
@@ -422,9 +422,9 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
 
   if (LeftShift.has_value()) {
     if (*LeftShift)
-      Mask &= maskTrailingZeros<uint64_t>(C2.getLimitedValue());
+      Mask &= maskTrailingZeros<uint64_t>(C2.getZExtValue());
     else
-      Mask &= maskTrailingOnes<uint64_t>(XLen - C2.getLimitedValue());
+      Mask &= maskTrailingOnes<uint64_t>(XLen - C2.getZExtValue());
 
     if (Mask.isShiftedMask()) {
       unsigned Leading = XLen - Mask.getActiveBits();
@@ -436,7 +436,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
-              .addImm(Trailing - C2.getLimitedValue());
+              .addImm(Trailing - C2.getZExtValue());
           MIB.addReg(DstReg);
         }}};
       }
@@ -475,12 +475,12 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
     // Given (shl (and y, mask), c2) in which mask has 32 leading zeros and
     // c3 trailing zeros. If c1 + c3 == ShAmt, we can emit SRLIW + SHXADD.
     bool Cond = *LeftShift && Leading == 32 && Trailing > 0 &&
-                (Trailing + C2.getLimitedValue()) == ShAmt;
+                (Trailing + C2.getZExtValue()) == ShAmt;
     if (!Cond)
       // Given (lshr (and y, mask), c2) in which mask has 32 leading zeros and
       // c3 trailing zeros. If c3 - c1 == ShAmt, we can emit SRLIW + SHXADD.
       Cond = !*LeftShift && Leading == 32 && C2.ult(Trailing) &&
-             (Trailing - C2.getLimitedValue()) == ShAmt;
+             (Trailing - C2.getZExtValue()) == ShAmt;
 
     if (Cond) {
       Register DstReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
@@ -514,7 +514,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
           RootReg, *MRI,
           m_OneNonDBGUse(m_GAnd(m_OneNonDBGUse(m_GShl(m_Reg(RegX), m_ICst(C2))),
                                 m_ICst(Mask))))) {
-    Mask &= maskTrailingZeros<uint64_t>(C2.getLimitedValue());
+    Mask &= maskTrailingZeros<uint64_t>(C2.getZExtValue());
 
     if (Mask.isShiftedMask()) {
       unsigned Leading = Mask.countl_zero();
@@ -524,7 +524,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SLLI, {DstReg}, {RegX})
-              .addImm(C2.getLimitedValue() - ShAmt);
+              .addImm(C2.getZExtValue() - ShAmt);
           MIB.addReg(DstReg);
         }}};
       }
@@ -1099,6 +1099,64 @@ bool RISCVInstructionSelector::selectExtractSubvector(MachineInstr &MI) const {
   return true;
 }
 
+bool RISCVInstructionSelector::selectInsertSubVector(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_INSERT_SUBVECTOR);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register VecReg = MI.getOperand(1).getReg();
+  Register SubVecReg = MI.getOperand(2).getReg();
+
+  LLT VecTy = MRI->getType(VecReg);
+  LLT SubVecTy = MRI->getType(SubVecReg);
+
+  MVT VecMVT = getMVTForLLT(VecTy);
+  MVT SubVecMVT = getMVTForLLT(SubVecTy);
+
+  unsigned Idx = static_cast<unsigned>(MI.getOperand(3).getImm());
+
+  unsigned SubRegIdx;
+  std::tie(SubRegIdx, Idx) =
+      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+          VecMVT, SubVecMVT, Idx, &TRI);
+
+  // If the Idx hasn't been completely eliminated then this is a subvector
+  // insert which doesn't naturally align to a vector register. These must
+  // be handled using instructions to manipulate the vector registers.
+  if (Idx != 0)
+    return false;
+
+  // Constrain dst
+  unsigned DstRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(VecMVT);
+  const TargetRegisterClass *DstRC = TRI.getRegClass(DstRegClassID);
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+
+  // If we haven't set a SubRegIdx, then we must be going between
+  // equally-sized LMUL groups (e.g. VR -> VR). This can be done as a copy.
+  if (SubRegIdx == RISCV::NoSubRegister) {
+    assert(RISCVTargetLowering::getRegClassIDForVecVT(SubVecMVT) ==
+               DstRegClassID &&
+           "Unexpected subvector insert");
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII.get(TargetOpcode::COPY),
+            DstReg)
+        .addReg(SubVecReg);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // Use INSERT_SUBREG to insert the subvector into the vector at the
+  // appropriate subregister index.
+  MachineInstr *Ins = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                              TII.get(TargetOpcode::INSERT_SUBREG), DstReg)
+                          .addReg(VecReg)
+                          .addReg(SubVecReg)
+                          .addImm(SubRegIdx);
+
+  MI.eraseFromParent();
+  constrainSelectedInstRegOperands(*Ins, TII, TRI, RBI);
+  return true;
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   preISelLower(MI);
   const unsigned Opc = MI.getOpcode();
@@ -1386,6 +1444,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectIntrinsic(MI);
   case TargetOpcode::G_EXTRACT_SUBVECTOR:
     return selectExtractSubvector(MI);
+  case TargetOpcode::G_INSERT_SUBVECTOR:
+    return selectInsertSubVector(MI);
   default:
     return false;
   }

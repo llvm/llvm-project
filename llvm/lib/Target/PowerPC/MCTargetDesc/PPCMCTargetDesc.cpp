@@ -254,7 +254,7 @@ public:
     const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
 
     OS << "\t.localentry\t";
-    S->print(OS, &MAI);
+    S->print(OS, MAI);
     OS << ", ";
     MAI.printExpr(OS, *LocalOffset);
     OS << '\n';

@@ -97,7 +97,8 @@ public:
                         mlir::omp::InclusiveClauseOps &result) const;
   bool processInitializer(
       lower::SymMap &symMap,
-      ReductionProcessor::GenInitValueCBTy &genInitValueCB) const;
+      ReductionProcessor::GenInitValueCBTy &genInitValueCB,
+      const parser::OmpStylizedInstance *parserInitInstance = nullptr) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
   bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
@@ -166,7 +167,9 @@ public:
   bool processNontemporal(mlir::omp::NontemporalClauseOps &result) const;
   bool processReduction(
       mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms,
+      llvm::DenseMap<const semantics::Symbol *, mlir::Value>
+          *reductionVarCache = nullptr) const;
   bool processTaskReduction(
       mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;

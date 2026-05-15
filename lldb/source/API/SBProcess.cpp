@@ -1041,8 +1041,11 @@ SBStructuredData SBProcess::GetExtendedCrashInformation() {
   auto expected_data =
       platform_sp->FetchExtendedCrashInformation(*process_sp.get());
 
-  if (!expected_data)
+  if (!expected_data) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), expected_data.takeError(),
+                   "FetchExtendedCrashInformation failed: {0}");
     return data;
+  }
 
   StructuredData::ObjectSP fetched_data = *expected_data;
   data.m_impl_up->SetObjectSP(fetched_data);

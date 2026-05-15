@@ -709,7 +709,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3118
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.591800e-01
     ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:_(s16) = G_FMINNUM [[TRUNC]], [[C]]
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s16) = G_FNEG [[FMINNUM]]
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FNEG]](s16)
@@ -732,7 +732,7 @@ body:             |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FC45F3060000000
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x3E22F983
     ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:_(s32) = G_FMINNUM [[COPY]], [[C]]
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[FMINNUM]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FNEG]](s32)
@@ -752,7 +752,7 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FC45F306DC9C882
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3FC45F306DC9C882
     ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:_(s64) = G_FMINNUM [[COPY]], [[C]]
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[FMINNUM]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FNEG]](s64)

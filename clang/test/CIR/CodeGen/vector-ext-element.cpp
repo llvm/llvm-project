@@ -339,3 +339,90 @@ void array_subscript_expr_with_element_expr_base() {
 // OGCG: %[[VEC_MEMBER_EXPR:.*]] = getelementptr inbounds i32, ptr %[[A_ADDR]], i64 0
 // OGCG: %[[VEC_ELEM_PTR:.*]] = getelementptr inbounds i32, ptr %[[VEC_MEMBER_EXPR]], i64 1
 // OGCG: store i32 2, ptr %[[VEC_ELEM_PTR]], align 4
+
+void store_src_dest_same_size() {
+  vi4 a;
+  vi2 b;
+  b.xy = a.xy;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.vector<2 x !s32i>, !cir.ptr<!cir.vector<2 x !s32i>>, ["b"]
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<4 x !s32i>
+// CIR: %[[SHUFFLE_A:.*]] = cir.vec.shuffle(%[[TMP_A]], %[[POISON]] : !cir.vector<4 x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<2 x !s32i>>, !cir.vector<2 x !s32i>
+// CIR: %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<2 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.vec.shuffle(%[[SHUFFLE_A]], %[[POISON]] : !cir.vector<2 x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !s32i>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.vector<2 x !s32i>, !cir.ptr<!cir.vector<2 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <2 x i32>, i64 1, align 8
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[SHUFFLE_A:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+// LLVM: %[[TMP_B:.*]] = load <2 x i32>, ptr %[[B_ADDR]], align 8
+// LLVM: %[[RESULT:.*]] = shufflevector <2 x i32> %[[SHUFFLE_A]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+// LLVM: store <2 x i32> %[[RESULT]], ptr %[[B_ADDR]], align 8
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <2 x i32>, align 8
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[SHUFFLE_A:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+// OGCG: %[[TMP_B:.*]] = load <2 x i32>, ptr %[[B_ADDR]], align 8
+// OGCG: %[[RESULT:.*]] = shufflevector <2 x i32> %[[SHUFFLE_A]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+// OGCG: store <2 x i32> %[[RESULT]], ptr %[[B_ADDR]], align 8
+
+void store_src_dest_not_same_size() {
+  vi4 a;
+  vi2 b;
+  a.lo = b;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.vector<2 x !s32i>, !cir.ptr<!cir.vector<2 x !s32i>>, ["b"]
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<2 x !s32i>>, !cir.vector<2 x !s32i>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<2 x !s32i>
+// CIR: %[[SHUFFLE_B:.*]] = cir.vec.shuffle(%[[TMP_B]], %[[POISON]] : !cir.vector<2 x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<-1> : !s32i, #cir.int<-1> : !s32i] : !cir.vector<4 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.vec.shuffle(%[[TMP_A]], %[[SHUFFLE_B]] : !cir.vector<4 x !s32i>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !s32i> 
+// CIR: cir.store {{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <2 x i32>, i64 1, align 8
+// LLVM: %[[TMP_B:.*]] = load <2 x i32>, ptr %[[B_ADDR]], align 8
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[SHUFFLE_A:.*]] = shufflevector <2 x i32> %[[TMP_B]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+// LLVM: %[[RESULT:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> %[[SHUFFLE_A]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+// LLVM: store <4 x i32> %[[RESULT]], ptr %[[A_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <2 x i32>, align 8
+// OGCG: %[[TMP_B:.*]] = load <2 x i32>, ptr %[[B_ADDR]], align 8
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[SHUFFLE_A:.*]] = shufflevector <2 x i32> %[[TMP_B]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+// OGCG: %[[RESULT:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> %[[SHUFFLE_A]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+// OGCG: store <4 x i32> %[[RESULT]], ptr %[[A_ADDR]], align 16
+
+void non_simple_base() {
+  vi4 a;
+  int b = a.xy.x;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s64i
+// CIR: %[[RESULT:.*]] = cir.vec.extract %[[TMP_A]][%[[CONST_0]] : !s64i] : !cir.vector<4 x !s32i>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>
+// LLVM: %[[B_ADDR]] = alloca i32
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[RESULT:.*]] = extractelement <4 x i32> %[[TMP_A]], i64 0
+// LLVM: store i32 %[[RESULT]], ptr %[[B_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR]] = alloca i32, align 4
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[RESULT:.*]] = extractelement <4 x i32> %[[TMP_A]], i64 0
+// OGCG: store i32 %[[RESULT]], ptr %[[B_ADDR]], align 4
