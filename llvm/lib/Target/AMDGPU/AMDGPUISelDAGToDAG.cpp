@@ -328,7 +328,9 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
 bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
   // This is special case for pattern of common compare + select if it can be
   // selected to SALU. The pattern will be directly selected to `s_cselect`, to
-  // avoid an intermediate i1 virtual register to be interpreted as a lane mask.
+  // This is special case for the common pattern of compare + select if it can be
+  // selected to SALU. The pattern will be directly selected to `s_cselect`, to
+  // avoid an intermediate i1 virtual register which will be interpreted as a lane mask.
   if (N->isDivergent())
     return false;
 
