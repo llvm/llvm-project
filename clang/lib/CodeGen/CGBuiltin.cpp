@@ -2745,6 +2745,21 @@ private:
     bool VisitVirtualBase;
   };
 
+  // Return the number of non padding bits of a scalar type.
+  //
+  // The property that we specifically care about here is whether the scalar
+  // type has padding bits, i.e. are there bits in the type which are not
+  // specified by the ABI.
+  //
+  // We currently don't care about this anywhere else in clang: layout cares
+  // about the ABI size, calling convention code cares about specific types, but
+  // nothing cares about padding specifically. And it's not something we can
+  // easily query from LLVM due to the type system mismatches.
+  // DL.getTypeSizeInBits(convertTypeForLoadStore(T)) is probably close, but the
+  // DataLayout methods aren't really designed for this usage.
+  //
+  // Therefore, it is better to explicitly list all the scalar types containing
+  // padding bits that we know of, namely, _BitInt(N) and x87 long double.
   uint64_t getScalarOccupiedSizeInBits(QualType Ty) const {
     if (const auto *BIT = Ty->getAs<BitIntType>())
       return BIT->getNumBits();
