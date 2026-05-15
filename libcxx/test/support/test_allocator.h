@@ -515,4 +515,34 @@ struct SocccAllocator {
   using propagate_on_container_swap            = std::false_type;
 };
 
+template <class T>
+struct noexcept_false_ctor_allocator {
+  using value_type = T;
+
+  TEST_CONSTEXPR noexcept_false_ctor_allocator() {}
+  template <class U>
+  TEST_CONSTEXPR noexcept_false_ctor_allocator(const noexcept_false_ctor_allocator<U&>) {}
+
+  TEST_CONSTEXPR noexcept_false_ctor_allocator(const noexcept_false_ctor_allocator&) {}
+  TEST_CONSTEXPR noexcept_false_ctor_allocator(noexcept_false_ctor_allocator&&) {}
+
+  noexcept_false_ctor_allocator& operator=(const noexcept_false_ctor_allocator&) = default;
+  noexcept_false_ctor_allocator& operator=(noexcept_false_ctor_allocator&&)      = default;
+
+  TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return std::allocator<T>().allocate(n); }
+
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { return std::allocator<T>().deallocate(p, n); }
+
+  template <class U>
+  friend TEST_CONSTEXPR bool operator==(const noexcept_false_ctor_allocator, const noexcept_false_ctor_allocator<U>&) {
+    return true;
+  }
+#if TEST_STD_VER < 20
+  template <class U>
+  friend TEST_CONSTEXPR bool operator!=(const noexcept_false_ctor_allocator, const noexcept_false_ctor_allocator<U>&) {
+    return false;
+  }
+#endif
+};
+
 #endif // TEST_ALLOCATOR_H
