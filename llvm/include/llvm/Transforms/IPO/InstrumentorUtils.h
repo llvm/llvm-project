@@ -33,8 +33,8 @@ namespace instrumentor {
 /// the new instructions.
 struct InstrumentorIRBuilderTy {
   /// Construct an IR builder for the module \p M.
-  InstrumentorIRBuilderTy(Module &M)
-      : M(M), Ctx(M.getContext()),
+  InstrumentorIRBuilderTy(Module &M, FunctionAnalysisManager &FAM)
+      : M(M), Ctx(M.getContext()), FAM(FAM),
         IRB(Ctx, ConstantFolder(),
             // Save the inserted instructions in a structure.
             IRBuilderCallbackInserter(
@@ -90,6 +90,11 @@ struct InstrumentorIRBuilderTy {
   /// the IR builder is destroyed.
   void eraseLater(Instruction *I) { ErasableInstructions.insert(I); }
 
+  template <typename T, typename R = typename T::Result>
+  R &analysisGetter(Function &F) {
+    return FAM.getResult<T>(F);
+  }
+
   /// Commonly used values for IR inspection and creation.
   ///{
   Module &M;
@@ -98,6 +103,8 @@ struct InstrumentorIRBuilderTy {
 
   const DataLayout &DL = M.getDataLayout();
 
+  FunctionAnalysisManager &FAM;
+ 
   Type *VoidTy = Type::getVoidTy(Ctx);
   PointerType *PtrTy = PointerType::get(Ctx, 0);
   IntegerType *Int8Ty = Type::getInt8Ty(Ctx);

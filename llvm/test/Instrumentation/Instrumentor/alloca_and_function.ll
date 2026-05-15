@@ -10,38 +10,48 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 declare void @use(ptr)
 
 ;.
-; CHECK: @__instrumentor_.str = private unnamed_addr constant [4 x i8] c"foo\00", align 1
-; CHECK: @__instrumentor_value_pack = internal global <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }> <{ i32 2, i32 12, [6 x i8] zeroinitializer, i16 0, i32 4, i32 2, [4 x i8] zeroinitializer, float 0.000000e+00 }>
+; CHECK: @__instrumentor_.str = private unnamed_addr constant [4 x i8] c"use\00", align 1
+; CHECK: @__instrumentor_value_pack = internal global <{ i32, i32, ptr }> <{ i32 8, i32 15, ptr null }>
+; CHECK: @__instrumentor_.str.1 = private unnamed_addr constant [4 x i8] c"foo\00", align 1
+; CHECK: @__instrumentor_value_pack.2 = internal global <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }> <{ i32 2, i32 12, [6 x i8] zeroinitializer, i16 0, i32 4, i32 2, [4 x i8] zeroinitializer, float 0.000000e+00 }>
 ;.
 define float @foo(i16 %a, float %b) {
 ; CHECK-LABEL: define float @foo(
 ; CHECK-SAME: i16 [[A:%.*]], float [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP7:%.*]] = alloca <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }>, align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP7]], ptr @__instrumentor_value_pack, i64 32, i1 false)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }>, ptr [[TMP7]], i32 0, i32 3
-; CHECK-NEXT:    store i16 [[A]], ptr [[TMP2]], align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }>, ptr [[TMP7]], i32 0, i32 7
-; CHECK-NEXT:    store float [[B]], ptr [[TMP9]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_function(ptr @foo, ptr @__instrumentor_.str, i32 2, ptr [[TMP7]], i8 0, i32 3) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 14
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }>, align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP0]], ptr @__instrumentor_value_pack.2, i64 32, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }>, ptr [[TMP0]], i32 0, i32 3
+; CHECK-NEXT:    store i16 [[A]], ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }>, ptr [[TMP0]], i32 0, i32 7
+; CHECK-NEXT:    store float [[B]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    call void @__instrumentor_pre_function(ptr @foo, ptr @__instrumentor_.str.1, i32 2, ptr [[TMP0]], i8 0, i32 4) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 14
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP3]], align 2
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 28
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 28
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @__instrumentor_pre_alloca(i64 2, i64 16, i32 1) #[[ATTR1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, i64 [[TMP0]], align 16
-; CHECK-NEXT:    [[TMP13:%.*]] = call ptr @__instrumentor_post_alloca(ptr [[TMP1]], i64 2, i64 16, i32 -1) #[[ATTR1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = zext i16 [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = call ptr @__instrumentor_pre_store(ptr [[TMP13]], i32 0, i64 [[TMP10]], i64 2, i64 2, i32 12, i32 0, i8 1, i8 0, i32 2) #[[ATTR1]]
-; CHECK-NEXT:    store i16 [[TMP4]], ptr [[TMP14]], align 2
-; CHECK-NEXT:    call void @__instrumentor_post_store(ptr [[TMP13]], i32 0, i64 [[TMP10]], i64 2, i64 2, i32 12, i32 0, i8 1, i8 0, i32 -2) #[[ATTR1]]
-; CHECK-NEXT:    call void @use(ptr [[TMP13]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP7]], ptr @__instrumentor_value_pack, i64 32, i1 false)
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }>, ptr [[TMP7]], i32 0, i32 3
-; CHECK-NEXT:    store i16 [[A]], ptr [[TMP12]], align 2
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }>, ptr [[TMP7]], i32 0, i32 7
-; CHECK-NEXT:    store float [[B]], ptr [[TMP11]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_function(ptr @foo, ptr @__instrumentor_.str, i32 2, ptr [[TMP7]], i8 0, i32 -4) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = alloca <{ i32, i32, ptr }>, align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @__instrumentor_pre_alloca(i64 2, i64 16, i32 1) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = alloca i8, i64 [[TMP8]], align 16
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @__instrumentor_post_alloca(ptr [[TMP9]], i64 2, i64 16, i32 -1) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i16 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = call ptr @__instrumentor_pre_store(ptr [[TMP10]], i32 0, i64 [[TMP11]], i64 2, i64 2, i32 12, i32 0, i8 1, i8 0, i32 2) #[[ATTR1]]
+; CHECK-NEXT:    store i16 [[TMP4]], ptr [[TMP12]], align 2
+; CHECK-NEXT:    call void @__instrumentor_post_store(ptr [[TMP10]], i32 0, i64 [[TMP11]], i64 2, i64 2, i32 12, i32 0, i8 1, i8 0, i32 -2) #[[ATTR1]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP7]], ptr @__instrumentor_value_pack, i64 16, i1 false)
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr }>, ptr [[TMP7]], i32 0, i32 2
+; CHECK-NEXT:    store ptr [[TMP10]], ptr [[TMP13]], align 8
+; CHECK-NEXT:    call void @__instrumentor_pre_call(ptr @use, ptr @__instrumentor_.str, i64 0, ptr null, ptr null, i32 1, ptr [[TMP7]], i8 0, i32 3) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 8
+; CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP14]], align 8
+; CHECK-NEXT:    call void @use(ptr [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @__instrumentor_post_call(ptr @use, ptr @__instrumentor_.str, i64 0, ptr null, ptr null, i64 0, i32 0, i32 1, ptr [[TMP7]], i8 0, i32 -3) #[[ATTR1]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP0]], ptr @__instrumentor_value_pack.2, i64 32, i1 false)
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }>, ptr [[TMP0]], i32 0, i32 3
+; CHECK-NEXT:    store i16 [[A]], ptr [[TMP17]], align 2
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw <{ i32, i32, [6 x i8], i16, i32, i32, [4 x i8], float }>, ptr [[TMP0]], i32 0, i32 7
+; CHECK-NEXT:    store float [[B]], ptr [[TMP18]], align 4
+; CHECK-NEXT:    call void @__instrumentor_post_function(ptr @foo, ptr @__instrumentor_.str.1, i32 2, ptr [[TMP0]], i8 0, i32 -5) #[[ATTR1]]
 ; CHECK-NEXT:    ret float [[TMP6]]
 ;
 entry:
