@@ -344,7 +344,7 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
   // TODO: To support the operand type is int64 if s_cmp_i64 is supported on
   // some targets
   if (CondNode->getOperand(0).getValueType() != MVT::i32 ||
-      CondNode->getOperand(1).getValueType() != MVT::i32)
+  if (CondNode->getOperand(0).getValueType() != MVT::i32)
     return false;
 
   SDLoc DL(N);
