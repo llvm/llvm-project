@@ -1314,8 +1314,10 @@ struct AAAMDGPUMinAGPRAlloc
     auto [MinNumAGPR, MaxNumAGPR] =
         AMDGPU::getIntegerPairAttribute(*F, "amdgpu-agpr-alloc", {~0u, ~0u},
                                         /*OnlyFirstRequired=*/true);
-    if (MinNumAGPR == 0)
+    if (MinNumAGPR == 0) {
       indicateOptimisticFixpoint();
+      return;
+    }
 
     if (hasSanitizerAttributes(*F))
       indicatePessimisticFixpoint();
