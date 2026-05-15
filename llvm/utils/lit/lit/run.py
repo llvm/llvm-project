@@ -28,11 +28,12 @@ class Run(object):
     """A concrete, configured testing run."""
 
     def __init__(
-        self, tests, lit_config, workers, progress_callback, max_failures, timeout, load_limit_fraction
+        self, tests, lit_config, workers, workers_min, progress_callback, max_failures, timeout, load_limit_fraction
     ):
         self.tests = tests
         self.lit_config = lit_config
         self.workers = workers
+        self.workers_min = workers_min
         self.progress_callback = progress_callback
         self.max_failures = max_failures
         self.timeout = timeout
@@ -102,7 +103,7 @@ class Run(object):
         #     ramp up to 16 (if load stays low) avoids an initial burst that
         #     would immediately overshoot the limit before the first tick.
         if self.load_limit is not None:
-            initial_ceiling = max(1, min(self.workers, int(self.load_limit)))
+            initial_ceiling = max(self.workers_min, min(self.workers, int(self.load_limit)))
         else:
             initial_ceiling = self.workers
         # Seed last_tick to "now" so the controller honors the initial
@@ -143,9 +144,10 @@ class Run(object):
                 (
                     self.lit_config,
                     semaphores,
+                    self.workers,
+                    self.workers_min,
                     self.load_limit,
                     load_state,
-                    self.workers,
                 ),
             )
             pools.append(pool)

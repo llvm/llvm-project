@@ -46,21 +46,24 @@ _HAS_LOADAVG = hasattr(os, "getloadavg")
 def initialize(
     lit_config,
     parallelism_semaphores,
+    workers_max,
+    workers_min=1,
     load_limit=None,
     load_state=None,
-    max_ceiling=1,
 ):
     """Copy data shared by all test executions into worker processes"""
     global _lit_config
     global _parallelism_semaphores
     global _load_limit
     global _load_state
+    global _min_ceiling
     global _max_ceiling
     _lit_config = lit_config
     _parallelism_semaphores = parallelism_semaphores
     _load_limit = load_limit
     _load_state = load_state
-    _max_ceiling = max(1, int(max_ceiling))
+    _min_ceiling = max(1, int(workers_min))
+    _max_ceiling = max(1, int(workers_max))
 
     # We use the following strategy for dealing with Ctrl+C/KeyboardInterrupt in
     # subprocesses created by the multiprocessing.Pool.
@@ -102,7 +105,7 @@ def _tick_ceiling(now, load1m):
 
     distance = max(-1.0, min(1.0, (load1m - _load_limit) / _load_limit))
     new_ceiling = _load_state[_S_CEILING] - distance * _LOAD_MAX_STEP
-    _load_state[_S_CEILING] = max(1.0, min(float(_max_ceiling), new_ceiling))
+    _load_state[_S_CEILING] = max(float(_min_ceiling), min(float(_max_ceiling), new_ceiling))
 
 
 def _acquire_run_slot():
@@ -119,56 +122,50 @@ def _acquire_run_slot():
     fluctuations of well under one worker accumulate smoothly instead of
     flipping concurrency on every tick.
     """
-    if _load_state is None:
+    if _load_state is None or _load_limit is None or not _HAS_LOADAVG:
         return
 
-    feature_on = bool(_load_limit) and _HAS_LOADAVG
     debug = _debug_enabled()
-    waited = False
 
     while True:
-        load1m = os.getloadavg()[0] if _HAS_LOADAVG else 0.0
+        load1m = os.getloadavg()[0]
         now = time.time()
 
         with _load_state.get_lock():
-            if feature_on:
-                _tick_ceiling(now, load1m)
+            _tick_ceiling(now, load1m)
 
             running = int(_load_state[_S_RUNNING])
             ceiling_f = float(_load_state[_S_CEILING])
             ceiling = int(ceiling_f)
 
-            allow = not feature_on or running == 0 or running < ceiling
-            if allow:
+            if running == 0 or running < _min_ceiling or running < ceiling:
                 running += 1
                 _load_state[_S_RUNNING] = running
                 break
 
         if debug:
             _lit_config.dbg(
-                "load-limit: waiting (pid=%d running=%d "
-                "ceiling=%d (%.2f) load=%.2f limit=%.2f)"
+                "load-limit: pid=%d running=%d "
+                "ceiling=%d (%.2f) load=%.2f limit=%.2f | waiting"
                 % (
                     os.getpid(), running, ceiling, ceiling_f,
                     load1m, _load_limit,
                 )
             )
-        waited = True
         # Jittered sleep so all idle workers don't re-check in lockstep.
         time.sleep(_LOAD_POLL_INTERVAL + random.uniform(0.0, _LOAD_POLL_INTERVAL))
 
     if debug:
         _lit_config.dbg(
-            "test start: pid=%d running=%d ceiling=%d (%.2f) load=%.2f%s"
+            "test start: pid=%d running=%d ceiling=%d (%.2f) load=%.2f"
             % (
                 os.getpid(), running, ceiling, ceiling_f, load1m,
-                " (after wait)" if waited else "",
             )
         )
 
 
 def _release_run_slot():
-    if _load_state is None:
+    if _load_state is None or _load_limit is None or not _HAS_LOADAVG:
         return
     with _load_state.get_lock():
         if _load_state[_S_RUNNING] > 0:

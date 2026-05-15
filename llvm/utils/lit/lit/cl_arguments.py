@@ -95,6 +95,16 @@ def parse_args():
         default=os.getenv("LIT_MAX_WORKERS", lit.util.usable_core_count()),
     )
     parser.add_argument(
+        "-jmin",
+        "--threads_min",
+        "--workers_min",
+        dest="workers_min",
+        metavar="N",
+        help="Minimal number of workers used for testing if `--load-limit FRAC` is enabled",
+        type=_positive_int,
+        default=os.getenv("LIT_MIN_WORKERS", 1),
+    )
+    parser.add_argument(
         "-l",
         "--load-limit",
         dest="load_limit_fraction",
@@ -539,6 +549,14 @@ def parse_args():
         print(
             "WARNING: --incremental is deprecated. Failing tests now always run first."
         )
+
+    if opts.workers_min > opts.workers:
+        print(
+            "WARNING: --threads_min %d is bigger than --threads %d. "
+            "Used default --threads_min 1."
+            % (opts.workers_min, opts.workers)
+        )
+        opts.workers_min = 1
 
     if opts.load_limit_fraction is not None and not hasattr(os, "getloadavg"):
         print(
