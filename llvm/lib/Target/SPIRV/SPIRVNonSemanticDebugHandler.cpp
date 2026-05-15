@@ -32,20 +32,20 @@ namespace {
 /// node is seen once, so no recursion into pointer bases. Other composites and
 /// non-pointer derived kinds are ignored.
 static void
-partitionTypes(const DIType *Ty, SetVector<const DIBasicType *> &BasicTypes,
-               SetVector<const DIDerivedType *> &PointerTypes,
-               SetVector<const DISubroutineType *> &SubroutineTypes) {
+partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
+               SmallVector<const DIDerivedType *> &PointerTypes,
+               SmallVector<const DISubroutineType *> &SubroutineTypes) {
   if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
-    BasicTypes.insert(BT);
+    BasicTypes.push_back(BT);
     return;
   }
   if (const auto *ST = dyn_cast<DISubroutineType>(Ty)) {
-    SubroutineTypes.insert(ST);
+    SubroutineTypes.push_back(ST);
     return;
   }
   const auto *DT = dyn_cast<DIDerivedType>(Ty);
   if (DT && DT->getTag() == dwarf::DW_TAG_pointer_type)
-    PointerTypes.insert(DT);
+    PointerTypes.push_back(DT);
 }
 
 enum : uint32_t {

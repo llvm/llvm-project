@@ -21,7 +21,6 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVModuleAnalysis.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -63,9 +62,9 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   // DI types partitioned from DebugInfoFinder.types() in beginModule()
   // (basics, pointers, subroutine types NSDI v1 may emit).
-  SetVector<const DIBasicType *> BasicTypes;
-  SetVector<const DIDerivedType *> PointerTypes;
-  SetVector<const DISubroutineType *> SubroutineTypes;
+  SmallVector<const DIBasicType *> BasicTypes;
+  SmallVector<const DIDerivedType *> PointerTypes;
+  SmallVector<const DISubroutineType *> SubroutineTypes;
 
   // Filled in emitNonSemanticGlobalDebugInfo(): DI types to their result
   // registers.
