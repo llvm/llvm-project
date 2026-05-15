@@ -7145,6 +7145,13 @@ static void emitLoadScalarOpsFromVGPRLoop(
         .addMBB(&BodyBB);
   }
 
+  // Current implementation defers v_cmpx and leaves other instruction
+  // scheduling decisions to later passes, where register pressure is known or
+  // easier to approximate.
+  // Non-terminators (V_READFIRSTLANE and REG_SEQUENCE) are inserted before I;
+  // v_cmpx instructions are inserted at the end of LoopBB.
+  // After the first v_cmpx is emitted, I is updated to point to it
+  // so subsequent non-terminators are inserted before all v_cmpx instructions.
   for (auto [Idx, ScalarOp] : enumerate(ScalarOps)) {
     unsigned RegSize = TRI->getRegSizeInBits(ScalarOp->getReg(), MRI);
     unsigned NumSubRegs = RegSize / 32;
@@ -7168,9 +7175,12 @@ static void emitLoadScalarOpsFromVGPRLoop(
           .addReg(VScalarOp);
 
       if (UseNewExecInstructions) {
-        BuildMI(LoopBB, I, DL, TII.get(LMC.CmpXEqU32Opc))
+        auto CmpxMI = BuildMI(LoopBB, LoopBB.end(), DL,
+                              TII.get(LMC.CmpXEqU32TermOpc))
             .addReg(CurReg)
             .addReg(VScalarOp);
+        if (I == LoopBB.end())
+          I = CmpxMI.getInstr()->getIterator();
       } else {
         Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
 
@@ -7237,9 +7247,12 @@ static void emitLoadScalarOpsFromVGPRLoop(
             NumSubRegs <= 2 ? 0 : TRI->getSubRegFromChannel(Idx, 2);
 
         if (UseNewExecInstructions) {
-          BuildMI(LoopBB, I, DL, TII.get(LMC.CmpXEqU64Opc))
+          auto CmpxMI = BuildMI(LoopBB, LoopBB.end(), DL,
+                                TII.get(LMC.CmpXEqU64TermOpc))
               .addReg(CurReg)
               .addReg(VScalarOp, VScalarOpUndef, SubReg);
+          if (I == LoopBB.end())
+            I = CmpxMI.getInstr()->getIterator();
         } else {
           Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
           BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64), NewCondReg)

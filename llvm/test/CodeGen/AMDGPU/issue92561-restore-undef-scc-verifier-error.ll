@@ -25,17 +25,16 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SDAG-NEXT:    v_readfirstlane_b32 s1, v1
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; SDAG-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; SDAG-NEXT:    v_readfirstlane_b32 s2, v2
 ; SDAG-NEXT:    v_readfirstlane_b32 s3, v3
-; SDAG-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
 ; SDAG-NEXT:    v_readfirstlane_b32 s4, v4
 ; SDAG-NEXT:    v_readfirstlane_b32 s5, v5
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; SDAG-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[4:5]
 ; SDAG-NEXT:    v_readfirstlane_b32 s6, v6
 ; SDAG-NEXT:    v_readfirstlane_b32 s7, v7
+; SDAG-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
+; SDAG-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
+; SDAG-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[4:5]
+; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; SDAG-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[6:7]
 ; SDAG-NEXT:    image_sample_c_lz v9, [v8, v8, v8, v8], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    s_and_not1_wrexec_b32 s13, s13

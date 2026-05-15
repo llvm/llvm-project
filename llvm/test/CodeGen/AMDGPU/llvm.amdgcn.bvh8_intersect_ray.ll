@@ -158,12 +158,11 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_vvvvvv(i64 %node_ptr, fl
 ; GFX12-SDAG-NEXT:  .LBB3_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v10
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v11
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[10:11]
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v12
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s3, v13
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[10:11]
 ; GFX12-SDAG-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[12:13]
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    image_bvh8_intersect_ray v[0:9], [v[24:25], v[26:27], v[21:23], v[18:20], v28], s[0:3]

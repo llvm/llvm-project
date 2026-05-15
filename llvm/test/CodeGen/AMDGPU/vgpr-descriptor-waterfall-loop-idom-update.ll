@@ -21,10 +21,10 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v2
 ; GCN-NEXT:    v_readfirstlane_b32 s5, v3
-; GCN-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
-; GCN-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[2:3]
 ; GCN-NEXT:    v_readfirstlane_b32 s6, v4
 ; GCN-NEXT:    v_readfirstlane_b32 s7, v5
+; GCN-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; GCN-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[2:3]
 ; GCN-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[4:5]
 ; GCN-NEXT:    buffer_store_dword v0, v0, s[4:7], 0 offen
 ; GCN-NEXT:    s_andn2_wrexec_b32 s9, s9
@@ -54,10 +54,10 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[2:3]
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v4
 ; GFX11-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[2:3]
 ; GFX11-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[4:5]
 ; GFX11-NEXT:    buffer_store_b32 v0, v0, s[0:3], 0 offen
 ; GFX11-NEXT:    s_and_not1_wrexec_b32 s5, s5

@@ -17,10 +17,10 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX10-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX10-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
-; GFX10-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; GFX10-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; GFX10-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; GFX10-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
 ; GFX10-NEXT:    buffer_load_format_d16_xyz v[5:6], v4, s[0:3], 0 idxen
 ; GFX10-NEXT:    s_andn2_wrexec_b32 s5, s5
@@ -98,10 +98,10 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX11-TRUE16-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; GFX11-TRUE16-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
 ; GFX11-TRUE16-NEXT:    buffer_load_d16_format_xyz v[5:6], v4, s[0:3], 0 idxen
 ; GFX11-TRUE16-NEXT:    s_and_not1_wrexec_b32 s5, s5
@@ -124,10 +124,10 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX11-FAKE16-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; GFX11-FAKE16-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
 ; GFX11-FAKE16-NEXT:    buffer_load_d16_format_xyz v[5:6], v4, s[0:3], 0 idxen
 ; GFX11-FAKE16-NEXT:    s_and_not1_wrexec_b32 s5, s5
@@ -149,12 +149,11 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX12-TRUE16-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; GFX12-TRUE16-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    buffer_load_d16_format_xyz v[5:6], v4, s[0:3], null idxen
@@ -178,12 +177,11 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX12-FAKE16-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
 ; GFX12-FAKE16-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    buffer_load_d16_format_xyz v[5:6], v4, s[0:3], null idxen
