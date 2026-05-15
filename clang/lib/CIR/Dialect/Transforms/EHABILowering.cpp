@@ -125,6 +125,8 @@ private:
   cir::FuncOp endCatchFunc;
   cir::FuncOp getExceptionPtrFunc;
   cir::FuncOp clangCallTerminateFunc;
+  cir::FuncOp cxaThrowFunc;
+  cir::FuncOp cxaRethrowFunc;
 
   DenseMap<mlir::StringAttr, cir::FuncOp> catchCopyThunks;
 
@@ -133,6 +135,8 @@ private:
 
   void ensureRuntimeDecls(mlir::Location loc);
   void ensureClangCallTerminate(mlir::Location loc);
+  void ensureCxaThrowDecl(mlir::Location loc);
+  void ensureCxaRethrowDecl(mlir::Location loc);
   mlir::Block *buildTerminateBlock(cir::FuncOp funcOp, mlir::Location loc);
   mlir::FailureOr<cir::FuncOp>
   resolveCatchCopyThunk(cir::ConstructCatchParamOp op);
@@ -146,6 +150,7 @@ private:
   mlir::LogicalResult lowerConstructCatchParam(cir::ConstructCatchParamOp op,
                                                mlir::Value exnPtr);
   void lowerInitCatchParam(cir::InitCatchParamOp op);
+  mlir::LogicalResult lowerTryThrow(cir::TryThrowOp op);
 };
 
 /// Lower all EH operations in the module to the Itanium-specific form.
@@ -253,6 +258,29 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
   clangCallTerminateFunc = funcOp;
 }
 
+/// Ensure the __cxa_throw runtime function is declared in the module.
+///
+///   void __cxa_throw(void *exception, void *type_info, void *dtor);
+void ItaniumEHLowering::ensureCxaThrowDecl(mlir::Location loc) {
+  if (cxaThrowFunc)
+    return;
+  auto throwFuncTy = cir::FuncType::get({voidPtrType, voidPtrType, voidPtrType},
+                                        voidType, /*isVarArg=*/false);
+  cxaThrowFunc =
+      getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_throw", throwFuncTy);
+}
+
+/// Ensure the __cxa_rethrow runtime function is declared in the module.
+///
+///   void __cxa_rethrow();
+void ItaniumEHLowering::ensureCxaRethrowDecl(mlir::Location loc) {
+  if (cxaRethrowFunc)
+    return;
+  auto rethrowFuncTy = cir::FuncType::get({}, voidType, /*isVarArg=*/false);
+  cxaRethrowFunc =
+      getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_rethrow", rethrowFuncTy);
+}
+
 /// Create a terminate landing pad block at the end of the specified function.
 mlir::Block *ItaniumEHLowering::buildTerminateBlock(cir::FuncOp funcOp,
                                                     mlir::Location loc) {
@@ -329,6 +357,15 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   funcOp.walk([&](cir::InitCatchParamOp op) { initCatchOps.push_back(op); });
   for (cir::InitCatchParamOp op : initCatchOps)
     lowerInitCatchParam(op);
+
+  // Lower any cir.try_throw ops in this function to cir.try_call of
+  // __cxa_throw / __cxa_rethrow. These are produced by FlattenCFG when a
+  // cir.throw appears inside a cleanup scope or try region.
+  SmallVector<cir::TryThrowOp> tryThrowOps;
+  funcOp.walk([&](cir::TryThrowOp op) { tryThrowOps.push_back(op); });
+  for (cir::TryThrowOp op : tryThrowOps)
+    if (mlir::failed(lowerTryThrow(op)))
+      return mlir::failure();
 
   return mlir::success();
 }
@@ -701,6 +738,72 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
                                            call.getLoc());
     cir::replaceCallWithTryCall(call, terminateBlock, call.getLoc(), rewriter);
   }
+  return mlir::success();
+}
+
+/// Lower a cir.try_throw to a cir.try_call of __cxa_throw (or
+/// __cxa_rethrow for the no-operand rethrow form). Materializes the
+/// type_info and dtor pointers from their symbol attributes, bitcasting
+/// each to !cir.ptr<!void> as required by the runtime function signature.
+mlir::LogicalResult ItaniumEHLowering::lowerTryThrow(cir::TryThrowOp op) {
+  mlir::Location loc = op.getLoc();
+  mlir::Block *normalDest = op.getNormalDest();
+  mlir::Block *unwindDest = op.getUnwindDest();
+  builder.setInsertionPoint(op);
+
+  if (op.rethrows()) {
+    ensureCxaRethrowDecl(loc);
+    cir::TryCallOp::create(
+        builder, loc, mlir::FlatSymbolRefAttr::get(cxaRethrowFunc), voidType,
+        normalDest, unwindDest, mlir::ValueRange{});
+    op.erase();
+    return mlir::success();
+  }
+
+  ensureCxaThrowDecl(loc);
+
+  // Bitcast the exception pointer to void* if necessary.
+  mlir::Value exnPtr = op.getExceptionPtr();
+  if (exnPtr.getType() != voidPtrType)
+    exnPtr = cir::CastOp::create(builder, loc, voidPtrType,
+                                 cir::CastKind::bitcast, exnPtr);
+
+  // Materialize the type_info pointer, looking up the typed symbol in the
+  // module so we get the correct pointer type for cir.get_global, then
+  // bitcasting to void* to match the runtime signature.
+  mlir::FlatSymbolRefAttr typeInfoAttr = op.getTypeInfoAttr();
+  auto typeInfoGlobal = mod.lookupSymbol<cir::GlobalOp>(typeInfoAttr);
+  if (!typeInfoGlobal)
+    return op.emitError("type_info symbol not found in module");
+  auto typeInfoPtrTy = cir::PointerType::get(typeInfoGlobal.getSymType());
+  mlir::Value typeInfo = cir::GetGlobalOp::create(builder, loc, typeInfoPtrTy,
+                                                  typeInfoAttr.getValue());
+  if (typeInfo.getType() != voidPtrType)
+    typeInfo = cir::CastOp::create(builder, loc, voidPtrType,
+                                   cir::CastKind::bitcast, typeInfo);
+
+  // Materialize the dtor pointer (or null if no dtor).
+  mlir::Value dtor;
+  if (mlir::FlatSymbolRefAttr dtorAttr = op.getDtorAttr()) {
+    auto dtorFunc = mod.lookupSymbol<cir::FuncOp>(dtorAttr);
+    if (!dtorFunc)
+      return op.emitError("dtor symbol not found in module");
+    auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
+    dtor =
+        cir::GetGlobalOp::create(builder, loc, dtorPtrTy, dtorAttr.getValue());
+    if (dtor.getType() != voidPtrType)
+      dtor = cir::CastOp::create(builder, loc, voidPtrType,
+                                 cir::CastKind::bitcast, dtor);
+  } else {
+    dtor = cir::ConstantOp::create(
+        builder, loc,
+        cir::ConstPtrAttr::get(voidPtrType, builder.getI64IntegerAttr(0)));
+  }
+
+  cir::TryCallOp::create(
+      builder, loc, mlir::FlatSymbolRefAttr::get(cxaThrowFunc), voidType,
+      normalDest, unwindDest, mlir::ValueRange{exnPtr, typeInfo, dtor});
+  op.erase();
   return mlir::success();
 }
 
