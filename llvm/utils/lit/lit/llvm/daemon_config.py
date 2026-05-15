@@ -77,7 +77,8 @@ def use_daemon_tool(
     # Register an in-process built-in to run the tool in daemon mode. This
     # replaces invocations to the tool.
     key = inproc_builtin_key_override if inproc_builtin_key_override else executable
-    testing_config.test_format.extra_inproc_builtins[key] = (
-        get_daemon_tool_inproc_builtin(tool_name, executable)
-    )
+    testing_config.test_format.extra_inproc_builtins[
+        key
+    ] = get_daemon_tool_inproc_builtin(tool_name, executable)
+
     return True
