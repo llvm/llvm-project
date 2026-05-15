@@ -15670,6 +15670,35 @@ static SDValue PerformExtractEltCombine(SDNode *N,
                            DCI.DAG.getConstant(SubIdx, dl, MVT::i32));
   }
 
+  // extract(bitcast(BUILD_VECTOR(extract(bitcast(a)), ..))) -> extract(a)
+  if (ST->isLittle() && Op0.getOpcode() == ISD::BITCAST &&
+      Op0.getOperand(0).getOpcode() == ARMISD::BUILD_VECTOR &&
+      isa<ConstantSDNode>(N->getOperand(1)) &&
+      Op0.getScalarValueSizeInBits() <=
+          Op0.getOperand(0).getScalarValueSizeInBits()) {
+    unsigned Lane = N->getConstantOperandVal(1);
+    EVT ExtVT = Op0.getValueType();
+    EVT BVVT = Op0.getOperand(0).getValueType();
+    unsigned BVLane =
+        (Lane * BVVT.getVectorNumElements()) / ExtVT.getVectorNumElements();
+    assert(BVLane < Op0.getOperand(0).getNumOperands());
+    SDValue Ext = Op0.getOperand(0).getOperand(BVLane);
+    if (Ext.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Ext.getOperand(0).getOpcode() == ISD::BITCAST &&
+        isa<ConstantSDNode>(Ext.getOperand(1)) &&
+        Ext.getOperand(0).getOperand(0).getValueType() == ExtVT) {
+      unsigned InnerLane = Ext.getConstantOperandVal(1);
+      unsigned BVSubLane = Lane - (BVLane * ExtVT.getVectorNumElements()) /
+                                      BVVT.getVectorNumElements();
+      unsigned FinalLane = (InnerLane * ExtVT.getVectorNumElements()) /
+                               BVVT.getVectorNumElements() +
+                           BVSubLane;
+      return DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT,
+                             Ext.getOperand(0).getOperand(0),
+                             DCI.DAG.getConstant(FinalLane, dl, MVT::i32));
+    }
+  }
+
   return SDValue();
 }
 
