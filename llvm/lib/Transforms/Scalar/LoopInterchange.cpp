@@ -2020,9 +2020,8 @@ bool LoopInterchangeTransform::transform(
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
 
-  // Move inner-loop preheader instructions to the outer-loop header and 
-  // eliminate single-incoming PHIs before loop interchange.
   if (InnerLoopPreHeader != OuterLoopHeader) {
+    // Eliminate PHIs in the inner-loop preheader.
     for (PHINode &P : make_early_inc_range(InnerLoopPreHeader->phis())) {
       assert(P.getNumIncomingValues() == 1 &&
              "Expected single-incoming PHIs in inner loop preheader");
