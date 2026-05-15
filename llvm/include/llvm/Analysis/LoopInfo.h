@@ -595,19 +595,17 @@ public:
 };
 
 /// Printer pass for the \c LoopAnalysis results.
-class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
+class LoopPrinterPass : public RequiredPassInfoMixin<LoopPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c LoopAnalysis results.
-struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
+struct LoopVerifierPass : public RequiredPassInfoMixin<LoopVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// The legacy pass manager's analysis pass to compute loop information.

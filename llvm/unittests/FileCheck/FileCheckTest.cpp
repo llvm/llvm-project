@@ -914,17 +914,18 @@ public:
     return Res.TheMatch->Pos;
   }
 
-  void printVariableDefs(FileCheckDiag::MatchType MatchTy,
-                         FileCheckDiagList &Diags) {
-    P.printVariableDefs(SM, MatchTy, &Diags);
+  void printVariableDefs(FileCheckDiagList &Diags) {
+    P.printVariableDefs(SM, &Diags);
   }
 
   SourceMgr &getSourceMgr() { return SM; }
 };
 
-#define EXPECT_SM_RANGE(SM, Range, StartLineExpected, StartColExpected,        \
+#define EXPECT_SM_RANGE(SM, RangeOpt, StartLineExpected, StartColExpected,     \
                         EndLineExpected, EndColExpected)                       \
   do {                                                                         \
+    EXPECT_TRUE(RangeOpt->isValid());                                          \
+    SMRange Range = *RangeOpt;                                                 \
     auto StartActual = SM.getLineAndColumn(Range.Start);                       \
     auto EndActual = SM.getLineAndColumn(Range.End);                           \
     EXPECT_EQ(StartActual.first, StartLineExpected);                           \
@@ -1656,17 +1657,17 @@ TEST_F(FileCheckTest, CapturedVarDiags) {
   ASSERT_FALSE(Tester.parsePattern("[[STRVAR:[a-z]+]] [[#NUMVAR:@LINE]]"));
   EXPECT_THAT_EXPECTED(Tester.match("foobar 2"), Succeeded());
   FileCheckDiagList Diags;
-  Tester.printVariableDefs(FileCheckDiag::MatchFoundAndExpected, Diags);
+  Tester.printVariableDefs(Diags);
   EXPECT_EQ(Diags.size(), 2ul);
-  SmallVector<MatchNoteDiag, 2> Notes;
+  SmallVector<MatchCustomNoteDiag, 2> Notes;
   for (const FileCheckDiag &Diag : Diags) {
-    EXPECT_EQ(Diag.getKind(), FileCheckDiag::FCDK_MatchNoteDiag);
-    EXPECT_EQ(Diag.getMatchType(), FileCheckDiag::MatchFoundAndExpected);
-    Notes.push_back(cast<MatchNoteDiag>(Diag));
+    EXPECT_EQ(Diag.getKind(), FileCheckDiag::MatchCustomNoteDiag);
+    EXPECT_FALSE(Diag.isError());
+    Notes.push_back(cast<MatchCustomNoteDiag>(Diag));
   }
-  EXPECT_SM_RANGE(SM, Notes[0].getInputRange(), 1u, 1u, 1u, 7u);
-  EXPECT_SM_RANGE(SM, Notes[1].getInputRange(), 1u, 8u, 1u, 9u);
-  EXPECT_EQ(Notes[0].getCustomNote(), "captured var \"STRVAR\"");
-  EXPECT_EQ(Notes[1].getCustomNote(), "captured var \"NUMVAR\"");
+  EXPECT_SM_RANGE(SM, Notes[0].getMatchRange(), 1u, 1u, 1u, 7u);
+  EXPECT_SM_RANGE(SM, Notes[1].getMatchRange(), 1u, 8u, 1u, 9u);
+  EXPECT_EQ(Notes[0].getNote(), "captured var \"STRVAR\"");
+  EXPECT_EQ(Notes[1].getNote(), "captured var \"NUMVAR\"");
 }
 } // namespace

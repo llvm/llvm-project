@@ -192,47 +192,71 @@ struct MarkerStyle {
   std::string Note;
   /// Does this marker indicate inclusion by -dump-input-filter=error?
   bool FiltersAsError;
-  MarkerStyle() = default;
-  MarkerStyle(char Lead, raw_ostream::Colors Color,
-              const std::string &Note = "", bool FiltersAsError = false)
-      : Lead(Lead), Color(Color), Note(Note), FiltersAsError(FiltersAsError) {
-    assert((!FiltersAsError || !Note.empty()) &&
-           "expected error diagnostic to have note");
-  }
 };
 
-static MarkerStyle GetMarker(FileCheckDiag::MatchType MatchTy) {
-  switch (MatchTy) {
-  case FileCheckDiag::MatchFoundAndExpected:
-    return MarkerStyle('^', raw_ostream::GREEN);
-  case FileCheckDiag::MatchFoundButExcluded:
-    return MarkerStyle('!', raw_ostream::RED, "error: no match expected",
-                       /*FiltersAsError=*/true);
-  case FileCheckDiag::MatchFoundButWrongLine:
-    return MarkerStyle('!', raw_ostream::RED, "error: match on wrong line",
-                       /*FiltersAsError=*/true);
-  case FileCheckDiag::MatchFoundButDiscarded:
-    return MarkerStyle('!', raw_ostream::CYAN,
-                       "discard: overlaps earlier match");
-  case FileCheckDiag::MatchFoundErrorNote:
-    // Note should always be overridden within the FileCheckDiag.
-    return MarkerStyle('!', raw_ostream::RED,
-                       "error: unknown error after match",
-                       /*FiltersAsError=*/true);
-  case FileCheckDiag::MatchNoneAndExcluded:
-    return MarkerStyle('X', raw_ostream::GREEN);
-  case FileCheckDiag::MatchNoneButExpected:
-    return MarkerStyle('X', raw_ostream::RED, "error: no match found",
-                       /*FiltersAsError=*/true);
-  case FileCheckDiag::MatchNoneForInvalidPattern:
-    return MarkerStyle('X', raw_ostream::RED,
-                       "error: match failed for invalid pattern",
-                       /*FiltersAsError=*/true);
-  case FileCheckDiag::MatchFuzzy:
-    return MarkerStyle('?', raw_ostream::MAGENTA, "possible intended match",
-                       /*FiltersAsError=*/true);
+static MarkerStyle getMarker(const FileCheckDiag &Diag) {
+  // By default, the marker is based on whether the diagnostic is an error or is
+  // a MatchNoteDiag on a MatchResultDiag that is an error.
+  //
+  // It's less confusing if diagnostics that don't actually have match ranges
+  // don't have markers.  For example, a marker for the MatchNoteDiag
+  // 'with "VAR" equal to "5"' would seem to indicate where "VAR" matches, but
+  // we don't actually have that location.  Instead, we just place the note
+  // after the start of the associated MatchResultDiag.  This decision is
+  // overriden below for the case of MatchNoneDiag because the search range is
+  // used instead.
+  MarkerStyle Res;
+  bool IsError = Diag.isError() || Diag.getMatchResultDiag().isError();
+  Res.Lead = !Diag.getMatchRange() ? ' ' : IsError ? '!' : '^';
+  Res.Color = IsError ? raw_ostream::RED : raw_ostream::GREEN;
+  Res.FiltersAsError = IsError;
+
+  // Add Note.  Override the default Lead and Color for some diagnostic kinds.
+  switch (Diag.getKind()) {
+  case FileCheckDiag::MatchFoundDiag:
+    switch (cast<MatchFoundDiag>(Diag).getStatus()) {
+    case MatchFoundDiag::Success:
+      break;
+    case MatchFoundDiag::Excluded:
+      Res.Note = "no match expected";
+      break;
+    case MatchFoundDiag::WrongLine:
+      Res.Note = "match on wrong line";
+      break;
+    case MatchFoundDiag::Discarded:
+      Res.Lead = '!'; // Not an error, but not a successful match either.
+      Res.Color = raw_ostream::CYAN;
+      Res.Note = "discard: overlaps earlier match";
+      break;
+    }
+    break;
+  case FileCheckDiag::MatchNoneDiag:
+    Res.Lead = 'X';
+    switch (cast<MatchNoneDiag>(Diag).getStatus()) {
+    case MatchNoneDiag::Success:
+      break;
+    case MatchNoneDiag::InvalidPattern:
+      Res.Note = "match failed for invalid pattern";
+      break;
+    case MatchNoneDiag::Expected:
+      Res.Note = "no match found";
+      break;
+    }
+    break;
+  case FileCheckDiag::MatchFuzzyDiag:
+    Res.Lead = '?';
+    Res.Color = raw_ostream::MAGENTA;
+    Res.Note = "possible intended match";
+    break;
+  case FileCheckDiag::MatchCustomNoteDiag:
+    Res.Note = cast<MatchCustomNoteDiag>(Diag).getNote();
+    break;
   }
-  llvm_unreachable_internal("unexpected match type");
+  if (Diag.isError()) {
+    assert(!Res.Note.empty() && "expected error diagnostic to have note");
+    Res.Note = "error: " + Res.Note;
+  }
+  return Res;
 }
 
 static void DumpInputAnnotationHelp(raw_ostream &OS) {
@@ -428,39 +452,39 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
           << DiagIndexPerPattern[Diag.getMatchResultDiag().getCheckLoc()]++;
     LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
 
-    A.Marker = GetMarker(Diag.getMatchType());
-    std::optional<StringRef> CustomNote;
-    if (const MatchNoteDiag *NoteDiag = dyn_cast<MatchNoteDiag>(&Diag)) {
-      CustomNote = NoteDiag->getCustomNote();
-      if (CustomNote) {
-        A.Marker.Note = *CustomNote;
-        // It's less confusing if notes that don't actually have ranges don't
-        // have markers.  For example, a marker for 'with "VAR" equal to "5"'
-        // would seem to indicate where "VAR" matches, but the location we
-        // actually have for the marker simply points to the start of the
-        // match/search range for the full pattern of which the substitution is
-        // potentially just one component.
-        SMRange InputRange = Diag.getInputRange();
-        if (InputRange.Start == InputRange.End)
-          A.Marker.Lead = ' ';
-      }
-    }
-    if (Diag.getMatchType() == FileCheckDiag::MatchFoundErrorNote) {
-      assert(CustomNote && "expected custom note for MatchFoundErrorNote");
-      A.Marker.Note = "error: " + A.Marker.Note;
-    }
-    A.FoundAndExpectedMatch =
-        Diag.getMatchType() == FileCheckDiag::MatchFoundAndExpected;
+    // Build the input marker.
+    A.Marker = getMarker(Diag);
 
-    // Compute the mark location, and break annotation into multiple
+    // Does this diagnostic mark text that has been successfully matched?
+    A.FoundAndExpectedMatch = false;
+    if (const MatchFoundDiag *Found = dyn_cast<MatchFoundDiag>(&Diag)) {
+      if (Found->getStatus() == MatchFoundDiag::Success)
+        A.FoundAndExpectedMatch = true;
+    }
+
+    // If Diag has a match range, position the marker there.  If it is a
+    // MatchNoneDiag, position the marker at its search range.  Otherwise,
+    // position the marker at the start of the most recent MatchResultDiag with
+    // which it is associated.
+    SMRange InputRange;
+    if (Diag.getMatchRange()) {
+      InputRange = *Diag.getMatchRange();
+    } else if (const MatchNoneDiag *MND = dyn_cast<MatchNoneDiag>(&Diag)) {
+      InputRange = MND->getSearchRange();
+    } else {
+      assert(isa<MatchNoteDiag>(Diag) &&
+             "expected only MatchNoteDiag to have no input range");
+      const MatchResultDiag &MRD = Diag.getMatchResultDiag();
+      InputRange =
+          MRD.getMatchRange() ? *MRD.getMatchRange() : MRD.getSearchRange();
+      InputRange.End = InputRange.Start;
+    }
+    auto [InputStartLine, InputStartCol] =
+        SM.getLineAndColumn(InputRange.Start);
+    auto [InputEndLine, InputEndCol] = SM.getLineAndColumn(InputRange.End);
+
+    // Compute the marker location, and break annotation into multiple
     // annotations if it spans multiple lines.
-    SMRange InputRange = Diag.getInputRange();
-    auto InputStartLineAndCol = SM.getLineAndColumn(InputRange.Start);
-    auto InputEndLineAndCol = SM.getLineAndColumn(InputRange.End);
-    unsigned InputStartLine = InputStartLineAndCol.first;
-    unsigned InputStartCol = InputStartLineAndCol.second;
-    unsigned InputEndLine = InputEndLineAndCol.first;
-    unsigned InputEndCol = InputEndLineAndCol.second;
     A.IsFirstLine = true;
     A.InputLine = InputStartLine;
     A.InputStartCol = InputStartCol;

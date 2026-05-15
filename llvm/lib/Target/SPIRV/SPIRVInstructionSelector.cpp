@@ -704,6 +704,7 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_radians:
   case Intrinsic::spv_reflect:
   case Intrinsic::spv_refract:
+  case Intrinsic::spv_resource_getbasepointer:
   case Intrinsic::spv_resource_getpointer:
   case Intrinsic::spv_resource_handlefrombinding:
   case Intrinsic::spv_resource_handlefromimplicitbinding:
@@ -1182,10 +1183,10 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::sqrt, GL::Sqrt);
 
   case TargetOpcode::G_CTTZ:
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTTZ_ZERO_POISON:
     return selectExtInst(ResVReg, ResType, I, CL::ctz);
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTLZ_ZERO_POISON:
     return selectExtInst(ResVReg, ResType, I, CL::clz);
 
   case TargetOpcode::G_INTRINSIC_ROUND:
@@ -1893,7 +1894,9 @@ bool SPIRVInstructionSelector::selectLoad(Register ResVReg,
   auto *PtrDef = getVRegDef(*MRI, Ptr);
   auto *IntPtrDef = dyn_cast<GIntrinsic>(PtrDef);
   if (IntPtrDef &&
-      IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+      (IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getbasepointer ||
+       IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getpointer)) {
+
     Register HandleReg = IntPtrDef->getOperand(2).getReg();
     SPIRVTypeInst HandleType = GR.getSPIRVTypeForVReg(HandleReg);
     if (HandleType->getOpcode() == SPIRV::OpTypeImage) {
@@ -1950,11 +1953,6 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   assert(I.getNumMemOperands());
   const MachineMemOperand &MemOp = **I.memoperands_begin();
   assert(MemOp.isAtomic());
-  // TODO: This must be relaxed since the volatile attribute on atomic load is
-  // supported with the VulkanMemoryModelKHR capability.
-  if (MemOp.isVolatile())
-    return diagnoseUnsupported(I, "Lowering to SPIR-V of atomic load of "
-                                  "volatile memory is not supported");
 
   uint32_t Scope =
       static_cast<uint32_t>(getMemScope(Context, MemOp.getSyncScopeID()));
@@ -1964,6 +1962,8 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   uint32_t StorageClass = static_cast<uint32_t>(getMemSemanticsForStorageClass(
       addressSpaceToStorageClass(MemOp.getAddrSpace(), STI)));
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
+  if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
+    MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
   Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
 
   MachineIRBuilder MIRBuilder(I);
@@ -1985,7 +1985,9 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
   auto *PtrDef = getVRegDef(*MRI, Ptr);
   auto *IntPtrDef = dyn_cast<GIntrinsic>(PtrDef);
   if (IntPtrDef &&
-      IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+      (IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getbasepointer ||
+       IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getpointer)) {
+
     Register HandleReg = IntPtrDef->getOperand(2).getReg();
     Register NewHandleReg =
         MRI->createVirtualRegister(MRI->getRegClass(HandleReg));
@@ -2050,12 +2052,6 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   const MachineMemOperand &MemOp = **I.memoperands_begin();
   assert(MemOp.isAtomic());
 
-  // TODO: This must be relaxed since the volatile attribute on atomic store is
-  // supported with the VulkanMemoryModelKHR capability.
-  if (MemOp.isVolatile())
-    return diagnoseUnsupported(I, "Lowering to SPIR-V of atomic store of "
-                                  "volatile memory is not supported");
-
   uint32_t Scope =
       static_cast<uint32_t>(getMemScope(Context, MemOp.getSyncScopeID()));
   Register ScopeReg = buildI32Constant(Scope, I);
@@ -2064,6 +2060,8 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   uint32_t StorageClass = static_cast<uint32_t>(getMemSemanticsForStorageClass(
       addressSpaceToStorageClass(MemOp.getAddrSpace(), STI)));
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
+  if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
+    MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
   Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
 
   MachineIRBuilder MIRBuilder(I);
@@ -3968,9 +3966,22 @@ bool SPIRVInstructionSelector::selectICmp(Register ResVReg,
   unsigned CmpOpc;
 
   Register CmpOperand = I.getOperand(2).getReg();
-  if (GR.isScalarOfType(CmpOperand, SPIRV::OpTypePointer))
+  if (GR.isScalarOfType(CmpOperand, SPIRV::OpTypePointer)) {
     CmpOpc = getPtrCmpOpcode(Pred);
-  else if (GR.isScalarOrVectorOfType(CmpOperand, SPIRV::OpTypeBool))
+    // OpPtrEqual/OpPtrNotEqual require both operands to share an identical
+    // pointer type. If they are not OpBitcast is inserted.
+    Register Op1 = I.getOperand(3).getReg();
+    SPIRVTypeInst Ty0 = GR.getSPIRVTypeForVReg(CmpOperand);
+    if (Ty0 != GR.getSPIRVTypeForVReg(Op1)) {
+      Register NewOp1 = createVirtualRegister(Ty0, &GR, MRI, MRI->getMF());
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpBitcast))
+          .addDef(NewOp1)
+          .addUse(GR.getSPIRVTypeID(Ty0))
+          .addUse(Op1)
+          .constrainAllUses(TII, TRI, RBI);
+      I.getOperand(3).setReg(NewOp1);
+    }
+  } else if (GR.isScalarOrVectorOfType(CmpOperand, SPIRV::OpTypeBool))
     CmpOpc = getBoolCmpOpcode(Pred);
   else
     CmpOpc = getICmpOpcode(Pred);
@@ -4205,12 +4216,14 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
       Opcode = IsScalarBool ? SPIRV::OpSelectVISCond : SPIRV::OpSelectVIVCond;
     }
   } else {
+    assert(IsScalarBool && "OpSelect with a scalar result requires a scalar "
+                           "boolean condition");
     if (IsFloatTy) {
-      Opcode = IsScalarBool ? SPIRV::OpSelectSFSCond : SPIRV::OpSelectVFVCond;
+      Opcode = SPIRV::OpSelectSFSCond;
     } else if (IsPtrTy) {
-      Opcode = IsScalarBool ? SPIRV::OpSelectSPSCond : SPIRV::OpSelectVPVCond;
+      Opcode = SPIRV::OpSelectSPSCond;
     } else {
-      Opcode = IsScalarBool ? SPIRV::OpSelectSISCond : SPIRV::OpSelectVIVCond;
+      Opcode = SPIRV::OpSelectSISCond;
     }
   }
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
@@ -4297,11 +4310,8 @@ bool SPIRVInstructionSelector::selectSUCmp(Register ResVReg,
     BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
   Register BoolTypeReg = GR.getSPIRVTypeID(BoolType);
   // Build less-than-equal and less-than.
-  // TODO: replace with one-liner createVirtualRegister() from
-  // llvm/lib/Target/SPIRV/SPIRVUtils.cpp when PR #116609 is merged.
-  Register IsLessEqReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  MRI->setType(IsLessEqReg, LLT::scalar(64));
-  GR.assignSPIRVTypeToVReg(ResType, IsLessEqReg, MIRBuilder.getMF());
+  Register IsLessEqReg =
+      createVirtualRegister(BoolType, &GR, MRI, MIRBuilder.getMF());
   BuildMI(BB, I, I.getDebugLoc(),
           TII.get(IsSigned ? SPIRV::OpSLessThanEqual : SPIRV::OpULessThanEqual))
       .addDef(IsLessEqReg)
@@ -4309,9 +4319,8 @@ bool SPIRVInstructionSelector::selectSUCmp(Register ResVReg,
       .addUse(I.getOperand(1).getReg())
       .addUse(I.getOperand(2).getReg())
       .constrainAllUses(TII, TRI, RBI);
-  Register IsLessReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  MRI->setType(IsLessReg, LLT::scalar(64));
-  GR.assignSPIRVTypeToVReg(ResType, IsLessReg, MIRBuilder.getMF());
+  Register IsLessReg =
+      createVirtualRegister(BoolType, &GR, MRI, MIRBuilder.getMF());
   BuildMI(BB, I, I.getDebugLoc(),
           TII.get(IsSigned ? SPIRV::OpSLessThan : SPIRV::OpULessThan))
       .addDef(IsLessReg)
@@ -5135,6 +5144,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_resource_gather:
   case Intrinsic::spv_resource_gather_cmp:
     return selectGatherIntrinsic(ResVReg, ResType, I);
+  case Intrinsic::spv_resource_getbasepointer:
   case Intrinsic::spv_resource_getpointer: {
     return selectResourceGetPointer(ResVReg, ResType, I);
   }
@@ -5940,16 +5950,20 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(Register &ResVReg,
   assert(ResType->getOpcode() == SPIRV::OpTypePointer);
   MachineIRBuilder MIRBuilder(I);
 
-  Register IndexReg = I.getOperand(3).getReg();
   Register ZeroReg =
       buildZerosVal(GR.getOrCreateSPIRVIntegerType(32, I, TII), I);
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAccessChain))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(ResourcePtr)
-      .addUse(ZeroReg)
-      .addUse(IndexReg)
-      .constrainAllUses(TII, TRI, RBI);
+  auto MIB =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAccessChain))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addUse(ResourcePtr)
+          .addUse(ZeroReg);
+
+  if (I.getNumExplicitOperands() > 3) {
+    Register IndexReg = I.getOperand(3).getReg();
+    MIB.addUse(IndexReg);
+  }
+  MIB.constrainAllUses(TII, TRI, RBI);
   return true;
 }
 

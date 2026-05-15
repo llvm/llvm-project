@@ -125,56 +125,31 @@ class MatchResultDiag;
 /// - \c MatchNoteDiag provides an additional note about the most recent
 ///   \c MatchResultDiag emitted by a FileCheck invocation.  For example, there
 ///   might be a fuzzy match after a failure to match.
+///
+/// Throughout this class hierarchy, a pattern is said to be either expected or
+/// excluded depending on whether the pattern must have or must not have a match
+/// in order for it to succeed.  For example, a \c CHECK directive's pattern is
+/// expected, and a \c CHECK-NOT directive's pattern is excluded.
 class FileCheckDiag {
 public:
-  enum FileCheckDiagKind { FCDK_MatchResultDiag, FCDK_MatchNoteDiag };
-
-  /// What type of match result does this diagnostic describe?
-  ///
-  /// A directive's supplied pattern is said to be either expected or excluded
-  /// depending on whether the pattern must have or must not have a match in
-  /// order for the directive to succeed.  For example, a CHECK directive's
-  /// pattern is expected, and a CHECK-NOT directive's pattern is excluded.
-  enum MatchType {
-    /// Indicates a good match for an expected pattern.
-    MatchFoundAndExpected,
-    /// Indicates a match for an excluded pattern.
-    MatchFoundButExcluded,
-    /// Indicates a match for an expected pattern, but the match is on the
-    /// wrong line.
-    MatchFoundButWrongLine,
-    /// Indicates a discarded match for an expected pattern.
-    MatchFoundButDiscarded,
-    /// Indicates an error while processing a match after the match was found
-    /// for an expected or excluded pattern.  The error is specified by \c Note,
-    /// to which it should be appropriate to prepend "error: " later.  The full
-    /// match itself should be recorded in a preceding diagnostic of a different
-    /// \c MatchFound match type.
-    MatchFoundErrorNote,
-    /// Indicates no match for an excluded pattern.
-    MatchNoneAndExcluded,
-    /// Indicates no match for an expected pattern, but this might follow good
-    /// matches when multiple matches are expected for the pattern, or it might
-    /// follow discarded matches for the pattern.
-    MatchNoneButExpected,
-    /// Indicates no match due to an expected or excluded pattern that has
-    /// proven to be invalid at match time.  The exact problems are usually
-    /// reported in subsequent diagnostics of the same match type but with
-    /// \c Note set.
-    MatchNoneForInvalidPattern,
-    /// Indicates a fuzzy match that serves as a suggestion for the next
-    /// intended match for an expected pattern with too few or no good matches.
-    MatchFuzzy,
+  enum FileCheckDiagKind {
+    // MatchResultDiag
+    MatchResultDiag_First,
+    MatchFoundDiag = MatchResultDiag_First,
+    MatchNoneDiag,
+    MatchResultDiag_Last = MatchNoneDiag,
+    // MatchNoteDiag
+    MatchNoteDiag_First,
+    MatchFuzzyDiag = MatchNoteDiag_First,
+    MatchCustomNoteDiag,
+    MatchNoteDiag_Last = MatchCustomNoteDiag
   };
 
 private:
   const FileCheckDiagKind Kind;
-  MatchType MatchTy;
-  SMRange InputRange;
 
 public:
-  FileCheckDiag(FileCheckDiagKind Kind, MatchType MatchTy, SMRange InputRange)
-      : Kind(Kind), MatchTy(MatchTy), InputRange(InputRange) {}
+  FileCheckDiag(FileCheckDiagKind Kind) : Kind(Kind) {}
   /// Destructor is purely virtual to ensure this remains an abstract class.
   virtual ~FileCheckDiag() = 0;
   /// Of what derived class is this an instance?
@@ -182,30 +157,40 @@ public:
   /// If this is a \c MatchResultDiag, return itself.  If this is a
   /// \c MatchNoteDiag, return its associated \c MatchResultDiag.
   virtual const MatchResultDiag &getMatchResultDiag() const = 0;
-  /// Adjust the match type.
-  void adjustMatchType(MatchType MatchTy) { this->MatchTy = MatchTy; }
-  /// Get the match type.
-  MatchType getMatchType() const { return MatchTy; }
-  /// The search range if MatchTy starts with MatchNone, or the match range
-  /// otherwise.
-  SMRange getInputRange() const { return InputRange; }
+  /// Does this diagnostic reveal a new error?
+  ///
+  /// For \c MatchResultDiag, \c !isError() is not always the same as a
+  /// successful pattern match result.  For \c MatchNoteDiag, \c !isError()
+  /// does not indicate the lack of an error but rather the lack of an
+  /// additional error beyond its associated \c MatchResultDiag.  See
+  /// documentation on derived types for details.
+  virtual bool isError() const = 0;
+  /// Return the input range for which this diagnostic indicates text that was
+  /// matched in some way (e.g., successful pattern match, discarded pattern
+  /// match, or variable capture), or return \c std::nullopt if the diagnostic
+  /// has no such input range.
+  virtual std::optional<SMRange> getMatchRange() const = 0;
 };
 
-/// Class for recording a FileCheck diagnostic that reports a match result for a
-/// pattern.
+/// Abstract base class for recording a FileCheck diagnostic that reports a
+/// match result for a pattern.
 class MatchResultDiag : public FileCheckDiag {
 private:
   Check::FileCheckType CheckTy;
   SMLoc CheckLoc;
+  SMRange SearchRange;
 
 public:
-  MatchResultDiag(const Check::FileCheckType &CheckTy, SMLoc CheckLoc,
-                  MatchType MatchTy, SMRange InputRange)
-      : FileCheckDiag(FCDK_MatchResultDiag, MatchTy, InputRange),
-        CheckTy(CheckTy), CheckLoc(CheckLoc) {}
+  MatchResultDiag(FileCheckDiagKind Kind, const Check::FileCheckType &CheckTy,
+                  SMLoc CheckLoc, SMRange SearchRange)
+      : FileCheckDiag(Kind), CheckTy(CheckTy), CheckLoc(CheckLoc),
+        SearchRange(SearchRange) {}
+  /// Destructor is purely virtual to ensure this remains an abstract class.
+  virtual ~MatchResultDiag() = 0;
   /// Is \p FCD an instance of \c MatchResultDiag?
   static bool classof(const FileCheckDiag *FCD) {
-    return FCD->getKind() == FCDK_MatchResultDiag;
+    FileCheckDiagKind Kind = FCD->getKind();
+    return MatchResultDiag_First <= Kind && Kind <= MatchResultDiag_Last;
   }
   /// Get itself.
   const MatchResultDiag &getMatchResultDiag() const override { return *this; }
@@ -213,23 +198,120 @@ public:
   Check::FileCheckType getCheckTy() const { return CheckTy; }
   /// Where is the pattern for this match result?
   SMLoc getCheckLoc() const { return CheckLoc; }
+  /// What is the search range for the match result?
+  SMRange getSearchRange() const { return SearchRange; }
 };
 
-/// Class for recording a FileCheck diagnostic that provides an additional note
-/// (possibly an additional error) about the most recent \c MatchResultDiag.
+/// \c MatchResultDiag for a pattern that matched the input.
+class MatchFoundDiag : public MatchResultDiag {
+public:
+  enum StatusTy {
+    /// Indicates a good match for an expected pattern.
+    Success,
+    /// Indicates a match for an excluded pattern (error).
+    Excluded,
+    /// Indicates a match for an expected pattern, but the match is on the
+    /// wrong line (error).
+    WrongLine,
+    /// Indicates a discarded match for an expected pattern (not an error).
+    Discarded
+  };
+
+private:
+  StatusTy Status;
+  SMRange MatchRange;
+
+public:
+  MatchFoundDiag(const Check::FileCheckType &CheckTy, SMLoc CheckLoc,
+                 StatusTy Status, SMRange MatchRange, SMRange SearchRange)
+      : MatchResultDiag(FileCheckDiag::MatchFoundDiag, CheckTy, CheckLoc,
+                        SearchRange),
+        Status(Status), MatchRange(MatchRange) {}
+  /// Is \p FCD an instance of \c MatchFoundDiag?
+  static bool classof(const FileCheckDiag *FCD) {
+    return FCD->getKind() == FileCheckDiag::MatchFoundDiag;
+  }
+  /// Does this match produce an error?
+  ///
+  /// This is not always the same as \c getStatus()!=Success.  For example,
+  /// \c CHECK-DAG discarded matches are neither successful matches nor errors.
+  bool isError() const override {
+    return Status != Success && Status != Discarded;
+  }
+  /// Was this a successful match?  If not, why not?
+  ///
+  /// See \c isError comments for the relationship between the two.
+  StatusTy getStatus() const { return Status; }
+  /// Adjust a successful status to a non-successful status.
+  ///
+  /// This is designed to be called while emitting diagnostics.  It is not
+  /// designed to be called by a diagnostic presentation layer like
+  /// `-dump-input`.
+  ///
+  /// For example, a match that was originally thought to be successful might
+  /// later be discarded, or it might be determined that it violates a matching
+  /// constraint (e.g., wrong line).
+  void markUnsuccessful(StatusTy S) {
+    assert(Status == Success && S != Success &&
+           "expected to change successful status to unsuccessful");
+    Status = S;
+  }
+  /// Return the match's input range, never \c std::nullopt.
+  std::optional<SMRange> getMatchRange() const override { return MatchRange; }
+};
+
+/// \c MatchResultDiag for a pattern that did not match the input.
+class MatchNoneDiag : public MatchResultDiag {
+public:
+  enum StatusTy {
+    /// Indicates no match for an excluded pattern.
+    Success,
+    /// Indicates no match due to an expected or excluded pattern that has
+    /// proven to be invalid at match time (error).  The exact problems are
+    /// usually reported in subsequent \c MatchNoteDiag objects.
+    InvalidPattern,
+    /// Indicates no match for an expected pattern (error).  In some cases, it
+    /// follows good matches (because multiple matches are expected) or
+    /// discarded matches for the pattern.
+    Expected
+  };
+
+private:
+  StatusTy Status;
+
+public:
+  MatchNoneDiag(const Check::FileCheckType &CheckTy, SMLoc CheckLoc,
+                StatusTy Status, SMRange SearchRange)
+      : MatchResultDiag(FileCheckDiag::MatchNoneDiag, CheckTy, CheckLoc,
+                        SearchRange),
+        Status(Status) {}
+  /// Is \p FCD an instance of \c MatchNoneDiag?
+  static bool classof(const FileCheckDiag *FCD) {
+    return FCD->getKind() == FileCheckDiag::MatchNoneDiag;
+  }
+  /// Does the lack of match represent an error?
+  bool isError() const override { return Status != Success; }
+  /// Does the lack of a match indicate a success?  If not, why not?
+  StatusTy getStatus() const { return Status; }
+  /// Return \c std::nullopt.
+  std::optional<SMRange> getMatchRange() const override { return std::nullopt; }
+};
+
+/// Abstract base class for recording a FileCheck diagnostic that provides an
+/// additional note (possibly a new error) about the most recent
+/// \c MatchResultDiag.
 class MatchNoteDiag : public FileCheckDiag {
 private:
   MatchResultDiag *MRD;
-  std::optional<std::string> CustomNote;
 
 public:
-  MatchNoteDiag(MatchType MatchTy, SMRange InputRange,
-                std::optional<StringRef> CustomNote = std::nullopt)
-      : FileCheckDiag(FCDK_MatchNoteDiag, MatchTy, InputRange), MRD(nullptr),
-        CustomNote(CustomNote) {}
+  MatchNoteDiag(FileCheckDiagKind Kind) : FileCheckDiag(Kind), MRD(nullptr) {}
+  /// Destructor is purely virtual to ensure this remains an abstract class.
+  virtual ~MatchNoteDiag() = 0;
   /// Is \p FCD an instance of \c MatchNoteDiag?
   static bool classof(const FileCheckDiag *FCD) {
-    return FCD->getKind() == FCDK_MatchNoteDiag;
+    FileCheckDiagKind Kind = FCD->getKind();
+    return MatchNoteDiag_First <= Kind && Kind <= MatchNoteDiag_Last;
   }
   /// Get the note's associated \c MatchResultDiag.
   const MatchResultDiag &getMatchResultDiag() const override { return *MRD; }
@@ -238,9 +320,81 @@ public:
     assert(!MRD && "expected setMatchResultDiag to be called only once");
     MRD = MRDNew;
   }
-  /// A note to replace the one normally indicated by the match type, or the
-  /// empty string if none.
-  const std::optional<std::string> &getCustomNote() const { return CustomNote; }
+};
+
+/// \c MatchNoteDiag for a fuzzy match that serves as a suggestion for the next
+/// intended match for an expected pattern with too few or no good matches.
+class MatchFuzzyDiag : public MatchNoteDiag {
+private:
+  SMLoc MatchStart;
+
+public:
+  MatchFuzzyDiag(SMLoc MatchStart)
+      : MatchNoteDiag(FileCheckDiag::MatchFuzzyDiag), MatchStart(MatchStart) {}
+  /// Is \p FCD an instance of \c MatchFuzzyDiag?
+  static bool classof(const FileCheckDiag *FCD) {
+    return FCD->getKind() == FileCheckDiag::MatchFuzzyDiag;
+  }
+  /// Always false.  A fuzzy match is not an error even though it is performed
+  /// due to an error.
+  bool isError() const override { return false; }
+  /// Return an input range (never \c std::nullopt) starting and ending at the
+  /// match start.  The actual match end is not computed.
+  std::optional<SMRange> getMatchRange() const override {
+    return SMRange(MatchStart, MatchStart);
+  }
+};
+
+/// \c MatchNoteDiag with a custom note not described by any other class derived
+/// from \c MatchNoteDiag.
+class MatchCustomNoteDiag : public MatchNoteDiag {
+private:
+  std::string Note;
+  bool AddsError;
+  std::optional<SMRange> MatchRange;
+
+public:
+  /// If \p MatchRange is specified, it is a range for input text that was
+  /// matched in some way (e.g., variable capture) and that is described by
+  /// this note.  Either way, as usual, the associated \c MatchResultDiag has
+  /// any full match range for the pattern.
+  ///
+  /// If \p AddsError is true, then this note indicates a \a new error that is
+  /// distinct from any error indicated by the associated \c MatchResultDiag.
+  /// The error is described by \c Note, which must be worded appropriately for
+  /// prepending "error: " when presented later.  For example, the associated
+  /// \c MatchResultDiag might indicate a match to either an expected pattern
+  /// (success) or an excluded pattern (error), and \c Note might be "unable to
+  /// represent numeric value" to indicate the match could not be processed
+  /// afterward.
+  ///
+  /// If \p AddsError is false, then this note merely provides additional
+  /// information about the associated \c MatchResultDiag.  That information
+  /// might be something harmless (e.g., variable substitution), or it might be
+  /// one of potentially many problems summarized as an error by the
+  /// \c MatchResultDiag (e.g., one way in which the pattern was invalid).
+  ///@{
+  MatchCustomNoteDiag(SMRange MatchRange, StringRef Note,
+                      bool AddsError = false)
+      : MatchNoteDiag(FileCheckDiag::MatchCustomNoteDiag), Note(Note),
+        AddsError(AddsError), MatchRange(MatchRange) {}
+  MatchCustomNoteDiag(StringRef Note)
+      : MatchNoteDiag(FileCheckDiag::MatchCustomNoteDiag), Note(Note),
+        AddsError(false) {}
+  ///@}
+  /// Is \p FCD an instance of \c MatchCustomNoteDiag?
+  static bool classof(const FileCheckDiag *FCD) {
+    return FCD->getKind() == FileCheckDiag::MatchCustomNoteDiag;
+  }
+  const std::string &getNote() const { return Note; }
+  /// Does this note indicate an \a additional error not indicated by the
+  /// associated \c MatchResultDiag?
+  ///
+  /// For details, see the \c MatchCustomNoteDiag::MatchCustomNoteDiag comments
+  /// for its \c AddsError parameter.
+  bool isError() const override { return AddsError; }
+  /// Return the match range described by the note, or \c std::nullopt if none.
+  std::optional<SMRange> getMatchRange() const override { return MatchRange; }
 };
 
 /// A \c FileCheckDiag series emitted by the FileCheck library.
@@ -271,14 +425,10 @@ public:
       return;
     Note->setMatchResultDiag(CurMatchResultDiag);
   }
-  /// Adjust the most recent \c MatchResultDiag, which must exist, and every
-  /// \c MatchResultNote after it to have the match type \c MatchTy.
-  void adjustPrevDiags(FileCheckDiag::MatchType MatchTy) {
-    assert(CurMatchResultDiag && "expected previous MatchResultDiag");
-    for (auto I = DiagList.rbegin(), E = DiagList.rend();
-         I != E && &**I != CurMatchResultDiag; ++I)
-      (*I)->adjustMatchType(MatchTy);
-    CurMatchResultDiag->adjustMatchType(MatchTy);
+  /// Adjust the previous \c MatchResultDiag, which must be a \c MatchFoundDiag,
+  /// from successful status to unsuccessful status.
+  void adjustPrevMatchFoundDiag(MatchFoundDiag::StatusTy Status) {
+    cast<MatchFoundDiag>(CurMatchResultDiag)->markUnsuccessful(Status);
   }
   class const_iterator {
     friend FileCheckDiagList;
