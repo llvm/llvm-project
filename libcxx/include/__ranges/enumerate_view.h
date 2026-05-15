@@ -328,6 +328,7 @@ struct __fn : __range_adaptor_closure<__fn> {
   operator()(_Range&& __range) noexcept(noexcept(enumerate_view<views::all_t<_Range>>(std::forward<_Range>(__range))))
       -> decltype(/*--------------------------*/ enumerate_view<views::all_t<_Range>>(std::forward<_Range>(__range))) {
     return /*---------------------------------*/ enumerate_view<views::all_t<_Range>>(std::forward<_Range>(__range));
+  }
 };
 
 } // namespace __enumerate
