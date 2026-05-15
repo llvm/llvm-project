@@ -1806,4 +1806,11 @@ namespace GH62206 {
     std::move(d);
     d = b; // Should not warn
   }
+
+  void paren_version() {
+    Base b;
+    Derived d;
+    std::move(d);
+    (d) = b; // Should not warn
+  }
 } // namespace GH62206
