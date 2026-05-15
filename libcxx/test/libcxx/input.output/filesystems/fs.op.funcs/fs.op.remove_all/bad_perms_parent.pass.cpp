@@ -9,6 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 
+// UNSUPPORTED: windows
+
 // Verify that remove_all reports the correct error (permission_denied)
 // when the parent directory has insufficient permissions.
 
