@@ -3739,7 +3739,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfpone(ptr addrspace(1) %out
 ; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; VI-SDAG-NEXT:    v_add_u16_e32 v2, 0x4400, v3
+; VI-SDAG-NEXT:    v_add_u16_e32 v2, 4.0, v3
 ; VI-SDAG-NEXT:    v_add_u16_sdwa v3, v3, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-SDAG-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-SDAG-NEXT:    flat_store_dword v[0:1], v2
@@ -3761,7 +3761,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfpone(ptr addrspace(1) %out
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; VI-GISEL-NEXT:    v_add_u16_e32 v2, 0x4400, v3
+; VI-GISEL-NEXT:    v_add_u16_e32 v2, 4.0, v3
 ; VI-GISEL-NEXT:    v_add_u16_sdwa v3, v3, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-GISEL-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
@@ -3904,7 +3904,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_fptwo(ptr addrspace(1) %out, p
 ; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; VI-SDAG-NEXT:    v_add_u16_e32 v2, 0x4000, v3
+; VI-SDAG-NEXT:    v_add_u16_e32 v2, 2.0, v3
 ; VI-SDAG-NEXT:    v_add_u16_sdwa v3, v3, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-SDAG-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-SDAG-NEXT:    flat_store_dword v[0:1], v2
@@ -3926,7 +3926,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_fptwo(ptr addrspace(1) %out, p
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; VI-GISEL-NEXT:    v_add_u16_e32 v2, 0x4000, v3
+; VI-GISEL-NEXT:    v_add_u16_e32 v2, 2.0, v3
 ; VI-GISEL-NEXT:    v_add_u16_sdwa v3, v3, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-GISEL-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2

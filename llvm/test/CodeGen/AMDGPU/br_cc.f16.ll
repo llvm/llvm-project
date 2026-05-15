@@ -179,7 +179,7 @@ define amdgpu_kernel void @br_cc_f16_imm_a(
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, -1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x3800
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0.5
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s3
@@ -284,7 +284,7 @@ define amdgpu_kernel void @br_cc_f16_imm_b(
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, -1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x3800
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0.5
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s3
