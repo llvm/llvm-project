@@ -118,7 +118,7 @@ func.func @f5(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf
     // CHECK: %[[B_OFFSET:.*]] =  add nuw nsw i64 %[[B_DIM_OFFSET]], 0
     // CHECK: %[[B_BASE_GEP:.*]] = getelementptr {{.*}}, ptr %{{.*}}, i32 0, i32 0
     // CHECK: %[[B_BASE:.*]] = load ptr, ptr %[[B_BASE_GEP]]
-    // CHECK: %[[B_VOID_ADDR:.*]] = getelementptr nusw nuw i8, ptr %[[B_BASE]], i64 %[[B_OFFSET]]
+    // CHECK: %[[B_VOID_ADDR:.*]] = getelementptr nusw i8, ptr %[[B_BASE]], i64 %[[B_OFFSET]]
     // CHECK: %[[B_VAL:.*]] = load float, ptr %[[B_VOID_ADDR]]
     // CHECK: fadd float %[[B_VAL]], %[[F]]
     %5 = fir.array_fetch %3, %arg3 : (!fir.array<?xf32>, index) -> f32

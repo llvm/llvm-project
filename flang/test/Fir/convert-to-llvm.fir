@@ -2290,7 +2290,7 @@ func.func @ext_array_coor3(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[GEPADDR:.*]] = llvm.getelementptr %[[ARG0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[LOADEDADDR:.*]] = llvm.load %[[GEPADDR]] : !llvm.ptr -> !llvm.ptr
-// CHECK:         %[[GEPADDROFFSET:.*]] = llvm.getelementptr nusw|nuw %[[LOADEDADDR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+// CHECK:         %[[GEPADDROFFSET:.*]] = llvm.getelementptr nusw %[[LOADEDADDR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
 
 // Conversion with non zero shift and slice.
 
