@@ -195,7 +195,7 @@ declare double @__sinpi(double)
 ; CHECK: declare float @__sinpif(float)
 declare float @__sinpif(float)
 
-; CHECK: declare i32 @abs(i32) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare i32 @abs(i32) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i32 @abs(i32)
 
 ; CHECK: declare noundef i32 @access(ptr noundef readonly captures(none), i32 noundef) [[NOFREE_NOUNWIND:#[0-9]+]]
@@ -295,22 +295,22 @@ declare ptr @calloc(i64, i64)
 ; CHECK-AIX: declare noalias noundef ptr @vec_calloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_VEC_MALLOC:#[0-9]+]]
 declare ptr @vec_calloc(i64, i64)
 
-; CHECK: declare double @cbrt(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @cbrt(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @cbrt(double)
 
-; CHECK: declare float @cbrtf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @cbrtf(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @cbrtf(float)
 
-; CHECK: declare x86_fp80 @cbrtl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @cbrtl(x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @cbrtl(x86_fp80)
 
-; CHECK: declare double @ceil(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @ceil(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @ceil(double)
 
-; CHECK: declare float @ceilf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @ceilf(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @ceilf(float)
 
-; CHECK: declare x86_fp80 @ceill(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @ceill(x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @ceill(x86_fp80)
 
 ; The second argument of int chmod(FILE*, mode_t) is a 32-bit int on most
@@ -330,13 +330,13 @@ declare void @clearerr(ptr)
 ; CHECK: declare noundef i32 @closedir(ptr noundef captures(none)) [[NOFREE_NOUNWIND]]
 declare i32 @closedir(ptr)
 
-; CHECK: declare double @copysign(double, double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @copysign(double, double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @copysign(double, double)
 
-; CHECK: declare float @copysignf(float, float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @copysignf(float, float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @copysignf(float, float)
 
-; CHECK: declare x86_fp80 @copysignl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @copysignl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @copysignl(x86_fp80, x86_fp80)
 
 ; CHECK: declare double @cos(double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
@@ -387,13 +387,13 @@ declare float @expm1f(float)
 ; CHECK: declare x86_fp80 @expm1l(x86_fp80) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @expm1l(x86_fp80)
 
-; CHECK: declare double @fabs(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @fabs(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @fabs(double)
 
-; CHECK: declare float @fabsf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @fabsf(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @fabsf(float)
 
-; CHECK: declare x86_fp80 @fabsl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @fabsl(x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @fabsl(x86_fp80)
 
 ; CHECK: declare noundef i32 @fclose(ptr noundef captures(none)) [[NOFREE_NOUNWIND]]
@@ -411,14 +411,14 @@ declare i32 @ferror(ptr)
 ; CHECK: declare noundef i32 @fflush(ptr noundef captures(none)) [[NOFREE_NOUNWIND]]
 declare i32 @fflush(ptr)
 
-; CHECK: declare i32 @ffs(i32) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare i32 @ffs(i32) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare i32 @ffs(i32)
 
-; CHECK-KNOWN: declare i32 @ffsl(i64) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK-KNOWN: declare i32 @ffsl(i64) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 ; CHECK-UNKNOWN: declare i32 @ffsl(i64){{$}}
 declare i32 @ffsl(i64)
 
-; CHECK-KNOWN: declare i32 @ffsll(i64) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK-KNOWN: declare i32 @ffsll(i64) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 ; CHECK-UNKNOWN: declare i32 @ffsll(i64){{$}}
 declare i32 @ffsll(i64)
 
@@ -437,13 +437,13 @@ declare i32 @fileno(ptr)
 ; CHECK: declare void @flockfile(ptr noundef captures(none)) [[NOFREE_NOUNWIND]]
 declare void @flockfile(ptr)
 
-; CHECK: declare double @floor(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @floor(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @floor(double)
 
-; CHECK: declare float @floorf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @floorf(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @floorf(float)
 
-; CHECK: declare x86_fp80 @floorl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @floorl(x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @floorl(x86_fp80)
 
 ; CHECK: declare i32 @fls(i32)
@@ -455,40 +455,40 @@ declare i32 @flsl(i64)
 ; CHECK: declare i32 @flsll(i64)
 declare i32 @flsll(i64)
 
-; CHECK: declare double @fmax(double, double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @fmax(double, double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @fmax(double, double)
 
-; CHECK: declare float @fmaxf(float, float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @fmaxf(float, float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @fmaxf(float, float)
 
-; CHECK: declare x86_fp80 @fmaxl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @fmaxl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @fmaxl(x86_fp80, x86_fp80)
 
-; CHECK: declare double @fmin(double, double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @fmin(double, double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @fmin(double, double)
 
-; CHECK: declare float @fminf(float, float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @fminf(float, float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @fminf(float, float)
 
-; CHECK: declare x86_fp80 @fminl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @fminl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @fminl(x86_fp80, x86_fp80)
 
-; CHECK: declare double @fmaximum_num(double, double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @fmaximum_num(double, double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @fmaximum_num(double, double)
 
-; CHECK: declare float @fmaximum_numf(float, float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @fmaximum_numf(float, float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @fmaximum_numf(float, float)
 
-; CHECK: declare x86_fp80 @fmaximum_numl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @fmaximum_numl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @fmaximum_numl(x86_fp80, x86_fp80)
 
-; CHECK: declare double @fminimum_num(double, double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @fminimum_num(double, double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @fminimum_num(double, double)
 
-; CHECK: declare float @fminimum_numf(float, float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @fminimum_numf(float, float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @fminimum_numf(float, float)
 
-; CHECK: declare x86_fp80 @fminimum_numl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @fminimum_numl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @fminimum_numl(x86_fp80, x86_fp80)
 
 ; CHECK: declare double @fmod(double, double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
@@ -622,7 +622,7 @@ declare i32 @isascii(i32)
 ; CHECK: declare i32 @isdigit(i32) [[NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i32 @isdigit(i32)
 
-; CHECK: declare i64 @labs(i64) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare i64 @labs(i64) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare i64 @labs(i64)
 
 ; CHECK: declare noundef i32 @lchown(ptr noundef readonly captures(none), i32 noundef, i32 noundef) [[NOFREE_NOUNWIND]]
@@ -637,7 +637,7 @@ declare float @ldexpf(float, i32)
 ; CHECK: declare x86_fp80 @ldexpl(x86_fp80, i32) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @ldexpl(x86_fp80, i32)
 
-; CHECK: declare i64 @llabs(i64) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare i64 @llabs(i64) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare i64 @llabs(i64)
 
 ; CHECK: declare double @log(double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
@@ -771,13 +771,13 @@ declare float @nanf(ptr)
 ; CHECK: declare x86_fp80 @nanl(ptr captures(none)) [[ARGMEMONLY_NOFREE_NOSYNC_NOUNWIND_READONLY_WILLRETURN]]
 declare x86_fp80 @nanl(ptr)
 
-; CHECK: declare double @nearbyint(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @nearbyint(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @nearbyint(double)
 
-; CHECK: declare float @nearbyintf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @nearbyintf(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @nearbyintf(float)
 
-; CHECK: declare x86_fp80 @nearbyintl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @nearbyintl(x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @nearbyintl(x86_fp80)
 
 ; CHECK: declare double @nextafter(double, double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
@@ -927,22 +927,22 @@ declare x86_fp80 @rintl(x86_fp80)
 ; CHECK: declare noundef i32 @rmdir(ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare i32 @rmdir(ptr)
 
-; CHECK: declare double @round(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @round(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @round(double)
 
-; CHECK: declare float @roundf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @roundf(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @roundf(float)
 
-; CHECK: declare x86_fp80 @roundl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @roundl(x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @roundl(x86_fp80)
 
-; CHECK: declare double @roundeven(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @roundeven(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @roundeven(double)
 
-; CHECK: declare float @roundevenf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @roundevenf(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @roundevenf(float)
 
-; CHECK: declare x86_fp80 @roundevenl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @roundevenl(x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @roundevenl(x86_fp80)
 
 ; CHECK: declare double @scalbln(double, i64) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
@@ -1146,16 +1146,16 @@ declare ptr @tmpfile()
 ; CHECK-LINUX: declare noalias noundef ptr @tmpfile64() [[NOFREE_NOUNWIND]]
 declare ptr @tmpfile64()
 
-; CHECK: declare i32 @toascii(i32) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare i32 @toascii(i32) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare i32 @toascii(i32)
 
-; CHECK: declare double @trunc(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @trunc(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare double @trunc(double)
 
-; CHECK: declare float @truncf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @truncf(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare float @truncf(float)
 
-; CHECK: declare x86_fp80 @truncl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @truncl(x86_fp80) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @truncl(x86_fp80)
 
 ; CHECK: declare noundef i32 @uname(ptr noundef captures(none)) [[NOFREE_NOUNWIND]]
@@ -1231,7 +1231,7 @@ declare void @memset_pattern16(ptr, ptr, i64)
 
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn }
 ; CHECK-DAG: attributes [[NOCALLBACK_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn }
-; CHECK-DAG: attributes [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK-DAG: attributes [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-DAG: attributes [[ARGMEMORERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 ; CHECK-DAG: attributes [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN_WRITEONLY]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: write) }

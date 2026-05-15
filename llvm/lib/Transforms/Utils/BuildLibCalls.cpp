@@ -1423,7 +1423,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotFreeMemory(F);
     Changed |= setWillReturn(F);
-    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_sincos:
   case LibFunc_sincosf:
