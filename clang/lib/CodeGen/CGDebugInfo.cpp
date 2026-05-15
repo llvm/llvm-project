@@ -5151,8 +5151,14 @@ CGDebugInfo::createBuiltinFunctionLocation(CGBuilderTy &Builder,
                                            GlobalDecl GD) {
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
   const auto Location = Builder.getCurrentDebugLocation();
-  return CreateSyntheticInlineAt(Location, getFunctionName(FD),
-                                 Location->getFile());
+  // Use `CGBuiltin.cpp` as the claimed "file" for built-ins. Using a single
+  // file like this (as opposed to e.g. the file of each call site) ensures that
+  // tools like profilers can aggregate calls to the same built-in from
+  // different files as expected.
+  llvm::DIFile *File = llvm::DIFile::get(CGM.getLLVMContext(),
+                                         /*Filename=*/"CGBuiltin.cpp",
+                                         /*Directory=*/"clang/lib/CodeGen");
+  return CreateSyntheticInlineAt(Location, getFunctionName(FD), File);
 }
 
 void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
