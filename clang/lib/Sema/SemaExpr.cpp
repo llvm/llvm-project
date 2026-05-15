@@ -17356,8 +17356,15 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   }
 
   QualType T = TInfo->getType().getNonLValueExprType(Context);
-  if (!PromoteType.isNull())
-    T = PromoteType.getNonLValueExprType(Context);
+  if (!PromoteType.isNull()) {
+    QualType baseType = TInfo->getType();
+    if (const auto *ED = BaseType->getAsEnumDecl())
+      BaseType = ED->getIntegerType();
+    const auto *BT = BaseType->getAs<BuiltinType>();
+    if (BT && (BT->getKind() == BuiltinType::Char16 ||
+               BT->getKind() == BuiltinType::Char32))
+      T = PromoteType.getNonLValueExprType(Context);
+  }
   return new (Context) VAArgExpr(BuiltinLoc, E, TInfo, RPLoc, T, IsMS);
 }
 
