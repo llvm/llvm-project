@@ -126,12 +126,12 @@ void test_counted()
 
 int main(int, char**)
 {
-    test_counted();
+  test_counted();
 
-    test();
+  test();
 #if TEST_STD_VER >= 26
-    static_assert(test());
+  static_assert(test());
 #endif // TEST_STD_VER >= 26
 
-    return 0;
+  return 0;
 }
