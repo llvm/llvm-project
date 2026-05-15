@@ -411,8 +411,9 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
   if (TA.empty()) {
     Ops.push_back(VoidTypeReg);
   } else {
-    for (DIType *Elem : TA) {
-      auto OptReg = mapDISignatureTypeToReg(Elem, VoidTypeReg);
+    for (unsigned I = 0, E = TA.size(); I != E; ++I) {
+      bool IsReturnType = I == 0;
+      auto OptReg = mapDISignatureTypeToReg(TA[I], VoidTypeReg, IsReturnType);
       // No emitted DebugType* id for this slot (e.g., pointer that
       // was skipped due missing address space, etc.).
       if (!OptReg)
@@ -424,11 +425,15 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
                      ExtInstSetReg, Ops, MAI);
 }
 
-std::optional<MCRegister>
-SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(const DIType *Ty,
-                                                      MCRegister VoidTypeReg) {
-  if (!Ty)
-    return VoidTypeReg;
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
+    const DIType *Ty, MCRegister VoidTypeReg, bool ReturnType) {
+  if (!Ty) {
+    if (ReturnType)
+      return VoidTypeReg;
+    assert(CachedDebugInfoNoneReg.isValid() &&
+           "DebugInfoNone must be emitted before DISubroutineType operands");
+    return CachedDebugInfoNoneReg;
+  }
   auto It = DebugTypeRegs.find(Ty);
   if (It != DebugTypeRegs.end())
     return It->second;

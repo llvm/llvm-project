@@ -203,9 +203,20 @@ private:
                                          MCRegister ExtInstSetReg,
                                          SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Map DISubroutineType slot DI types using DebugTypeRegs.
+  /// Map a \c DISubroutineType::getTypeArray() element to an operand register
+  /// for
+  /// \c DebugTypeFunction. Non-null \p Ty resolves via \c DebugTypeRegs; if the
+  /// type was never emitted, returns \c std::nullopt.
+  ///
+  /// LLVM encodes a void return as a null first element (and may use null in
+  /// later slots). NonSemantic \c DebugTypeFunction
+  /// requires a concrete return-type operand, so when \p ReturnType is true and
+  /// \p Ty is null, this returns \p VoidTypeReg (\c OpTypeVoid). When
+  /// \p ReturnType is false and \p Ty is null, this returns
+  /// \c CachedDebugInfoNoneReg (\c DebugInfoNone).
   std::optional<MCRegister> mapDISignatureTypeToReg(const DIType *Ty,
-                                                    MCRegister VoidTypeReg);
+                                                    MCRegister VoidTypeReg,
+                                                    bool ReturnType);
 
   /// Map a DWARF source language code to a NonSemantic.Shader.DebugInfo.100
   /// source language code.
