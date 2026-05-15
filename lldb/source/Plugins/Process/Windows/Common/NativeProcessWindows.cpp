@@ -458,9 +458,6 @@ NativeProcessWindows::OnDebugException(bool first_chance,
   ProcessDebugger::OnDebugException(first_chance, record);
 
   static bool initial_stop = false;
-  if (!first_chance) {
-    SetState(eStateStopped, false);
-  }
 
   switch (record.GetExceptionCode()) {
   case DWORD(STATUS_SINGLE_STEP):
@@ -582,6 +579,9 @@ NativeProcessWindows::OnDebugException(bool first_chance,
              record.GetExceptionCode(), record.GetExceptionAddress(),
              first_chance);
 
+    if (first_chance)
+      return ExceptionResult::SendToApplication;
+
     std::string desc;
     llvm::raw_string_ostream desc_stream(desc);
     desc_stream << "Exception "
@@ -593,12 +593,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
 
     SetState(eStateStopped, true);
 
-    // For non-breakpoints, give the application a chance to handle the
-    // exception first.
-    if (first_chance)
-      return ExceptionResult::SendToApplication;
-    else
-      return ExceptionResult::BreakInDebugger;
+    return ExceptionResult::BreakInDebugger;
   }
   }
 }
