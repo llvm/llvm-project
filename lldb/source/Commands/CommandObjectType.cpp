@@ -2764,7 +2764,7 @@ public:
 protected:
   void DoExecute(llvm::StringRef command,
                  CommandReturnObject &result) override {
-    TargetSP target_sp = GetDebugger().GetSelectedTarget();
+    Target *target = &GetTarget();
     Thread *thread = GetDefaultThread();
     if (!thread) {
       result.AppendError("no default thread");
@@ -2775,13 +2775,13 @@ protected:
         thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
     ValueObjectSP result_valobj_sp;
     EvaluateExpressionOptions options;
-    lldb::ExpressionResults expr_result = target_sp->EvaluateExpression(
+    lldb::ExpressionResults expr_result = target->EvaluateExpression(
         command, frame_sp.get(), result_valobj_sp, options);
     if (expr_result == eExpressionCompleted && result_valobj_sp) {
       result_valobj_sp =
           result_valobj_sp->GetQualifiedRepresentationIfAvailable(
-              target_sp->GetPreferDynamicValue(),
-              target_sp->GetEnableSyntheticValue());
+              target->GetPreferDynamicValue(),
+              target->GetEnableSyntheticValue());
       typename FormatterType::SharedPointer formatter_sp =
           m_discovery_function(*result_valobj_sp);
       if (formatter_sp) {
