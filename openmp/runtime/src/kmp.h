@@ -4430,11 +4430,6 @@ extern kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
 extern kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
                                        kmp_taskdata_t *current_taskdata,
                                        kmp_taskgraph_record_t *taskgraph);
-
-extern void __kmp_replay_taskgraph(kmp_int32 gtid,
-                                   kmp_taskdata_t *current_taskdata,
-                                   kmp_taskgraph_record_t *taskgraph,
-                                   kmp_uint32 graph_id);
 #endif
 
 KMP_EXPORT kmp_int32 __kmpc_cancel(ident_t *loc_ref, kmp_int32 gtid,

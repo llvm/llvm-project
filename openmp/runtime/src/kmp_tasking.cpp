@@ -3178,9 +3178,11 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
 }
 
 #if OMP_TASKGRAPH_EXPERIMENTAL
-void __kmp_replay_taskgraph(kmp_int32 gtid, kmp_taskdata_t *current_taskdata,
-                            kmp_taskgraph_record_t *taskgraph,
-                            kmp_uint32 graph_id, kmp_taskgroup_t *taskgroup) {
+static void __kmp_replay_taskgraph(kmp_int32 gtid,
+                                   kmp_taskdata_t *current_taskdata,
+                                   kmp_taskgraph_record_t *taskgraph,
+                                   kmp_uint32 graph_id,
+                                   kmp_taskgroup_t *taskgroup) {
   kmp_info_t *thread = __kmp_threads[gtid];
 
   kmp_taskgraph_exec_descr_t *exec_descrs = taskgraph->exec_descrs;
