@@ -921,7 +921,7 @@ LogicalResult DpasMxOp::verify() {
   if (getScaleA()) {
     auto scaleAVecType = dyn_cast<VectorType>(getScaleAType());
     // Only validate if scale is a vector (scalars are always valid)
-    if (scaleAVecType) {
+    if (scaleAVecType && scaleAVecType.getRank() > 1) {
       auto scaleAShape = scaleAVecType.getShape();
 
       if (scaleAVecType.getRank() != 2)
@@ -944,7 +944,7 @@ LogicalResult DpasMxOp::verify() {
   if (getScaleB()) {
     auto scaleBVecType = dyn_cast<VectorType>(getScaleBType());
     // Only validate if scale is a vector (scalars are always valid)
-    if (scaleBVecType) {
+    if (scaleBVecType && scaleBVecType.getRank() > 1) {
       auto scaleBShape = scaleBVecType.getShape();
 
       if (scaleBVecType.getRank() != 2)
@@ -969,7 +969,8 @@ LogicalResult DpasMxOp::verify() {
     auto scaleAVecType = dyn_cast<VectorType>(getScaleAType());
     auto scaleBVecType = dyn_cast<VectorType>(getScaleBType());
 
-    if (scaleAVecType && scaleBVecType) {
+    if (scaleAVecType && scaleBVecType && scaleAVecType.getRank() > 1 &&
+        scaleBVecType.getRank() > 1) {
       auto scaleAShape = scaleAVecType.getShape();
       auto scaleBShape = scaleBVecType.getShape();
 
