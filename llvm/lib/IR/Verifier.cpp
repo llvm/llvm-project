@@ -6949,10 +6949,24 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::speculative_load: {
     Type *LoadTy = Call.getType();
-    TypeSize Size = DL.getTypeStoreSize(LoadTy);
-    // For scalable vectors, check the known minimum size is a power of 2.
-    Check(Size.getKnownMinValue() > 0 && isPowerOf2_64(Size.getKnownMinValue()),
-          "llvm.speculative.load type must have a power-of-2 size", &Call);
+    Check(LoadTy->isByteTy() || LoadTy->isVectorTy(),
+          "llvm.speculative.load return type must be a byte type or a "
+          "vector type",
+          &Call);
+    if (LoadTy->isByteOrByteVectorTy()) {
+      unsigned BitWidth = LoadTy->getScalarType()->getByteBitWidth();
+      Check((BitWidth % 8) == 0,
+            "llvm.speculative.load byte type must have a bit width that is "
+            "a multiple of 8",
+            &Call);
+    }
+
+    TypeSize SizeInBits = LoadTy->getPrimitiveSizeInBits();
+    uint64_t MinBits = SizeInBits.getKnownMinValue();
+    Check(MinBits != 0 && (MinBits % 8) == 0 && isPowerOf2_64(MinBits / 8),
+          "llvm.speculative.load return type size in bytes must be a "
+          "positive power of 2",
+          &Call);
 
     unsigned NumArgs = Call.arg_size();
     Check(NumArgs >= 3, "llvm.speculative.load requires at least 3 arguments",

@@ -2,9 +2,8 @@
 ; RUN: opt -mtriple=aarch64-unknown-linux-gnu -passes=pre-isel-intrinsic-lowering -S < %s | FileCheck %s
 
 ; Test that @llvm.can.load.speculatively is lowered to an alignment check
-; for power-of-2 sizes <= 16 bytes on AArch64, and returns false for larger sizes.
+; for power-of-2 sizes <= 16 bytes on AArch64, and returns false otherwise.
 ; The 16-byte limit ensures correctness with MTE (memory tagging).
-; Note: non-power-of-2 constant sizes are rejected by the verifier.
 
 define i1 @can_load_speculatively_16(ptr %ptr) {
 ; CHECK-LABEL: @can_load_speculatively_16(
@@ -101,16 +100,16 @@ define i1 @can_load_speculatively_8(ptr %ptr) {
   ret i1 %can_load
 }
 
-; Test with runtime size - checks size <= 16 and alignment
+; Test with runtime size - checks size <= 16, power-of-2, and alignment
 define i1 @can_load_speculatively_runtime(ptr %ptr, i64 %size) {
 ; CHECK-LABEL: @can_load_speculatively_runtime(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[SIZE:%.*]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[SIZE]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP2]], [[TMP5]]
-; CHECK-NEXT:    ret i1 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = and i1 [[TMP2]], [[TMP9]]
+; CHECK-NEXT:    ret i1 [[TMP11]]
 ;
   %can_load = call i1 @llvm.can.load.speculatively.p0(ptr %ptr, i64 %size)
   ret i1 %can_load
