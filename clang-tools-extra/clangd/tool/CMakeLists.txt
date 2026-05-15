@@ -35,6 +35,7 @@ clang_target_link_libraries(clangdMain
 
 target_link_libraries(clangdMain
   PRIVATE
+  clangIncludeCleaner
   clangTidy
   clangTidyUtils
 

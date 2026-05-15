@@ -1,4 +1,3 @@
-include_directories(include)
 add_subdirectory(lib)
 add_subdirectory(tool)
 if(CLANG_INCLUDE_TESTS)
