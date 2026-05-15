@@ -1804,7 +1804,7 @@ TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
 }
 #endif
 
-TEST_F(VPRecipeTest, UFAddUsersBeforeMaterialization) {
+TEST_F(VPRecipeTest, UFVScaleUserBeforeMaterialization) {
   VPlan &Plan = getPlan();
   VPBasicBlock *Header = Plan.createVPBasicBlock("vector.header");
   VPBasicBlock *Latch = Plan.createVPBasicBlock("vector.latch");
