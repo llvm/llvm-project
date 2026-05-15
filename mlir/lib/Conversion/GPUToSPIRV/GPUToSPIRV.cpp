@@ -265,10 +265,26 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
         "or none of them");
     return nullptr;
   }
+
+  // Collect workgroup attribution types before inlining moves the body.
+  SmallVector<Type> workgroupTypes;
+  for (BlockArgument wgAttr : funcOp.getWorkgroupAttributions()) {
+    Type convertedType = typeConverter.convertType(wgAttr.getType());
+    if (!convertedType) {
+      funcOp.emitError("unable to convert workgroup attribution type");
+      return nullptr;
+    }
+    workgroupTypes.push_back(convertedType);
+  }
+
   // Update the signature to valid SPIR-V types and add the ABI
   // attributes. These will be "materialized" by using the
-  // LowerABIAttributesPass.
-  TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
+  // LowerABIAttributesPass. The signature conversion covers both regular
+  // function arguments and workgroup attributions.
+  unsigned numFuncArgs = fnType.getNumInputs();
+  unsigned numWorkgroupAttrs = funcOp.getNumWorkgroupAttributions();
+  TypeConverter::SignatureConversion signatureConverter(numFuncArgs +
+                                                        numWorkgroupAttrs);
   {
     for (const auto &argType :
          enumerate(funcOp.getFunctionType().getInputs())) {
@@ -283,13 +299,47 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(), {}));
   for (const auto &namedAttr : funcOp->getAttrs()) {
     if (namedAttr.getName() == funcOp.getFunctionTypeAttrName() ||
-        namedAttr.getName() == SymbolTable::getSymbolAttrName())
+        namedAttr.getName() == SymbolTable::getSymbolAttrName() ||
+        namedAttr.getName() ==
+            gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName())
       continue;
     newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
   }
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                               newFuncOp.end());
+
+  // Handle workgroup attributions by creating module-scope global variables
+  // and remapping workgroup block arguments to spirv.mlir.addressof results.
+  if (numWorkgroupAttrs > 0) {
+    Location loc = funcOp.getLoc();
+
+    // Create global variables at module scope (before the function).
+    SmallVector<spirv::GlobalVariableOp> workgroupGlobals;
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(newFuncOp);
+      for (auto [idx, type] : llvm::enumerate(workgroupTypes)) {
+        std::string name = std::string("__workgroup_mem__") +
+                           funcOp.getName().str() + "_" + std::to_string(idx);
+        auto globalOp = spirv::GlobalVariableOp::create(
+            rewriter, loc, type, name, /*initializer=*/nullptr);
+        workgroupGlobals.push_back(globalOp);
+      }
+    }
+
+    // Create addressof ops at the beginning of the function entry block
+    // and remap workgroup block arguments to the addressof results.
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(&newFuncOp.getBody().front());
+      for (auto [idx, globalOp] : llvm::enumerate(workgroupGlobals)) {
+        auto addrOf = spirv::AddressOfOp::create(rewriter, loc, globalOp);
+        signatureConverter.remapInput(numFuncArgs + idx, addrOf.getResult());
+      }
+    }
+  }
+
   if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), typeConverter,
                                          &signatureConverter)))
     return nullptr;
@@ -314,7 +364,10 @@ getDefaultABIAttrs(const spirv::TargetEnv &targetEnv, gpu::GPUFuncOp funcOp,
   if (!spirv::needsInterfaceVarABIAttrs(targetEnv))
     return success();
 
-  for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
+  // Only generate ABI attributes for regular function arguments, not for
+  // workgroup or private attributions which are handled separately.
+  for (auto argIndex :
+       llvm::seq<unsigned>(0, funcOp.getFunctionType().getNumInputs())) {
     if (funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
             argIndex, spirv::getInterfaceVarABIAttrName()))
       return failure();
@@ -335,12 +388,19 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
   if (!gpu::GPUDialect::isKernel(funcOp))
     return failure();
 
+  if (funcOp.getNumPrivateAttributions() > 0)
+    return funcOp.emitError(
+        "SPIR-V lowering of private attributions is not supported");
+
   auto *typeConverter = getTypeConverter<SPIRVTypeConverter>();
   SmallVector<spirv::InterfaceVarABIAttr, 4> argABI;
   if (failed(
           getDefaultABIAttrs(typeConverter->getTargetEnv(), funcOp, argABI))) {
     argABI.clear();
-    for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
+    // Only check ABI attributes for regular function arguments, not for
+    // workgroup attributions which don't have descriptor set/binding.
+    for (auto argIndex :
+         llvm::seq<unsigned>(0, funcOp.getFunctionType().getNumInputs())) {
       // If the ABI is already specified, use it.
       auto abiAttr = funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
           argIndex, spirv::getInterfaceVarABIAttrName());
