@@ -156,7 +156,7 @@ define void @test_smax(i32 %N) {
 ; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[DEC:%.*]], [[FOR_BODY]] ], [ [[DEC_PEEL4]], [[FOR_BODY_PREHEADER_PEEL_NEWPH]] ]
 ; CHECK-NEXT:    tail call void @foo(i32 -2)
 ; CHECK-NEXT:    [[DEC]] = add nsw i32 [[I_06]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[DEC]], [[N]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.cond.cleanup.loopexit.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
@@ -215,7 +215,7 @@ define void @test_smin(i32 %N) {
 ; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[DEC:%.*]], [[FOR_BODY]] ], [ [[DEC_PEEL4]], [[FOR_BODY_PREHEADER_PEEL_NEWPH]] ]
 ; CHECK-NEXT:    tail call void @foo(i32 noundef signext [[I_06]])
 ; CHECK-NEXT:    [[DEC]] = add nsw i32 [[I_06]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[DEC]], [[N]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       for.cond.cleanup.loopexit.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]

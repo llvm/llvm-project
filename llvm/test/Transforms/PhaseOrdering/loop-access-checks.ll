@@ -291,7 +291,7 @@ define void @loop_with_signed_induction(ptr noundef nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA6]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_010]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INC]], [[SUB_PTR_DIV_I_I]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[INC]], [[SUB_PTR_DIV_I_I]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP]]
 ;
 entry:

@@ -405,7 +405,7 @@ define i32 @test8(ptr %a, i32 %b, i32 %init) {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_COND_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY:%.*]] ]
 ; CHECK-NEXT:    [[SUM_0:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_COND_PREHEADER]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[INDVARS_IV]], [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ule i64 [[INDVARS_IV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
