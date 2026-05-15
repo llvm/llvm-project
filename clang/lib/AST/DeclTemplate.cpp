@@ -1843,11 +1843,11 @@ ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
 }
 
 SourceLocation ExplicitInstantiationDecl::getTagKWLoc() const {
-  if (auto *TSI = getRawTypeSourceInfo()) {
-    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
-      return TL.getElaboratedKeywordLoc();
-    if (auto TL = TSI->getTypeLoc().getAs<TagTypeLoc>())
-      return TL.getElaboratedKeywordLoc();
+  if (auto TL = getClassTypeLoc()) {
+    if (auto TST = TL->getAs<TemplateSpecializationTypeLoc>())
+      return TST.getElaboratedKeywordLoc();
+    if (auto Tag = TL->getAs<TagTypeLoc>())
+      return Tag.getElaboratedKeywordLoc();
   }
   return SourceLocation();
 }
@@ -1855,29 +1855,24 @@ SourceLocation ExplicitInstantiationDecl::getTagKWLoc() const {
 NestedNameSpecifierLoc ExplicitInstantiationDecl::getQualifierLoc() const {
   if (hasTrailingQualifier())
     return *getTrailingObjects<NestedNameSpecifierLoc>();
-  if (auto *TSI = getRawTypeSourceInfo())
-    return TSI->getTypeLoc().getPrefix();
+  if (auto TL = getClassTypeLoc())
+    return TL->getPrefix();
   return NestedNameSpecifierLoc();
 }
 
 TypeSourceInfo *ExplicitInstantiationDecl::getTypeAsWritten() const {
-  auto *TSI = getRawTypeSourceInfo();
-  if (!TSI)
+  // For class-like entities, TSI encodes the class itself, not a declared type.
+  if (getClassTypeLoc())
     return nullptr;
-  TypeLoc TL = TSI->getTypeLoc();
-  // For class templates and nested classes, the "type" is fully described by
-  // the unified accessors (getQualifierLoc, getTemplateArg, getTagKWLoc).
-  if (TL.getAs<TemplateSpecializationTypeLoc>() || TL.getAs<TagTypeLoc>())
-    return nullptr;
-  return TSI;
+  return getRawTypeSourceInfo();
 }
 
 unsigned ExplicitInstantiationDecl::getNumTemplateArgs() const {
   if (const auto *Args = getTrailingArgsInfo())
     return Args->NumTemplateArgs;
-  if (auto *TSI = getRawTypeSourceInfo())
-    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
-      return TL.getNumArgs();
+  if (auto TL = getClassTypeLoc())
+    if (auto TST = TL->getAs<TemplateSpecializationTypeLoc>())
+      return TST.getNumArgs();
   return 0;
 }
 
@@ -1885,25 +1880,28 @@ TemplateArgumentLoc
 ExplicitInstantiationDecl::getTemplateArg(unsigned I) const {
   if (const auto *Args = getTrailingArgsInfo())
     return (*Args)[I];
-  auto *TSI = getRawTypeSourceInfo();
-  return TSI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>().getArgLoc(I);
+  // Must be a class template -- args live in the TemplateSpecializationTypeLoc.
+  return getRawTypeSourceInfo()
+      ->getTypeLoc()
+      .castAs<TemplateSpecializationTypeLoc>()
+      .getArgLoc(I);
 }
 
 SourceLocation ExplicitInstantiationDecl::getTemplateArgsLAngleLoc() const {
   if (const auto *Args = getTrailingArgsInfo())
     return Args->getLAngleLoc();
-  if (auto *TSI = getRawTypeSourceInfo())
-    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
-      return TL.getLAngleLoc();
+  if (auto TL = getClassTypeLoc())
+    if (auto TST = TL->getAs<TemplateSpecializationTypeLoc>())
+      return TST.getLAngleLoc();
   return SourceLocation();
 }
 
 SourceLocation ExplicitInstantiationDecl::getTemplateArgsRAngleLoc() const {
   if (const auto *Args = getTrailingArgsInfo())
     return Args->getRAngleLoc();
-  if (auto *TSI = getRawTypeSourceInfo())
-    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
-      return TL.getRAngleLoc();
+  if (auto TL = getClassTypeLoc())
+    if (auto TST = TL->getAs<TemplateSpecializationTypeLoc>())
+      return TST.getRAngleLoc();
   return SourceLocation();
 }
 
