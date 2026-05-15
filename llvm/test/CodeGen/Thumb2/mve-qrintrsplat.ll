@@ -1144,13 +1144,13 @@ define void @vaddqf(ptr %x, ptr %y, i32 %n) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB26_1: @ %for.body.preheader
-; CHECK-NEXT:    vmov.f32 q0, #1.000000e+01
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB26_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmov.f32 q0, #1.000000e+01
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vadd.f32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r1], #16
+; CHECK-NEXT:    vadd.f32 q0, q1, q0
+; CHECK-NEXT:    vstrw.32 q0, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB26_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -1231,13 +1231,13 @@ define void @vsubqf(ptr %x, ptr %y, i32 %n) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB28_1: @ %for.body.preheader
-; CHECK-NEXT:    vmov.f32 q0, #-1.000000e+01
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB28_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmov.f32 q0, #-1.000000e+01
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vadd.f32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r1], #16
+; CHECK-NEXT:    vadd.f32 q0, q1, q0
+; CHECK-NEXT:    vstrw.32 q0, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB28_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -1318,13 +1318,13 @@ define void @vmulqf(ptr %x, ptr %y, i32 %n) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB30_1: @ %for.body.preheader
-; CHECK-NEXT:    vmov.f32 q0, #1.000000e+01
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB30_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmov.f32 q0, #1.000000e+01
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vmul.f32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r1], #16
+; CHECK-NEXT:    vmul.f32 q0, q1, q0
+; CHECK-NEXT:    vstrw.32 q0, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB30_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -1405,14 +1405,14 @@ define void @vfmaq(ptr %x, ptr %y, i32 %n) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB32_1: @ %for.body.preheader
-; CHECK-NEXT:    vmov.f32 q0, #1.000000e+01
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB32_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
-; CHECK-NEXT:    vfma.f32 q2, q1, q0
-; CHECK-NEXT:    vstrw.32 q2, [r1], #16
+; CHECK-NEXT:    vmov.f32 q2, #1.000000e+01
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vfma.f32 q1, q0, q2
+; CHECK-NEXT:    vstrw.32 q1, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB32_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -1450,14 +1450,14 @@ define void @vfma(ptr %s1, ptr %s2, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB33_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vmov.f32 q0, #1.000000e+01
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB33_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vfma.f32 q2, q1, q0
-; CHECK-NEXT:    vstrw.32 q2, [r0], #16
+; CHECK-NEXT:    vmov.f32 q2, #1.000000e+01
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vfma.f32 q1, q0, q2
+; CHECK-NEXT:    vstrw.32 q1, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB33_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -1600,11 +1600,9 @@ define void @rgbconvert(ptr noalias %pwSourceBase, i16 signext %iSourceStride, p
 ; CHECK-NEXT:    mov.w r11, #8388608
 ; CHECK-NEXT:    mov.w r4, #67108864
 ; CHECK-NEXT:    sxth.w r12, r2
-; CHECK-NEXT:    vmov.i32 q0, #0xf800
-; CHECK-NEXT:    vmov.i32 q1, #0x1f
 ; CHECK-NEXT:    mov.w r2, #2016
 ; CHECK-NEXT:    mov.w r7, #268435456
-; CHECK-NEXT:    vdup.32 q2, r2
+; CHECK-NEXT:    vdup.32 q0, r2
 ; CHECK-NEXT:  .LBB36_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB36_3 Depth 2
@@ -1614,16 +1612,18 @@ define void @rgbconvert(ptr noalias %pwSourceBase, i16 signext %iSourceStride, p
 ; CHECK-NEXT:  .LBB36_3: @ %do.body
 ; CHECK-NEXT:    @ Parent Loop BB36_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    vmov.i32 q2, #0x1f
 ; CHECK-NEXT:    vldrw.u32 q3, [r5], #16
+; CHECK-NEXT:    vmov.i32 q1, #0xf800
 ; CHECK-NEXT:    vqdmulh.s32 q4, q3, r4
 ; CHECK-NEXT:    vqdmulh.s32 q5, q3, r7
 ; CHECK-NEXT:    vqdmulh.s32 q3, q3, r11
-; CHECK-NEXT:    vand q4, q4, q2
-; CHECK-NEXT:    vand q5, q5, q1
-; CHECK-NEXT:    vand q3, q3, q0
-; CHECK-NEXT:    vorr q4, q4, q5
-; CHECK-NEXT:    vorr q3, q4, q3
-; CHECK-NEXT:    vstrh.32 q3, [r2], #8
+; CHECK-NEXT:    vand q4, q4, q0
+; CHECK-NEXT:    vand q2, q5, q2
+; CHECK-NEXT:    vand q1, q3, q1
+; CHECK-NEXT:    vorr q2, q4, q2
+; CHECK-NEXT:    vorr q1, q2, q1
+; CHECK-NEXT:    vstrh.32 q1, [r2], #8
 ; CHECK-NEXT:    letp lr, .LBB36_3
 ; CHECK-NEXT:  @ %bb.4: @ %do.end
 ; CHECK-NEXT:    @ in Loop: Header=BB36_2 Depth=1

@@ -969,6 +969,11 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     if (MO.isDef())
       RCCost = W.RegWeight;
     else {
+      // IMPLICIT_DEF contributes zero register pressure, so a vreg whose
+      // unique def is IMPLICIT_DEF must not reduce tracked pressure.
+      if (MachineInstr *DefMI = MRI->getUniqueVRegDef(Reg);
+          DefMI && DefMI->isImplicitDef())
+        continue;
       bool isKill = isOperandKill(MO, MRI);
       if (isNew && !isKill && ConsiderUnseenAsDef)
         // Haven't seen this, it must be a livein.

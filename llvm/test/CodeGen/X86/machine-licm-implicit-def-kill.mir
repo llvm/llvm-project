@@ -1,0 +1,110 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=early-machinelicm -o - %s | FileCheck %s
+
+# Verify that MachineLICM does not credit pressure relief for a use of a vreg
+# whose unique def is IMPLICIT_DEF.  GR pressure is saturated below, so if it
+# did, INSERT_SUBREG would hoist and cause a spill.
+
+# CHECK-LABEL: name: no_hoist_insert_subreg_of_implicit_def
+# IMPLICIT_DEF may hoist; INSERT_SUBREG must stay in the loop.
+# CHECK:      bb.0:
+# CHECK:        %{{[a-zA-Z0-9_.]+}}:gr64 = IMPLICIT_DEF
+# CHECK-NOT:    INSERT_SUBREG
+# CHECK:      bb.1:
+# CHECK:        %{{[a-zA-Z0-9_.]+}}:gr64 = INSERT_SUBREG %{{[a-zA-Z0-9_.]+}}, %{{[a-zA-Z0-9_.]+}}, %subreg.sub_32bit
+
+---
+name:            no_hoist_insert_subreg_of_implicit_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $rdi
+
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rdi
+    %2:gr64 = COPY $rdi
+    %3:gr64 = COPY $rdi
+    %4:gr64 = COPY $rdi
+    %5:gr64 = COPY $rdi
+    %6:gr64 = COPY $rdi
+    %7:gr64 = COPY $rdi
+    %8:gr64 = COPY $rdi
+    %9:gr64 = COPY $rdi
+    %10:gr64 = COPY $rdi
+    %11:gr64 = COPY $rdi
+    %12:gr64 = COPY $rdi
+    %13:gr64 = COPY $rdi
+    %14:gr64 = COPY $rdi
+    %15:gr64 = COPY $rdi
+    %16:gr64 = COPY $rdi
+    %17:gr64 = COPY $rdi
+    %18:gr64 = COPY $rdi
+    %19:gr64 = COPY $rdi
+    %20:gr64 = COPY $rdi
+    %21:gr64 = COPY $rdi
+    %22:gr64 = COPY $rdi
+    %23:gr64 = COPY $rdi
+    %24:gr64 = COPY $rdi
+    %25:gr64 = COPY $rdi
+    %26:gr64 = COPY $rdi
+    %27:gr64 = COPY $rdi
+    %28:gr64 = COPY $rdi
+    %29:gr64 = COPY $rdi
+    %30:gr64 = COPY $rdi
+    %31:gr64 = COPY $rdi
+    %32:gr64 = COPY $rdi
+    ; Multiple uses below so isOperandKill is false for %narrow at INSERT_SUBREG;
+    ; isolates the IMPLICIT_DEF case from a real GR32 -W kill.
+    %narrow:gr32 = COPY $edi
+
+  bb.1:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+
+    %impdef:gr64 = IMPLICIT_DEF
+    %ins:gr64 = INSERT_SUBREG %impdef, %narrow, %subreg.sub_32bit
+
+    ; Keep preheader vregs and %narrow live to saturate GR16/GR32/GR64
+    ; pressure while LICM decides whether to hoist %ins.
+    $rax = MOV64rr %0
+    $rax = ADD64rr $rax, %1, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %2, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %3, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %4, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %5, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %6, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %7, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %8, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %9, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %10, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %11, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %12, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %13, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %14, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %15, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %16, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %17, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %18, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %19, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %20, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %21, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %22, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %23, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %24, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %25, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %26, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %27, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %28, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %29, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %30, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %31, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %32, implicit-def dead $eflags
+    $rax = ADD64rr $rax, %ins, implicit-def dead $eflags
+    $eax = ADD32rr $eax, %narrow, implicit-def dead $eflags
+    $eax = ADD32rr $eax, %narrow, implicit-def dead $eflags
+    MOV64mr %0, 1, $noreg, 0, $noreg, $rax :: (store (s64) into `ptr undef`)
+    JCC_1 %bb.1, 5, implicit undef $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET 0
+...

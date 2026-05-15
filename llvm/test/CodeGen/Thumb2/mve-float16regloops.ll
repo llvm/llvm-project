@@ -1347,12 +1347,11 @@ define void @arm_biquad_cascade_df2T_f16(ptr nocapture readonly %S, ptr nocaptur
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    ldrd r6, r12, [r0, #4]
-; CHECK-NEXT:    ldrb.w r9, [r0]
 ; CHECK-NEXT:    vldr.16 s0, .LCPI17_0
+; CHECK-NEXT:    ldrb.w r9, [r0]
 ; CHECK-NEXT:    lsr.w r8, r3, #1
 ; CHECK-NEXT:    b .LBB17_3
 ; CHECK-NEXT:  .LBB17_1: @ %if.else
@@ -1372,13 +1371,14 @@ define void @arm_biquad_cascade_df2T_f16(ptr nocapture readonly %S, ptr nocaptur
 ; CHECK-NEXT:    @ Child Loop BB17_5 Depth 2
 ; CHECK-NEXT:    vldrh.u16 q2, [r12]
 ; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    vmov.i32 q6, #0x0
 ; CHECK-NEXT:    vmov q4, q2
 ; CHECK-NEXT:    vshlc q4, r5, #16
 ; CHECK-NEXT:    vldrh.u16 q3, [r12, #4]
 ; CHECK-NEXT:    vmov q5, q3
 ; CHECK-NEXT:    vshlc q5, r5, #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r6]
-; CHECK-NEXT:    vmov.f32 s5, s1
+; CHECK-NEXT:    vmov.f32 s5, s25
 ; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    wls lr, r8, .LBB17_6
 ; CHECK-NEXT:  @ %bb.4: @ %while.body.preheader
@@ -1417,7 +1417,7 @@ define void @arm_biquad_cascade_df2T_f16(ptr nocapture readonly %S, ptr nocaptur
 ; CHECK-NEXT:    vstr.16 s2, [r6]
 ; CHECK-NEXT:    b .LBB17_2
 ; CHECK-NEXT:  .LBB17_8: @ %do.end
-; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
 ; CHECK-NEXT:    .p2align 1

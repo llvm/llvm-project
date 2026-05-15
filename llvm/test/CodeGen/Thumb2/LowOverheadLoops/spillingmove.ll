@@ -13,81 +13,61 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(ptr noalias nocapture
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    sub sp, #64
 ; CHECK-NEXT:    ldrsh.w r7, [r2]
 ; CHECK-NEXT:    cmp r7, #1
 ; CHECK-NEXT:    blt .LBB0_6
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond3.preheader.us.preheader
-; CHECK-NEXT:    ldr r4, [sp, #152]
 ; CHECK-NEXT:    movs r2, #252
+; CHECK-NEXT:    ldr r4, [sp, #88]
 ; CHECK-NEXT:    and.w r6, r2, r3, lsr #3
 ; CHECK-NEXT:    movs r2, #120
 ; CHECK-NEXT:    and.w r5, r2, r3, lsr #9
 ; CHECK-NEXT:    lsls r3, r3, #3
-; CHECK-NEXT:    muls r6, r4, r6
 ; CHECK-NEXT:    uxtb r3, r3
+; CHECK-NEXT:    muls r6, r4, r6
 ; CHECK-NEXT:    rsb.w r2, r4, #256
-; CHECK-NEXT:    vmov.i16 q1, #0xfc
-; CHECK-NEXT:    vdup.16 q0, r6
 ; CHECK-NEXT:    mul lr, r5, r4
-; CHECK-NEXT:    mov.w r6, #2016
-; CHECK-NEXT:    vstrw.32 q0, [sp, #48] @ 16-byte Spill
-; CHECK-NEXT:    mul r5, r3, r4
-; CHECK-NEXT:    adds r3, r7, #7
 ; CHECK-NEXT:    vdup.16 q0, r6
-; CHECK-NEXT:    bic r3, r3, #7
-; CHECK-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
-; CHECK-NEXT:    vdup.16 q0, r5
-; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vdup.16 q0, lr
-; CHECK-NEXT:    subs r3, #8
-; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
-; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    add.w r3, r4, r3, lsr #3
-; CHECK-NEXT:    vldrw.u32 q6, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vldrw.u32 q2, [sp] @ 16-byte Reload
+; CHECK-NEXT:    mov.w r6, #2016
+; CHECK-NEXT:    mul r5, r3, r4
+; CHECK-NEXT:    vdup.16 q1, r6
 ; CHECK-NEXT:    lsls r1, r1, #1
+; CHECK-NEXT:    vdup.16 q2, r5
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vmov.i16 q4, #0xf8
+; CHECK-NEXT:    vdup.16 q3, lr
 ; CHECK-NEXT:  .LBB0_3: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB0_4 Depth 2
 ; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r6, r7
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    dlstp.16 lr, r7
 ; CHECK-NEXT:  .LBB0_4: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vctp.16 r6
-; CHECK-NEXT:    vmov.i16 q5, #0xf800
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrht.u16 q0, [r5]
-; CHECK-NEXT:    subs r6, #8
-; CHECK-NEXT:    vshr.u16 q3, q0, #3
-; CHECK-NEXT:    vand q3, q3, q1
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #48] @ 16-byte Reload
-; CHECK-NEXT:    vmla.i16 q1, q3, r2
-; CHECK-NEXT:    vshl.i16 q3, q0, #3
-; CHECK-NEXT:    vand q3, q3, q4
-; CHECK-NEXT:    vmov q4, q6
-; CHECK-NEXT:    vshr.u16 q1, q1, #5
-; CHECK-NEXT:    vmla.i16 q4, q3, r2
-; CHECK-NEXT:    vshr.u16 q3, q4, #11
-; CHECK-NEXT:    vand q1, q1, q7
-; CHECK-NEXT:    vorr q1, q1, q3
-; CHECK-NEXT:    vshr.u16 q0, q0, #9
-; CHECK-NEXT:    vmov.i16 q3, #0x78
-; CHECK-NEXT:    vmov.i16 q4, #0xf8
-; CHECK-NEXT:    vand q0, q0, q3
-; CHECK-NEXT:    vmov q3, q2
-; CHECK-NEXT:    vmla.i16 q3, q0, r2
-; CHECK-NEXT:    vand q0, q3, q5
-; CHECK-NEXT:    vorr q0, q1, q0
-; CHECK-NEXT:    vmov.i16 q1, #0xfc
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r5], #16
-; CHECK-NEXT:    le lr, .LBB0_4
+; CHECK-NEXT:    vmov.i16 q6, #0xfc
+; CHECK-NEXT:    vldrh.u16 q4, [r5]
+; CHECK-NEXT:    vmov.i16 q7, #0xf8
+; CHECK-NEXT:    vshr.u16 q5, q4, #3
+; CHECK-NEXT:    vand q5, q5, q6
+; CHECK-NEXT:    vmov q6, q0
+; CHECK-NEXT:    vmla.i16 q6, q5, r2
+; CHECK-NEXT:    vshr.u16 q5, q6, #5
+; CHECK-NEXT:    vshl.i16 q6, q4, #3
+; CHECK-NEXT:    vand q6, q6, q7
+; CHECK-NEXT:    vmov q7, q2
+; CHECK-NEXT:    vmla.i16 q7, q6, r2
+; CHECK-NEXT:    vand q5, q5, q1
+; CHECK-NEXT:    vshr.u16 q6, q7, #11
+; CHECK-NEXT:    vshr.u16 q4, q4, #9
+; CHECK-NEXT:    vorr q5, q5, q6
+; CHECK-NEXT:    vmov.i16 q6, #0x78
+; CHECK-NEXT:    vand q4, q4, q6
+; CHECK-NEXT:    vmov q6, q3
+; CHECK-NEXT:    vmla.i16 q6, q4, r2
+; CHECK-NEXT:    vmov.i16 q4, #0xf800
+; CHECK-NEXT:    vand q4, q6, q4
+; CHECK-NEXT:    vorr q4, q5, q4
+; CHECK-NEXT:    vstrh.16 q4, [r5], #16
+; CHECK-NEXT:    letp lr, .LBB0_4
 ; CHECK-NEXT:  @ %bb.5: @ %for.cond3.for.cond.cleanup7_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    adds r4, #1
@@ -95,7 +75,6 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(ptr noalias nocapture
 ; CHECK-NEXT:    cmp r4, r12
 ; CHECK-NEXT:    bne .LBB0_3
 ; CHECK-NEXT:  .LBB0_6:
-; CHECK-NEXT:    add sp, #64
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, lr}
@@ -195,70 +174,59 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha_sched(ptr noalias noc
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    ldr r7, [sp, #88]
 ; CHECK-NEXT:    movs r5, #120
-; CHECK-NEXT:    lsls r6, r3, #3
 ; CHECK-NEXT:    movs r4, #252
+; CHECK-NEXT:    ldr r7, [sp, #88]
+; CHECK-NEXT:    lsls r6, r3, #3
 ; CHECK-NEXT:    and.w r5, r5, r3, lsr #9
-; CHECK-NEXT:    uxtb r6, r6
 ; CHECK-NEXT:    and.w r3, r4, r3, lsr #3
-; CHECK-NEXT:    adds r4, r2, #7
+; CHECK-NEXT:    uxtb r6, r6
 ; CHECK-NEXT:    muls r6, r7, r6
-; CHECK-NEXT:    bic r4, r4, #7
-; CHECK-NEXT:    mul lr, r3, r7
-; CHECK-NEXT:    muls r5, r7, r5
+; CHECK-NEXT:    mul r4, r3, r7
+; CHECK-NEXT:    mul lr, r5, r7
 ; CHECK-NEXT:    rsb.w r3, r7, #256
 ; CHECK-NEXT:    lsls r7, r1, #1
-; CHECK-NEXT:    sub.w r1, r4, #8
-; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    vmov.i16 q2, #0xf8
-; CHECK-NEXT:    add.w r1, r4, r1, lsr #3
-; CHECK-NEXT:    vdup.16 q6, r6
+; CHECK-NEXT:    vdup.16 q0, r6
 ; CHECK-NEXT:    mov.w r6, #2016
+; CHECK-NEXT:    vdup.16 q1, r4
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vdup.16 q3, lr
-; CHECK-NEXT:    vdup.16 q5, r5
-; CHECK-NEXT:    vdup.16 q7, r6
+; CHECK-NEXT:    vdup.16 q2, lr
+; CHECK-NEXT:    vdup.16 q3, r6
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB1_3: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB1_4 Depth 2
 ; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r6, r2
-; CHECK-NEXT:    dls lr, r1
+; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB1_4: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB1_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vctp.16 r6
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrht.u16 q0, [r5]
-; CHECK-NEXT:    vshl.i16 q1, q0, #3
-; CHECK-NEXT:    subs r6, #8
-; CHECK-NEXT:    vand q1, q1, q2
-; CHECK-NEXT:    vmov.i16 q2, #0x78
-; CHECK-NEXT:    vshr.u16 q4, q0, #9
-; CHECK-NEXT:    vand q4, q4, q2
-; CHECK-NEXT:    vmov q2, q6
-; CHECK-NEXT:    vmla.i16 q2, q1, r3
-; CHECK-NEXT:    vshr.u16 q0, q0, #3
-; CHECK-NEXT:    vmov.i16 q1, #0xfc
-; CHECK-NEXT:    vand q0, q0, q1
-; CHECK-NEXT:    vmov q1, q3
-; CHECK-NEXT:    vmla.i16 q1, q0, r3
-; CHECK-NEXT:    vshr.u16 q0, q2, #11
-; CHECK-NEXT:    vmov q2, q5
-; CHECK-NEXT:    vmla.i16 q2, q4, r3
-; CHECK-NEXT:    vshr.u16 q1, q1, #5
-; CHECK-NEXT:    vmov.i16 q4, #0xf800
-; CHECK-NEXT:    vand q1, q1, q7
-; CHECK-NEXT:    vorr q0, q1, q0
-; CHECK-NEXT:    vand q1, q2, q4
-; CHECK-NEXT:    vmov.i16 q2, #0xf8
-; CHECK-NEXT:    vorr q0, q0, q1
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r5], #16
-; CHECK-NEXT:    le lr, .LBB1_4
+; CHECK-NEXT:    vldrh.u16 q4, [r5]
+; CHECK-NEXT:    vmov.i16 q6, #0xf8
+; CHECK-NEXT:    vshl.i16 q5, q4, #3
+; CHECK-NEXT:    vmov.i16 q7, #0x78
+; CHECK-NEXT:    vand q5, q5, q6
+; CHECK-NEXT:    vshr.u16 q6, q4, #9
+; CHECK-NEXT:    vand q6, q6, q7
+; CHECK-NEXT:    vmov.i16 q7, #0xfc
+; CHECK-NEXT:    vshr.u16 q4, q4, #3
+; CHECK-NEXT:    vand q4, q4, q7
+; CHECK-NEXT:    vmov q7, q0
+; CHECK-NEXT:    vmla.i16 q7, q5, r3
+; CHECK-NEXT:    vmov q5, q1
+; CHECK-NEXT:    vmla.i16 q5, q4, r3
+; CHECK-NEXT:    vshr.u16 q4, q7, #11
+; CHECK-NEXT:    vshr.u16 q5, q5, #5
+; CHECK-NEXT:    vand q5, q5, q3
+; CHECK-NEXT:    vmov q7, q2
+; CHECK-NEXT:    vmla.i16 q7, q6, r3
+; CHECK-NEXT:    vorr q4, q5, q4
+; CHECK-NEXT:    vmov.i16 q5, #0xf800
+; CHECK-NEXT:    vand q5, q7, q5
+; CHECK-NEXT:    vorr q4, q4, q5
+; CHECK-NEXT:    vstrh.16 q4, [r5], #16
+; CHECK-NEXT:    letp lr, .LBB1_4
 ; CHECK-NEXT:  @ %bb.5: @ %for.cond3.for.cond.cleanup7_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB1_3 Depth=1
 ; CHECK-NEXT:    adds r4, #1

@@ -5,39 +5,39 @@ define void @remat_vctp(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i1
 ; CHECK-LABEL: remat_vctp:
 ; CHECK:       @ %bb.0: @ %bb
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    ldrd r5, r12, [sp, #64]
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEXT:    ldrd r5, r12, [sp, #48]
 ; CHECK-NEXT:    vmvn.i32 q0, #0x80000000
-; CHECK-NEXT:    vmov.i32 q1, #0x3f
 ; CHECK-NEXT:    movs r4, #1
 ; CHECK-NEXT:    dlstp.32 lr, r12
 ; CHECK-NEXT:  .LBB0_1: @ %bb6
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmov.i32 q2, #0x3f
 ; CHECK-NEXT:    vldrw.u32 q3, [r1], #16
 ; CHECK-NEXT:    vabs.s32 q4, q3
-; CHECK-NEXT:    vcls.s32 q2, q4
-; CHECK-NEXT:    vshl.u32 q4, q4, q2
-; CHECK-NEXT:    vadd.i32 q2, q2, r4
+; CHECK-NEXT:    vcls.s32 q1, q4
+; CHECK-NEXT:    vshl.u32 q4, q4, q1
+; CHECK-NEXT:    vadd.i32 q1, q1, r4
 ; CHECK-NEXT:    vshr.u32 q5, q4, #24
-; CHECK-NEXT:    vand q5, q5, q1
-; CHECK-NEXT:    vldrw.u32 q6, [r5, q5, uxtw #2]
-; CHECK-NEXT:    vqrdmulh.s32 q5, q6, q4
-; CHECK-NEXT:    vqsub.s32 q5, q0, q5
-; CHECK-NEXT:    vqrdmulh.s32 q5, q6, q5
-; CHECK-NEXT:    vqshl.s32 q5, q5, #1
-; CHECK-NEXT:    vqrdmulh.s32 q4, q5, q4
+; CHECK-NEXT:    vand q2, q5, q2
+; CHECK-NEXT:    vldrw.u32 q5, [r5, q2, uxtw #2]
+; CHECK-NEXT:    vqrdmulh.s32 q2, q5, q4
+; CHECK-NEXT:    vqsub.s32 q2, q0, q2
+; CHECK-NEXT:    vqrdmulh.s32 q2, q5, q2
+; CHECK-NEXT:    vqshl.s32 q2, q2, #1
+; CHECK-NEXT:    vqrdmulh.s32 q4, q2, q4
 ; CHECK-NEXT:    vqsub.s32 q4, q0, q4
-; CHECK-NEXT:    vqrdmulh.s32 q4, q5, q4
-; CHECK-NEXT:    vqshl.s32 q4, q4, #1
+; CHECK-NEXT:    vqrdmulh.s32 q2, q2, q4
+; CHECK-NEXT:    vqshl.s32 q2, q2, #1
 ; CHECK-NEXT:    vpt.s32 lt, q3, zr
-; CHECK-NEXT:    vnegt.s32 q4, q4
+; CHECK-NEXT:    vnegt.s32 q2, q2
 ; CHECK-NEXT:    vldrw.u32 q3, [r0], #16
-; CHECK-NEXT:    vqrdmulh.s32 q3, q3, q4
-; CHECK-NEXT:    vstrw.32 q3, [r2], #16
-; CHECK-NEXT:    vstrw.32 q2, [r3], #16
+; CHECK-NEXT:    vqrdmulh.s32 q2, q3, q2
+; CHECK-NEXT:    vstrw.32 q2, [r2], #16
+; CHECK-NEXT:    vstrw.32 q1, [r3], #16
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %bb44
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 bb:
   %i = zext i16 %arg5 to i32
@@ -89,14 +89,13 @@ define void @dont_remat_predicated_vctp(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg
 ; CHECK-LABEL: dont_remat_predicated_vctp:
 ; CHECK:       @ %bb.0: @ %bb
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    ldrd r6, r12, [sp, #72]
+; CHECK-NEXT:    ldrd r6, r12, [sp, #56]
 ; CHECK-NEXT:    movs r4, #4
 ; CHECK-NEXT:    cmp.w r12, #4
 ; CHECK-NEXT:    vmvn.i32 q0, #0x80000000
 ; CHECK-NEXT:    csel r5, r12, r4, lt
-; CHECK-NEXT:    vmov.i32 q1, #0x3f
 ; CHECK-NEXT:    sub.w r5, r12, r5
 ; CHECK-NEXT:    add.w lr, r5, #3
 ; CHECK-NEXT:    movs r5, #1
@@ -104,40 +103,41 @@ define void @dont_remat_predicated_vctp(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg
 ; CHECK-NEXT:  .LBB1_1: @ %bb6
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r12
-; CHECK-NEXT:    sub.w r12, r12, #4
+; CHECK-NEXT:    vmov.i32 q2, #0x3f
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vctpt.32 r4
+; CHECK-NEXT:    sub.w r12, r12, #4
 ; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q3, [r1], #16
 ; CHECK-NEXT:    vabs.s32 q4, q3
-; CHECK-NEXT:    vcls.s32 q2, q4
-; CHECK-NEXT:    vshl.u32 q4, q4, q2
-; CHECK-NEXT:    vadd.i32 q2, q2, r5
+; CHECK-NEXT:    vcls.s32 q1, q4
+; CHECK-NEXT:    vshl.u32 q4, q4, q1
+; CHECK-NEXT:    vadd.i32 q1, q1, r5
 ; CHECK-NEXT:    vshr.u32 q5, q4, #24
-; CHECK-NEXT:    vand q5, q5, q1
-; CHECK-NEXT:    vldrw.u32 q6, [r6, q5, uxtw #2]
-; CHECK-NEXT:    vqrdmulh.s32 q5, q6, q4
-; CHECK-NEXT:    vqsub.s32 q5, q0, q5
-; CHECK-NEXT:    vqrdmulh.s32 q5, q6, q5
-; CHECK-NEXT:    vqshl.s32 q5, q5, #1
-; CHECK-NEXT:    vqrdmulh.s32 q4, q5, q4
+; CHECK-NEXT:    vand q2, q5, q2
+; CHECK-NEXT:    vldrw.u32 q5, [r6, q2, uxtw #2]
+; CHECK-NEXT:    vqrdmulh.s32 q2, q5, q4
+; CHECK-NEXT:    vqsub.s32 q2, q0, q2
+; CHECK-NEXT:    vqrdmulh.s32 q2, q5, q2
+; CHECK-NEXT:    vqshl.s32 q2, q2, #1
+; CHECK-NEXT:    vqrdmulh.s32 q4, q2, q4
 ; CHECK-NEXT:    vqsub.s32 q4, q0, q4
-; CHECK-NEXT:    vqrdmulh.s32 q4, q5, q4
-; CHECK-NEXT:    vqshl.s32 q4, q4, #1
+; CHECK-NEXT:    vqrdmulh.s32 q2, q2, q4
+; CHECK-NEXT:    vqshl.s32 q2, q2, #1
 ; CHECK-NEXT:    vpt.s32 lt, q3, zr
-; CHECK-NEXT:    vnegt.s32 q4, q4
+; CHECK-NEXT:    vnegt.s32 q2, q2
 ; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q3, [r0], #16
-; CHECK-NEXT:    vqrdmulh.s32 q3, q3, q4
+; CHECK-NEXT:    vqrdmulh.s32 q2, q3, q2
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vstrwt.32 q3, [r2], #16
-; CHECK-NEXT:    vstrwt.32 q2, [r3], #16
+; CHECK-NEXT:    vstrwt.32 q2, [r2], #16
+; CHECK-NEXT:    vstrwt.32 q1, [r3], #16
 ; CHECK-NEXT:    le lr, .LBB1_1
 ; CHECK-NEXT:  @ %bb.2: @ %bb44
 ; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 bb:
   %i = zext i16 %arg5 to i32
