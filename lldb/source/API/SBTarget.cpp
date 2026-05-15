@@ -1665,7 +1665,7 @@ const char *SBTarget::GetTriple() {
     // Unique the string so we don't run into ownership issues since the const
     // strings put the string into the string pool once and the strings never
     // comes out
-    ConstString const_triple(triple.c_str());
+    ConstString const_triple(triple);
     return const_triple.GetCString();
   }
   return nullptr;
@@ -1689,7 +1689,7 @@ const char *SBTarget::GetABIName() {
 
   if (TargetSP target_sp = GetSP()) {
     std::string abi_name(target_sp->GetABIName().str());
-    ConstString const_name(abi_name.c_str());
+    ConstString const_name(abi_name);
     return const_name.GetCString();
   }
   return nullptr;
