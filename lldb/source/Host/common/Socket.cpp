@@ -444,6 +444,12 @@ NativeSocket Socket::CreateSocket(const int domain, const int type,
   if (sock == kInvalidSocketValue)
     SetLastError(error);
 
+#if defined(SO_NOSIGPIPE)
+  if (Socket::SetOption(sock, SOL_SOCKET, SO_NOSIGPIPE, 1) == -1)
+    LLDB_LOG(GetLog(LLDBLog::Host), "failed to set SO_NOSIGPIPE on fd {0}: {1}",
+             sock, llvm::sys::StrError());
+#endif
+
   return sock;
 }
 
