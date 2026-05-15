@@ -759,6 +759,9 @@ the runtime scaling factor. The indices inserted in the source vector must be
 valid indices of that vector. If this condition cannot be determined statically
 but is false at runtime, then the result vector is undefined.
 
+This operation supports inserting a fixed vector into a scalable vector, but not
+the other way around.
+
 .. code-block:: none
 
   %2:_(<vscale x 4 x i64>) = G_INSERT_SUBVECTOR %0:_(<vscale x 4 x i64>), %1:_(<vscale x 2 x i64>), 0
@@ -777,7 +780,8 @@ vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
 
-Mixing scalable vectors and fixed vectors are not allowed.
+This operation supports extracting a fixed vector from a scalable vector, but
+not the other way around.
 
 .. code-block:: none
 

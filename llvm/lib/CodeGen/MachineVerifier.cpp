@@ -1832,12 +1832,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (Src1Ty.isScalable() != DstTy.isScalable()) {
-      report("Vector types must both be fixed or both be scalable", MI);
+    if (!DstTy.isScalable() && Src1Ty.isScalable()) {
+      report("Cannot insert a scalable vector into a fixed length vector", MI);
       break;
     }
 
-    if (ElementCount::isKnownGT(Src1Ty.getElementCount(),
+    bool IsMixedFixedIntoScalable =
+        DstTy.isScalableVector() && Src1Ty.isFixedVector();
+
+    if (!IsMixedFixedIntoScalable &&
+        ElementCount::isKnownGT(Src1Ty.getElementCount(),
                                 DstTy.getElementCount())) {
       report("Second source must be smaller than destination vector", MI);
       break;
@@ -1853,7 +1857,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
-    if (Idx >= DstMinLen || Idx + Src1MinLen > DstMinLen) {
+    if (!IsMixedFixedIntoScalable &&
+        (Idx >= DstMinLen || Idx + Src1MinLen > DstMinLen)) {
       report("Subvector type and index must not cause insert to overrun the "
              "vector being inserted into",
              MI);
@@ -1893,12 +1898,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (SrcTy.isScalable() != DstTy.isScalable()) {
-      report("Vector types must both be fixed or both be scalable", MI);
+    if (DstTy.isScalable() && !SrcTy.isScalable()) {
+      report("Cannot extract a scalable vector from a fixed length vector", MI);
       break;
     }
 
-    if (ElementCount::isKnownGT(DstTy.getElementCount(),
+    bool IsMixedFixedFromScalable =
+        DstTy.isFixedVector() && SrcTy.isScalableVector();
+
+    if (!IsMixedFixedFromScalable &&
+        ElementCount::isKnownGT(DstTy.getElementCount(),
                                 SrcTy.getElementCount())) {
       report("Destination vector must be smaller than source vector", MI);
       break;
@@ -1914,7 +1923,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
-    if (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen) {
+    if (!IsMixedFixedFromScalable &&
+        (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen)) {
       report("Destination type and index must not cause extract to overrun the "
              "source vector",
              MI);
