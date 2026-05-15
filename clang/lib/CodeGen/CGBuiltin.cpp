@@ -4020,15 +4020,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
     return RValue::get(Builder.CreateCall(F, {Begin, End}));
   }
-  case Builtin::BI__builtin_trap:
+  case Builtin::BI__builtin_trap: {
     EmitTrapCall(Intrinsic::trap);
+    Trap->setDoesNotReturn();
+    Trap->setDoesNotThrow();
+    Builder.CreateUnreachable();
     if (Builder.GetInsertBlock()) {
-      Builder.CreateUnreachable();
-      // Dummy block for the ret void - it'll be clened up
+      // Dummy block for the ret void - it'll be cleaned up
       llvm::BasicBlock *DeadBB = createBasicBlock("dead.trap");
       EmitBlock(DeadBB);
     }
     return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_verbose_trap: {
     llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
     if (getDebugInfo()) {
