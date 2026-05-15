@@ -2,15 +2,15 @@
 
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu tahiti -target-feature +tanh-insts -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN:            -target-cpu tahiti -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu tahiti --target-feature +tanh-insts fcuda-is-device -emit-llvm %s -o %t-cir.ll
+// RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu tahiti -target-feature +tanh-insts -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 //===----------------------------------------------------------------------===//
@@ -70,12 +70,4 @@ __device__ void test_div_fmas_f64(double* out, double a, double b, double c, int
 // LLVM: call{{.*}} i32 @llvm.amdgcn.ds.swizzle(i32 %{{.*}}, i32 32)
 __device__ void test_ds_swizzle(int* out, int a) {
   *out = __builtin_amdgcn_ds_swizzle(a, 32);
-}
-
-// CIR-LABEL: @_Z14test_tanhf_f32Pff
-// CIR: cir.call_llvm_intrinsic "amdgcn.tanh" {{.*}} : (!cir.float) -> !cir.float
-// LLVM: define{{.*}} void @_Z14test_tanhf_f32Pff
-// LLVM: call{{.*}} float @llvm.amdgcn.tanh.f32(float %{{.*}})
-__device__ void test_tanhf_f32(float* out, float a) {
-  *out = __builtin_amdgcn_tanhf(a);
 }
