@@ -255,11 +255,12 @@ MCRegister SPIRVNonSemanticDebugHandler::emitOpStringIfNew(
     StringRef S, SPIRV::ModuleAnalysisInfo &MAI) {
   assert(!NonSemanticOpStringsSectionEmitted &&
          "emitOpStringIfNew is only valid while emitting SPIR-V section 7");
-  auto It = OpStringContentCache.find(S);
-  if (It != OpStringContentCache.end())
+  auto [It, Inserted] = OpStringContentCache.try_emplace(S, MCRegister());
+  if (!Inserted)
     return It->second;
+
   MCRegister Reg = emitOpString(S, MAI);
-  OpStringContentCache.insert(std::make_pair(S, Reg));
+  It->second = Reg;
   return Reg;
 }
 
