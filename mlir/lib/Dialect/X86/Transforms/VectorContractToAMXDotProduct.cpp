@@ -876,6 +876,7 @@ struct VectorContractToAMXDotProduct
                   arith::AddIOp::create(rewriter, loc, nextLoadIndx, iv);
 
               indicesRhs[indicesRhs.size() - 2] = iv;
+              indicesRhs[indicesRhs.size() - 1] = c0;
               ValueRange range1(indicesRhs);
               auto vec1 = vector::LoadOp::create(
                   rewriter, loc,
