@@ -740,10 +740,19 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
   APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
   APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
 
-  APInt MaskRes = APInt(Len, 2 * Len - 1);
-
   Value *Add1;
-  if (!match(&I, m_And(m_Value(Add1), m_SpecificInt(MaskRes))))
+  const APInt *MaskRes;
+  if (!match(&I, m_And(m_Value(Add1), m_APInt(MaskRes))))
+    return false;
+  // Number of bits needed to represent Len.
+  unsigned NumLenBits = Log2_32(Len) + 1;
+  // The "mask" here really only needs to fulfill two conditions:
+  // (1) All ones for the lower NumLenBits-bits
+  // (2) Zeros from bit 8 and onward.
+  // Condition (1) is straightforward. The reason behind condition
+  // (2) is that we don't care any 8-bit chunks but the first one
+  // in the original divide-and-conquer algorithm.
+  if (MaskRes->countTrailingOnes() < NumLenBits || MaskRes->getActiveBits() > 8)
     return false;
 
   Value *Add2;

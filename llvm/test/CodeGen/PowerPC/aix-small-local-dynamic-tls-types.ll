@@ -2056,7 +2056,6 @@ define i32 @testDouble2() {
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-O0-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-O0-NEXT:    la r3, internal_tlv_double[TL]@ld(r3)
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-O0-NEXT:    lfd f0, 0(r3)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-O0-NEXT:    # kill: def $f1 killed $f0
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-O0-NEXT:    xscvdpsxws f0, f0
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-O0-NEXT:    addi r3, r1, 52
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-O0-NEXT:    stfiwx f0, 0, r3
@@ -2077,7 +2076,6 @@ define i32 @testDouble2() {
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-O0-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-O0-NEXT:    la r3, internal_tlv_double[TL]@ld(r3)
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-O0-NEXT:    lfd f0, 0(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-O0-NEXT:    # kill: def $f1 killed $f0
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-O0-NEXT:    xscvdpsxws f0, f0
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-O0-NEXT:    addi r3, r1, 52
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-O0-NEXT:    stfiwx f0, 0, r3

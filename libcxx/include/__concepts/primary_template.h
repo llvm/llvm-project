@@ -10,23 +10,24 @@
 #define _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
 
 #include <__config>
-#include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_valid_expansion.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-using __test_for_primary_template _LIBCPP_NODEBUG =
-    __enable_if_t<_IsSame<_Tp, typename _Tp::__primary_template>::value>;
-
-template <class _Tp>
-using __is_primary_template _LIBCPP_NODEBUG = _IsValidExpansion<__test_for_primary_template, _Tp>;
+concept __primary_template = requires {
+  typename _Tp::__primary_template;
+  requires _IsSame<typename _Tp::__primary_template, _Tp>::value;
+};
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H

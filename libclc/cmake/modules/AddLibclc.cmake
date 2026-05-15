@@ -58,37 +58,56 @@ endfunction()
 function(libclc_add_builtin_library target_name)
   cmake_parse_arguments(ARG
     ""
-    "FOLDER"
+    "FOLDER;SOURCE_SUB_DIR"
     "COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS"
     ${ARGN}
   )
+
+  if(NOT ARG_SOURCE_SUB_DIR)
+    message(FATAL_ERROR "SOURCE_SUB_DIR is required for libclc_add_builtin_library")
+  endif()
 
   add_library(${target_name} OBJECT)
   target_compile_options(${target_name} PRIVATE ${ARG_COMPILE_OPTIONS})
   target_include_directories(${target_name} PRIVATE ${ARG_INCLUDE_DIRS})
   target_compile_definitions(${target_name} PRIVATE ${ARG_COMPILE_DEFINITIONS})
   set_target_properties(${target_name} PROPERTIES FOLDER ${ARG_FOLDER})
+
+  # Populate sources.
+  add_subdirectory(
+    ${LIBCLC_SOURCE_DIR}/${ARG_SOURCE_SUB_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}/${target_name}
+  )
 endfunction()
 
-# Links builtin libclc object libraries together into a merged bitcode or SPIR-V
-# file and a static archive.
+# Builds a builtin library from sources, links it with any internalized
+# dependencies, produces the final output file, and registers it for
+# installation.
 function(libclc_add_library target_name)
   cmake_parse_arguments(ARG
     ""
-    "ARCH;TRIPLE;TARGET_TRIPLE;OUTPUT_FILENAME;PARENT_TARGET"
-    "LIBRARIES;INTERNALIZE_LIBRARIES;OPT_FLAGS"
+    "ARCH;TRIPLE;TARGET_TRIPLE;SOURCE_TARGET;SOURCE_SUB_DIR;OUTPUT_FILENAME;PARENT_TARGET"
+    "COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS;INTERNALIZE_LIBRARIES;OPT_FLAGS"
     ${ARGN}
   )
 
+  if(NOT ARG_SOURCE_TARGET)
+    message(FATAL_ERROR "SOURCE_TARGET is required for libclc_add_library")
+  endif()
   if(NOT ARG_OUTPUT_FILENAME)
     message(FATAL_ERROR "OUTPUT_FILENAME is required for libclc_add_library")
   endif()
   if(NOT ARG_PARENT_TARGET)
     message(FATAL_ERROR "PARENT_TARGET is required for libclc_add_library")
   endif()
-  if(NOT ARG_LIBRARIES)
-    message(FATAL_ERROR "LIBRARIES is required for libclc_add_library")
-  endif()
+
+  libclc_add_builtin_library(${ARG_SOURCE_TARGET}
+    COMPILE_OPTIONS ${ARG_COMPILE_OPTIONS}
+    INCLUDE_DIRS ${ARG_INCLUDE_DIRS}
+    COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
+    SOURCE_SUB_DIR ${ARG_SOURCE_SUB_DIR}
+    FOLDER "libclc/Device IR/Intermediate"
+  )
 
   set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TARGET_TRIPLE})
   file(MAKE_DIRECTORY ${library_dir})
@@ -97,7 +116,7 @@ function(libclc_add_library target_name)
   set(archive_target ${target_name}.a)
   add_library(${archive_target} STATIC)
   target_link_libraries(${archive_target} PRIVATE
-    ${ARG_LIBRARIES} ${ARG_INTERNALIZE_LIBRARIES}
+    ${ARG_SOURCE_TARGET} ${ARG_INTERNALIZE_LIBRARIES}
   )
   set_target_properties(${archive_target} PROPERTIES
     OUTPUT_NAME ${ARG_OUTPUT_FILENAME}
@@ -106,19 +125,19 @@ function(libclc_add_library target_name)
     FOLDER "libclc/Device IR/Library"
   )
 
-  # Link the object files, using a temporary library as for internalization.
+  # Link the object files, using a temporary library for internalization.
   set(linked_bc ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.linked.bc)
   set(link_cmd ${llvm-link_exe})
   set(link_deps ${llvm-link_target})
-  foreach(lib ${ARG_LIBRARIES})
-    add_library(${target_name}-${lib} STATIC)
-    target_link_libraries(${target_name}-${lib} PRIVATE ${lib})
-    set_target_properties(${target_name}-${lib} PROPERTIES
-      FOLDER "libclc/Device IR/Library"
-    )
-    list(APPEND link_cmd $<TARGET_FILE:${target_name}-${lib}>)
-    list(APPEND link_deps ${target_name}-${lib})
-  endforeach()
+
+  add_library(${target_name}-src STATIC)
+  target_link_libraries(${target_name}-src PRIVATE ${ARG_SOURCE_TARGET})
+  set_target_properties(${target_name}-src PROPERTIES
+    FOLDER "libclc/Device IR/Library"
+  )
+  list(APPEND link_cmd $<TARGET_FILE:${target_name}-src>)
+  list(APPEND link_deps ${target_name}-src)
+
   if(ARG_INTERNALIZE_LIBRARIES)
     list(APPEND link_cmd --internalize --only-needed)
     foreach(lib ${ARG_INTERNALIZE_LIBRARIES})

@@ -801,6 +801,181 @@ void HexagonAsmPrinter::emitAttributes() {
   HTS.emitTargetAttributes(TM.getMCSubtargetInfo());
 }
 
+void HexagonAsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
+                                                  bool Typed) {
+  auto &O = *OutStreamer;
+  MCSymbol *CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  O.emitLabel(CurSled);
+
+  auto *Sym = MCSymbolRefExpr::create(
+      OutContext.getOrCreateSymbol(Typed ? "__xray_TypedEvent"
+                                         : "__xray_CustomEvent"),
+      OutContext);
+
+  // The sled structure:
+  //   .Lxray_sled_N:
+  //     { jump .Lend }            -- disabled (patched to nop when enabled)
+  //     <save args, move operands, call handler, restore args>
+  //   .Lend:
+
+  MCSymbol *EndSled = OutContext.createTempSymbol();
+
+  // Packet 1: jump over the sled (disabled state).
+  MCInst *JumpInst = OutContext.createMCInst();
+  JumpInst->setOpcode(Hexagon::J2_jump);
+  JumpInst->addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+      MCSymbolRefExpr::create(EndSled, OutContext), OutContext)));
+
+  MCInst JumpPacket;
+  JumpPacket.setOpcode(Hexagon::BUNDLE);
+  JumpPacket.addOperand(MCOperand::createImm(0));
+  JumpPacket.addOperand(MCOperand::createInst(JumpInst));
+  EmitToStreamer(O, JumpPacket);
+
+  // Packet 2: allocframe to save LR:FP.
+  MCInst *AllocInst = OutContext.createMCInst();
+  AllocInst->setOpcode(Hexagon::S2_allocframe);
+  AllocInst->addOperand(MCOperand::createReg(Hexagon::R29));
+  AllocInst->addOperand(MCOperand::createReg(Hexagon::R30));
+  AllocInst->addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+      MCConstantExpr::create(0, OutContext), OutContext)));
+
+  MCInst AllocPacket;
+  AllocPacket.setOpcode(Hexagon::BUNDLE);
+  AllocPacket.addOperand(MCOperand::createImm(0));
+  AllocPacket.addOperand(MCOperand::createInst(AllocInst));
+  EmitToStreamer(O, AllocPacket);
+
+  // Save argument registers and set up call arguments.
+  // Custom event:  2 operands (ptr, size) in MI operands 0,1 -> r0, r1
+  // Typed event:   3 operands (type, ptr, size) in MI operands 0,1,2 ->
+  // r0,r1,r2
+  unsigned NumArgs = Typed ? 3 : 2;
+
+  // Save the original argument registers onto the stack.
+  // Packet 3: Allocate space and save r0.
+  MCInst *SubSpInst = OutContext.createMCInst();
+  SubSpInst->setOpcode(Hexagon::A2_addi);
+  SubSpInst->addOperand(MCOperand::createReg(Hexagon::R29));
+  SubSpInst->addOperand(MCOperand::createReg(Hexagon::R29));
+  SubSpInst->addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+      MCConstantExpr::create(-(int64_t)(NumArgs * 4), OutContext),
+      OutContext)));
+
+  MCInst SubSpPacket;
+  SubSpPacket.setOpcode(Hexagon::BUNDLE);
+  SubSpPacket.addOperand(MCOperand::createImm(0));
+  SubSpPacket.addOperand(MCOperand::createInst(SubSpInst));
+  EmitToStreamer(O, SubSpPacket);
+
+  // Save each argument register.
+  for (unsigned I = 0; I < NumArgs; ++I) {
+    MCInst *StoreInst = OutContext.createMCInst();
+    StoreInst->setOpcode(Hexagon::S2_storeri_io);
+    StoreInst->addOperand(MCOperand::createReg(Hexagon::R29));
+    StoreInst->addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+        MCConstantExpr::create(I * 4, OutContext), OutContext)));
+    StoreInst->addOperand(MCOperand::createReg(Hexagon::R0 + I));
+
+    MCInst StorePacket;
+    StorePacket.setOpcode(Hexagon::BUNDLE);
+    StorePacket.addOperand(MCOperand::createImm(0));
+    StorePacket.addOperand(MCOperand::createInst(StoreInst));
+    EmitToStreamer(O, StorePacket);
+  }
+
+  // Move operands into argument registers (r0, r1, [r2]).
+  // The XRay intrinsic uses i64 for size (and type) parameters. On 32-bit
+  // Hexagon these are in DoubleRegs (register pairs). The runtime handler
+  // expects 32-bit arguments, so extract the low sub-register.
+  //
+  // NOTE: Moves are always emitted (even identity moves like r0 = r0) so that
+  // the sled has a fixed size. The runtime patching code relies on the sled
+  // being a known number of words to encode the correct jump offset for the
+  // disabled state.
+  //
+  // NOTE: When source registers alias destination registers in a conflicting
+  // order (e.g., src0 in r1 and src1 in r0), the sequential moves can produce
+  // incorrect results. This is the same limitation as AArch64's implementation
+  // and is unlikely in practice since the register allocator rarely produces
+  // such assignments for XRay event intrinsics.
+  const auto &HRI = *MF->getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  for (unsigned I = 0; I < NumArgs; ++I) {
+    Register SrcReg = MI.getOperand(I).getReg();
+    if (Hexagon::DoubleRegsRegClass.contains(SrcReg))
+      SrcReg = HRI.getSubReg(SrcReg, Hexagon::isub_lo);
+
+    MCInst *MovInst = OutContext.createMCInst();
+    MovInst->setOpcode(Hexagon::A2_tfr);
+    MovInst->addOperand(MCOperand::createReg(Hexagon::R0 + I));
+    MovInst->addOperand(MCOperand::createReg(SrcReg));
+
+    MCInst MovPacket;
+    MovPacket.setOpcode(Hexagon::BUNDLE);
+    MovPacket.addOperand(MCOperand::createImm(0));
+    MovPacket.addOperand(MCOperand::createInst(MovInst));
+    EmitToStreamer(O, MovPacket);
+  }
+
+  // Call the handler.
+  MCInst *CallInst = OutContext.createMCInst();
+  CallInst->setOpcode(Hexagon::J2_call);
+  CallInst->addOperand(
+      MCOperand::createExpr(HexagonMCExpr::create(Sym, OutContext)));
+
+  MCInst CallPacket;
+  CallPacket.setOpcode(Hexagon::BUNDLE);
+  CallPacket.addOperand(MCOperand::createImm(0));
+  CallPacket.addOperand(MCOperand::createInst(CallInst));
+  EmitToStreamer(O, CallPacket);
+
+  // Restore argument registers.
+  for (unsigned I = 0; I < NumArgs; ++I) {
+    MCInst *LoadInst = OutContext.createMCInst();
+    LoadInst->setOpcode(Hexagon::L2_loadri_io);
+    LoadInst->addOperand(MCOperand::createReg(Hexagon::R0 + I));
+    LoadInst->addOperand(MCOperand::createReg(Hexagon::R29));
+    LoadInst->addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+        MCConstantExpr::create(I * 4, OutContext), OutContext)));
+
+    MCInst LoadPacket;
+    LoadPacket.setOpcode(Hexagon::BUNDLE);
+    LoadPacket.addOperand(MCOperand::createImm(0));
+    LoadPacket.addOperand(MCOperand::createInst(LoadInst));
+    EmitToStreamer(O, LoadPacket);
+  }
+
+  // Deallocate saved argument space.
+  MCInst *AddSpInst = OutContext.createMCInst();
+  AddSpInst->setOpcode(Hexagon::A2_addi);
+  AddSpInst->addOperand(MCOperand::createReg(Hexagon::R29));
+  AddSpInst->addOperand(MCOperand::createReg(Hexagon::R29));
+  AddSpInst->addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+      MCConstantExpr::create(NumArgs * 4, OutContext), OutContext)));
+
+  MCInst AddSpPacket;
+  AddSpPacket.setOpcode(Hexagon::BUNDLE);
+  AddSpPacket.addOperand(MCOperand::createImm(0));
+  AddSpPacket.addOperand(MCOperand::createInst(AddSpInst));
+  EmitToStreamer(O, AddSpPacket);
+
+  // Deallocframe to restore LR:FP.
+  MCInst *DeallocInst = OutContext.createMCInst();
+  DeallocInst->setOpcode(Hexagon::L2_deallocframe);
+  DeallocInst->addOperand(MCOperand::createReg(Hexagon::D15));
+  DeallocInst->addOperand(MCOperand::createReg(Hexagon::R30));
+
+  MCInst DeallocPacket;
+  DeallocPacket.setOpcode(Hexagon::BUNDLE);
+  DeallocPacket.addOperand(MCOperand::createImm(0));
+  DeallocPacket.addOperand(MCOperand::createInst(DeallocInst));
+  EmitToStreamer(O, DeallocPacket);
+
+  OutStreamer->emitLabel(EndSled);
+  recordSled(CurSled, MI,
+             Typed ? SledKind::TYPED_EVENT : SledKind::CUSTOM_EVENT, 2);
+}
+
 void HexagonAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   static const int8_t NoopsInSledCount = 6;
   // We want to emit the following pattern:

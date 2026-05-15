@@ -261,7 +261,8 @@ def or_oneuse : HasOneUseBinOp<or>;
 def xor_oneuse : HasOneUseBinOp<xor>;
 } // Properties = [SDNPCommutative, SDNPAssociative]
 
-def not_oneuse : HasOneUseUnaryOp<not>;
+def not_oneuse  : HasOneUseUnaryOp<not>;
+def vnot_oneuse : HasOneUseUnaryOp<vnot>;
 
 def add_oneuse : HasOneUseBinOp<add>;
 def sub_oneuse : HasOneUseBinOp<sub>;

@@ -4973,8 +4973,8 @@ protected:
     //  First step, make the specifier.
     std::unique_ptr<SymbolContextSpecifier> specifier_up;
     if (m_options.m_sym_ctx_specified) {
-      specifier_up = std::make_unique<SymbolContextSpecifier>(
-          GetDebugger().GetSelectedTarget());
+      specifier_up =
+          std::make_unique<SymbolContextSpecifier>(target.shared_from_this());
 
       if (!m_options.m_module_name.empty()) {
         specifier_up->AddSpecification(
@@ -5616,8 +5616,8 @@ protected:
 
     // Set up symbol context specifier if filter options were provided.
     if (m_options.m_sym_ctx_specified) {
-      auto specifier_up = std::make_unique<SymbolContextSpecifier>(
-          GetDebugger().GetSelectedTarget());
+      auto specifier_up =
+          std::make_unique<SymbolContextSpecifier>(target.shared_from_this());
 
       if (!m_options.m_module_name.empty())
         specifier_up->AddSpecification(

@@ -371,6 +371,13 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
                            TII->getRegClass(True->getDesc(), 1));
   }
 
+  // If True is mask agnostic, we need to make it mask undisturbed.
+  if (RISCVII::hasVecPolicyOp(True->getDesc().TSFlags)) {
+    MachineOperand &PolicyOp =
+        True->getOperand(RISCVII::getVecPolicyOpNum(True->getDesc()));
+    PolicyOp.setImm(PolicyOp.getImm() & ~RISCVVType::MASK_AGNOSTIC);
+  }
+
   MI.setDesc(TII->get(NewOpc));
   MI.removeOperand(2); // False operand
   MI.removeOperand(3); // Mask operand

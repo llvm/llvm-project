@@ -533,7 +533,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R2_DD[] = {
 };
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-LIBC_INLINE LIBC_CONSTEXPR bool is_odd_integer(float x) {
+LIBC_INLINE constexpr bool is_odd_integer(float x) {
   using FPBits = typename fputil::FPBits<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
   int32_t x_e =
@@ -544,7 +544,7 @@ LIBC_INLINE LIBC_CONSTEXPR bool is_odd_integer(float x) {
   return (x_e + lsb == UNIT_EXPONENT);
 }
 
-LIBC_INLINE LIBC_CONSTEXPR bool is_integer(float x) {
+LIBC_INLINE constexpr bool is_integer(float x) {
   using FPBits = typename fputil::FPBits<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
   int32_t x_e =
@@ -556,7 +556,7 @@ LIBC_INLINE LIBC_CONSTEXPR bool is_integer(float x) {
 }
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE LIBC_CONSTEXPR bool larger_exponent(double a, double b) {
+LIBC_INLINE constexpr bool larger_exponent(double a, double b) {
   using DoubleBits = typename fputil::FPBits<double>;
   return DoubleBits(a).get_biased_exponent() >=
          DoubleBits(b).get_biased_exponent();

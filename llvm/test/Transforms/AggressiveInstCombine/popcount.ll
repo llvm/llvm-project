@@ -1318,9 +1318,8 @@ define i56 @popcnt1_negative_i56(i56 noundef %uWord) {
 }
 
 define i32 @popcnt2_32(i32 noundef %0)  {
-; CHECK-LABEL: define i32 @popcnt2_32(
-; CHECK-SAME: i32 noundef [[TMP0:%.*]])  {
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP0]])
+; CHECK-LABEL: @popcnt2_32(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP0:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %2 = lshr i32 %0, 1
@@ -1342,9 +1341,8 @@ define i32 @popcnt2_32(i32 noundef %0)  {
 }
 
 define i32 @popcnt3_32(i32 noundef %0) {
-; CHECK-LABEL: define i32 @popcnt3_32(
-; CHECK-SAME: i32 noundef [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP0]])
+; CHECK-LABEL: @popcnt3_32(
+; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP0:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP16]]
 ;
   %2 = lshr i32 %0, 1
@@ -1362,6 +1360,90 @@ define i32 @popcnt3_32(i32 noundef %0) {
   %14 = lshr i32 %13, 16
   %15 = add nuw nsw i32 %14, %13
   %16 = and i32 %15, 63
+  ret i32 %16
+}
+
+define i32 @popcnt3_32_large_mask(i32 noundef %0) {
+; CHECK-LABEL: @popcnt3_32_large_mask(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP0:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = lshr i32 %0, 1
+  %3 = and i32 %2, 1431655765
+  %4 = sub i32 %0, %3
+  %5 = lshr i32 %4, 2
+  %6 = and i32 %5, 858993459
+  %7 = mul i32 %6, -3
+  %8 = add i32 %7, %4
+  %9 = lshr i32 %8, 4
+  %10 = add i32 %9, %8
+  %11 = and i32 %10, 252645135
+  %12 = lshr i32 %11, 8
+  %13 = add nuw nsw i32 %12, %11
+  %14 = lshr i32 %13, 16
+  %15 = add nuw nsw i32 %14, %13
+  %16 = and i32 %15, 255
+  ret i32 %16
+}
+
+define i32 @popcnt3_32_large_mask2(i32 noundef %0) {
+; CHECK-LABEL: @popcnt3_32_large_mask2(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP0:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = lshr i32 %0, 1
+  %3 = and i32 %2, 1431655765
+  %4 = sub i32 %0, %3
+  %5 = lshr i32 %4, 2
+  %6 = and i32 %5, 858993459
+  %7 = mul i32 %6, -3
+  %8 = add i32 %7, %4
+  %9 = lshr i32 %8, 4
+  %10 = add i32 %9, %8
+  %11 = and i32 %10, 252645135
+  %12 = lshr i32 %11, 8
+  %13 = add nuw nsw i32 %12, %11
+  %14 = lshr i32 %13, 16
+  %15 = add nuw nsw i32 %14, %13
+  %16 = and i32 %15, 191
+  ret i32 %16
+}
+
+; The last mask should not be larger than 8 bits.
+define i32 @negative_popcnt3_32_large_mask(i32 noundef %0) {
+; CHECK-LABEL: @negative_popcnt3_32_large_mask(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1431655765
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 858993459
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], -3
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = and i32 [[TMP10]], 252645135
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i32 [[TMP11]], 8
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i32 [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP13]], 16
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i32 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 511
+; CHECK-NEXT:    ret i32 [[TMP16]]
+;
+  %2 = lshr i32 %0, 1
+  %3 = and i32 %2, 1431655765
+  %4 = sub i32 %0, %3
+  %5 = lshr i32 %4, 2
+  %6 = and i32 %5, 858993459
+  %7 = mul i32 %6, -3
+  %8 = add i32 %7, %4
+  %9 = lshr i32 %8, 4
+  %10 = add i32 %9, %8
+  %11 = and i32 %10, 252645135
+  %12 = lshr i32 %11, 8
+  %13 = add nuw nsw i32 %12, %11
+  %14 = lshr i32 %13, 16
+  %15 = add nuw nsw i32 %14, %13
+  %16 = and i32 %15, 511
   ret i32 %16
 }
 
@@ -1410,6 +1492,73 @@ define i64 @popcnt2_64(i64 noundef %0) {
   %16 = lshr i64 %15, 32
   %17 = add nuw nsw i64 %16, %15
   %18 = and i64 %17, 127
+  ret i64 %18
+}
+
+define i64 @popcnt2_64_large_mask(i64 noundef %0) {
+; CHECK-LABEL: @popcnt2_64_large_mask(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0:%.*]])
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %2 = lshr i64 %0, 1
+  %3 = and i64 %2, 6148914691236517205
+  %4 = sub i64 %0, %3
+  %5 = and i64 %4, 3689348814741910323
+  %6 = lshr i64 %4, 2
+  %7 = and i64 %6, 3689348814741910323
+  %8 = add nuw nsw i64 %7, %5
+  %9 = lshr i64 %8, 4
+  %10 = add nuw nsw i64 %9, %8
+  %11 = and i64 %10, 1085102592571150095
+  %12 = lshr i64 %11, 8
+  %13 = add nuw nsw i64 %12, %11
+  %14 = lshr i64 %13, 16
+  %15 = add nuw nsw i64 %14, %13
+  %16 = lshr i64 %15, 32
+  %17 = add nuw nsw i64 %16, %15
+  %18 = and i64 %17, 255
+  ret i64 %18
+}
+
+; The last mask is not big enough
+define i64 @negative_popcnt2_64_large_mask(i64 noundef %0) {
+; CHECK-LABEL: @negative_popcnt2_64_large_mask(
+; CHECK-NEXT:    [[TMP18:%.*]] = lshr i64 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP18]], 6148914691236517205
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 3689348814741910323
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 3689348814741910323
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[TMP7]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 1085102592571150095
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 8
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i64 [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP13]], 16
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i64 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = lshr i64 [[TMP15]], 32
+; CHECK-NEXT:    [[TMP17:%.*]] = add nuw nsw i64 [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP17]], 63
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %2 = lshr i64 %0, 1
+  %3 = and i64 %2, 6148914691236517205
+  %4 = sub i64 %0, %3
+  %5 = and i64 %4, 3689348814741910323
+  %6 = lshr i64 %4, 2
+  %7 = and i64 %6, 3689348814741910323
+  %8 = add nuw nsw i64 %7, %5
+  %9 = lshr i64 %8, 4
+  %10 = add nuw nsw i64 %9, %8
+  %11 = and i64 %10, 1085102592571150095
+  %12 = lshr i64 %11, 8
+  %13 = add nuw nsw i64 %12, %11
+  %14 = lshr i64 %13, 16
+  %15 = add nuw nsw i64 %14, %13
+  %16 = lshr i64 %15, 32
+  %17 = add nuw nsw i64 %16, %15
+  %18 = and i64 %17, 63
   ret i64 %18
 }
 

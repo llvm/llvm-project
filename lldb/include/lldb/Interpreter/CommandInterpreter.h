@@ -470,6 +470,14 @@ public:
 
   Debugger &GetDebugger() { return m_debugger; }
 
+  /// Get the target selected by the user at the command line. All commands
+  /// should prefer this over any other notion of a "current" target, so that
+  /// the user's explicit `target select` stays authoritative within the
+  /// command layer. Non-command code should use the execution context instead.
+  lldb::TargetSP GetSelectedTarget() {
+    return m_debugger.GetTargetList().GetSelectedTarget();
+  }
+
   ExecutionContext GetExecutionContext() const;
 
   lldb::PlatformSP GetPlatform(bool prefer_target_platform);

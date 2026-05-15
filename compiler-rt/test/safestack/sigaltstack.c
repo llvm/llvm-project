@@ -7,6 +7,11 @@
 #include <stddef.h>
 #include <sys/mman.h>
 
+// MAP_STACK is unportable.
+#ifndef MAP_STACK
+#  define MAP_STACK 0
+#endif
+
 // Test that safe stack works with sigaltstack.
 int puts(const char *);
 

@@ -81,27 +81,27 @@ namespace math {
 // and relative errors bounded by:
 //   |(atan(u) - P(u)) / P(u)| < 2^-114.
 
-LIBC_INLINE LIBC_CONSTEXPR float128 atan2f128(float128 y, float128 x) {
+LIBC_INLINE constexpr float128 atan2f128(float128 y, float128 x) {
   using Float128 = fputil::DyadicFloat<128>;
 
-  LIBC_CONSTEXPR Float128 ZERO = {Sign::POS, 0, 0_u128};
-  LIBC_CONSTEXPR Float128 MZERO = {Sign::NEG, 0, 0_u128};
-  LIBC_CONSTEXPR Float128 PI = {Sign::POS, -126,
-                                0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
-  LIBC_CONSTEXPR Float128 MPI = {Sign::NEG, -126,
-                                 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
-  LIBC_CONSTEXPR Float128 PI_OVER_2 = {
-      Sign::POS, -127, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
-  LIBC_CONSTEXPR Float128 MPI_OVER_2 = {
-      Sign::NEG, -127, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
-  LIBC_CONSTEXPR Float128 PI_OVER_4 = {
-      Sign::POS, -128, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
-  LIBC_CONSTEXPR Float128 THREE_PI_OVER_4 = {
+  constexpr Float128 ZERO = {Sign::POS, 0, 0_u128};
+  constexpr Float128 MZERO = {Sign::NEG, 0, 0_u128};
+  constexpr Float128 PI = {Sign::POS, -126,
+                           0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+  constexpr Float128 MPI = {Sign::NEG, -126,
+                            0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+  constexpr Float128 PI_OVER_2 = {Sign::POS, -127,
+                                  0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+  constexpr Float128 MPI_OVER_2 = {Sign::NEG, -127,
+                                   0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+  constexpr Float128 PI_OVER_4 = {Sign::POS, -128,
+                                  0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+  constexpr Float128 THREE_PI_OVER_4 = {
       Sign::POS, -128, 0x96cbe3f9'990e91a7'9394c9e8'a0a5159d_u128};
 
   // Adjustment for constant term:
   //   CONST_ADJ[x_sign][y_sign][recip]
-  LIBC_CONSTEXPR Float128 CONST_ADJ[2][2][2] = {
+  constexpr Float128 CONST_ADJ[2][2][2] = {
       {{ZERO, MPI_OVER_2}, {MZERO, MPI_OVER_2}},
       {{MPI, PI_OVER_2}, {MPI, PI_OVER_2}}};
 
@@ -139,7 +139,7 @@ LIBC_INLINE LIBC_CONSTEXPR float128 atan2f128(float128 y, float128 x) {
     //   0: zero
     //   1: finite, non-zero
     //   2: infinity
-    LIBC_CONSTEXPR Float128 EXCEPTS[3][3][2] = {
+    constexpr Float128 EXCEPTS[3][3][2] = {
         {{ZERO, PI}, {ZERO, PI}, {ZERO, PI}},
         {{PI_OVER_2, PI_OVER_2}, {ZERO, ZERO}, {ZERO, PI}},
         {{PI_OVER_2, PI_OVER_2},

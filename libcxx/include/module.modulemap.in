@@ -255,10 +255,6 @@ module std_core [system] {
       header "__type_traits/is_polymorphic.h"
       export std_core.type_traits.integral_constant
     }
-    module is_primary_template {
-      header "__type_traits/is_primary_template.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_reference_wrapper {
       header "__type_traits/is_reference_wrapper.h"
       export std_core.type_traits.integral_constant
@@ -330,10 +326,6 @@ module std_core [system] {
     module is_unqualified { header "__type_traits/is_unqualified.h" }
     module is_unsigned {
       header "__type_traits/is_unsigned.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_valid_expansion {
-      header "__type_traits/is_valid_expansion.h"
       export std_core.type_traits.integral_constant
     }
     module is_void {
@@ -1089,6 +1081,7 @@ module std [system] {
     module invocable                { header "__concepts/invocable.h" }
     module movable                  { header "__concepts/movable.h" }
     module predicate                { header "__concepts/predicate.h" }
+    module primary_template         { header "__concepts/primary_template.h" }
     module regular                  { header "__concepts/regular.h" }
     module relation                 { header "__concepts/relation.h" }
     module same_as                  { header "__concepts/same_as.h" }

@@ -26,26 +26,33 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
     bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
 
+  auto getPtrVarType = [](mlir::Type ptrType) {
+    mlir::TypeAttr varType = mlir::TypeAttr::get(
+        llvm::cast<mlir::omp::PointerLikeType>(ptrType).getElementType());
+
+    // For types with unknown extents such as <2x?xi32> we discard the
+    // incomplete type info and only retain the base type. The correct
+    // dimensions are later recovered through the bounds info.
+    if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
+      if (seqType.hasDynamicExtents())
+        varType = mlir::TypeAttr::get(seqType.getEleTy());
+    return varType;
+  };
+
   if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
     baseAddr = fir::BoxAddrOp::create(builder, loc, baseAddr);
     retTy = baseAddr.getType();
   }
 
-  mlir::TypeAttr varType = mlir::TypeAttr::get(
-      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
-
-  // For types with unknown extents such as <2x?xi32> we discard the incomplete
-  // type info and only retain the base type. The correct dimensions are later
-  // recovered through the bounds info.
-  if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
-    if (seqType.hasDynamicExtents())
-      varType = mlir::TypeAttr::get(seqType.getEleTy());
+  auto varPtrType = getPtrVarType(retTy);
+  auto varPtrPtrTy =
+      varPtrPtr ? getPtrVarType(varPtrPtr.getType()) : mlir::TypeAttr{};
 
   mlir::omp::MapInfoOp op =
-      mlir::omp::MapInfoOp::create(builder, loc, retTy, baseAddr, varType,
+      mlir::omp::MapInfoOp::create(builder, loc, retTy, baseAddr, varPtrType,
           builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
           builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
-          varPtrPtr, members, membersIndex, bounds, mapperId,
+          varPtrPtr, varPtrPtrTy, members, membersIndex, bounds, mapperId,
           builder.getStringAttr(name), builder.getBoolAttr(partialMap));
   return op;
 }

@@ -25,6 +25,8 @@
 
 namespace llvm {
 
+extern cl::opt<unsigned> SSAUpdaterPhiSearchLimit;
+
 template<typename T> class SSAUpdaterTraits;
 
 template<typename UpdaterT>
@@ -414,7 +416,17 @@ public:
   /// them match what is needed.
   void FindExistingPHI(BlkT *BB) {
     SmallVector<BBInfo *, 20> TaggedBlocks;
+    // SSAUpdaterPhiSearchLimit is needed to guard against pathological cases
+    // (e.g. AMDGPU/large-phi-search.ll) where a large number of searches are
+    // done which all fail.  Each search adds another PHI node to be searched.
+    // In a 3-stage build of LLVM the maximum search length was 53.
+    unsigned Count = 0;
+
     for (auto &SomePHI : BB->phis()) {
+      // Abandon search for match.  FindAvailableVals will create a new
+      // phi-node.
+      if (++Count > SSAUpdaterPhiSearchLimit)
+        break;
       if (CheckIfPHIMatches(&SomePHI, TaggedBlocks)) {
         RecordMatchingPHIs(TaggedBlocks);
         break;

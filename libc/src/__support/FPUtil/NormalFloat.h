@@ -46,7 +46,7 @@ template <typename T> struct NormalFloat {
 
   Sign sign = Sign::POS;
 
-  LIBC_INLINE LIBC_CONSTEXPR NormalFloat(Sign s, int32_t e, StorageType m)
+  LIBC_INLINE constexpr NormalFloat(Sign s, int32_t e, StorageType m)
       : exponent(e), mantissa(m), sign(s) {
     if (mantissa >= ONE)
       return;
@@ -56,18 +56,18 @@ template <typename T> struct NormalFloat {
     exponent -= normalization_shift;
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR explicit NormalFloat(T x) {
+  LIBC_INLINE constexpr explicit NormalFloat(T x) {
     init_from_bits(FPBits<T>(x));
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR explicit NormalFloat(FPBits<T> bits) {
+  LIBC_INLINE constexpr explicit NormalFloat(FPBits<T> bits) {
     init_from_bits(bits);
   }
 
   // Compares this normalized number with another normalized number.
   // Returns -1 is this number is less than |other|, 0 if this number is equal
   // to |other|, and 1 if this number is greater than |other|.
-  LIBC_INLINE LIBC_CONSTEXPR int cmp(const NormalFloat<T> &other) const {
+  LIBC_INLINE constexpr int cmp(const NormalFloat<T> &other) const {
     const int result = sign.is_neg() ? -1 : 1;
     if (sign != other.sign)
       return result;
@@ -89,13 +89,13 @@ template <typename T> struct NormalFloat {
   // Returns a new normalized floating point number which is equal in value
   // to this number multiplied by 2^e. That is:
   //     new = this *  2^e
-  LIBC_INLINE LIBC_CONSTEXPR NormalFloat<T> mul2(int e) const {
+  LIBC_INLINE constexpr NormalFloat<T> mul2(int e) const {
     NormalFloat<T> result = *this;
     result.exponent += e;
     return result;
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR operator T() const {
+  LIBC_INLINE constexpr operator T() const {
     int biased_exponent = exponent + FPBits<T>::EXP_BIAS;
     // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
     constexpr int MAX_EXPONENT_VALUE = (1 << FPBits<T>::EXP_LEN) - 2;
@@ -148,7 +148,7 @@ template <typename T> struct NormalFloat {
   }
 
 private:
-  LIBC_INLINE LIBC_CONSTEXPR void init_from_bits(FPBits<T> bits) {
+  LIBC_INLINE constexpr void init_from_bits(FPBits<T> bits) {
     sign = bits.sign();
 
     if (bits.is_inf_or_nan() || bits.is_zero()) {
@@ -170,8 +170,7 @@ private:
     }
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR unsigned
-  evaluate_normalization_shift(StorageType m) {
+  LIBC_INLINE constexpr unsigned evaluate_normalization_shift(StorageType m) {
     unsigned shift = 0;
     for (; (ONE & m) == 0 && (shift < FPBits<T>::FRACTION_LEN);
          m <<= 1, ++shift)
@@ -182,7 +181,7 @@ private:
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 template <>
-LIBC_INLINE LIBC_CONSTEXPR void
+LIBC_INLINE constexpr void
 NormalFloat<long double>::init_from_bits(FPBits<long double> bits) {
   sign = bits.sign();
 
@@ -218,8 +217,7 @@ NormalFloat<long double>::init_from_bits(FPBits<long double> bits) {
 }
 
 template <>
-LIBC_INLINE LIBC_CONSTEXPR NormalFloat<long double>::operator long double()
-    const {
+LIBC_INLINE constexpr NormalFloat<long double>::operator long double() const {
   using LDBits = FPBits<long double>;
   int biased_exponent = exponent + LDBits::EXP_BIAS;
   // Max exponent is of the form 0xFF...E. That is why -2 and not -1.

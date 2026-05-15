@@ -478,6 +478,11 @@ private:
   /// A queue of (optional) vtables to consider emitting.
   std::vector<const CXXRecordDecl*> DeferredVTables;
 
+  /// In incremental compilation, the set of vtable classes whose vtable
+  /// definitions were emitted into a previous PTU's module. Carried forward
+  /// by moveLazyEmissionStates() so later PTUs skip re-defining them.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 8> EmittedVTables;
+
   /// A queue of (optional) vtables that may be emitted opportunistically.
   std::vector<const CXXRecordDecl *> OpportunisticVTables;
 

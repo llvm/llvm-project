@@ -120,7 +120,6 @@ define void @storeLongLong(i64 noundef %x) {
 ; SMALL32-O0-NEXT:    stw r0, 40(r1)
 ; SMALL32-O0-NEXT:    mr r5, r4
 ; SMALL32-O0-NEXT:    stw r3, 28(r1) # 4-byte Folded Spill
-; SMALL32-O0-NEXT:    # kill: def $r4 killed $r5
 ; SMALL32-O0-NEXT:    lwz r6, L..C1(r2) # target-flags(ppc-tprel) @TLLongLong
 ; SMALL32-O0-NEXT:    bla .__get_tpointer[PR]
 ; SMALL32-O0-NEXT:    mr r4, r3
@@ -140,7 +139,6 @@ define void @storeLongLong(i64 noundef %x) {
 ; LARGE32-O0-NEXT:    stw r0, 40(r1)
 ; LARGE32-O0-NEXT:    mr r5, r4
 ; LARGE32-O0-NEXT:    stw r3, 28(r1) # 4-byte Folded Spill
-; LARGE32-O0-NEXT:    # kill: def $r4 killed $r5
 ; LARGE32-O0-NEXT:    addis r3, L..C1@u(r2)
 ; LARGE32-O0-NEXT:    lwz r6, L..C1@l(r3)
 ; LARGE32-O0-NEXT:    bla .__get_tpointer[PR]
@@ -434,7 +432,6 @@ define i32 @loadDouble() {
 ; SMALL64-O0-NEXT:    ld r3, L..C2(r2) # target-flags(ppc-tprel) @TLDouble
 ; SMALL64-O0-NEXT:    add r3, r13, r3
 ; SMALL64-O0-NEXT:    lfd f0, 0(r3)
-; SMALL64-O0-NEXT:    # kill: def $f1 killed $f0
 ; SMALL64-O0-NEXT:    xscvdpsxws f0, f0
 ; SMALL64-O0-NEXT:    addi r3, r1, -12
 ; SMALL64-O0-NEXT:    stfiwx f0, 0, r3
@@ -448,7 +445,6 @@ define i32 @loadDouble() {
 ; LARGE64-O0-NEXT:    ld r3, L..C2@l(r3)
 ; LARGE64-O0-NEXT:    add r3, r13, r3
 ; LARGE64-O0-NEXT:    lfd f0, 0(r3)
-; LARGE64-O0-NEXT:    # kill: def $f1 killed $f0
 ; LARGE64-O0-NEXT:    xscvdpsxws f0, f0
 ; LARGE64-O0-NEXT:    addi r3, r1, -12
 ; LARGE64-O0-NEXT:    stfiwx f0, 0, r3
@@ -497,7 +493,6 @@ define i32 @loadDouble() {
 ; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, TLDouble[UL]@le(r13)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    lfd f0, 0(r3)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    # kill: def $f1 killed $f0
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    xscvdpsxws f0, f0
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    addi r3, r1, -12
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stfiwx f0, 0, r3
@@ -509,7 +504,6 @@ define i32 @loadDouble() {
 ; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, TLDouble[UL]@le(r13)
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    lfd f0, 0(r3)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    # kill: def $f1 killed $f0
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    xscvdpsxws f0, f0
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    addi r3, r1, -12
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stfiwx f0, 0, r3

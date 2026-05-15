@@ -330,13 +330,6 @@ bool CodeGenAction::beginSourceFileAction() {
     opts.doConcurrentMappingKind = DoConcurrentMappingKind::DCMK_None;
   }
 
-  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None) {
-    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Warning,
-        "Mapping `do concurrent` to OpenMP is still experimental.");
-    ci.getDiagnostics().Report(diagID);
-  }
-
   if (isOpenMPEnabled) {
     opts.isTargetDevice = false;
     if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(

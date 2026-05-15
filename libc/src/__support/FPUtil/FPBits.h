@@ -835,8 +835,7 @@ struct FPBits final : public internal::FPRepImpl<get_fp_type<T>(), FPBits<T>> {
   // Constructors.
   LIBC_INLINE constexpr FPBits() = default;
 
-  template <typename XType>
-  LIBC_INLINE LIBC_CONSTEXPR explicit FPBits(XType x) {
+  template <typename XType> LIBC_INLINE constexpr explicit FPBits(XType x) {
     using Unqual = typename cpp::remove_cv_t<XType>;
     if constexpr (cpp::is_same_v<Unqual, T>) {
       UP::bits = cpp::bit_cast<StorageType>(x);
@@ -850,9 +849,7 @@ struct FPBits final : public internal::FPRepImpl<get_fp_type<T>(), FPBits<T>> {
   }
 
   // Floating-point conversions.
-  LIBC_INLINE LIBC_CONSTEXPR T get_val() const {
-    return cpp::bit_cast<T>(UP::bits);
-  }
+  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(UP::bits); }
 };
 
 } // namespace fputil

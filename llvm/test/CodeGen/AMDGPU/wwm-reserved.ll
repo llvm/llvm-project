@@ -733,7 +733,6 @@ define amdgpu_cs void @_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %index) {
 ; GFX9-O0-NEXT:    s_mov_b32 s1, s6
 ; GFX9-O0-NEXT:    s_mov_b32 s2, s5
 ; GFX9-O0-NEXT:    s_mov_b32 s3, s4
-; GFX9-O0-NEXT:    ; kill: def $sgpr4_sgpr5_sgpr6_sgpr7 killed $sgpr0_sgpr1_sgpr2_sgpr3
 ; GFX9-O0-NEXT:    s_mov_b32 s4, 5
 ; GFX9-O0-NEXT:    v_lshlrev_b32_e64 v0, s4, v0
 ; GFX9-O0-NEXT:    s_mov_b32 s4, 0
@@ -1592,7 +1591,6 @@ define amdgpu_cs void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %ind
 ; GFX9-O0-NEXT:    s_mov_b32 s1, s6
 ; GFX9-O0-NEXT:    s_mov_b32 s2, s5
 ; GFX9-O0-NEXT:    s_mov_b32 s3, s4
-; GFX9-O0-NEXT:    ; kill: def $sgpr4_sgpr5_sgpr6_sgpr7 killed $sgpr0_sgpr1_sgpr2_sgpr3
 ; GFX9-O0-NEXT:    s_mov_b32 s4, 5
 ; GFX9-O0-NEXT:    v_lshlrev_b32_e64 v0, s4, v0
 ; GFX9-O0-NEXT:    s_mov_b32 s4, 0

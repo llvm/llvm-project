@@ -90,6 +90,9 @@ void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
       J.attributeBegin(ChoiceIt.getKey());
       J.objectBegin();
       J.attribute("enabled", ChoiceIt.second->Enabled);
+      J.attribute("filter", ChoiceIt.second->Filter);
+      J.attribute("filter.description",
+                  "Static property filter to exclude instrumentation.");
       for (auto &ArgIt : ChoiceIt.second->IRTArgs) {
         J.attribute(ArgIt.Name, ArgIt.Enabled);
         if ((ArgIt.Flags & IRTArg::REPLACABLE) ||
@@ -208,14 +211,20 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
       }
       SeenIOs.insert(IO);
       StringMap<bool> ValueMap, ReplaceMap;
+      StringRef FilterStr;
       for (auto &InnerObjIt : *InnerObj) {
         auto Name = StringRef(InnerObjIt.first);
-        if (Name.consume_back(".replace"))
+        if (Name == "filter") {
+          if (auto V = InnerObjIt.second.getAsString())
+            FilterStr = IConf.SS.save(*V);
+        } else if (Name.consume_back(".replace")) {
           ReplaceMap[Name] = InnerObjIt.second.getAsBoolean().value_or(false);
-        else
+        } else {
           ValueMap[Name] = InnerObjIt.second.getAsBoolean().value_or(false);
+        }
       }
       IO->Enabled = ValueMap["enabled"];
+      IO->Filter = FilterStr;
       for (auto &IRArg : IO->IRTArgs) {
         IRArg.Enabled = ValueMap[IRArg.Name];
         if (!ReplaceMap.lookup(IRArg.Name)) {

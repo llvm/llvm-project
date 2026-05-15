@@ -90,7 +90,7 @@ public:
 
   /// Search for symbols in the target process.
   LLVM_ABI void
-  lookupSymbolsAsync(ArrayRef<DylibManager::LookupRequest> Request,
+  lookupSymbolsAsync(tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
                      DylibManager::SymbolLookupCompleteFn Complete) override;
 
 private:

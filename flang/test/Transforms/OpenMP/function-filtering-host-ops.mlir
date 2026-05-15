@@ -88,7 +88,7 @@ module attributes {omp.is_target_device = true} {
     // CHECK-NEXT: %[[ALLOCATABLE_DECL:.*]]:2 = hlfir.declare %[[ALLOCATABLE]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "allocatable"} : ([[ALLOCATABLE_TYPE]]) -> ([[ALLOCATABLE_TYPE]], [[ALLOCATABLE_TYPE]])
     // CHECK-NEXT: %[[ARRAY_DECL:.*]]:2 = hlfir.declare %[[ARRAY]](%[[SHAPE]]) {uniq_name = "array"} : ([[ARRAY_TYPE]], !fir.shape<1>) -> ([[ARRAY_TYPE]], [[ARRAY_TYPE]])
     // CHECK-NEXT: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[ALLOCATABLE_DECL]]#1 base_addr : ([[ALLOCATABLE_TYPE]]) -> [[VAR_PTR_PTR_TYPE:.*]]
-    // CHECK-NEXT: %[[MAP_ALLOCATABLE:.*]] = omp.map.info var_ptr(%[[ALLOCATABLE_DECL]]#1 : [[ALLOCATABLE_TYPE]], f32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAR_PTR_PTR]] : [[VAR_PTR_PTR_TYPE]]) -> [[VAR_PTR_PTR_TYPE]]
+    // CHECK-NEXT: %[[MAP_ALLOCATABLE:.*]] = omp.map.info var_ptr(%[[ALLOCATABLE_DECL]]#1 : [[ALLOCATABLE_TYPE]], !fir.box<!fir.heap<!fir.array<?xf32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAR_PTR_PTR]] : [[VAR_PTR_PTR_TYPE]], f32) -> [[VAR_PTR_PTR_TYPE]]
     // CHECK-NEXT: %[[MAP_ARRAY:.*]] = omp.map.info var_ptr(%[[ARRAY_DECL]]#1 : [[ARRAY_TYPE]], !fir.array<9xi32>) map_clauses(tofrom) capture(ByRef) -> [[ARRAY_TYPE]]
     // CHECK-NEXT: omp.target map_entries(%[[MAP_ALLOCATABLE]] -> %{{.*}}, %[[MAP_ARRAY]] -> %{{.*}} : [[VAR_PTR_PTR_TYPE]], [[ARRAY_TYPE]])
     %c0 = arith.constant 0 : index
@@ -99,7 +99,7 @@ module attributes {omp.is_target_device = true} {
     %0:2 = hlfir.declare %allocatable {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "allocatable"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
     %1 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%c8 : index) extent(%c9 : index) stride(%c1 : index) start_idx(%c1 : index)
     %2 = fir.box_offset %0#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>
-    %m0 = omp.map.info var_ptr(%0#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, f32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%2 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) bounds(%1) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>
+    %m0 = omp.map.info var_ptr(%0#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.box<!fir.heap<!fir.array<?xf32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%2 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>, f32) bounds(%1) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>
 
     %3 = fir.shape %c9 : (index) -> !fir.shape<1>
     %4:2 = hlfir.declare %array(%3) {uniq_name = "array"} : (!fir.ref<!fir.array<9xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<9xi32>>, !fir.ref<!fir.array<9xi32>>)
@@ -141,8 +141,8 @@ module attributes {omp.is_target_device = true} {
     fir.store %2#1 to %0 : !fir.ref<!fir.box<!fir.array<*:f32>>>
     // CHECK-NEXT: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[ALLOCA]] base_addr : (!fir.ref<[[X_TYPE]]>) -> [[VAR_PTR_PTR_TYPE:.*]]
     %4 = fir.box_offset %0 base_addr : (!fir.ref<!fir.box<!fir.array<*:f32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>
-    // CHECK-NEXT: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ALLOCA]] : !fir.ref<[[X_TYPE]]>, !fir.array<*:f32>) {{.*}} var_ptr_ptr(%[[VAR_PTR_PTR]] : [[VAR_PTR_PTR_TYPE]]) -> [[VAR_PTR_PTR_TYPE]]
-    %5 = omp.map.info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<*:f32>>>, !fir.array<*:f32>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%4 : !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>
+    // CHECK-NEXT: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ALLOCA]] : !fir.ref<[[X_TYPE]]>, !fir.box<!fir.array<*:f32>>) {{.*}} var_ptr_ptr(%[[VAR_PTR_PTR]] : [[VAR_PTR_PTR_TYPE]], !fir.array<*:f32>) -> [[VAR_PTR_PTR_TYPE]]
+    %5 = omp.map.info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<*:f32>>>, !fir.box<!fir.array<*:f32>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%4 : !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>, !fir.array<*:f32>) -> !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>
     // CHECK-NEXT: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ALLOCA]] : !fir.ref<[[X_TYPE]]>, !fir.box<!fir.array<*:f32>>) {{.*}} members(%[[MAP0]] : [0] : [[VAR_PTR_PTR_TYPE]]) -> !fir.ref<!fir.array<*:f32>>
     %6 = omp.map.info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<*:f32>>>, !fir.box<!fir.array<*:f32>>) map_clauses(to) capture(ByRef) members(%5 : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>) -> !fir.ref<!fir.array<*:f32>>
     // CHECK-NEXT: omp.target map_entries(%[[MAP1]] -> %{{.*}}, %[[MAP0]] -> {{.*}})
@@ -191,11 +191,11 @@ module attributes {omp.is_target_device = true} {
     
     // CHECK-NEXT: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[ALLOCA_X]] base_addr : ([[X_TYPE]]) -> [[VAR_PTR_PTR_TYPE:.*]]
     // CHECK-NEXT: %[[MAP0:.*]] = omp.map.info var_ptr(%[[Y_DECL]]#1 : [[Y_TYPE]], i32) {{.*}} -> [[Y_TYPE]]
-    // CHECK-NEXT: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ALLOCA_X]] : [[X_TYPE]], i32) {{.*}} var_ptr_ptr(%[[VAR_PTR_PTR]] : [[VAR_PTR_PTR_TYPE]]) -> [[VAR_PTR_PTR_TYPE]]
+    // CHECK-NEXT: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ALLOCA_X]] : [[X_TYPE]], !fir.box<!fir.ptr<!fir.array<?xi32>>>) {{.*}} var_ptr_ptr(%[[VAR_PTR_PTR]] : [[VAR_PTR_PTR_TYPE]], i32) -> [[VAR_PTR_PTR_TYPE]]
     // CHECK-NEXT: %[[MAP2:.*]] = omp.map.info var_ptr(%[[ALLOCA_X]] : [[X_TYPE]], !fir.box<!fir.ptr<!fir.array<?xi32>>>) {{.*}} members(%[[MAP1]] : [0] : [[VAR_PTR_PTR_TYPE]]) -> [[X_TYPE]]
     %15 = omp.map.info var_ptr(%11#1 : !fir.ptr<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%14) -> !fir.ptr<!fir.array<?xi32>>
     %16 = fir.box_offset %0 base_addr : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-    %17 = omp.map.info var_ptr(%0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, i32) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%16 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) bounds(%7) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+    %17 = omp.map.info var_ptr(%0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%16 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%7) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
     %18 = omp.map.info var_ptr(%0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(implicit, to) capture(ByRef) members(%17 : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
     
     // CHECK-NEXT: omp.target map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP2]] -> %{{.*}}, %[[MAP1]] -> {{.*}} : [[Y_TYPE]], [[X_TYPE]], [[VAR_PTR_PTR_TYPE]])
@@ -266,8 +266,8 @@ module attributes {omp.is_target_device = true} {
     %70 = omp.map.bounds lower_bound(%66 : index) upper_bound(%67 : index) extent(%69#1 : index) stride(%65#2 : index) start_idx(%64#0 : index) {stride_in_bytes = true}
     // CHECK-NEXT: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[X_DECL]]#1 base_addr : ([[X_TYPE]]) -> [[VAR_PTR_PTR_TYPE:.*]]
     %71 = fir.box_offset %23#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>
-    // CHECK-NEXT: %[[MAP0:.*]] = omp.map.info var_ptr(%[[X_DECL]]#1 : [[X_TYPE]], f32) {{.*}} var_ptr_ptr(%[[VAR_PTR_PTR]] : [[VAR_PTR_PTR_TYPE]]) -> [[VAR_PTR_PTR_TYPE]]
-    %72 = omp.map.info var_ptr(%23#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, f32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%71 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) bounds(%70) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>
+    // CHECK-NEXT: %[[MAP0:.*]] = omp.map.info var_ptr(%[[X_DECL]]#1 : [[X_TYPE]], !fir.box<!fir.heap<!fir.array<?xf32>>>) {{.*}} var_ptr_ptr(%[[VAR_PTR_PTR]] : [[VAR_PTR_PTR_TYPE]], f32) -> [[VAR_PTR_PTR_TYPE]]
+    %72 = omp.map.info var_ptr(%23#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.box<!fir.heap<!fir.array<?xf32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%71 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>, f32) bounds(%70) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>
     // CHECK-NEXT: %[[MAP1:.*]] = omp.map.info var_ptr(%[[X_DECL]]#1 : [[X_TYPE]], !fir.box<!fir.heap<!fir.array<?xf32>>>) {{.*}} members(%[[MAP0]] : [0] : [[VAR_PTR_PTR_TYPE]]) -> [[X_TYPE]]
     %73 = omp.map.info var_ptr(%23#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.box<!fir.heap<!fir.array<?xf32>>>) map_clauses(to) capture(ByRef) members(%72 : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     // CHECK-NEXT: omp.target map_entries(%[[MAP1]] -> {{.*}}, %[[MAP0]] -> %{{.*}} : [[X_TYPE]], [[VAR_PTR_PTR_TYPE]])

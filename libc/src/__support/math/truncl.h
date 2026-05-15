@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR long double truncl(long double x) {
+LIBC_INLINE constexpr long double truncl(long double x) {
   return fputil::trunc(x);
 }
 

@@ -48,15 +48,20 @@
 #endif // has_builtin(__builtin_bit_cast)
 #endif // LIBC_HAS_BUILTIN_BIT_CAST
 
+#ifndef LIBC_HAS_CONSTANT_EVALUATION
+#define LIBC_HAS_CONSTANT_EVALUATION                                           \
+  (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED && LIBC_HAS_BUILTIN_BIT_CAST)
+#endif // LIBC_HAS_CONSTANT_EVALUATION
+
 // TODO: Remove the macro once Clang/LLVM bump their minimum compilers' version.
 // The reason for indirection is GCC is known to fail with constexpr qualified
 // functions that doesn't produce constant expression.
-#if (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED && LIBC_HAS_BUILTIN_BIT_CAST)
-#define LIBC_HAS_CONSTANT_EVALUATION
+#if LIBC_ENABLE_CONSTEXPR && LIBC_HAS_CONSTANT_EVALUATION
+#define LIBC_USE_CONSTEXPR
 #define LIBC_CONSTEXPR constexpr
 #else
 #define LIBC_CONSTEXPR
-#endif
+#endif // LIBC_USE_CONSTEXPR
 
 #ifndef LIBC_HAS_BUILTIN_IS_ASSIGNABLE
 #if (__has_builtin(__is_assignable) ||                                         \

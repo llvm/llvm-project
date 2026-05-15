@@ -15,8 +15,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR long double fromfpxl(long double x, int rnd,
-                                                unsigned int width) {
+LIBC_INLINE constexpr long double fromfpxl(long double x, int rnd,
+                                           unsigned int width) {
   return fputil::fromfpx</*IsSigned=*/true>(x, rnd, width);
 }
 

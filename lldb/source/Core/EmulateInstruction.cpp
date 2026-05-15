@@ -26,6 +26,7 @@
 #include "lldb/lldb-private-interfaces.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <cstring>
 #include <memory>
@@ -613,53 +614,49 @@ bool EmulateInstruction::CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) {
   return false;
 }
 
-BreakpointLocations
-SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(Status &status) {
+llvm::Expected<BreakpointLocations>
+SingleStepBreakpointLocationsPredictor::GetBreakpointLocations() {
   if (!m_emulator_up->ReadInstruction()) {
     // try to get at least the size of next instruction to set breakpoint.
-    lldb::addr_t next_pc = GetNextInstructionAddress(status);
-    return BreakpointLocations{next_pc};
+    llvm::Expected<addr_t> next_pc = GetNextInstructionAddress();
+    if (next_pc)
+      return BreakpointLocations{*next_pc};
+    return next_pc.takeError();
   }
 
-  auto entry_pc = m_emulator_up->ReadPC();
-  if (!entry_pc) {
-    status = Status("Can't read PC");
-    return {};
-  }
+  std::optional<addr_t> entry_pc = m_emulator_up->ReadPC();
+  if (!entry_pc)
+    return llvm::createStringError("Can't read PC");
 
   m_emulation_result = m_emulator_up->EvaluateInstruction(
       eEmulateInstructionOptionAutoAdvancePC);
 
-  lldb::addr_t next_pc = GetBreakpointLocationAddress(*entry_pc, status);
-  return BreakpointLocations{next_pc};
+  llvm::Expected<addr_t> next_pc = GetBreakpointLocationAddress(*entry_pc);
+  if (next_pc)
+    return BreakpointLocations{*next_pc};
+  return next_pc.takeError();
 }
 
-lldb::addr_t SingleStepBreakpointLocationsPredictor::GetNextInstructionAddress(
-    Status &error) {
-  auto instr_size = m_emulator_up->GetLastInstrSize();
-  if (!instr_size) {
-    error = Status("Read instruction failed!");
-    return LLDB_INVALID_ADDRESS;
-  }
+llvm::Expected<addr_t>
+SingleStepBreakpointLocationsPredictor::GetNextInstructionAddress() {
+  std::optional<uint32_t> instr_size = m_emulator_up->GetLastInstrSize();
+  if (!instr_size)
+    return llvm::createStringError("Read instruction failed!");
 
-  auto pc = m_emulator_up->ReadPC();
-  if (!pc) {
-    error = Status("Can't read PC");
-    return LLDB_INVALID_ADDRESS;
-  }
+  std::optional<addr_t> pc = m_emulator_up->ReadPC();
+  if (!pc)
+    return llvm::createStringError("Can't read PC");
 
   lldb::addr_t next_pc = *pc + *instr_size;
   return next_pc;
 }
 
-lldb::addr_t
+llvm::Expected<addr_t>
 SingleStepBreakpointLocationsPredictor::GetBreakpointLocationAddress(
-    lldb::addr_t entry_pc, Status &error) {
-  auto addr = m_emulator_up->ReadPC();
-  if (!addr) {
-    error = Status("Can't read PC");
-    return LLDB_INVALID_ADDRESS;
-  }
+    lldb::addr_t entry_pc) {
+  std::optional<addr_t> addr = m_emulator_up->ReadPC();
+  if (!addr)
+    return llvm::createStringError("Can't read PC");
   lldb::addr_t pc = *addr;
 
   if (m_emulation_result) {
@@ -678,6 +675,5 @@ SingleStepBreakpointLocationsPredictor::GetBreakpointLocationAddress(
   // The instruction emulation failed after it modified the PC. It is an
   // unknown error where we can't continue because the next instruction is
   // modifying the PC but we don't  know how.
-  error = Status("Instruction emulation failed unexpectedly.");
-  return LLDB_INVALID_ADDRESS;
+  return llvm::createStringError("Instruction emulation failed unexpectedly.");
 }

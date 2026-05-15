@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float fdivf128(float128 x, float128 y) {
+LIBC_INLINE constexpr float fdivf128(float128 x, float128 y) {
   return fputil::generic::div<float>(x, y);
 }
 

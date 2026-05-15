@@ -99,17 +99,18 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
 }
 
 bool isInStlNamespace(const Decl *D) {
-  const DeclContext *DC = D->getDeclContext();
-  if (!DC)
-    return false;
-  if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
-    if (const IdentifierInfo *II = ND->getIdentifier()) {
-      StringRef Name = II->getName();
-      if (Name.size() >= 2 && Name.front() == '_' &&
-          (Name[1] == '_' || isUppercase(Name[1])))
-        return true;
-    }
-  return DC->isStdNamespace();
+  for (const DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent()) {
+    if (DC->isStdNamespace())
+      return true;
+    if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
+      if (const IdentifierInfo *II = ND->getIdentifier()) {
+        StringRef Name = II->getName();
+        if (Name.size() >= 2 && Name.front() == '_' &&
+            (Name[1] == '_' || isUppercase(Name[1])))
+          return true;
+      }
+  }
+  return false;
 }
 
 bool isPointerLikeType(QualType QT) {

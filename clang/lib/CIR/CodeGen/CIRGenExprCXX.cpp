@@ -897,8 +897,12 @@ public:
     // is an enum whose underlying type is std::size_t.
     // FIXME: Use the right type as the parameter type. Note that in a call
     // to operator delete(size_t, ...), we may not have it available.
-    if (isAlignedAllocation(params.Alignment))
-      cgf.cgm.errorNYI("CallDeleteDuringNew: aligned allocation");
+    if (isAlignedAllocation(params.Alignment)) {
+      QualType sizeType = cgf.getContext().getSizeType();
+      cir::ConstantOp align = cgf.getBuilder().getAlignment(
+          *cgf.currSrcLoc, cgf.convertType(sizeType), allocAlign);
+      deleteArgs.add(RValue::get(align), sizeType);
+    }
 
     // Pass the rest of the arguments, which must match exactly.
     for (unsigned i = 0; i != numPlacementArgs; ++i) {
@@ -1613,7 +1617,19 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
     // The allocation alignment may be passed as the second argument.
     if (e->passAlignment()) {
-      cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: pass alignment");
+      // The alignment is always the second positional argument to a
+      // C++17 aligned allocation function -- right after the size.
+      constexpr unsigned indexOfAlignArg = 1;
+      // The corresponding parameter type, if the allocator declares one;
+      // otherwise fall back to size_t (the underlying type of
+      // std::align_val_t).
+      QualType alignValType = sizeType;
+      if (allocatorType->getNumParams() > indexOfAlignArg)
+        alignValType = allocatorType->getParamType(indexOfAlignArg);
+      cir::ConstantOp align = builder.getAlignment(
+          *currSrcLoc, convertType(alignValType), allocAlign);
+      allocatorArgs.add(RValue::get(align), alignValType);
+      ++paramsToSkip;
     }
 
     // FIXME: Why do we not pass a CalleeDecl here?
@@ -1821,8 +1837,8 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
     CharUnits deleteTypeAlign =
         getContext().toCharUnitsFromBits(getContext().getTypeAlignIfKnown(
             deleteTy, /*NeedsPreferredAlignment=*/true));
-    cir::ConstantOp align = builder.getConstInt(
-        *currSrcLoc, convertType(alignValType), deleteTypeAlign.getQuantity());
+    cir::ConstantOp align = builder.getAlignment(
+        *currSrcLoc, convertType(alignValType), deleteTypeAlign);
     deleteArgs.add(RValue::get(align), alignValType);
   }
 

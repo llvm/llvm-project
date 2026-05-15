@@ -5439,12 +5439,7 @@ LogicalResult WhileOp::verify() {
 }
 
 LogicalResult ReverseOp::verify() {
-  if (verifySameElementTypes(*this, /* inType = */ getInput1().getType(),
-                             /* outType = */ getOutput().getType())
-          .failed())
-    return failure();
   TensorType inputType = getInput1().getType();
-  TensorType outputType = getOutput().getType();
   int32_t reverseAxis = getAxis();
 
   if (reverseAxis < 0)
@@ -5458,16 +5453,7 @@ LogicalResult ReverseOp::verify() {
              << inputRank << ") to be larger than reverse axis (" << reverseAxis
              << ")";
   }
-  if (outputType.hasRank()) {
-    int64_t outputRank = outputType.getRank();
-    if (inputType.hasRank() && outputRank != inputType.getRank())
-      return emitOpError(
-          "expect output tensor rank to be equal to input tensor rank");
-    if (reverseAxis >= outputRank && (reverseAxis != 0 || outputRank != 0))
-      return emitOpError("expect output tensor rank (")
-             << outputRank << ") to be larger than reverse axis ("
-             << reverseAxis << ")";
-  }
+
   return success();
 }
 

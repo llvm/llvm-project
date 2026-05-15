@@ -12,9 +12,9 @@ define void @matmul(ptr %a, ptr %b, ptr %c) {
 ; SPLIT_REMAINDER-LABEL: define void @matmul(
 ; SPLIT_REMAINDER-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {
 ; SPLIT_REMAINDER-NEXT:    [[COL_LOAD:%.*]] = load <3 x float>, ptr [[A]], align 4
-; SPLIT_REMAINDER-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[A]], i64 3
+; SPLIT_REMAINDER-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
 ; SPLIT_REMAINDER-NEXT:    [[COL_LOAD1:%.*]] = load <3 x float>, ptr [[VEC_GEP]], align 4
-; SPLIT_REMAINDER-NEXT:    [[VEC_GEP2:%.*]] = getelementptr float, ptr [[A]], i64 6
+; SPLIT_REMAINDER-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 6
 ; SPLIT_REMAINDER-NEXT:    [[COL_LOAD3:%.*]] = load <3 x float>, ptr [[VEC_GEP2]], align 4
 ; SPLIT_REMAINDER-NEXT:    [[COL_LOAD4:%.*]] = load <3 x float>, ptr [[B]], align 4
 ; SPLIT_REMAINDER-NEXT:    [[BLOCK:%.*]] = shufflevector <3 x float> [[COL_LOAD]], <3 x float> poison, <2 x i32> <i32 0, i32 1>
@@ -61,9 +61,9 @@ define void @matmul(ptr %a, ptr %b, ptr %c) {
 ; NO_SPLIT_REMAINDER-LABEL: define void @matmul(
 ; NO_SPLIT_REMAINDER-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {
 ; NO_SPLIT_REMAINDER-NEXT:    [[COL_LOAD:%.*]] = load <3 x float>, ptr [[A]], align 4
-; NO_SPLIT_REMAINDER-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[A]], i64 3
+; NO_SPLIT_REMAINDER-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
 ; NO_SPLIT_REMAINDER-NEXT:    [[COL_LOAD1:%.*]] = load <3 x float>, ptr [[VEC_GEP]], align 4
-; NO_SPLIT_REMAINDER-NEXT:    [[VEC_GEP2:%.*]] = getelementptr float, ptr [[A]], i64 6
+; NO_SPLIT_REMAINDER-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 6
 ; NO_SPLIT_REMAINDER-NEXT:    [[COL_LOAD3:%.*]] = load <3 x float>, ptr [[VEC_GEP2]], align 4
 ; NO_SPLIT_REMAINDER-NEXT:    [[COL_LOAD4:%.*]] = load <3 x float>, ptr [[B]], align 4
 ; NO_SPLIT_REMAINDER-NEXT:    [[BLOCK:%.*]] = shufflevector <3 x float> [[COL_LOAD]], <3 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
