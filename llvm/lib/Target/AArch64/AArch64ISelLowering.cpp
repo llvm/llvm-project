@@ -9442,7 +9442,9 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
                                   IsVarArg &&
                                   !(CLI.CB && CLI.CB->isMustTailCall());
   if (IsArm64ECVarArgExitThunk) {
-    assert(NumArgs >= 2 && "variadic Arm64EC exit thunk call missing x4/x5");
+    if (NumArgs < 2)
+      report_fatal_error("variadic arm64ec_thunk_x64 call is missing the "
+                         "x4/x5 (pointer/length) arguments");
     NumArgs -= 2;
   }
 
@@ -10050,9 +10052,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Materialize an aligned outgoing stack area now
     // so the args described by x4 (pointer) and x5 (length) can be copied
     // into a real x64-style stack layout.
-    assert(Outs.size() >= 2 && "variadic Arm64EC thunk call missing x4/x5");
-    assert(!IsTailCall &&
-           "tail calls are unsupported for variadic Arm64EC thunk calls");
+    if (Outs.size() < 2)
+      report_fatal_error("variadic arm64ec_thunk_x64 call is missing the "
+                         "x4/x5 (pointer/length) arguments");
+    if (IsTailCall)
+      report_fatal_error("tail calls are not supported for variadic "
+                         "arm64ec_thunk_x64 calls");
 
     ThunkVarArgSrc = OutVals[Outs.size() - 2];
     ThunkVarArgSize = DAG.getZExtOrTrunc(OutVals[Outs.size() - 1], DL, PtrVT);
