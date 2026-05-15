@@ -284,8 +284,22 @@ namespace test12 {
 }
 
 namespace test13 {
-template <typename T> struct S {
-  template <typename> friend class T::template X<int>::Y;
-  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
-};
+  template <typename T> struct S {
+    template <typename> friend class T::template X<int>::Y;
+    // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
+  };
+}
+
+namespace test14 {
+  template <class T> struct A {
+    template <bool V> struct B {
+      static int f(B<false> &x) { return x.n; }
+
+    private:
+      int n;
+      template <bool> friend struct A<T>::B;
+    };
+  };
+
+  int x = A<int>::B<true>::f(*new A<int>::B<false>);
 }
