@@ -347,18 +347,6 @@ ApplyInlineDebugLocation::~ApplyInlineDebugLocation() {
   DI.EmitLocation(CGF->Builder, SavedLocation);
 }
 
-static llvm::DILocation *createBuiltinInlineAt(CodeGenFunction &CGF,
-                                               GlobalDecl GD) {
-  if (!CGF.getDebugInfo())
-    return nullptr;
-  auto &DI = *CGF.getDebugInfo();
-  return DI.createBuiltinFunctionLocation(CGF.Builder, GD);
-}
-
-ApplyBuiltinDebugLocation::ApplyBuiltinDebugLocation(CodeGenFunction &CGF,
-                                                     GlobalDecl BuiltinFn)
-    : Apply(CGF, createBuiltinInlineAt(CGF, BuiltinFn)) {}
-
 void CGDebugInfo::setLocation(SourceLocation Loc) {
   // If the new location isn't valid return.
   if (Loc.isInvalid())

@@ -2758,6 +2758,14 @@ static bool shouldUseBuiltinDebugLocation(unsigned BuiltinID) {
   // overrides the value returned here.
 }
 
+static llvm::DILocation *createBuiltinInlineAt(CodeGenFunction &CGF,
+                                               GlobalDecl GD) {
+  if (!CGF.getDebugInfo())
+    return nullptr;
+  auto &DI = *CGF.getDebugInfo();
+  return DI.createBuiltinFunctionLocation(CGF.Builder, GD);
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -2768,11 +2776,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // This enables e.g. profiling tools to annotate time spent in user-called
   // built-ins with the built-in function name.
   // See `useBuiltinDebugLocation` for cases where this treatment is disabled.
-  auto DebugScope =
-      CGM.getCodeGenOpts().DebugInlinedBuiltins &&
-              shouldUseBuiltinDebugLocation(BuiltinID)
-          ? std::make_optional<ApplyBuiltinDebugLocation>(*this, GD)
-          : std::nullopt;
+  auto DebugScope = CGM.getCodeGenOpts().DebugInlinedBuiltins &&
+                            shouldUseBuiltinDebugLocation(BuiltinID)
+                        ? std::make_optional<ApplyDebugLocation>(
+                              *this, createBuiltinInlineAt(*this, GD))
+                        : std::nullopt;
 
   const FunctionDecl *FD = GD.getDecl()->getAsFunction();
   // See if we can constant fold this builtin.  If so, don't emit it at all.

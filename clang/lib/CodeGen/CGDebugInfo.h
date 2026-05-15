@@ -503,7 +503,8 @@ public:
   /// End an inlined function scope.
   void EmitInlineFunctionEnd(CGBuilderTy &Builder);
 
-  /// Create location for an inlined built-in function.
+  /// Create location for an inlined built-in function. The function is marked
+  /// as artificial in debug info to convey the built-in aspect.
   llvm::DILocation *createBuiltinFunctionLocation(CGBuilderTy &Builder,
                                                   GlobalDecl GD);
 
@@ -1001,16 +1002,6 @@ public:
   ~ApplyInlineDebugLocation();
   ApplyInlineDebugLocation(const ApplyInlineDebugLocation &) = delete;
   ApplyInlineDebugLocation &operator=(ApplyInlineDebugLocation &) = delete;
-};
-
-/// A scoped helper to set the current debug location to a inlined location for
-/// a built-in function. The function is marked as artificial in debug info to
-/// convey the built-in aspect.
-class ApplyBuiltinDebugLocation {
-  ApplyDebugLocation Apply;
-
-public:
-  ApplyBuiltinDebugLocation(CodeGenFunction &CGF, GlobalDecl BuiltinFn);
 };
 
 class SanitizerDebugLocation {
