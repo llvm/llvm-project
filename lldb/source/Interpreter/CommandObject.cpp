@@ -799,7 +799,7 @@ Thread *CommandObject::GetDefaultThread() {
   if (!process) {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (!target) {
-      target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+      target = m_interpreter.GetSelectedTarget().get();
     }
     if (target)
       process = target->GetProcessSP().get();
