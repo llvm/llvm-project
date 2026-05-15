@@ -468,9 +468,8 @@ bool AppleObjCRuntime::CalculateHasNewLiteralsAndIndexing() {
   Target &target = m_process->GetTarget();
   if (ModuleSP corefoundation_module_sp =
           target.GetImages().FindFirstModule(corefoundation_module_spec)) {
-    if (const Symbol *method_symbol =
-            corefoundation_module_sp->FindFirstSymbolWithNameAndType(
-                s_method_signature, eSymbolTypeCode))
+    if (corefoundation_module_sp->FindFirstSymbolWithNameAndType(
+            s_method_signature, eSymbolTypeCode))
       return true;
   }
 
