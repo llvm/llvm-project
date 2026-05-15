@@ -36,8 +36,7 @@ class Run(object):
         self.progress_callback = progress_callback
         self.max_failures = max_failures
         self.timeout = timeout
-        if load_limit_fraction is not None:
-            self.load_limit = load_limit_fraction * lit.util.usable_core_count()
+        self.load_limit = load_limit_fraction * lit.util.usable_core_count() if load_limit_fraction is not None else None
         assert workers > 0
 
     def execute(self):
