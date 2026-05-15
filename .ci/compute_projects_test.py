@@ -32,6 +32,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["runtimes_check_targets_needs_reconfig"],
             "check-cxx check-cxxabi check-unwind",
         )
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_llvm_windows(self):
         env_variables = compute_projects.get_env_variables(
@@ -54,6 +55,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["runtimes_check_targets_needs_reconfig"],
             "",
         )
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_llvm_mac(self):
         env_variables = compute_projects.get_env_variables(
@@ -76,6 +78,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["runtimes_check_targets_needs_reconfig"],
             "",
         )
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_clang(self):
         env_variables = compute_projects.get_env_variables(
@@ -104,6 +107,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["enable_cir"],
             "OFF",
         )
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_clang_windows(self):
         env_variables = compute_projects.get_env_variables(
@@ -127,6 +131,7 @@ class TestComputeProjects(unittest.TestCase):
             "",
         )
         self.assertEqual(env_variables["enable_cir"], "OFF")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_compiler_rt(self):
         env_variables = compute_projects.get_env_variables(
@@ -153,6 +158,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["enable_cir"],
             "OFF",
         )
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_cir(self):
         env_variables = compute_projects.get_env_variables(
@@ -178,6 +184,45 @@ class TestComputeProjects(unittest.TestCase):
             "check-cxx check-cxxabi check-unwind",
         )
         self.assertEqual(env_variables["enable_cir"], "ON")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
+
+    def test_z3(self):
+        env_variables = compute_projects.get_env_variables(
+            ["clang/lib/StaticAnalyzer/CMakeLists.txt"], "Linux"
+        )
+        self.assertEqual(
+            env_variables["projects_to_build"],
+            "clang;clang-tools-extra;lld;lldb;llvm",
+        )
+        self.assertEqual(
+            env_variables["project_check_targets"],
+            "check-clang check-clang-tools check-lldb",
+        )
+        self.assertEqual(
+            env_variables["runtimes_to_build"], "compiler-rt;libcxx;libcxxabi;libunwind"
+        )
+        self.assertEqual(
+            env_variables["runtimes_check_targets"],
+            "check-compiler-rt",
+        )
+        self.assertEqual(
+            env_variables["runtimes_check_targets_needs_reconfig"],
+            "check-cxx check-cxxabi check-unwind",
+        )
+        self.assertEqual(env_variables["enable_cir"], "OFF")
+        self.assertEqual(env_variables["enable_z3"], "ON")
+
+    def test_z3_windows(self):
+        env_variables = compute_projects.get_env_variables(
+            ["clang/lib/StaticAnalyzer/CMakeLists.txt"], "Windows"
+        )
+        self.assertEqual(env_variables["enable_z3"], "OFF")
+
+    def test_z3_mac(self):
+        env_variables = compute_projects.get_env_variables(
+            ["clang/lib/StaticAnalyzer/CMakeLists.txt"], "Darwin"
+        )
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_bolt(self):
         env_variables = compute_projects.get_env_variables(
@@ -188,6 +233,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_lldb(self):
         env_variables = compute_projects.get_env_variables(
@@ -198,6 +244,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_mlir(self):
         env_variables = compute_projects.get_env_variables(
@@ -211,6 +258,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
         self.assertEqual(env_variables["enable_cir"], "OFF")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_flang(self):
         env_variables = compute_projects.get_env_variables(
@@ -222,6 +270,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_check_targets"], "check-flang-rt")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
         self.assertEqual(env_variables["enable_cir"], "OFF")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_invalid_subproject(self):
         env_variables = compute_projects.get_env_variables(
@@ -232,6 +281,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_top_level_file(self):
         env_variables = compute_projects.get_env_variables(["README.md"], "Linux")
@@ -240,6 +290,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_exclude_libcxx_in_projects(self):
         env_variables = compute_projects.get_env_variables(
@@ -250,6 +301,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_include_libc_in_runtimes(self):
         env_variables = compute_projects.get_env_variables(
@@ -260,6 +312,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "libc")
         self.assertEqual(env_variables["runtimes_check_targets"], "check-libc")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_include_libclc_in_runtimes(self):
         env_variables = compute_projects.get_env_variables(
@@ -283,6 +336,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_exclude_gn(self):
         env_variables = compute_projects.get_env_variables(
@@ -293,6 +347,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_ci(self):
         env_variables = compute_projects.get_env_variables(
@@ -318,6 +373,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["runtimes_check_targets_needs_reconfig"],
             "check-cxx check-cxxabi check-unwind",
         )
+        self.assertEqual(env_variables["enable_z3"], "ON")
 
     def test_windows_ci(self):
         env_variables = compute_projects.get_env_variables(
@@ -343,6 +399,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["runtimes_check_targets_needs_reconfig"],
             "",
         )
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_lldb(self):
         env_variables = compute_projects.get_env_variables(
@@ -355,6 +412,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_clang_tools_extra(self):
         env_variables = compute_projects.get_env_variables(
@@ -367,6 +425,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "libc")
         self.assertEqual(env_variables["runtimes_check_targets"], "check-libc")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_premerge_workflow(self):
         env_variables = compute_projects.get_env_variables(
@@ -392,6 +451,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["runtimes_check_targets_needs_reconfig"],
             "check-cxx check-cxxabi check-unwind",
         )
+        self.assertEqual(env_variables["enable_z3"], "ON")
 
     def test_other_github_workflow(self):
         env_variables = compute_projects.get_env_variables(
@@ -402,6 +462,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_third_party_benchmark(self):
         env_variables = compute_projects.get_env_variables(
@@ -427,6 +488,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["runtimes_check_targets_needs_reconfig"],
             "check-cxx check-cxxabi check-unwind",
         )
+        self.assertEqual(env_variables["enable_z3"], "ON")
 
     def test_lit(self):
         env_variables = compute_projects.get_env_variables(
@@ -451,6 +513,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["runtimes_check_targets_needs_reconfig"],
             "check-cxx check-cxxabi check-unwind",
         )
+        self.assertEqual(env_variables["enable_z3"], "OFF")
 
     def test_cross_project_tests(self):
         env_variables = compute_projects.get_env_variables(

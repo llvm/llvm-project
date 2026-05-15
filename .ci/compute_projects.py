@@ -20,6 +20,7 @@ PROJECT_DEPENDENCIES = {
     "llvm": set(),
     "clang": {"llvm"},
     "CIR": {"clang", "mlir"},
+    "Z3": {"clang"},
     "bolt": {"clang", "lld", "llvm"},
     "clang-tools-extra": {"clang", "llvm"},
     "compiler-rt": {"clang", "lld"},
@@ -59,6 +60,7 @@ DEPENDENTS_TO_TEST = {
         "llvm",
         "clang",
         "CIR",
+        "Z3",
         "lld",
         "lldb",
         "bolt",
@@ -114,6 +116,7 @@ EXCLUDE_WINDOWS = {
     "libcxxabi",
     "libunwind",
     "flang-rt",
+    "Z3",
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -135,6 +138,7 @@ EXCLUDE_MAC = {
     "libcxx",
     "libcxxabi",
     "libunwind",
+    "Z3",
 }
 
 PROJECT_CHECK_TARGETS = {
@@ -148,6 +152,7 @@ PROJECT_CHECK_TARGETS = {
     "llvm": "check-llvm",
     "clang": "check-clang",
     "CIR": "check-clang-cir",
+    "Z3": "check-clang",
     "bolt": "check-bolt",
     "lld": "check-lld",
     "flang": "check-flang",
@@ -180,6 +185,9 @@ META_PROJECTS = {
     ("clang", "lib", "CIR"): "CIR",
     ("clang", "test", "CIR"): "CIR",
     ("clang", "include", "clang", "CIR"): "CIR",
+    ("clang", "lib", "StaticAnalyzer"): "Z3",
+    ("clang", "test", "Analysis"): "Z3",
+    ("clang", "include", "clang", "StaticAnalyzer"): "Z3",
     ("*", "docs"): "docs",
     ("llvm", "utils", "gn"): "gn",
     (".github", "workflows", "premerge.yaml"): ".ci",
@@ -188,7 +196,7 @@ META_PROJECTS = {
 }
 
 # Projects that should run tests but cannot be explicitly built.
-SKIP_BUILD_PROJECTS = ["CIR", "lit"]
+SKIP_BUILD_PROJECTS = ["Z3", "CIR", "lit"]
 
 # Projects that should not run any tests. These need to be metaprojects.
 SKIP_PROJECTS = ["docs", "gn"]
@@ -361,6 +369,8 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     # clang build, but it requires an explicit option to enable. We set that
     # option here, and remove it from the projects_to_build list.
     enable_cir = "ON" if "CIR" in projects_to_build else "OFF"
+    # Z3 is used as a pseudo-project like CIR to enable building with Z3.
+    enable_z3 = "ON" if "Z3" in projects_to_build else "OFF"
     # Remove any metaprojects from the list of projects to build.
     for project in SKIP_BUILD_PROJECTS:
         projects_to_build.discard(project)
@@ -378,6 +388,7 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
             sorted(runtimes_check_targets_needs_reconfig)
         ),
         "enable_cir": enable_cir,
+        "enable_z3": enable_z3,
     }
 
 

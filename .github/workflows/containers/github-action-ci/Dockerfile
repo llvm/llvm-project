@@ -54,6 +54,7 @@ RUN apt-get update && \
     git \
     libstdc++-11-dev \
     ninja-build \
+    libz3-dev \
     nodejs \
     perl-modules \
     python3-psutil \
