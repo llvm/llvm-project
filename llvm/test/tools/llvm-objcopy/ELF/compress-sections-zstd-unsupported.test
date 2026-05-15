@@ -1,0 +1,31 @@
+# UNSUPPORTED: zstd
+## Verify that (de)compression requests using zstd produce a friendly error
+## rather than crashing via llvm_unreachable when zstd is not built into LLVM.
+
+# RUN: yaml2obj %s -o %t
+
+## --compress-sections is not validated at option-parsing time, so the check
+## must come from the library layer in compressOrDecompressSections.
+# RUN: not llvm-objcopy --compress-sections '.debug_str=zstd' %t /dev/null 2>&1 | FileCheck %s --check-prefix=COMPRESS -DFILE=%t
+
+# COMPRESS: error: '[[FILE]]': failed to compress section '.debug_str': LLVM was not built with LLVM_ENABLE_ZSTD or did not find zstd at build time
+
+# RUN: not llvm-objcopy --decompress-debug-sections %t /dev/null 2>&1 | FileCheck %s --check-prefix=DECOMPRESS -DFILE=%t
+
+# DECOMPRESS: error: '[[FILE]]': failed to decompress section '.debug_info': LLVM was not built with LLVM_ENABLE_ZSTD or did not find zstd at build time
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Type:         SHT_PROGBITS
+    Name:         .debug_info
+    Flags:        [ SHF_COMPRESSED ]
+    AddressAlign: 8
+    Content:      "0200000000000000010000000000000001000000000000000000000000"
+  - Name:         .debug_str
+    Type:         SHT_PROGBITS
+    Content:      "00"

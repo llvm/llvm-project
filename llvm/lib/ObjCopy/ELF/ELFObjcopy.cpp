@@ -242,6 +242,13 @@ Error Object::compressOrDecompressSections(const CommonConfig &Config) {
         ToReplace.emplace_back(
             &Sec, [=] { return &addSection<DecompressedSection>(*CS); });
     } else if (*CType != DebugCompressionType::None) {
+      // compression::compress would call llvm_unreachable if the requested
+      // format is unsupported in this LLVM build, so reject it here.
+      if (const char *Reason = compression::getReasonIfUnsupported(
+              compression::formatFor(*CType)))
+        return createStringError(errc::invalid_argument,
+                                 "failed to compress section '" + Sec.Name +
+                                     "': " + Reason);
       ToReplace.emplace_back(&Sec, [=, S = &Sec] {
         return &addSection<CompressedSection>(
             CompressedSection(*S, *CType, Is64Bits));
