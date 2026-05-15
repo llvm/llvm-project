@@ -20,11 +20,11 @@
 #ifndef LLVM_IR_INSTRUCTIONLISTENER_H
 #define LLVM_IR_INSTRUCTIONLISTENER_H
 
+#include "llvm/IR/Function.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class Function;
 class Instruction;
 class Value;
 
@@ -49,9 +49,15 @@ private:
   RAUWCallbackT RAUWCallback;
 
 public:
-  LLVM_ABI InstructionListener(Function &F, RemoveCallbackT REMCB,
-                               RAUWCallbackT RAUWCB = nullptr);
-  LLVM_ABI ~InstructionListener();
+  InstructionListener(Function &F, RemoveCallbackT RemoveCB,
+                      RAUWCallbackT RAUWCB = nullptr)
+      : F(&F), RemoveCallback(RemoveCB), RAUWCallback(RAUWCB) {
+    F.addInstructionListener(this);
+  }
+  ~InstructionListener() {
+    if (F)
+      F->removeInstructionListener(this);
+  }
 
   InstructionListener(const InstructionListener &) = delete;
   InstructionListener &operator=(const InstructionListener &) = delete;

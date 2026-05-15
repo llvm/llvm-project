@@ -101,7 +101,7 @@ void Instruction::setParent(BasicBlock *P) {
   if (BasicBlock *OldBB = getParent()) {
     Function *OldF = OldBB->getParent();
     Function *NewF = P ? P->getParent() : nullptr;
-    if (OldF && OldF != NewF && OldF->hasInstructionListeners())
+    if (OldF && OldF != NewF)
       for (InstructionListener *L : OldF->InstructionListeners)
         L->instructionRemoved(this);
   }

@@ -118,7 +118,7 @@ private:
   friend class BasicBlock;
   friend class Instruction;
   friend class Value;
-  SmallVector<InstructionListener *, 0> InstructionListeners;
+  SmallVector<InstructionListener *, 2> InstructionListeners;
 
   void addInstructionListener(InstructionListener *L);
   void removeInstructionListener(InstructionListener *L);

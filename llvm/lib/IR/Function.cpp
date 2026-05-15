@@ -63,17 +63,6 @@ using ProfileCount = Function::ProfileCount;
 // are not in the public header file...
 template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<BasicBlock>;
 
-InstructionListener::InstructionListener(Function &F, RemoveCallbackT REMCB,
-                                         RAUWCallbackT RAUWCB)
-    : F(&F), RemoveCallback(REMCB), RAUWCallback(RAUWCB) {
-  F.addInstructionListener(this);
-}
-
-InstructionListener::~InstructionListener() {
-  if (F)
-    F->removeInstructionListener(this);
-}
-
 void Function::addInstructionListener(InstructionListener *L) {
   assert(!llvm::is_contained(InstructionListeners, L) &&
          "Listener already registered");
