@@ -303,6 +303,83 @@ func.func @failedParentOneOf_wrong_parent1() {
    }) : () -> ()
 }
 
+// -----
+
+// CHECK: succeededHasAncestor_direct_child
+func.func @succeededHasAncestor_direct_child() {
+  "test.ancestor"() ({
+    "test.descendant"() : () -> ()
+    "test.finish"() : () -> ()
+   }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededHasAncestor_deeply_nested
+func.func @succeededHasAncestor_deeply_nested() {
+  "test.ancestor"() ({
+    "test.intermediate"() ({
+      "test.intermediate"() ({
+        "test.descendant"() : () -> ()
+        "test.finish"() : () -> ()
+      }) : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+   }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedHasAncestor_no_matching_ancestor() {
+  "test.intermediate"() ({
+    // expected-error@+1 {{'test.descendant' op expects ancestor op 'test.ancestor'}}
+    "test.descendant"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededAncestorOneOf_first_type
+func.func @succeededAncestorOneOf_first_type() {
+  "test.ancestor"() ({
+    "test.intermediate"() ({
+      "test.descendant_with_ancestor_one_of"() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+   }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededAncestorOneOf_second_type
+func.func @succeededAncestorOneOf_second_type() {
+  "test.ancestor1"() ({
+    "test.intermediate"() ({
+      "test.descendant_with_ancestor_one_of"() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+   }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedAncestorOneOf_no_matching_ancestor() {
+  "test.intermediate"() ({
+    // expected-error@+1 {{'test.descendant_with_ancestor_one_of' op expects ancestor op to be one of 'test.ancestor, test.ancestor1'}}
+    "test.descendant_with_ancestor_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
 
 // -----
 

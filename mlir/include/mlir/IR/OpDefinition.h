@@ -1323,6 +1323,36 @@ struct HasParent {
   };
 };
 
+/// This class provides a verifier for ops that are expecting at least one
+/// transitive parent (i.e. some ancestor) to be one of the given parent ops.
+/// The check matches the immediate parent as well as any deeper ancestor.
+template <typename... ParentOpTypes>
+struct HasAncestor {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      Operation *cur = op->getParentOp();
+      while (cur) {
+        if (llvm::isa<ParentOpTypes...>(cur))
+          return success();
+        cur = cur->getParentOp();
+      }
+      return op->emitOpError()
+             << "expects ancestor op "
+             << (sizeof...(ParentOpTypes) != 1 ? "to be one of '" : "'")
+             << llvm::ArrayRef({ParentOpTypes::getOperationName()...}) << "'";
+    }
+
+    template <typename ParentOpType =
+                  std::tuple_element_t<0, std::tuple<ParentOpTypes...>>>
+    std::enable_if_t<sizeof...(ParentOpTypes) == 1, ParentOpType>
+    getAncestorOp() {
+      return this->getOperation()->template getParentOfType<ParentOpType>();
+    }
+  };
+};
+
 /// A trait for operations that have an attribute specifying operand segments.
 ///
 /// Certain operations can have multiple variadic operands and their size

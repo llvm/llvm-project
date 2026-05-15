@@ -141,6 +141,15 @@ class ParentOneOf<list<string> ops>
     : ParamNativeOpTrait<"HasParent", !interleave(ops, ", ")>,
       StructuralOpTrait;
 
+// Op has at least one ancestor (transitive parent) of the provided type.
+class HasAncestor<string op>
+    : ParamNativeOpTrait<"HasAncestor", op>, StructuralOpTrait;
+
+// Op has at least one ancestor of one of the provided types.
+class AncestorOneOf<list<string> ops>
+    : ParamNativeOpTrait<"HasAncestor", !interleave(ops, ", ")>,
+      StructuralOpTrait;
+
 // Op result type is derived from the first attribute. If the attribute is an
 // subclass of `TypeAttrBase`, its value is used, otherwise, the type of the
 // attribute content is used.

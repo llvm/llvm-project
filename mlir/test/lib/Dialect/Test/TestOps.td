@@ -876,6 +876,22 @@ def ParentOp1 : TEST_Op<"parent1"> {
 def ChildWithParentOneOf : TEST_Op<"child_with_parent_one_of",
                                 [ParentOneOf<["ParentOp", "ParentOp1"]>]>;
 
+// HasAncestor trait
+def AncestorOp : TEST_Op<"ancestor"> {
+    let regions = (region AnyRegion);
+}
+def AncestorOp1 : TEST_Op<"ancestor1"> {
+    let regions = (region AnyRegion);
+}
+def IntermediateOp : TEST_Op<"intermediate"> {
+    let regions = (region AnyRegion);
+}
+def DescendantOp : TEST_Op<"descendant", [HasAncestor<"AncestorOp">]>;
+
+// AncestorOneOf trait
+def DescendantWithAncestorOneOf : TEST_Op<"descendant_with_ancestor_one_of",
+                                [AncestorOneOf<["AncestorOp", "AncestorOp1"]>]>;
+
 def TerminatorOp : TEST_Op<"finish", [Terminator]>;
 def SingleBlockImplicitTerminatorOp : TEST_Op<"SingleBlockImplicitTerminator",
     [SingleBlockImplicitTerminator<"TerminatorOp">]> {
