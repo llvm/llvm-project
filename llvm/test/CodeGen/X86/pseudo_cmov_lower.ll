@@ -119,13 +119,13 @@ entry:
   ret <2 x double> %sub
 }
 
-; This test checks that only a single ja gets generated in the final code
-; for lowering the CMOV pseudos that get created for this IR. This combines
-; all the supported types together into one long string of selects based
-; on the same condition.
+; This test checks that only a single conditional jump gets generated in the
+; final code for lowering the CMOV pseudos that get created for this IR. This
+; combines all the supported types together into one long string of selects
+; based on the same condition.
 ; CHECK-LABEL: foo8:
-; CHECK: ja
-; CHECK-NOT: ja
+; CHECK: jbe
+; CHECK-NOT: jbe
 define void @foo8(i32 %v1,
                   i8 %v2, i8 %v3,
                   i16 %v12, i16 %v13,
@@ -200,8 +200,8 @@ entry:
   ret void
 }
 
-; This test checks that only a single ja gets generated in the final code
-; for lowering the CMOV pseudos that get created for this IR.
+; This test checks that only a single conditional jump gets generated in the
+; final code for lowering the CMOV pseudos that get created for this IR.
 ; on the same condition.
 ; Contrary to my expectations, this doesn't exercise the code for
 ; CMOV_V8I1, CMOV_V16I1, CMOV_V32I1, or CMOV_V64I1.  Instead the selects all
@@ -213,8 +213,8 @@ entry:
 ; tests those opcodes.
 ;
 ; CHECK-LABEL: foo9:
-; CHECK: ja
-; CHECK-NOT: ja
+; CHECK: jae
+; CHECK-NOT: jae
 define void @foo9(i32 %v1,
                   <8 x i1> %v12, <8 x i1> %v13,
                   <16 x i1> %v22, <16 x i1> %v23,

@@ -901,6 +901,10 @@ define i128 @bzhi_i128_load(ptr %p0, i128 %idx) nounwind {
 define i128 @isolate_msb_i128(i128 %a0, i128 %idx) nounwind {
 ; SSE-LABEL: isolate_msb_i128:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    orq %rsi, %rax
+; SSE-NEXT:    je .LBB15_1
+; SSE-NEXT:  # %bb.2: # %select.false.sink
 ; SSE-NEXT:    bsrq %rsi, %rax
 ; SSE-NEXT:    xorl $63, %eax
 ; SSE-NEXT:    bsrq %rdi, %rcx
@@ -912,14 +916,15 @@ define i128 @isolate_msb_i128(i128 %a0, i128 %idx) nounwind {
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    shrdq %cl, %rdx, %rax
-; SSE-NEXT:    xorl %r8d, %r8d
+; SSE-NEXT:    xorl %esi, %esi
 ; SSE-NEXT:    shrq %cl, %rdx
 ; SSE-NEXT:    testb $64, %cl
 ; SSE-NEXT:    cmovneq %rdx, %rax
-; SSE-NEXT:    cmovneq %r8, %rdx
-; SSE-NEXT:    orq %rsi, %rdi
-; SSE-NEXT:    cmoveq %r8, %rax
-; SSE-NEXT:    cmoveq %r8, %rdx
+; SSE-NEXT:    cmovneq %rsi, %rdx
+; SSE-NEXT:    retq
+; SSE-NEXT:  .LBB15_1:
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    xorl %edx, %edx
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: isolate_msb_i128:
@@ -952,13 +957,15 @@ define i128 @isolate_msb_i128(i128 %a0, i128 %idx) nounwind {
 define i128 @isolate_msb_i128_vector(<2 x i64> %v0, i128 %idx) nounwind {
 ; SSE2-LABEL: isolate_msb_i128_vector:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movq %xmm1, %rcx
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    movmskps %xmm1, %esi
-; SSE2-NEXT:    xorl $15, %esi
+; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    xorl $15, %eax
+; SSE2-NEXT:    je .LBB16_1
+; SSE2-NEXT:  # %bb.2: # %select.false.sink
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE2-NEXT:    movq %xmm0, %rcx
 ; SSE2-NEXT:    bsrq %rcx, %rdx
 ; SSE2-NEXT:    xorl $63, %edx
 ; SSE2-NEXT:    bsrq %rax, %rax
@@ -970,27 +977,31 @@ define i128 @isolate_msb_i128_vector(<2 x i64> %v0, i128 %idx) nounwind {
 ; SSE2-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    shrdq %cl, %rdx, %rax
-; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    xorl %esi, %esi
 ; SSE2-NEXT:    shrq %cl, %rdx
 ; SSE2-NEXT:    testb $64, %cl
 ; SSE2-NEXT:    cmovneq %rdx, %rax
-; SSE2-NEXT:    cmovneq %rdi, %rdx
-; SSE2-NEXT:    testl %esi, %esi
-; SSE2-NEXT:    cmoveq %rdi, %rax
-; SSE2-NEXT:    cmoveq %rdi, %rdx
+; SSE2-NEXT:    cmovneq %rsi, %rdx
+; SSE2-NEXT:    retq
+; SSE2-NEXT:  .LBB16_1:
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: isolate_msb_i128_vector:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movq %xmm0, %rax
-; SSE42-NEXT:    pextrq $1, %xmm0, %rcx
-; SSE42-NEXT:    bsrq %rcx, %rdx
+; SSE42-NEXT:    ptest %xmm0, %xmm0
+; SSE42-NEXT:    je .LBB16_1
+; SSE42-NEXT:  # %bb.2: # %select.false.sink
+; SSE42-NEXT:    pextrq $1, %xmm0, %rax
+; SSE42-NEXT:    movq %xmm0, %rcx
+; SSE42-NEXT:    bsrq %rax, %rdx
 ; SSE42-NEXT:    xorl $63, %edx
-; SSE42-NEXT:    bsrq %rax, %rax
-; SSE42-NEXT:    xorl $63, %eax
-; SSE42-NEXT:    orb $64, %al
-; SSE42-NEXT:    testq %rcx, %rcx
-; SSE42-NEXT:    movzbl %al, %ecx
+; SSE42-NEXT:    bsrq %rcx, %rcx
+; SSE42-NEXT:    xorl $63, %ecx
+; SSE42-NEXT:    orb $64, %cl
+; SSE42-NEXT:    testq %rax, %rax
+; SSE42-NEXT:    movzbl %cl, %ecx
 ; SSE42-NEXT:    cmovnel %edx, %ecx
 ; SSE42-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; SSE42-NEXT:    xorl %eax, %eax
@@ -1000,9 +1011,10 @@ define i128 @isolate_msb_i128_vector(<2 x i64> %v0, i128 %idx) nounwind {
 ; SSE42-NEXT:    testb $64, %cl
 ; SSE42-NEXT:    cmovneq %rdx, %rax
 ; SSE42-NEXT:    cmovneq %rsi, %rdx
-; SSE42-NEXT:    ptest %xmm0, %xmm0
-; SSE42-NEXT:    cmoveq %rsi, %rax
-; SSE42-NEXT:    cmoveq %rsi, %rdx
+; SSE42-NEXT:    retq
+; SSE42-NEXT:  .LBB16_1:
+; SSE42-NEXT:    xorl %eax, %eax
+; SSE42-NEXT:    xorl %edx, %edx
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: isolate_msb_i128_vector:
@@ -1038,27 +1050,32 @@ define i128 @isolate_msb_i128_vector(<2 x i64> %v0, i128 %idx) nounwind {
 define i128 @isolate_msb_i128_load(ptr %p0, i128 %idx) nounwind {
 ; SSE-LABEL: isolate_msb_i128_load:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movq (%rdi), %rsi
-; SSE-NEXT:    movq 8(%rdi), %rdi
-; SSE-NEXT:    bsrq %rdi, %rax
-; SSE-NEXT:    xorl $63, %eax
-; SSE-NEXT:    bsrq %rsi, %rcx
+; SSE-NEXT:    movq (%rdi), %rcx
+; SSE-NEXT:    movq 8(%rdi), %rax
+; SSE-NEXT:    movq %rcx, %rdx
+; SSE-NEXT:    orq %rax, %rdx
+; SSE-NEXT:    je .LBB17_1
+; SSE-NEXT:  # %bb.2: # %select.false.sink
+; SSE-NEXT:    bsrq %rax, %rdx
+; SSE-NEXT:    xorl $63, %edx
+; SSE-NEXT:    bsrq %rcx, %rcx
 ; SSE-NEXT:    xorl $63, %ecx
 ; SSE-NEXT:    orb $64, %cl
-; SSE-NEXT:    testq %rdi, %rdi
+; SSE-NEXT:    testq %rax, %rax
 ; SSE-NEXT:    movzbl %cl, %ecx
-; SSE-NEXT:    cmovnel %eax, %ecx
+; SSE-NEXT:    cmovnel %edx, %ecx
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    shrdq %cl, %rdx, %rax
-; SSE-NEXT:    xorl %r8d, %r8d
+; SSE-NEXT:    xorl %esi, %esi
 ; SSE-NEXT:    shrq %cl, %rdx
 ; SSE-NEXT:    testb $64, %cl
 ; SSE-NEXT:    cmovneq %rdx, %rax
-; SSE-NEXT:    cmovneq %r8, %rdx
-; SSE-NEXT:    orq %rdi, %rsi
-; SSE-NEXT:    cmoveq %r8, %rax
-; SSE-NEXT:    cmoveq %r8, %rdx
+; SSE-NEXT:    cmovneq %rsi, %rdx
+; SSE-NEXT:    retq
+; SSE-NEXT:  .LBB17_1:
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    xorl %edx, %edx
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: isolate_msb_i128_load:
