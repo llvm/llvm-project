@@ -85,7 +85,6 @@ define void @store_trunc_v32i64i8(ptr %ap, ptr %dest) vscale_range(16,0) #0 {
 }
 
 define void @store_trunc_v8i64i16(ptr %ap, ptr %dest) #0 {
-; Currently does not use the truncating store
 ; VBITS_GE_256-LABEL: store_trunc_v8i64i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4

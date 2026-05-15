@@ -23889,22 +23889,21 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
     return SDValue();
 
   SDValue Chain = ST->getChain();
-  SDValue Value = ST->getValue();
+  SDValue ConcatVec = ST->getValue();
 
-  unsigned Opc = Value.getOpcode();
-  if (Opc != ISD::CONCAT_VECTORS || Value.getNumOperands() != 2 ||
-      !Value->hasOneUse())
+  if (ConcatVec.getOpcode() != ISD::CONCAT_VECTORS ||
+      ConcatVec.getNumOperands() != 2 || !ConcatVec->hasOneUse())
     return SDValue();
 
-  SDValue T1 = Value.getOperand(0);
-  SDValue T2 = Value.getOperand(1);
+  SDValue T1 = ConcatVec.getOperand(0);
+  SDValue T2 = ConcatVec.getOperand(1);
   if (T1.getOpcode() != ISD::TRUNCATE || T2.getOpcode() != ISD::TRUNCATE)
     return SDValue();
 
   if (!T1.getValueType().isFixedLengthVector())
     return SDValue();
 
-  if (!T1->hasOneUse() || !T2.hasOneUse())
+  if (!T1.hasOneUse() || !T2.hasOneUse())
     return SDValue();
 
   EVT LoMemVT = T1.getValueType();
@@ -23925,7 +23924,7 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
   SDLoc DL(ST);
   SDValue LoPtr = ST->getBasePtr();
   SDValue HiPtr =
-      DAG.getMemBasePlusOffset(LoPtr, TypeSize::getFixed(LoBytes), DL);
+      DAG.getObjectPtrOffset(DL, LoPtr, TypeSize::getFixed(LoBytes));
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *LoMMO =
@@ -23933,14 +23932,16 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
   MachineMemOperand *HiMMO =
       MF.getMachineMemOperand(ST->getMemOperand(), LoBytes, HiBytes);
 
-  SDValue LoSt = DAG.getStore(Chain, DL, T1, LoPtr, LoMMO);
-  SDValue HiSt = DAG.getStore(Chain, DL, T2, HiPtr, HiMMO);
+  SDValue LoSt = DAG.getTruncStore(Chain, DL, T1.getOperand(0), LoPtr,
+                                   T1.getValueType(), LoMMO);
+  SDValue HiSt = DAG.getTruncStore(Chain, DL, T2.getOperand(0), HiPtr,
+                                   T2.getValueType(), HiMMO);
 
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, LoSt, HiSt);
 }
 
 SDValue DAGCombiner::visitSTORE(SDNode *N) {
-  StoreSDNode *ST  = cast<StoreSDNode>(N);
+  StoreSDNode *ST = cast<StoreSDNode>(N);
   SDValue Chain = ST->getChain();
   SDValue Value = ST->getValue();
   SDValue Ptr   = ST->getBasePtr();
