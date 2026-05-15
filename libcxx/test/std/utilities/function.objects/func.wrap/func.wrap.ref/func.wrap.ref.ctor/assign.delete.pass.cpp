@@ -35,9 +35,9 @@ static_assert(std::is_assignable_v<std::function_ref<void()>, std::constant_wrap
 static_assert(!std::is_assignable_v<std::function_ref<void()>, std::constant_wrapper<[](int) {}>>);
 
 // const noexcept(false)
-static_assert(std::is_assignable_v<std::function_ref<void() const>, std::function_ref<void()>>);
+static_assert(!std::is_assignable_v<std::function_ref<void() const>, std::function_ref<void()>>);
 static_assert(std::is_assignable_v<std::function_ref<void() const>, std::function_ref<void() const>>);
-static_assert(std::is_assignable_v<std::function_ref<void() const>, std::function_ref<void() noexcept>>);
+static_assert(!std::is_assignable_v<std::function_ref<void() const>, std::function_ref<void() noexcept>>);
 static_assert(std::is_assignable_v<std::function_ref<void() const>, std::function_ref<void() const noexcept>>);
 
 static_assert(std::is_assignable_v<std::function_ref<void() const>, void (*)()>);
@@ -61,7 +61,7 @@ static_assert(!std::is_assignable_v<std::function_ref<void() noexcept>, std::con
 // const noexcept(true)
 static_assert(!std::is_assignable_v<std::function_ref<void() const noexcept>, std::function_ref<void()>>);
 static_assert(!std::is_assignable_v<std::function_ref<void() const noexcept>, std::function_ref<void() const>>);
-static_assert(std::is_assignable_v<std::function_ref<void() const noexcept>, std::function_ref<void() noexcept>>);
+static_assert(!std::is_assignable_v<std::function_ref<void() const noexcept>, std::function_ref<void() noexcept>>);
 static_assert(std::is_assignable_v<std::function_ref<void() const noexcept>, std::function_ref<void() const noexcept>>);
 
 static_assert(std::is_assignable_v<std::function_ref<void() const noexcept>, void (*)() noexcept>);
