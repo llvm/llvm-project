@@ -5686,7 +5686,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         !match(BackedgeVal,
                m_Select(m_Specific(HeaderMask),
                         m_VPSingleDefRecipe(FindLastSelect), m_Specific(PhiR))))
-      llvm_unreachable("expected header mask select");
+      continue;
 
     // Get the find-last expression from the find-last select of the reduction
     // phi. The find-last select should be a select between the phi and the
