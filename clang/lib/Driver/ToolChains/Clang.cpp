@@ -8908,15 +8908,15 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     return false;
   };
 
-  if (Args.hasArg(options::OPT__SLASH_experemental_deterministic)) {
+  if (Args.hasArg(options::OPT__SLASH_experimental_deterministic)) {
     CmdArgs.push_back("-Wdate-time");
 
     if (Args.hasArg(options::OPT_mincremental_linker_compatible)) {
-      D.Diag(diag::err_drv_argument_not_allowed_with) << "/experemental:determenistic"
+      D.Diag(diag::err_drv_argument_not_allowed_with) << "/experimental:deterministic"
                                                       << "/Brepro-";
     }
     // CL's sets COFF's OBJ timestamp to a hash of the source file path to get deterministic
-    // result, but we force this timestamp to 0, which also produces determinitic result.
+    // result, but we force this timestamp to 0, which also produces deterministic result.
     CmdArgs.push_back("-mno-incremental-linker-compatible");
   }
 
