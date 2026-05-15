@@ -13946,9 +13946,32 @@ const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
 
 void ScalarEvolution::SCEVCallbackVH::deleted() {
   assert(SE && "SCEVCallbackVH called with a null ScalarEvolution!");
-  if (PHINode *PN = dyn_cast<PHINode>(getValPtr()))
-    SE->ConstantEvolutionLoopExitValue.erase(PN);
-  SE->eraseValueFromMap(getValPtr());
+  // Save SE locally because the operations below may destroy *this*: erasing
+  // from ValueExprMap (either via eraseValueFromMap below or transitively via
+  // forgetMemoizedResults) destroys the SCEVCallbackVH that is the map key,
+  // and that key is *this*. Once destroyed, accessing this->SE is UB.
+  ScalarEvolution *LocalSE = SE;
+  Value *V = getValPtr();
+  if (PHINode *PN = dyn_cast<PHINode>(V))
+    LocalSE->ConstantEvolutionLoopExitValue.erase(PN);
+  // Drop the SCEVUnknown for V (and any cached SCEVs that transitively depend
+  // on it) before V is destroyed. Without this, getDefiningScopeBound can
+  // later dereference an instruction whose parent BasicBlock pointer has been
+  // nulled out (e.g. SLPVectorizer's deferred deletion list), leading to a
+  // crash inside DominatorTree::dominates.
+  //
+  // Order matters: eraseValueFromMap(V) must run before forgetMemoizedResults
+  // so V is removed from ExprValueMap[S] first. Otherwise forgetMemoizedResults
+  // would walk ExprValueMap[S] and try to erase the ValueExprMap entry whose
+  // SCEVCallbackVH key is *this*, destroying us mid-execution.
+  if (LocalSE->isSCEVable(V->getType())) {
+    const SCEV *S = LocalSE->getExistingSCEV(V);
+    LocalSE->eraseValueFromMap(V);
+    if (S)
+      LocalSE->forgetMemoizedResults({S});
+  } else {
+    LocalSE->eraseValueFromMap(V);
+  }
   // this now dangles!
 }
 
