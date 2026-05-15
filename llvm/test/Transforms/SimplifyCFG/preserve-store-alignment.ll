@@ -17,18 +17,16 @@ define i32 @align_both_equal() local_unnamed_addr {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[AND]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TOBOOL]], <2 x i64> [[TMP1]], <2 x i64> [[TMP3]]
+; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr getelementptr inbounds ([[STRUCT_COUNTERS]], ptr @counters, i64 0, i32 1), align 8
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TOBOOL]], <2 x i64> [[TMP1]], <2 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[AND4:%.*]] = and i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TOBOOL5:%.*]] = icmp eq i64 [[AND4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], splat (i64 1)
-; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE:%.*]] = select i1 [[TOBOOL5]], <2 x i64> [[TMP4]], <2 x i64> [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TOBOOL]], true
-; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TOBOOL5]], true
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]]
-; CHECK:       9:
+; CHECK-NEXT:    br i1 [[TOBOOL5]], label [[TMP10:%.*]], label [[IF_THEN6:%.*]]
+; CHECK:       if.then6:
+; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE:%.*]] = add nsw <2 x i64> [[SPEC_SELECT]], splat (i64 1)
 ; CHECK-NEXT:    store <2 x i64> [[SIMPLIFYCFG_MERGE]], ptr getelementptr inbounds ([[STRUCT_COUNTERS]], ptr @counters, i64 0, i32 1), align 8
 ; CHECK-NEXT:    br label [[TMP10]]
-; CHECK:       10:
+; CHECK:       if.end9:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
