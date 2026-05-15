@@ -41,6 +41,7 @@ void call_var_args() {
 }
 
 // CHECK-LABEL: define dso_local void @"?call_var_args@@YAXXZ"()
+// FIXME all of these are after the trap so they should be gone.
 // CHECK: call void {{.*varargs_zero.*}}(ptr inalloca(<{ %struct.A }>) %{{.*}})
 // CHECK: call void {{.*varargs_one.*}}(ptr inalloca(<{ i32, %struct.A }>) %{{.*}})
 // CHECK: call void {{.*varargs_two.*}}(ptr inalloca(<{ i32, i32, %struct.A }>) %{{.*}})

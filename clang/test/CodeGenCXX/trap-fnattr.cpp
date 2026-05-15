@@ -30,7 +30,7 @@ int test_add_overflow(int a, int b) {
   return a + b;
 }
 
-// TRAPFUNC: attributes [[ATTR0]] = { {{.*}}"trap-func-name"="mytrap" }
+// TRAPFUNC: attributes [[ATTR0]] = { noreturn no unwind "trap-func-name"="mytrap" }
 // TRAPFUNC: attributes [[ATTR1]] = { {{.*}}"trap-func-name"="mytrap" }
 
 // NOOPTION-NOT: attributes [[ATTR2]] = { {{.*}}"trap-func-name"="mytrap" }

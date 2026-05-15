@@ -20,7 +20,7 @@
 // AMDGCN-GFX1010-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGCN-GFX1010-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-GFX1010-NEXT:    call void @llvm.trap()
-// AMDGCN-GFX1010-NEXT:    ret void
+// AMDGCN-GFX1010-NEXT:    unreachable
 //
 // AMDGCNSPIRV-LABEL: define spir_func void @foo(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
@@ -38,6 +38,8 @@
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL3]], label %[[IF_THEN]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap()
+// AMDGCNSPIRV-NEXT:    unreachable
+// AMDGCNSPIRV:        dead.trap:
 // AMDGCNSPIRV-NEXT:    br label %[[IF_END]]
 // AMDGCNSPIRV:       [[IF_END]]:
 // AMDGCNSPIRV-NEXT:    ret void

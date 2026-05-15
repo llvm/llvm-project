@@ -15,6 +15,8 @@ void operator delete(void*);
 // CHECK-NEXT:    br i1 [[CALL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // CHECK:       cond.true:
 // CHECK-NEXT:    call void @llvm.trap()
+// CHECK-NEXT:    unreachable
+// CHECK:       dead.trap:
 // CHECK-NEXT:    br label [[COND_END:%.*]]
 // CHECK:       cond.false:
 // CHECK-NEXT:    br label [[COND_END]]

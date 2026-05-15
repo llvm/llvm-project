@@ -14,6 +14,8 @@
 // AMDGCN-GFX900-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGCN-GFX900-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-GFX900-NEXT:    call void @llvm.trap()
+// AMDGCN-GFX900-NEXT:    unreachable
+// AMDGCN-GFX900:       dead.trap:
 // AMDGCN-GFX900-NEXT:    ret void
 //
 // AMDGCN-GFX1010-LABEL: define dso_local void @foo(
@@ -45,6 +47,8 @@
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL7]], label %[[IF_THEN]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap()
+// AMDGCNSPIRV-NEXT:    unreachable
+// AMDGCNSPIRV:       dead.trap:    
 // AMDGCNSPIRV-NEXT:    br label %[[IF_END]]
 // AMDGCNSPIRV:       [[IF_END]]:
 // AMDGCNSPIRV-NEXT:    ret void
