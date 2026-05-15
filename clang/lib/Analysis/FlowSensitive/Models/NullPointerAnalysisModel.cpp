@@ -117,12 +117,14 @@ static auto equalExprMatcher() {
       hasOperands(ptrWithBinding(kVar), ptrWithBinding(kValue)));
 }
 
-static auto anyPointerMatcher() { return expr(hasType(isAnyPointer())).bind(kVar); }
+static auto anyPointerMatcher() {
+  return expr(hasType(isAnyPointer())).bind(kVar);
+}
 
 // Only computes simple comparisons against the literals True and False in the
 // environment. Faster, but produces many Unknown values.
-static SatisfiabilityResult shallowComputeSatisfiability(BoolValue *Val,
-                                                  const Environment &Env) {
+static SatisfiabilityResult
+shallowComputeSatisfiability(BoolValue *Val, const Environment &Env) {
   if (!Val)
     return SR::Nullptr;
 
@@ -141,7 +143,7 @@ static SatisfiabilityResult shallowComputeSatisfiability(BoolValue *Val,
 // Computes satisfiability by using the flow condition. Slower, but more
 // precise.
 static SatisfiabilityResult computeSatisfiability(BoolValue *Val,
-                                           const Environment &Env) {
+                                                  const Environment &Env) {
   // Early return with the fast compute values.
   if (SatisfiabilityResult ShallowResult =
           shallowComputeSatisfiability(Val, Env);
@@ -226,8 +228,8 @@ static bool hasTopOrNullValue(const Value *Val, const Environment &Env) {
 }
 
 static void matchDereferenceExpr(const Stmt *stmt,
-                          const MatchFinder::MatchResult &Result,
-                          Environment &Env) {
+                                 const MatchFinder::MatchResult &Result,
+                                 Environment &Env) {
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
@@ -241,14 +243,14 @@ static void matchDereferenceExpr(const Stmt *stmt,
 }
 
 static void matchNullCheckExpr(const Expr *NullCheck,
-                        const MatchFinder::MatchResult &Result,
-                        Environment &Env) {
+                               const MatchFinder::MatchResult &Result,
+                               Environment &Env) {
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
   // (bool)p or (p != nullptr)
   bool IsNonnullOp = true;
-  
+
   const auto *BinOp = dyn_cast<BinaryOperator>(NullCheck);
   if (BinOp && BinOp->getOpcode() == BO_EQ) {
     IsNonnullOp = false;
@@ -276,7 +278,8 @@ static void matchNullCheckExpr(const Expr *NullCheck,
 }
 
 static void matchEqualExpr(const BinaryOperator *EqualExpr,
-                    const MatchFinder::MatchResult &Result, Environment &Env) {
+                           const MatchFinder::MatchResult &Result,
+                           Environment &Env) {
   bool IsNotEqualsOp = EqualExpr->getOpcode() == BO_NE;
 
   const auto *LHSVar = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -319,8 +322,9 @@ static void matchEqualExpr(const BinaryOperator *EqualExpr,
       A.makeNot(A.makeAnd(LHSNull.formula(), RHSNull.formula()))));
 }
 
-static void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &Result,
-                      Environment &Env) {
+static void matchNullptrExpr(const Expr *expr,
+                             const MatchFinder::MatchResult &Result,
+                             Environment &Env) {
   const auto *PrVar = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(PrVar != nullptr);
 
@@ -336,8 +340,8 @@ static void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &R
 }
 
 static void matchAddressofExpr(const Expr *expr,
-                        const MatchFinder::MatchResult &Result,
-                        Environment &Env) {
+                               const MatchFinder::MatchResult &Result,
+                               Environment &Env) {
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
@@ -357,8 +361,8 @@ static void matchAddressofExpr(const Expr *expr,
 }
 
 static void matchPtrArgFunctionExpr(const CallExpr *fncall,
-                             const MatchFinder::MatchResult &Result,
-                             Environment &Env) {
+                                    const MatchFinder::MatchResult &Result,
+                                    Environment &Env) {
   for (const auto *Arg : fncall->arguments()) {
     // FIXME: Add handling for reference types as arguments
     if (Arg->getType()->isPointerType()) {
@@ -401,8 +405,8 @@ static void matchPtrArgFunctionExpr(const CallExpr *fncall,
 }
 
 static void matchAnyPointerExpr(const Expr *fncall,
-                         const MatchFinder::MatchResult &Result,
-                         Environment &Env) {
+                                const MatchFinder::MatchResult &Result,
+                                Environment &Env) {
   // This is not necessarily a prvalue, since operators such as prefix ++ are
   // lvalues.
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -615,7 +619,7 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
     if (LHSVar == RHSVar)
       return LHSVar ? *LHSVar : MergedEnv.makeAtomicBoolValue();
     if (isa_and_nonnull<TopBoolValue>(LHSVar) ||
-             isa_and_nonnull<TopBoolValue>(RHSVar))
+        isa_and_nonnull<TopBoolValue>(RHSVar))
       return MergedEnv.makeTopBoolValue();
 
     if (!LHSVar)
@@ -718,8 +722,8 @@ ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
 
 // Different in that it replaces differing boolean values with Top.
 static ComparisonResult compareAndReplace(QualType Type, Value &Val1,
-                                   const Environment &Env1, Value &Val2,
-                                   Environment &Env2) {
+                                          const Environment &Env1, Value &Val2,
+                                          Environment &Env2) {
 
   if (!Type->isAnyPointerType())
     return ComparisonResult::Unknown;
@@ -755,7 +759,8 @@ static ComparisonResult compareAndReplace(QualType Type, Value &Val1,
         isa_and_nonnull<TopBoolValue>(RHSVar)) {
       Val2.setProperty(Name, Env2.makeTopBoolValue());
       return CR::Top;
-    } if (LHSVar == RHSVar)
+    }
+    if (LHSVar == RHSVar)
       return LHSVar ? CR::Same : CR::Unknown;
 
     return CR::Different;

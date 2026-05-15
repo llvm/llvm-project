@@ -13,18 +13,15 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
-#include <clang/Analysis/FlowSensitive/AdornedCFG.h>
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
-#include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Models/NullPointerAnalysisModel.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/Any.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include <memory>
-#include <vector>
 
 namespace clang::tidy::bugprone {
 
@@ -35,10 +32,12 @@ using Diagnoser = NullCheckAfterDereferenceDiagnoser;
 
 static constexpr llvm::StringLiteral FuncID("fun");
 
+namespace {
 struct ExpandedResult {
   Diagnoser::DiagnosticEntry Entry;
   std::optional<SourceLocation> DerefLoc;
 };
+} // namespace
 
 using ExpandedResultType = llvm::SmallVector<ExpandedResult>;
 
@@ -50,9 +49,8 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
 
   ASTContext &ASTCtx = FuncDecl.getASTContext();
 
-  if (FuncDecl.getBody() == nullptr) {
+  if (FuncDecl.getBody() == nullptr)
     return std::nullopt;
-  }
 
   Expected<AdornedCFG> Context =
       AdornedCFG::build(FuncDecl, *FuncDecl.getBody(), ASTCtx);
@@ -61,7 +59,7 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
 
   dataflow::DataflowAnalysisContext AnalysisContext(
       std::make_unique<dataflow::WatchedLiteralsSolver>());
-  dataflow::Environment Env(AnalysisContext, FuncDecl);
+  const dataflow::Environment Env(AnalysisContext, FuncDecl);
   NullPointerAnalysisModel Analysis(ASTCtx);
   Diagnoser Diagnoser;
 
@@ -81,9 +79,11 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
   llvm::transform(Diagnostics, std::back_inserter(ExpandedDiagnostics),
                   [&](Diagnoser::DiagnosticEntry Entry) -> ExpandedResult {
                     const auto *Val = Diagnoser.WarningLocToVal[Entry.Location];
-                    if (Val && Diagnoser.ValToDerefLoc[Val]) {
-                      return {Entry, Diagnoser.ValToDerefLoc[Val]->getBeginLoc()};
-                    }
+                    if (Val && Diagnoser.ValToDerefLoc[Val])
+                      return {
+                          Entry,
+                          Diagnoser.ValToDerefLoc[Val]->getBeginLoc(),
+                      };
 
                     return {Entry, std::nullopt};
                   });
