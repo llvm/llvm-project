@@ -464,11 +464,9 @@ define <2 x i16> @test_signed_v2i16_v2f64(<2 x double> %f) nounwind {
 define <2 x i32> @test_signed_v2i32_v2f64(<2 x double> %f) nounwind {
 ; CHECK-LABEL: test_signed_v2i32_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [-2.147483648E+9,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [2.147483647E+9,0.0E+0]
 ; CHECK-NEXT:    movapd %xmm0, %xmm1
-; CHECK-NEXT:    maxsd %xmm2, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm3 = [2.147483647E+9,0.0E+0]
-; CHECK-NEXT:    minsd %xmm3, %xmm1
+; CHECK-NEXT:    minsd %xmm2, %xmm1
 ; CHECK-NEXT:    cvttsd2si %xmm1, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm0
@@ -476,8 +474,7 @@ define <2 x i32> @test_signed_v2i32_v2f64(<2 x double> %f) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm0
-; CHECK-NEXT:    maxsd %xmm2, %xmm0
-; CHECK-NEXT:    minsd %xmm3, %xmm0
+; CHECK-NEXT:    minsd %xmm2, %xmm0
 ; CHECK-NEXT:    cvttsd2si %xmm0, %eax
 ; CHECK-NEXT:    cmovpl %ecx, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
