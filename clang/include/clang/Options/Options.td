@@ -9338,6 +9338,8 @@ def _SLASH_experemental_deterministic : CLJoined<"experimental:deterministic">,
       HelpText<"Emit warnings on usage of non-deterministic macros __DATE__, __TIME__ and __TIMESTAMP__">;
 def _SLASH_d1nodatetime : CLFlag<"d1nodatetime">,
       HelpText<"Undefine the standard preprocessor macros __DATE__, __TIME__ and __TIMESTAMP__">;
+def _SLASH_d1nodatetime_ : CLFlag<"d1nodatetime-">,
+      HelpText<"Disable undefinition of the standard preprocessor macros __DATE__, __TIME__ and __TIMESTAMP__">;
 
 // Non-aliases:
 
