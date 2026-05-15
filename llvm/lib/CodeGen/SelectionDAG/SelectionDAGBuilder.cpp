@@ -8615,6 +8615,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitVectorExtractLastActive(I, Intrinsic);
     return;
   }
+  case Intrinsic::vector_shuffle: {
+    setValue(&I,
+             DAG.getNode(ISD::VECTOR_TABLE_SHUFFLE, sdl,
+                         EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
+                         getValue(I.getOperand(1)), getValue(I.getOperand(2))));
+    return;
+  }
   case Intrinsic::loop_dependence_war_mask:
     setValue(&I,
              DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, sdl,

@@ -1437,6 +1437,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SHUFFLE:
     SplitVecRes_VECTOR_SHUFFLE(cast<ShuffleVectorSDNode>(N), Lo, Hi);
     break;
+  case ISD::VECTOR_TABLE_SHUFFLE:
+    SplitVecRes_VECTOR_TABLE_SHUFFLE(N, Lo, Hi);
+    break;
   case ISD::VECTOR_SPLICE_LEFT:
   case ISD::VECTOR_SPLICE_RIGHT:
     SplitVecRes_VECTOR_SPLICE(N, Lo, Hi);
@@ -3498,6 +3501,20 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
   }
 }
 
+void DAGTypeLegalizer::SplitVecRes_VECTOR_TABLE_SHUFFLE(SDNode *N, SDValue &Lo,
+                                                        SDValue &Hi) {
+  SDLoc DL(N);
+  SDValue Data = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  EVT SplitVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+  // If we're splitting the result, then the indices and passthru also require
+  // splitting.
+  auto [IdxLo, IdxHi] = DAG.SplitVectorOperand(N, 1);
+  auto [PassLo, PassHi] = DAG.SplitVectorOperand(N, 2);
+  Lo = DAG.getNode(ISD::VECTOR_TABLE_SHUFFLE, DL, SplitVT, Data, IdxLo, PassLo);
+  Hi = DAG.getNode(ISD::VECTOR_TABLE_SHUFFLE, DL, SplitVT, Data, IdxHi, PassHi);
+}
+
 void DAGTypeLegalizer::SplitVecRes_VAARG(SDNode *N, SDValue &Lo, SDValue &Hi) {
   EVT OVT = N->getValueType(0);
   EVT NVT = OVT.getHalfNumVectorElementsVT(*DAG.getContext());
@@ -3842,6 +3859,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = SplitVecOp_VECTOR_FIND_LAST_ACTIVE(N);
     break;
+  case ISD::VECTOR_TABLE_SHUFFLE:
+    Res = SplitVecOp_VECTOR_TABLE_SHUFFLE(N, OpNo);
+    break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:
     Res = SplitVecOp_TruncateHelper(N);
@@ -4039,6 +4059,35 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
                      DAG.getNode(ISD::ADD, DL, VT, HiFind,
                                  DAG.getElementCount(DL, VT, SplitEC)),
                      LoFind);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_TABLE_SHUFFLE(SDNode *N,
+                                                          unsigned OpNo) {
+  SDLoc DL(N);
+  SDValue Indices = N->getOperand(1);
+  SDValue PassThru = N->getOperand(2);
+  EVT IndicesVT = Indices.getValueType();
+
+  // We should only be splitting the data vector, as indices/passthru will
+  // be split (if needed) based on the return.
+  assert(OpNo == 0 && "Unexpected operand split.");
+  SDValue LoData, HiData;
+  GetSplitVector(N->getOperand(0), LoData, HiData);
+  EVT SplitVT = LoData->getValueType(0);
+
+  // Ok. Create a new table shuffle for the hi part.
+  SDValue HiShuffle = DAG.getNode(ISD::VECTOR_TABLE_SHUFFLE, DL, SplitVT,
+                                  HiData, Indices, PassThru);
+  // Subtract from each index, to move to the next vector of data.
+  unsigned NumElts = SplitVT.getVectorNumElements();
+  SDValue SplatNumElts = DAG.getSplatBuildVector(
+      IndicesVT, DL,
+      DAG.getConstant(NumElts, DL, SplitVT.getVectorElementType()));
+  SDValue LoIndices =
+      DAG.getNode(ISD::SUB, DL, IndicesVT, Indices, SplatNumElts);
+  SDValue LoShuffle = DAG.getNode(ISD::VECTOR_TABLE_SHUFFLE, DL, SplitVT,
+                                  LoData, LoIndices, HiShuffle);
+  return LoShuffle;
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSELECT(SDNode *N, unsigned OpNo) {

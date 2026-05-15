@@ -5750,6 +5750,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand VECTOR_TABLE_SHUFFLE nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandVectorTableShuffle(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand LOOP_DEPENDENCE_MASK nodes
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.

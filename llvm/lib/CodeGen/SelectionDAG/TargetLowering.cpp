@@ -11239,6 +11239,43 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
   return DAG.getZExtOrTrunc(HighestIdx, DL, N->getValueType(0));
 }
 
+SDValue TargetLowering::expandVectorTableShuffle(SDNode *N,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT EltVT = VT.getScalarType();
+  SDValue Data = N->getOperand(0);
+  SDValue Indices = N->getOperand(1);
+  SDValue PassThru = N->getOperand(2);
+  EVT IndicesVT = Indices.getValueType();
+  EVT IndexVT = IndicesVT.getScalarType();
+
+  assert(IndicesVT.getVectorElementCount() == VT.getVectorElementCount() &&
+         "Invalid indices for vector table shuffle");
+  assert(!VT.isScalableVector() && "Cannot scalarize scalable vector");
+  // Extract each element from Data, place in buildvector
+  SmallVector<SDValue, 64> Elts;
+  unsigned MaxIdx = VT.getVectorNumElements();
+  SDValue Max = DAG.getConstant(MaxIdx - 1, DL, IndexVT);
+  // TODO: Do we need something better than this?
+  //  SDValue Zero = DAG.getConstant(0, DL, EltVT);
+  EVT CmpVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IndexVT);
+  for (unsigned I = 0; I < MaxIdx; ++I) {
+    SDValue Index = DAG.getExtractVectorElt(DL, IndexVT, Indices, I);
+    SDValue IsOutOfRange = DAG.getSetCC(DL, CmpVT, Index, Max, ISD::SETUGT);
+    SDValue PTElt = DAG.getExtractVectorElt(DL, EltVT, PassThru, I);
+    Index = DAG.getNode(ISD::UMIN, DL, IndexVT, Index, Max);
+    // TODO: Compare vs highest index, and use passthru if above.
+    // TODO: Clamp index to avoid going out of range.
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Data, Index);
+    Elt = DAG.getSelect(DL, EltVT, IsOutOfRange, Elt, PTElt);
+    Elts.push_back(Elt);
+  }
+
+  return DAG.getBuildVector(VT, DL, Elts);
+}
+
 SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(N);

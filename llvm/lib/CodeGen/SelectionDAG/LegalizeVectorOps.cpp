@@ -489,6 +489,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::MASKED_SDIV:
   case ISD::MASKED_UREM:
   case ISD::MASKED_SREM:
+  case ISD::VECTOR_TABLE_SHUFFLE:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -1396,6 +1397,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     return;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Results.push_back(TLI.expandVectorFindLastActive(Node, DAG));
+    return;
+  case ISD::VECTOR_TABLE_SHUFFLE:
+    Results.push_back(TLI.expandVectorTableShuffle(Node, DAG));
     return;
   case ISD::SCMP:
   case ISD::UCMP:

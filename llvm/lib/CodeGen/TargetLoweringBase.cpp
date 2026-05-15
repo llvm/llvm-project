@@ -1263,6 +1263,9 @@ void TargetLoweringBase::initActions() {
     // Masked vector extracts default to expand.
     setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Expand);
 
+    // Variable vector shuffles default to expand.
+    setOperationAction(ISD::VECTOR_TABLE_SHUFFLE, VT, Expand);
+
     setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Expand);
     setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Expand);
 

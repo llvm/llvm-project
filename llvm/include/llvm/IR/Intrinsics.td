@@ -3060,6 +3060,12 @@ def int_vector_splice_right
                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable]>;
 
+// Inputs: Data vector, index vector, passthru.
+def int_vector_shuffle
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [llvm_anyvector_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
+
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                                        [],
