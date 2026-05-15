@@ -38,14 +38,20 @@ public:
   }
 
   void handleFileDependency(StringRef File) override {
-    Dependencies.push_back(std::string(File));
+    SmallString<128> NormalizedFile = File;
+    llvm::sys::path::remove_dots(NormalizedFile, /*remove_dot_dot=*/true);
+    Dependencies.emplace_back(NormalizedFile.str());
   }
 
   // These are ignored for the make format as it can't support the full
   // set of deps, and handleFileDependency handles enough for implicitly
   // built modules to work.
   void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {}
-  void handleModuleDependency(ModuleDeps MD) override {}
+  void handleModuleDependency(ModuleDeps MD) override {
+    MD.forEachFileDep([this](StringRef File) {
+      DependenciesFromModules.push_back(std::string(File));
+    });
+  }
   void handleDirectModuleDependency(ModuleID ID) override {}
   void handleVisibleModule(std::string ModuleName) override {}
   void handleContextHash(std::string Hash) override {}
@@ -56,9 +62,12 @@ public:
     class DependencyPrinter : public DependencyFileGenerator {
     public:
       DependencyPrinter(DependencyOutputOptions &Opts,
-                        ArrayRef<std::string> Dependencies)
+                        ArrayRef<std::string> Dependencies,
+                        ArrayRef<std::string> ModuleDependencies)
           : DependencyFileGenerator(Opts) {
         for (const auto &Dep : Dependencies)
+          addDependency(Dep);
+        for (const auto &Dep : ModuleDependencies)
           addDependency(Dep);
       }
 
@@ -68,13 +77,14 @@ public:
       }
     };
 
-    DependencyPrinter Generator(*Opts, Dependencies);
+    DependencyPrinter Generator(*Opts, Dependencies, DependenciesFromModules);
     Generator.printDependencies(S);
   }
 
 protected:
   std::unique_ptr<DependencyOutputOptions> Opts;
   std::vector<std::string> Dependencies;
+  std::vector<std::string> DependenciesFromModules;
 };
 } // anonymous namespace
 
@@ -187,12 +197,12 @@ bool tooling::computeDependencies(
                           Controller, DiagConsumer, OverlayFS);
 }
 
-std::optional<std::string>
-DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
-                                          StringRef CWD,
-                                          DiagnosticConsumer &DiagConsumer) {
+std::optional<std::string> DependencyScanningTool::getDependencyFile(
+    ArrayRef<std::string> CommandLine, StringRef CWD,
+    LookupModuleOutputCallback LookupModuleOutput,
+    DiagnosticConsumer &DiagConsumer) {
   MakeDependencyPrinterConsumer DepConsumer;
-  CallbackActionController Controller(nullptr);
+  CallbackActionController Controller(LookupModuleOutput);
   if (!computeDependencies(Worker, CWD, CommandLine, DepConsumer, Controller,
                            DiagConsumer))
     return std::nullopt;
@@ -347,14 +357,14 @@ llvm::Expected<TranslationUnitDeps>
 DependencyScanningTool::getModuleDependencies(
     StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput) {
+    DependencyActionController &Controller) {
   auto MaybeCIWithContext = CompilerInstanceWithContext::initializeOrError(
-      *this, CWD, CommandLine, LookupModuleOutput);
+      *this, CWD, CommandLine, Controller);
   if (auto Error = MaybeCIWithContext.takeError())
     return Error;
 
   return MaybeCIWithContext->computeDependenciesByNameOrError(
-      ModuleName, AlreadySeen, LookupModuleOutput);
+      ModuleName, AlreadySeen, Controller);
 }
 
 static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
@@ -421,12 +431,7 @@ CompilerInstanceWithContext::initializeFromCommandline(
 llvm::Expected<CompilerInstanceWithContext>
 CompilerInstanceWithContext::initializeOrError(
     DependencyScanningTool &Tool, StringRef CWD,
-    ArrayRef<std::string> CommandLine,
-    LookupModuleOutputCallback LookupModuleOutput) {
-  // It might seem wasteful to create fresh controller just for initializing the
-  // compiler instance, but repeated calls to computeDependenciesByNameOrError()
-  // do that as well, so this gets amortized.
-  CallbackActionController Controller(LookupModuleOutput);
+    ArrayRef<std::string> CommandLine, DependencyActionController &Controller) {
   auto DiagPrinterWithOS =
       std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
 
@@ -442,9 +447,8 @@ CompilerInstanceWithContext::initializeOrError(
 llvm::Expected<TranslationUnitDeps>
 CompilerInstanceWithContext::computeDependenciesByNameOrError(
     StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput) {
+    DependencyActionController &Controller) {
   FullDependencyConsumer Consumer(AlreadySeen);
-  CallbackActionController Controller(LookupModuleOutput);
   // We need to clear the DiagnosticOutput so that each by-name lookup
   // has a clean diagnostics buffer.
   DiagPrinterWithOS->DiagnosticOutput.clear();
@@ -540,7 +544,7 @@ bool CompilerInstanceWithContext::computeDependencies(
   });
 
   auto MDC = initializeScanInstanceDependencyCollector(
-      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), CWD, Consumer,
+      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts),
       Worker.Service,
       /* The MDC's constructor makes a copy of the OriginalInvocation, so
       we can pass it in without worrying that it might be changed across
@@ -599,10 +603,6 @@ bool CompilerInstanceWithContext::computeDependencies(
 
   assert(CB && "Must have PPCallbacks after module loading");
   CB->moduleImport(SourceLocation(), Path, ModResult);
-  // Note that we are calling the CB's EndOfMainFile function, which
-  // forwards the results to the dependency consumer.
-  // It does not indicate the end of processing the fake file.
-  CB->EndOfMainFile();
 
   if (!ModResult)
     return false;
@@ -610,6 +610,7 @@ bool CompilerInstanceWithContext::computeDependencies(
   if (CI.getDiagnostics().hasErrorOccurred())
     return false;
 
+  MDC->run(Consumer);
   MDC->applyDiscoveredDependencies(ModuleInvocation);
 
   if (!Controller.finalize(CI, ModuleInvocation))

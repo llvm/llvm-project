@@ -39,15 +39,25 @@ using namespace PatternMatch;
 static cl::opt<bool> UseConstantIntForFixedLengthSplat(
     "use-constant-int-for-fixed-length-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantInt's native fixed-length vector splat support."));
-static cl::opt<bool> UseConstantFPForFixedLengthSplat(
-    "use-constant-fp-for-fixed-length-splat", cl::init(true), cl::Hidden,
-    cl::desc("Use ConstantFP's native fixed-length vector splat support."));
 static cl::opt<bool> UseConstantIntForScalableSplat(
     "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantInt's native scalable vector splat support."));
-static cl::opt<bool> UseConstantFPForScalableSplat(
-    "use-constant-fp-for-scalable-splat", cl::init(true), cl::Hidden,
-    cl::desc("Use ConstantFP's native scalable vector splat support."));
+static cl::opt<bool> UseConstantPtrNullForFixedLengthSplat(
+    "use-constant-ptrnull-for-fixed-length-splat", cl::init(true), cl::Hidden,
+    cl::desc("Use ConstantPointerNull's native fixed-length vector splat "
+             "support."));
+static cl::opt<bool> UseConstantPtrNullForScalableSplat(
+    "use-constant-ptrnull-for-scalable-splat", cl::init(true), cl::Hidden,
+    cl::desc(
+        "Use ConstantPointerNull's native scalable vector splat support."));
+
+static bool shouldUseConstantPointerNullForVector(VectorType *VTy) {
+  if (!VTy->getElementType()->isPointerTy())
+    return false;
+  return VTy->getElementCount().isScalable()
+             ? UseConstantPtrNullForScalableSplat
+             : UseConstantPtrNullForFixedLengthSplat;
+}
 
 //===----------------------------------------------------------------------===//
 //                              Constant Class
@@ -404,10 +414,13 @@ Constant *Constant::getNullValue(Type *Ty) {
                            APFloat::getZero(Ty->getFltSemantics()));
   case Type::PointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
-  case Type::StructTyID:
-  case Type::ArrayTyID:
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID:
+    if (shouldUseConstantPointerNullForVector(cast<VectorType>(Ty)))
+      return ConstantPointerNull::get(Ty);
+    return ConstantAggregateZero::get(Ty);
+  case Type::StructTyID:
+  case Type::ArrayTyID:
     return ConstantAggregateZero::get(Ty);
   case Type::TokenTyID:
     return ConstantTokenNone::get(Ty->getContext());
@@ -491,6 +504,13 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
                        .getKnownMinValue()
                ? ConstantFP::get(getContext(), CFP->getValue())
                : nullptr;
+
+  if (isa<ConstantPointerNull>(this)) {
+    auto *VT = cast<VectorType>(getType());
+    return Elt < VT->getElementCount().getKnownMinValue()
+               ? ConstantPointerNull::get(VT->getElementType())
+               : nullptr;
+  }
 
   // FIXME: getNumElements() will fail for non-fixed vector types.
   if (isa<ScalableVectorType>(getType()))
@@ -1588,19 +1608,24 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isZero = C->isNullValue();
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
-  bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
+  bool isSplatFP = isa<ConstantFP>(C);
   bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
   bool isSplatByte = isa<ConstantByte>(C);
+  bool isSplatPtrNull =
+      UseConstantPtrNullForFixedLengthSplat && isa<ConstantPointerNull>(C);
 
-  if (isZero || isUndef || isSplatFP || isSplatInt || isSplatByte) {
+  if (isZero || isUndef || isSplatFP || isSplatInt || isSplatByte ||
+      isSplatPtrNull) {
     for (unsigned i = 1, e = V.size(); i != e; ++i)
       if (V[i] != C) {
         isZero = isUndef = isPoison = isSplatFP = isSplatInt = isSplatByte =
-            false;
+            isSplatPtrNull = false;
         break;
       }
   }
 
+  if (isSplatPtrNull)
+    return ConstantPointerNull::get(T);
   if (isZero)
     return ConstantAggregateZero::get(T);
   if (isPoison)
@@ -1628,23 +1653,29 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
 }
 
 Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
+  if (isa<ConstantPointerNull>(V)) {
+    VectorType *VTy = VectorType::get(V->getType(), EC);
+    if (shouldUseConstantPointerNullForVector(VTy))
+      return ConstantPointerNull::get(VTy);
+  }
+
+  if (auto *CB = dyn_cast<ConstantByte>(V))
+    return ConstantByte::get(V->getContext(), EC, CB->getValue());
+
+  if (auto *CFP = dyn_cast<ConstantFP>(V))
+    return ConstantFP::get(V->getContext(), EC, CFP->getValue());
+
   if (!EC.isScalable()) {
     // Maintain special handling of zero.
     if (!V->isNullValue()) {
       if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
         return ConstantInt::get(V->getContext(), EC,
                                 cast<ConstantInt>(V)->getValue());
-      if (isa<ConstantByte>(V))
-        return ConstantByte::get(V->getContext(), EC,
-                                 cast<ConstantByte>(V)->getValue());
-      if (UseConstantFPForFixedLengthSplat && isa<ConstantFP>(V))
-        return ConstantFP::get(V->getContext(), EC,
-                               cast<ConstantFP>(V)->getValue());
     }
 
     // If this splat is compatible with ConstantDataVector, use it instead of
     // ConstantVector.
-    if ((isa<ConstantFP>(V) || isa<ConstantInt>(V) || isa<ConstantByte>(V)) &&
+    if (isa<ConstantInt>(V) &&
         ConstantDataSequential::isElementTypeCompatible(V->getType()))
       return ConstantDataVector::getSplat(EC.getKnownMinValue(), V);
 
@@ -1657,12 +1688,6 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
     if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
       return ConstantInt::get(V->getContext(), EC,
                               cast<ConstantInt>(V)->getValue());
-    if (isa<ConstantByte>(V))
-      return ConstantByte::get(V->getContext(), EC,
-                               cast<ConstantByte>(V)->getValue());
-    if (UseConstantFPForScalableSplat && isa<ConstantFP>(V))
-      return ConstantFP::get(V->getContext(), EC,
-                             cast<ConstantFP>(V)->getValue());
   }
 
   Type *VTy = VectorType::get(V->getType(), EC);
@@ -1884,6 +1909,8 @@ Constant *Constant::getSplatValue(bool AllowPoison) const {
     return ConstantByte::get(getContext(), CB->getValue());
   if (auto *CFP = dyn_cast<ConstantFP>(this))
     return ConstantFP::get(getContext(), CFP->getValue());
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(this))
+    return ConstantPointerNull::get(CPN->getPointerType());
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
@@ -1989,7 +2016,7 @@ ConstantRange Constant::toConstantRange() const {
       auto *CB = dyn_cast<ConstantByte>(Elem);
       if (!CI && !CB)
         return ConstantRange::getFull(BitWidth);
-      CR = CR.unionWith(CI->getValue());
+      CR = CR.unionWith(CI ? CI->getValue() : CB->getValue());
     }
     return CR;
   }
@@ -2001,11 +2028,17 @@ ConstantRange Constant::toConstantRange() const {
 //
 
 ConstantPointerNull *ConstantPointerNull::get(PointerType *Ty) {
+  return get(static_cast<Type *>(Ty));
+}
+
+ConstantPointerNull *ConstantPointerNull::get(Type *Ty) {
+  assert(Ty->isPtrOrPtrVectorTy() && "invalid type for null pointer constant");
   std::unique_ptr<ConstantPointerNull> &Entry =
       Ty->getContext().pImpl->CPNConstants[Ty];
   if (!Entry)
     Entry.reset(new ConstantPointerNull(Ty));
 
+  assert(Entry->getType() == Ty);
   return Entry.get();
 }
 
@@ -2163,7 +2196,7 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
 
   // If the argument is replaced with a null value, just replace this constant
   // with a null value.
-  if (cast<Constant>(To)->isNullValue())
+  if (isa<ConstantPointerNull>(To))
     return To;
 
   // The replacement could be a bitcast or an alias to another function. We can
@@ -2307,7 +2340,7 @@ bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
                                             const DataLayout &DL) const {
   // This function may only be validly called to analyze a ptrauth operation
   // with no deactivation symbol, so if we have one it isn't compatible.
-  if (!getDeactivationSymbol()->isNullValue())
+  if (!isa<ConstantPointerNull>(getDeactivationSymbol()))
     return false;
 
   // If the keys are different, there's no chance for this to be compatible.
