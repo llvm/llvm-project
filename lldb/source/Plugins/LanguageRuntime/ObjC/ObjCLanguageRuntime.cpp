@@ -194,16 +194,14 @@ ObjCLanguageRuntime::GetDescriptorIterator(ConstString name) {
   // Name hashes were provided, so use them to efficiently lookup name to
   // isa/descriptor
   const uint32_t name_hash = llvm::djbHash(name.GetStringRef());
-  std::pair<HashToISAIterator, HashToISAIterator> range =
-      m_hash_to_isa_map.equal_range(name_hash);
-  for (HashToISAIterator range_pos = range.first; range_pos != range.second;
-       ++range_pos) {
-    ISAToDescriptorIterator pos = m_isa_to_descriptor.find(range_pos->second);
-    if (pos != m_isa_to_descriptor.end()) {
-      if (pos->second->GetClassName() == name)
-        return pos;
-    }
-  }
+  auto matches_it = m_hash_to_isa_map.find(name_hash);
+  if (matches_it == m_hash_to_isa_map.end())
+    return m_isa_to_descriptor.end();
+
+  for (auto isa : matches_it->second)
+    if (auto pos = m_isa_to_descriptor.find(isa);
+        pos != m_isa_to_descriptor.end() && pos->second->GetClassName() == name)
+      return pos;
 
   return m_isa_to_descriptor.end();
 }
