@@ -8,7 +8,9 @@
 
 // REQUIRES: std-at-least-c++26
 
-// Track number of moves
+// In case the function signature is taking an argument by value,
+// when the type is small and trivial, we pass it internally by value,
+// otherwise, we pass it by rvalue reference
 
 #include <cassert>
 #include <functional>

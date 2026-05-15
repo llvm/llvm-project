@@ -46,13 +46,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class...>
 class function_ref;
 
-template <bool _NoExcept2, bool _NoExcept1, class _Rp, class... _ArgTypes>
+template <bool _NoExcept1, bool _NoExcept2, class _Rp, class... _ArgTypes>
 struct __is_convertible_from_specialization<
-    function_ref<_Rp(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV noexcept(_NoExcept2)>,
-    _NoExcept1,
-    _Rp,
-    _ArgTypes...>
+    function_ref<_Rp(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV noexcept(_NoExcept1)>,
+    function_ref<_Rp(_ArgTypes...) const noexcept(_NoExcept2)> >
     : is_convertible<_Rp (&)(_ArgTypes...) noexcept(_NoExcept2), _Rp (&)(_ArgTypes...) noexcept(_NoExcept1)> {};
+
+template <bool _NoExcept1, bool _NoExcept2, class _Rp, class... _ArgTypes>
+struct __is_convertible_from_specialization<
+    function_ref<_Rp(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV noexcept(_NoExcept1)>,
+    function_ref<_Rp(_ArgTypes...) noexcept(_NoExcept2)> >
+    : _And<is_convertible<_Rp (&)(_ArgTypes...) noexcept(_NoExcept2), _Rp (&)(_ArgTypes...) noexcept(_NoExcept1)>,
+           is_convertible<_LIBCPP_FUNCTION_REF_CV int&, int&>> {};
 
 template <class _Rp, class... _ArgTypes, bool __is_noexcept>
 class function_ref<_Rp(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV noexcept(__is_noexcept)> {
@@ -62,9 +67,9 @@ private:
       _If<__is_noexcept, is_nothrow_invocable_r<_Rp, _Tp..., _ArgTypes...>, is_invocable_r<_Rp, _Tp..., _ArgTypes...>>::
           value;
 
-  template <class _Fn>
+  template <class _Fn2>
   static constexpr bool __is_convertible_from_specialization_v =
-      __is_convertible_from_specialization<_Fn, __is_noexcept, _Rp, _ArgTypes...>::value;
+      __is_convertible_from_specialization<function_ref, _Fn2>::value;
 
   template <class... _Tp>
   friend class function_ref;

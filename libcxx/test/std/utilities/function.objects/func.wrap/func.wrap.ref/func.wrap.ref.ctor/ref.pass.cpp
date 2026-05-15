@@ -310,6 +310,17 @@ constexpr bool test() {
     }
   }
   {
+    // P3961R1 Less double indirection in function_ref
+    // is-convertible-from-specialization<remove_cv_t<T>> is false
+    std::function_ref<int()> f1(std::cw<one>);
+    std::function_ref<int() const> f2(f1);
+
+    f1 = std::cw<two>;
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(f2() == 2);
+    }
+  }
+  {
     // volatile objects
     const volatile VolatileCallable vc{};
     std::function_ref<int()> f(vc);

@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class...>
 class function_ref;
 
-template <class _Fn, bool _NoExcept1, class _Rp, class... _ArgTypes>
+template <class _Fn1, class _Fn2>
 struct __is_convertible_from_specialization : false_type {};
 
 union __function_ref_storage {
