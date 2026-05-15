@@ -1526,7 +1526,7 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_pod.h",
       "__type_traits/is_pointer.h",
       "__type_traits/is_polymorphic.h",
-      "__type_traits/is_primary_template.h",
+
       "__type_traits/is_reference.h",
       "__type_traits/is_reference_wrapper.h",
       "__type_traits/is_referenceable.h",
@@ -1546,7 +1546,7 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_union.h",
       "__type_traits/is_unqualified.h",
       "__type_traits/is_unsigned.h",
-      "__type_traits/is_valid_expansion.h",
+
       "__type_traits/is_void.h",
       "__type_traits/is_volatile.h",
       "__type_traits/is_within_lifetime.h",
