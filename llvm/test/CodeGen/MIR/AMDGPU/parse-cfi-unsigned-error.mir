@@ -1,7 +1,5 @@
 # RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 
-# REQUIRES: amdgpu-registered-target
-
 # Test MIParser::parseCFIUnsigned
 
 name: test
