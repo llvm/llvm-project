@@ -77,25 +77,25 @@ tzcnt       (%rax), %rcx
 # CHECK-NEXT:  6      6     0.33    *                   tzcntq	(%rax), %rcx
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - 4GM4AGU0
-# CHECK-NEXT: [1]   - 4GM4AGU1
-# CHECK-NEXT: [2]   - 4GM4AGU2
-# CHECK-NEXT: [3]   - 4GM4ALU0
-# CHECK-NEXT: [4]   - 4GM4ALU1
-# CHECK-NEXT: [5]   - 4GM4ALU2
-# CHECK-NEXT: [6]   - 4GM4ALU3
-# CHECK-NEXT: [7]   - 4GM4FPU0
-# CHECK-NEXT: [8]   - 4GM4FPU1
-# CHECK-NEXT: [9]   - 4GM4FPU2
-# CHECK-NEXT: [10]  - 4GM4FPU3
-# CHECK-NEXT: [11.0] - 4GM4LSU
-# CHECK-NEXT: [11.1] - 4GM4LSU
-# CHECK-NEXT: [11.2] - 4GM4LSU
-# CHECK-NEXT: [12.0] - 4GM4Load
-# CHECK-NEXT: [12.1] - 4GM4Load
-# CHECK-NEXT: [13.0] - 4GM4Store
-# CHECK-NEXT: [13.1] - 4GM4Store
-# CHECK-NEXT: [13.2] - 4GM4Store
+# CHECK-NEXT: [0]   - C4GM4AGU0
+# CHECK-NEXT: [1]   - C4GM4AGU1
+# CHECK-NEXT: [2]   - C4GM4AGU2
+# CHECK-NEXT: [3]   - C4GM4ALU0
+# CHECK-NEXT: [4]   - C4GM4ALU1
+# CHECK-NEXT: [5]   - C4GM4ALU2
+# CHECK-NEXT: [6]   - C4GM4ALU3
+# CHECK-NEXT: [7]   - C4GM4FPU0
+# CHECK-NEXT: [8]   - C4GM4FPU1
+# CHECK-NEXT: [9]   - C4GM4FPU2
+# CHECK-NEXT: [10]  - C4GM4FPU3
+# CHECK-NEXT: [11.0] - C4GM4LSU
+# CHECK-NEXT: [11.1] - C4GM4LSU
+# CHECK-NEXT: [11.2] - C4GM4LSU
+# CHECK-NEXT: [12.0] - C4GM4Load
+# CHECK-NEXT: [12.1] - C4GM4Load
+# CHECK-NEXT: [13.0] - C4GM4Store
+# CHECK-NEXT: [13.1] - C4GM4Store
+# CHECK-NEXT: [13.2] - C4GM4Store
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11.0] [11.1] [11.2] [12.0] [12.1] [13.0] [13.1] [13.2]

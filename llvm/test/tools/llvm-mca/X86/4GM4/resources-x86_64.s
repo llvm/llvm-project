@@ -1292,10 +1292,10 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.17                        cmpq	%rsi, %rdi
 # CHECK-NEXT:  1      5     0.50    *                   cmpq	%rsi, (%rax)
 # CHECK-NEXT:  1      5     0.50    *                   cmpq	(%rax), %rdi
-# CHECK-NEXT:  1      100   0.25                  U     cmpsb	%es:(%rdi), (%rsi)
-# CHECK-NEXT:  1      100   0.25                  U     cmpsw	%es:(%rdi), (%rsi)
-# CHECK-NEXT:  1      100   0.25                  U     cmpsl	%es:(%rdi), (%rsi)
-# CHECK-NEXT:  1      100   0.25                  U     cmpsq	%es:(%rdi), (%rsi)
+# CHECK-NEXT:  1      100   0.25    *             U     cmpsb	%es:(%rdi), (%rsi)
+# CHECK-NEXT:  1      100   0.25    *             U     cmpsw	%es:(%rdi), (%rsi)
+# CHECK-NEXT:  1      100   0.25    *             U     cmpsl	%es:(%rdi), (%rsi)
+# CHECK-NEXT:  1      100   0.25    *             U     cmpsq	%es:(%rdi), (%rsi)
 # CHECK-NEXT:  1      3     0.17                        cmpxchgb	%cl, %bl
 # CHECK-NEXT:  3      5     0.33    *      *            cmpxchgb	%cl, (%rbx)
 # CHECK-NEXT:  3      5     0.33    *      *            lock		cmpxchgb	%cl, (%rbx)
@@ -1390,17 +1390,17 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      100   0.25                  U     invlpga
 # CHECK-NEXT:  2      2     0.17                        lahf
 # CHECK-NEXT:  1      1     0.17    *                   leave
-# CHECK-NEXT:  1      100   0.25                  U     lodsb	(%rsi), %al
-# CHECK-NEXT:  1      100   0.25                  U     lodsw	(%rsi), %ax
-# CHECK-NEXT:  1      100   0.25                  U     lodsl	(%rsi), %eax
-# CHECK-NEXT:  1      100   0.25                  U     lodsq	(%rsi), %rax
+# CHECK-NEXT:  1      100   0.25    *             U     lodsb	(%rsi), %al
+# CHECK-NEXT:  1      100   0.25    *             U     lodsw	(%rsi), %ax
+# CHECK-NEXT:  1      100   0.25    *             U     lodsl	(%rsi), %eax
+# CHECK-NEXT:  1      100   0.25    *             U     lodsq	(%rsi), %rax
 # CHECK-NEXT:  1      1     0.17                  U     loop	0
 # CHECK-NEXT:  1      1     0.17                  U     loope	0
 # CHECK-NEXT:  1      1     0.17                  U     loopne	0
-# CHECK-NEXT:  1      100   0.25                  U     movsb	(%rsi), %es:(%rdi)
-# CHECK-NEXT:  1      100   0.25                  U     movsw	(%rsi), %es:(%rdi)
-# CHECK-NEXT:  1      100   0.25                  U     movsl	(%rsi), %es:(%rdi)
-# CHECK-NEXT:  1      100   0.25                  U     movsq	(%rsi), %es:(%rdi)
+# CHECK-NEXT:  1      100   0.25    *      *      U     movsb	(%rsi), %es:(%rdi)
+# CHECK-NEXT:  1      100   0.25    *      *      U     movsw	(%rsi), %es:(%rdi)
+# CHECK-NEXT:  1      100   0.25    *      *      U     movsl	(%rsi), %es:(%rdi)
+# CHECK-NEXT:  1      100   0.25    *      *      U     movsq	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      1     0.17                        movsbw	%al, %di
 # CHECK-NEXT:  1      1     0.17                        movzbw	%al, %di
 # CHECK-NEXT:  1      5     0.50    *                   movsbw	(%rax), %di
@@ -1743,10 +1743,10 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      6     0.67    *      *            sbbq	%rsi, (%rax)
 # CHECK-NEXT:  2      6     0.67    *      *            lock		sbbq	%rsi, (%rax)
 # CHECK-NEXT:  1      5     0.50    *                   sbbq	(%rax), %rdi
-# CHECK-NEXT:  1      100   0.25                  U     scasb	%es:(%rdi), %al
-# CHECK-NEXT:  1      100   0.25                  U     scasw	%es:(%rdi), %ax
-# CHECK-NEXT:  1      100   0.25                  U     scasl	%es:(%rdi), %eax
-# CHECK-NEXT:  1      100   0.25                  U     scasq	%es:(%rdi), %rax
+# CHECK-NEXT:  1      100   0.25    *             U     scasb	%es:(%rdi), %al
+# CHECK-NEXT:  1      100   0.25    *             U     scasw	%es:(%rdi), %ax
+# CHECK-NEXT:  1      100   0.25    *             U     scasl	%es:(%rdi), %eax
+# CHECK-NEXT:  1      100   0.25    *             U     scasq	%es:(%rdi), %rax
 # CHECK-NEXT:  1      1     0.17                        seto	%al
 # CHECK-NEXT:  1      1     0.33           *            seto	(%rax)
 # CHECK-NEXT:  1      1     0.17                        setno	%al
@@ -1805,10 +1805,10 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  8      5     0.83    *      *            shrdq	$7, %rsi, (%rax)
 # CHECK-NEXT:  1      1     0.17                  U     stc
 # CHECK-NEXT:  1      1     0.17                  U     std
-# CHECK-NEXT:  1      100   0.25                  U     stosb	%al, %es:(%rdi)
-# CHECK-NEXT:  1      100   0.25                  U     stosw	%ax, %es:(%rdi)
-# CHECK-NEXT:  1      100   0.25                  U     stosl	%eax, %es:(%rdi)
-# CHECK-NEXT:  1      100   0.25                  U     stosq	%rax, %es:(%rdi)
+# CHECK-NEXT:  1      100   0.25           *      U     stosb	%al, %es:(%rdi)
+# CHECK-NEXT:  1      100   0.25           *      U     stosw	%ax, %es:(%rdi)
+# CHECK-NEXT:  1      100   0.25           *      U     stosl	%eax, %es:(%rdi)
+# CHECK-NEXT:  1      100   0.25           *      U     stosq	%rax, %es:(%rdi)
 # CHECK-NEXT:  1      1     0.17                        subb	$7, %al
 # CHECK-NEXT:  1      1     0.17                        subb	$7, %dil
 # CHECK-NEXT:  2      6     0.67    *      *            subb	$7, (%rax)
@@ -1949,25 +1949,25 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      5     0.50    *                   xorq	(%rax), %rdi
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - 4GM4AGU0
-# CHECK-NEXT: [1]   - 4GM4AGU1
-# CHECK-NEXT: [2]   - 4GM4AGU2
-# CHECK-NEXT: [3]   - 4GM4ALU0
-# CHECK-NEXT: [4]   - 4GM4ALU1
-# CHECK-NEXT: [5]   - 4GM4ALU2
-# CHECK-NEXT: [6]   - 4GM4ALU3
-# CHECK-NEXT: [7]   - 4GM4FPU0
-# CHECK-NEXT: [8]   - 4GM4FPU1
-# CHECK-NEXT: [9]   - 4GM4FPU2
-# CHECK-NEXT: [10]  - 4GM4FPU3
-# CHECK-NEXT: [11.0] - 4GM4LSU
-# CHECK-NEXT: [11.1] - 4GM4LSU
-# CHECK-NEXT: [11.2] - 4GM4LSU
-# CHECK-NEXT: [12.0] - 4GM4Load
-# CHECK-NEXT: [12.1] - 4GM4Load
-# CHECK-NEXT: [13.0] - 4GM4Store
-# CHECK-NEXT: [13.1] - 4GM4Store
-# CHECK-NEXT: [13.2] - 4GM4Store
+# CHECK-NEXT: [0]   - C4GM4AGU0
+# CHECK-NEXT: [1]   - C4GM4AGU1
+# CHECK-NEXT: [2]   - C4GM4AGU2
+# CHECK-NEXT: [3]   - C4GM4ALU0
+# CHECK-NEXT: [4]   - C4GM4ALU1
+# CHECK-NEXT: [5]   - C4GM4ALU2
+# CHECK-NEXT: [6]   - C4GM4ALU3
+# CHECK-NEXT: [7]   - C4GM4FPU0
+# CHECK-NEXT: [8]   - C4GM4FPU1
+# CHECK-NEXT: [9]   - C4GM4FPU2
+# CHECK-NEXT: [10]  - C4GM4FPU3
+# CHECK-NEXT: [11.0] - C4GM4LSU
+# CHECK-NEXT: [11.1] - C4GM4LSU
+# CHECK-NEXT: [11.2] - C4GM4LSU
+# CHECK-NEXT: [12.0] - C4GM4Load
+# CHECK-NEXT: [12.1] - C4GM4Load
+# CHECK-NEXT: [13.0] - C4GM4Store
+# CHECK-NEXT: [13.1] - C4GM4Store
+# CHECK-NEXT: [13.2] - C4GM4Store
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11.0] [11.1] [11.2] [12.0] [12.1] [13.0] [13.1] [13.2]

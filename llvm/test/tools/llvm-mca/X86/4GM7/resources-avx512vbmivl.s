@@ -128,29 +128,29 @@ vpmultishiftqb    (%rax){1to4}, %ymm17, %ymm19 {k1}{z}
 # CHECK-NEXT:  1      8     0.33    *                   vpmultishiftqb	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - 4GM7AGU0
-# CHECK-NEXT: [1]   - 4GM7AGU1
-# CHECK-NEXT: [2]   - 4GM7AGU2
-# CHECK-NEXT: [3]   - 4GM7ALU0
-# CHECK-NEXT: [4]   - 4GM7ALU1
-# CHECK-NEXT: [5]   - 4GM7ALU2
-# CHECK-NEXT: [6]   - 4GM7ALU3
-# CHECK-NEXT: [7]   - 4GM7BRU1
-# CHECK-NEXT: [8]   - 4GM7FPU0
-# CHECK-NEXT: [9]   - 4GM7FPU1
-# CHECK-NEXT: [10]  - 4GM7FPU2
-# CHECK-NEXT: [11]  - 4GM7FPU3
-# CHECK-NEXT: [12.0] - 4GM7LSU
-# CHECK-NEXT: [12.1] - 4GM7LSU
-# CHECK-NEXT: [12.2] - 4GM7LSU
-# CHECK-NEXT: [12.3] - 4GM7LSU
-# CHECK-NEXT: [13.0] - 4GM7Load
-# CHECK-NEXT: [13.1] - 4GM7Load
-# CHECK-NEXT: [13.2] - 4GM7Load
-# CHECK-NEXT: [14.0] - 4GM7Store
-# CHECK-NEXT: [14.1] - 4GM7Store
-# CHECK-NEXT: [14.2] - 4GM7Store
-# CHECK-NEXT: [14.3] - 4GM7Store
+# CHECK-NEXT: [0]   - C4GM7AGU0
+# CHECK-NEXT: [1]   - C4GM7AGU1
+# CHECK-NEXT: [2]   - C4GM7AGU2
+# CHECK-NEXT: [3]   - C4GM7ALU0
+# CHECK-NEXT: [4]   - C4GM7ALU1
+# CHECK-NEXT: [5]   - C4GM7ALU2
+# CHECK-NEXT: [6]   - C4GM7ALU3
+# CHECK-NEXT: [7]   - C4GM7BRU1
+# CHECK-NEXT: [8]   - C4GM7FPU0
+# CHECK-NEXT: [9]   - C4GM7FPU1
+# CHECK-NEXT: [10]  - C4GM7FPU2
+# CHECK-NEXT: [11]  - C4GM7FPU3
+# CHECK-NEXT: [12.0] - C4GM7LSU
+# CHECK-NEXT: [12.1] - C4GM7LSU
+# CHECK-NEXT: [12.2] - C4GM7LSU
+# CHECK-NEXT: [12.3] - C4GM7LSU
+# CHECK-NEXT: [13.0] - C4GM7Load
+# CHECK-NEXT: [13.1] - C4GM7Load
+# CHECK-NEXT: [13.2] - C4GM7Load
+# CHECK-NEXT: [14.0] - C4GM7Store
+# CHECK-NEXT: [14.1] - C4GM7Store
+# CHECK-NEXT: [14.2] - C4GM7Store
+# CHECK-NEXT: [14.3] - C4GM7Store
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [12.3] [13.0] [13.1] [13.2] [14.0] [14.1] [14.2] [14.3]

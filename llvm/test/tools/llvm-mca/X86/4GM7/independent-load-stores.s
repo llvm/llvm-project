@@ -52,29 +52,29 @@
 # ALL-NEXT:       1      6     0.67    *      *            addq	$44, 640(%r14)
 
 # ALL:           Resources:
-# ALL-NEXT:      [0]   - 4GM7AGU0
-# ALL-NEXT:      [1]   - 4GM7AGU1
-# ALL-NEXT:      [2]   - 4GM7AGU2
-# ALL-NEXT:      [3]   - 4GM7ALU0
-# ALL-NEXT:      [4]   - 4GM7ALU1
-# ALL-NEXT:      [5]   - 4GM7ALU2
-# ALL-NEXT:      [6]   - 4GM7ALU3
-# ALL-NEXT:      [7]   - 4GM7BRU1
-# ALL-NEXT:      [8]   - 4GM7FPU0
-# ALL-NEXT:      [9]   - 4GM7FPU1
-# ALL-NEXT:      [10]  - 4GM7FPU2
-# ALL-NEXT:      [11]  - 4GM7FPU3
-# ALL-NEXT:      [12.0] - 4GM7LSU
-# ALL-NEXT:      [12.1] - 4GM7LSU
-# ALL-NEXT:      [12.2] - 4GM7LSU
-# ALL-NEXT:      [12.3] - 4GM7LSU
-# ALL-NEXT:      [13.0] - 4GM7Load
-# ALL-NEXT:      [13.1] - 4GM7Load
-# ALL-NEXT:      [13.2] - 4GM7Load
-# ALL-NEXT:      [14.0] - 4GM7Store
-# ALL-NEXT:      [14.1] - 4GM7Store
-# ALL-NEXT:      [14.2] - 4GM7Store
-# ALL-NEXT:      [14.3] - 4GM7Store
+# ALL-NEXT:      [0]   - C4GM7AGU0
+# ALL-NEXT:      [1]   - C4GM7AGU1
+# ALL-NEXT:      [2]   - C4GM7AGU2
+# ALL-NEXT:      [3]   - C4GM7ALU0
+# ALL-NEXT:      [4]   - C4GM7ALU1
+# ALL-NEXT:      [5]   - C4GM7ALU2
+# ALL-NEXT:      [6]   - C4GM7ALU3
+# ALL-NEXT:      [7]   - C4GM7BRU1
+# ALL-NEXT:      [8]   - C4GM7FPU0
+# ALL-NEXT:      [9]   - C4GM7FPU1
+# ALL-NEXT:      [10]  - C4GM7FPU2
+# ALL-NEXT:      [11]  - C4GM7FPU3
+# ALL-NEXT:      [12.0] - C4GM7LSU
+# ALL-NEXT:      [12.1] - C4GM7LSU
+# ALL-NEXT:      [12.2] - C4GM7LSU
+# ALL-NEXT:      [12.3] - C4GM7LSU
+# ALL-NEXT:      [13.0] - C4GM7Load
+# ALL-NEXT:      [13.1] - C4GM7Load
+# ALL-NEXT:      [13.2] - C4GM7Load
+# ALL-NEXT:      [14.0] - C4GM7Store
+# ALL-NEXT:      [14.1] - C4GM7Store
+# ALL-NEXT:      [14.2] - C4GM7Store
+# ALL-NEXT:      [14.3] - C4GM7Store
 
 # ALL:           Resource pressure per iteration:
 # ALL-NEXT:      [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [12.3] [13.0] [13.1] [13.2] [14.0] [14.1] [14.2] [14.3]
