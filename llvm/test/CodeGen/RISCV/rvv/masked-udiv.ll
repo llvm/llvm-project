@@ -255,3 +255,24 @@ define <3 x i10> @udiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
   %res = call <3 x i10> @llvm.masked.udiv(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m)
   ret <3 x i10> %res
 }
+
+; Test case for crash where we weren't converting container type back to fixed-length
+define <8 x i8> @udiv_trunc_select(i1 %c) {
+; CHECK-LABEL: udiv_trunc_select:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vdivu.vv v8, v8, v8, v0.t
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vmsne.vi v0, v9, 0
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
+; CHECK-NEXT:    ret
+  %udiv = call <8 x i16> @llvm.masked.udiv(<8 x i16> zeroinitializer, <8 x i16> zeroinitializer, <8 x i1> zeroinitializer)
+  %trunc = trunc <8 x i16> %udiv to <8 x i8>
+  %res = select i1 %c, <8 x i8> zeroinitializer, <8 x i8> %trunc
+  ret <8 x i8> %res
+}
