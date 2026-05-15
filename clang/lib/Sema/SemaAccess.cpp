@@ -372,14 +372,11 @@ GetQualifierClassTemplateSpecializationType(Sema &S, NestedNameSpecifier NNS) {
     Ty = ICNT->getDecl()->getCanonicalTemplateSpecializationType(S.Context);
 
   const auto *TST = Ty->getAsNonAliasTemplateSpecializationType();
-  if (!TST)
-    return nullptr;
+  if (TST && isa_and_nonnull<ClassTemplateDecl>(
+                 TST->getTemplateName().getAsTemplateDecl()))
+    return TST;
 
-  if (!isa_and_nonnull<ClassTemplateDecl>(
-          TST->getTemplateName().getAsTemplateDecl()))
-    return nullptr;
-
-  return TST;
+  return nullptr;
 }
 
 static FunctionTemplateDecl *TryGetFunctionTemplateDecl(FunctionDecl *FD) {
