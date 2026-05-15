@@ -44,7 +44,7 @@ protected:
   llvm::DenseMap<mlir::Operation *, mlir::Operation *> kernelStubs;
 
   struct VarInfo {
-    mlir::Operation *var;
+    cir::GlobalOp var;
     const VarDecl *d;
     cir::CUDADeviceVarKind flags;
   };
@@ -95,7 +95,7 @@ public:
                      cir::CUDADeviceVarKind::Variable, isExtern, isConstant,
                      vd->hasAttr<HIPManagedAttr>()));
     deviceVars.push_back({
-        var.getOperation(),
+        var,
         vd,
         cir::CUDADeviceVarKind::Variable,
     });
@@ -472,8 +472,8 @@ void CIRGenNVCUDARuntime::handleVarRegistration(const VarDecl *vd,
 void CIRGenNVCUDARuntime::handleGlobalReplace(cir::GlobalOp oldGV,
                                               cir::GlobalOp newGV) {
   for (auto &info : deviceVars) {
-    if (info.var == oldGV.getOperation())
-      info.var = newGV.getOperation();
+    if (info.var == oldGV)
+      info.var = newGV;
   }
 }
 
@@ -492,12 +492,9 @@ void CIRGenNVCUDARuntime::finalizeModule() {
   // Static device variables have been externalized at this point, therefore
   // variables with private or internal linkage need not be added.
   for (auto &&info : deviceVars) {
-    auto var = mlir::dyn_cast_or_null<cir::GlobalOp>(info.var);
-    if (!var)
-      continue;
     auto kind = info.flags;
-    bool isDecl = var.isDeclaration();
-    bool isLocalLinkage = cir::isLocalLinkage(var.getLinkage());
+    bool isDecl = info.var.isDeclaration();
+    bool isLocalLinkage = cir::isLocalLinkage(info.var.getLinkage());
     bool isVarOrSurfaceOrTexture = (kind == cir::CUDADeviceVarKind::Variable ||
                                     kind == cir::CUDADeviceVarKind::Surface ||
                                     kind == cir::CUDADeviceVarKind::Texture);
@@ -505,8 +502,10 @@ void CIRGenNVCUDARuntime::finalizeModule() {
     bool hasUsedAttr = info.d->hasAttr<UsedAttr>();
     if (!isDecl && !isLocalLinkage && isVarOrSurfaceOrTexture && isUsed &&
         !hasUsedAttr) {
-      cgm.addCompilerUsedGlobal(
-          mlir::dyn_cast<cir::CIRGlobalValueInterface>(var.getOperation()));
+      if (auto globalValue = mlir::dyn_cast<cir::CIRGlobalValueInterface>(
+              info.var.getOperation())) {
+        cgm.addCompilerUsedGlobal(globalValue);
+      }
     }
   }
 }
