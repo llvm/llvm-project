@@ -91,7 +91,6 @@ body:             |
     ; CHECK-NEXT: dead $x0 = PseudoSF_VSETTK [[COPY]], 4 /* e16 */, 2 /* w2 */, implicit-def $vtype, implicit $vtype
     ; CHECK-NEXT: PseudoSF_MM_F_F $t0, $v8m8, $v16m8, 7 /* frm=dyn */, $noreg, $noreg, $noreg, 4 /* e16 */, 2 /* w2 */, implicit $frm, implicit $vl, implicit $vtype, implicit $vl, implicit $vtype
     ; CHECK-NEXT: dead $x0 = PseudoSF_VSETTK [[COPY1]], 4 /* e16 */, 2 /* w2 */, implicit-def $vtype, implicit $vtype, implicit $vtype
-    ; CHECK-NEXT: dead $x0 = PseudoSF_VSETTNT [[COPY1]], 1032 /* e16, w2 */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: dead $x0 = PseudoSF_VSETTM [[COPY1]], 4 /* e16 */, 2 /* w2 */, implicit-def $vtype, implicit $vtype
     ; CHECK-NEXT: dead $x0 = PseudoSF_VSETTK [[COPY]], 4 /* e16 */, 2 /* w2 */, implicit-def $vtype, implicit $vtype
     ; CHECK-NEXT: PseudoSF_MM_F_F $t0, renamable $v8m8, renamable $v16m8, 7 /* frm=dyn */, $noreg, $noreg, $noreg, 4 /* e16 */, 2 /* w2 */, implicit $frm, implicit $vl, implicit $vtype, implicit $vl, implicit $vtype
@@ -121,7 +120,6 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $v8m8, $v16m8, $t0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead $x0 = PseudoSF_VSETTNT [[COPY1]], 1032 /* e16, w2 */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   dead $x0 = PseudoSF_VSETTM [[COPY1]], 4 /* e16 */, 2 /* w2 */, implicit-def $vtype, implicit $vtype
   ; CHECK-NEXT:   dead $x0 = PseudoSF_VSETTK [[COPY]], 4 /* e16 */, 2 /* w2 */, implicit-def $vtype, implicit $vtype
   ; CHECK-NEXT:   PseudoSF_MM_F_F $t0, renamable $v8m8, renamable $v16m8, 7 /* frm=dyn */, $noreg, $noreg, $noreg, 4 /* e16 */, 2 /* w2 */, implicit $frm, implicit $vl, implicit $vtype, implicit $vl, implicit $vtype
