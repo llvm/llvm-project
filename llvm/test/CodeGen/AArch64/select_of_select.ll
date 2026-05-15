@@ -6,7 +6,6 @@ define <2 x i8> @src_a(<2 x i1> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
-; CHECK-NEXT:    bif v1.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    bsl v0.8b, v1.8b, v3.8b
 ; CHECK-NEXT:    ret
   %s = select <2 x i1> %a, <2 x i8> %b, <2 x i8> %c
@@ -31,8 +30,7 @@ define <2 x i8> @src_b(<2 x i1> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
-; CHECK-NEXT:    bif v1.8b, v2.8b, v0.8b
-; CHECK-NEXT:    bsl v0.8b, v3.8b, v1.8b
+; CHECK-NEXT:    bsl v0.8b, v3.8b, v2.8b
 ; CHECK-NEXT:    ret
   %s = select <2 x i1> %a, <2 x i8> %b, <2 x i8> %c
   %t = select <2 x i1> %a, <2 x i8> %d, <2 x i8> %s

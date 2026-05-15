@@ -745,8 +745,7 @@ define <vscale x 4 x float> @select_f32_no_invert_fmul_two_setcc_uses(<vscale x 
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fadd z1.s, z0.s, z1.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
-; CHECK-NEXT:    mov z0.s, p0/m, z2.s
+; CHECK-NEXT:    sel z0.s, p0, z2.s, z1.s
 ; CHECK-NEXT:    ret
   %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
   %fadd = fadd <vscale x 4 x float> %a, %b

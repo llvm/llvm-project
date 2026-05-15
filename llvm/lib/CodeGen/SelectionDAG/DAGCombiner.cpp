@@ -14123,6 +14123,13 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   if (SDValue V = foldBoolSelectToLogic<EmptyMatchContext>(N, DL, DAG))
     return V;
 
+  // vselect P, (vselect P, A, B), C -> vselect P, A, C
+  if (N1.getOpcode() == ISD::VSELECT && N1.getOperand(0) == N0)
+    return DAG.getNode(ISD::VSELECT, DL, VT, N0, N1.getOperand(1), N2);
+  // vselect P, C, (vselect P, A, B) -> vselect P, C, B
+  if (N2.getOpcode() == ISD::VSELECT && N2.getOperand(0) == N0)
+    return DAG.getNode(ISD::VSELECT, DL, VT, N0, N1, N2.getOperand(2));
+
   // vselect (not Cond), N1, N2 -> vselect Cond, N2, N1
   if (!TLI.isTargetCanonicalSelect(N))
     if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
