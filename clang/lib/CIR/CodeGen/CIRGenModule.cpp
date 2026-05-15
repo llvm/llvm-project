@@ -1170,7 +1170,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       if (const SectionAttr *sa = d->getAttr<SectionAttr>())
         gv.setSectionAttr(builder.getStringAttr(sa->getName()));
     }
-    gv.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(d).getValue());
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
@@ -2702,24 +2701,11 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
   return false;
 }
 
-static void setGlobalVisibilityHelper(const CIRGenModule &cgm,
-                                      cir::CIRGlobalValueInterface gv,
-                                      cir::VisibilityKind visibility) {
-  gv.setGlobalVisibility(cir::VisibilityKind::Default);
-  // Also update MLIR symbol visibility to match linkage
-  if (auto globalOp = dyn_cast<cir::GlobalOp>(gv.getOperation()))
-    mlir::SymbolTable::setSymbolVisibility(globalOp,
-                                           cgm.getMLIRVisibility(globalOp));
-  else if (auto funcOp = dyn_cast<cir::FuncOp>(gv.getOperation()))
-    mlir::SymbolTable::setSymbolVisibility(
-        funcOp, cgm.getMLIRVisibilityFromCIRLinkage(funcOp.getLinkage()));
-}
-
 void CIRGenModule::setGlobalVisibility(cir::CIRGlobalValueInterface gv,
                                        const NamedDecl *d) const {
   // Internal definitions always have default visibility.
   if (gv.hasLocalLinkage()) {
-    setGlobalVisibilityHelper(*this, gv, cir::VisibilityKind::Default);
+    gv.setGlobalVisibility(cir::VisibilityKind::Default);
     return;
   }
   if (!d)
@@ -2752,11 +2738,12 @@ void CIRGenModule::setGlobalVisibility(cir::CIRGlobalValueInterface gv,
     if (isa<FunctionDecl>(d)) {
       needsProtected =
           d->hasAttr<CUDAGlobalAttr>() || d->hasAttr<DeviceKernelAttr>();
-    } else if (const auto *vd = dyn_cast<VarDecl>(d))
+    } else if (const auto *vd = dyn_cast<VarDecl>(d)) {
       needsProtected = vd->hasAttr<CUDADeviceAttr>() ||
                        vd->hasAttr<CUDAConstantAttr>() ||
                        vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
                        vd->getType()->isCUDADeviceBuiltinTextureType();
+    }
     if (needsProtected) {
       gv.setGlobalVisibility(cir::VisibilityKind::Protected);
       return;
@@ -2764,8 +2751,7 @@ void CIRGenModule::setGlobalVisibility(cir::CIRGlobalValueInterface gv,
   }
 
   if (getASTContext().getLangOpts().HLSL && !d->isInExportDeclContext()) {
-    gv.setGlobalVisibility(cir::VisibilityKind::Hidden);
-    return;
+    llvm_unreachable("setGlobalVisibility: HLSL is NYI");
   }
 
   assert(!cir::MissingFeatures::opGlobalDLLImportExport());
@@ -2895,7 +2881,6 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // recompute it here. This is a minimal fix for now.
   if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
     const Decl *decl = globalDecl.getDecl();
-    func.setGlobalVisibility(getGlobalVisibilityAttrFromDecl(decl).getValue());
   }
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
