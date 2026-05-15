@@ -78,7 +78,7 @@ external functions.
 
    extern int *external();
    extern void refresh(int **ptr_ptr);
-   
+
    int f() {
      int *ptr_null = nullptr;
      if (ptr_null) { // bugprone: pointer is checked where it cannot be non-null.
