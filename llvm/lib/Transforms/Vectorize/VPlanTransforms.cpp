@@ -1429,11 +1429,6 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(
         Plan->getAllOnesValue(TypeInfo.inferScalarType(Def)));
 
-  // x ^ x -> 0
-  if (match(Def, m_c_BinaryXor(m_VPValue(X), m_Deferred(X))))
-    return Def->replaceAllUsesWith(
-        Plan->getZero(TypeInfo.inferScalarType(Def)));
-
   // x & 0 -> 0
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
     return Def->replaceAllUsesWith(

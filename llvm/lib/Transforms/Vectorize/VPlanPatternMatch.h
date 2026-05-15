@@ -647,13 +647,6 @@ m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Binary<Instruction::Or, Op0_t, Op1_t>(Op0, Op1);
 }
 
-/// Match a binary XOR operation.
-template <typename Op0_t, typename Op1_t>
-inline AllRecipe_commutative_match<Instruction::Xor, Op0_t, Op1_t>
-m_c_BinaryXor(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_c_Binary<Instruction::Xor, Op0_t, Op1_t>(Op0, Op1);
-}
-
 /// Cmp_match is a variant of BinaryRecipe_match that also binds the comparison
 /// predicate. Opcodes must either be Instruction::ICmp or Instruction::FCmp, or
 /// both.
