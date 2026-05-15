@@ -17246,6 +17246,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
              diag::err_first_argument_to_va_arg_not_of_type_va_list)
         << OrigExpr->getType() << E->getSourceRange());
 
+  QualType PromoteType;
   if (!TInfo->getType()->isDependentType()) {
     if (RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), TInfo->getType(),
                             diag::err_second_parameter_to_va_arg_incomplete,
@@ -17276,7 +17277,6 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
 
     // Check for va_arg where arguments of the given type will be promoted
     // (i.e. this va_arg is guaranteed to have undefined behavior).
-    QualType PromoteType;
     if (Context.isPromotableIntegerType(TInfo->getType())) {
       PromoteType = Context.getPromotedIntegerType(TInfo->getType());
       // [cstdarg.syn]p1 defers the C++ behavior to what the C standard says,
@@ -17338,6 +17338,8 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   }
 
   QualType T = TInfo->getType().getNonLValueExprType(Context);
+  if (!PromoteType.isNull())
+    T = PromoteType.getNonLValueExprType(Context);
   return new (Context) VAArgExpr(BuiltinLoc, E, TInfo, RPLoc, T, IsMS);
 }
 
