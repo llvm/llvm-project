@@ -341,10 +341,13 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
-    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
-      VPBuilder Builder(VPR);
+    if (isa<VPVectorPointerRecipe, VPWidenCanonicalIVRecipe>(R)) {
+      VPBuilder Builder(&R);
       const DataLayout &DL = Plan.getDataLayout();
-      Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
+      Type *IndexTy =
+          isa<VPWidenCanonicalIVRecipe>(R)
+              ? Plan.getVectorLoopRegion()->getCanonicalIVType()
+              : DL.getIndexType(TypeInfo.inferScalarType(R.getVPSingleValue()));
       Type *VFTy = Plan.getVF().getType();
       VPValue *VF = Builder.createScalarZExtOrTrunc(
           &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
@@ -352,7 +355,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
-      Copy->setOperand(0, VPR->getOperand(0));
       Copy->addOperand(VFxPart);
       continue;
     }
@@ -367,14 +369,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
         Parts.push_back(Copy->getVPSingleValue());
         Phi->setOperand(1, Copy->getVPSingleValue());
       }
-    }
-    if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
-      VPBuilder Builder(WideCanIV);
-      VPValue *VFxPart = Builder.createOverflowingOp(
-          Instruction::Mul, {&Plan.getVF(), getConstantInt(Part)},
-          {true, true});
-      Copy->addOperand(VFxPart);
-      continue;
     }
     if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(Copy)) {
       // Materialize PartN offset for VectorEndPointer.
