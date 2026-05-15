@@ -3675,6 +3675,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!RK || RK.AttrKind != Attribute::NonNull)
           continue;
 
+        if (isa<ConstantPointerNull>(RK.WasOn)) {
+          CreateNonTerminatorUnreachable(II);
+          // This is unreachable - any other assumes are meaningless now.
+          return eraseInstFromFunction(*II);
+        }
+
         // Drop assume if we can prove nonnull without it
         if (isKnownNonZero(RK.WasOn, getSimplifyQuery().getWithInstruction(II)))
           return CallBase::removeOperandBundle(II, OBU.getTagID());

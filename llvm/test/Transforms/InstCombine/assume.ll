@@ -490,6 +490,15 @@ define void @redundant_nonnull3(ptr %ptr) {
   ret void
 }
 
+define void @nonnull_on_nullptr() {
+; CHECK-LABEL: @nonnull_on_nullptr(
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr null) ]
+  ret void
+}
+
 ; PR35846 - https://bugs.llvm.org/show_bug.cgi?id=35846
 
 define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
