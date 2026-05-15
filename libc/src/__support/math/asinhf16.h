@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float16 asinhf16(float16 x) {
+LIBC_INLINE constexpr float16 asinhf16(float16 x) {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   constexpr size_t N_EXCEPTS = 8;
