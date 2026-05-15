@@ -1573,6 +1573,13 @@ struct SgToWiDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
   LogicalResult
   matchAndRewrite(xegpu::DpasMxOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    if (!uArch)
+      return failure();
+    if (!uArch->isSupportedInstruction(
+            xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc))
+      return rewriter.notifyMatchFailure(
+          op, "target uArch does not support scaled subgroup mma");
     // Check if the op has A, B and CD layouts attached.
     auto layoutA = cast<xegpu::LayoutAttr>(op.getLayoutAAttr());
     auto layoutB = cast<xegpu::LayoutAttr>(op.getLayoutBAttr());
@@ -1580,8 +1587,6 @@ struct SgToWiDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
     if (!layoutA || !layoutB || !layoutCd)
       return rewriter.notifyMatchFailure(
           op, "missing required layout attributes for DpasMxOp distribution");
-    auto layoutScaleA = cast<xegpu::LayoutAttr>(op.getLayoutAScaleAttr());
-    auto layoutScaleB = cast<xegpu::LayoutAttr>(op.getLayoutBScaleAttr());
 
     // Retrieve expected types, according to anchor layouts.
     auto expected1DTypeResult =
@@ -1593,6 +1598,7 @@ struct SgToWiDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
 
     VectorType expected1DTypeScaleA, expected1DTypeScaleB;
     if (op.getScaleA()) {
+      auto layoutScaleA = cast<xegpu::LayoutAttr>(op.getLayoutAScaleAttr());
       auto expected1DTypeScaleAOrFailure = xegpu::getDistributedVectorType(
           cast<VectorType>(op.getScaleA().getType()), layoutScaleA);
       if (failed(expected1DTypeScaleAOrFailure))
@@ -1601,6 +1607,7 @@ struct SgToWiDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
       expected1DTypeScaleA = expected1DTypeScaleAOrFailure.value();
     }
     if (op.getScaleB()) {
+      auto layoutScaleB = cast<xegpu::LayoutAttr>(op.getLayoutBScaleAttr());
       auto expected1DTypeScaleBOrFailure = xegpu::getDistributedVectorType(
           cast<VectorType>(op.getScaleB().getType()), layoutScaleB);
       if (failed(expected1DTypeScaleBOrFailure))
@@ -1623,31 +1630,25 @@ struct SgToWiDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
               "lane layout");
 
     // Validate bit widths match uArch packed format requirements
-    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
-    if (uArch) {
-      const auto *uArchInstruction = dyn_cast<
-          xegpu::uArch::SubgroupScaledMatrixMultiplyAcc>(uArch->getInstruction(
-          xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc));
-      if (uArchInstruction) {
-        auto wiAType = expected1DTypeA.value();
-        auto wiBType = expected1DTypeB.value();
-        // Calculate total packed bit width = element bit width * vector size
-        unsigned aPackedBitWidth =
-            wiAType.getElementTypeBitWidth() * wiAType.getNumElements();
-        unsigned bPackedBitWidth =
-            wiBType.getElementTypeBitWidth() * wiBType.getNumElements();
-        if (aPackedBitWidth % uArchInstruction->getPackedFormatBitSizeA())
-          return rewriter.notifyMatchFailure(
-              op,
-              "A operand packed bit width must be a multiple of uArch packed "
+    const auto *uArchInstruction = dyn_cast<
+        xegpu::uArch::SubgroupScaledMatrixMultiplyAcc>(uArch->getInstruction(
+        xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc));
+    assert(uArchInstruction);
+    auto wiAType = expected1DTypeA.value();
+    auto wiBType = expected1DTypeB.value();
+    // Calculate total packed bit width = element bit width * vector size
+    unsigned aPackedBitWidth =
+        wiAType.getElementTypeBitWidth() * wiAType.getNumElements();
+    unsigned bPackedBitWidth =
+        wiBType.getElementTypeBitWidth() * wiBType.getNumElements();
+    if (aPackedBitWidth % uArchInstruction->getPackedFormatBitSizeA())
+      return rewriter.notifyMatchFailure(
+          op, "A operand packed bit width must be a multiple of uArch packed "
               "format requirement");
-        if (bPackedBitWidth % uArchInstruction->getPackedFormatBitSizeB())
-          return rewriter.notifyMatchFailure(
-              op,
-              "B operand packed bit width must be a multiple of uArch packed "
+    if (bPackedBitWidth % uArchInstruction->getPackedFormatBitSizeB())
+      return rewriter.notifyMatchFailure(
+          op, "B operand packed bit width must be a multiple of uArch packed "
               "format requirement");
-      }
-    }
 
     auto newOp = xegpu::DpasMxOp::create(
         rewriter, op->getLoc(), expected1DTypeResult.value(),
