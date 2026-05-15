@@ -1012,7 +1012,6 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       AnalysisWorklist.push_back(U);
     }
   }
-
   V2SCopies[Info.ID] = std::move(Info);
 }
 
