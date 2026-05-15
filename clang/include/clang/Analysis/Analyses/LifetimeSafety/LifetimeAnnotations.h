@@ -12,9 +12,10 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 
 namespace clang ::lifetimes {
+
+enum class WarningScope;
 
 // This function is needed because Decl::isInStdNamespace will return false for
 // iterators in some STL implementations due to them being defined in a
