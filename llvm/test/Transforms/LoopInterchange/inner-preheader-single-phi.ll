@@ -1,5 +1,5 @@
-; Loop-interchange pass doesn't crash if the inner loop preheader has PHI nodes.
 ; RUN: opt -passes=loop-interchange -loop-interchange-profitabilities=ignore --disable-output %s
+; Loop-interchange pass doesn't crash if the inner loop preheader has PHI nodes.
 
 
 define void @f(ptr %A) {

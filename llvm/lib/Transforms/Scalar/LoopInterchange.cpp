@@ -2020,17 +2020,14 @@ bool LoopInterchangeTransform::transform(
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
 
-  // Check if there are any single path Phi nodes in the inner loop preheader.
-  if (InnerLoopPreHeader && InnerLoopPreHeader != OuterLoopHeader) {
+  // Move inner-loop preheader instructions to the outer-loop header and eliminate single-incoming PHIs before loop interchange.
+  if (InnerLoopPreHeader != OuterLoopHeader) {
     for (PHINode &P : make_early_inc_range(InnerLoopPreHeader->phis())) {
       assert(P.getNumIncomingValues() == 1 &&
             "Expected single-incoming PHIs in inner loop preheader");
         P.replaceAllUsesWith(P.getIncomingValue(0));
         P.eraseFromParent();
     }
-  }
-
-  if (InnerLoopPreHeader != OuterLoopHeader) {
     for (Instruction &I :
          make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
                                          std::prev(InnerLoopPreHeader->end()))))
