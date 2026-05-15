@@ -1,17 +1,22 @@
 #include "../CodeGenCUDA/Inputs/cuda.h"
 
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir -target-cpu gfx1250 \
-// RUN:            -target-feature +tanh-insts -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -target-cpu gfx1250 -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir -target-cpu gfx1250 \
-// RUN:            -target-feature +tanh-insts -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -target-cpu gfx1250 -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -target-cpu gfx1250 \
-// RUN:             -target-feature +tanh-insts -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -target-cpu gfx1250 -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+
+//===----------------------------------------------------------------------===//
+// Test AMDGPU builtins
+//===----------------------------------------------------------------------===//
 
 // CIR-LABEL: @_Z14test_tanhf_f32Pff
 // CIR: cir.call_llvm_intrinsic "amdgcn.tanh" {{.*}} : (!cir.float) -> !cir.float
