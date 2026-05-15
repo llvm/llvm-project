@@ -153,10 +153,11 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   const TargetRegisterClass *RegClassForVT =
       VT == MVT::Untyped ? nullptr : TLI->getRegClassFor(VT, Op->isDivergent());
 
-  if (UseRC == nullptr || !UseRC->isAllocatable()) {
-      UseRC = RegClassForVT;
-  } else if (auto CommonSubClass = TRI->getCommonSubClass(UseRC, RegClassForVT)) {
-      UseRC = CommonSubClass;
+  if (!UseRC || !UseRC->isAllocatable()) {
+    UseRC = RegClassForVT;
+  } else if (const TargetRegisterClass *CommonSubClass =
+                 TRI->getCommonSubClass(UseRC, RegClassForVT)) {
+    UseRC = CommonSubClass;
   }
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
