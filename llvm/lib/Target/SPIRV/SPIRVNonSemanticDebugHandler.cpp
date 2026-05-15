@@ -380,18 +380,16 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
           SPIRV::NonSemanticExtInst::DebugTypePointer, VoidTypeReg,
           ExtInstSetReg,
           {BaseIt->second, StorageClassReg, DebugTypePointerFlagsReg}, MAI);
-  } else {
-    // No getBaseType() (typical for void*): use DebugInfoNone as Base Type,
-    // same as SPIRV-LLVM-Translator (see issue #109287 and the DISABLED
-    // spirv-val run in debug-type-pointer.ll). spirv-val may still reject this
-    // encoding; see https://github.com/KhronosGroup/SPIRV-Registry/pull/287.
-    return emitExtInst(
-        SPIRV::NonSemanticExtInst::DebugTypePointer, VoidTypeReg, ExtInstSetReg,
-        {CachedDebugInfoNoneReg, StorageClassReg, DebugTypePointerFlagsReg},
-        MAI);
+    // Unsupported type, no DebugType* id available.
+    return std::nullopt;
   }
-
-  return std::nullopt;
+  // No getBaseType() (typical for void*): use DebugInfoNone as Base Type,
+  // same as SPIRV-LLVM-Translator (see issue #109287 and the DISABLED
+  // spirv-val run in debug-type-pointer.ll). spirv-val may still reject this
+  // encoding; see https://github.com/KhronosGroup/SPIRV-Registry/pull/287.
+  return emitExtInst(
+      SPIRV::NonSemanticExtInst::DebugTypePointer, VoidTypeReg, ExtInstSetReg,
+      {CachedDebugInfoNoneReg, StorageClassReg, DebugTypePointerFlagsReg}, MAI);
 }
 
 std::optional<MCRegister>
