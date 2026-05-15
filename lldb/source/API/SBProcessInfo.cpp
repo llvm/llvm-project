@@ -203,5 +203,5 @@ const char *SBProcessInfo::GetArgumentAtIndex(uint32_t idx) const {
     return nullptr;
 
   const Args &args = m_opaque_up->GetArguments();
-  return args.GetArgumentAtIndex(idx);
+  return ConstString(args.GetArgumentAtIndex(idx)).GetCString();
 }
