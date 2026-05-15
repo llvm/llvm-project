@@ -291,7 +291,7 @@ jobs:
   # ==========================================================================
   manifest_summary:
     needs: [compiler-runtime, foundation, math-libs, comm-libs]
-    if: ${{ !cancelled() && !failure() }}
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: Download all stage submodule commit
