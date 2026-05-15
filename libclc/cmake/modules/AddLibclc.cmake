@@ -58,16 +58,26 @@ endfunction()
 function(libclc_add_builtin_library target_name)
   cmake_parse_arguments(ARG
     ""
-    "FOLDER"
+    "FOLDER;SOURCE_SUB_DIR"
     "COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS"
     ${ARGN}
   )
+
+  if(NOT ARG_SOURCE_SUB_DIR)
+    message(FATAL_ERROR "SOURCE_SUB_DIR is required for libclc_add_builtin_library")
+  endif()
 
   add_library(${target_name} OBJECT)
   target_compile_options(${target_name} PRIVATE ${ARG_COMPILE_OPTIONS})
   target_include_directories(${target_name} PRIVATE ${ARG_INCLUDE_DIRS})
   target_compile_definitions(${target_name} PRIVATE ${ARG_COMPILE_DEFINITIONS})
   set_target_properties(${target_name} PROPERTIES FOLDER ${ARG_FOLDER})
+
+  # Populate sources.
+  add_subdirectory(
+    ${LIBCLC_SOURCE_DIR}/${ARG_SOURCE_SUB_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}/${target_name}
+  )
 endfunction()
 
 # Builds a builtin library from sources, links it with any internalized
@@ -84,9 +94,6 @@ function(libclc_add_library target_name)
   if(NOT ARG_SOURCE_TARGET)
     message(FATAL_ERROR "SOURCE_TARGET is required for libclc_add_library")
   endif()
-  if(NOT ARG_SOURCE_SUB_DIR)
-    message(FATAL_ERROR "SOURCE_SUB_DIR is required for libclc_add_library")
-  endif()
   if(NOT ARG_OUTPUT_FILENAME)
     message(FATAL_ERROR "OUTPUT_FILENAME is required for libclc_add_library")
   endif()
@@ -98,12 +105,8 @@ function(libclc_add_library target_name)
     COMPILE_OPTIONS ${ARG_COMPILE_OPTIONS}
     INCLUDE_DIRS ${ARG_INCLUDE_DIRS}
     COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
+    SOURCE_SUB_DIR ${ARG_SOURCE_SUB_DIR}
     FOLDER "libclc/Device IR/Intermediate"
-  )
-  # Populate sources.
-  add_subdirectory(
-    ${LIBCLC_SOURCE_DIR}/${ARG_SOURCE_SUB_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}/${target_name}
   )
 
   set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TARGET_TRIPLE})

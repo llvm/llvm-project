@@ -201,10 +201,9 @@ libclc_add_builtin_library(${LIBCLC_CLC_TARGET}
   COMPILE_OPTIONS ${compile_flags}
   INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
   COMPILE_DEFINITIONS ${common_defs}
+  SOURCE_SUB_DIR clc
   FOLDER "libclc/Device IR/CLC"
 )
-
-add_subdirectory(clc)
 
 # Build, link, and install the final OpenCL builtins library.
 set(LIBCLC_OPENCL_TARGET opencl)
