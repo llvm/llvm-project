@@ -19331,6 +19331,12 @@ bool PPCTargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   return NumBits1 == 64 && NumBits2 == 32;
 }
 
+bool PPCTargetLowering::isZExtFree(Type *FromTy, Type *ToTy) const {
+  // PPC64 implicitly zero-extends 32-bit results in 64-bit registers.
+  return Subtarget.isPPC64() && FromTy->isIntegerTy(32) &&
+         ToTy->isIntegerTy(64);
+}
+
 bool PPCTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   // Generally speaking, zexts are not free, but they are free when they can be
   // folded with other operations.
@@ -19343,8 +19349,20 @@ bool PPCTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
       return true;
   }
 
+  // PPC64 32-bit shift instructions (SLW, SRW) zero-extend the result
+  // into the 64-bit register.
+  if (Subtarget.isPPC64() && Val.getValueType() == MVT::i32 &&
+      VT2 == MVT::i64) {
+    switch (Val.getOpcode()) {
+    case ISD::SHL:
+    case ISD::SRL:
+      return true;
+    default:
+      break;
+    }
+  }
+
   // FIXME: Add other cases...
-  //  - 32-bit shifts with a zext to i64
   //  - zext after ctlz, bswap, etc.
   //  - zext after and by a constant mask
 
