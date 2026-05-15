@@ -1,0 +1,4 @@
+# This test verifies that the daemon gives the correct error message when an
+# invalid path is provided for the status pipe.
+RUN: not ExampleDaemon --daemon --daemon-status-pipe=path:does/not/exist 2>&1 | FileCheck %s --match-full-lines
+CHECK: [daemon] Error: Parsing option 'daemon-status-pipe': Couldn't open file 'does/not/exist': {{.*}}

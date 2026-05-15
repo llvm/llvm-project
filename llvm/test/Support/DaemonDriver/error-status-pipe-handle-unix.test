@@ -1,0 +1,5 @@
+# This test verifies that the daemon gives the correct error message when a
+# Windows file handle is provided for `--daemon-status-pipe` on Unix
+REQUIRES: !system-windows
+RUN: not ExampleDaemon --daemon --daemon-status-pipe=handle:0 2>&1 | FileCheck %s --match-full-lines
+CHECK: [daemon] Error: Parsing option 'daemon-status-pipe': 'handle' may only be specified on Windows
