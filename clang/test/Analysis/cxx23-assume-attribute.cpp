@@ -75,3 +75,16 @@ void assume_opaque_gh151854_no_crash() {
   [[assume(opaque())]]; // no-crash
   // expected-warning@-1 {{assumption is ignored because it contains (potential) side-effects}}
 }
+
+int multiple_assumptions(int a, int b) {
+  [[assume(a == 2), assume(b == 3)]];
+  clang_analyzer_dump(a); // expected-warning {{2 S32b}}
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<int a>}} FIXME: We shouldn't have this dump.
+  clang_analyzer_dump(b); // expected-warning {{3 S32b}}
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<int b>}} FIXME: We shouldn't have this dump.
+  clang_analyzer_dump(a+b); // expected-warning {{5 S32b}}
+  // expected-warning-re@-1 {{(reg_${{[0-9]+}}<int a>) + 3}} FIXME: We shouldn't have this dump.
+  // expected-warning-re@-2 {{(reg_${{[0-9]+}}<int b>) + 2}} FIXME: We shouldn't have this dump.
+  // expected-warning-re@-3 {{(reg_${{[0-9]+}}<int a>) + (reg_${{[0-9]+}}<int b>)}} FIXME: We shouldn't have this dump.
+  return a + b;
+}
