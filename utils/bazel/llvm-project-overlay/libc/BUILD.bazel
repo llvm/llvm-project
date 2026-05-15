@@ -2345,7 +2345,23 @@ libc_support_library(
         ":__support_error_or",
         ":__support_macros_config",
         ":__support_osutil_syscall",
+        ":hdr_errno_macros",
         ":types_off_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_memfd_create",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/memfd_create.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
     ],
 )
 
@@ -15081,6 +15097,18 @@ libc_function(
         ":errno",
         ":hdr_sys_mman_macros",
         ":types_size_t",
+    ],
+)
+
+libc_function(
+    name = "memfd_create",
+    srcs = ["src/sys/mman/linux/memfd_create.cpp"],
+    hdrs = ["src/sys/mman/memfd_create.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_memfd_create",
     ],
 )
 
