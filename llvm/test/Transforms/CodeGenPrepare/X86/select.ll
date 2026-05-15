@@ -200,30 +200,22 @@ define float @fadd_no_sink(float %a, float %b) {
   ret float %sel
 }
 
-; Possible enhancement: sinkability is only calculated with the direct
-; operand of the select, so we don't try to sink this. The fdiv cost is not
-; taken into account.
+; Recursive sinking: the fdiv is expensive, so sink the entire chain
+; (fdiv + fadd) into the taken branch.
 
-define float @fdiv_no_sink(float %a, float %b) {
-; CHECK-LABEL: @fdiv_no_sink(
+define float @fdiv_chain_sink(float %a, float %b) {
+; CHECK-LABEL: @fdiv_chain_sink(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL_FROZEN:%.*]] = freeze float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[SEL_FROZEN]], 1.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[A]], [[B:%.*]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[DIV]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A]], 1.000000e+00
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[ADD]], float 8.000000e+00
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[SEL:%.*]] = phi float [ [[ADD]], [[SELECT_TRUE_SINK]] ], [ 8.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[SEL]]
-;
-; DEBUG-LABEL: @fdiv_no_sink(
-; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:    [[DIV:%.*]] = fdiv float [[A:%.*]], [[B:%.*]], !dbg [[DBG72:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(float [[DIV]], [[META68:![0-9]+]], !DIExpression(), [[DBG72]])
-; DEBUG-NEXT:    [[ADD:%.*]] = fadd float [[DIV]], [[B]], !dbg [[DBG73:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(float [[ADD]], [[META69:![0-9]+]], !DIExpression(), [[DBG73]])
-; DEBUG-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A]], 1.000000e+00, !dbg [[DBG74:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i1 [[CMP]], [[META70:![0-9]+]], !DIExpression(), [[DBG74]])
-; DEBUG-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[ADD]], float 8.000000e+00, !dbg [[DBG75:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(float [[SEL]], [[META71:![0-9]+]], !DIExpression(), [[DBG75]])
-; DEBUG-NEXT:    ret float [[SEL]], !dbg [[DBG76:![0-9]+]]
 ;
 entry:
   %div = fdiv float %a, %b
