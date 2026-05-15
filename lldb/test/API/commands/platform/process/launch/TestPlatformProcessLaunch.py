@@ -17,6 +17,9 @@ class ProcessLaunchTestCase(TestBase):
         outfile = lldbutil.append_to_process_working_directory(self, "stdio.log")
         return (exe, outfile)
 
+    def _assert_stdio_log_matches(self, expected, actual):
+        self.assertEqual(expected.replace("\\", "/"), actual.replace("\\", "/"))
+
     def test_process_launch_no_args(self):
         # When there are no extra arguments we just have 0, the program name.
         exe, outfile = self.setup()
@@ -24,7 +27,7 @@ class ProcessLaunchTestCase(TestBase):
         self.runCmd("continue")
 
         stdio_log = lldbutil.read_file_on_target(self, outfile)
-        self.assertEqual(
+        self._assert_stdio_log_matches(
             dedent(
                 """\
             Got 1 argument(s).
@@ -44,7 +47,7 @@ class ProcessLaunchTestCase(TestBase):
         self.runCmd("continue")
 
         stdio_log = lldbutil.read_file_on_target(self, outfile)
-        self.assertEqual(
+        self._assert_stdio_log_matches(
             dedent(
                 """\
             Got 4 argument(s).
@@ -67,7 +70,7 @@ class ProcessLaunchTestCase(TestBase):
         self.runCmd("continue")
 
         stdio_log = lldbutil.read_file_on_target(self, outfile)
-        self.assertEqual(
+        self._assert_stdio_log_matches(
             dedent(
                 """\
             Got 3 argument(s).
