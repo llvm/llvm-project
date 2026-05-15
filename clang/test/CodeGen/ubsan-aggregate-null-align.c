@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c11 -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,C
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c++17 -x c++ -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,CXX
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c11 -O0 -DUSE_UNION %s -o - | FileCheck %s --check-prefixes=CHECK,C
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -std=c++17 -x c++ -O0 -DUSE_UNION %s -o - | FileCheck %s --check-prefixes=CHECK,CXX
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -Wno-array-bounds -std=c11 -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,C
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -Wno-array-bounds -std=c++17 -x c++ -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,CXX
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -Wno-array-bounds -std=c11 -O0 -DUSE_UNION %s -o - | FileCheck %s --check-prefixes=CHECK,C
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -Wno-array-bounds -std=c++17 -x c++ -O0 -DUSE_UNION %s -o - | FileCheck %s --check-prefixes=CHECK,CXX
 
 #ifdef USE_UNION
 union Agg { int x; };
