@@ -709,7 +709,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
              " condition!");
     buildPartialUnswitchConditionalBranch(
         *OldPH, Invariants, ExitDirection, *UnswitchedBB, *NewPH,
-        FreezeLoopUnswitchCond, OldPH->getTerminator(), nullptr, DT, BI);
+        FreezeLoopUnswitchCond, OldPH->getTerminatorOrNull(), nullptr, DT, BI);
   }
 
   // Update the dominator tree with the added edge.
@@ -2205,24 +2205,12 @@ void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
     if (PartiallyInvariant) {
       // Mark the new loop as partially unswitched, to avoid unswitching on
       // the same condition again.
-      auto &Context = L.getHeader()->getContext();
-      MDNode *DisableUnswitchMD = MDNode::get(
-          Context,
-          MDString::get(Context, "llvm.loop.unswitch.partial.disable"));
-      MDNode *NewLoopID = makePostTransformationMetadata(
-          Context, L.getLoopID(), {"llvm.loop.unswitch.partial"},
-          {DisableUnswitchMD});
-      L.setLoopID(NewLoopID);
+      L.addStringLoopAttribute("llvm.loop.unswitch.partial.disable",
+                               {"llvm.loop.unswitch.partial"});
     } else if (InjectedCondition) {
       // Do the same for injection of invariant conditions.
-      auto &Context = L.getHeader()->getContext();
-      MDNode *DisableUnswitchMD = MDNode::get(
-          Context,
-          MDString::get(Context, "llvm.loop.unswitch.injection.disable"));
-      MDNode *NewLoopID = makePostTransformationMetadata(
-          Context, L.getLoopID(), {"llvm.loop.unswitch.injection"},
-          {DisableUnswitchMD});
-      L.setLoopID(NewLoopID);
+      L.addStringLoopAttribute("llvm.loop.unswitch.injection.disable",
+                               {"llvm.loop.unswitch.injection"});
     } else
       U.revisitCurrentLoop();
   } else

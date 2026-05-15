@@ -462,7 +462,7 @@ public:
 
     // Call the static method.
     llvm::Expected<PythonObject> expected_return_object =
-        llvm::createStringError("Not initialized.");
+        llvm::createStringError("not initialized");
     std::apply(
         [&method, &expected_return_object](auto &&...args) {
           llvm::consumeError(expected_return_object.takeError());
@@ -525,7 +525,7 @@ protected:
     auto transformed_args = TransformArgs(original_args);
 
     llvm::Expected<PythonObject> expected_return_object =
-        llvm::createStringError("Not initialized.");
+        llvm::createStringError("not initialized");
     std::apply(
         [&implementor, &method_name, &expected_return_object](auto &&...args) {
           llvm::consumeError(expected_return_object.takeError());
@@ -816,6 +816,11 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
 template <>
 lldb::ValueObjectSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::TargetSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::TargetSP>(
     python::PythonObject &p, Status &error);
 
 template <>

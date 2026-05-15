@@ -513,6 +513,15 @@ SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
   AffineMap transMap =
       dir == CrdTransDirectionKind::dim2lvl ? getDimToLvl() : getLvlToDim();
 
+  // Check if transMap is valid. There are cases where the lvlToDim map is
+  // uninitialized due to the format used, e.g. ELL. This is visible as
+  // inferring lvlToDim (see inferLvlToDim function below) may return an
+  // uninitialized affine map. Fallback to dynamic shapes.
+  if (!transMap) {
+    ret.resize(rank, ShapedType::kDynamic);
+    return ret;
+  }
+
   SmallVector<AffineExpr> dimRep;
   dimRep.reserve(srcShape.size());
   for (int64_t sz : srcShape) {
@@ -525,10 +534,15 @@ SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
     }
   };
 
+  // The number of symbols information is included inside the `dimToLvl` map
+  // during parsing. Here, we're extracting it to be used when simplifying the
+  // affine expression.
+  unsigned numSymbols = getDimToLvl().getNumSymbols();
+
   for (AffineExpr exp : transMap.getResults()) {
     // Do constant propagation on the affine map.
-    AffineExpr evalExp =
-        simplifyAffineExpr(exp.replaceDims(dimRep), srcShape.size(), 0);
+    AffineExpr evalExp = simplifyAffineExpr(exp.replaceDims(dimRep),
+                                            srcShape.size(), numSymbols);
     // use llvm namespace here to avoid ambiguity
     if (auto c = llvm::dyn_cast<AffineConstantExpr>(evalExp)) {
       ret.push_back(c.getValue() + 1);
@@ -1605,8 +1619,7 @@ OpFoldResult ReinterpretMapOp::fold(FoldAdaptor adaptor) {
 
 template <typename ToBufferOp>
 static LogicalResult inferSparseBufferType(ValueRange ops, DictionaryAttr attr,
-                                           OpaqueProperties prop,
-                                           RegionRange region,
+                                           PropertyRef prop, RegionRange region,
                                            SmallVectorImpl<mlir::Type> &ret) {
   typename ToBufferOp::Adaptor adaptor(ops, attr, prop, region);
   SparseTensorType stt = getSparseTensorType(adaptor.getTensor());
@@ -1647,7 +1660,7 @@ LogicalResult ToPositionsOp::verify() {
 LogicalResult
 ToPositionsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
                                 ValueRange ops, DictionaryAttr attr,
-                                OpaqueProperties prop, RegionRange region,
+                                PropertyRef prop, RegionRange region,
                                 SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToPositionsOp>(ops, attr, prop, region, ret);
 }
@@ -1664,7 +1677,7 @@ LogicalResult ToCoordinatesOp::verify() {
 LogicalResult
 ToCoordinatesOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
                                   ValueRange ops, DictionaryAttr attr,
-                                  OpaqueProperties prop, RegionRange region,
+                                  PropertyRef prop, RegionRange region,
                                   SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToCoordinatesOp>(ops, attr, prop, region, ret);
 }
@@ -1678,7 +1691,7 @@ LogicalResult ToCoordinatesBufferOp::verify() {
 
 LogicalResult ToCoordinatesBufferOp::inferReturnTypes(
     MLIRContext *ctx, std::optional<Location> loc, ValueRange ops,
-    DictionaryAttr attr, OpaqueProperties prop, RegionRange region,
+    DictionaryAttr attr, PropertyRef prop, RegionRange region,
     SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToCoordinatesBufferOp>(ops, attr, prop, region,
                                                       ret);
@@ -1695,8 +1708,7 @@ LogicalResult ToValuesOp::verify() {
 LogicalResult ToValuesOp::inferReturnTypes(MLIRContext *ctx,
                                            std::optional<Location> loc,
                                            ValueRange ops, DictionaryAttr attr,
-                                           OpaqueProperties prop,
-                                           RegionRange region,
+                                           PropertyRef prop, RegionRange region,
                                            SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToValuesOp>(ops, attr, prop, region, ret);
 }
@@ -2367,7 +2379,7 @@ parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
 
 LogicalResult ExtractIterSpaceOp::inferReturnTypes(
     MLIRContext *ctx, std::optional<Location> loc, ValueRange ops,
-    DictionaryAttr attr, OpaqueProperties prop, RegionRange region,
+    DictionaryAttr attr, PropertyRef prop, RegionRange region,
     SmallVectorImpl<mlir::Type> &ret) {
 
   ExtractIterSpaceOp::Adaptor adaptor(ops, attr, prop, region);

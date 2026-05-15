@@ -188,6 +188,7 @@ class L0DeviceTy final : public GenericDeviceTy {
   ze_device_compute_properties_t ComputeProperties{};
   ze_device_memory_properties_t MemoryProperties{};
   ze_device_cache_properties_t CacheProperties{};
+  ze_device_module_properties_t ModuleProperties{};
 
   /// Devices' default target allocation kind for internal allocation.
   int32_t AllocKind = TARGET_ALLOC_DEVICE;
@@ -238,6 +239,10 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair.
   std::pair<uint32_t, uint32_t> findCopyOrdinal(bool LinkCopy = false);
 
+  /// Helper function to call global constructors or destructors.
+  Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
+                                 bool IsCtor);
+
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
              ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
@@ -253,6 +258,8 @@ public:
     MemoryProperties.pNext = nullptr;
     CacheProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES;
     CacheProperties.pNext = nullptr;
+    ModuleProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES;
+    ModuleProperties.pNext = nullptr;
   }
 
   static L0DeviceTy &makeL0Device(GenericDeviceTy &Device) {
@@ -379,6 +386,26 @@ public:
   size_t getCacheSize() const { return CacheProperties.cacheSize; }
   uint64_t getMaxMemAllocSize() const {
     return DeviceProperties.maxMemAllocSize;
+  }
+
+  bool supportsFP64() const {
+    return ModuleProperties.flags & ZE_DEVICE_MODULE_FLAG_FP64;
+  }
+
+  bool supportsFP16() const {
+    return ModuleProperties.flags & ZE_DEVICE_MODULE_FLAG_FP16;
+  }
+
+  ze_device_fp_flags_t getFP64Flags() const {
+    return ModuleProperties.fp64flags;
+  }
+
+  ze_device_fp_flags_t getFP16Flags() const {
+    return ModuleProperties.fp16flags;
+  }
+
+  ze_device_fp_flags_t getFP32Flags() const {
+    return ModuleProperties.fp32flags;
   }
 
   int32_t getAllocKind() const { return AllocKind; }
@@ -626,6 +653,12 @@ public:
                          __func__);
   }
 
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override {
+    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
+                         __func__);
+  }
+
   Expected<InfoTreeNode> obtainInfoImpl() override;
   uint64_t getClockFrequency() const override { return getClockRate(); }
   uint64_t getHardwareParallelism() const override { return getTotalThreads(); }
@@ -639,6 +672,12 @@ public:
     return Plugin::success();
   }
   Expected<GenericKernelTy &> constructKernel(const char *Name) override;
+
+  Error callGlobalConstructors(GenericPluginTy &Plugin,
+                               DeviceImageTy &Image) override;
+
+  Error callGlobalDestructors(GenericPluginTy &Plugin,
+                              DeviceImageTy &Image) override;
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
 

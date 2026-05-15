@@ -297,7 +297,7 @@ protected:
           result.AppendError(error.AsCString());
         }
       } else {
-        result.AppendErrorWithFormat("%s\n", error.AsCString());
+        result.AppendErrorWithFormat("%s", error.AsCString());
       }
     } else {
       result.AppendError("no platform is currently selected\n");
@@ -394,6 +394,7 @@ protected:
       if (m_option_working_dir.GetOptionValue().OptionWasSet())
         platform_sp->SetWorkingDirectory(
             m_option_working_dir.GetOptionValue().GetCurrentValue());
+      result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendError("no platform is currently selected");
     }
@@ -833,8 +834,8 @@ public:
             remote_file_path, local_file_path);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormatv("get-file failed: {0}",
-                                        error.AsCString());
+        result.AppendErrorWithFormatv("get-file failed: {0}",
+                                      error.AsCString());
       }
     } else {
       result.AppendError("no platform currently selected\n");
@@ -879,9 +880,8 @@ public:
                                         remote_file_path.c_str(), size);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormatv(
-            "Error getting file size of {0} (remote)",
-            remote_file_path.c_str());
+        result.AppendErrorWithFormatv("failed to get file size of {0} (remote)",
+                                      remote_file_path.c_str());
       }
     } else {
       result.AppendError("no platform currently selected\n");
@@ -1152,6 +1152,7 @@ protected:
         if (rebroadcast_first_stop) {
           assert(first_stop_event_sp);
           process_sp->BroadcastEvent(first_stop_event_sp);
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
           return;
         }
 
@@ -1184,6 +1185,8 @@ protected:
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
           return;
         }
+        if (result.GetStatus() != eReturnStatusFailed)
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         result.AppendError("'platform process launch' uses the current target "
                            "file and arguments, or the executable and its "
@@ -1242,8 +1245,8 @@ protected:
                                    m_options.show_args, m_options.verbose);
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat(
-              "no process found with pid = %" PRIu64 "\n", pid);
+          result.AppendErrorWithFormat("no process found with pid = %" PRIu64,
+                                       pid);
         }
       } else {
         ProcessInstanceInfoList proc_infos;
@@ -1288,10 +1291,11 @@ protected:
           result.AppendMessageWithFormatv(
               "{0} matching process{1} found on \"{2}\"", matches,
               matches > 1 ? "es were" : " was", platform_sp->GetName());
+          Stream &strm = result.GetOutputStream();
           if (match_desc)
-            result.AppendMessageWithFormat(" whose name %s \"%s\"", match_desc,
-                                           match_name);
-          result.AppendMessageWithFormat("\n");
+            strm << llvm::formatv(" whose name {0} \"{1}\"", match_desc,
+                                  match_name);
+          strm.PutChar('\n');
           ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                m_options.verbose);
           for (uint32_t i = 0; i < matches; ++i) {
@@ -1299,6 +1303,7 @@ protected:
                 ostrm, platform_sp->GetUserIDResolver(), m_options.show_args,
                 m_options.verbose);
           }
+          result.SetStatus(eReturnStatusSuccessFinishResult);
         }
       }
     } else {
@@ -1501,6 +1506,8 @@ protected:
               ostrm.EOL();
             }
           }
+          if (result.GetStatus() != eReturnStatusFailed)
+            result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           // Not connected...
           result.AppendErrorWithFormatv("not connected to '{0}'",

@@ -74,12 +74,6 @@ static cl::opt<bool> SimplifyMIR(
 static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
                                     cl::desc("Print MIR debug-locations"));
 
-// TODO: Remove once the transition to the symbolic form is over.
-static cl::opt<bool>
-    PrintSymbolicInlineAsmOps("print-symbolic-inline-asm-ops", cl::Hidden,
-                              cl::init(false),
-                              cl::desc("Print inline asm operands as names"));
-
 namespace {
 
 /// This structure describes how to print out stack object references.
@@ -364,6 +358,7 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
   YamlMFI.MaxAlignment = MFI.getMaxAlign().value();
   YamlMFI.AdjustsStack = MFI.adjustsStack();
   YamlMFI.HasCalls = MFI.hasCalls();
+  YamlMFI.FramePointerPolicy = MFI.getFramePointerPolicy();
   YamlMFI.MaxCallFrameSize = MFI.isMaxCallFrameSizeComputed()
     ? MFI.getMaxCallFrameSize() : ~0u;
   YamlMFI.CVBytesOfCalleeSavedRegisters =
@@ -974,7 +969,7 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
       MachineOperand::printSubRegIdx(OS, Op.getImm(), TRI);
       break;
     }
-    if (PrintSymbolicInlineAsmOps && MI.isInlineAsm()) {
+    if (MI.isInlineAsm()) {
       if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
         unsigned ExtraInfo = Op.getImm();
         interleave(InlineAsm::getExtraInfoNames(ExtraInfo), OS, " ");

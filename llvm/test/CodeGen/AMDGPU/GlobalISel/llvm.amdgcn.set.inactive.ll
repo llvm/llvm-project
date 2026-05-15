@@ -70,11 +70,11 @@ define amdgpu_kernel void @set_inactive_imm_poison_64(ptr addrspace(1) %out) {
 ; GCN-LABEL: set_inactive_imm_poison_64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v0, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, 1
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    v_mov_b32_e32 v2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_store_dwordx2 v[2:3], off, s[0:3], 0

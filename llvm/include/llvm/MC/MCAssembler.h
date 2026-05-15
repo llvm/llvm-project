@@ -114,6 +114,7 @@ private:
   /// Perform relaxation on a single fragment.
   void relaxFragment(MCFragment &F);
   void relaxAlign(MCFragment &F);
+  void relaxPrefAlign(MCFragment &F);
   void relaxInstruction(MCFragment &F);
   void relaxLEB(MCFragment &F);
   void relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
@@ -195,6 +196,7 @@ public:
   bool hasFinalLayout() const { return HasFinalLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
+  int64_t getStretch() const { return Stretch; }
 
   const_iterator begin() const { return Sections.begin(); }
   const_iterator end() const { return Sections.end(); }

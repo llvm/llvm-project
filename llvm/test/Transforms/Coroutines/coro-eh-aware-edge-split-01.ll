@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @g(i1 %cond, i32 %x, i32 %y) presplitcoroutine personality i32 0 {
 entry:
-  %id = call token @llvm.coro.id(i32 16, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 16, ptr null, ptr @g, ptr null)
   %size = tail call i64 @llvm.coro.size.i64()
   %alloc = call ptr @malloc(i64 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -73,7 +73,7 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 ; CHECK-LABEL: define void @g(
 ; CHECK-SAME: i1 [[COND:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 16, ptr null, ptr null, ptr @g.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 16, ptr null, ptr @g, ptr @g.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 32)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @g.resume, ptr [[HDL]], align 8

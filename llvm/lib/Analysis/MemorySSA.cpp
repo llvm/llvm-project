@@ -419,7 +419,7 @@ checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
     if (!VisitedPhis.insert(MAP).second)
       continue;
 
-    for (const auto *MA : def_chain(MAP.MA)) {
+    for (auto *MA : def_chain(MAP.MA)) {
       if (MA == ClobberAt) {
         if (const auto *MD = dyn_cast<MemoryDef>(MA)) {
           // instructionClobbersQuery isn't essentially free, so don't use `|=`,
@@ -461,7 +461,8 @@ checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
       assert(isa<MemoryPhi>(MA));
 
       // Add reachable phi predecessors
-      for (auto ItB = upward_defs_begin(MAP, MSSA.getDomTree()),
+      for (auto ItB = upward_defs_begin({MA, MAP.Loc, MAP.MayBeCrossIteration},
+                                        MSSA.getDomTree()),
                 ItE = upward_defs_end();
            ItB != ItE; ++ItB)
         if (MSSA.getDomTree().isReachableFromEntry(ItB.getPhiArgBlock()))

@@ -301,9 +301,8 @@ define <32 x i8> @var_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vpsllw $5, %xmm5, %xmm5
 ; AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpsllw $2, %xmm2, %xmm3
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm6 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; AVX1-NEXT:    vpand %xmm6, %xmm3, %xmm3
+; AVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
+; AVX1-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm5, %xmm5, %xmm5
 ; AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
@@ -313,8 +312,8 @@ define <32 x i8> @var_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsllw $5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpsllw $2, %xmm0, %xmm3
-; AVX1-NEXT:    vpand %xmm6, %xmm3, %xmm3
+; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm3
+; AVX1-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm3
@@ -329,8 +328,8 @@ define <32 x i8> @var_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX2-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; AVX2-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; AVX2-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
@@ -362,8 +361,8 @@ define <32 x i8> @var_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX512DQ-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; AVX512DQ-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX512DQ-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; AVX512DQ-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
@@ -385,8 +384,8 @@ define <32 x i8> @var_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX512DQVL-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; AVX512DQVL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %ymm2
 ; AVX512DQVL-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
-; AVX512DQVL-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX512DQVL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %ymm2
+; AVX512DQVL-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; AVX512DQVL-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; AVX512DQVL-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512DQVL-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
@@ -411,9 +410,8 @@ define <32 x i8> @var_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; X86-AVX1-NEXT:    vpsllw $5, %xmm5, %xmm5
 ; X86-AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vpsllw $2, %xmm2, %xmm3
-; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm6 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; X86-AVX1-NEXT:    vpand %xmm6, %xmm3, %xmm3
+; X86-AVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
+; X86-AVX1-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
 ; X86-AVX1-NEXT:    vpaddb %xmm5, %xmm5, %xmm5
 ; X86-AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm2, %xmm2
 ; X86-AVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
@@ -423,8 +421,8 @@ define <32 x i8> @var_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; X86-AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
 ; X86-AVX1-NEXT:    vpsllw $5, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpsllw $2, %xmm0, %xmm3
-; X86-AVX1-NEXT:    vpand %xmm6, %xmm3, %xmm3
+; X86-AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm3
+; X86-AVX1-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
 ; X86-AVX1-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm3
@@ -439,8 +437,8 @@ define <32 x i8> @var_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; X86-AVX2-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; X86-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpsllw $2, %ymm0, %ymm2
-; X86-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm2
+; X86-AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; X86-AVX2-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm2

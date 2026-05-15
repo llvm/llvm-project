@@ -1740,7 +1740,7 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
   // Compute an approximate result.
   Value yApprox = handleMultidimensionalVectors(
       builder, op->getOperands(), 8, [&builder](ValueRange operands) -> Value {
-        return x86::RsqrtOp::create(builder, operands);
+        return x86::avx::RsqrtOp::create(builder, operands);
       });
 
   // Do a single step of Newton-Raphson iteration to improve the approximation.

@@ -155,34 +155,48 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    andl $31, %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE2-NEXT:    shldl $27, %ebx, %edi
-; X86-SSE2-NEXT:    pushl $0
-; X86-SSE2-NEXT:    pushl $37
-; X86-SSE2-NEXT:    pushl %eax
-; X86-SSE2-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    calll __umoddi3
-; X86-SSE2-NEXT:    addl $16, %esp
-; X86-SSE2-NEXT:    movl %eax, %ecx
-; X86-SSE2-NEXT:    testb $32, %cl
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE2-NEXT:    movl %ecx, %edx
+; X86-SSE2-NEXT:    andl $262143, %edx # imm = 0x3FFFF
+; X86-SSE2-NEXT:    shrdl $18, %eax, %ecx
+; X86-SSE2-NEXT:    andl $16, %eax
+; X86-SSE2-NEXT:    andl $262143, %ecx # imm = 0x3FFFF
+; X86-SSE2-NEXT:    subl %ecx, %edx
+; X86-SSE2-NEXT:    shrl $4, %eax
+; X86-SSE2-NEXT:    leal 524290(%edx,%eax), %ecx
+; X86-SSE2-NEXT:    movl $-1160801971, %edx # imm = 0xBACF914D
+; X86-SSE2-NEXT:    movl %ecx, %eax
+; X86-SSE2-NEXT:    mull %edx
+; X86-SSE2-NEXT:    movl %ecx, %eax
+; X86-SSE2-NEXT:    subl %edx, %eax
+; X86-SSE2-NEXT:    shrl %eax
+; X86-SSE2-NEXT:    addl %edx, %eax
+; X86-SSE2-NEXT:    shrl $5, %eax
+; X86-SSE2-NEXT:    leal (%eax,%eax,8), %edx
+; X86-SSE2-NEXT:    leal (%eax,%edx,4), %eax
+; X86-SSE2-NEXT:    subl %eax, %ecx
+; X86-SSE2-NEXT:    movl %ecx, %eax
+; X86-SSE2-NEXT:    shrl $5, %eax
+; X86-SSE2-NEXT:    shldl $27, %edi, %esi
+; X86-SSE2-NEXT:    testb %al, %al
 ; X86-SSE2-NEXT:    jne .LBB3_1
 ; X86-SSE2-NEXT:  # %bb.2:
-; X86-SSE2-NEXT:    movl %edi, %ebx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE2-NEXT:    movl %esi, %edi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE2-NEXT:    movl %ebx, %esi
 ; X86-SSE2-NEXT:    jmp .LBB3_3
 ; X86-SSE2-NEXT:  .LBB3_1:
-; X86-SSE2-NEXT:    shll $27, %ebx
+; X86-SSE2-NEXT:    shll $27, %edi
+; X86-SSE2-NEXT:    movl %ebx, %edx
 ; X86-SSE2-NEXT:  .LBB3_3:
-; X86-SSE2-NEXT:    movl %edi, %eax
-; X86-SSE2-NEXT:    shldl %cl, %ebx, %eax
+; X86-SSE2-NEXT:    movl %esi, %eax
+; X86-SSE2-NEXT:    shldl %cl, %edi, %eax
 ; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-SSE2-NEXT:    shldl %cl, %edi, %esi
-; X86-SSE2-NEXT:    movl %esi, %edx
+; X86-SSE2-NEXT:    shldl %cl, %esi, %edx
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    popl %ebx
@@ -321,35 +335,48 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    andl $31, %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    shldl $27, %ebx, %esi
-; X86-SSE2-NEXT:    pushl $0
-; X86-SSE2-NEXT:    pushl $37
-; X86-SSE2-NEXT:    pushl %eax
-; X86-SSE2-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    calll __umoddi3
-; X86-SSE2-NEXT:    addl $16, %esp
-; X86-SSE2-NEXT:    movl %eax, %ecx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE2-NEXT:    movl %ecx, %edx
+; X86-SSE2-NEXT:    andl $262143, %edx # imm = 0x3FFFF
+; X86-SSE2-NEXT:    shrdl $18, %eax, %ecx
+; X86-SSE2-NEXT:    andl $16, %eax
+; X86-SSE2-NEXT:    andl $262143, %ecx # imm = 0x3FFFF
+; X86-SSE2-NEXT:    subl %ecx, %edx
+; X86-SSE2-NEXT:    shrl $4, %eax
+; X86-SSE2-NEXT:    leal 524290(%edx,%eax), %ecx
+; X86-SSE2-NEXT:    movl $-1160801971, %edx # imm = 0xBACF914D
+; X86-SSE2-NEXT:    movl %ecx, %eax
+; X86-SSE2-NEXT:    mull %edx
+; X86-SSE2-NEXT:    movl %ecx, %eax
+; X86-SSE2-NEXT:    subl %edx, %eax
+; X86-SSE2-NEXT:    shrl %eax
+; X86-SSE2-NEXT:    addl %edx, %eax
+; X86-SSE2-NEXT:    shrl $5, %eax
+; X86-SSE2-NEXT:    leal (%eax,%eax,8), %edx
+; X86-SSE2-NEXT:    leal (%eax,%edx,4), %eax
+; X86-SSE2-NEXT:    subl %eax, %ecx
 ; X86-SSE2-NEXT:    addl $27, %ecx
+; X86-SSE2-NEXT:    shldl $27, %ebx, %edi
 ; X86-SSE2-NEXT:    testb $32, %cl
 ; X86-SSE2-NEXT:    je .LBB10_1
 ; X86-SSE2-NEXT:  # %bb.2:
-; X86-SSE2-NEXT:    movl %edi, %edx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    jmp .LBB10_3
 ; X86-SSE2-NEXT:  .LBB10_1:
 ; X86-SSE2-NEXT:    shll $27, %ebx
-; X86-SSE2-NEXT:    movl %esi, %edx
-; X86-SSE2-NEXT:    movl %ebx, %esi
-; X86-SSE2-NEXT:  .LBB10_3:
-; X86-SSE2-NEXT:    shrdl %cl, %edx, %esi
-; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-SSE2-NEXT:    shrdl %cl, %edi, %edx
 ; X86-SSE2-NEXT:    movl %esi, %eax
+; X86-SSE2-NEXT:    movl %edi, %esi
+; X86-SSE2-NEXT:    movl %ebx, %edi
+; X86-SSE2-NEXT:  .LBB10_3:
+; X86-SSE2-NEXT:    shrdl %cl, %esi, %edi
+; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-SSE2-NEXT:    shrdl %cl, %eax, %esi
+; X86-SSE2-NEXT:    movl %edi, %eax
+; X86-SSE2-NEXT:    movl %esi, %edx
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    popl %ebx

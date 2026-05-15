@@ -9,7 +9,7 @@ define ptr @f(i1 %n) presplitcoroutine personality i32 0 {
 ; CHECK-LABEL: define ptr @f(
 ; CHECK-SAME: i1 [[N:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 32)
 ; CHECK-NEXT:    [[FLAG:%.*]] = call i1 @check(ptr [[ALLOC]])
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[FLAG]], i32 0, i32 1
@@ -29,7 +29,7 @@ define ptr @f(i1 %n) presplitcoroutine personality i32 0 {
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %flag = call i1 @check(ptr %alloc)

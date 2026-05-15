@@ -49,11 +49,10 @@ static void rewriteUses(mlir::Value oldVal, mlir::Value newVal,
                         mlir::Operation *targetContract,
                         mlir::PatternRewriter &rewriter) {
   for (mlir::OpOperand &use : llvm::make_early_inc_range(oldVal.getUses())) {
-
     mlir::Operation *user = use.getOwner();
     if (mlir::isa<mlir::vector::ContractionOp>(user) ||
         mlir::isa<mlir::scf::ForOp>(user)) {
-      use.set(newVal);
+      rewriter.modifyOpInPlace(user, [&]() { use.set(newVal); });
     }
   }
 }
@@ -83,22 +82,86 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
   auto elemTy = Ty.getElementType();
   auto flatTy = mlir::VectorType::get(nonUnitDimAcc, elemTy);
 
-  auto castA = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy,
-                                                 opA->getResult(0));
-  auto castB = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy,
-                                                 opB->getResult(0));
+  Value srcBuff;
+  SmallVector<Value> indexVals;
 
-  static constexpr int64_t maskLo[] = {
+  llvm::TypeSwitch<Operation *>(opA).Case<TransferReadOp, LoadOp>(
+      [&](auto readOp) {
+        srcBuff = readOp.getOperand(0);
+
+        auto indices = readOp.getIndices();
+        indexVals.reserve(indices.size());
+
+        llvm::transform(
+            indices, std::back_inserter(indexVals), [&](OpFoldResult ofr) {
+              return mlir::getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
+            });
+      });
+
+  int64_t srcRank = (dyn_cast<ShapedType>(srcBuff.getType())).getRank();
+  Value padding = ub::PoisonOp::create(rewriter, loc, elemTy);
+  auto map = AffineMap::getMinorIdentityMap(srcRank, flatTy.getRank(),
+                                            rewriter.getContext());
+  SmallVector<bool> inBounds(flatTy.getRank(), true);
+
+  auto vec1 = vector::TransferReadOp::create(rewriter, loc, flatTy, srcBuff,
+                                             indexVals, padding, map, inBounds);
+
+  unsigned int offset = 1;
+  if (elemTy.isSignlessInteger(8))
+    offset = 2;
+
+  Value cOffset = arith::ConstantIndexOp::create(rewriter, loc, offset);
+  auto nextIndx =
+      arith::AddIOp::create(rewriter, loc, rewriter.getIndexType(), cOffset,
+                            indexVals[indexVals.size() - 2]);
+  indexVals[indexVals.size() - 2] = nextIndx;
+
+  auto vec2 = vector::TransferReadOp::create(rewriter, loc, flatTy, srcBuff,
+                                             indexVals, padding, map, inBounds);
+
+  static constexpr int64_t maskLo_bf16[] = {
       0,  32, 1,  33, 2,  34, 3,  35, 8,  40, 9,  41, 10, 42, 11, 43,
       16, 48, 17, 49, 18, 50, 19, 51, 24, 56, 25, 57, 26, 58, 27, 59};
-  static constexpr int64_t maskHi[] = {
+  static constexpr int64_t maskHi_bf16[] = {
       4,  36, 5,  37, 6,  38, 7,  39, 12, 44, 13, 45, 14, 46, 15, 47,
       20, 52, 21, 53, 22, 54, 23, 55, 28, 60, 29, 61, 30, 62, 31, 63};
 
-  auto shuffleLo = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
-                                                   castB, maskLo);
-  auto shuffleHi = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
-                                                   castB, maskHi);
+  static constexpr int64_t maskLo_int8_avx2[] = {
+      0, 16, 32, 48, 1, 17, 33, 49, 2,  18, 34, 50, 3,  19, 35, 51,
+      8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59};
+  static constexpr int64_t maskHi_int8_avx2[] = {
+      4,  20, 36, 52, 5,  21, 37, 53, 6,  22, 38, 54, 7,  23, 39, 55,
+      12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63};
+
+  static constexpr int64_t maskLo_int8_avx10[] = {
+      0,  32, 64, 96,  1,  33, 65, 97,  2,  34, 66, 98,  3,  35, 67, 99,
+      8,  40, 72, 104, 9,  41, 73, 105, 10, 42, 74, 106, 11, 43, 75, 107,
+      16, 48, 80, 112, 17, 49, 81, 113, 18, 50, 82, 114, 19, 51, 83, 115,
+      24, 56, 88, 120, 25, 57, 89, 121, 26, 58, 90, 122, 27, 59, 91, 123};
+  static constexpr int64_t maskHi_int8_avx10[] = {
+      4,  36, 68, 100, 5,  37, 69, 101, 6,  38, 70, 102, 7,  39, 71, 103,
+      12, 44, 76, 108, 13, 45, 77, 109, 14, 46, 78, 110, 15, 47, 79, 111,
+      20, 52, 84, 116, 21, 53, 85, 117, 22, 54, 86, 118, 23, 55, 87, 119,
+      28, 60, 92, 124, 29, 61, 93, 125, 30, 62, 94, 126, 31, 63, 95, 127};
+
+  mlir::DenseI64ArrayAttr maskLo = rewriter.getDenseI64ArrayAttr(maskLo_bf16);
+  mlir::DenseI64ArrayAttr maskHi = rewriter.getDenseI64ArrayAttr(maskHi_bf16);
+
+  if (elemTy.isSignlessInteger(8)) {
+    maskLo = rewriter.getDenseI64ArrayAttr(maskLo_int8_avx10);
+    maskHi = rewriter.getDenseI64ArrayAttr(maskHi_int8_avx10);
+
+    if (nonUnitDimAcc == 32) {
+      maskLo = rewriter.getDenseI64ArrayAttr(maskLo_int8_avx2);
+      maskHi = rewriter.getDenseI64ArrayAttr(maskHi_int8_avx2);
+    }
+  }
+
+  auto shuffleLo = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, vec1,
+                                                   vec2, maskLo);
+  auto shuffleHi = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, vec1,
+                                                   vec2, maskHi);
 
   auto newA = mlir::vector::ShapeCastOp::create(rewriter, loc, Ty, shuffleLo);
   auto newB = mlir::vector::ShapeCastOp::create(rewriter, loc, Ty, shuffleHi);
@@ -160,9 +223,6 @@ struct VectorContractToPackedTypeDotProduct
         isInVnniLayout(contractOp.getOperation(),
                        contractOp.getIndexingMapsArray(), blockingFactor);
 
-    if (lhsTy.getElementType().isSignlessInteger(8) && !isVnni)
-      return failure();
-
     VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
     if (!accTy)
       return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");
@@ -218,7 +278,7 @@ struct VectorContractToPackedTypeDotProduct
 
     if (!isVnni && (extraFlatDim != blockingFactor))
       return rewriter.notifyMatchFailure(
-          contractOp, "The K or reduction dim for flat layout should be 2.");
+          contractOp, "The K or reduction dim for flat layout should be 2/4.");
 
     if ((lhsTy.getElementType().isBF16() && !accTy.getElementType().isF32()) ||
         (lhsTy.getElementType().isSignlessInteger(8) &&
@@ -384,7 +444,7 @@ struct VectorContractToPackedTypeDotProduct
         rewriter, loc, castNonUnitDim.getResult().getType(), broadcastUnitDim);
 
     if (lhsTy.getElementType().isBF16()) {
-      dp = x86::DotBF16Op::create(
+      dp = x86::avx512::DotBF16Op::create(
           rewriter, loc,
           VectorType::get(nonUnitDimValue, rewriter.getF32Type()), castAcc,
           bitcastUnitDimPkType, castNonUnitDim);
@@ -392,12 +452,12 @@ struct VectorContractToPackedTypeDotProduct
 
     if (lhsTy.getElementType().isSignlessInteger(8)) {
       if (nonUnitDimAcc.front() == 16) {
-        dp = x86::AVX10DotInt8Op::create(
+        dp = x86::avx10::AVX10DotInt8Op::create(
             rewriter, loc,
             VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
             castAcc, bitcastUnitDimPkType, castNonUnitDim);
       } else {
-        dp = x86::DotInt8Op::create(
+        dp = x86::avx::DotInt8Op::create(
             rewriter, loc,
             VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
             castAcc, bitcastUnitDimPkType, castNonUnitDim);

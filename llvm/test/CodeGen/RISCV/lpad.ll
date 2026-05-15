@@ -360,3 +360,6 @@ define i32 @test_returns_twice() {
   %call = call i32 @setjmp(ptr %buf)
   ret i32 %call
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"cf-protection-branch", i32 1}

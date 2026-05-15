@@ -626,9 +626,7 @@ subroutine sub33(m, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub33
-! CHECK: cuf.data_transfer 
-! CHECK-COUNT-2: hlfir.elemental
-! CHECK: hlfir.assign
+! CHECK-NOT: cuf.data_transfer 
 
 subroutine sub34(n)
   integer :: n
@@ -639,3 +637,90 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub34
 ! CHECK:  cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<host_device>} : f16, !fir.box<!fir.array<?xf16>>
+
+module managed_mod
+  integer, managed :: marray(10)
+end module
+
+subroutine sub35()
+  use managed_mod
+  integer :: host_arr(10)
+  marray = host_arr
+  marray = 0
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub35()
+! CHECK-NOT: cuf.data_transfer
+
+! Test that host_var = managed_module_var does NOT generate cuf.data_transfer
+! (managed memory is host-accessible, so direct assignment suffices).
+subroutine sub36()
+  use managed_mod
+  integer :: host_arr(10)
+  host_arr = marray
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub36()
+! CHECK-NOT: cuf.data_transfer
+
+! Test that device_var = managed_module_var DOES generate cuf.data_transfer
+! (device memory requires explicit cudaMemcpy).
+subroutine sub37()
+  use managed_mod
+  integer, device :: dev_arr(10)
+  dev_arr = marray
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub37()
+! CHECK: cuf.data_transfer
+
+subroutine sub38()
+  type :: bar
+    integer, device, allocatable :: m(:)
+  end type
+  type(bar), unified :: a
+  type(bar), managed :: ma
+  integer :: lm(5)
+
+
+  lm(1:5) = a%m(1:5)
+  lm(1:5) = ma%m(1:5)
+end subroutine
+
+subroutine sub39()
+  type :: foo
+    integer, device, allocatable :: m(:)
+  end type
+  type :: bar
+    type(foo) :: f
+  end type
+  type(bar) :: a
+  integer :: lm(5)
+
+  lm(1:5) = a%f%m(1:5)
+end subroutine
+
+function sub40_call(x, y, n) result(z)
+  integer :: n
+  real, device :: x(n)
+  real, device :: y(n)
+  real :: z
+  z = 0.0
+end function
+
+subroutine sub40()
+  real, device :: x(10)
+  real, device :: y(10)
+  real :: res
+  res = sub40_call(x, y, 10)
+end subroutine
+
+subroutine sub41()
+  type :: bar
+    integer, device, allocatable :: m(:)
+  end type
+  type(bar), managed :: a
+  integer, managed :: lm(5)
+  
+  lm(1:5) = a%m(1:5)
+end subroutine

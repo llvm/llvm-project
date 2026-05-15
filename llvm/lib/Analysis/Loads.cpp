@@ -161,7 +161,8 @@ static bool isDereferenceableAndAlignedPointer(
 
 
   if (const auto *Call = dyn_cast<CallBase>(V)) {
-    if (auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
+    if (auto *RP = getArgumentAliasingToReturnedPointer(
+            Call, /*MustPreserveOffset=*/true))
       return isDereferenceableAndAlignedPointer(RP, Alignment, Size, DL, CtxI,
                                                 AC, DT, TLI, Visited, MaxDepth);
 
@@ -574,6 +575,8 @@ static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
                                               const DataLayout &DL) {
   APInt LoadOffset(DL.getIndexTypeSizeInBits(LoadPtr->getType()), 0);
   APInt StoreOffset(DL.getIndexTypeSizeInBits(StorePtr->getType()), 0);
+  if (LoadOffset.getBitWidth() != StoreOffset.getBitWidth())
+    return false;
   const Value *LoadBase = LoadPtr->stripAndAccumulateConstantOffsets(
       DL, LoadOffset, /* AllowNonInbounds */ false);
   const Value *StoreBase = StorePtr->stripAndAccumulateConstantOffsets(

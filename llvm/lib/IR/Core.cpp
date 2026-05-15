@@ -1171,6 +1171,12 @@ LLVMInstructionGetAllMetadataOtherThanDebugLoc(LLVMValueRef Value,
 
 LLVM_FOR_EACH_VALUE_SUBCLASS(LLVM_DEFINE_VALUE_CAST)
 
+LLVMValueRef LLVMIsABranchInst(LLVMValueRef Val) {
+  if (Value *V = unwrap(Val))
+    return isa<UncondBrInst, CondBrInst>(V) ? Val : nullptr;
+  return nullptr;
+}
+
 LLVMValueRef LLVMIsAMDNode(LLVMValueRef Val) {
   if (auto *MD = dyn_cast_or_null<MetadataAsValue>(unwrap(Val)))
     if (isa<MDNode>(MD->getMetadata()) ||
@@ -2546,13 +2552,13 @@ static Intrinsic::ID llvm_map_to_intrinsic_id(unsigned ID) {
   return llvm::Intrinsic::ID(ID);
 }
 
-LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
-                                         unsigned ID,
-                                         LLVMTypeRef *ParamTypes,
-                                         size_t ParamCount) {
-  ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
+LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod, unsigned ID,
+                                         LLVMTypeRef *OverloadTypes,
+                                         size_t OverloadCount) {
+  ArrayRef<Type *> OverloadTys(unwrap(OverloadTypes), OverloadCount);
   auto IID = llvm_map_to_intrinsic_id(ID);
-  return wrap(llvm::Intrinsic::getOrInsertDeclaration(unwrap(Mod), IID, Tys));
+  return wrap(
+      llvm::Intrinsic::getOrInsertDeclaration(unwrap(Mod), IID, OverloadTys));
 }
 
 const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength) {
@@ -2563,27 +2569,30 @@ const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength) {
 }
 
 LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
-                                 LLVMTypeRef *ParamTypes, size_t ParamCount) {
+                                 LLVMTypeRef *OverloadTypes,
+                                 size_t OverloadCount) {
   auto IID = llvm_map_to_intrinsic_id(ID);
-  ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
-  return wrap(llvm::Intrinsic::getType(*unwrap(Ctx), IID, Tys));
+  ArrayRef<Type *> OverloadTys(unwrap(OverloadTypes), OverloadCount);
+  return wrap(llvm::Intrinsic::getType(*unwrap(Ctx), IID, OverloadTys));
 }
 
-char *LLVMIntrinsicCopyOverloadedName(unsigned ID, LLVMTypeRef *ParamTypes,
-                                      size_t ParamCount, size_t *NameLength) {
+char *LLVMIntrinsicCopyOverloadedName(unsigned ID, LLVMTypeRef *OverloadTypes,
+                                      size_t OverloadCount,
+                                      size_t *NameLength) {
   auto IID = llvm_map_to_intrinsic_id(ID);
-  ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
-  auto Str = llvm::Intrinsic::getNameNoUnnamedTypes(IID, Tys);
+  ArrayRef<Type *> OverloadTys(unwrap(OverloadTypes), OverloadCount);
+  auto Str = llvm::Intrinsic::getNameNoUnnamedTypes(IID, OverloadTys);
   *NameLength = Str.length();
   return strdup(Str.c_str());
 }
 
 char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
-                                       LLVMTypeRef *ParamTypes,
-                                       size_t ParamCount, size_t *NameLength) {
+                                       LLVMTypeRef *OverloadTypes,
+                                       size_t OverloadCount,
+                                       size_t *NameLength) {
   auto IID = llvm_map_to_intrinsic_id(ID);
-  ArrayRef<Type *> Tys(unwrap(ParamTypes), ParamCount);
-  auto Str = llvm::Intrinsic::getName(IID, Tys, unwrap(Mod));
+  ArrayRef<Type *> OverloadTys(unwrap(OverloadTypes), OverloadCount);
+  auto Str = llvm::Intrinsic::getName(IID, OverloadTys, unwrap(Mod));
   *NameLength = Str.length();
   return strdup(Str.c_str());
 }
@@ -2874,7 +2883,7 @@ LLVMValueRef LLVMGetBasicBlockParent(LLVMBasicBlockRef BB) {
 }
 
 LLVMValueRef LLVMGetBasicBlockTerminator(LLVMBasicBlockRef BB) {
-  return wrap(unwrap(BB)->getTerminator());
+  return wrap(unwrap(BB)->getTerminatorOrNull());
 }
 
 unsigned LLVMCountBasicBlocks(LLVMValueRef FnRef) {

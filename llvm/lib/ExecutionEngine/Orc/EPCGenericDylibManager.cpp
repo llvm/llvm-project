@@ -39,24 +39,6 @@ public:
   static constexpr bool available = true;
 };
 
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookup,
-                             DylibManager::LookupRequest> {
-  using MemberSerialization =
-      SPSArgList<SPSExecutorAddr, SPSRemoteSymbolLookupSet>;
-
-public:
-  static size_t size(const DylibManager::LookupRequest &LR) {
-    return MemberSerialization::size(ExecutorAddr(LR.Handle), LR.Symbols);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const DylibManager::LookupRequest &LR) {
-    return MemberSerialization::serialize(OB, ExecutorAddr(LR.Handle),
-                                          LR.Symbols);
-  }
-};
-
 } // end namespace shared
 
 Expected<EPCGenericDylibManager>
@@ -117,6 +99,17 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         Complete(std::move(Result));
       },
       H, Lookup);
+}
+
+Expected<tpctypes::DylibHandle>
+EPCGenericDylibManager::loadDylib(const char *DylibPath) {
+  return open(DylibPath, 0);
+}
+
+void EPCGenericDylibManager::lookupSymbolsAsync(
+    tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
+    DylibManager::SymbolLookupCompleteFn Complete) {
+  lookupAsync(H, Symbols, std::move(Complete));
 }
 
 } // end namespace orc
