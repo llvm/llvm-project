@@ -652,6 +652,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_readlane:
     return emitBuiltinWithOneOverloadedType<2>(*this, E,
                                                Intrinsic::amdgcn_readlane);
+  case AMDGPU::BI__builtin_amdgcn_wave_shuffle:
+    return emitBuiltinWithOneOverloadedType<2>(*this, E,
+                                               Intrinsic::amdgcn_wave_shuffle);
   case AMDGPU::BI__builtin_amdgcn_readfirstlane:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_readfirstlane);

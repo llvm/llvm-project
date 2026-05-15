@@ -206,6 +206,22 @@ private:
 protected:
   MultilibSet Multilibs;
   llvm::SmallVector<Multilib> SelectedMultilibs;
+  SmallVector<std::string> MultilibMacroDefines;
+
+  using OrderedMultilibs =
+      llvm::iterator_range<llvm::SmallVector<Multilib>::const_reverse_iterator>;
+
+  /// Get selected multilibs in priority order with default fallback.
+  OrderedMultilibs getOrderedMultilibs() const;
+
+  /// Discover and load a multilib.yaml configuration.
+  bool loadMultilibsFromYAML(const llvm::opt::ArgList &Args, const Driver &D,
+                             StringRef Fallback = {});
+
+  /// Load multilib configuration from a YAML file at \p MultilibPath,
+  std::optional<std::string> findMultilibsYAML(const llvm::opt::ArgList &Args,
+                                               const Driver &D,
+                                               StringRef FallbackDir = {});
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
@@ -665,7 +681,7 @@ public:
   /// ComputeLLVMTriple - Return the LLVM target triple to use, after taking
   /// command line arguments into account.
   virtual std::string
-  ComputeLLVMTriple(const llvm::opt::ArgList &Args,
+  ComputeLLVMTriple(const llvm::opt::ArgList &Args, StringRef BoundArch = {},
                     types::ID InputType = types::TY_INVALID) const;
 
   /// ComputeEffectiveClangTriple - Return the Clang triple to use for this
@@ -673,9 +689,10 @@ public:
   /// example, on Darwin the -mmacos-version-min= command line argument (which
   /// sets the deployment target) determines the version in the triple passed to
   /// Clang.
-  virtual std::string ComputeEffectiveClangTriple(
-      const llvm::opt::ArgList &Args,
-      types::ID InputType = types::TY_INVALID) const;
+  virtual std::string
+  ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                              StringRef BoundArch = {},
+                              types::ID InputType = types::TY_INVALID) const;
 
   /// getDefaultObjCRuntime - Return the default Objective-C runtime
   /// for this platform.
@@ -715,12 +732,12 @@ public:
   /// Add warning options that need to be passed to cc1 for this target.
   virtual void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const;
 
-  // Get the list of extra macro defines requested by the multilib
-  // configuration.
-  virtual SmallVector<std::string>
+  /// Get the list of extra macro defines requested by the multilib
+  /// configuration.
+  SmallVector<std::string>
   getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const {
-    return {};
-  };
+    return MultilibMacroDefines;
+  }
 
   // GetRuntimeLibType - Determine the runtime library type to use with the
   // given compilation arguments.

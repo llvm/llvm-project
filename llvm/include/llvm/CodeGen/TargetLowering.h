@@ -466,10 +466,10 @@ public:
     return MachineMemOperand::MONone;
   }
 
-  MachineMemOperand::Flags
-  getLoadMemOperandFlags(const LoadInst &LI, const DataLayout &DL,
-                         AssumptionCache *AC = nullptr,
-                         const TargetLibraryInfo *LibInfo = nullptr) const;
+  MachineMemOperand::Flags getLoadMemOperandFlags(
+      const LoadInst &LI, const DataLayout &DL, AssumptionCache *AC = nullptr,
+      const TargetLibraryInfo *LibInfo = nullptr,
+      CodeGenOptLevel OptLevel = CodeGenOptLevel::Default) const;
   MachineMemOperand::Flags getStoreMemOperandFlags(const StoreInst &SI,
                                                    const DataLayout &DL) const;
   MachineMemOperand::Flags getAtomicMemOperandFlags(const Instruction &AI,
@@ -996,8 +996,9 @@ public:
   /// Return the ValueType for comparison libcalls. Comparison libcalls include
   /// floating point comparison calls, and Ordered/Unordered check calls on
   /// floating point numbers.
-  virtual
-  MVT::SimpleValueType getCmpLibcallReturnType() const;
+  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
+    return MVT::i32; // return the default value
+  }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
   /// of boolean values held in types wider than i1.
@@ -2298,6 +2299,14 @@ public:
   virtual AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const {
     return AtomicOrdering::Monotonic;
+  }
+
+  // Whether to issue an atomic load for the initial word value before the
+  // atomicrmw/cmpxchg emulation loop.
+  // TODO: For correctness, an atomic load should be issued for all targets.
+  // Remove this API once this is achieved
+  virtual bool shouldIssueAtomicLoadForAtomicEmulationLoop(void) const {
+    return true;
   }
 
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
@@ -5529,10 +5538,12 @@ public:
                  SDValue LL = SDValue(), SDValue LH = SDValue(),
                  SDValue RL = SDValue(), SDValue RH = SDValue()) const;
 
-  /// Attempt to expand an n-bit div/rem/divrem by constant using a n/2-bit
-  /// urem by constant and other arithmetic ops. The n/2-bit urem by constant
-  /// will be expanded by DAGCombiner. This is not possible for all constant
-  /// divisors.
+  /// Attempt to expand an n-bit div/rem/divrem by constant using an n/2-bit
+  /// algorithm. First, attempt to expand the division using a n/2-bit urem by
+  /// constant and other arithmetic ops. The n/2-bit urem by constant will be
+  /// expanded by DAGCombiner. As this is not possible for all constant
+  /// divisors, this method falls back to an implementation of the magic
+  /// algorithm using n/2-bit operations.
   /// \param N Node to expand
   /// \param Result A vector that will be filled with the lo and high parts of
   ///        the results. For *DIVREM, this will be the quotient parts followed
@@ -5637,6 +5648,12 @@ public:
   /// \returns The expansion result
   SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expand CONVERT_FROM_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
+                                          SelectionDAG &DAG) const;
+
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
@@ -5690,6 +5707,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand LOOP_DEPENDENCE_MASK nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandLoopDependenceMask(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
@@ -6025,6 +6047,15 @@ private:
   SDValue buildSREMEqFold(EVT SETCCVT, SDValue REMNode, SDValue CompTargetNode,
                           ISD::CondCode Cond, DAGCombinerInfo &DCI,
                           const SDLoc &DL) const;
+
+  bool expandUDIVREMByConstantViaUREMDecomposition(
+      SDNode *N, APInt Divisor, SmallVectorImpl<SDValue> &Result, EVT HiLoVT,
+      SelectionDAG &DAG, SDValue LL, SDValue LH) const;
+
+  bool expandUDIVREMByConstantViaUMulHiMagic(SDNode *N, const APInt &Divisor,
+                                             SmallVectorImpl<SDValue> &Result,
+                                             EVT HiLoVT, SelectionDAG &DAG,
+                                             SDValue LL, SDValue LH) const;
 };
 
 /// Given an LLVM IR type and return type attributes, compute the return value

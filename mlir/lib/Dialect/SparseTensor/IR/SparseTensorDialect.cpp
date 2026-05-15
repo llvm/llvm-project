@@ -525,10 +525,15 @@ SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
     }
   };
 
+  // The number of symbols information is included inside the `dimToLvl` map
+  // during parsing. Here, we're extracting it to be used when simplifying the
+  // affine expression.
+  unsigned numSymbols = getDimToLvl().getNumSymbols();
+
   for (AffineExpr exp : transMap.getResults()) {
     // Do constant propagation on the affine map.
-    AffineExpr evalExp =
-        simplifyAffineExpr(exp.replaceDims(dimRep), srcShape.size(), 0);
+    AffineExpr evalExp = simplifyAffineExpr(exp.replaceDims(dimRep),
+                                            srcShape.size(), numSymbols);
     // use llvm namespace here to avoid ambiguity
     if (auto c = llvm::dyn_cast<AffineConstantExpr>(evalExp)) {
       ret.push_back(c.getValue() + 1);

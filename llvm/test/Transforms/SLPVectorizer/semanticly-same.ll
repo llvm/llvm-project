@@ -321,14 +321,17 @@ define void @lshr_div2(ptr %p, ptr %s) {
 ; X86-NEXT:    [[P3:%.*]] = getelementptr i16, ptr [[P]], i64 3
 ; X86-NEXT:    [[L0:%.*]] = load i16, ptr [[P]], align 2
 ; X86-NEXT:    [[L3:%.*]] = load i16, ptr [[P3]], align 2
-; X86-NEXT:    [[DIV0:%.*]] = lshr i16 [[L0]], 3
-; X86-NEXT:    [[DIV3:%.*]] = lshr i16 [[L3]], 5
+; X86-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[L0]], i32 0
+; X86-NEXT:    [[TMP4:%.*]] = insertelement <2 x i16> [[TMP3]], i16 [[L3]], i32 1
+; X86-NEXT:    [[TMP2:%.*]] = lshr <2 x i16> [[TMP4]], <i16 3, i16 5>
 ; X86-NEXT:    [[S1:%.*]] = getelementptr i16, ptr [[S:%.*]], i64 1
 ; X86-NEXT:    [[S3:%.*]] = getelementptr i16, ptr [[S]], i64 3
 ; X86-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P1]], align 2
 ; X86-NEXT:    [[TMP1:%.*]] = udiv <2 x i16> [[TMP0]], <i16 8, i16 2>
+; X86-NEXT:    [[DIV0:%.*]] = extractelement <2 x i16> [[TMP2]], i32 0
 ; X86-NEXT:    store i16 [[DIV0]], ptr [[S]], align 2
 ; X86-NEXT:    store <2 x i16> [[TMP1]], ptr [[S1]], align 2
+; X86-NEXT:    [[DIV3:%.*]] = extractelement <2 x i16> [[TMP2]], i32 1
 ; X86-NEXT:    store i16 [[DIV3]], ptr [[S3]], align 2
 ; X86-NEXT:    ret void
 ;

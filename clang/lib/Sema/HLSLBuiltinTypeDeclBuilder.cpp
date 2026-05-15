@@ -1393,10 +1393,10 @@ BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim) {
   DeclarationName Subscript =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
-  addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true, IndexTy);
-  if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
-    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true,
-                            IndexTy);
+  addHandleAccessFunction(Subscript,
+                          /*IsConstReturn=*/getResourceAttrs().ResourceClass !=
+                              llvm::dxil::ResourceClass::UAV,
+                          /*IsRef=*/true, IndexTy);
 
   return *this;
 }
@@ -1407,10 +1407,11 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   ASTContext &AST = Record->getASTContext();
   IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
   DeclarationName Load(&II);
-  // TODO: We also need versions with status for CheckAccessFullyMapped.
-  addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false,
+
+  addHandleAccessFunction(Load,
+                          /*IsConstReturn=*/false, /*IsRef=*/false,
                           AST.UnsignedIntTy);
-  addLoadWithStatusFunction(Load, /*IsConst=*/false);
+  addLoadWithStatusFunction(Load);
 
   return *this;
 }
@@ -1562,9 +1563,10 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Load(&II);
 
-    addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false,
+    addHandleAccessFunction(Load,
+                            /*IsConstReturn=*/false, /*IsRef=*/false,
                             AST.UnsignedIntTy, ReturnType);
-    addLoadWithStatusFunction(Load, /*IsConst=*/false, ReturnType);
+    addLoadWithStatusFunction(Load, ReturnType);
   };
 
   AddLoads("Load", AST.UnsignedIntTy);
@@ -2201,15 +2203,17 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
       .finalize();
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadWithStatusFunction(
-    DeclarationName &Name, bool IsConst, QualType ReturnTy) {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
+                                                  QualType ReturnTy) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   bool NeedsTypedBuiltin = !ReturnTy.isNull();
 
   // The empty QualType is a placeholder. The actual return type is set below.
-  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), IsConst);
+  // All load methods will be const.
+  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), true);
 
   if (!NeedsTypedBuiltin)
     ReturnTy = getHandleElementType();
@@ -2232,7 +2236,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadWithStatusFunction(
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
-    DeclarationName &Name, bool IsConst, bool IsRef, QualType IndexTy,
+    DeclarationName &Name, bool IsConstReturn, bool IsRef, QualType IndexTy,
     QualType ElemTy) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
@@ -2240,7 +2244,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
   bool NeedsTypedBuiltin = !ElemTy.isNull();
 
   // The empty QualType is a placeholder. The actual return type is set below.
-  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), IsConst);
+  // All access methods are const; none of them rebind the resource handle.
+  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), true);
 
   if (!NeedsTypedBuiltin)
     ElemTy = getHandleElementType();
@@ -2253,13 +2258,13 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
 
   if (IsRef) {
     ReturnTy = AddrSpaceElemTy;
-    if (IsConst)
+    if (IsConstReturn)
       ReturnTy.addConst();
     ReturnTy = AST.getLValueReferenceType(ReturnTy);
   } else {
+    assert(!IsConstReturn && "There shouldn't be any resource methods with a "
+                             "const ref return value");
     ReturnTy = ElemTy;
-    if (IsConst)
-      ReturnTy.addConst();
   }
   MMB.ReturnTy = ReturnTy;
 

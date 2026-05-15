@@ -186,7 +186,7 @@ void ValueObjectPrinter::SetupMostSpecializedValue() {
 const char *ValueObjectPrinter::GetRootNameForDisplay() {
   const char *root_valobj_name =
       m_options.m_root_valobj_name.empty()
-          ? GetMostSpecializedValue().GetName().AsCString()
+          ? GetMostSpecializedValue().GetName().AsCString(nullptr)
           : m_options.m_root_valobj_name.c_str();
   return root_valobj_name ? root_valobj_name : "";
 }

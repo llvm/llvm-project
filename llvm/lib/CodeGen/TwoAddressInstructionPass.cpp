@@ -1148,9 +1148,26 @@ bool TwoAddressInstructionImpl::rescheduleKillAboveMI(
   } else {
     KillMI = LV->getVarInfo(Reg).findKill(MBB);
   }
-  if (!KillMI || MI == KillMI || KillMI->isCopy() || KillMI->isCopyLike())
-    // Don't mess with copies, they may be coalesced later.
+  if (!KillMI || MI == KillMI)
     return false;
+
+  if (KillMI->isCopyLike()) {
+    if (!MI->mayLoad())
+      return false;
+
+    Register CopySrcReg, CopyDstReg;
+    bool IsCopySrcPhys, IsCopyDstPhys;
+    // Most copies are better left for coalescing. Allow moving only the
+    // case of a kill-copy from a source virtual register into a
+    // physical register when the current two-address instruction has a folded
+    // load; that preserves the memory form and avoids introducing a load+copy.
+    if (!isCopyToReg(*KillMI, CopySrcReg, CopyDstReg, IsCopySrcPhys,
+                     IsCopyDstPhys))
+      return false;
+
+    if (CopySrcReg != Reg || IsCopySrcPhys || !IsCopyDstPhys)
+      return false;
+  }
 
   Register DstReg;
   if (isTwoAddrUse(*KillMI, Reg, DstReg))

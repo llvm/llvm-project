@@ -13,142 +13,136 @@
 #include <detail/device_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
-#include <cstring>
+#include <llvm/Frontend/Offloading/Utility.h>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
-static inline bool checkFatBinVersion(const __sycl_tgt_bin_desc &FatbinDesc) {
-  return FatbinDesc.Version == SupportedOffloadBinaryVersion;
-}
-
 static inline bool
-checkDeviceImageValidity(const __sycl_tgt_device_image &DeviceImage) {
-  return (DeviceImage.Version == SupportedDevicyBinaryVersion) &&
-         (DeviceImage.OffloadKind == llvm::object::OFK_SYCL) &&
-         (DeviceImage.ImageFormat == llvm::object::IMG_SPIRV);
+checkDeviceImageValidity(const llvm::object::OffloadBinary &OB) {
+  return (OB.getOffloadKind() == llvm::object::OFK_SYCL) &&
+         (OB.getImageKind() == llvm::object::IMG_SPIRV);
 }
 
-void ProgramManager::addImages(__sycl_tgt_bin_desc *FatbinDesc) {
-  assert(FatbinDesc && "Device images descriptor can't be nullptr");
+void ProgramAndKernelManager::registerFatBin(const void *BinaryStart,
+                                             size_t Size) {
+  assert(BinaryStart && "Binary pointer can't be nullptr");
 
-  if (!checkFatBinVersion(*FatbinDesc))
+  llvm::MemoryBufferRef MBR(
+      llvm::StringRef(static_cast<const char *>(BinaryStart), Size),
+      /*Identifier=*/"");
+  auto BinOrErr = llvm::object::OffloadBinary::create(MBR);
+  if (!BinOrErr || BinOrErr->empty())
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
-                          "Incompatible version of device images descriptor.");
-  if (!FatbinDesc->NumDeviceBinaries)
-    return;
+                          "Failed to parse OffloadBinary");
 
-  std::lock_guard<std::mutex> Guard(MImageCollectionMutex);
-  for (int I = 0; I < FatbinDesc->NumDeviceBinaries; ++I) {
-    const auto &RawDeviceImage = FatbinDesc->DeviceImages[I];
-    if (!checkDeviceImageValidity(RawDeviceImage))
+  DeviceImageManagerVec Images;
+  Images.reserve(BinOrErr->size());
+
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
+  for (std::unique_ptr<llvm::object::OffloadBinary> &OB : *BinOrErr) {
+    if (!checkDeviceImageValidity(*OB))
       throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                             "Incompatible device image.");
 
-    const llvm::offloading::EntryTy *EntriesB = RawDeviceImage.EntriesBegin;
-    const llvm::offloading::EntryTy *EntriesE = RawDeviceImage.EntriesEnd;
-    // Ignore "empty" device image.
-    if (EntriesB == EntriesE)
-      continue;
+    llvm::StringRef Symbols = OB->getString("symbols");
 
-    std::unique_ptr<DeviceImageWrapper> NewImageWrapper =
-        std::make_unique<DeviceImageWrapper>(RawDeviceImage);
+    Images.push_back(std::make_unique<DeviceImageManager>(std::move(OB)));
+    DeviceImageManager &NewImageWrapper = *Images.back();
 
-    for (auto EntriesIt = EntriesB; EntriesIt != EntriesE; ++EntriesIt) {
-      auto Name = EntriesIt->SymbolName;
-      auto KernelIDIt = MKernelNameToID.find(Name);
-      if (KernelIDIt == MKernelNameToID.end()) {
-        sycl::kernel_id KernelID =
-            detail::createSyclObjFromImpl<sycl::kernel_id>(
-                std::make_shared<detail::KernelIdImpl>(Name));
-        KernelIDIt = MKernelNameToID.insert(
-            MKernelNameToID.end(),
-            std::make_pair(std::string_view(Name), KernelID));
+    llvm::offloading::sycl::forEachSymbol(Symbols, [&](llvm::StringRef Name) {
+      auto It = MDeviceKernelInfoMap.find(std::string_view(Name));
+      if (It == MDeviceKernelInfoMap.end()) {
+        [[maybe_unused]] auto [Iterator, EmplaceSucceeded] =
+            MDeviceKernelInfoMap.emplace(
+                std::piecewise_construct,
+                std::forward_as_tuple(std::string_view(Name)),
+                std::forward_as_tuple(std::string_view(Name), NewImageWrapper));
+        assert(EmplaceSucceeded && "Kernel name found in multiple images");
       }
-
-      MKernelIDToDevImageJIT.insert(
-          std::make_pair(KernelIDIt->second, NewImageWrapper.get()));
-    }
-
-    MDeviceImageWrappers.insert(
-        std::make_pair(&RawDeviceImage, std::move(NewImageWrapper)));
+    });
   }
+
+  [[maybe_unused]] auto [It, Inserted] =
+      MDeviceImageManagers.emplace(BinaryStart, std::move(Images));
+  assert(Inserted && "Fat binary registered twice");
 }
 
-void ProgramManager::removeImages(__sycl_tgt_bin_desc *FatbinDesc) {
-  assert(FatbinDesc && "Device images descriptor can't be nullptr");
+void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart,
+                                               size_t /*Size*/) {
+  assert(BinaryStart && "Binary pointer can't be nullptr");
 
-  if (!checkFatBinVersion(*FatbinDesc) || FatbinDesc->NumDeviceBinaries == 0)
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
+  auto It = MDeviceImageManagers.find(BinaryStart);
+  if (It == MDeviceImageManagers.end())
     return;
 
-  std::lock_guard<std::mutex> Guard(MImageCollectionMutex);
-  for (int I = 0; I < FatbinDesc->NumDeviceBinaries; ++I) {
-    const auto &RawDeviceImage = FatbinDesc->DeviceImages[I];
-
-    auto DevImageIt = MDeviceImageWrappers.find(&RawDeviceImage);
-    if (DevImageIt == MDeviceImageWrappers.end())
-      continue;
-
-    const llvm::offloading::EntryTy *EntriesB = RawDeviceImage.EntriesBegin;
-    const llvm::offloading::EntryTy *EntriesE = RawDeviceImage.EntriesEnd;
-    // Ignore "empty" device image
-    if (EntriesB == EntriesE)
-      continue;
-
-    for (auto EntriesIt = EntriesB; EntriesIt != EntriesE; ++EntriesIt) {
-      if (auto KernelIDIt = MKernelNameToID.find(EntriesIt->SymbolName);
-          KernelIDIt != MKernelNameToID.end()) {
-        MKernelIDToDevImageJIT.erase(KernelIDIt->second);
-        MKernelNameToID.erase(KernelIDIt);
+  for (auto &Image : It->second) {
+    llvm::StringRef Symbols = Image->getOffloadBinary().getString("symbols");
+    llvm::offloading::sycl::forEachSymbol(Symbols, [&](llvm::StringRef Name) {
+      if (auto KernelIt = MDeviceKernelInfoMap.find(std::string_view(Name));
+          KernelIt != MDeviceKernelInfoMap.end()) {
+        // Programs are attached to the image and will be released with image
+        // destruction. Clear only kernel specific data by destroying its kernel
+        // info object.
+        MDeviceKernelInfoMap.erase(KernelIt);
       }
-    }
-
-    MDeviceImageWrappers.erase(DevImageIt);
+    });
   }
+  MDeviceImageManagers.erase(It);
 }
 
-static bool isImageTargetCompatible(const DeviceImageWrapper &Image,
-                                    const DeviceImpl &Device) {
-  sycl::backend BE = Device.getBackend();
-  const char *Target = Image.getRawData().TripleString;
+static bool isImageCompatible(const DeviceImageManager &Image,
+                              const DeviceImpl &Device) {
+  const llvm::object::OffloadBinary &OB = Image.getOffloadBinary();
+  if (!(OB.getTriple() == DeviceBinaryTripleSPIRV64 &&
+        Device.getBackend() == sycl::backend::level_zero))
+    return false;
 
-  return (strcmp(Target, DeviceBinaryTripleSPIRV64) == 0) &&
-         (BE == sycl::backend::level_zero);
+  bool IsValid{};
+  llvm::StringRef ImageBytes = OB.getImage();
+  callAndThrow(olIsValidBinary, Device.getOLHandle(), ImageBytes.data(),
+               ImageBytes.size(), &IsValid);
+  return IsValid;
 }
 
-DeviceImageWrapper *ProgramManager::getDeviceImage(std::string_view KernelName,
-                                                   const kernel_id &KernelID,
-                                                   DeviceImpl &Device) {
-  std::lock_guard<std::mutex> Guard(MImageCollectionMutex);
-  auto [Begin, End] = MKernelIDToDevImageJIT.equal_range(KernelID);
-  if (Begin != End) {
-    bool IsValid{};
-    // TODO: with AOT (not implemented yet), we need to analyze and check
-    // olIsValidBinary for AOT binaries first.
-    for (auto It = Begin; It != End; ++It) {
-      if (isImageTargetCompatible(*It->second, Device)) {
-        callAndThrow(olIsValidBinary, Device.getHandle(),
-                     It->second->getRawData().ImageStart, It->second->getSize(),
-                     &IsValid);
-        if (IsValid)
-          return It->second;
-      }
-    }
-  }
+ol_symbol_handle_t
+ProgramAndKernelManager::getOrCreateKernel(DeviceKernelInfo &KernelInfo,
+                                           DeviceImpl &Device) {
 
-  throw exception(make_error_code(errc::runtime),
-                  "No kernel named " + std::string(KernelName) + " was found");
+  std::lock_guard<std::mutex> KernelGuard(MDataCollectionMutex);
+
+  if (auto Kernel = KernelInfo.getKernel(Device.getOLHandle()))
+    return Kernel;
+
+  auto &DeviceImage = KernelInfo.getDeviceImage();
+
+  if (!isImageCompatible(DeviceImage, Device))
+    throw exception(make_error_code(errc::runtime),
+                    std::string("No compatible image for ") +
+                        KernelInfo.getName().data() + " was found");
+
+  auto DeviceHandle = Device.getOLHandle();
+  auto Program = DeviceImage.getOrCreateProgram(DeviceHandle);
+
+  ol_symbol_handle_t Kernel{};
+  callAndThrow(olGetSymbol, Program, KernelInfo.getName().data(),
+               OL_SYMBOL_KIND_KERNEL, &Kernel);
+  KernelInfo.addKernel(DeviceHandle, Kernel);
+  return Kernel;
 }
 
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
 
-extern "C" _LIBSYCL_EXPORT void
-__sycl_register_lib(sycl::detail::__sycl_tgt_bin_desc *FatbinDesc) {
-  sycl::detail::ProgramManager::getInstance().addImages(FatbinDesc);
+extern "C" _LIBSYCL_EXPORT void __sycl_register_lib(const void *BinaryStart,
+                                                    size_t Size) {
+  sycl::detail::ProgramAndKernelManager::getInstance().registerFatBin(
+      BinaryStart, Size);
 }
 
-extern "C" _LIBSYCL_EXPORT void
-__sycl_unregister_lib(sycl::detail::__sycl_tgt_bin_desc *FatbinDesc) {
-  sycl::detail::ProgramManager::getInstance().removeImages(FatbinDesc);
+extern "C" _LIBSYCL_EXPORT void __sycl_unregister_lib(const void *BinaryStart,
+                                                      size_t Size) {
+  sycl::detail::ProgramAndKernelManager::getInstance().unregisterFatBin(
+      BinaryStart, Size);
 }

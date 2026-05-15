@@ -89,12 +89,12 @@ void test_signbit_positive_nan(){
 // CIR: cir.signbit {{.*}} : !cir.double -> !cir.bool
 // CIR: cir.cast bool_to_int {{.*}} : !cir.bool -> !s32i
 
-// LLVM: store double 0x7FF8000000000000, ptr %{{.*}}
+// LLVM: store double +qnan, ptr %{{.*}}
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
 
-// OGCG: store double 0x7FF8000000000000, ptr %{{.*}}
+// OGCG: store double +qnan, ptr %{{.*}}
 // OGCG: bitcast double %{{.*}} to i64
 // OGCG: icmp slt i64 %{{.*}}, 0
 // OGCG: zext i1 %{{.*}} to i32
@@ -108,12 +108,12 @@ void test_signbit_negative_nan(){
 // CIR: cir.signbit {{.*}} : !cir.double -> !cir.bool
 // CIR: cir.cast bool_to_int {{.*}} : !cir.bool -> !s32i
 
-// LLVM: store double 0xFFF8000000000000, ptr %{{.*}}
+// LLVM: store double -qnan, ptr %{{.*}}
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
 
-// OGCG: store double 0xFFF8000000000000, ptr %{{.*}}
+// OGCG: store double -qnan, ptr %{{.*}}
 // OGCG: bitcast double %{{.*}} to i64
 // OGCG: icmp slt i64 %{{.*}}, 0
 // OGCG: zext i1 %{{.*}} to i32
@@ -127,12 +127,12 @@ void test_signbit_positive_infinity(){
 // CIR: cir.signbit {{.*}} : !cir.double -> !cir.bool
 // CIR: cir.cast bool_to_int {{.*}} : !cir.bool -> !s32i
 
-// LLVM: store double 0x7FF0000000000000, ptr %{{.*}}
+// LLVM: store double +inf, ptr %{{.*}}
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
 
-// OGCG: store double 0x7FF0000000000000, ptr %{{.*}}
+// OGCG: store double +inf, ptr %{{.*}}
 // OGCG: bitcast double %{{.*}} to i64
 // OGCG: icmp slt i64 %{{.*}}, 0
 // OGCG: zext i1 %{{.*}} to i32
@@ -146,12 +146,12 @@ void test_signbit_negative_infinity(){
 // CIR: cir.signbit {{.*}} : !cir.double -> !cir.bool
 // CIR: cir.cast bool_to_int {{.*}} : !cir.bool -> !s32i
 
-// LLVM: store double 0xFFF0000000000000, ptr %{{.*}}
+// LLVM: store double -inf, ptr %{{.*}}
 // LLVM: bitcast double %{{.*}} to i64
 // LLVM: icmp slt i64 %{{.*}}, 0
 // LLVM: zext i1 %{{.*}} to i32
 
-// OGCG: store double 0xFFF0000000000000, ptr %{{.*}}
+// OGCG: store double -inf, ptr %{{.*}}
 // OGCG: bitcast double %{{.*}} to i64
 // OGCG: icmp slt i64 %{{.*}}, 0
 // OGCG: zext i1 %{{.*}} to i32

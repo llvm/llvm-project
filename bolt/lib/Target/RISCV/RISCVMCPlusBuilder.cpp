@@ -568,6 +568,14 @@ public:
     Inst.setOpcode(RISCV::EBREAK);
   }
 
+  void createNoop(MCInst &Inst) const override {
+    Inst.clear();
+    Inst = MCInstBuilder(RISCV::ADDI)
+               .addReg(RISCV::X0)
+               .addReg(RISCV::X0)
+               .addImm(0);
+  }
+
   void createShortJmp(InstructionListType &Seq, const MCSymbol *Target,
                       MCContext *Ctx, bool IsTailCall) override {
     // The sequence of instructions we create here is the following:

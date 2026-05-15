@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -141,6 +142,63 @@ static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
   createMovz(Insts.back(), RegTmp, 1);
   Insts.emplace_back();
   atomicAdd(Insts.back(), RegTo, RegTmp);
+  return Insts;
+}
+
+static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
+                                        uint64_t Imm) {
+  SmallVector<AArch64_IMM::ImmInsnModel> Insn;
+  AArch64_IMM::expandMOVImm(Imm, BitSize, Insn);
+  assert(Insn.size() != 0);
+
+  InstructionListType Insts;
+  for (auto I = Insn.begin(), E = Insn.end(); I != E; ++I) {
+    switch (I->Opcode) {
+    case AArch64::ORRWri:
+    case AArch64::ORRXri:
+    case AArch64::ANDXri:
+    case AArch64::EORXri:
+      if (I->Op1 == 0)
+        Insts.emplace_back(
+            MCInstBuilder(I->Opcode)
+                .addReg(DstReg)
+                .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
+                .addImm(I->Op2));
+      else
+        Insts.emplace_back(
+            MCInstBuilder(I->Opcode).addReg(DstReg).addReg(DstReg).addImm(
+                I->Op2));
+      break;
+    case AArch64::EORXrs:
+    case AArch64::EONXrs:
+    case AArch64::ORRWrs:
+    case AArch64::ORRXrs:
+      Insts.emplace_back(MCInstBuilder(I->Opcode)
+                             .addReg(DstReg)
+                             .addReg(DstReg)
+                             .addReg(DstReg)
+                             .addImm(I->Op2));
+      break;
+    case AArch64::MOVNWi:
+    case AArch64::MOVNXi:
+    case AArch64::MOVZWi:
+    case AArch64::MOVZXi:
+      Insts.emplace_back(
+          MCInstBuilder(I->Opcode).addReg(DstReg).addImm(I->Op1).addImm(
+              I->Op2));
+      break;
+    case AArch64::MOVKWi:
+    case AArch64::MOVKXi:
+      Insts.emplace_back(MCInstBuilder(I->Opcode)
+                             .addReg(DstReg)
+                             .addReg(DstReg)
+                             .addImm(I->Op1)
+                             .addImm(I->Op2));
+      break;
+    default:
+      llvm_unreachable("Unhandled! Please refer to expandMOVImm in llvm");
+    }
+  }
   return Insts;
 }
 
@@ -2788,10 +2846,10 @@ public:
         BF.getAddress() - BF.getOriginSection()->getAddress(), BF.getMaxSize());
 
     const BinaryContext &BC = BF.getBinaryContext();
-    DataExtractor DE(FunctionContents, BC.AsmInfo->isLittleEndian(),
-                     BC.AsmInfo->getCodePointerSize());
+    unsigned CodePointerSize = BC.AsmInfo->getCodePointerSize();
+    DataExtractor DE(FunctionContents, BC.AsmInfo->isLittleEndian());
     uint64_t Offset = 8;
-    TargetAddress = DE.getAddress(&Offset);
+    TargetAddress = DE.getUnsigned(&Offset, CodePointerSize);
 
     return true;
   }
@@ -2986,30 +3044,11 @@ public:
 
   InstructionListType createLoadImmediate(const MCPhysReg Dest,
                                           uint64_t Imm) const override {
-    InstructionListType Insts;
-
-    Insts.emplace_back();
-    MCInst &Inst = Insts.back();
-    Inst.clear();
-    Inst.setOpcode(AArch64::MOVZXi);
-    Inst.addOperand(MCOperand::createReg(Dest));
-    Inst.addOperand(MCOperand::createImm(Imm & 0xFFFF));
-    Inst.addOperand(MCOperand::createImm(0));
-
-    int Shift = 16;
-    for (int I = 0; I < 3; I++, Shift += 16) {
-      const uint64_t ImmVal = (Imm >> Shift) & 0xFFFF;
-      if (!ImmVal)
-        continue;
-      Insts.emplace_back();
-      MCInst &Inst = Insts.back();
-      Inst.setOpcode(AArch64::MOVKXi);
-      Inst.addOperand(MCOperand::createReg(Dest));
-      Inst.addOperand(MCOperand::createReg(Dest));
-      Inst.addOperand(MCOperand::createImm(ImmVal));
-      Inst.addOperand(MCOperand::createImm(Shift));
-    }
-    return Insts;
+    if (RegInfo->getRegClass(AArch64::GPR64RegClassID).contains(Dest))
+      return createMOVImm(Dest, 64, Imm);
+    if (RegInfo->getRegClass(AArch64::GPR32RegClassID).contains(Dest))
+      return createMOVImm(Dest, 32, Imm);
+    llvm_unreachable("Unexpected RegClass");
   }
 
   void createIndirectCallInst(MCInst &Inst, bool IsTailCall,

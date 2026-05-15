@@ -82,6 +82,7 @@ extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<uint32_t> InstrumentationSleepTime;
 extern cl::opt<bool> KeepNops;
+extern cl::opt<bool> LargeCodeModel;
 extern cl::opt<bool> Lite;
 extern cl::list<std::string> PrintOnly;
 extern cl::opt<std::string> PrintOnlyFile;
@@ -2161,13 +2162,10 @@ void RewriteInstance::relocateEHFrameSection() {
       return;
 
     // Only fix references that are relative to other locations.
-    if (!(DwarfType & dwarf::DW_EH_PE_pcrel) &&
-        !(DwarfType & dwarf::DW_EH_PE_textrel) &&
-        !(DwarfType & dwarf::DW_EH_PE_funcrel) &&
-        !(DwarfType & dwarf::DW_EH_PE_datarel))
-      return;
-
-    if (!(DwarfType & dwarf::DW_EH_PE_sdata4))
+    if ((DwarfType & 0xf0) != dwarf::DW_EH_PE_pcrel &&
+        (DwarfType & 0xf0) != dwarf::DW_EH_PE_textrel &&
+        (DwarfType & 0xf0) != dwarf::DW_EH_PE_funcrel &&
+        (DwarfType & 0xf0) != dwarf::DW_EH_PE_datarel)
       return;
 
     uint32_t RelType;
@@ -2239,6 +2237,13 @@ Error RewriteInstance::readSpecialSections() {
   if (HasDebugInfo && !opts::UpdateDebugSections && !opts::AggregateOnly) {
     BC->errs() << "BOLT-WARNING: debug info will be stripped from the binary. "
                   "Use -update-debug-sections to keep it.\n";
+  }
+
+  if (opts::LargeCodeModel.getNumOccurrences() == 0 && !BC->UseLargeCodeModel &&
+      BC->getUniqueSectionByName(".ltext")) {
+    BC->outs() << "BOLT-INFO: .ltext detected - enabling large code model\n";
+    BC->UseLargeCodeModel = true;
+    BC->updateLSDAEncoding();
   }
 
   HasTextRelocations = (bool)BC->getUniqueSectionByName(
@@ -2800,8 +2805,7 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
   auto ExtractAddendValue = [&](uint64_t Address) -> uint64_t {
     ErrorOr<BinarySection &> Section = BC->getSectionForAddress(Address);
     assert(Section && "cannot get section for data address from RELR");
-    DataExtractor DE = DataExtractor(Section->getContents(),
-                                     BC->AsmInfo->isLittleEndian(), PSize);
+    DataExtractor DE(Section->getContents(), BC->AsmInfo->isLittleEndian());
     uint64_t Offset = Address - Section->getAddress();
     return DE.getUnsigned(&Offset, PSize);
   };
@@ -2814,8 +2818,7 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
     BC->addDynamicRelocation(Address, nullptr, RType, Addend);
   };
 
-  DataExtractor DE = DataExtractor(Section.getContents(),
-                                   BC->AsmInfo->isLittleEndian(), PSize);
+  DataExtractor DE(Section.getContents(), BC->AsmInfo->isLittleEndian());
   uint64_t Offset = 0, Address = 0;
   uint64_t RelrCount = DynamicRelrSize / DynamicRelrEntrySize;
   while (RelrCount--) {
@@ -4102,6 +4105,9 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
       CodeSections.emplace_back(&Section);
 
   auto compareSections = [&](const BinarySection *A, const BinarySection *B) {
+    if (A == B)
+      return false;
+
     // If both A and B have names starting with ".text.cold", then
     // - if opts::HotFunctionsAtEnd is true, we want order
     //   ".text.cold.T", ".text.cold.T-1", ... ".text.cold.1", ".text.cold"
@@ -6426,6 +6432,7 @@ void RewriteInstance::writeEHFrameHeader() {
 
   // If there was not enough space, allocate more memory for .eh_frame_hdr.
   if (!OldEHFrameHdrSection) {
+    Out->os().seek(getFileOffsetForAddress(NextAvailableAddress));
     NextAvailableAddress =
         appendPadding(Out->os(), NextAvailableAddress, EHFrameHdrAlign);
 

@@ -19,7 +19,6 @@ void test_cleanup_array() {
 // CIR-BEFORE-LPP:   cir.array.dtor %[[S]] : !cir.ptr<!cir.array<!rec_S x 42>> {
 // CIR-BEFORE-LPP:   ^bb0(%arg0: !cir.ptr<!rec_S>
 // CIR-BEFORE-LPP:     cir.call @_ZN1SD1Ev(%arg0) nothrow : (!cir.ptr<!rec_S> {{.*}}) -> ()
-// CIR-BEFORE-LPP:     cir.yield
 // CIR-BEFORE-LPP:   }
 // CIR-BEFORE-LPP:   cir.return
 
@@ -113,7 +112,6 @@ void multi_dimensional() {
 // CIR-BEFORE-LPP:       cir.array.dtor %[[FLAT]] : !cir.ptr<!cir.array<!rec_S x 15>> {
 // CIR-BEFORE-LPP:       ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_S>):
 // CIR-BEFORE-LPP:         cir.call @_ZN1SD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_S> {{.*}}) -> ()
-// CIR-BEFORE-LPP:         cir.yield
 // CIR-BEFORE-LPP:       }
 // CIR-BEFORE-LPP:       cir.return
 

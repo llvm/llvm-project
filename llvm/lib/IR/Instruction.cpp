@@ -533,25 +533,35 @@ void Instruction::dropPoisonGeneratingMetadata() {
     eraseMetadata(ID);
 }
 
-bool Instruction::hasPoisonGeneratingReturnAttributes() const {
+bool Instruction::hasPoisonGeneratingAttributes() const {
   if (const auto *CB = dyn_cast<CallBase>(this)) {
-    AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
-    return RetAttrs.hasAttribute(Attribute::Range) ||
-           RetAttrs.hasAttribute(Attribute::Alignment) ||
-           RetAttrs.hasAttribute(Attribute::NonNull);
+    auto HasPoisonGeneratingAttributes = [](AttributeSet Attrs) {
+      return Attrs.hasAttribute(Attribute::Range) ||
+             Attrs.hasAttribute(Attribute::Alignment) ||
+             Attrs.hasAttribute(Attribute::NonNull) ||
+             Attrs.hasAttribute(Attribute::NoFPClass);
+    };
+    if (HasPoisonGeneratingAttributes(CB->getRetAttributes()))
+      return true;
+    for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+      if (HasPoisonGeneratingAttributes(CB->getParamAttributes(ArgNo)))
+        return true;
   }
   return false;
 }
 
-void Instruction::dropPoisonGeneratingReturnAttributes() {
+void Instruction::dropPoisonGeneratingAttributes() {
   if (auto *CB = dyn_cast<CallBase>(this)) {
     AttributeMask AM;
     AM.addAttribute(Attribute::Range);
     AM.addAttribute(Attribute::Alignment);
     AM.addAttribute(Attribute::NonNull);
+    AM.addAttribute(Attribute::NoFPClass);
     CB->removeRetAttrs(AM);
+    for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+      CB->removeParamAttrs(ArgNo, AM);
   }
-  assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
+  assert(!hasPoisonGeneratingAttributes() && "must be kept in sync");
 }
 
 void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
@@ -959,6 +969,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
                cast<AtomicCmpXchgInst>(I2)->getSyncScopeID();
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I1))
     return RMWI->getOperation() == cast<AtomicRMWInst>(I2)->getOperation() &&
+           RMWI->isElementwise() == cast<AtomicRMWInst>(I2)->isElementwise() &&
            RMWI->isVolatile() == cast<AtomicRMWInst>(I2)->isVolatile() &&
            (RMWI->getAlign() == cast<AtomicRMWInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
@@ -1159,6 +1170,33 @@ bool Instruction::isVolatile() const {
   }
 }
 
+bool Instruction::maySynchronize() const {
+  // FIXME: This currently treats atomics with monotonic ordering as
+  // synchronizing. This is unnecessarily conservative and does not match
+  // our LangRef definition of the property.
+  switch (getOpcode()) {
+  default:
+    assert(!isAtomic() && "Unhandled atomic instruction");
+    return false;
+  case Instruction::Fence: {
+    // All legal orderings for fence are stronger than monotonic.
+    auto *FI = cast<FenceInst>(this);
+    return FI->getSyncScopeID() != SyncScope::SingleThread;
+  }
+  case Instruction::AtomicRMW:
+  case Instruction::AtomicCmpXchg:
+    return true;
+  case Instruction::Store:
+    return isStrongerThanUnordered(cast<StoreInst>(this)->getOrdering());
+  case Instruction::Load:
+    return isStrongerThanUnordered(cast<LoadInst>(this)->getOrdering());
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return !cast<CallBase>(this)->hasFnAttr(Attribute::NoSync);
+  }
+}
+
 Type *Instruction::getAccessType() const {
   switch (getOpcode()) {
   case Instruction::Store:
@@ -1254,9 +1292,9 @@ bool Instruction::isSafeToRemove() const {
 }
 
 bool Instruction::willReturn() const {
-  // Volatile store isn't guaranteed to return; see LangRef.
-  if (auto *SI = dyn_cast<StoreInst>(this))
-    return !SI->isVolatile();
+  // Volatile operations are not guaranteed to return.
+  if (isVolatile())
+    return false;
 
   if (const auto *CB = dyn_cast<CallBase>(this))
     return CB->hasFnAttr(Attribute::WillReturn);

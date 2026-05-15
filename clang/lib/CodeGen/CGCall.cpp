@@ -22,6 +22,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
+#include "QualTypeMapper.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -32,6 +33,10 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
+#include "llvm/ABI/FunctionInfo.h"
+#include "llvm/ABI/IRTypeMapper.h"
+#include "llvm/ABI/TargetInfo.h"
+#include "llvm/ABI/Types.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -824,8 +829,69 @@ const CGFunctionInfo &CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,
 namespace clang {
 namespace CodeGen {
 void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
-}
+} // namespace CodeGen
 } // namespace clang
+
+void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
+  SmallVector<const llvm::abi::Type *> MappedArgTypes;
+  MappedArgTypes.reserve(FI.arg_size());
+  for (const auto &Arg : FI.arguments())
+    MappedArgTypes.push_back(AbiMapper->convertType(Arg.type));
+
+  std::optional<unsigned> NumRequired;
+  RequiredArgs Required = FI.getRequiredArgs();
+  if (Required.allowsOptionalArgs())
+    NumRequired = Required.getNumRequiredArgs();
+
+  llvm::abi::FunctionInfo *AbiFI = llvm::abi::FunctionInfo::create(
+      FI.getCallingConvention(), AbiMapper->convertType(FI.getReturnType()),
+      MappedArgTypes, NumRequired);
+
+  getLLVMABITargetInfo(AbiMapper->getTypeBuilder()).computeInfo(*AbiFI);
+
+  FI.getReturnInfo() =
+      convertABIArgInfo(AbiFI->getReturnInfo(), FI.getReturnType());
+
+  for (auto [CGArg, AbiArg] :
+       llvm::zip_equal(FI.arguments(), AbiFI->arguments()))
+    CGArg.info = convertABIArgInfo(AbiArg.Info, CGArg.type);
+}
+
+ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
+                                            QualType Type) {
+  switch (AbiInfo.getKind()) {
+  case llvm::abi::ArgInfo::Direct: {
+    llvm::Type *CoercedType = nullptr;
+    if (AbiInfo.getCoerceToType())
+      CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
+    if (!CoercedType)
+      CoercedType = getTypes().ConvertType(Type);
+    return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset());
+  }
+  case llvm::abi::ArgInfo::Extend: {
+    llvm::Type *CoercedType = nullptr;
+    if (AbiInfo.getCoerceToType())
+      CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
+    if (!CoercedType)
+      CoercedType = getTypes().ConvertType(Type);
+    if (AbiInfo.isSignExt())
+      return ABIArgInfo::getSignExtend(Type, CoercedType);
+    if (AbiInfo.isZeroExt())
+      return ABIArgInfo::getZeroExtend(Type, CoercedType);
+    return ABIArgInfo::getExtend(Type, CoercedType);
+  }
+  case llvm::abi::ArgInfo::Indirect: {
+    CharUnits Alignment =
+        CharUnits::fromQuantity(AbiInfo.getIndirectAlign().value());
+    return ABIArgInfo::getIndirect(Alignment, AbiInfo.getIndirectAddrSpace(),
+                                   AbiInfo.getIndirectByVal(),
+                                   AbiInfo.getIndirectRealign());
+  }
+  case llvm::abi::ArgInfo::Ignore:
+    return ABIArgInfo::getIgnore();
+  }
+  llvm_unreachable("Unexpected llvm::abi::ArgInfo kind");
+}
 
 /// Arrange the argument and result information for an abstract value
 /// of a given function type.  This is the method which all of the
@@ -866,12 +932,18 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   assert(inserted && "Recursively being processed?");
 
   // Compute ABI information.
-  if (CC == llvm::CallingConv::SPIR_KERNEL) {
+  if (info.getCC() == CC_DeviceKernel &&
+      (CC == llvm::CallingConv::SPIR_KERNEL || CC == llvm::CallingConv::C)) {
     // Force target independent argument handling for the host visible
     // kernel functions.
+    //
+    // For CPU targets, this currently only works for OpenCL.
+    assert(CC != llvm::CallingConv::C || getContext().getLangOpts().OpenCL);
     computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
+  } else if (CGM.shouldUseLLVMABILowering()) {
+    CGM.computeABIInfoUsingLib(*FI);
   } else {
     CGM.getABIInfo().computeInfo(*FI);
   }
@@ -5423,6 +5495,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // If the call returns a temporary with struct return, create a temporary
   // alloca to hold the result, unless one is given to us.
   Address SRetPtr = Address::invalid();
+  // Original alloca for lifetime markers
+  Address SRetAlloca = Address::invalid();
   bool NeedSRetLifetimeEnd = false;
   if (RetAI.isIndirect() || RetAI.isInAlloca() || RetAI.isCoerceAndExpand()) {
     // For virtual function pointer thunks and musttail calls, we must always
@@ -5437,8 +5511,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       SRetPtr = ReturnValue.getAddress();
     } else {
       SRetPtr = CreateMemTempWithoutCast(RetTy, "tmp");
-      if (HaveInsertPoint() && ReturnValue.isUnused())
+      if (HaveInsertPoint() && ReturnValue.isUnused()) {
         NeedSRetLifetimeEnd = EmitLifetimeStart(SRetPtr.getBasePointer());
+        if (NeedSRetLifetimeEnd)
+          SRetAlloca = SRetPtr;
+      }
     }
     if (IRFunctionArgs.hasSRetArg()) {
       // A mismatch between the allocated return value's AS and the target's
@@ -6023,8 +6100,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // can't depend on being inside of an ExprWithCleanups, so we need to manually
   // pop this cleanup later on. Being eager about this is OK, since this
   // temporary is 'invisible' outside of the callee.
+  // Use the original alloca pointer (before any addrspacecast) for the
+  // lifetime end marker, since lifetime intrinsics must reference the alloca
+  // address space.
   if (NeedSRetLifetimeEnd)
-    pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, SRetPtr);
+    pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, SRetAlloca);
 
   llvm::BasicBlock *InvokeDest = CannotThrow ? nullptr : getInvokeDest();
 
@@ -6242,6 +6322,18 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (IsMustTail) {
     for (auto it = EHStack.find(CurrentCleanupScopeDepth); it != EHStack.end();
          ++it) {
+      // A noexcept caller pushes an EHTerminateScope to call std::terminate()
+      // if an exception escapes. A musttail call replaces the caller's frame,
+      // removing this handler. This is safe if the callee is also nounwind:
+      // the callee's own noexcept handler prevents any exception from reaching
+      // where the caller's handler would have been.
+      if (isa<EHTerminateScope>(&*it)) {
+        if (CI->doesNotThrow())
+          continue;
+        CGM.getDiags().Report(MustTailCall->getBeginLoc(),
+                              diag::err_musttail_noexcept_mismatch);
+        break;
+      }
       EHCleanupScope *Cleanup = dyn_cast<EHCleanupScope>(&*it);
       // Fake uses can be safely emitted immediately prior to the tail call, so
       // we choose to emit them just before the call here.

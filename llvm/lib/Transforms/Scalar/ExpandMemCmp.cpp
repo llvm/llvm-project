@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -878,56 +879,32 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   return true;
 }
 
-// Returns true if a change was made.
-static bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
-                       const TargetTransformInfo *TTI, const DataLayout &DL,
-                       ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
-                       DomTreeUpdater *DTU);
-
 static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
                                  const TargetTransformInfo *TTI,
                                  ProfileSummaryInfo *PSI,
-                                 BlockFrequencyInfo *BFI, DominatorTree *DT);
-
-bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
-                const TargetTransformInfo *TTI, const DataLayout &DL,
-                ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
-                DomTreeUpdater *DTU) {
-  for (Instruction &I : BB) {
-    CallInst *CI = dyn_cast<CallInst>(&I);
-    if (!CI) {
-      continue;
-    }
-    LibFunc Func;
-    if (TLI->getLibFunc(*CI, Func) &&
-        (Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
-        expandMemCmp(CI, TTI, &DL, PSI, BFI, DTU, Func == LibFunc_bcmp)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
-                          const TargetTransformInfo *TTI,
-                          ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
-                          DominatorTree *DT) {
+                                 BlockFrequencyInfo *BFI, DominatorTree *DT) {
   std::optional<DomTreeUpdater> DTU;
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
   const DataLayout& DL = F.getDataLayout();
-  bool MadeChanges = false;
-  for (auto BBIt = F.begin(); BBIt != F.end();) {
-    if (runOnBlock(*BBIt, TLI, TTI, DL, PSI, BFI, DTU ? &*DTU : nullptr)) {
-      MadeChanges = true;
-      // If changes were made, restart the function from the beginning, since
-      // the structure of the function was changed.
-      BBIt = F.begin();
-    } else {
-      ++BBIt;
+  SmallVector<std::pair<CallInst *, LibFunc>, 8> MemCmpCalls;
+  for (Instruction &I : instructions(F)) {
+    if (auto *CI = dyn_cast<CallInst>(&I)) {
+      LibFunc Func;
+      if (TLI->getLibFunc(*CI, Func) &&
+          (Func == LibFunc_memcmp || Func == LibFunc_bcmp))
+        MemCmpCalls.push_back({CI, Func});
     }
   }
+
+  bool MadeChanges = false;
+  for (const auto &[CI, Func] : MemCmpCalls) {
+    if (expandMemCmp(CI, TTI, &DL, PSI, BFI, DTU ? &*DTU : nullptr,
+                     Func == LibFunc_bcmp))
+      MadeChanges = true;
+  }
+
   if (MadeChanges)
     for (BasicBlock &BB : F)
       SimplifyInstructionsInBlock(&BB);

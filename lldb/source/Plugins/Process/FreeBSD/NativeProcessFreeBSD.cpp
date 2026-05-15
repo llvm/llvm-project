@@ -749,9 +749,9 @@ Status NativeProcessFreeBSD::GetLoadedModuleFileSpec(const char *module_path,
       return Status();
     }
   }
-  return Status::FromErrorStringWithFormat(
-      "Module file (%s) not found in process' memory map!",
-      module_file_spec.GetFilename().AsCString());
+  return Status::FromErrorStringWithFormatv(
+      "Module file ({0}) not found in process' memory map!",
+      module_file_spec.GetFilename());
 }
 
 Status

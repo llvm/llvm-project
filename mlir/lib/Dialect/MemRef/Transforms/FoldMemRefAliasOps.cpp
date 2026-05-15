@@ -1,4 +1,4 @@
-//===- FoldMemRefAliasOps.cpp - Fold memref alias ops -----===//
+//===- FoldMemRefAliasOps.cpp - Fold memref alias ops ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,13 +13,11 @@
 
 #include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -72,14 +70,6 @@ static Value getMemRefOperand(LoadOrStoreOpTy op) {
   return op.getMemref();
 }
 
-static Value getMemRefOperand(vector::TransferReadOp op) {
-  return op.getBase();
-}
-
-static Value getMemRefOperand(nvgpu::LdMatrixOp op) {
-  return op.getSrcMemref();
-}
-
 static Value getMemRefOperand(vector::LoadOp op) { return op.getBase(); }
 
 static Value getMemRefOperand(vector::StoreOp op) { return op.getBase(); }
@@ -87,18 +77,6 @@ static Value getMemRefOperand(vector::StoreOp op) { return op.getBase(); }
 static Value getMemRefOperand(vector::MaskedLoadOp op) { return op.getBase(); }
 
 static Value getMemRefOperand(vector::MaskedStoreOp op) { return op.getBase(); }
-
-static Value getMemRefOperand(vector::TransferWriteOp op) {
-  return op.getBase();
-}
-
-static Value getMemRefOperand(gpu::SubgroupMmaLoadMatrixOp op) {
-  return op.getSrcMemref();
-}
-
-static Value getMemRefOperand(gpu::SubgroupMmaStoreMatrixOp op) {
-  return op.getDstMemref();
-}
 
 //===----------------------------------------------------------------------===//
 // Patterns
@@ -176,47 +154,18 @@ public:
     if (!srcSubView)
       return failure();
 
-    // TODO: relax unit stride assumption.
-    if (!subView.hasUnitStride()) {
-      return rewriter.notifyMatchFailure(subView, "requires unit strides");
-    }
-    if (!srcSubView.hasUnitStride()) {
-      return rewriter.notifyMatchFailure(srcSubView, "requires unit strides");
-    }
-
-    // Resolve sizes according to dropped dims.
-    SmallVector<OpFoldResult> resolvedSizes;
-    llvm::SmallBitVector srcDroppedDims = srcSubView.getDroppedDims();
-    affine::resolveSizesIntoOpWithSizes(srcSubView.getMixedSizes(),
-                                        subView.getMixedSizes(), srcDroppedDims,
-                                        resolvedSizes);
-
-    // Resolve offsets according to source offsets and strides.
-    SmallVector<Value> resolvedOffsets;
-    affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-        rewriter, subView.getLoc(), srcSubView.getMixedOffsets(),
-        srcSubView.getMixedStrides(), srcDroppedDims, subView.getMixedOffsets(),
-        resolvedOffsets);
+    SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
+    if (failed(affine::mergeOffsetsSizesAndStrides(
+            rewriter, subView.getLoc(), srcSubView, subView,
+            srcSubView.getDroppedDims(), newOffsets, newSizes, newStrides)))
+      return failure();
 
     // Replace original op.
     rewriter.replaceOpWithNewOp<memref::SubViewOp>(
-        subView, subView.getType(), srcSubView.getSource(),
-        getAsOpFoldResult(resolvedOffsets), resolvedSizes,
-        srcSubView.getMixedStrides());
-
+        subView, subView.getType(), srcSubView.getSource(), newOffsets,
+        newSizes, newStrides);
     return success();
   }
-};
-
-/// Folds nvgpu.device_async_copy subviews into the copy itself. This pattern
-/// is folds subview on src and dst memref of the copy.
-class NVGPUAsyncCopyOpSubViewOpFolder final
-    : public OpRewritePattern<nvgpu::DeviceAsyncCopyOp> {
-public:
-  using OpRewritePattern<nvgpu::DeviceAsyncCopyOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(nvgpu::DeviceAsyncCopyOp copyOp,
-                                PatternRewriter &rewriter) const override;
 };
 
 /// Merges subview operations with load/store like operations unless such a
@@ -294,40 +243,53 @@ struct IndexedMemCopyOpOfCollapseShapeOpFolder final
   LogicalResult matchAndRewrite(memref::IndexedMemCopyOpInterface op,
                                 PatternRewriter &rewriter) const override;
 };
-} // namespace
 
-template <typename XferOp>
-static LogicalResult
-preconditionsFoldSubViewOpImpl(RewriterBase &rewriter, XferOp xferOp,
-                               memref::SubViewOp subviewOp) {
-  static_assert(
-      !llvm::is_one_of<vector::TransferReadOp, vector::TransferWriteOp>::value,
-      "must be a vector transfer op");
-  if (xferOp.hasOutOfBoundsDim())
-    return rewriter.notifyMatchFailure(xferOp, "out of bounds transfer dim");
-  if (!subviewOp.hasUnitStride()) {
-    return rewriter.notifyMatchFailure(
-        xferOp, "non-1 stride subview, need to track strides in folded memref");
-  }
-  return success();
-}
+/// Merges memref.subview ops on the base argument to vector transfer operations
+/// into the base and indices of that transfer if:
+/// - The subview has unit strides on transfer dimensions
+/// - All the transfer dimensions are in-bounds
+/// This will correctly update said permutation map to account for dropped
+/// dimensions in rank-reducing subviews.
+struct TransferOpOfSubViewOpFolder final
+    : OpInterfaceRewritePattern<VectorTransferOpInterface> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(VectorTransferOpInterface op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Merges memref.expand_shape ops that create the base of a vector transfer
+/// operation into the base and indices of that transfer. Does not act when the
+/// a dimension is potentially out of bounds, if one of the transfer dimensions
+/// would need to be strided because of the collapse, or if it would merge two
+/// dimensions that are both transfer dimensions.
+/// TODO: become more sophisticated about length-1 dimensions that are the
+/// result of an expansion becoming broadcasts.
+struct TransferOpOfExpandShapeOpFolder final
+    : OpInterfaceRewritePattern<VectorTransferOpInterface> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(VectorTransferOpInterface op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Merges memref.collapse_shape ops that create the base of a vector transfer
+/// operation into the base and indices of that transfer. Does not act when the
+/// permutation map is not trivial, a dimension could be performing out of
+/// bounds reads, or if it would break apart a transfer dimension.
+struct TransferOpOfCollapseShapeOpFolder final
+    : OpInterfaceRewritePattern<VectorTransferOpInterface> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(VectorTransferOpInterface op,
+                                PatternRewriter &rewriter) const override;
+};
+} // namespace
 
 static LogicalResult preconditionsFoldSubViewOp(RewriterBase &rewriter,
                                                 Operation *op,
                                                 memref::SubViewOp subviewOp) {
   return success();
-}
-
-static LogicalResult preconditionsFoldSubViewOp(RewriterBase &rewriter,
-                                                vector::TransferReadOp readOp,
-                                                memref::SubViewOp subviewOp) {
-  return preconditionsFoldSubViewOpImpl(rewriter, readOp, subviewOp);
-}
-
-static LogicalResult preconditionsFoldSubViewOp(RewriterBase &rewriter,
-                                                vector::TransferWriteOp writeOp,
-                                                memref::SubViewOp subviewOp) {
-  return preconditionsFoldSubViewOpImpl(rewriter, writeOp, subviewOp);
 }
 
 template <typename OpTy>
@@ -364,24 +326,6 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
             op, op.getType(), subViewOp.getSource(), sourceIndices,
             op.getMask(), op.getPassThru());
       })
-      .Case([&](vector::TransferReadOp op) {
-        rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-            op, op.getVectorType(), subViewOp.getSource(), sourceIndices,
-            AffineMapAttr::get(expandDimsToRank(
-                op.getPermutationMap(), subViewOp.getSourceType().getRank(),
-                subViewOp.getDroppedDims())),
-            op.getPadding(), op.getMask(), op.getInBoundsAttr());
-      })
-      .Case([&](gpu::SubgroupMmaLoadMatrixOp op) {
-        rewriter.replaceOpWithNewOp<gpu::SubgroupMmaLoadMatrixOp>(
-            op, op.getType(), subViewOp.getSource(), sourceIndices,
-            op.getLeadDimension(), op.getTransposeAttr());
-      })
-      .Case([&](nvgpu::LdMatrixOp op) {
-        rewriter.replaceOpWithNewOp<nvgpu::LdMatrixOp>(
-            op, op.getType(), subViewOp.getSource(), sourceIndices,
-            op.getTranspose(), op.getNumTiles());
-      })
       .DefaultUnreachable("unexpected operation");
   return success();
 }
@@ -394,40 +338,6 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
 
   if (!expandShapeOp)
     return failure();
-
-  // For vector::TransferReadOp, validate preconditions before creating any IR.
-  // resolveSourceIndicesExpandShape creates new ops, so all checks that can
-  // fail must happen before that call to avoid "pattern returned failure but
-  // IR did change" errors (caught by MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS).
-  SmallVector<AffineExpr> transferReadNewResults;
-  if (auto transferOp =
-          dyn_cast<vector::TransferReadOp>(loadOp.getOperation())) {
-    const int64_t vectorRank = transferOp.getVectorType().getRank();
-    const int64_t sourceRank =
-        cast<MemRefType>(expandShapeOp.getViewSource().getType()).getRank();
-    if (sourceRank < vectorRank)
-      return failure();
-
-    // We can only fold if the permutation map uses only the least significant
-    // dimension from each expanded reassociation group.
-    for (AffineExpr result : transferOp.getPermutationMap().getResults()) {
-      bool foundExpr = false;
-      for (auto reassocationIndices :
-           llvm::enumerate(expandShapeOp.getReassociationIndices())) {
-        auto reassociation = reassocationIndices.value();
-        AffineExpr dim = getAffineDimExpr(
-            reassociation[reassociation.size() - 1], rewriter.getContext());
-        if (dim == result) {
-          transferReadNewResults.push_back(getAffineDimExpr(
-              reassocationIndices.index(), rewriter.getContext()));
-          foundExpr = true;
-          break;
-        }
-      }
-      if (!foundExpr)
-        return failure();
-    }
-  }
 
   SmallVector<Value> sourceIndices;
   // memref.load guarantees that indexes start inbounds while the vector
@@ -453,16 +363,6 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
         rewriter.replaceOpWithNewOp<vector::MaskedLoadOp>(
             op, op.getType(), expandShapeOp.getViewSource(), sourceIndices,
             op.getMask(), op.getPassThru());
-        return success();
-      })
-      .Case([&](vector::TransferReadOp op) {
-        const int64_t sourceRank = sourceIndices.size();
-        auto newMap = AffineMap::get(sourceRank, 0, transferReadNewResults,
-                                     op.getContext());
-        rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-            op, op.getVectorType(), expandShapeOp.getViewSource(),
-            sourceIndices, newMap, op.getPadding(), op.getMask(),
-            op.getInBounds());
         return success();
       })
       .DefaultUnreachable("unexpected operation");
@@ -526,14 +426,6 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
             op, op.getValue(), subViewOp.getSource(), sourceIndices,
             op.getNontemporal());
       })
-      .Case([&](vector::TransferWriteOp op) {
-        rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-            op, op.getValue(), subViewOp.getSource(), sourceIndices,
-            AffineMapAttr::get(expandDimsToRank(
-                op.getPermutationMap(), subViewOp.getSourceType().getRank(),
-                subViewOp.getDroppedDims())),
-            op.getMask(), op.getInBoundsAttr());
-      })
       .Case([&](vector::StoreOp op) {
         rewriter.replaceOpWithNewOp<vector::StoreOp>(
             op, op.getValueToStore(), subViewOp.getSource(), sourceIndices);
@@ -542,11 +434,6 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
         rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
             op, subViewOp.getSource(), sourceIndices, op.getMask(),
             op.getValueToStore());
-      })
-      .Case([&](gpu::SubgroupMmaStoreMatrixOp op) {
-        rewriter.replaceOpWithNewOp<gpu::SubgroupMmaStoreMatrixOp>(
-            op, op.getSrc(), subViewOp.getSource(), sourceIndices,
-            op.getLeadDimension(), op.getTransposeAttr());
       })
       .DefaultUnreachable("unexpected operation");
   return success();
@@ -822,54 +709,142 @@ LogicalResult IndexedMemCopyOpOfCollapseShapeOpFolder::matchAndRewrite(
   return success();
 }
 
-LogicalResult NVGPUAsyncCopyOpSubViewOpFolder::matchAndRewrite(
-    nvgpu::DeviceAsyncCopyOp copyOp, PatternRewriter &rewriter) const {
+LogicalResult
+TransferOpOfSubViewOpFolder::matchAndRewrite(VectorTransferOpInterface op,
+                                             PatternRewriter &rewriter) const {
+  auto subview = op.getBase().getDefiningOp<memref::SubViewOp>();
+  if (!subview)
+    return rewriter.notifyMatchFailure(op, "not accessing a subview");
 
-  LLVM_DEBUG(DBGS() << "copyOp       : " << copyOp << "\n");
+  AffineMap perm = op.getPermutationMap();
+  // Note: no identity permutation check here, since subview folding can handle
+  // complex permutations because it doesn't merge or split any individual
+  // dimension.
+  if (op.hasOutOfBoundsDim())
+    return rewriter.notifyMatchFailure(op, "out of bounds dimension");
+  VectorType vecTy = op.getVectorType();
+  // Because we know the permutation map is a minor identity, we know that the
+  // last N dimensions must have unit stride, where N is the vector rank.
+  if (!hasTrailingUnitStrides(subview, vecTy.getRank()))
+    return rewriter.notifyMatchFailure(subview, "non-unit stride within last " +
+                                                    Twine(vecTy.getRank()) +
+                                                    " dimensions");
 
-  auto srcSubViewOp =
-      copyOp.getSrc().template getDefiningOp<memref::SubViewOp>();
-  auto dstSubViewOp =
-      copyOp.getDst().template getDefiningOp<memref::SubViewOp>();
+  AffineMap newPerm = expandDimsToRank(perm, subview.getSourceType().getRank(),
+                                       subview.getDroppedDims());
 
-  if (!(srcSubViewOp || dstSubViewOp))
-    return rewriter.notifyMatchFailure(copyOp, "does not use subview ops for "
-                                               "source or destination");
+  if (failed(op.mayUpdateStartingPosition(subview.getSourceType(), newPerm)))
+    return rewriter.notifyMatchFailure(subview,
+                                       "failed op-specific preconditions");
 
-  // If the source is a subview, we need to resolve the indices.
-  SmallVector<Value> foldedSrcIndices(copyOp.getSrcIndices().begin(),
-                                      copyOp.getSrcIndices().end());
+  SmallVector<Value> newIndices;
+  affine::resolveIndicesIntoOpWithOffsetsAndStrides(
+      rewriter, op.getLoc(), subview.getMixedOffsets(),
+      subview.getMixedStrides(), subview.getDroppedDims(), op.getIndices(),
+      newIndices);
+  op.updateStartingPosition(rewriter, subview.getSource(), newIndices,
+                            AffineMapAttr::get(newPerm));
+  return success();
+}
 
-  if (srcSubViewOp) {
-    LLVM_DEBUG(DBGS() << "srcSubViewOp : " << srcSubViewOp << "\n");
-    affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-        rewriter, copyOp.getLoc(), srcSubViewOp.getMixedOffsets(),
-        srcSubViewOp.getMixedStrides(), srcSubViewOp.getDroppedDims(),
-        copyOp.getSrcIndices(), foldedSrcIndices);
+LogicalResult TransferOpOfExpandShapeOpFolder::matchAndRewrite(
+    VectorTransferOpInterface op, PatternRewriter &rewriter) const {
+  auto expand = op.getBase().getDefiningOp<memref::ExpandShapeOp>();
+  if (!expand)
+    return rewriter.notifyMatchFailure(op, "not accessing an expand_shape");
+
+  if (op.hasOutOfBoundsDim())
+    return rewriter.notifyMatchFailure(op, "out of bounds dimension");
+
+  int64_t srcRank = expand.getSrc().getType().getRank();
+  int64_t vecRank = op.getVectorType().getRank();
+  if (srcRank < vecRank)
+    return rewriter.notifyMatchFailure(op,
+                                       "source rank is less than vector rank");
+
+  llvm::SmallDenseMap<int64_t, int64_t, 8> unstridedResDimToSrcDim;
+  for (auto [srcIdx, reassoc] :
+       llvm::enumerate(expand.getReassociationIndices())) {
+    unstridedResDimToSrcDim.insert({reassoc.back(), srcIdx});
+  }
+  // If every dimension of the expanded shape that appears in the permutation
+  // map is also present in the final entry of the expansions (meaning that
+  // collapsing in more values won't cause us to need to stride the index), we
+  // can fold in the expansion. (This doesn't currently account for expanding
+  // length X to X by 1, but it could in the future).
+  AffineMap permMap = op.getPermutationMap();
+  SmallVector<AffineExpr> newPermMapResults;
+  newPermMapResults.reserve(permMap.getNumResults());
+  for (AffineExpr permRes : permMap.getResults()) {
+    auto resDim = dyn_cast<AffineDimExpr>(permRes);
+    if (!resDim)
+      return rewriter.notifyMatchFailure(
+          op, "has non-dim entry in permutation map");
+    auto dimInSrc = unstridedResDimToSrcDim.find(resDim.getPosition());
+    if (dimInSrc == unstridedResDimToSrcDim.end())
+      return rewriter.notifyMatchFailure(op,
+                                         "permutation map result would be made "
+                                         "strided by expand_shape folding");
+    newPermMapResults.push_back(rewriter.getAffineDimExpr(dimInSrc->second));
   }
 
-  // If the destination is a subview, we need to resolve the indices.
-  SmallVector<Value> foldedDstIndices(copyOp.getDstIndices().begin(),
-                                      copyOp.getDstIndices().end());
+  auto newPerm = AffineMap::get(srcRank, 0, newPermMapResults, op.getContext());
 
-  if (dstSubViewOp) {
-    LLVM_DEBUG(DBGS() << "dstSubViewOp : " << dstSubViewOp << "\n");
-    affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-        rewriter, copyOp.getLoc(), dstSubViewOp.getMixedOffsets(),
-        dstSubViewOp.getMixedStrides(), dstSubViewOp.getDroppedDims(),
-        copyOp.getDstIndices(), foldedDstIndices);
-  }
+  if (failed(op.mayUpdateStartingPosition(expand.getSrc().getType(), newPerm)))
+    return rewriter.notifyMatchFailure(op, "failed op-specific preconditions");
 
-  // Replace the copy op with a new copy op that uses the source and destination
-  // of the subview.
-  rewriter.replaceOpWithNewOp<nvgpu::DeviceAsyncCopyOp>(
-      copyOp, nvgpu::DeviceAsyncTokenType::get(copyOp.getContext()),
-      (dstSubViewOp ? dstSubViewOp.getSource() : copyOp.getDst()),
-      foldedDstIndices,
-      (srcSubViewOp ? srcSubViewOp.getSource() : copyOp.getSrc()),
-      foldedSrcIndices, copyOp.getDstElements(), copyOp.getSrcElements(),
-      copyOp.getBypassL1Attr());
+  SmallVector<Value> newIndices;
+  // We can use a disjoint linearization if we aren't masking, because then all
+  // indicators show that the start position will be in bounds.
+  memref::resolveSourceIndicesExpandShape(op.getLoc(), rewriter, expand,
+                                          op.getIndices(), newIndices,
+                                          /*startsInbounds=*/!op.getMask());
 
+  op.updateStartingPosition(rewriter, expand.getViewSource(), newIndices,
+                            AffineMapAttr::get(newPerm));
+  return success();
+}
+
+LogicalResult TransferOpOfCollapseShapeOpFolder::matchAndRewrite(
+    VectorTransferOpInterface op, PatternRewriter &rewriter) const {
+  auto collapse = op.getBase().getDefiningOp<memref::CollapseShapeOp>();
+  if (!collapse)
+    return rewriter.notifyMatchFailure(op, "not accessing a collapse_shape");
+
+  if (!op.getPermutationMap().isMinorIdentity())
+    return rewriter.notifyMatchFailure(op,
+                                       "non-minor identity permutation map");
+
+  if (op.hasOutOfBoundsDim())
+    return rewriter.notifyMatchFailure(op, "out of bounds dimension");
+
+  int64_t srcRank = collapse.getSrc().getType().getRank();
+  int64_t vecRank = op.getVectorType().getRank();
+  if (srcRank < vecRank)
+    return rewriter.notifyMatchFailure(op,
+                                       "source rank is less than vector rank");
+
+  // Note: no - 1 on the rank here. While we could treat the collapse of [1, 1,
+  // N] into N as a special case, that is left as future work for those who need
+  // such a pattern.
+  SmallVector<ReassociationIndices> reassocs =
+      collapse.getReassociationIndices();
+  if (!hasTrivialReassociationSuffix(reassocs, vecRank))
+    return rewriter.notifyMatchFailure(
+        op, "collapse_shape folding would split a transfer dimension");
+
+  AffineMap newPerm =
+      AffineMap::getMinorIdentityMap(srcRank, vecRank, op.getContext());
+  if (failed(
+          op.mayUpdateStartingPosition(collapse.getSrc().getType(), newPerm)))
+    return rewriter.notifyMatchFailure(op, "failed op-specific preconditions");
+
+  SmallVector<Value> newIndices;
+  memref::resolveSourceIndicesCollapseShape(op.getLoc(), rewriter, collapse,
+                                            op.getIndices(), newIndices);
+
+  op.updateStartingPosition(rewriter, collapse.getViewSource(), newIndices,
+                            AffineMapAttr::get(newPerm));
   return success();
 }
 
@@ -879,28 +854,22 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
       AccessOpOfSubViewOpFolder, AccessOpOfExpandShapeOpFolder,
       AccessOpOfCollapseShapeOpFolder, IndexedMemCopyOpOfSubViewOpFolder,
       IndexedMemCopyOpOfExpandShapeOpFolder,
-      IndexedMemCopyOpOfCollapseShapeOpFolder,
+      IndexedMemCopyOpOfCollapseShapeOpFolder, TransferOpOfSubViewOpFolder,
+      TransferOpOfExpandShapeOpFolder, TransferOpOfCollapseShapeOpFolder,
       // The old way of doing things. Don't add more of these.
-      LoadOpOfSubViewOpFolder<nvgpu::LdMatrixOp>,
       LoadOpOfSubViewOpFolder<vector::LoadOp>,
       LoadOpOfSubViewOpFolder<vector::MaskedLoadOp>,
-      LoadOpOfSubViewOpFolder<vector::TransferReadOp>,
-      LoadOpOfSubViewOpFolder<gpu::SubgroupMmaLoadMatrixOp>,
-      StoreOpOfSubViewOpFolder<vector::TransferWriteOp>,
       StoreOpOfSubViewOpFolder<vector::StoreOp>,
       StoreOpOfSubViewOpFolder<vector::MaskedStoreOp>,
-      StoreOpOfSubViewOpFolder<gpu::SubgroupMmaStoreMatrixOp>,
       LoadOpOfExpandShapeOpFolder<vector::LoadOp>,
       LoadOpOfExpandShapeOpFolder<vector::MaskedLoadOp>,
-      LoadOpOfExpandShapeOpFolder<vector::TransferReadOp>,
       StoreOpOfExpandShapeOpFolder<vector::StoreOp>,
       StoreOpOfExpandShapeOpFolder<vector::MaskedStoreOp>,
       LoadOpOfCollapseShapeOpFolder<vector::LoadOp>,
       LoadOpOfCollapseShapeOpFolder<vector::MaskedLoadOp>,
       StoreOpOfCollapseShapeOpFolder<vector::StoreOp>,
       StoreOpOfCollapseShapeOpFolder<vector::MaskedStoreOp>,
-      SubViewOfSubViewFolder, NVGPUAsyncCopyOpSubViewOpFolder>(
-      patterns.getContext());
+      SubViewOfSubViewFolder>(patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//

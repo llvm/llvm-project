@@ -30,7 +30,7 @@ namespace llvm {
 
 cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
                                   cl::desc("Enable rewriting for LFI."),
-                                  cl::init(true));
+                                  cl::init(true), cl::Hidden);
 
 void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
                              const Triple &TheTriple) {
