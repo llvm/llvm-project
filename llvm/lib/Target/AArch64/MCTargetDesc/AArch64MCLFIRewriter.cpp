@@ -25,6 +25,53 @@
 
 using namespace llvm;
 
+namespace llvm::AArch64 {
+struct LFIVariantEntry {
+  unsigned Inst;
+  uint8_t AddrMode;
+  uint8_t Log2Size;
+  unsigned RoWInst;
+};
+struct PairVariantEntry {
+  unsigned Inst;
+  bool IsPre;
+  uint8_t Scale;
+  unsigned BaseInst;
+};
+struct SIMDPostEntry {
+  unsigned Inst;
+  uint8_t NaturalOffset;
+  unsigned BaseInst;
+};
+struct MemInfoEntry {
+  unsigned Inst;
+  uint8_t BaseIdx;
+  uint8_t OffsetIdx;
+  bool HasOffset;
+  bool IsPrePost;
+  bool IsLiteral;
+};
+
+// LFI addressing-mode codes (must match AArch64LFI.td's LFI_AM_* defs).
+enum LFIAddrMode : uint8_t {
+  LFI_AM_Ui = 0,
+  LFI_AM_RoW = 1,
+  LFI_AM_RoX = 2,
+  LFI_AM_Pre = 3,
+  LFI_AM_Post = 4,
+};
+
+#define GET_LFIVariantTable_DECL
+#define GET_PairVariantTable_DECL
+#define GET_SIMDPostTable_DECL
+#define GET_MemInfoTable_DECL
+#define GET_LFIVariantTable_IMPL
+#define GET_PairVariantTable_IMPL
+#define GET_SIMDPostTable_IMPL
+#define GET_MemInfoTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace llvm::AArch64
+
 // LFI reserved registers.
 static constexpr MCRegister LFIBaseReg = AArch64::X27;
 static constexpr MCRegister LFIAddrReg = AArch64::X28;
@@ -130,34 +177,58 @@ static MCInst replaceRegAt(const MCInst &Inst, unsigned Idx,
   return New;
 }
 
-// Memory instruction information for the base load/store rewriting path.
-// Provides operand indices for the base register and offset, and whether
-// the instruction uses pre/post-indexed addressing.
-struct MemInstInfo {
-  int BaseRegIdx;
-  std::optional<unsigned> OffsetIdx;
-  bool IsPrePost;
-  bool IsLiteral;
-};
-
-// Returns memory instruction info for a given opcode, or std::nullopt if
-// the opcode is not a recognized memory instruction.
-static std::optional<MemInstInfo> getMemInstInfo(unsigned Op);
-
 // AArch64 load/store opcode suffixes used throughout this file:
 //   Ui:  Unsigned immediate offset, scaled by access size: [Xn, #imm].
 //   RoW: Register offset with 32-bit W register: [Xn, Wm, uxtw #shift].
 //   RoX: Register offset with 64-bit X register: [Xn, Xm, lsl #shift].
 
-static unsigned convertUiToRoW(unsigned Op);
-static unsigned convertPreToRoW(unsigned Op);
-static unsigned convertPostToRoW(unsigned Op);
-static unsigned convertRoXToRoW(unsigned Op, unsigned &Shift);
-static bool getRoWShift(unsigned Op, unsigned &Shift);
-static unsigned getPrePostScale(unsigned Op);
+// Scalar load/store variant lookup. If Op is a scalar mem instruction with
+// addressing mode ExpectedMode, returns the RoW variant of the same family.
+// Returns INSTRUCTION_LIST_END otherwise.
+static unsigned convertVariantToRoW(unsigned Op, unsigned ExpectedMode) {
+  const AArch64::LFIVariantEntry *E = AArch64::lookupLFIVariantByOpcode(Op);
+  if (!E || E->AddrMode != ExpectedMode)
+    return AArch64::INSTRUCTION_LIST_END;
+  return E->RoWInst;
+}
+
+static unsigned convertRoXToRoW(unsigned Op, unsigned &Shift) {
+  Shift = 0;
+  const AArch64::LFIVariantEntry *E = AArch64::lookupLFIVariantByOpcode(Op);
+  if (!E || E->AddrMode != AArch64::LFI_AM_RoX)
+    return AArch64::INSTRUCTION_LIST_END;
+  Shift = E->Log2Size;
+  return E->RoWInst;
+}
+
+static bool getRoWShift(unsigned Op, unsigned &Shift) {
+  Shift = 0;
+  const AArch64::LFIVariantEntry *E = AArch64::lookupLFIVariantByOpcode(Op);
+  if (!E || E->AddrMode != AArch64::LFI_AM_RoW)
+    return false;
+  Shift = E->Log2Size;
+  return true;
+}
+
+// Pre/post-index conversion to base form. Both LDP/STP pair pre/post forms and
+// SIMD post-index forms come from generated lookup tables. The pair table sets
+// IsPre to distinguish pre-index from post-index. The SIMD table is
+// post-index-only so IsNoOffset is set to indicate the demoted base form takes
+// no immediate offset.
 static unsigned convertPrePostToBase(unsigned Op, bool &IsPre,
-                                     bool &IsNoOffset);
-static int getSIMDNaturalOffset(unsigned Op);
+                                     bool &IsNoOffset) {
+  IsPre = false;
+  IsNoOffset = false;
+  if (const auto *E = AArch64::lookupPairVariantByOpcode(Op)) {
+    IsPre = E->IsPre;
+    return E->BaseInst;
+  }
+  if (const auto *E = AArch64::lookupSIMDPostByOpcode(Op)) {
+    IsNoOffset = true;
+    return E->BaseInst;
+  }
+  return AArch64::INSTRUCTION_LIST_END;
+}
 
 bool AArch64MCLFIRewriter::mayModifySP(const MCInst &Inst) const {
   return mayModifyRegister(Inst, AArch64::SP);
@@ -409,7 +480,8 @@ bool AArch64MCLFIRewriter::rewriteLoadStoreRoW(const MCInst &Inst,
 
   // Case 1: Indexed load/store with zero immediate offset.
   // ldr xN, [xM, #0] -> ldr xN, [x27, wM, uxtw]
-  if ((MemOp = convertUiToRoW(Op)) != AArch64::INSTRUCTION_LIST_END) {
+  if ((MemOp = convertVariantToRoW(Op, AArch64::LFI_AM_Ui)) !=
+      AArch64::INSTRUCTION_LIST_END) {
     MCRegister BaseReg = Inst.getOperand(1).getReg();
     if (BaseReg == AArch64::SP)
       return false;
@@ -423,7 +495,8 @@ bool AArch64MCLFIRewriter::rewriteLoadStoreRoW(const MCInst &Inst,
 
   // Case 2: Pre-index load/store with writeback.
   // ldr xN, [xM, #imm]! -> add xM, xM, #imm; ldr xN, [x27, wM, uxtw]
-  if ((MemOp = convertPreToRoW(Op)) != AArch64::INSTRUCTION_LIST_END) {
+  if ((MemOp = convertVariantToRoW(Op, AArch64::LFI_AM_Pre)) !=
+      AArch64::INSTRUCTION_LIST_END) {
     MCRegister BaseReg = Inst.getOperand(2).getReg();
     if (BaseReg == AArch64::SP)
       return false;
@@ -435,7 +508,8 @@ bool AArch64MCLFIRewriter::rewriteLoadStoreRoW(const MCInst &Inst,
 
   // Case 3: Post-index load/store.
   // ldr xN, [xM], #imm -> ldr xN, [x27, wM, uxtw]; add xM, xM, #imm
-  if ((MemOp = convertPostToRoW(Op)) != AArch64::INSTRUCTION_LIST_END) {
+  if ((MemOp = convertVariantToRoW(Op, AArch64::LFI_AM_Post)) !=
+      AArch64::INSTRUCTION_LIST_END) {
     MCRegister BaseReg = Inst.getOperand(2).getReg();
     if (BaseReg == AArch64::SP)
       return false;
@@ -498,7 +572,7 @@ void AArch64MCLFIRewriter::rewriteLoadStoreBase(const MCInst &Inst,
                                                 MCStreamer &Out,
                                                 const MCSubtargetInfo &STI) {
   unsigned Opcode = Inst.getOpcode();
-  auto Info = getMemInstInfo(Opcode);
+  const AArch64::MemInfoEntry *Info = AArch64::lookupMemInfoByOpcode(Opcode);
 
   if (!Info)
     return error(Inst, "unknown addressing mode for memory instruction in LFI");
@@ -506,15 +580,15 @@ void AArch64MCLFIRewriter::rewriteLoadStoreBase(const MCInst &Inst,
   if (Info->IsLiteral)
     return error(Inst, "PC-relative literal loads are not supported in LFI");
 
-  MCRegister BaseReg = Inst.getOperand(Info->BaseRegIdx).getReg();
+  MCRegister BaseReg = Inst.getOperand(Info->BaseIdx).getReg();
 
   // Stack accesses don't need address sandboxing, except when sp is modified
   // with a non-zero register post-index operand.
   bool BaseIsSP = BaseReg == AArch64::SP;
   if (BaseIsSP) {
-    if (!Info->OffsetIdx || !Inst.getOperand(*Info->OffsetIdx).isReg())
+    if (!Info->HasOffset || !Inst.getOperand(Info->OffsetIdx).isReg())
       return emitInst(Inst, Out, STI);
-    MCRegister OffReg = Inst.getOperand(*Info->OffsetIdx).getReg();
+    MCRegister OffReg = Inst.getOperand(Info->OffsetIdx).getReg();
     if (OffReg == AArch64::XZR || OffReg == AArch64::WZR)
       return emitInst(Inst, Out, STI);
   }
@@ -525,7 +599,7 @@ void AArch64MCLFIRewriter::rewriteLoadStoreBase(const MCInst &Inst,
 
   if (!Info->IsPrePost) {
     // Non-pre/post instruction: replace the base register operand.
-    MCInst NewInst = replaceRegAt(Inst, Info->BaseRegIdx, LFIAddrReg);
+    MCInst NewInst = replaceRegAt(Inst, Info->BaseIdx, LFIAddrReg);
     emitInst(NewInst, Out, STI);
     return;
   }
@@ -543,7 +617,7 @@ void AArch64MCLFIRewriter::rewriteLoadStoreBase(const MCInst &Inst,
   NewInst.setLoc(Inst.getLoc());
 
   // Skip writeback operand (operand 0) and copy data operands up to base.
-  for (int I = 1; I < Info->BaseRegIdx; ++I)
+  for (int I = 1; I < Info->BaseIdx; ++I)
     NewInst.addOperand(Inst.getOperand(I));
 
   // Add the access base register (LFIAddrReg or SP).
@@ -551,32 +625,35 @@ void AArch64MCLFIRewriter::rewriteLoadStoreBase(const MCInst &Inst,
   NewInst.addOperand(MCOperand::createReg(AccessBase));
 
   // For pre-index, include the offset; for post-index, use zero.
-  if (IsPre && Info->OffsetIdx)
-    NewInst.addOperand(Inst.getOperand(*Info->OffsetIdx));
+  if (IsPre && Info->HasOffset)
+    NewInst.addOperand(Inst.getOperand(Info->OffsetIdx));
   else if (!IsNoOffset)
     NewInst.addOperand(MCOperand::createImm(0));
 
   emitInst(NewInst, Out, STI);
 
-  if (!Info->OffsetIdx)
+  if (!Info->HasOffset)
     return;
 
   // Update the base register with the offset. If the base is SP, a register
   // offset must be sandboxed (the result is otherwise unbounded), and ADDXrs
   // cannot take SP, so the extended-register form via the scratch register is
   // used.
-  const MCOperand &OffsetOp = Inst.getOperand(*Info->OffsetIdx);
+  const MCOperand &OffsetOp = Inst.getOperand(Info->OffsetIdx);
   if (OffsetOp.isImm()) {
-    int64_t Scale = getPrePostScale(Opcode);
+    // Pair pre/post immediates are scaled by element size; other pre/post
+    // forms (scalar, SIMD) use the raw immediate (scale = 1).
+    int64_t Scale = 1;
+    if (const auto *E = AArch64::lookupPairVariantByOpcode(Opcode))
+      Scale = E->Scale;
     int64_t Offset = OffsetOp.getImm() * Scale;
     emitAddImm(BaseReg, BaseReg, Offset, Out, STI);
   } else if (OffsetOp.isReg()) {
     // SIMD post-index uses a register offset (XZR for natural offset).
     MCRegister OffReg = OffsetOp.getReg();
     if (OffReg == AArch64::XZR) {
-      int NaturalOffset = getSIMDNaturalOffset(Opcode);
-      if (NaturalOffset > 0)
-        emitAddImm(BaseReg, BaseReg, NaturalOffset, Out, STI);
+      if (const auto *E = AArch64::lookupSIMDPostByOpcode(Opcode))
+        emitAddImm(BaseReg, BaseReg, E->NaturalOffset, Out, STI);
     } else if (OffReg != AArch64::WZR) {
       if (BaseIsSP) {
         emitAddRegExtend(LFIScratchReg, AArch64::SP, OffReg, AArch64_AM::UXTX,
@@ -721,9 +798,11 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
 // This function is made available to the size estimator so that it can
 // classify Pre/Post-index instructions.
 bool llvm::isLFIPrePostMemAccess(unsigned Opcode) {
-  if (convertPreToRoW(Opcode) != AArch64::INSTRUCTION_LIST_END)
+  if (convertVariantToRoW(Opcode, AArch64::LFI_AM_Pre) !=
+      AArch64::INSTRUCTION_LIST_END)
     return true;
-  if (convertPostToRoW(Opcode) != AArch64::INSTRUCTION_LIST_END)
+  if (convertVariantToRoW(Opcode, AArch64::LFI_AM_Post) !=
+      AArch64::INSTRUCTION_LIST_END)
     return true;
   bool IsPre, IsNoOffset;
   if (convertPrePostToBase(Opcode, IsPre, IsNoOffset) !=
@@ -744,541 +823,4 @@ bool AArch64MCLFIRewriter::rewriteInst(const MCInst &Inst, MCStreamer &Out,
 
   Guard = false;
   return true;
-}
-
-// Opcode X-macro Tables
-//
-// These macros define groups of related opcodes and are used to generate
-// multiple switch tables without repetition. Each macro takes a callback X and
-// invokes X(NAME, VALUE) for each entry.
-
-// Scalar memory ops that have ui, pre, post, roX, and roW variants.
-// PRFM is excluded because it has no pre/post forms.
-// The second column is the log2 element size (shift for scaled addressing).
-#define SCALAR_MEM_OPS(X)                                                      \
-  X(LDRBB, 0)                                                                  \
-  X(LDRB, 0)                                                                   \
-  X(LDRSBW, 0)                                                                 \
-  X(LDRSBX, 0)                                                                 \
-  X(STRBB, 0)                                                                  \
-  X(STRB, 0)                                                                   \
-  X(LDRHH, 1)                                                                  \
-  X(LDRH, 1)                                                                   \
-  X(LDRSHW, 1)                                                                 \
-  X(LDRSHX, 1)                                                                 \
-  X(STRHH, 1)                                                                  \
-  X(STRH, 1)                                                                   \
-  X(LDRSW, 2)                                                                  \
-  X(LDRS, 2)                                                                   \
-  X(LDRW, 2)                                                                   \
-  X(STRS, 2)                                                                   \
-  X(STRW, 2)                                                                   \
-  X(LDRD, 3)                                                                   \
-  X(LDRX, 3)                                                                   \
-  X(STRD, 3)                                                                   \
-  X(STRX, 3)                                                                   \
-  X(LDRQ, 4)                                                                   \
-  X(STRQ, 4)
-
-// LDP/STP pair ops. The second column is the scale factor for pre/post
-// immediates.
-#define PAIR_OPS(X)                                                            \
-  X(LDPD, 8)                                                                   \
-  X(LDPQ, 16)                                                                  \
-  X(LDPSW, 4)                                                                  \
-  X(LDPS, 4)                                                                   \
-  X(LDPW, 4)                                                                   \
-  X(LDPX, 8)                                                                   \
-  X(STPD, 8)                                                                   \
-  X(STPQ, 16)                                                                  \
-  X(STPS, 4)                                                                   \
-  X(STPW, 4)                                                                   \
-  X(STPX, 8)
-
-// SIMD post-index ops, split into three groups by operand layout.
-// The second column is the natural byte offset for post-index.
-
-// Lane stores: Vt, idx, [Rn] (base=2) / wback, Vt, idx, [Rn], Xm (base=3).
-
-// clang-format off
-#define SIMD_LANE_STORE_OPS(X)                                                 \
-  X(ST1i8, 1) X(ST1i16, 2) X(ST1i32,  4) X(ST1i64,  8)                         \
-  X(ST2i8, 2) X(ST2i16, 4) X(ST2i32,  8) X(ST2i64, 16)                         \
-  X(ST3i8, 3) X(ST3i16, 6) X(ST3i32, 12) X(ST3i64, 24)                         \
-  X(ST4i8, 4) X(ST4i16, 8) X(ST4i32, 16) X(ST4i64, 32)
-
-// Lane loads: Vt(out), Vt(tied), idx, [Rn] (base=3) /
-//             wback, Vt(out), Vt(tied), idx, [Rn], Xm (base=4).
-#define SIMD_LANE_LOAD_OPS(X)                                                  \
-  X(LD1i8, 1) X(LD1i16, 2) X(LD1i32,  4) X(LD1i64,  8)                         \
-  X(LD2i8, 2) X(LD2i16, 4) X(LD2i32,  8) X(LD2i64, 16)                         \
-  X(LD3i8, 3) X(LD3i16, 6) X(LD3i32, 12) X(LD3i64, 24)                         \
-  X(LD4i8, 4) X(LD4i16, 8) X(LD4i32, 16) X(LD4i64, 32)
-
-// Multiple structure and replicate: Vt, [Rn] (base=1) /
-//                                   wback, Vt, [Rn], Xm (base=2).
-// Each line pairs the LD and ST variants (replicates are LD-only).
-#define SIMD_MULTI_OPS(X)                                                      \
-  /* Replicate loads (LD only). */                                             \
-  X(LD1Rv8b,  1) X(LD1Rv16b,  1) X(LD1Rv4h,  2) X(LD1Rv8h,  2)                 \
-  X(LD1Rv2s,  4) X(LD1Rv4s,   4) X(LD1Rv1d,  8) X(LD1Rv2d,  8)                 \
-  X(LD2Rv8b,  2) X(LD2Rv16b,  2) X(LD2Rv4h,  4) X(LD2Rv8h,  4)                 \
-  X(LD2Rv2s,  8) X(LD2Rv4s,   8) X(LD2Rv1d, 16) X(LD2Rv2d, 16)                 \
-  X(LD3Rv8b,  3) X(LD3Rv16b,  3) X(LD3Rv4h,  6) X(LD3Rv8h,  6)                 \
-  X(LD3Rv2s, 12) X(LD3Rv4s,  12) X(LD3Rv1d, 24) X(LD3Rv2d, 24)                 \
-  X(LD4Rv8b,  4) X(LD4Rv16b,  4) X(LD4Rv4h,  8) X(LD4Rv8h,  8)                 \
-  X(LD4Rv2s, 16) X(LD4Rv4s,  16) X(LD4Rv1d, 32) X(LD4Rv2d, 32)                 \
-  /* LD1/ST1 One register. */                                                  \
-  X(LD1Onev8b, 8) X(LD1Onev16b, 16)                                            \
-  X(LD1Onev4h, 8) X(LD1Onev8h,  16)                                            \
-  X(LD1Onev2s, 8) X(LD1Onev4s,  16)                                            \
-  X(LD1Onev1d, 8) X(LD1Onev2d,  16)                                            \
-  X(ST1Onev8b, 8) X(ST1Onev16b, 16)                                            \
-  X(ST1Onev4h, 8) X(ST1Onev8h,  16)                                            \
-  X(ST1Onev2s, 8) X(ST1Onev4s,  16)                                            \
-  X(ST1Onev1d, 8) X(ST1Onev2d,  16)                                            \
-  /* LD1/ST1 Two registers. */                                                 \
-  X(LD1Twov8b, 16) X(LD1Twov16b, 32)                                           \
-  X(LD1Twov4h, 16) X(LD1Twov8h,  32)                                           \
-  X(LD1Twov2s, 16) X(LD1Twov4s,  32)                                           \
-  X(LD1Twov1d, 16) X(LD1Twov2d,  32)                                           \
-  X(ST1Twov8b, 16) X(ST1Twov16b, 32)                                           \
-  X(ST1Twov4h, 16) X(ST1Twov8h,  32)                                           \
-  X(ST1Twov2s, 16) X(ST1Twov4s,  32)                                           \
-  X(ST1Twov1d, 16) X(ST1Twov2d,  32)                                           \
-  /* LD1/ST1 Three registers. */                                               \
-  X(LD1Threev8b, 24) X(LD1Threev16b, 48)                                       \
-  X(LD1Threev4h, 24) X(LD1Threev8h,  48)                                       \
-  X(LD1Threev2s, 24) X(LD1Threev4s,  48)                                       \
-  X(LD1Threev1d, 24) X(LD1Threev2d,  48)                                       \
-  X(ST1Threev8b, 24) X(ST1Threev16b, 48)                                       \
-  X(ST1Threev4h, 24) X(ST1Threev8h,  48)                                       \
-  X(ST1Threev2s, 24) X(ST1Threev4s,  48)                                       \
-  X(ST1Threev1d, 24) X(ST1Threev2d,  48)                                       \
-  /* LD1/ST1 Four registers. */                                                \
-  X(LD1Fourv8b, 32) X(LD1Fourv16b, 64)                                         \
-  X(LD1Fourv4h, 32) X(LD1Fourv8h,  64)                                         \
-  X(LD1Fourv2s, 32) X(LD1Fourv4s,  64)                                         \
-  X(LD1Fourv1d, 32) X(LD1Fourv2d,  64)                                         \
-  X(ST1Fourv8b, 32) X(ST1Fourv16b, 64)                                         \
-  X(ST1Fourv4h, 32) X(ST1Fourv8h,  64)                                         \
-  X(ST1Fourv2s, 32) X(ST1Fourv4s,  64)                                         \
-  X(ST1Fourv1d, 32) X(ST1Fourv2d,  64)                                         \
-  /* LD2/ST2 Two registers. */                                                 \
-  X(LD2Twov8b, 16) X(LD2Twov16b, 32)                                           \
-  X(LD2Twov4h, 16) X(LD2Twov8h,  32)                                           \
-  X(LD2Twov2s, 16) X(LD2Twov4s,  32) X(LD2Twov2d, 32)                          \
-  X(ST2Twov8b, 16) X(ST2Twov16b, 32)                                           \
-  X(ST2Twov4h, 16) X(ST2Twov8h,  32)                                           \
-  X(ST2Twov2s, 16) X(ST2Twov4s,  32) X(ST2Twov2d, 32)                          \
-  /* LD3/ST3 Three registers. */                                               \
-  X(LD3Threev8b, 24) X(LD3Threev16b, 48)                                       \
-  X(LD3Threev4h, 24) X(LD3Threev8h,  48)                                       \
-  X(LD3Threev2s, 24) X(LD3Threev4s,  48) X(LD3Threev2d, 48)                    \
-  X(ST3Threev8b, 24) X(ST3Threev16b, 48)                                       \
-  X(ST3Threev4h, 24) X(ST3Threev8h,  48)                                       \
-  X(ST3Threev2s, 24) X(ST3Threev4s,  48) X(ST3Threev2d, 48)                    \
-  /* LD4/ST4 Four registers. */                                                \
-  X(LD4Fourv8b, 32) X(LD4Fourv16b, 64)                                         \
-  X(LD4Fourv4h, 32) X(LD4Fourv8h,  64)                                         \
-  X(LD4Fourv2s, 32) X(LD4Fourv4s,  64) X(LD4Fourv2d,  64)                      \
-  X(ST4Fourv8b, 32) X(ST4Fourv16b, 64)                                         \
-  X(ST4Fourv4h, 32) X(ST4Fourv8h,  64)                                         \
-  X(ST4Fourv2s, 32) X(ST4Fourv4s,  64) X(ST4Fourv2d,  64)
-// clang-format on
-
-// Union of all SIMD post-index ops.
-#define SIMD_POST_OPS(X)                                                       \
-  SIMD_LANE_STORE_OPS(X)                                                       \
-  SIMD_LANE_LOAD_OPS(X)                                                        \
-  SIMD_MULTI_OPS(X)
-
-// Memory Instruction Info Table
-//
-// Returns information about how to find the base register and offset operands
-// in a memory instruction, and whether it uses pre/post-indexed addressing.
-// Used by rewriteLoadStoreBase as a fallback when RoW conversion isn't
-// possible.
-static std::optional<MemInstInfo> getMemInstInfo(unsigned Op) {
-  switch (Op) {
-  default:
-    return std::nullopt;
-
-  // PC-relative literal loads: Rt, label
-  case AArch64::LDRWl:
-  case AArch64::LDRXl:
-  case AArch64::LDRSWl:
-  case AArch64::LDRSl:
-  case AArch64::LDRDl:
-  case AArch64::LDRQl:
-  case AArch64::PRFMl:
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{0, std::nullopt, false, true};
-
-    // Scalar indexed/unscaled/register-offset: Rt, [Rn, ...]
-#define X(NAME, S)                                                             \
-  case AArch64::NAME##ui:                                                      \
-  case AArch64::NAME##roW:                                                     \
-  case AArch64::NAME##roX:
-    SCALAR_MEM_OPS(X)
-#undef X
-  case AArch64::PRFMui:
-  case AArch64::PRFMroW:
-  case AArch64::PRFMroX:
-  // Unscaled variants.
-  case AArch64::LDURBBi:
-  case AArch64::LDURBi:
-  case AArch64::LDURDi:
-  case AArch64::LDURHHi:
-  case AArch64::LDURHi:
-  case AArch64::LDURQi:
-  case AArch64::LDURSBWi:
-  case AArch64::LDURSBXi:
-  case AArch64::LDURSHWi:
-  case AArch64::LDURSHXi:
-  case AArch64::LDURSWi:
-  case AArch64::LDURSi:
-  case AArch64::LDURWi:
-  case AArch64::LDURXi:
-  case AArch64::STURBBi:
-  case AArch64::STURBi:
-  case AArch64::STURDi:
-  case AArch64::STURHHi:
-  case AArch64::STURHi:
-  case AArch64::STURQi:
-  case AArch64::STURSi:
-  case AArch64::STURWi:
-  case AArch64::STURXi:
-  case AArch64::PRFUMi:
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{1, 2, false, false};
-
-    // Scalar pre/post-index: wback, Rt, [Rn], #imm
-#define X(NAME, S)                                                             \
-  case AArch64::NAME##pre:                                                     \
-  case AArch64::NAME##post:
-    SCALAR_MEM_OPS(X)
-#undef X
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{2, 3, true, false};
-
-  // Exclusive/acquire loads: Rt, [Rn]
-  case AArch64::LDXRB:
-  case AArch64::LDXRH:
-  case AArch64::LDXRW:
-  case AArch64::LDXRX:
-  case AArch64::LDAXRB:
-  case AArch64::LDAXRH:
-  case AArch64::LDAXRW:
-  case AArch64::LDAXRX:
-  case AArch64::LDARB:
-  case AArch64::LDARH:
-  case AArch64::LDARW:
-  case AArch64::LDARX:
-  case AArch64::LDLARB:
-  case AArch64::LDLARH:
-  case AArch64::LDLARW:
-  case AArch64::LDLARX:
-  // RCPC loads: Rt, [Rn]
-  case AArch64::LDAPRB:
-  case AArch64::LDAPRH:
-  case AArch64::LDAPRW:
-  case AArch64::LDAPRX:
-  // Store-release: Rt, [Rn]
-  case AArch64::STLRB:
-  case AArch64::STLRH:
-  case AArch64::STLRW:
-  case AArch64::STLRX:
-  case AArch64::STLLRB:
-  case AArch64::STLLRH:
-  case AArch64::STLLRW:
-  case AArch64::STLLRX:
-    // SIMD multiple/replicate (base form): Vt, [Rn]
-#define X(NAME, OFF) case AArch64::NAME:
-    SIMD_MULTI_OPS(X)
-#undef X
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{1, std::nullopt, false, false};
-
-  // Exclusive stores: Ws, Rt, [Rn]
-  case AArch64::STXRB:
-  case AArch64::STXRH:
-  case AArch64::STXRW:
-  case AArch64::STXRX:
-  case AArch64::STLXRB:
-  case AArch64::STLXRH:
-  case AArch64::STLXRW:
-  case AArch64::STLXRX:
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{2, std::nullopt, false, false};
-
-  // Exclusive pair loads: Rt, Rt2, [Rn]
-  case AArch64::LDXPW:
-  case AArch64::LDXPX:
-  case AArch64::LDAXPW:
-  case AArch64::LDAXPX:
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{2, std::nullopt, false, false};
-
-    // Pair indexed loads/stores: Rt, Rt2, [Rn, #imm]
-#define X(NAME, SCALE) case AArch64::NAME##i:
-    PAIR_OPS(X)
-#undef X
-  case AArch64::LDNPDi:
-  case AArch64::LDNPQi:
-  case AArch64::LDNPSi:
-  case AArch64::LDNPWi:
-  case AArch64::LDNPXi:
-  case AArch64::STNPDi:
-  case AArch64::STNPQi:
-  case AArch64::STNPSi:
-  case AArch64::STNPWi:
-  case AArch64::STNPXi:
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{2, 3, false, false};
-
-    // CAS: Rs(out), Rs(in, tied), Rt, [Rn]
-#define CAS_VARIANTS(NAME)                                                     \
-  case AArch64::NAME##B:                                                       \
-  case AArch64::NAME##H:                                                       \
-  case AArch64::NAME##W:                                                       \
-  case AArch64::NAME##X:
-    CAS_VARIANTS(CAS)
-    CAS_VARIANTS(CASA)
-    CAS_VARIANTS(CASL)
-    CAS_VARIANTS(CASAL)
-#undef CAS_VARIANTS
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{3, std::nullopt, false, false};
-
-    // LSE atomics: Rs, Rt, [Rn] - all 16 size/ordering variants per operation.
-#define LSE_VARIANTS(NAME)                                                     \
-  case AArch64::NAME##B:                                                       \
-  case AArch64::NAME##H:                                                       \
-  case AArch64::NAME##W:                                                       \
-  case AArch64::NAME##X:                                                       \
-  case AArch64::NAME##AB:                                                      \
-  case AArch64::NAME##AH:                                                      \
-  case AArch64::NAME##AW:                                                      \
-  case AArch64::NAME##AX:                                                      \
-  case AArch64::NAME##LB:                                                      \
-  case AArch64::NAME##LH:                                                      \
-  case AArch64::NAME##LW:                                                      \
-  case AArch64::NAME##LX:                                                      \
-  case AArch64::NAME##ALB:                                                     \
-  case AArch64::NAME##ALH:                                                     \
-  case AArch64::NAME##ALW:                                                     \
-  case AArch64::NAME##ALX:
-    LSE_VARIANTS(LDADD)
-    LSE_VARIANTS(LDCLR)
-    LSE_VARIANTS(LDEOR)
-    LSE_VARIANTS(LDSET)
-    LSE_VARIANTS(LDSMAX)
-    LSE_VARIANTS(LDSMIN)
-    LSE_VARIANTS(LDUMAX)
-    LSE_VARIANTS(LDUMIN)
-    LSE_VARIANTS(SWP)
-#undef LSE_VARIANTS
-    // SIMD lane stores (base form): Vt, idx, [Rn]
-#define X(NAME, OFF) case AArch64::NAME:
-    SIMD_LANE_STORE_OPS(X)
-#undef X
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{2, std::nullopt, false, false};
-
-    // SIMD lane loads (base form): Vt(out), Vt(tied), idx, [Rn]
-#define X(NAME, OFF) case AArch64::NAME:
-    SIMD_LANE_LOAD_OPS(X)
-#undef X
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{3, std::nullopt, false, false};
-
-  // Exclusive store pairs: Ws, Rt, Rt2, [Rn]
-  case AArch64::STXPW:
-  case AArch64::STXPX:
-  case AArch64::STLXPW:
-  case AArch64::STLXPX:
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{3, std::nullopt, false, false};
-
-    // Pair pre/post-index: wback, Rt, Rt2, [Rn, #imm]! / [Rn], #imm
-#define X(NAME, SCALE)                                                         \
-  case AArch64::NAME##pre:                                                     \
-  case AArch64::NAME##post:
-    PAIR_OPS(X)
-#undef X
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{3, 4, true, false};
-
-  // CASP: Ws_Ws2(out), Ws_Ws2(in, tied), Wt_Wt2, [Rn]
-  case AArch64::CASPW:
-  case AArch64::CASPX:
-  case AArch64::CASPAW:
-  case AArch64::CASPAX:
-  case AArch64::CASPLW:
-  case AArch64::CASPLX:
-  case AArch64::CASPALW:
-  case AArch64::CASPALX:
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{3, std::nullopt, false, false};
-
-    // SIMD multiple/replicate post-index: wback, Vt, [Rn], Xm
-#define X(NAME, OFF) case AArch64::NAME##_POST:
-    SIMD_MULTI_OPS(X)
-#undef X
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{2, 3, true, false};
-
-    // SIMD lane store post-index: wback, Vt, idx, [Rn], Xm
-#define X(NAME, OFF) case AArch64::NAME##_POST:
-    SIMD_LANE_STORE_OPS(X)
-#undef X
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{3, 4, true, false};
-
-    // SIMD lane load post-index: wback, Vt(out), Vt(tied), idx, [Rn], Xm
-#define X(NAME, OFF) case AArch64::NAME##_POST:
-    SIMD_LANE_LOAD_OPS(X)
-#undef X
-    // BaseIdx, OffsetIdx, IsPrePost, IsLiteral
-    return MemInstInfo{4, 5, true, false};
-  }
-}
-
-// RoW (Register-offset-W) Opcode Conversion Tables
-//
-// These tables convert various load/store addressing modes to the
-// register-offset-W form ([X27, Wn, uxtw]) which provides sandboxing in a
-// single instruction by zero-extending the 32-bit offset register.
-//
-// All scalar load/store instructions that support RoW addressing are listed
-// here. Each entry is (NAME, SHIFT) where NAME is the opcode base (e.g. LDRX)
-// and SHIFT is the log2 element size used for scaled addressing.
-static unsigned convertUiToRoW(unsigned Op) {
-  switch (Op) {
-#define X(NAME, S)                                                             \
-  case AArch64::NAME##ui:                                                      \
-    return AArch64::NAME##roW;
-    SCALAR_MEM_OPS(X)
-#undef X
-  case AArch64::PRFMui:
-    return AArch64::PRFMroW;
-  default:
-    return AArch64::INSTRUCTION_LIST_END;
-  }
-}
-
-static unsigned convertPreToRoW(unsigned Op) {
-  switch (Op) {
-#define X(NAME, S)                                                             \
-  case AArch64::NAME##pre:                                                     \
-    return AArch64::NAME##roW;
-    SCALAR_MEM_OPS(X)
-#undef X
-  default:
-    return AArch64::INSTRUCTION_LIST_END;
-  }
-}
-
-static unsigned convertPostToRoW(unsigned Op) {
-  switch (Op) {
-#define X(NAME, S)                                                             \
-  case AArch64::NAME##post:                                                    \
-    return AArch64::NAME##roW;
-    SCALAR_MEM_OPS(X)
-#undef X
-  default:
-    return AArch64::INSTRUCTION_LIST_END;
-  }
-}
-
-static unsigned convertRoXToRoW(unsigned Op, unsigned &Shift) {
-  Shift = 0;
-  switch (Op) {
-#define X(NAME, S)                                                             \
-  case AArch64::NAME##roX:                                                     \
-    Shift = S;                                                                 \
-    return AArch64::NAME##roW;
-    SCALAR_MEM_OPS(X)
-#undef X
-  case AArch64::PRFMroX:
-    Shift = 3;
-    return AArch64::PRFMroW;
-  default:
-    return AArch64::INSTRUCTION_LIST_END;
-  }
-}
-
-static bool getRoWShift(unsigned Op, unsigned &Shift) {
-  Shift = 0;
-  switch (Op) {
-#define X(NAME, S)                                                             \
-  case AArch64::NAME##roW:                                                     \
-    Shift = S;                                                                 \
-    return true;
-    SCALAR_MEM_OPS(X)
-#undef X
-  case AArch64::PRFMroW:
-    Shift = 3;
-    return true;
-  default:
-    return false;
-  }
-}
-
-// Pre/Post-Index to Base Conversion and Natural Offset Tables
-//
-// SIMD post-index instructions are listed once in SIMD_POST_OPS and used to
-// generate both convertPrePostToBase and getSIMDNaturalOffset.
-// Each entry is (NAME, OFFSET) where the post opcode is NAME##_POST, the base
-// opcode is NAME, and OFFSET is the natural byte increment.
-static unsigned convertPrePostToBase(unsigned Op, bool &IsPre,
-                                     bool &IsNoOffset) {
-  IsPre = false;
-  IsNoOffset = false;
-  switch (Op) {
-    // LDP/STP pairs.
-#define X(NAME, SCALE)                                                         \
-  case AArch64::NAME##post:                                                    \
-    return AArch64::NAME##i;                                                   \
-  case AArch64::NAME##pre:                                                     \
-    IsPre = true;                                                              \
-    return AArch64::NAME##i;
-    PAIR_OPS(X)
-#undef X
-    // SIMD post-index.
-#define X(NAME, OFF)                                                           \
-  case AArch64::NAME##_POST:                                                   \
-    IsNoOffset = true;                                                         \
-    return AArch64::NAME;
-    SIMD_POST_OPS(X)
-#undef X
-  default:
-    return AArch64::INSTRUCTION_LIST_END;
-  }
-}
-
-static unsigned getPrePostScale(unsigned Op) {
-  switch (Op) {
-#define X(NAME, SCALE)                                                         \
-  case AArch64::NAME##post:                                                    \
-  case AArch64::NAME##pre:                                                     \
-    return SCALE;
-    PAIR_OPS(X)
-#undef X
-  default:
-    return 1;
-  }
-}
-
-static int getSIMDNaturalOffset(unsigned Op) {
-  switch (Op) {
-#define X(NAME, OFF)                                                           \
-  case AArch64::NAME##_POST:                                                   \
-    return OFF;
-    SIMD_POST_OPS(X)
-#undef X
-  default:
-    return -1;
-  }
 }
