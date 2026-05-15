@@ -37,7 +37,7 @@ namespace test1 {
     // CHECK:      [[NEW:%.*]] = call noalias nonnull ptr @_Znwm(i64 8)
     // CHECK-NEXT: invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[NEW]], i32 5)
     // CHECK:      ret ptr [[NEW]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr captures(address) [[NEW]])
     return new A(5);
   }
 
@@ -47,7 +47,7 @@ namespace test1 {
     // CHECK-NEXT: [[FOO:%.*]] = invoke i32 @_ZN5test13fooEv()
     // CHECK:      invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[NEW]], i32 [[FOO]])
     // CHECK:      ret ptr [[NEW]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr captures(address) [[NEW]])
     extern int foo();
     return new A(foo());
   }
@@ -72,7 +72,7 @@ namespace test1 {
     // CHECK:      ret ptr [[NEW]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, ptr [[ACTIVE]]
     // CHECK-NEXT: br i1 [[ISACTIVE]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr captures(address) [[NEW]])
     return new A(B().x);
   }
 
@@ -98,7 +98,7 @@ namespace test1 {
     // CHECK:      ret ptr [[NEW]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, ptr [[ACTIVE]]
     // CHECK-NEXT: br i1 [[ISACTIVE]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr captures(address) [[NEW]])
     return new A(B());
   }
 
@@ -123,7 +123,7 @@ namespace test1 {
     // CHECK:      ret ptr [[NEW]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, ptr [[ACTIVE]]
     // CHECK-NEXT: br i1 [[ISACTIVE]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr captures(address) [[NEW]])
     return new A(B(), B());
   }
   A *f() {
@@ -159,7 +159,7 @@ namespace test1 {
     // CHECK:      ret ptr [[RET]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, ptr [[ACTIVE]]
     // CHECK-NEXT: br i1 [[ISACTIVE]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr captures(address) [[NEW]])
     A *x;
     return (x = new A(makeB()), makeB(), x);
   }
@@ -444,7 +444,7 @@ namespace test9 {
   }
   // CHECK: define{{.*}} ptr @_ZN5test94testEv
   // CHECK: [[TEST9_NEW:%.*]] = call noalias nonnull ptr @_Znam
-  // CHECK: call void @_ZdaPv(ptr [[TEST9_NEW]])
+  // CHECK: call void @_ZdaPv(ptr captures(address) [[TEST9_NEW]])
 }
 
 // In a destructor with a function-try-block, a return statement in a

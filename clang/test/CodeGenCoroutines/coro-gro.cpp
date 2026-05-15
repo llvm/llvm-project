@@ -85,7 +85,7 @@ int f() {
   // CHECK-NEXT: %[[Mem:.+]] = call ptr @llvm.coro.free(
 
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK-NEXT: call void @_ZdlPvm(ptr noundef %[[Mem]], i64 noundef %[[SIZE]])
+  // CHECK-NEXT: call void @_ZdlPvm(ptr noundef captures(address) %[[Mem]], i64 noundef %[[SIZE]])
 
   // CHECK: [[CoroRet]]:
   // CHECK-NEXT: call void @llvm.coro.end(

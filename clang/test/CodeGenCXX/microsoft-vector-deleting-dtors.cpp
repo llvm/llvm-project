@@ -104,8 +104,8 @@ void bar() {
 // X86-NEXT:   %[[HOWMANYBYTES:.*]] = mul i32 4, %[[HOWMANY]]
 // X64-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i64 %[[HOWMANYBYTES]], 8
 // X86-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i32 %[[HOWMANYBYTES]], 4
-// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
-// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
+// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef captures(address) %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
+// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef captures(address) %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
 // CHECK-NEXT:   br label %delete.end
 // CHECK: vdtor.call:
 // CHECK-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[LPTR]]
@@ -139,7 +139,7 @@ void bar() {
 // CLANG21: arraydestroy.done1:
 // CLANG21-NEXT:   %3 = mul i64 8, %2
 // CLANG21-NEXT:   %4 = add i64 %3, 8
-// CLANG21-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %1, i64 noundef %4)
+// CLANG21-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef captures(address) %1, i64 noundef %4)
 // CLANG21-NEXT:   br label %delete.end2
 
 // Definition of S::foo, check that it has vector deleting destructor call
@@ -164,8 +164,8 @@ void bar() {
 // X86-NEXT:   %[[HOWMANYBYTES:.*]] = mul i32 4, %[[HOWMANY]]
 // X64-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i64 %[[HOWMANYBYTES]], 8
 // X86-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i32 %[[HOWMANYBYTES]], 4
-// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
-// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
+// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef captures(address) %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
+// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef captures(address) %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
 // CHECK-NEXT:   br label %delete.end
 // CHECK: vdtor.call:                                       ; preds = %delete.notnull
 // CHECK-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[DEL_PTR]]
@@ -221,8 +221,8 @@ void bar() {
 // X86-NEXT:  %[[ARRSZ:.*]] = mul i32 4, %[[HOWMANY]]
 // X64-NEXT:  %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
 // X86-NEXT:  %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
-// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[TOTALSZ]])
-// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[TOTALSZ]])
+// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef captures(address) %[[COOKIEGEP]], i64 noundef %[[TOTALSZ]])
+// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef captures(address) %[[COOKIEGEP]], i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.scalar:
 // X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[LTHIS]])
@@ -231,8 +231,8 @@ void bar() {
 // CHECK-NEXT:   %[[ISFIRSTBITZERO:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
 // CHECK-NEXT:   br i1 %[[ISFIRSTBITZERO]], label %dtor.continue, label %dtor.call_delete
 // CHECK: dtor.call_delete:
-// X64-NEXT:     call void @"??3@YAXPEAX_K@Z"(ptr noundef %[[LTHIS]], i64 noundef 8)
-// X86-NEXT:     call void @"??3@YAXPAXI@Z"(ptr noundef %[[LTHIS]], i32 noundef 4)
+// X64-NEXT:     call void @"??3@YAXPEAX_K@Z"(ptr noundef captures(address) %[[LTHIS]], i64 noundef 8)
+// X86-NEXT:     call void @"??3@YAXPAXI@Z"(ptr noundef captures(address) %[[LTHIS]], i32 noundef 4)
 // CHECK-NEXT:   br label %dtor.continue
 // CHECK: dtor.continue:
 // CHECK-NEXT:   %[[LOADRET:.*]] = load ptr, ptr %[[RET]]
@@ -260,8 +260,8 @@ void bar() {
 // X86-NEXT: %[[ARRSZ:.*]] = mul i32 4, %[[COOKIE:.*]]
 // X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
 // X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
-// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
-// X86-NEXT: call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
+// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr noundef captures(address) %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT: call void @"??_V@YAXPAXI@Z"(ptr noundef captures(address) %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:   br label %dtor.continue
 
 
@@ -326,8 +326,8 @@ void foobartest() {
 // X86-NEXT: %[[ARRSZ:.*]] = mul i32 8, %[[COOKIE:.*]]
 // X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
 // X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
-// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
-// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
+// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef captures(address) %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef captures(address) %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.scalar:
 // X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(16) dereferenceable(16) %this1)
@@ -336,8 +336,8 @@ void foobartest() {
 // CHECK-NEXT:  %9 = icmp eq i32 %8, 0
 // CHECK-NEXT:  br i1 %9, label %dtor.continue, label %dtor.call_delete
 // CHECK: dtor.call_delete:
-// X64-NEXT:  call void @"??3@YAXPEAX_K@Z"(ptr noundef %this1, i64 noundef 16)
-// X86-NEXT:  call void @"??3@YAXPAXI@Z"(ptr noundef %this1, i32 noundef 8)
+// X64-NEXT:  call void @"??3@YAXPEAX_K@Z"(ptr noundef captures(address) %this1, i64 noundef 16)
+// X86-NEXT:  call void @"??3@YAXPAXI@Z"(ptr noundef captures(address) %this1, i32 noundef 8)
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.continue:
 // CHECK-NEXT:  %10 = load ptr, ptr %retval

@@ -94,7 +94,7 @@ namespace test1 {
     // CHECK-NEXT: br i1 [[ISDONE]]
     // CHECK:      [[MUL:%.*]] = mul i64 4, [[COUNT]]
     // CHECK-NEXT: [[SIZE:%.*]] = add i64 [[MUL]], 8
-    // CHECK-NEXT: call void @_ZdaPvm(ptr noundef [[ALLOC]], i64 noundef [[SIZE]])
+    // CHECK-NEXT: call void @_ZdaPvm(ptr noundef captures(address) [[ALLOC]], i64 noundef [[SIZE]])
   }
 
   // CHECK-LABEL: define{{.*}} void @_ZN5test11gEPA_NS_1AE(
@@ -113,7 +113,7 @@ namespace test1 {
     // CHECK-NEXT: call void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[CUR]])
     // CHECK-NEXT: [[ISDONE:%.*]] = icmp eq ptr [[CUR]], [[PTR]]
     // CHECK-NEXT: br i1 [[ISDONE]]
-    // CHECK:      call void @_ZdaPv(ptr noundef [[ALLOC]])
+    // CHECK:      call void @_ZdaPv(ptr noundef captures(address) [[ALLOC]])
   }
 }
 
@@ -157,7 +157,7 @@ namespace test4 {
     // CHECK-NEXT: [[DTOR:%.*]] = load ptr, ptr [[T0]]
     // CHECK-NEXT: call void [[DTOR]](ptr {{[^,]*}} [[OBJ:%.*]])
     //   Call the global operator delete.
-    // CHECK-NEXT: call void @_ZdlPvm(ptr noundef [[ALLOCATED]], i64 noundef 8) [[NUW:#[0-9]+]]
+    // CHECK-NEXT: call void @_ZdlPvm(ptr noundef captures(address) [[ALLOCATED]], i64 noundef 8) [[NUW:#[0-9]+]]
     ::delete xp;
   }
 }

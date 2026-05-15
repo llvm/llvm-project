@@ -45,7 +45,7 @@ namespace test2 {
     // CHECK-NEXT: [[T5:%.*]] = load i32, ptr [[T3]]
     // CHECK-NEXT: [[T6:%.*]] = mul i32 4, [[T5]]
     // CHECK-NEXT: [[T7:%.*]] = add i32 [[T6]], 4
-    // CHECK-NEXT: call void @_ZdaPvj(ptr noundef [[T3]], i32 noundef [[T7]])
+    // CHECK-NEXT: call void @_ZdaPvj(ptr noundef captures(address) [[T3]], i32 noundef [[T7]])
     // CHECK-NEXT: br label
     ::delete[] p;
   }

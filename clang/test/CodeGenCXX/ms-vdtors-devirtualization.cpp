@@ -48,8 +48,8 @@ void case1(A *arg) {
 // X86-NEXT:  %[[HOWMANYELEMS:.*]] = mul i32 4, %[[COOKIE]]
 // X64-NEXT:  %[[SIZEPLUSCOOKIE:.*]] = add i64 %[[HOWMANYELEMS]], 8
 // X86-NEXT:  %[[SIZEPLUSCOOKIE:.*]] = add i32 %[[HOWMANYELEMS]], 4
-// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEADDR]], i64 noundef %[[SIZEPLUSCOOKIE]])
-// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEADDR]], i32 noundef %[[SIZEPLUSCOOKIE]])
+// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef captures(address) %[[COOKIEADDR]], i64 noundef %[[SIZEPLUSCOOKIE]])
+// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef captures(address) %[[COOKIEADDR]], i32 noundef %[[SIZEPLUSCOOKIE]])
 // CHECK-NEXT:  br label %delete.end2
 
 void case2(B *arg) {
@@ -88,8 +88,8 @@ void case2(B *arg) {
 // X86-NEXT:  %[[HOWMANYELEMS:.*]] = mul i32 4, %[[COOKIE]]
 // X64-NEXT:  %[[SIZEPLUSCOOKIE:.*]] = add i64 %[[HOWMANYELEMS]], 8
 // X86-NEXT:  %[[SIZEPLUSCOOKIE:.*]] = add i32 %[[HOWMANYELEMS]], 4
-// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEADDR]], i64 noundef %[[SIZEPLUSCOOKIE]])
-// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEADDR]], i32 noundef %[[SIZEPLUSCOOKIE]])
+// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef captures(address) %[[COOKIEADDR]], i64 noundef %[[SIZEPLUSCOOKIE]])
+// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef captures(address) %[[COOKIEADDR]], i32 noundef %[[SIZEPLUSCOOKIE]])
 // CHECK-NEXT:  br label %delete.end2
 
 
