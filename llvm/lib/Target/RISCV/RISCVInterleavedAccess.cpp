@@ -370,6 +370,9 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   VectorType *ResVTy = getDeinterleavedVectorType(DI);
 
   unsigned MaskFactor = GapMask.getActiveBits();
+  // For MaskFactor of 1, we still want to lower it with segmented load
+  // (of the original Factor), because the sole field extraction will eventually
+  // turn it into a strided load.
   bool UseStridedSeg = MaskFactor < Factor && MaskFactor > 1;
   const DataLayout &DL = Load->getDataLayout();
   auto *XLenTy = Builder.getIntNTy(Subtarget.getXLen());
@@ -399,12 +402,17 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
           Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2],
                                   {ResVTy, PtrTy, XLenTy}, {Ptr, Mask, VL});
     }
-    // Replace masked-off factors with poisons.
-    SmallVector<Type *, 8> AggrTypes{Factor, ResVTy};
-    Return = PoisonValue::get(StructType::get(Load->getContext(), AggrTypes));
-    for (unsigned I = 0; I < MaskFactor; ++I) {
-      Value *SubVec = Builder.CreateExtractValue(SegLoad, I);
-      Return = Builder.CreateInsertValue(Return, SubVec, I);
+
+    if (MaskFactor != Factor) {
+      // Replace masked-off factors with poisons.
+      SmallVector<Type *, 8> AggrTypes{Factor, ResVTy};
+      Return = PoisonValue::get(StructType::get(Load->getContext(), AggrTypes));
+      for (unsigned I = 0; I < MaskFactor; ++I) {
+        Value *SubVec = Builder.CreateExtractValue(SegLoad, I);
+        Return = Builder.CreateInsertValue(Return, SubVec, I);
+      }
+    } else {
+      Return = SegLoad;
     }
   } else {
     unsigned SEW = DL.getTypeSizeInBits(ResVTy->getElementType());
