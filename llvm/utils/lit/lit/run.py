@@ -28,7 +28,7 @@ class Run(object):
     """A concrete, configured testing run."""
 
     def __init__(
-        self, tests, lit_config, workers, progress_callback, max_failures, timeout
+        self, tests, lit_config, workers, progress_callback, max_failures, timeout, load_limit_fraction
     ):
         self.tests = tests
         self.lit_config = lit_config
@@ -36,6 +36,8 @@ class Run(object):
         self.progress_callback = progress_callback
         self.max_failures = max_failures
         self.timeout = timeout
+        if load_limit_fraction is not None:
+            self.load_limit = load_limit_fraction * lit.util.usable_core_count()
         assert workers > 0
 
     def execute(self):
@@ -80,6 +82,36 @@ class Run(object):
             if v is not None
         }
 
+        # Shared state used by --load-limit (one multiprocessing.Array, all
+        # accesses guarded by the array's internal lock):
+        #   index 0: last_tick - timestamp of the most recent controller
+        #                        adjustment of `ceiling`.
+        #   index 1: running   - number of tests currently executing across
+        #                        all workers.
+        #   index 2: ceiling   - dynamic concurrency ceiling (stored as a
+        #                        float so sub-worker adjustments accumulate
+        #                        smoothly).  See lit.worker._tick_ceiling()
+        #                        for the proportional update rule.  Bounded
+        #                        in [1.0, self.workers].
+        #
+        # Initial ceiling:
+        #   * --load-limit unset  -> workers       (option is a no-op)
+        #   * --load-limit set    -> min(workers, int(load_limit))
+        #     This gives a gentler start: on a busy host the user typically
+        #     asks for e.g. `-j 16 -l 4`, meaning "16 max, but currently keep
+        #     load near 4".  Starting at 4 threads and letting the controller
+        #     ramp up to 16 (if load stays low) avoids an initial burst that
+        #     would immediately overshoot the limit before the first tick.
+        if self.load_limit is not None:
+            initial_ceiling = max(1, min(self.workers, int(self.load_limit)))
+        else:
+            initial_ceiling = self.workers
+        # Seed last_tick to "now" so the controller honors the initial
+        # ceiling for a full LIT_LOAD_TICK interval before adjusting.
+        load_state = multiprocessing.Array(
+            "d", [time.time(), 0.0, float(initial_ceiling)]
+        )
+
         # Windows has a limit of 60 workers per pool, so we need to use multiple pools
         # if we have more workers requested than the limit.
         # Also, allow to override the limit with the LIT_WINDOWS_MAX_WORKERS_PER_POOL environment variable.
@@ -107,7 +139,15 @@ class Run(object):
         pools = []
         for pool_size in workers_per_pool_list:
             pool = multiprocessing.Pool(
-                pool_size, lit.worker.initialize, (self.lit_config, semaphores)
+                pool_size,
+                lit.worker.initialize,
+                (
+                    self.lit_config,
+                    semaphores,
+                    self.load_limit,
+                    load_state,
+                    self.workers,
+                ),
             )
             pools.append(pool)
 

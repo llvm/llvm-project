@@ -7,6 +7,7 @@ and store it in global variables. This reduces the cost of each task.
 """
 import contextlib
 import os
+import random
 import signal
 import time
 import traceback
@@ -18,20 +19,168 @@ from lit.TestRunner import TestUpdaterException
 
 _lit_config = None
 _parallelism_semaphores = None
+_load_limit = None
+# Shared multiprocessing.Array('d', [last_tick, running, ceiling]).
+_load_state = None
+# Hard cap on the dynamic ceiling -- the -j value.
+_max_ceiling = 1
 
+# Indices into _load_state.  Must match the layout allocated in run.py.
+_S_LAST_TICK = 0
+_S_RUNNING = 1
+_S_CEILING = 2
 
-def initialize(lit_config, parallelism_semaphores):
+# Tunables for the load-average gate.  Exposed via environment variables
+# so users can experiment without having to recompile or edit the source.
+_LOAD_POLL_INTERVAL = float(os.environ.get("LIT_LOAD_POLL", "1.0"))
+_LOAD_TICK_INTERVAL = float(os.environ.get("LIT_LOAD_TICK", "1.0"))
+# Maximum +/- adjustment of the (float) ceiling per controller tick when the
+# system is saturated (load <= 0 or load >= 2*limit).  Near the limit the
+# adjustment shrinks proportionally, damping oscillations.
+_LOAD_MAX_STEP = float(os.environ.get("LIT_LOAD_STEP", "1.0"))
+
+# Whether os.getloadavg() is available on this platform.  Cached because
+# the gate consults it on every poll iteration.
+_HAS_LOADAVG = hasattr(os, "getloadavg")
+
+def initialize(
+    lit_config,
+    parallelism_semaphores,
+    load_limit=None,
+    load_state=None,
+    max_ceiling=1,
+):
     """Copy data shared by all test executions into worker processes"""
     global _lit_config
     global _parallelism_semaphores
+    global _load_limit
+    global _load_state
+    global _max_ceiling
     _lit_config = lit_config
     _parallelism_semaphores = parallelism_semaphores
+    _load_limit = load_limit
+    _load_state = load_state
+    _max_ceiling = max(1, int(max_ceiling))
 
     # We use the following strategy for dealing with Ctrl+C/KeyboardInterrupt in
     # subprocesses created by the multiprocessing.Pool.
     # https://noswap.com/blog/python-multiprocessing-keyboardinterrupt
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
+def _debug_enabled():
+    return _lit_config is not None and getattr(_lit_config, "debug", False)
+
+
+def _tick_ceiling(now, load1m):
+    """Adjust the dynamic concurrency ceiling (proportional controller).
+
+    Must be called with _load_state's lock held.  Performs at most one
+    adjustment per LIT_LOAD_TICK seconds.  The adjustment is
+    proportional to the normalized signed distance between current load
+    and --load-limit, clamped to a maximum of +/- LIT_LOAD_STEP per
+    tick:
+
+        distance = clamp((load - limit) / limit, -1, +1)
+        delta    = -distance * LIT_LOAD_STEP
+        ceiling  = clamp(ceiling + delta, 1.0, workers)
+
+    Effect:
+      * load == limit       -> delta == 0,        ceiling holds steady
+      * load == 0           -> delta == +STEP,    fastest ramp-up
+      * load == 2 * limit   -> delta == -STEP,    fastest shrink
+      * load just above/below limit -> tiny delta, no oscillation
+
+    The ceiling is stored as a float; the gate compares `running` to
+    int(ceiling), so concurrency only changes once the float crosses an
+    integer boundary -- this naturally damps churn near the limit.
+    """
+    if not _load_limit:
+        return
+    if (now - _load_state[_S_LAST_TICK]) < _LOAD_TICK_INTERVAL:
+        return
+    _load_state[_S_LAST_TICK] = now
+
+    distance = max(-1.0, min(1.0, (load1m - _load_limit) / _load_limit))
+    new_ceiling = _load_state[_S_CEILING] - distance * _LOAD_MAX_STEP
+    _load_state[_S_CEILING] = max(1.0, min(float(_max_ceiling), new_ceiling))
+
+
+def _acquire_run_slot():
+    """Block until it is OK to start a new test.
+
+    With --load-limit set, the number of concurrent tests is governed by
+    a dynamic ceiling whose movement is proportional to the (signed)
+    distance between the 1-minute system load and --load-limit; see
+    _tick_ceiling().  A new test is admitted when:
+      * running == 0           (forward progress - never wait forever), or
+      * running <  int(ceiling)  (within the current concurrency budget).
+
+    The ceiling is stored as a float internally so that near-limit
+    fluctuations of well under one worker accumulate smoothly instead of
+    flipping concurrency on every tick.
+    """
+    if _load_state is None:
+        return
+
+    feature_on = bool(_load_limit) and _HAS_LOADAVG
+    debug = _debug_enabled()
+    waited = False
+
+    while True:
+        load1m = os.getloadavg()[0] if _HAS_LOADAVG else 0.0
+        now = time.time()
+
+        with _load_state.get_lock():
+            if feature_on:
+                _tick_ceiling(now, load1m)
+
+            running = int(_load_state[_S_RUNNING])
+            ceiling_f = float(_load_state[_S_CEILING])
+            ceiling = int(ceiling_f)
+
+            allow = not feature_on or running == 0 or running < ceiling
+            if allow:
+                running += 1
+                _load_state[_S_RUNNING] = running
+                break
+
+        if debug:
+            _lit_config.dbg(
+                "load-limit: waiting (pid=%d running=%d "
+                "ceiling=%d (%.2f) load=%.2f limit=%.2f)"
+                % (
+                    os.getpid(), running, ceiling, ceiling_f,
+                    load1m, _load_limit,
+                )
+            )
+        waited = True
+        # Jittered sleep so all idle workers don't re-check in lockstep.
+        time.sleep(_LOAD_POLL_INTERVAL + random.uniform(0.0, _LOAD_POLL_INTERVAL))
+
+    if debug:
+        _lit_config.dbg(
+            "test start: pid=%d running=%d ceiling=%d (%.2f) load=%.2f%s"
+            % (
+                os.getpid(), running, ceiling, ceiling_f, load1m,
+                " (after wait)" if waited else "",
+            )
+        )
+
+
+def _release_run_slot():
+    if _load_state is None:
+        return
+    with _load_state.get_lock():
+        if _load_state[_S_RUNNING] > 0:
+            _load_state[_S_RUNNING] -= 1
+        running = int(_load_state[_S_RUNNING])
+        ceiling_f = float(_load_state[_S_CEILING])
+    if _debug_enabled():
+        load1m = os.getloadavg()[0] if _HAS_LOADAVG else 0.0
+        _lit_config.dbg(
+            "test done:  pid=%d running=%d ceiling=%d (%.2f) load=%.2f"
+            % (os.getpid(), running, int(ceiling_f), ceiling_f, load1m)
+        )
 
 def execute(test):
     """Run one test in a multiprocessing.Pool
@@ -42,8 +191,12 @@ def execute(test):
     Arguments and results of this function are pickled, so they should be cheap
     to copy.
     """
-    with _get_parallelism_semaphore(test):
-        result = _execute(test, _lit_config)
+    _acquire_run_slot()
+    try:
+        with _get_parallelism_semaphore(test):
+            result = _execute(test, _lit_config)
+    finally:
+        _release_run_slot()
 
     test.setResult(result)
     return test
