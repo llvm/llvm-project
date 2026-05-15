@@ -71,3 +71,11 @@ __device__ void test_div_fmas_f64(double* out, double a, double b, double c, int
 __device__ void test_ds_swizzle(int* out, int a) {
   *out = __builtin_amdgcn_ds_swizzle(a, 32);
 }
+
+// CIR-LABEL: @_Z13test_exp2_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.exp2" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z13test_exp2_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.exp2.f32(float %{{.*}})
+__device__ void test_exp2_f32(float* out, float a) {
+  *out = __builtin_amdgcn_exp2f(a);
+}
