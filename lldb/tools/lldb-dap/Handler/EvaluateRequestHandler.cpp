@@ -118,11 +118,11 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   if (value.GetError().Fail())
     return ToError(value.GetError(), /*show_user=*/false);
 
-  // Check original value type before calling `Persist`, because it change value
-  // type to const result
+  // Check the original value type before calling `Persist`, because it changes
+  // the type to const result
   if (lldb::addr_t addr = value.GetLoadAddress();
-      value.GetValueType() != lldb::eValueTypeConstResult &&
-      addr != LLDB_INVALID_ADDRESS)
+      addr != LLDB_INVALID_ADDRESS &&
+      value.GetValueType() != lldb::eValueTypeConstResult)
     body.memoryReference = EncodeMemoryReference(addr);
 
   if (is_repl_context) {
