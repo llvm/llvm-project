@@ -71,11 +71,10 @@ public:
   llvm::CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
 
   // Get X86ABIAVXLevel for the given FunctionDecl and ExtInfo.
-  // This can be different than the global / module level X86ABIAVXLevel 
+  // This can be different than the global / module level X86ABIAVXLevel
   // due to function attributes.
-  virtual unsigned
-  getX86ABIAVXLevel(const FunctionDecl *,
-                const FunctionType::ExtInfo &) const {
+  virtual unsigned getX86ABIAVXLevel(const FunctionDecl *,
+                                     const FunctionType::ExtInfo &) const {
     return 0;
   }
 

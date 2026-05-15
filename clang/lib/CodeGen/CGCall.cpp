@@ -986,8 +986,8 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
     ArrayRef<CanQualType> argTypes) {
   llvm::FoldingSetNodeID ID;
   CGFunctionInfo::Profile(ID, isInstanceMethod, isChainCall, isDelegateCall,
-                          X86ABIAVXLevel, info, paramInfos, required, resultType,
-                          argTypes);
+                          X86ABIAVXLevel, info, paramInfos, required,
+                          resultType, argTypes);
 
   void *insertPos = nullptr;
   CGFunctionInfo *FI = FunctionInfos.FindNodeOrInsertPos(ID, insertPos);
@@ -998,8 +998,8 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
 
   // Construct the function info.  We co-allocate the ArgInfos.
   FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
-                              X86ABIAVXLevel, info, paramInfos, resultType, argTypes,
-                              required);
+                              X86ABIAVXLevel, info, paramInfos, resultType,
+                              argTypes, required);
   FunctionInfos.InsertNode(FI, insertPos);
 
   bool inserted = FunctionsBeingProcessed.insert(FI).second;
