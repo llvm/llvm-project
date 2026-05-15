@@ -220,6 +220,8 @@ add_header_macro(
     .llvm-libc-types.in_addr_t
     .llvm-libc-types.in_port_t
     .llvm-libc-types.sa_family_t
+    .llvm-libc-types.struct_sockaddr_in
+    .llvm-libc-types.struct_in_addr
     .llvm_libc_common_h
 )
 
