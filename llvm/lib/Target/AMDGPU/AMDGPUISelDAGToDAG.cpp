@@ -325,17 +325,14 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
   return false;
 }
 
+// TODO: To support sext and any_ext.
 bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
-  // If the extension of uniform i1 to i32 is not used as lanemask, we want to
-  // the result type is int32. This method mutates node `zero_extend i1 to i32`
-  // directly to S_CSELECT_B32. Instead of change the following
-  // SI-Fix-SGPR-Copies to support it, we make changes earlier bofore inst
-  // selection.
+  // This is special case for pattern of common compare + select if it can be
+  // selected to SALU. The pattern will be directly selected to `s_cselect`, to
+  // avoid an intermediate i1 virtual register to be interpreted as a lane mask.
   if (N->isDivergent())
     return false;
 
-  // If to i64, it is probably used for lane mask, then we don't do the changes
-  // here.
   if (N->getValueType(0) != MVT::i32)
     return false;
 
@@ -343,6 +340,8 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
   if (CondNode->getOpcode() != ISD::SETCC)
     return false;
 
+  // TODO: To support the operand type is int64 if s_cmp_i64 is supported on
+  // some targets
   if (CondNode->getOperand(0).getValueType() != MVT::i32 ||
       CondNode->getOperand(1).getValueType() != MVT::i32)
     return false;

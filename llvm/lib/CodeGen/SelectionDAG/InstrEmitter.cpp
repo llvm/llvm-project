@@ -129,7 +129,6 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
             RC = TRI->getAllocatableClass(
                 TII->getRegClass(II, i + II.getNumDefs()));
           }
-
           if (!UseRC)
             UseRC = RC;
           else if (RC) {
