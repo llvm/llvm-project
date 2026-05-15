@@ -159,8 +159,6 @@ public:
                               MachineBasicBlock *BlockToInsertTo,
                               MachineBasicBlock::iterator PointToInsertTo,
                               const DebugLoc &DL);
-
-  void validateNoCrossBlockSCC(MachineFunction &MF);
 };
 
 class SIFixSGPRCopiesLegacy : public MachineFunctionPass {
@@ -625,8 +623,6 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   if (MF.getProperties().hasSelected())
     return false;
 
-  validateNoCrossBlockSCC(MF);
-
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
@@ -786,10 +782,8 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
   lowerVGPR2SGPRCopies(MF);
 
-  validateNoCrossBlockSCC(MF);
   // Postprocessing
   fixSCCCopies(MF);
-  validateNoCrossBlockSCC(MF);
 
   for (auto *MI : S2VCopies) {
     // Check if it is still valid
@@ -813,8 +807,6 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
   if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
     hoistAndMergeSGPRInits(AMDGPU::M0, *MRI, TRI, *MDT, TII);
-
-  validateNoCrossBlockSCC(MF);
 
   SiblingPenalty.clear();
   V2SCopies.clear();
@@ -1067,72 +1059,6 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
   Info->Score = Penalty > Profit ? 0 : Profit - Penalty;
   Info->NeedToBeConvertedToVALU = Info->Score < 3;
   return Info->NeedToBeConvertedToVALU;
-}
-
-void SIFixSGPRCopies::validateNoCrossBlockSCC(MachineFunction &MF) {
-
-  for (const MachineBasicBlock &MBB : MF) {
-    // assert(!MBB.isLiveIn(AMDGPU::SCC) && "AMDGPU::SCC is live-in to a basic
-    // block! Cross-BB SCC liveness detected.");
-
-    bool SCCDefinedInCurrentBlock = false;
-
-    for (const MachineInstr &MI : MBB) {
-      bool ReadsSCC = false;
-      bool ModifiesSCC = false;
-
-      for (const MachineOperand &MO : MI.operands()) {
-        if (MO.isRegMask() && MO.clobbersPhysReg(AMDGPU::SCC)) {
-          ModifiesSCC = true;
-          continue;
-        }
-
-        if (!MO.isReg())
-          continue;
-
-        Register Reg = MO.getReg();
-        if (!Reg || !Reg.isPhysical())
-          continue;
-
-        unsigned BitSize = 0;
-        if (Reg.isPhysical()) {
-          const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-          BitSize = TRI->getRegSizeInBits(*RC);
-        } else {
-          if (MRI->getType(Reg).isValid()) {
-            BitSize = MRI->getType(Reg).getSizeInBits();
-          } else {
-            const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-            if (RC)
-              BitSize = TRI->getRegSizeInBits(*RC);
-          }
-        }
-
-        if (BitSize != 32)
-          continue;
-
-        if (TRI->regsOverlap(Reg, AMDGPU::SCC)) {
-          if (MO.readsReg())
-            ReadsSCC = true;
-          if (MO.isDef())
-            ModifiesSCC = true;
-        }
-      }
-
-      if (ReadsSCC) {
-        if (!SCCDefinedInCurrentBlock) {
-          errs() << "Violation in MBB: " << MBB.getName() << "\n";
-          errs() << "Instruction: " << MI << "\n";
-          llvm_unreachable(
-              "SCC is read before being defined in the same basic block!");
-        }
-      }
-
-      if (ModifiesSCC) {
-        SCCDefinedInCurrentBlock = true;
-      }
-    }
-  }
 }
 
 void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {

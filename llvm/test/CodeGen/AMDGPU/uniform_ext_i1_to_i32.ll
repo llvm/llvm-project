@@ -3,9 +3,36 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
-define amdgpu_kernel void @zext_i1_to_i64_uniform(ptr addrspace(1) %out, i1 %pred, i32 %a, i32 %b) #0 {
+; divergent i64
+define i64 @zext_i1_to_i64(i32 %a, i32 %b) #0 {
 entry:
-  ; GFX950-LABEL: zext_i1_to_i64_uniform
+  ; GFX950-LABEL: zext_i1_to_i64
+  ; GFX950: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; GFX950-NEXT:  v_cmp_eq_u32_e32 vcc, v0, v1
+  ; GFX950-NEXT:  v_mov_b32_e32 v1, 0
+  ; GFX950-NEXT:  s_nop 0
+  ; GFX950-NEXT:  v_cndmask_b32_e64 v0, 0, 1, vcc
+  ; GFX950-NEXT:  s_setpc_b64 s[30:31]
+
+  %cmp = icmp eq i32 %a, %b
+  %tmp2 = zext i1 %cmp to i64
+  ret i64 %tmp2
+}
+
+; divergent i32
+define i32 @zext_i1_to_i32(i1 %pred) #0 {
+entry:
+  ; GFX950-LABEL: zext_i1_to_i32
+  ; GFX950: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; GFX950-NEXT: v_and_b32_e32 v0, 1, v0
+  ; GFX950-NEXT: s_setpc_b64 s[30:31]
+  %tmp2 = zext i1 %pred to i32
+  ret i32 %tmp2
+}
+
+define amdgpu_kernel void @kernel_zext_i1_to_i64_uniform(ptr addrspace(1) %out, i1 %pred, i32 %a, i32 %b) #0 {
+entry:
+  ; GFX950-LABEL: kernel_zext_i1_to_i64_uniform
   ; GFX950: s_load_dwordx2 s[0:1], s[4:5], 0x30
   ; GFX950-NEXT: s_load_dwordx2 s[2:3], s[4:5], 0x24
   ; GFX950-NEXT: s_mov_b32 s4, 0
@@ -24,9 +51,9 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @zext_i1_to_i32_uniform(ptr addrspace(1) %out, i1 %pred, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @kernel_zext_i1_to_i32_uniform(ptr addrspace(1) %out, i1 %pred, i32 %a, i32 %b) #0 {
 entry:
-  ; GFX950-LABEL: zext_i1_to_i32_uniform
+  ; GFX950-LABEL: kernel_zext_i1_to_i32_uniform
   ; GFX950: s_load_dwordx2 s[0:1], s[4:5], 0x30
   ; GFX950-NEXT: s_load_dwordx2 s[2:3], s[4:5], 0x24
   ; GFX950-NEXT: v_mov_b32_e32 v0, 0
@@ -34,7 +61,7 @@ entry:
   ; GFX950-NEXT: s_cmp_eq_u32 s0, s1
   ; GFX950-NEXT: s_cselect_b64 s[0:1], -1, 0
   ; GFX950-NEXT: s_and_b64 s[0:1], s[0:1], exec
-  ; GFX950-NEXT: s_cselect_b32 s0, -1, 0
+  ; GFX950-NEXT: s_cselect_b32 s0, 1, 0
   ; GFX950-NEXT: v_mov_b32_e32 v1, s0
   ; GFX950-NEXT: global_store_dword v0, v1, s[2:3]
   ; GFX950-NEXT: s_endpgm
