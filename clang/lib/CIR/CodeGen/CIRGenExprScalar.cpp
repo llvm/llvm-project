@@ -2786,7 +2786,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
   // the select function.
   if (cgf.getLangOpts().OpenCL &&
       (condType->isVectorType() || condType->isExtVectorType())) {
-    assert(!cir::MissingFeatures::vectorType());
+    assert(!cir::MissingFeatures::incrementProfileCounter());
 
     mlir::Value condValue = cgf.emitScalarExpr(condExpr);
     mlir::Value lhsValue = Visit(lhsExpr);

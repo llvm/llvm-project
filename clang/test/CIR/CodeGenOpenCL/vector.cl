@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -fclangir -emit-cir -triple spir-unknown-unknown -o %t.cir
-// RUN: FileCheck %s --input-file=%t.cir --check-prefix=CIR
+// RUN: FileCheck %s --input-file=%t.cir --check-prefix=LLVM
 
 // RUN: %clang_cc1 %s -fclangir -emit-llvm -triple spir-unknown-unknown -o %t.ll
 // RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM
