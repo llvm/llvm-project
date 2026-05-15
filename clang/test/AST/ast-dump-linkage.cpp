@@ -88,7 +88,7 @@ int TemplatedVarSpec = TemplatedVar<int>;
 
 void FuncDef() {
 // CHECK: |-FunctionDecl {{.*}} FuncDef 'void ()' external-linkage
-  
+
   extern int Int;
 // CHECK: |   | `-VarDecl {{.*}} Int 'int' extern external-linkage
   extern const int ConstInt;
@@ -170,11 +170,11 @@ struct Struct {
 // CHECK: |   | `-ClassTemplateDecl {{.*}} friend_undeclared UnknownFriendStructTemplate external-linkage
 // CHECK: |   |   `-CXXRecordDecl {{.*}} struct UnknownFriendStructTemplate
 // FIXME: Friend declarations do not bind names, so they cannot have linkage.
-  
+
   friend struct Known::FriendStruct;
 // CHECK: |   |-FriendDecl {{.*}} 'struct Known::FriendStruct'
 // FIXME: Where is CXXRecordDecl?
-  
+
   template <typename>
   friend struct Known::FriendStructTemplate;
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
@@ -336,10 +336,10 @@ struct StructTemplate {
 // CHECK: |   | `-ClassTemplateDecl {{.*}} friend_undeclared UnknownFriendStructTemplate external-linkage
 // CHECK: |   |   `-CXXRecordDecl {{.*}} struct UnknownFriendStructTemplate
 // FIXME: Friend declarations do not bind names, so they cannot have linkage.
-  
+
   friend struct Known::FriendStruct;
 // CHECK: |   |-FriendDecl {{.*}} 'struct Known::FriendStruct'
-  
+
   template <typename>
   friend struct Known::FriendStructTemplate;
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}

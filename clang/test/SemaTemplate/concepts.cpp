@@ -1949,3 +1949,35 @@ static_assert(D<Publ>::has, "Public should be visible.");
 static_assert(!D<Priv>::has, "Private should be invisible.");
 static_assert(!D<Prot>::has, "Protected should be invisible.");
 }
+
+
+namespace GH197067 {
+typedef int uint32_t;
+class basic_string;
+using string = basic_string;
+using __self_view = int;
+struct basic_string {
+  basic_string(const char *);
+  operator __self_view();
+};
+int GetVmo(int);
+template <typename> struct StorageTraits;
+template <class Traits, typename Storage>
+concept StorageTraitsBufferedReadApi =
+    requires(Storage storage_ref, uint32_t length) {
+      Traits::Read(storage_ref, length, length, [] {});
+    };
+template <class Traits, typename Storage>
+concept StorageTraitsApi = StorageTraitsBufferedReadApi<Traits, Storage>;
+template <typename T>
+concept StorageApi = StorageTraitsApi<StorageTraits<T>, T>;
+template <StorageApi Storage> struct View {
+  using storage_type = Storage;
+  storage_type storage_;
+};
+template <> struct StorageTraits<int> {
+  template <typename Callback>
+  static auto Read(int, long, uint32_t, Callback) {}
+};
+View zbi(GetVmo(string("")));
+}

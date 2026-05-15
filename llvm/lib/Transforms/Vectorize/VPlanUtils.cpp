@@ -113,7 +113,7 @@ static bool poisonGuaranteesUB(const VPValue *V) {
 
     for (VPUser *U : Current->users()) {
       // Check if Current is used as an address operand for load/store.
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
         if (MemR->getAddr() == Current)
           return true;
         continue;
@@ -819,7 +819,7 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
             RepR->getOperand(1) == Cur)
           return true;
       }
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
         if (MemR->getAddr() == Cur && MemR->isConsecutive())
           return true;
       }

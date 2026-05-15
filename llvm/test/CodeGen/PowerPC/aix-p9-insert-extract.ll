@@ -1739,7 +1739,6 @@ define <8 x i16> @insert_halfword_0(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_halfword_0:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinserth 2, 3, 0
@@ -1772,7 +1771,6 @@ define <8 x i16> @insert_halfword_1(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_halfword_1:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinserth 2, 3, 2
@@ -1805,7 +1803,6 @@ define <8 x i16> @insert_halfword_2(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_halfword_2:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinserth 2, 3, 4
@@ -1838,7 +1835,6 @@ define <8 x i16> @insert_halfword_3(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_halfword_3:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinserth 2, 3, 6
@@ -1871,7 +1867,6 @@ define <8 x i16> @insert_halfword_4(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_halfword_4:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinserth 2, 3, 8
@@ -1904,7 +1899,6 @@ define <8 x i16> @insert_halfword_5(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_halfword_5:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinserth 2, 3, 10
@@ -1937,7 +1931,6 @@ define <8 x i16> @insert_halfword_6(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_halfword_6:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinserth 2, 3, 12
@@ -1970,7 +1963,6 @@ define <8 x i16> @insert_halfword_7(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_halfword_7:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinserth 2, 3, 14
@@ -2005,7 +1997,6 @@ define <16 x i8> @insert_byte_0(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_0:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 0
@@ -2038,7 +2029,6 @@ define <16 x i8> @insert_byte_1(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_1:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 1
@@ -2071,7 +2061,6 @@ define <16 x i8> @insert_byte_2(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_2:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 2
@@ -2104,7 +2093,6 @@ define <16 x i8> @insert_byte_3(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_3:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 3
@@ -2137,7 +2125,6 @@ define <16 x i8> @insert_byte_4(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_4:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 4
@@ -2170,7 +2157,6 @@ define <16 x i8> @insert_byte_5(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_5:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 5
@@ -2203,7 +2189,6 @@ define <16 x i8> @insert_byte_6(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_6:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 6
@@ -2236,7 +2221,6 @@ define <16 x i8> @insert_byte_7(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_7:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 7
@@ -2269,7 +2253,6 @@ define <16 x i8> @insert_byte_8(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_8:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 8
@@ -2302,7 +2285,6 @@ define <16 x i8> @insert_byte_9(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_9:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 9
@@ -2335,7 +2317,6 @@ define <16 x i8> @insert_byte_10(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_10:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 10
@@ -2368,7 +2349,6 @@ define <16 x i8> @insert_byte_11(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_11:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 11
@@ -2401,7 +2381,6 @@ define <16 x i8> @insert_byte_12(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_12:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 12
@@ -2434,7 +2413,6 @@ define <16 x i8> @insert_byte_13(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_13:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 13
@@ -2467,7 +2445,6 @@ define <16 x i8> @insert_byte_14(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_14:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 14
@@ -2500,7 +2477,6 @@ define <16 x i8> @insert_byte_15(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-32-O0-LABEL: insert_byte_15:
 ; CHECK-32-O0:       # %bb.0: # %entry
-; CHECK-32-O0-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-32-O0-NEXT:    mtfprwz 0, 3
 ; CHECK-32-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-32-O0-NEXT:    vinsertb 2, 3, 15

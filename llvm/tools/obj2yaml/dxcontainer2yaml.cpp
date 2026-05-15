@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/Support/Error.h"
@@ -70,6 +71,15 @@ dumpDXContainer(MemoryBufferRef Source) {
           DXIL->first.Bitcode.Size,
           std::vector<llvm::yaml::Hex8>(
               DXIL->second, DXIL->second + DXIL->first.Bitcode.Size)};
+      break;
+    }
+    case dxbc::PartType::ILDN: {
+      std::optional<mcdxbc::DebugName> DebugName = Container.getDebugName();
+      assert(DebugName && "Since we are iterating and found a ILDN part, this "
+                          "should never not have a value");
+      NewPart.DebugName = DXContainerYAML::DebugName{
+          DebugName->Parameters.Flags, DebugName->Parameters.NameLength,
+          DebugName->Filename.str()};
       break;
     }
     case dxbc::PartType::SFI0: {

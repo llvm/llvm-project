@@ -532,6 +532,12 @@ struct VPlanTransforms {
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
   /// enabled by prior widening of consecutive memory operations for now.
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
+
+  /// Convert call VPInstructions in \p Plan into widened call, vector
+  /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.
+  static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+                                        VPRecipeBuilder &RecipeBuilder,
+                                        VPCostContext &CostCtx);
 };
 
 } // namespace llvm

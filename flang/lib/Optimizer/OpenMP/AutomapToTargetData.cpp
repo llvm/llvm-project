@@ -124,6 +124,7 @@ class AutomapToTargetDataPass
           builder.getAttr<omp::VariableCaptureKindAttr>(
               omp::VariableCaptureKind::ByCopy),
           /*var_ptr_ptr=*/mlir::Value{},
+          /*var_ptr_ptr_type=*/mlir::TypeAttr{},
           /*members=*/SmallVector<Value>{},
           /*members_index=*/ArrayAttr{}, bounds,
           /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),

@@ -462,7 +462,6 @@ NativeProcessWindows::OnDebugException(bool first_chance,
     SetState(eStateStopped, false);
   }
 
-  ExceptionResult result = ExceptionResult::SendToApplication;
   switch (record.GetExceptionCode()) {
   case DWORD(STATUS_SINGLE_STEP):
   case STATUS_WX86_SINGLE_STEP: {
@@ -496,8 +495,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
     return ExceptionResult::MaskException;
   }
   case DWORD(STATUS_BREAKPOINT):
-  case STATUS_WX86_BREAKPOINT:
-
+  case STATUS_WX86_BREAKPOINT: {
     if (NativeThreadWindows *stop_thread =
             GetThreadByID(record.GetThreadID())) {
       auto &reg_ctx = stop_thread->GetRegisterContext();
@@ -564,49 +562,45 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       return ExceptionResult::BreakInDebugger;
     }
 
-    {
-      // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
-      // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
-      // Stop the debugger and let the user decide what to do.
-      std::string desc =
-          formatv("Exception {0:x8} encountered at address {1:x8}",
-                  record.GetExceptionCode(), record.GetExceptionAddress())
-              .str();
-      StopThread(record.GetThreadID(), StopReason::eStopReasonException,
-                 std::move(desc));
-      SetState(eStateStopped, true);
-    }
+    // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
+    // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
+    // Stop the debugger and let the user decide what to do.
+    std::string desc =
+        formatv("Exception {0:x8} encountered at address {1:x8}",
+                record.GetExceptionCode(), record.GetExceptionAddress())
+            .str();
+    StopThread(record.GetThreadID(), StopReason::eStopReasonException,
+               std::move(desc));
+    SetState(eStateStopped, true);
 
     return ExceptionResult::MaskException;
-  default:
+  }
+  default: {
     LLDB_LOG(log,
              "Debugger thread reported exception {0:x} at address {1:x} "
              "(first_chance={2})",
              record.GetExceptionCode(), record.GetExceptionAddress(),
              first_chance);
 
-    {
-      std::string desc;
-      llvm::raw_string_ostream desc_stream(desc);
-      desc_stream << "Exception "
-                  << llvm::format_hex(record.GetExceptionCode(), 8)
-                  << " encountered at address "
-                  << llvm::format_hex(record.GetExceptionAddress(), 8);
-      StopThread(record.GetThreadID(), StopReason::eStopReasonException,
-                 desc.c_str());
+    std::string desc;
+    llvm::raw_string_ostream desc_stream(desc);
+    desc_stream << "Exception "
+                << llvm::format_hex(record.GetExceptionCode(), 8)
+                << " encountered at address "
+                << llvm::format_hex(record.GetExceptionAddress(), 8);
+    StopThread(record.GetThreadID(), StopReason::eStopReasonException,
+               desc.c_str());
 
-      SetState(eStateStopped, true);
-    }
+    SetState(eStateStopped, true);
 
     // For non-breakpoints, give the application a chance to handle the
     // exception first.
     if (first_chance)
-      result = ExceptionResult::SendToApplication;
+      return ExceptionResult::SendToApplication;
     else
-      result = ExceptionResult::BreakInDebugger;
+      return ExceptionResult::BreakInDebugger;
   }
-
-  return result;
+  }
 }
 
 void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {

@@ -6,8 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines UnsafeBufferUsageAnalysisResult, the whole-program analysis result
-// type for UnsafeBufferUsageAnalysis.
+// Defines:
+// - UnsafeBufferUsageAnalysisResult
+//     - the whole-program analysis result
+//       type for UnsafeBufferUsageAnalysis. It collects unsafe buffer usages
+//       throughout the whole program.
+//
+// - UnsafeBufferReachableAnalysisResult
+//     - the whole-program analysis result
+//       type for UnsafeBufferReachableAnalysis. It propagates unsafe buffer
+//       usages through the pointer flow graph, starting from the initial set
+//       collected by UnsafeBufferUsageAnalysis.
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,6 +34,8 @@ namespace clang::ssaf {
 
 constexpr llvm::StringLiteral UnsafeBufferUsageAnalysisResultName =
     "UnsafeBufferUsageAnalysisResult";
+constexpr llvm::StringLiteral UnsafeBufferReachableAnalysisResultName =
+    "UnsafeBufferReachableAnalysisResult";
 
 struct UnsafeBufferUsageAnalysisResult final : AnalysisResult {
   static AnalysisName analysisName() {
@@ -36,6 +47,14 @@ struct UnsafeBufferUsageAnalysisResult final : AnalysisResult {
 
   auto begin() const { return UnsafeBuffers.begin(); }
   auto end() const { return UnsafeBuffers.end(); }
+};
+
+struct UnsafeBufferReachableAnalysisResult final : AnalysisResult {
+  static AnalysisName analysisName() {
+    return AnalysisName(UnsafeBufferReachableAnalysisResultName.str());
+  }
+
+  std::map<EntityId, EntityPointerLevelSet> Reachables;
 };
 
 } // namespace clang::ssaf

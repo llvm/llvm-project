@@ -121,14 +121,20 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
   case OffloadArch::SM_120:
   case OffloadArch::SM_120a:
     return CudaVersion::CUDA_128;
+  case OffloadArch::SM_100f:
+  case OffloadArch::SM_101f:
   case OffloadArch::SM_103:
   case OffloadArch::SM_103a:
+  case OffloadArch::SM_103f:
+  case OffloadArch::SM_120f:
   case OffloadArch::SM_121:
   case OffloadArch::SM_121a:
+  case OffloadArch::SM_121f:
     return CudaVersion::CUDA_129;
   case OffloadArch::SM_88:
   case OffloadArch::SM_110:
   case OffloadArch::SM_110a:
+  case OffloadArch::SM_110f:
     return CudaVersion::CUDA_130;
   default:
     llvm_unreachable("invalid enum");
@@ -154,6 +160,7 @@ CudaVersion MaxVersionForOffloadArch(OffloadArch A) {
     return CudaVersion::CUDA_118;
   case OffloadArch::SM_101:
   case OffloadArch::SM_101a:
+  case OffloadArch::SM_101f:
     return CudaVersion::CUDA_129;
   default:
     return CudaVersion::NEW;
@@ -221,21 +228,27 @@ unsigned CudaArchToID(OffloadArch Arch) {
     return 900;
   case OffloadArch::SM_100:
   case OffloadArch::SM_100a:
+  case OffloadArch::SM_100f:
     return 1000;
   case OffloadArch::SM_101:
   case OffloadArch::SM_101a:
+  case OffloadArch::SM_101f:
     return 1010;
   case OffloadArch::SM_103:
   case OffloadArch::SM_103a:
+  case OffloadArch::SM_103f:
     return 1030;
   case OffloadArch::SM_110:
   case OffloadArch::SM_110a:
+  case OffloadArch::SM_110f:
     return 1100;
   case OffloadArch::SM_120:
   case OffloadArch::SM_120a:
+  case OffloadArch::SM_120f:
     return 1200;
   case OffloadArch::SM_121:
   case OffloadArch::SM_121a:
+  case OffloadArch::SM_121f:
     return 1210;
   default:
     break;
@@ -252,6 +265,22 @@ bool IsNVIDIAAcceleratedOffloadArch(OffloadArch Arch) {
   case OffloadArch::SM_110a:
   case OffloadArch::SM_120a:
   case OffloadArch::SM_121a:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool IsNVIDIAFamilySpecificOffloadArch(OffloadArch Arch) {
+  if (IsNVIDIAAcceleratedOffloadArch(Arch))
+    return true;
+  switch (Arch) {
+  case OffloadArch::SM_100f:
+  case OffloadArch::SM_101f:
+  case OffloadArch::SM_103f:
+  case OffloadArch::SM_110f:
+  case OffloadArch::SM_120f:
+  case OffloadArch::SM_121f:
     return true;
   default:
     return false;

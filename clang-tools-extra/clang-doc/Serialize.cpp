@@ -233,14 +233,16 @@ void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
   if (NumChildren > 0) {
     CommentInfo *ChildrenArray =
         TransientArena.Allocate<CommentInfo>(NumChildren);
-    unsigned I = 0;
+    unsigned Idx = 0;
     for (comments::Comment *Child :
          llvm::make_range(C->child_begin(), C->child_end())) {
-      new (&ChildrenArray[I]) CommentInfo();
-      ClangDocCommentVisitor Visitor(ChildrenArray[I]);
+      new (&ChildrenArray[Idx]) CommentInfo();
+      ClangDocCommentVisitor Visitor(ChildrenArray[Idx]);
       Visitor.parseComment(Child);
-      I++;
+      Idx++;
     }
+    assert(Idx == NumChildren &&
+           "Mismatch between child_count and actual children");
     CurrentCI.Children =
         llvm::ArrayRef<CommentInfo>(ChildrenArray, NumChildren);
   }

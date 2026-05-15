@@ -372,6 +372,8 @@ class ProcessAPITestCase(TestBase):
         launch_flags = launch_info.GetLaunchFlags()
         launch_flags |= lldb.eLaunchFlagStopAtEntry
         launch_info.SetLaunchFlags(launch_flags)
+        expected_arguments = ["10", "qu'o'tes\"", "hello", "מזל טוב"]
+        launch_info.SetArguments(expected_arguments, False)
         error = lldb.SBError()
         process = target.Launch(launch_info, error)
 
@@ -444,6 +446,14 @@ class ProcessAPITestCase(TestBase):
             )
 
         process_info.GetParentProcessID()
+
+        self.assertListEqual(process_info.arguments, expected_arguments)
+        self.assertEqual(process_info.GetNumArguments(), 4)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "10")
+        self.assertEqual(process_info.GetArgumentAtIndex(1), "qu'o'tes\"")
+        self.assertEqual(process_info.GetArgumentAtIndex(2), "hello")
+        self.assertEqual(process_info.GetArgumentAtIndex(3), "מזל טוב")
+        self.assertEqual(process_info.GetArgumentAtIndex(4), None)
 
     def test_allocate_deallocate_memory(self):
         """Test Python SBProcess.AllocateMemory() and SBProcess.DeallocateMemory() APIs."""

@@ -1012,11 +1012,9 @@ public:
           // Gotos that target a label within the cleanup body region are
           // filtered out by collectExits and never reach this code, so any
           // goto that does reach here transfers control out of the cleanup
-          // scope. Branching out of a cleanup scope through a goto isn't
-          // yet supported.
-          cir::UnreachableOp::create(rewriter, loc);
-          return gotoOp.emitError("goto out of cleanup scope is not yet "
-                                  "implemented");
+          // scope. The goto is just moved to the exit block.
+          cir::GotoOp::create(rewriter, loc, gotoOp.getLabel());
+          return mlir::success();
         })
         .Default([&](mlir::Operation *op) {
           cir::UnreachableOp::create(rewriter, loc);
@@ -1404,10 +1402,7 @@ public:
 
     // Always return success because the IR has been modified (blocks split,
     // regions inlined, ops erased, etc.). The MLIR pattern rewriter contract
-    // requires that if a pattern modifies IR, it must return success(). Any
-    // errors from unsupported exit operations (e.g. goto) have already been
-    // reported via emitError and an unreachable terminator was placed as a
-    // placeholder.
+    // requires that if a pattern modifies IR, it must return success().
     return mlir::success();
   }
 

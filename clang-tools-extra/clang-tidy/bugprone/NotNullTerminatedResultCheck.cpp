@@ -297,15 +297,10 @@ static void lengthExprHandle(const Expr *LengthExpr,
   LengthExpr = LengthExpr->IgnoreParenImpCasts();
 
   // See whether we work with a macro.
-  bool IsMacroDefinition = false;
   const StringRef LengthExprStr = exprToStr(LengthExpr, Result);
-  Preprocessor::macro_iterator It = PP->macro_begin();
-  while (It != PP->macro_end() && !IsMacroDefinition) {
-    if (It->first->getName() == LengthExprStr)
-      IsMacroDefinition = true;
-
-    ++It;
-  }
+  const bool IsMacroDefinition = llvm::any_of(PP->macros(), [=](const auto &M) {
+    return M.first->getName() == LengthExprStr;
+  });
 
   // Try to obtain an 'IntegerLiteral' and adjust it.
   if (!IsMacroDefinition) {
@@ -796,25 +791,21 @@ void NotNullTerminatedResultCheck::check(
 
   if (WantToUseSafeFunctions && PP->isMacroDefined("__STDC_LIB_EXT1__")) {
     std::optional<bool> AreSafeFunctionsWanted;
-
-    Preprocessor::macro_iterator It = PP->macro_begin();
-    while (It != PP->macro_end() && !AreSafeFunctionsWanted) {
-      if (It->first->getName() == "__STDC_WANT_LIB_EXT1__") {
-        const auto *MI = PP->getMacroInfo(It->first);
-        // PP->getMacroInfo() returns nullptr if macro has no definition.
-        if (MI) {
-          const auto &T = MI->tokens().back();
-          if (T.isLiteral() && T.getLiteralData()) {
-            const StringRef ValueStr =
-                StringRef(T.getLiteralData(), T.getLength());
-            llvm::APInt IntValue;
-            ValueStr.getAsInteger(10, IntValue);
-            AreSafeFunctionsWanted = IntValue.getZExtValue();
-          }
-        }
+    for (const auto &M : PP->macros()) {
+      if (M.first->getName() != "__STDC_WANT_LIB_EXT1__")
+        continue;
+      const auto *MI = PP->getMacroInfo(M.first);
+      // PP->getMacroInfo() returns nullptr if macro has no definition.
+      if (!MI)
+        continue;
+      const auto &T = MI->tokens().back();
+      if (T.isLiteral() && T.getLiteralData()) {
+        const StringRef ValueStr(T.getLiteralData(), T.getLength());
+        llvm::APInt IntValue;
+        ValueStr.getAsInteger(10, IntValue);
+        AreSafeFunctionsWanted = IntValue.getZExtValue();
+        break;
       }
-
-      ++It;
     }
 
     if (AreSafeFunctionsWanted)

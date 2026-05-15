@@ -36,7 +36,7 @@ page](https://llvm.org/releases/).
 ## New Compiler Flags
 
 - The warning flags with prefixes -Wopen-mp and -Wopen-acc have been deprecated in favor of corrected spellings with the respective prefixes -Wopenmp and -Wopenacc. Removal of the deprecated options is planned for LLVM 25 (July 2027).
-
+- The `-Werror` flag will cause all warnings to become errors. This includes warnings about support for OpenMP versions, which will now prevent the compilation from happening with the `-Werror` flag. These OpenMP warnings can be disabled with `-Wno-experimental-option`.
 
 ## Windows Support
 

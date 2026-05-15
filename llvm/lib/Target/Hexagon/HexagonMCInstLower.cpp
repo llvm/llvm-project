@@ -115,6 +115,14 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
     AP.EmitSled(*MI, HexagonAsmPrinter::SledKind::TAIL_CALL);
     return;
   }
+  if (MI->getOpcode() == Hexagon::PATCHABLE_EVENT_CALL) {
+    AP.LowerPATCHABLE_EVENT_CALL(*MI, false);
+    return;
+  }
+  if (MI->getOpcode() == Hexagon::PATCHABLE_TYPED_EVENT_CALL) {
+    AP.LowerPATCHABLE_EVENT_CALL(*MI, true);
+    return;
+  }
 
   MCInst *MCI = AP.OutContext.createMCInst();
   MCI->setOpcode(MI->getOpcode());

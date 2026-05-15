@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR long double roundevenl(long double x) {
+LIBC_INLINE constexpr long double roundevenl(long double x) {
   return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
 }
 

@@ -16,9 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR bfloat16 ceilbf16(bfloat16 x) {
-  return fputil::ceil(x);
-}
+LIBC_INLINE constexpr bfloat16 ceilbf16(bfloat16 x) { return fputil::ceil(x); }
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

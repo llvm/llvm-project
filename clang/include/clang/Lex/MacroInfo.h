@@ -583,6 +583,11 @@ public:
   unsigned getNumOverridingMacros() const { return NumOverriddenBy; }
 };
 
+struct ModuleMacroInfo {
+  ArrayRef<ModuleMacro *> ActiveModuleMacros = {};
+  bool IsAmbiguous = false;
+};
+
 /// A description of the current definition of a macro.
 ///
 /// The definition of a macro comprises a set of (at least one) defining
@@ -593,9 +598,9 @@ class MacroDefinition {
 
 public:
   MacroDefinition() = default;
-  MacroDefinition(DefMacroDirective *MD, ArrayRef<ModuleMacro *> MMs,
-                  bool IsAmbiguous)
-      : LatestLocalAndAmbiguous(MD, IsAmbiguous), ModuleMacros(MMs) {}
+  MacroDefinition(DefMacroDirective *MD, ModuleMacroInfo Info)
+      : LatestLocalAndAmbiguous(MD, Info.IsAmbiguous),
+        ModuleMacros(Info.ActiveModuleMacros) {}
 
   /// Determine whether there is a definition of this macro.
   explicit operator bool() const {

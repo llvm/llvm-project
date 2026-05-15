@@ -247,6 +247,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config
+    libc.hdr.errno_macros
     libc.hdr.types.off_t
     libc.include.sys_syscall
 )

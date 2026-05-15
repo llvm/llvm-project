@@ -884,6 +884,49 @@ class FenceToXeVMPattern : public OpConversionPattern<xegpu::FenceOp> {
   }
 };
 
+static auto encodePrecision = [](Type type) -> xevm::ElemType {
+  if (type.isBF16())
+    return xevm::ElemType::BF16;
+  else if (type.isF16())
+    return xevm::ElemType::F16;
+  else if (type.isTF32())
+    return xevm::ElemType::TF32;
+  else if (type.isInteger(8)) {
+    if (type.isUnsignedInteger())
+      return xevm::ElemType::U8;
+    return xevm::ElemType::S8;
+  } else if (type.isF32())
+    return xevm::ElemType::F32;
+  else if (type.isInteger(32))
+    return xevm::ElemType::S32;
+  else if (type.isF8E5M2())
+    return xevm::ElemType::BF8;
+  else if (type.isF8E4M3FN())
+    return xevm::ElemType::F8;
+  else if (mlir::isa<Float4E2M1FNType>(type))
+    return xevm::ElemType::E2M1;
+  llvm_unreachable("add more support for ElemType");
+};
+
+static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
+  switch (pTy) {
+  case xevm::ElemType::TF32:
+    return 1;
+  case xevm::ElemType::BF16:
+  case xevm::ElemType::F16:
+    return 2;
+  case xevm::ElemType::U8:
+  case xevm::ElemType::S8:
+  case xevm::ElemType::F8:
+  case xevm::ElemType::BF8:
+    return 4;
+  case xevm::ElemType::E2M1:
+    return 8;
+  default:
+    llvm_unreachable("unsupported xevm::ElemType");
+  }
+}
+
 class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -929,23 +972,6 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
       return rewriter.notifyMatchFailure(
           op, "result/accumulator element type not supported by target uArch");
 
-    auto encodePrecision = [&](Type type) -> xevm::ElemType {
-      if (type == rewriter.getBF16Type())
-        return xevm::ElemType::BF16;
-      else if (type == rewriter.getF16Type())
-        return xevm::ElemType::F16;
-      else if (type == rewriter.getTF32Type())
-        return xevm::ElemType::TF32;
-      else if (type.isInteger(8)) {
-        if (type.isUnsignedInteger())
-          return xevm::ElemType::U8;
-        return xevm::ElemType::S8;
-      } else if (type == rewriter.getF32Type())
-        return xevm::ElemType::F32;
-      else if (type.isInteger(32))
-        return xevm::ElemType::S32;
-      llvm_unreachable("add more support for ElemType");
-    };
     xevm::ElemType precATy = encodePrecision(aTy.getElementType());
     xevm::ElemType precBTy = encodePrecision(bTy.getElementType());
     Value c = op.getAcc();
@@ -979,22 +1005,6 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
       dpasRes = vector::ShapeCastOp::create(rewriter, loc, resultType, dpasRes);
     rewriter.replaceOp(op, dpasRes);
     return success();
-  }
-
-private:
-  static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
-    switch (pTy) {
-    case xevm::ElemType::TF32:
-      return 1;
-    case xevm::ElemType::BF16:
-    case xevm::ElemType::F16:
-      return 2;
-    case xevm::ElemType::U8:
-    case xevm::ElemType::S8:
-      return 4;
-    default:
-      llvm_unreachable("unsupported xevm::ElemType");
-    }
   }
 };
 
@@ -1063,6 +1073,72 @@ class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
       resVec = vector::InsertOp::create(rewriter, loc, newVal, resVec, i);
     }
     rewriter.replaceOp(op, resVec);
+    return success();
+  }
+};
+
+class DpasMxToXeVMPattern : public OpConversionPattern<xegpu::DpasMxOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::DpasMxOp op, xegpu::DpasMxOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto ctxt = rewriter.getContext();
+    auto aTy = op.getA().getType();
+    auto bTy = op.getB().getType();
+    auto resVecTy =
+        cast<VectorType>(getTypeConverter()->convertType(op.getType()));
+
+    auto chipStr = xegpu::getChipStr(op);
+    if (!chipStr)
+      return rewriter.notifyMatchFailure(op, "cannot determine target chip");
+
+    const auto *uArch = xegpu::uArch::getUArch(*chipStr);
+    if (!uArch)
+      return rewriter.notifyMatchFailure(op, "unsupported target uArch");
+
+    // TODO: Add supported shape check
+
+    xevm::ElemType precATy = encodePrecision(aTy.getElementType());
+    xevm::ElemType precBTy = encodePrecision(bTy.getElementType());
+    Value c = adaptor.getAcc();
+    if (!c) {
+      auto elementTy = resVecTy.getElementType();
+      Attribute initValueAttr;
+      if (isa<FloatType>(elementTy))
+        initValueAttr = FloatAttr::get(elementTy, 0.0);
+      else
+        initValueAttr = IntegerAttr::get(elementTy, 0);
+      c = arith::ConstantOp::create(
+          rewriter, loc, DenseElementsAttr::get(resVecTy, initValueAttr));
+    }
+
+    Value aVec = adaptor.getA();
+    Value bVec = adaptor.getB();
+    auto aVecTy = cast<VectorType>(aVec.getType());
+    auto bVecTy = cast<VectorType>(bVec.getType());
+    if (aVecTy.getElementTypeBitWidth() == 4)
+      aVec = vector::BitCastOp::create(
+          rewriter, loc,
+          VectorType::get(aVecTy.getNumElements() / 2, rewriter.getI8Type()),
+          aVec);
+    if (bVecTy.getElementTypeBitWidth() == 4)
+      bVec = vector::BitCastOp::create(
+          rewriter, loc,
+          VectorType::get(bVecTy.getNumElements() / 2, rewriter.getI8Type()),
+          bVec);
+    auto cVecTy = cast<VectorType>(c.getType());
+    xevm::ElemType precCTy = encodePrecision(cVecTy.getElementType());
+    xevm::ElemType precDTy = encodePrecision(resVecTy.getElementType());
+    Value scaleA = adaptor.getScaleA();
+    Value scaleB = adaptor.getScaleB();
+    Value dpasMxRes = xevm::MMAMxOp::create(
+        rewriter, loc, resVecTy, aVec, bVec, scaleA, scaleB, c,
+        xevm::MMAShapeAttr::get(ctxt, cVecTy.getNumElements(), executionSize,
+                                systolicDepth *
+                                    getNumOperandsPerDword(precATy)),
+        xevm::MMATypesAttr::get(ctxt, precDTy, precATy, precBTy, precCTy));
+    rewriter.replaceOp(op, dpasMxRes);
     return success();
   }
 };
@@ -1381,4 +1457,5 @@ void mlir::populateXeGPUToXeVMConversionPatterns(
                CreateMemDescOpPattern>(typeConverter, patterns.getContext());
   patterns.add<FenceToXeVMPattern, DpasToXeVMPattern>(typeConverter,
                                                       patterns.getContext());
+  patterns.add<DpasMxToXeVMPattern>(typeConverter, patterns.getContext());
 }

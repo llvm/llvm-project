@@ -30,6 +30,7 @@
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseAST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -278,13 +279,19 @@ public:
 
           // Find the range of the primary location.
           for (const auto &range : Info.getRanges()) {
-            if (range.getBegin() == sloc) {
-              // FIXME: This is probably not handling wide characters correctly.
-              unsigned end_col = sm.getSpellingColumnNumber(range.getEnd());
-              if (end_col > loc.column)
-                loc.length = end_col - loc.column;
+            if (range.getBegin() != sloc)
+              continue;
+            SourceLocation end = range.getEnd();
+            if (range.isTokenRange())
+              end = clang::Lexer::getLocForEndOfToken(end, 0, sm, m_lang_opts);
+            // FIXME: This is probably not handling wide characters correctly.
+            unsigned end_col = sm.getSpellingColumnNumber(end);
+            // Ignore ranges that span multiple lines.
+            if (end_col != sm.getSpellingLineNumber(sloc))
               break;
-            }
+            if (end_col > loc.column)
+              loc.length = end_col - loc.column;
+            break;
           }
           detail.source_location = loc;
         }
@@ -307,6 +314,7 @@ public:
   }
 
   void BeginSourceFile(const LangOptions &LO, const Preprocessor *PP) override {
+    m_lang_opts = LO;
     m_passthrough->BeginSourceFile(LO, PP);
   }
 
@@ -315,6 +323,7 @@ public:
 private:
   DiagnosticManager *m_manager = nullptr;
   DiagnosticOptions m_options;
+  LangOptions m_lang_opts;
   /// Output string filled by m_os.
   std::string m_output;
   /// Output stream of m_passthrough.

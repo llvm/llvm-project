@@ -9,16 +9,12 @@
 // Defines
 // - PointerFlowAnalysisResult
 //     - the plain PointerFlow info collected from the whole program.
-// - PointerFlowReachableAnalysisResult
-//     - the set of reachable pointers in the pointer flow graph from a provided
-//       starting set.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ANALYSES_POINTERFLOW_POINTERFLOWANALYSIS_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ANALYSES_POINTERFLOW_POINTERFLOWANALYSIS_H
 
-#include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlow.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
@@ -30,8 +26,6 @@ namespace clang::ssaf {
 
 constexpr llvm::StringLiteral PointerFlowAnalysisResultName =
     "PointerFlowAnalysisResult";
-constexpr llvm::StringLiteral UnsafeBufferReachableAnalysisResultName =
-    "UnsafeBufferReachableAnalysisResult";
 
 /// A PointerFlowAnalysisResult is a set of pointer-flow edges, i.e.,
 /// a pointer-flow graph. A directed edge src -> dest corresponds to an
@@ -49,14 +43,6 @@ struct PointerFlowAnalysisResult final : AnalysisResult {
   }
 
   std::map<EntityId, EdgeSet> Edges;
-};
-
-struct UnsafeBufferReachableAnalysisResult final : AnalysisResult {
-  static AnalysisName analysisName() {
-    return AnalysisName(UnsafeBufferReachableAnalysisResultName.str());
-  }
-
-  std::map<EntityId, EntityPointerLevelSet> Reachables;
 };
 
 } // namespace clang::ssaf

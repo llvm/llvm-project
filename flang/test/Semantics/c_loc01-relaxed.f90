@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -frelaxed-c-loc
+! RUN: %python %S/test_errors.py %s %flang_fc1 -frelaxed-c-loc-checks
 module m
   use iso_c_binding
   type haslen(L)

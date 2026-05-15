@@ -807,6 +807,18 @@ void Module::setStackProtectorGuardOffset(int Offset) {
   addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-offset", Offset);
 }
 
+std::optional<unsigned> Module::getStackProtectorGuardValueWidth() const {
+  Metadata *MD = getModuleFlag("stack-protector-guard-value-width");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return CI->getZExtValue();
+  return std::nullopt;
+}
+
+void Module::setStackProtectorGuardValueWidth(unsigned Width) {
+  addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-value-width",
+                Width);
+}
+
 unsigned Module::getOverrideStackAlignment() const {
   Metadata *MD = getModuleFlag("override-stack-alignment");
   if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))

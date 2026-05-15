@@ -2011,3 +2011,13 @@ namespace RVOPtrIsExtern {
   }
   static_assert(test_all(), "");
 }
+
+namespace MutableInMemcpy {
+  union H {
+    mutable struct {} gx; // both-note {{declared here}}
+  };
+  constexpr H h1 = {};
+  constexpr H h2 = h1; // both-error {{must be initialized by a constant expression}} \
+                       // both-note {{read of mutable member 'gx' is not allowed in a constant expression}} \
+                       // both-note {{in call}}
+}

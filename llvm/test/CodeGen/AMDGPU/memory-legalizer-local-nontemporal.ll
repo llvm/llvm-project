@@ -20,7 +20,6 @@ define amdgpu_kernel void @local_nontemporal_load_0(
 ; GFX6-NEXT:    s_mov_b64 s[4:5], s[8:9]
 ; GFX6-NEXT:    s_load_dword s8, s[4:5], 0x0
 ; GFX6-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr8
 ; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s11, s5
@@ -263,7 +262,6 @@ define amdgpu_kernel void @local_nontemporal_load_1(
 ; GFX6-NEXT:    s_mov_b64 s[4:5], s[8:9]
 ; GFX6-NEXT:    s_load_dword s8, s[4:5], 0x0
 ; GFX6-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr8
 ; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s11, s5
@@ -543,7 +541,6 @@ define amdgpu_kernel void @local_nontemporal_store_0(
 ; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[6:7], 0x0
@@ -764,7 +761,6 @@ define amdgpu_kernel void @local_nontemporal_store_1(
 ; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s5, s[8:9], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr4 killed $sgpr5
 ; GFX6-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s4, s[6:7], 0x0
@@ -1012,7 +1008,6 @@ define amdgpu_kernel void @local_nontemporal_volatile_load(
 ; GFX6-NEXT:    s_mov_b64 s[4:5], s[8:9]
 ; GFX6-NEXT:    s_load_dword s8, s[4:5], 0x0
 ; GFX6-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x2
-; GFX6-NEXT:    ; kill: def $sgpr6 killed $sgpr8
 ; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s11, s5

@@ -1759,6 +1759,115 @@ func.func @adduiExtendedPoisonRhs() -> (i32, i1) {
   return %sum, %overflow : i32, i1
 }
 
+// CHECK-LABEL: @subuiExtendedZeroRhs
+//  CHECK-NEXT:   %[[false:.+]] = arith.constant false
+//  CHECK-NEXT:   return %arg0, %[[false]]
+func.func @subuiExtendedZeroRhs(%arg0: i32) -> (i32, i1) {
+  %zero = arith.constant 0 : i32
+  %diff, %borrow = arith.subui_extended %arg0, %zero: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedZeroRhsSplat
+//  CHECK-NEXT:   %[[false:.+]] = arith.constant dense<false> : vector<4xi1>
+//  CHECK-NEXT:   return %arg0, %[[false]]
+func.func @subuiExtendedZeroRhsSplat(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %zero = arith.constant dense<0> : vector<4xi32>
+  %diff, %borrow = arith.subui_extended %arg0, %zero: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedSameOperand
+//  CHECK-DAG:    %[[zero:.+]] = arith.constant 0 : i32
+//  CHECK-DAG:    %[[false:.+]] = arith.constant false
+//  CHECK-NEXT:   return %[[zero]], %[[false]]
+func.func @subuiExtendedSameOperand(%arg0: i32) -> (i32, i1) {
+  %diff, %borrow = arith.subui_extended %arg0, %arg0: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedSameOperandVector
+//  CHECK-DAG:    %[[zero:.+]] = arith.constant dense<0> : vector<4xi32>
+//  CHECK-DAG:    %[[false:.+]] = arith.constant dense<false> : vector<4xi1>
+//  CHECK-NEXT:   return %[[zero]], %[[false]]
+func.func @subuiExtendedSameOperandVector(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %diff, %borrow = arith.subui_extended %arg0, %arg0: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedUnusedBorrowScalar
+//  CHECK-SAME:   (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32) -> i32
+//  CHECK-NEXT:   %[[RES:.+]] = arith.subi %[[LHS]], %[[RHS]] : i32
+//  CHECK-NEXT:   return %[[RES]] : i32
+func.func @subuiExtendedUnusedBorrowScalar(%arg0: i32, %arg1: i32) -> i32 {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1: i32, i1
+  return %diff : i32
+}
+
+// CHECK-LABEL: @subuiExtendedUnusedBorrowVector
+//  CHECK-SAME:   (%[[LHS:.+]]: vector<3xi32>, %[[RHS:.+]]: vector<3xi32>) -> vector<3xi32>
+//  CHECK-NEXT:   %[[RES:.+]] = arith.subi %[[LHS]], %[[RHS]] : vector<3xi32>
+//  CHECK-NEXT:   return %[[RES]] : vector<3xi32>
+func.func @subuiExtendedUnusedBorrowVector(%arg0: vector<3xi32>, %arg1: vector<3xi32>) -> vector<3xi32> {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1: vector<3xi32>, vector<3xi1>
+  return %diff : vector<3xi32>
+}
+
+// CHECK-LABEL: @subuiExtendedConstants
+//  CHECK-DAG:    %[[false:.+]] = arith.constant false
+//  CHECK-DAG:    %[[c2:.+]] = arith.constant 2 : i32
+//  CHECK-NEXT:   return %[[c2]], %[[false]]
+func.func @subuiExtendedConstants() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %c3 = arith.constant 3 : i32
+  %diff, %borrow = arith.subui_extended %c5, %c3: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedConstantsBorrow
+//  CHECK-DAG:    %[[true:.+]] = arith.constant true
+//  CHECK-DAG:    %[[c_2:.+]] = arith.constant -2 : i32
+//  CHECK-NEXT:   return %[[c_2]], %[[true]]
+func.func @subuiExtendedConstantsBorrow() -> (i32, i1) {
+  %c3 = arith.constant 3 : i32
+  %c5 = arith.constant 5 : i32
+  %diff, %borrow = arith.subui_extended %c3, %c5: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedConstantsBorrowVector
+//  CHECK-DAG:    %[[diff:.+]] = arith.constant dense<[1, 0, -1, 0]> : vector<4xi32>
+//  CHECK-DAG:    %[[borrow:.+]] = arith.constant dense<[false, false, true, false]> : vector<4xi1>
+//  CHECK-NEXT:   return %[[diff]], %[[borrow]]
+func.func @subuiExtendedConstantsBorrowVector() -> (vector<4xi32>, vector<4xi1>) {
+  %v1 = arith.constant dense<[1, 3, 3, 7]> : vector<4xi32>
+  %v2 = arith.constant dense<[0, 3, 4, 7]> : vector<4xi32>
+  %diff, %borrow = arith.subui_extended %v1, %v2 : vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedPoisonLhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @subuiExtendedPoisonLhs() -> (i32, i1) {
+  %poison = ub.poison : i32
+  %c5 = arith.constant 5 : i32
+  %diff, %borrow = arith.subui_extended %poison, %c5 : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedPoisonRhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @subuiExtendedPoisonRhs() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %poison = ub.poison : i32
+  %diff, %borrow = arith.subui_extended %c5, %poison : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
 // CHECK-LABEL: @mulsiExtendedZeroRhs
 //  CHECK-NEXT:   %[[zero:.+]] = arith.constant 0 : i32
 //  CHECK-NEXT:   return %[[zero]], %[[zero]]

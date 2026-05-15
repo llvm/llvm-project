@@ -6082,6 +6082,15 @@ def mstack_protector_guard_offset_EQ : Joined<["-"], "mstack-protector-guard-off
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given offset for addressing the stack-protector guard">,
   MarshallingInfoInt<CodeGenOpts<"StackProtectorGuardOffset">, "INT_MAX", "int">;
+def mstack_protector_guard_value_width_EQ : Joined<["-"], "mstack-protector-guard-value-width=">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use the given width for the value of the the stack-protector guard (AArch64-only)">,
+  MarshallingInfoInt<CodeGenOpts<"StackProtectorGuardValueWidth">, "UINT_MAX", "unsigned">,
+  DocBrief<[{Set the width of the stack-protector guard variable. By default,
+the width is the same as the pointer width.  Currently only supported on AArch64
+targets.  Only the values "4" and "8" are currently supported.  This currently
+only modifies the size of accesses to the global variable, not the value
+stored on the stack.}]>;
 def mstack_protector_guard_symbol_EQ : Joined<["-"], "mstack-protector-guard-symbol=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given symbol for addressing the stack-protector guard">,

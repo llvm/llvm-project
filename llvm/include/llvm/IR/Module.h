@@ -1009,6 +1009,10 @@ public:
   int getStackProtectorGuardOffset() const;
   void setStackProtectorGuardOffset(int Offset);
 
+  /// Get/set the width in memory of the stack protector guard value.
+  std::optional<unsigned> getStackProtectorGuardValueWidth() const;
+  void setStackProtectorGuardValueWidth(unsigned Width);
+
   /// Get/set the stack alignment overridden from the default.
   unsigned getOverrideStackAlignment() const;
   void setOverrideStackAlignment(unsigned Align);

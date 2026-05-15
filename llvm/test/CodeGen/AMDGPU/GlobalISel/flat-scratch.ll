@@ -3,13 +3,13 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -global-isel -new-reg-bank-select -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+enable-flat-scratch < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -global-isel -new-reg-bank-select -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=GFX942 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -global-isel -new-reg-bank-select -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=GFX11 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -global-isel -new-reg-bank-select -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=GFX12 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -global-isel -new-reg-bank-select -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+real-true16 < %s | FileCheck -check-prefix=GFX12 %s
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -global-isel -new-reg-bank-select -mattr=-unaligned-access-mode -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=UNALIGNED_GFX9 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -global-isel -new-reg-bank-select -mattr=-unaligned-access-mode -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=UNALIGNED_GFX10 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -global-isel -new-reg-bank-select -mattr=-unaligned-access-mode -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefixes=UNALIGNED_GFX942 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -global-isel -new-reg-bank-select -mattr=-unaligned-access-mode -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefixes=UNALIGNED_GFX11 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -global-isel -new-reg-bank-select -mattr=-unaligned-access-mode -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefixes=UNALIGNED_GFX12 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -global-isel -new-reg-bank-select -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=-unaligned-access-mode,+enable-flat-scratch < %s | FileCheck -check-prefixes=UNALIGNED_GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -global-isel -new-reg-bank-select -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=-unaligned-access-mode,+enable-flat-scratch < %s | FileCheck -check-prefixes=UNALIGNED_GFX10 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -global-isel -new-reg-bank-select -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=-unaligned-access-mode < %s | FileCheck -check-prefixes=UNALIGNED_GFX942 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -global-isel -new-reg-bank-select -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=-unaligned-access-mode < %s | FileCheck -check-prefixes=UNALIGNED_GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -global-isel -new-reg-bank-select -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+real-true16,-unaligned-access-mode < %s | FileCheck -check-prefixes=UNALIGNED_GFX12 %s
 
 define amdgpu_kernel void @store_load_sindex_kernel(i32 %idx) {
 ; GFX9-LABEL: store_load_sindex_kernel:
@@ -2689,22 +2689,23 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX11-LABEL: store_load_i64_unaligned:
 ; UNALIGNED_GFX11:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v1.l, 15
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v1.h, 0
 ; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v1, off dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:1 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:1 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:2 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:2 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:3 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:3 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:4 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:4 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:5 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:5 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:6 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:6 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:7 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:7 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -2731,23 +2732,24 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX12-NEXT:    s_wait_samplecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; UNALIGNED_GFX12-NEXT:    s_wait_kmcnt 0x0
-; UNALIGNED_GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v1.l, 15
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v1.h, 0
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v1, off scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:1 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:2 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:3 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:3 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:4 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:4 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:5 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:5 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:6 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:6 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:7 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:7 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    scratch_load_u8 v1, v0, off scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -3028,32 +3030,33 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX11-LABEL: store_load_v3i32_unaligned:
 ; UNALIGNED_GFX11:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 0
-; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v3, 2
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v1.l, 1
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v1.h, 0
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v2.l, 2
 ; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v1, off dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:1 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:1 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:2 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:2 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:3 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:3 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v1, 3
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v3, off offset:4 dlc
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v1.l, 3
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:4 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:5 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:5 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:6 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:6 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:7 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:7 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v1, off offset:8 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:9 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:9 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:10 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:10 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:11 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:11 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -3088,33 +3091,34 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX12-NEXT:    s_wait_samplecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; UNALIGNED_GFX12-NEXT:    s_wait_kmcnt 0x0
-; UNALIGNED_GFX12-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 0
-; UNALIGNED_GFX12-NEXT:    v_mov_b32_e32 v3, 2
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v1.l, 1
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v1.h, 0
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v2.l, 2
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v1, off scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:1 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:2 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:3 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:3 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    v_mov_b32_e32 v1, 3
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v1.l, 3
+; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:4 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:5 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:5 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:6 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:6 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:7 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:7 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v1, off offset:8 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:9 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:9 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:10 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:10 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:11 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:11 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    scratch_load_u8 v1, v0, off scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -3458,41 +3462,42 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX11-LABEL: store_load_v4i32_unaligned:
 ; UNALIGNED_GFX11:       ; %bb.0: ; %bb
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; UNALIGNED_GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 0
-; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v3, 2
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v1.l, 1
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v1.h, 0
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v2.l, 2
 ; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v1, off dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:1 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:1 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:2 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:2 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:3 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:3 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v3, off offset:4 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:4 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v1, 3
-; UNALIGNED_GFX11-NEXT:    v_mov_b32_e32 v3, 4
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:5 dlc
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v1.l, 3
+; UNALIGNED_GFX11-NEXT:    v_mov_b16_e32 v2.l, 4
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:5 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:6 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:6 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:7 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:7 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v1, off offset:8 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:9 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:9 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:10 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:10 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:11 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:11 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v3, off offset:12 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:12 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:13 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:13 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:14 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:14 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; UNALIGNED_GFX11-NEXT:    scratch_store_b8 v0, v2, off offset:15 dlc
+; UNALIGNED_GFX11-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:15 dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; UNALIGNED_GFX11-NEXT:    scratch_load_u8 v1, v0, off glc dlc
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -3535,42 +3540,43 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; UNALIGNED_GFX12-NEXT:    s_wait_samplecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; UNALIGNED_GFX12-NEXT:    s_wait_kmcnt 0x0
-; UNALIGNED_GFX12-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 0
-; UNALIGNED_GFX12-NEXT:    v_mov_b32_e32 v3, 2
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v1.l, 1
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v1.h, 0
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v2.l, 2
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v1, off scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:1 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:2 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:3 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:3 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:4 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    v_mov_b32_e32 v1, 3
-; UNALIGNED_GFX12-NEXT:    v_mov_b32_e32 v3, 4
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:5 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v1.l, 3
+; UNALIGNED_GFX12-NEXT:    v_mov_b16_e32 v2.l, 4
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:5 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:6 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:6 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:7 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:7 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v1, off offset:8 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:9 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:9 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:10 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:10 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:11 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:11 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v3, off offset:12 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:12 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:13 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:13 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:14 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:14 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
-; UNALIGNED_GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:15 scope:SCOPE_SYS
+; UNALIGNED_GFX12-NEXT:    scratch_store_d16_hi_b8 v0, v1, off offset:15 scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_storecnt 0x0
 ; UNALIGNED_GFX12-NEXT:    scratch_load_u8 v1, v0, off scope:SCOPE_SYS
 ; UNALIGNED_GFX12-NEXT:    s_wait_loadcnt 0x0

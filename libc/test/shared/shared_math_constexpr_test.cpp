@@ -11,6 +11,8 @@
 #include "shared/math.h"
 #include "test/UnitTest/Test.h"
 
+#ifdef LIBC_USE_CONSTEXPR
+
 //===----------------------------------------------------------------------===//
 //                       Double Tests
 //===----------------------------------------------------------------------===//
@@ -631,5 +633,7 @@ static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::roundevenbf16(bfloat16(0.0)));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::truncbf16(bfloat16(0.0)));
+
+#endif // LIBC_USE_CONTEXPR
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}

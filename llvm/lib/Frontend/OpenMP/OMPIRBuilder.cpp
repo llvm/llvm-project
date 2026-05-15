@@ -10170,7 +10170,8 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     function_ref<MapInfosOrErrorTy(InsertPointTy CodeGenIP, llvm::Value *PtrPHI,
                                    llvm::Value *BeginArg)>
         GenMapInfoCB,
-    Type *ElemTy, StringRef FuncName, CustomMapperCallbackTy CustomMapperCB) {
+    Type *ElemTy, StringRef FuncName, CustomMapperCallbackTy CustomMapperCB,
+    bool PreserveMemberOfFlags) {
   SmallVector<Type *> Params;
   Params.emplace_back(Builder.getPtrTy());
   Params.emplace_back(Builder.getPtrTy());
@@ -10267,8 +10268,21 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     Value *OriMapType = Builder.getInt64(
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             Info->Types[I]));
-    Value *MemberMapType =
-        Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
+    Value *MemberMapType;
+    if (PreserveMemberOfFlags) {
+      constexpr uint64_t MemberOfMask =
+          static_cast<uint64_t>(OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF);
+      uint64_t OrigFlags =
+          static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+              Info->Types[I]);
+      bool HasMemberOf = (OrigFlags & MemberOfMask) != 0;
+      if (HasMemberOf)
+        MemberMapType = Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
+      else
+        MemberMapType = OriMapType;
+    } else {
+      MemberMapType = Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
+    }
 
     // Combine the map type inherited from user-defined mapper with that
     // specified in the program. According to the OMP_MAP_TO and OMP_MAP_FROM

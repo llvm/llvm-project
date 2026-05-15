@@ -92,7 +92,7 @@ sqrt(InType x) {
         DyadicFloat<cpp::bit_ceil(static_cast<size_t>(InFPBits::STORAGE_LEN))>;
 
     constexpr InStorageType ONE = InStorageType(1) << InFPBits::FRACTION_LEN;
-    LIBC_CONSTEXPR auto FLT_NAN = OutFPBits::quiet_nan().get_val();
+    constexpr auto FLT_NAN = OutFPBits::quiet_nan().get_val();
 
     InFPBits bits(x);
 

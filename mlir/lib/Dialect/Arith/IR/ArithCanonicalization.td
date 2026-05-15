@@ -106,6 +106,17 @@ def AddUIExtendedToAddI:
              [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
 
 //===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+// subui_extended(x, y) -> [subi(x, y), x], when the `borrow` result has no
+// uses. Since the 'borrow' result is unused, any replacement value will do.
+def SubUIExtendedToSubI:
+    Pattern<(Arith_SubUIExtendedOp:$res $x, $y),
+             [(Arith_SubIOp $x, $y, DefOverflow), (replaceWithValue $x)],
+             [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
+
+//===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 
