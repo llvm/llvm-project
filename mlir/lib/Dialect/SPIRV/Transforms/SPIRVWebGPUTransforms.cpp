@@ -204,6 +204,43 @@ struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
   }
 };
 
+struct ExpandSubBorrowPattern final : OpRewritePattern<ISubBorrowOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ISubBorrowOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    Value lhs = op.getOperand1();
+    Value rhs = op.getOperand2();
+
+    // Currently, WGSL only supports 32-bit integer types. Any other integer
+    // types should already have been promoted/demoted to i32.
+    Type argTy = lhs.getType();
+    auto elemTy = cast<IntegerType>(getElementTypeOrSelf(argTy));
+    if (elemTy.getIntOrFloatBitWidth() != 32)
+      return rewriter.notifyMatchFailure(
+          loc,
+          llvm::formatv("Unexpected integer type for WebGPU: '{0}'", elemTy));
+
+    Value one = ConstantOp::create(rewriter, loc, argTy,
+                                   getScalarOrSplatAttr(argTy, 1));
+    Value zero = ConstantOp::create(rewriter, loc, argTy,
+                                    getScalarOrSplatAttr(argTy, 0));
+
+    // Calculate the borrow by checking if lhs < rhs (unsigned).
+    Value out = ISubOp::create(rewriter, loc, lhs, rhs);
+    Value cmp = ULessThanOp::create(rewriter, loc, lhs, rhs);
+    Value borrow = SelectOp::create(rewriter, loc, cmp, one, zero);
+
+    Value sub = CompositeConstructOp::create(rewriter, loc,
+                                             op->getResultTypes().front(),
+                                             llvm::ArrayRef({out, borrow}));
+
+    rewriter.replaceOp(op, sub);
+    return success();
+  }
+};
+
 struct ExpandIsInfPattern final : OpRewritePattern<IsInfOp> {
   using Base::Base;
 
@@ -252,7 +289,8 @@ void populateSPIRVExpandExtendedMultiplicationPatterns(
   // WGSL currently does not support extended multiplication ops, see:
   // https://github.com/gpuweb/gpuweb/issues/1565.
   patterns.add<ExpandSMulExtendedPattern, ExpandUMulExtendedPattern,
-               ExpandAddCarryPattern>(patterns.getContext());
+               ExpandAddCarryPattern, ExpandSubBorrowPattern>(
+      patterns.getContext());
 }
 
 void populateSPIRVExpandNonFiniteArithmeticPatterns(
