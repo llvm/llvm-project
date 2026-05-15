@@ -549,19 +549,35 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     Value lhsImag = complex::ImOp::create(b, elementType, adaptor.getLhs());
     Value rhsReal = complex::ReOp::create(b, elementType, adaptor.getRhs());
     Value rhsImag = complex::ImOp::create(b, elementType, adaptor.getRhs());
-    Value lhsRealTimesRhsReal =
-        arith::MulFOp::create(b, lhsReal, rhsReal, fmfValue);
-    Value lhsImagTimesRhsImag =
-        arith::MulFOp::create(b, lhsImag, rhsImag, fmfValue);
-    Value lhsImagTimesRhsReal =
-        arith::MulFOp::create(b, lhsImag, rhsReal, fmfValue);
-    Value lhsRealTimesRhsImag =
-        arith::MulFOp::create(b, lhsReal, rhsImag, fmfValue);
+    Value real;
+    Value imag;
+    if (arith::bitEnumContainsAll(fmfValue, arith::FastMathFlags::contract)) {
+      Value lhsImagTimesRhsImag =
+          arith::MulFOp::create(b, lhsImag, rhsImag, fmfValue);
+      Value negLhsImagTimesRhsImag =
+          arith::NegFOp::create(b, lhsImagTimesRhsImag, fmfValue);
+      real = math::FmaOp::create(b, lhsReal, rhsReal, negLhsImagTimesRhsImag,
+                                 fmfValue);
 
-    Value real = arith::SubFOp::create(b, lhsRealTimesRhsReal,
-                                       lhsImagTimesRhsImag, fmfValue);
-    Value imag = arith::AddFOp::create(b, lhsImagTimesRhsReal,
-                                       lhsRealTimesRhsImag, fmfValue);
+      Value lhsImagTimesRhsReal =
+          arith::MulFOp::create(b, lhsImag, rhsReal, fmfValue);
+      imag = math::FmaOp::create(b, lhsReal, rhsImag, lhsImagTimesRhsReal,
+                                 fmfValue);
+    } else {
+      Value lhsRealTimesRhsReal =
+          arith::MulFOp::create(b, lhsReal, rhsReal, fmfValue);
+      Value lhsImagTimesRhsImag =
+          arith::MulFOp::create(b, lhsImag, rhsImag, fmfValue);
+      Value lhsImagTimesRhsReal =
+          arith::MulFOp::create(b, lhsImag, rhsReal, fmfValue);
+      Value lhsRealTimesRhsImag =
+          arith::MulFOp::create(b, lhsReal, rhsImag, fmfValue);
+
+      real = arith::SubFOp::create(b, lhsRealTimesRhsReal, lhsImagTimesRhsImag,
+                                   fmfValue);
+      imag = arith::AddFOp::create(b, lhsImagTimesRhsReal, lhsRealTimesRhsImag,
+                                   fmfValue);
+    }
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, real, imag);
     return success();
   }

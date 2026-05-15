@@ -89,7 +89,6 @@ static size_t WriteMemoryCallback(EmulateInstruction *instruction, void *baton,
 
 Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
     NativeThreadProtocol &thread) {
-  Status error;
   NativeProcessProtocol &process = thread.GetProcess();
   NativeRegisterContext &register_context = thread.GetRegisterContext();
   const ArchSpec &arch = process.GetArchitecture();
@@ -111,26 +110,25 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
       EmulateInstruction::CreateBreakpointLocationPredictor(
           std::move(emulator_up));
 
-  BreakpointLocations candidates =
-      bp_locations_predictor->GetBreakpointLocations(error);
-  if (error.Fail())
-    return error;
+  llvm::Expected<BreakpointLocations> candidates =
+      bp_locations_predictor->GetBreakpointLocations();
+  if (!candidates)
+    return Status::FromError(candidates.takeError());
 
-  for (addr_t bp_addr : candidates) {
+  for (addr_t bp_addr : *candidates) {
     if (process.HasSoftwareBreakpoint(bp_addr))
       continue;
-    auto bp_size = bp_locations_predictor->GetBreakpointSize(bp_addr);
+    llvm::Expected<unsigned> bp_size =
+        bp_locations_predictor->GetBreakpointSize(bp_addr);
     if (auto err = bp_size.takeError())
-      return Status(toString(std::move(err)));
+      return Status::FromError(std::move(err));
 
-    error = process.SetBreakpoint(bp_addr, *bp_size, /*hardware=*/false);
+    Status error = process.SetBreakpoint(bp_addr, *bp_size, /*hardware=*/false);
 
     // If setting the breakpoint fails because pc is out of the address
     // space, ignore it and let the debugee segfault.
-    if (error.GetError() == EIO || error.GetError() == EFAULT) {
-      error.Clear();
+    if (error.GetError() == EIO || error.GetError() == EFAULT)
       continue;
-    }
     if (error.Fail())
       return error;
 
@@ -138,6 +136,6 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
   }
 
   m_threads_stepping_with_breakpoint.emplace(thread.GetID(),
-                                             std::move(candidates));
-  return error;
+                                             std::move(*candidates));
+  return Status();
 }

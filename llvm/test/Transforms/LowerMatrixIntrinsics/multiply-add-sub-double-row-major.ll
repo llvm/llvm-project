@@ -9,25 +9,25 @@ define void @multiply_sub_add_2x3_3x2(ptr %a.ptr, ptr %b.ptr, ptr %c.ptr) {
 ; RM-LABEL: @multiply_sub_add_2x3_3x2(
 ; RM-NEXT:  entry:
 ; RM-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[A_PTR:%.*]], align 8
-; RM-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A_PTR]], i64 3
+; RM-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 3
 ; RM-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
 ; RM-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B_PTR:%.*]], align 8
-; RM-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[B_PTR]], i64 2
+; RM-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[B_PTR]], i64 2
 ; RM-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
-; RM-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, ptr [[B_PTR]], i64 4
+; RM-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds double, ptr [[B_PTR]], i64 4
 ; RM-NEXT:    [[COL_LOAD6:%.*]] = load <2 x double>, ptr [[VEC_GEP5]], align 8
 ; RM-NEXT:    [[TMP0:%.*]] = fadd <3 x double> [[COL_LOAD]], [[COL_LOAD]]
 ; RM-NEXT:    [[TMP1:%.*]] = fadd <3 x double> [[COL_LOAD1]], [[COL_LOAD1]]
 ; RM-NEXT:    store <3 x double> [[TMP0]], ptr [[A_PTR]], align 8
-; RM-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[A_PTR]], i64 3
+; RM-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 3
 ; RM-NEXT:    store <3 x double> [[TMP1]], ptr [[VEC_GEP7]], align 8
 ; RM-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[COL_LOAD2]], splat (double 1.000000e+00)
 ; RM-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[COL_LOAD4]], splat (double 1.000000e+00)
 ; RM-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[COL_LOAD6]], splat (double 1.000000e+00)
 ; RM-NEXT:    store <2 x double> [[TMP2]], ptr [[B_PTR]], align 8
-; RM-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[B_PTR]], i64 2
+; RM-NEXT:    [[VEC_GEP8:%.*]] = getelementptr inbounds double, ptr [[B_PTR]], i64 2
 ; RM-NEXT:    store <2 x double> [[TMP3]], ptr [[VEC_GEP8]], align 8
-; RM-NEXT:    [[VEC_GEP9:%.*]] = getelementptr double, ptr [[B_PTR]], i64 4
+; RM-NEXT:    [[VEC_GEP9:%.*]] = getelementptr inbounds double, ptr [[B_PTR]], i64 4
 ; RM-NEXT:    store <2 x double> [[TMP4]], ptr [[VEC_GEP9]], align 8
 ; RM-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <1 x i32> zeroinitializer
 ; RM-NEXT:    [[TMP5:%.*]] = extractelement <3 x double> [[TMP0]], i64 0
@@ -106,12 +106,12 @@ define void @multiply_sub_add_2x3_3x2(ptr %a.ptr, ptr %b.ptr, ptr %c.ptr) {
 ; RM-NEXT:    [[TMP43:%.*]] = shufflevector <1 x double> [[TMP42]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; RM-NEXT:    [[TMP44:%.*]] = shufflevector <2 x double> [[TMP34]], <2 x double> [[TMP43]], <2 x i32> <i32 0, i32 2>
 ; RM-NEXT:    [[COL_LOAD43:%.*]] = load <2 x double>, ptr [[C_PTR:%.*]], align 8
-; RM-NEXT:    [[VEC_GEP44:%.*]] = getelementptr double, ptr [[C_PTR]], i64 2
+; RM-NEXT:    [[VEC_GEP44:%.*]] = getelementptr inbounds double, ptr [[C_PTR]], i64 2
 ; RM-NEXT:    [[COL_LOAD45:%.*]] = load <2 x double>, ptr [[VEC_GEP44]], align 8
 ; RM-NEXT:    [[TMP45:%.*]] = fsub <2 x double> [[COL_LOAD43]], [[TMP24]]
 ; RM-NEXT:    [[TMP46:%.*]] = fsub <2 x double> [[COL_LOAD45]], [[TMP44]]
 ; RM-NEXT:    store <2 x double> [[TMP45]], ptr [[C_PTR]], align 8
-; RM-NEXT:    [[VEC_GEP46:%.*]] = getelementptr double, ptr [[C_PTR]], i64 2
+; RM-NEXT:    [[VEC_GEP46:%.*]] = getelementptr inbounds double, ptr [[C_PTR]], i64 2
 ; RM-NEXT:    store <2 x double> [[TMP46]], ptr [[VEC_GEP46]], align 8
 ; RM-NEXT:    ret void
 ;

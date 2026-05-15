@@ -1212,7 +1212,9 @@ public:
 
   const Init *resolveReferences(Resolver &R) const override;
 
-  const Init *getBit(unsigned Bit) const override;
+  const Init *getBit(unsigned Bit) const override {
+    llvm_unreachable("Illegal bit reference off !instances");
+  }
 
   std::string getAsString() const override;
 };
