@@ -8,7 +8,7 @@
 
 
 // CHECK-LABEL: define {{[^@]+}}@test_vmaxnmvq_f32
-// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VMAXNMVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v4f32(<4 x float> [[A]])
 // CHECK-NEXT:    ret float [[VMAXNMVQ_F32_I]]
