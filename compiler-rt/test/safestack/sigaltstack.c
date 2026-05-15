@@ -9,7 +9,7 @@
 
 // MAP_STACK is unportable.
 #ifndef MAP_STACK
-#define MAP_STACK 0
+#  define MAP_STACK 0
 #endif
 
 // Test that safe stack works with sigaltstack.
