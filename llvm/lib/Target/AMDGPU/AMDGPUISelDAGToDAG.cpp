@@ -345,6 +345,7 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
   // some targets
   if (CondNode->getOperand(0).getValueType() != MVT::i32 ||
   if (CondNode->getOperand(0).getValueType() != MVT::i32)
+  if (CondNode->getOperand(0).getValueType() != MVT::i32)
     return false;
 
   SDLoc DL(N);
