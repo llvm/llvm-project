@@ -107,6 +107,10 @@ public:
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
 
+  bool isShuffleMaskLegal(ArrayRef<int>, EVT VT) const override {
+    return isTypeLegal(VT);
+  }
+
   // Get the degree of precision we want from 32-bit floating point division
   // operations.
   NVPTX::DivPrecisionLevel getDivF32Level(const MachineFunction &MF,
