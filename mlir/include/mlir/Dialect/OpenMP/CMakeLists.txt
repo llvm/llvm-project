@@ -30,8 +30,3 @@ add_mlir_doc(OpenMPOps OpenMPDialect Dialects/ -gen-dialect-doc -dialect=omp)
 add_mlir_dialect_tablegen_target(MLIROpenMPOpsIncGen)
 add_dependencies(OpenMPDialectDocGen omp_common_td)
 add_mlir_interface(OpenMPOpsInterfaces)
-
-set(LLVM_TARGET_DEFINITIONS OpenMPTypeInterfaces.td)
-mlir_tablegen(OpenMPTypeInterfaces.h.inc -gen-type-interface-decls)
-mlir_tablegen(OpenMPTypeInterfaces.cpp.inc -gen-type-interface-defs)
-add_mlir_generic_tablegen_target(MLIROpenMPTypeInterfacesIncGen)

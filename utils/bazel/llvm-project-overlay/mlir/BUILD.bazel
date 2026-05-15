@@ -10562,7 +10562,6 @@ td_library(
         "include/mlir/Dialect/OpenMP/OpenMPOpBase.td",
         "include/mlir/Dialect/OpenMP/OpenMPOps.td",
         "include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td",
-        "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td",
     ],
     deps = [
         ":AtomicInterfacesTdFiles",
@@ -10614,17 +10613,6 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "OpenMPTypeInterfacesIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.h.inc": ["-gen-type-interface-decls"],
-        "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc": ["-gen-type-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td",
-    deps = [":OpenMPOpsTdFiles"],
-)
-
-gentbl_cc_library(
     name = "OpenMPInterfacesIncGen",
     tbl_outs = {
         "include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.h.inc": ["-gen-op-interface-decls"],
@@ -10657,7 +10645,6 @@ cc_library(
         ":OpenACCMPOpsInterfacesIncGen",
         ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
-        ":OpenMPTypeInterfacesIncGen",
         ":SideEffectInterfaces",
         ":Support",
         "//llvm:FrontendOpenMP",

@@ -560,7 +560,7 @@ private:
       name = declareOp.getUniqName();
     }
 
-    if (!llvm::isa<mlir::omp::PointerLikeType>(rawAddr.getType())) {
+    if (!llvm::isa<mlir::PtrLikeTypeInterface>(rawAddr.getType())) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointAfter(liveInDefiningOp);
       auto copyVal = builder.createTemporary(liveIn.getLoc(), liveIn.getType());
@@ -678,7 +678,7 @@ private:
 
       auto mapHostValueToDevice = [&](mlir::Value hostValue,
                                       mlir::Value deviceValue) {
-        if (!llvm::isa<mlir::omp::PointerLikeType>(hostValue.getType()))
+        if (!llvm::isa<mlir::PtrLikeTypeInterface>(hostValue.getType()))
           mapper.map(hostValue,
                      builder.loadIfRef(hostValue.getLoc(), deviceValue));
         else

@@ -16,7 +16,7 @@
 include "mlir/Dialect/OpenMP/OpenMPAttrDefs.td"
 include "mlir/Dialect/OpenMP/OpenMPDialect.td"
 include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td"
-include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
@@ -31,8 +31,8 @@ class OpenMP_Type<string name, string typeMnemonic> :
 // Type which can be constraint accepting standard integers and indices.
 def IntLikeType : AnyTypeOf<[AnyInteger, Index]>;
 
-def OpenMP_PointerLikeType : TypeAlias<OpenMP_PointerLikeTypeInterface,
-	"OpenMP-compatible variable type">;
+def OpenMP_PointerLikeType
+    : TypeAlias<PtrLikeTypeInterface, "OpenMP-compatible variable type">;
 
 def OpenMP_MapBoundsType : OpenMP_Type<"MapBounds", "map_bounds_ty"> {
   let summary = "Type for representing omp map clause bounds information";

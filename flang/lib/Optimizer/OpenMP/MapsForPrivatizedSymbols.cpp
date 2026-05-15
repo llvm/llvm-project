@@ -96,8 +96,8 @@ class MapsForPrivatizedSymbolsPass
       fir::StoreOp::create(builder, loc, varPtr, alloca);
       varPtr = alloca;
     }
-    assert(mlir::isa<omp::PointerLikeType>(varPtr.getType()) &&
-           "Dealing with a varPtr that is not a PointerLikeType");
+    assert(mlir::isa<mlir::PtrLikeTypeInterface>(varPtr.getType()) &&
+           "Dealing with a varPtr that is not a PtrLikeTypeInterface");
 
     // Figure out the bounds because knowing the bounds will help the subsequent
     // MapInfoFinalizationPass map the underlying data of the descriptor.
@@ -127,7 +127,7 @@ class MapsForPrivatizedSymbolsPass
     return omp::MapInfoOp::create(
         builder, loc, varType, varPtr,
         TypeAttr::get(
-            llvm::cast<omp::PointerLikeType>(varType).getElementType()),
+            llvm::cast<mlir::PtrLikeTypeInterface>(varType).getElementType()),
         builder.getAttr<omp::ClauseMapFlagsAttr>(mapFlag),
         builder.getAttr<omp::VariableCaptureKindAttr>(captureKind),
         /*varPtrPtr=*/Value{},
@@ -204,7 +204,7 @@ class MapsForPrivatizedSymbolsPass
   // bounds from descriptor of var and add the bounds to the resultant
   // MapInfoOp.
   bool needsBoundsOps(mlir::Value var) {
-    assert(mlir::isa<omp::PointerLikeType>(var.getType()) &&
+    assert(mlir::isa<mlir::PtrLikeTypeInterface>(var.getType()) &&
            "needsBoundsOps can deal only with pointer types");
     mlir::Type t = fir::unwrapRefType(var.getType());
     // t could be a box, so look inside the box

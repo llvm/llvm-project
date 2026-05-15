@@ -8,7 +8,6 @@ add_mlir_dialect_library(MLIROpenMPDialect
   omp_gen
   MLIROpenMPOpsIncGen
   MLIROpenMPOpsInterfacesIncGen
-  MLIROpenMPTypeInterfacesIncGen
 
   LINK_COMPONENTS
   TargetParser

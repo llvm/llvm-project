@@ -12,7 +12,6 @@
 include "mlir/Dialect/OpenMP/OpenMPDialect.td"
 include "mlir/Dialect/OpenMP/OpenMPEnums.td"
 include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td"
-include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
 

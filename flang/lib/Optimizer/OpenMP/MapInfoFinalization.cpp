@@ -361,7 +361,7 @@ class MapInfoFinalizationPass
         builder, mapInfoOpLoc, descriptor, fir::BoxFieldAttr::base_addr);
 
     mlir::Type underlyingVarType =
-        llvm::cast<mlir::omp::PointerLikeType>(
+        llvm::cast<mlir::PtrLikeTypeInterface>(
             fir::unwrapRefType(baseAddrAddr.getType()))
             .getElementType();
     if (auto seqType = llvm::dyn_cast<fir::SequenceType>(underlyingVarType))

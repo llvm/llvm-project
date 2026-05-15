@@ -13,6 +13,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
@@ -43,7 +44,6 @@
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.cpp.inc"
-#include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::omp;
@@ -64,18 +64,27 @@ makeDenseI64ArrayAttr(MLIRContext *ctx, const ArrayRef<int64_t> intArray) {
 }
 
 namespace {
-struct MemRefPointerLikeModel
-    : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
-                                            MemRefType> {
-  Type getElementType(Type pointer) const {
-    return llvm::cast<MemRefType>(pointer).getElementType();
+struct LLVMPointerPtrLikeModel
+    : public PtrLikeTypeInterface::ExternalModel<LLVMPointerPtrLikeModel,
+                                                 LLVM::LLVMPointerType> {
+  Attribute getMemorySpace(Type pointer) const {
+    return LLVM::AddressSpaceAttr::get(
+        pointer.getContext(),
+        llvm::cast<LLVM::LLVMPointerType>(pointer).getAddressSpace());
   }
-};
-
-struct LLVMPointerPointerLikeModel
-    : public PointerLikeType::ExternalModel<LLVMPointerPointerLikeModel,
-                                            LLVM::LLVMPointerType> {
   Type getElementType(Type pointer) const { return Type(); }
+  bool hasPtrMetadata(Type pointer) const { return false; }
+  FailureOr<PtrLikeTypeInterface>
+  clonePtrWith(Type pointer, Attribute memorySpace,
+               std::optional<Type> elementType) const {
+    if (elementType)
+      return failure();
+    auto addrSpaceAttr = dyn_cast<LLVM::AddressSpaceAttr>(memorySpace);
+    if (!addrSpaceAttr)
+      return failure();
+    return cast<PtrLikeTypeInterface>(LLVM::LLVMPointerType::get(
+        pointer.getContext(), addrSpaceAttr.getAddressSpace()));
+  }
 };
 } // namespace
 
@@ -321,8 +330,7 @@ void OpenMPDialect::initialize() {
 
   declarePromisedInterface<ConvertToLLVMPatternInterface, OpenMPDialect>();
 
-  MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
-  LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
+  LLVM::LLVMPointerType::attachInterface<LLVMPointerPtrLikeModel>(
       *getContext());
 
   // Attach default offload module interface to module op to access
@@ -2314,8 +2322,8 @@ static ParseResult parseCaptureType(OpAsmParser &parser,
 }
 
 static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
-  llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> updateToVars;
-  llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> updateFromVars;
+  llvm::DenseSet<mlir::TypedValue<mlir::PtrLikeTypeInterface>> updateToVars;
+  llvm::DenseSet<mlir::TypedValue<mlir::PtrLikeTypeInterface>> updateFromVars;
 
   for (auto mapOp : mapVars) {
     if (!mapOp.getDefiningOp())
@@ -3500,7 +3508,7 @@ LogicalResult DeclareReductionOp::verifyRegions() {
             atomicReductionEntryBlock.getArgumentTypes()[1])
       return emitOpError() << "expects atomic reduction region with two "
                               "arguments of the same type";
-    auto ptrType = llvm::dyn_cast<PointerLikeType>(
+    auto ptrType = llvm::dyn_cast<PtrLikeTypeInterface>(
         atomicReductionEntryBlock.getArgumentTypes()[0]);
     if (!ptrType ||
         (ptrType.getElementType() && ptrType.getElementType() != getType()))

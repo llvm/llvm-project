@@ -32,7 +32,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
   }
 
   mlir::TypeAttr varType = mlir::TypeAttr::get(
-      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
+      llvm::cast<mlir::PtrLikeTypeInterface>(retTy).getElementType());
 
   // For types with unknown extents such as <2x?xi32> we discard the incomplete
   // type info and only retain the base type. The correct dimensions are later

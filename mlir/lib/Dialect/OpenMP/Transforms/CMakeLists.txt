@@ -11,7 +11,6 @@ add_mlir_dialect_library(MLIROpenMPTransforms
   MLIROpenMPPassIncGen
   MLIROpenMPOpsIncGen
   MLIROpenMPOpsInterfacesIncGen
-  MLIROpenMPTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRFunctionInterfaces

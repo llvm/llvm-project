@@ -9,17 +9,26 @@
 #ifndef FORTRAN_TOOLS_POINTER_MODELS_H
 #define FORTRAN_TOOLS_POINTER_MODELS_H
 
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 
-/// models for FIR pointer like types that already provide a `getElementType`
-/// method
+/// Models for FIR pointer like types that already provide a `getElementType`
+/// method. These implement the core MLIR PtrLikeTypeInterface.
 
 template <typename T>
 struct OpenMPPointerLikeModel
-    : public mlir::omp::PointerLikeType::ExternalModel<
+    : public mlir::PtrLikeTypeInterface::ExternalModel<
           OpenMPPointerLikeModel<T>, T> {
+  mlir::Attribute getMemorySpace(mlir::Type pointer) const {
+    return mlir::Attribute();
+  }
   mlir::Type getElementType(mlir::Type pointer) const {
     return mlir::cast<T>(pointer).getElementType();
+  }
+  bool hasPtrMetadata(mlir::Type pointer) const { return false; }
+  mlir::FailureOr<mlir::PtrLikeTypeInterface> clonePtrWith(mlir::Type pointer,
+      mlir::Attribute memorySpace,
+      std::optional<mlir::Type> elementType) const {
+    return mlir::failure();
   }
 };
 

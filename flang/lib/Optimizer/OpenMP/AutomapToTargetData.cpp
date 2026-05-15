@@ -35,7 +35,7 @@ class AutomapToTargetDataPass
   // Returns true if the variable has a dynamic size and therefore requires
   // bounds operations to describe its extents.
   inline bool needsBoundsOps(mlir::Value var) {
-    assert(mlir::isa<mlir::omp::PointerLikeType>(var.getType()) &&
+    assert(mlir::isa<mlir::PtrLikeTypeInterface>(var.getType()) &&
            "only pointer like types expected");
     mlir::Type t = fir::unwrapRefType(var.getType());
     if (mlir::Type inner = fir::dyn_cast_ptrOrBoxEleTy(t))

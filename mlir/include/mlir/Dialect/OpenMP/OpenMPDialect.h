@@ -33,7 +33,7 @@
 
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 
-#include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.h.inc"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.h.inc"

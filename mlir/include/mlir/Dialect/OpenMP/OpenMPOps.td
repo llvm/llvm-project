@@ -1292,7 +1292,7 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
     ```
 
     This operation records the bounds information in a normalized fashion
-    (zero-based). This works well with the `PointerLikeType`
+    (zero-based). This works well with the `PtrLikeTypeInterface`
     requirement in data clauses - since a `lower_bound` of 0 means looking
     at data at the zero offset from pointer.
 
@@ -2205,11 +2205,11 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
       return region.empty() ? nullptr : region.getArgument(0);
     }
 
-    PointerLikeType getAccumulatorType() {
+    PtrLikeTypeInterface getAccumulatorType() {
       if (getAtomicReductionRegion().empty())
         return {};
 
-      return cast<PointerLikeType>(getAtomicReductionLhsArg().getType());
+      return cast<PtrLikeTypeInterface>(getAtomicReductionLhsArg().getType());
     }
   }];
   let hasRegionVerifier = 1;
