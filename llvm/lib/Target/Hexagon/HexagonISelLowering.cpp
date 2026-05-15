@@ -3957,6 +3957,18 @@ HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
   return AtomicExpansionKind::LLSC;
 }
 
+MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
+    // These are lowered in the AsmPrinter.
+    return BB;
+  default:
+    llvm_unreachable("Unexpected instruction with custom inserter");
+  }
+}
+
 bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(
     const Instruction &AndI) const {
   // Only sink 'and' mask to cmp use block if it is masking a single bit since

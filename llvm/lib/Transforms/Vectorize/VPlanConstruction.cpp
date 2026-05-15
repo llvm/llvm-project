@@ -1787,7 +1787,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     if (HeaderMask && !match(BackedgeSelect,
                              m_Select(m_Specific(HeaderMask),
                                       m_VPValue(CondSelect), m_Specific(PhiR))))
-      llvm_unreachable("expected header mask select");
+      return false;
 
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
 
