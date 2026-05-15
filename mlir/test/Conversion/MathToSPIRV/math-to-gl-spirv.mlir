@@ -204,25 +204,34 @@ func.func @powf_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) -> vector<4xf32
   return %0: vector<4xf32>
 }
 
-// Constant integer exponent: parity-based path preserves sign (pow(-2,3)=-8).
-// CHECK-LABEL: @powf_const_int_exp
+// Constant odd integer exponent: parity is known statically, so the lowering
+// drops the runtime FToS/BitwiseAnd/IEqual/LogicalAnd parity computation.
+// CHECK-LABEL: @powf_const_odd_int_exp
 //  CHECK-SAME: (%[[LHS:.+]]: f32)
-func.func @powf_const_int_exp(%lhs: f32) -> f32 {
+func.func @powf_const_odd_int_exp(%lhs: f32) -> f32 {
   // CHECK: %[[RHS:.+]] = arith.constant 3.000000e+00 : f32
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[LHS]] : f32
+  // CHECK: %[[POW:.+]] = spirv.GL.Pow %[[ABS]], %[[RHS]] : f32
   // CHECK: %[[F0:.+]] = spirv.Constant 0.000000e+00 : f32
   // CHECK: %[[LT:.+]] = spirv.FOrdLessThan %[[LHS]], %[[F0]] : f32
-  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[LHS]] : f32
-  // CHECK: %[[IRHS:.+]] = spirv.ConvertFToS %[[RHS]] : f32 to i32
-  // CHECK: %[[CST1:.+]] = spirv.Constant 1 : i32
-  // CHECK: %[[REM:.+]] = spirv.BitwiseAnd %[[IRHS]], %[[CST1]] : i32
-  // CHECK: %[[ODD:.+]] = spirv.IEqual %[[REM]], %[[CST1]] : i32
-  // CHECK: %[[POW:.+]] = spirv.GL.Pow %[[ABS]], %[[RHS]] : f32
   // CHECK: %[[NEG:.+]] = spirv.FNegate %[[POW]] : f32
-  // CHECK: %[[SNEG:.+]] = spirv.LogicalAnd %[[LT]], %[[ODD]] : i1
-  // CHECK: %[[SEL:.+]] = spirv.Select %[[SNEG]], %[[NEG]], %[[POW]] : i1, f32
+  // CHECK: %[[SEL:.+]] = spirv.Select %[[LT]], %[[NEG]], %[[POW]] : i1, f32
   %c = arith.constant 3.0 : f32
   %0 = math.powf %lhs, %c : f32
   // CHECK: return %[[SEL]]
+  return %0: f32
+}
+
+// Constant even integer exponent: result is non-negative, no select needed.
+// CHECK-LABEL: @powf_const_even_int_exp
+//  CHECK-SAME: (%[[LHS:.+]]: f32)
+func.func @powf_const_even_int_exp(%lhs: f32) -> f32 {
+  // CHECK: %[[RHS:.+]] = arith.constant 4.000000e+00 : f32
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[LHS]] : f32
+  // CHECK: %[[POW:.+]] = spirv.GL.Pow %[[ABS]], %[[RHS]] : f32
+  %c = arith.constant 4.0 : f32
+  %0 = math.powf %lhs, %c : f32
+  // CHECK: return %[[POW]]
   return %0: f32
 }
 
@@ -240,18 +249,31 @@ func.func @powf_const_frac_exp(%lhs: f32) -> f32 {
   return %0: f32
 }
 
-// Splat constant integer-valued vector exponent: parity-based path.
-// CHECK-LABEL: @powf_const_int_exp_vector
-func.func @powf_const_int_exp_vector(%lhs: vector<4xf32>) -> vector<4xf32> {
-  // CHECK: spirv.FOrdLessThan
+// Splat constant odd integer-valued vector exponent: uniform odd parity.
+// CHECK-LABEL: @powf_const_odd_int_exp_vector
+func.func @powf_const_odd_int_exp_vector(%lhs: vector<4xf32>) -> vector<4xf32> {
   // CHECK: spirv.GL.FAbs
-  // CHECK: spirv.ConvertFToS %{{.*}} : vector<4xf32> to vector<4xi32>
-  // CHECK: spirv.BitwiseAnd %{{.*}} : vector<4xi32>
-  // CHECK: spirv.IEqual %{{.*}} : vector<4xi32>
   // CHECK: spirv.GL.Pow %{{.*}}: vector<4xf32>
+  // CHECK: spirv.FOrdLessThan
   // CHECK: spirv.FNegate
   // CHECK: spirv.Select
   %c = arith.constant dense<3.0> : vector<4xf32>
+  %0 = math.powf %lhs, %c : vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// Mixed-parity constant integer-valued vector exponent: per-element odd-mask
+// constant is materialized and AND-ed with lhs<0.
+// CHECK-LABEL: @powf_const_mixed_int_exp_vector
+func.func @powf_const_mixed_int_exp_vector(%lhs: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: spirv.GL.FAbs
+  // CHECK: spirv.GL.Pow %{{.*}}: vector<4xf32>
+  // CHECK: spirv.FOrdLessThan
+  // CHECK: spirv.FNegate
+  // CHECK: %[[ODD:.+]] = spirv.Constant dense<[true, false, true, false]> : vector<4xi1>
+  // CHECK: spirv.LogicalAnd %{{.*}}, %[[ODD]] : vector<4xi1>
+  // CHECK: spirv.Select
+  %c = arith.constant dense<[3.0, 2.0, 5.0, 4.0]> : vector<4xf32>
   %0 = math.powf %lhs, %c : vector<4xf32>
   return %0: vector<4xf32>
 }

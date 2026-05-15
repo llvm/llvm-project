@@ -365,25 +365,46 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     Location loc = powfOp.getLoc();
     auto operandType = adaptor.getRhs().getType();
 
-    // ConvertFToS-based parity needs an integer-valued exponent. Otherwise
-    // fall back to exp(y*log(x)), which yields NaN for x<0 (matches C).
-    auto isIntegerValuedConstant = [](Value v) -> bool {
-      Attribute attr;
-      if (!matchPattern(v, m_Constant(&attr)))
-        return false;
-      return TypeSwitch<Attribute, bool>(attr)
-          .Case([](FloatAttr a) { return a.getValue().isInteger(); })
-          .Case([](SplatElementsAttr a) {
-            return a.getSplatValue<APFloat>().isInteger();
-          })
-          .Case([](DenseElementsAttr a) {
-            return llvm::all_of(a.getValues<APFloat>(),
-                                [](const APFloat &v) { return v.isInteger(); });
-          })
-          .Default(false);
+    // Parity-based lowering requires an integer-valued constant exponent.
+    // Otherwise fall back to exp(y*log(x)), which yields NaN for x<0 (matches
+    // C).
+    auto isOdd = [](const APFloat &v) {
+      APSInt i(/*BitWidth=*/64, /*isUnsigned=*/false);
+      bool ignored;
+      v.convertToInteger(i, APFloat::rmTowardZero, &ignored);
+      return i[0];
     };
 
-    if (!isIntegerValuedConstant(adaptor.getRhs())) {
+    Attribute rhsAttr;
+    SmallVector<bool> oddMask;
+    bool isIntegerValued = false;
+    if (matchPattern(adaptor.getRhs(), m_Constant(&rhsAttr))) {
+      isIntegerValued = TypeSwitch<Attribute, bool>(rhsAttr)
+                            .Case([&](FloatAttr a) {
+                              if (!a.getValue().isInteger())
+                                return false;
+                              oddMask.push_back(isOdd(a.getValue()));
+                              return true;
+                            })
+                            .Case([&](SplatElementsAttr a) {
+                              APFloat v = a.getSplatValue<APFloat>();
+                              if (!v.isInteger())
+                                return false;
+                              oddMask.push_back(isOdd(v));
+                              return true;
+                            })
+                            .Case([&](DenseElementsAttr a) {
+                              for (const APFloat &v : a.getValues<APFloat>()) {
+                                if (!v.isInteger())
+                                  return false;
+                                oddMask.push_back(isOdd(v));
+                              }
+                              return true;
+                            })
+                            .Default(false);
+    }
+
+    if (!isIntegerValued) {
       Value log = spirv::GLLogOp::create(rewriter, loc, adaptor.getLhs());
       Value mul = spirv::FMulOp::create(rewriter, loc, adaptor.getRhs(), log);
       rewriter.replaceOpWithNewOp<spirv::GLExpOp>(powfOp, mul);
@@ -391,29 +412,36 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     }
 
     // GL.Pow is undefined for x < 0; take abs and conditionally negate the
-    // result when the exponent is odd.
-    Type intType = rewriter.getIntegerType(32);
-    if (auto vectorType = dyn_cast<VectorType>(operandType))
-      intType = VectorType::get(vectorType.getShape(), intType);
+    // result for lanes whose exponent is odd.
+    Value abs = spirv::GLFAbsOp::create(rewriter, loc, adaptor.getLhs());
+    Value pow = spirv::GLPowOp::create(rewriter, loc, abs, adaptor.getRhs());
+
+    // No odd-parity element: result has the same sign as |lhs|^rhs >= 0.
+    if (llvm::none_of(oddMask, [](bool b) { return b; })) {
+      rewriter.replaceOp(powfOp, pow);
+      return success();
+    }
 
     Value zero = spirv::ConstantOp::getZero(operandType, loc, rewriter);
     Value lessThan =
         spirv::FOrdLessThanOp::create(rewriter, loc, adaptor.getLhs(), zero);
-    Value abs = spirv::GLFAbsOp::create(rewriter, loc, adaptor.getLhs());
-
-    Value intRhs =
-        spirv::ConvertFToSOp::create(rewriter, loc, intType, adaptor.getRhs());
-    Value intOne = spirv::ConstantOp::getOne(intType, loc, rewriter);
-    Value bitwiseAndOne =
-        spirv::BitwiseAndOp::create(rewriter, loc, intRhs, intOne);
-    Value isOdd = spirv::IEqualOp::create(rewriter, loc, bitwiseAndOne, intOne);
-
-    // calculate pow based on abs(lhs)^rhs.
-    Value pow = spirv::GLPowOp::create(rewriter, loc, abs, adaptor.getRhs());
     Value negate = spirv::FNegateOp::create(rewriter, loc, pow);
-    // if the exponent is odd and lhs < 0, negate the result.
-    Value shouldNegate =
-        spirv::LogicalAndOp::create(rewriter, loc, lessThan, isOdd);
+
+    Value shouldNegate;
+    if (llvm::all_of(oddMask, [](bool b) { return b; })) {
+      // Every lane has odd exponent: negate iff lhs < 0.
+      shouldNegate = lessThan;
+    } else {
+      // Mixed parity (non-splat dense vector): AND lhs<0 with a per-element
+      // constant odd-mask.
+      auto vecType = cast<VectorType>(operandType);
+      auto maskType = VectorType::get(vecType.getShape(), rewriter.getI1Type());
+      Value oddConst = spirv::ConstantOp::create(
+          rewriter, loc, maskType, DenseElementsAttr::get(maskType, oddMask));
+      shouldNegate =
+          spirv::LogicalAndOp::create(rewriter, loc, lessThan, oddConst);
+    }
+
     rewriter.replaceOpWithNewOp<spirv::SelectOp>(powfOp, shouldNegate, negate,
                                                  pow);
     return success();
