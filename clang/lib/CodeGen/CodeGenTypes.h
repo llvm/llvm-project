@@ -97,7 +97,7 @@ class CodeGenTypes {
   // Helper to insert CGFunctionInfo objects
   CGFunctionInfo *findOrInsertCGFunctionInfo(
       bool isInstanceMethod, bool isChainCall, bool isDelegateCall,
-      unsigned ABIInfoKey, const FunctionType::ExtInfo &info,
+      unsigned X86ABIAVXLevel, const FunctionType::ExtInfo &info,
       ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
       RequiredArgs required, CanQualType resultType,
       ArrayRef<CanQualType> argTypes);

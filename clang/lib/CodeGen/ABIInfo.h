@@ -70,10 +70,11 @@ public:
   /// functions.
   llvm::CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
 
-  /// Return a target-specific key for ABI information that affects function
-  /// lowering but is not captured by the source signature.
+  // Get X86ABIAVXLevel for the given FunctionDecl and ExtInfo.
+  // This can be different than the global / module level X86ABIAVXLevel 
+  // due to function attributes.
   virtual unsigned
-  getABIInfoKey(const FunctionDecl *,
+  getX86ABIAVXLevel(const FunctionDecl *,
                 const FunctionType::ExtInfo &) const {
     return 0;
   }
