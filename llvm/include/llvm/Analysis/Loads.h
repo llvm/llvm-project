@@ -34,6 +34,7 @@ class ScalarEvolution;
 class SCEVPredicate;
 template <typename T> class SmallVectorImpl;
 class TargetLibraryInfo;
+class TargetTransformInfo;
 
 /// Return true if this is always a dereferenceable pointer. If the context
 /// instruction is specified perform context-sensitive analysis and return true
@@ -52,7 +53,8 @@ LLVM_ABI bool isDereferenceablePointer(const Value *V, Type *Ty,
 LLVM_ABI bool isDereferenceableAndAlignedPointer(
     const Value *V, Type *Ty, Align Alignment, const DataLayout &DL,
     const Instruction *CtxI = nullptr, AssumptionCache *AC = nullptr,
-    const DominatorTree *DT = nullptr, const TargetLibraryInfo *TLI = nullptr);
+    const DominatorTree *DT = nullptr, const TargetLibraryInfo *TLI = nullptr,
+    const TargetTransformInfo *TTI = nullptr);
 
 /// Returns true if V is always dereferenceable for Size byte with alignment
 /// greater or equal than requested. If the context instruction is specified
@@ -61,7 +63,8 @@ LLVM_ABI bool isDereferenceableAndAlignedPointer(
 LLVM_ABI bool isDereferenceableAndAlignedPointer(
     const Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
     const Instruction *CtxI = nullptr, AssumptionCache *AC = nullptr,
-    const DominatorTree *DT = nullptr, const TargetLibraryInfo *TLI = nullptr);
+    const DominatorTree *DT = nullptr, const TargetLibraryInfo *TLI = nullptr,
+    const TargetTransformInfo *TTI = nullptr);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///

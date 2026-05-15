@@ -486,7 +486,9 @@ static bool dominatesMergePoint(
   // Okay, it looks like the instruction IS in the "condition".  Check to
   // see if it's a cheap instruction to unconditionally compute, and if it
   // only uses stuff defined outside of the condition.  If so, hoist it out.
-  if (!isSafeToSpeculativelyExecute(I, InsertPt, AC))
+  if (!isSafeToSpeculativelyExecute(I, InsertPt, AC, /*DT=*/nullptr,
+                                    /*TLI=*/nullptr, /*UseVariableInfo=*/true,
+                                    /*IgnoreUBImplyingAttrs=*/true, &TTI))
     return false;
 
   // Overflow arithmetic instruction plus extract value are usually generated
