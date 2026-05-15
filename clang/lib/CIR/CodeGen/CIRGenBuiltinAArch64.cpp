@@ -2574,6 +2574,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vfmaq_lane_v: {
     mlir::Value addend = builder.createBitcast(ops[0], ty);
     mlir::Value multiplicand = builder.createBitcast(ops[1], ty);
+    // The lane source operand is the non-quad vector, so it has half as many
+    // lanes as the quad result vector.
     cir::VectorType sourceTy =
         cir::VectorType::get(ty.getElementType(), ty.getSize() / 2);
     mlir::Value laneSource = builder.createBitcast(ops[2], sourceTy);
@@ -2605,6 +2607,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
     mlir::Value addend = builder.createBitcast(ops[0], ty);
     mlir::Value multiplicand = builder.createBitcast(ops[1], ty);
+    // The laneq source operand is the quad vector, so it has twice as many
+    // lanes as the non-quad result vector.
     cir::VectorType sourceTy =
         cir::VectorType::get(ty.getElementType(), ty.getSize() * 2);
     mlir::Value laneSource = builder.createBitcast(ops[2], sourceTy);
