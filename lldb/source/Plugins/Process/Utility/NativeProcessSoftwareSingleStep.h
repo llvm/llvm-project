@@ -11,8 +11,8 @@
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
-
 #include <map>
+#include <set>
 
 namespace lldb_private {
 
@@ -22,9 +22,12 @@ public:
 
 protected:
   // List of thread ids stepping with a breakpoint with the address of
-  // the relevan breakpoint
+  // next PC candidates.
   std::map<lldb::tid_t, std::vector<lldb::addr_t>>
       m_threads_stepping_with_breakpoint;
+
+  // The list of stepping breakpoints.
+  std::set<lldb::addr_t> m_step_breakpoints;
 };
 
 } // namespace lldb_private

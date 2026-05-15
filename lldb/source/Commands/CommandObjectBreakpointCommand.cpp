@@ -344,7 +344,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, m_exe_ctx, result, &valid_bp_ids,
+        command, &target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     m_bp_options_vec.clear();
@@ -389,16 +389,25 @@ protected:
         } else {
           script_interp->CollectDataForBreakpointCommandCallback(
               m_bp_options_vec, result);
+          // Still gathering input; the IOHandler will set the final status.
+          result.SetStatus(eReturnStatusStarted);
+          return;
         }
         if (!error.Success())
           result.SetError(std::move(error));
+        else
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         // Special handling for one-liner specified inline.
-        if (m_options.m_use_one_liner)
+        if (m_options.m_use_one_liner) {
           SetBreakpointCommandCallback(m_bp_options_vec,
                                        m_options.m_one_liner.c_str());
-        else
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
+        } else {
           CollectDataForBreakpointCommandCallback(m_bp_options_vec, result);
+          // Still gathering input; the IOHandler will set the final status.
+          result.SetStatus(eReturnStatusStarted);
+        }
       }
     }
   }
@@ -500,7 +509,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, m_exe_ctx, result, &valid_bp_ids,
+        command, &target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
