@@ -157,7 +157,7 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
                                   /*IsBitInt=*/false);
 
   case BuiltinType::MetaInfo:
-    llvm::reportFatalInternalError("MetaInfo is consteval-only type");
+    llvm::reportFatalInternalError("std::meta::info is consteval-only type");
 
   case BuiltinType::Char_S:
   case BuiltinType::Char_U:
