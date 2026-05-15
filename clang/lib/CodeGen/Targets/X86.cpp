@@ -1211,6 +1211,17 @@ static unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
   llvm_unreachable("Unknown AVXLevel");
 }
 
+static unsigned getEffectiveX86AVXABILevelForCall(CodeGenTypes &CGT,
+                                                  X86AVXABILevel AVXLevel,
+                                                  const FunctionDecl *FD) {
+  if (CGT.getTarget().getTriple().isPS() ||
+      CGT.getContext().getLangOpts().getClangABICompat() <=
+          LangOptions::ClangABI::Ver22)
+    return static_cast<unsigned>(AVXLevel);
+
+  return CGT.getCGM().getEffectiveX86AVXABILevel(FD);
+}
+
 /// X86_64ABIInfo - The X86_64 ABI information.
 class X86_64ABIInfo : public ABIInfo {
   enum Class {
@@ -1385,6 +1396,8 @@ public:
   }
 
   void computeInfo(CGFunctionInfo &FI) const override;
+  unsigned getABIInfoKey(const FunctionDecl *FD,
+                         const FunctionType::ExtInfo &Info) const override;
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
@@ -1404,6 +1417,8 @@ public:
         IsMingw64(getTarget().getTriple().isWindowsGNUEnvironment()) {}
 
   void computeInfo(CGFunctionInfo &FI) const override;
+  unsigned getABIInfoKey(const FunctionDecl *FD,
+                         const FunctionType::ExtInfo &Info) const override;
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
@@ -3024,24 +3039,16 @@ X86_64ABIInfo::classifyRegCallStructType(QualType Ty, unsigned &NeededInt,
       llvm::StructType::get(getVMContext(), CoerceElts));
 }
 
+unsigned
+X86_64ABIInfo::getABIInfoKey(const FunctionDecl *FD,
+                             const FunctionType::ExtInfo &Info) const {
+  if (Info.getCC() == CC_Win64)
+    return 0;
+
+  return getEffectiveX86AVXABILevelForCall(CGT, AVXLevel, FD);
+}
+
 void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
-  bool shouldRespectFunctionAVXLevel =
-      !getTarget().getTriple().isPS() &&
-      getContext().getLangOpts().getClangABICompat() >
-          LangOptions::ClangABI::Ver22;
-
-  X86AVXABILevel EffectiveAVXLevel = AVXLevel;
-  if (shouldRespectFunctionAVXLevel && FI.getABIInfoFD()) {
-    EffectiveAVXLevel = static_cast<X86AVXABILevel>(
-        CGT.getCGM().getEffectiveX86AVXABILevel(FI.getABIInfoFD()));
-  }
-
-  if (EffectiveAVXLevel != AVXLevel) {
-    X86_64ABIInfo EffectiveABIInfo(CGT, EffectiveAVXLevel);
-    EffectiveABIInfo.computeInfo(FI);
-    return;
-  }
-
   const unsigned CallingConv = FI.getCallingConvention();
   // It is possible to force Win64 calling convention on any x86_64 target by
   // using __attribute__((ms_abi)). In such case to correctly emit Win64
@@ -3049,6 +3056,17 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (CallingConv == llvm::CallingConv::Win64) {
     WinX86_64ABIInfo Win64ABIInfo(CGT, AVXLevel);
     Win64ABIInfo.computeInfo(FI);
+    return;
+  }
+
+  assert(FI.getABIInfoKey() <=
+             static_cast<unsigned>(X86AVXABILevel::AVX512) &&
+         "Unexpected X86 AVX ABI key");
+  X86AVXABILevel EffectiveAVXLevel =
+      static_cast<X86AVXABILevel>(FI.getABIInfoKey());
+  if (EffectiveAVXLevel != AVXLevel) {
+    X86_64ABIInfo EffectiveABIInfo(CGT, EffectiveAVXLevel);
+    EffectiveABIInfo.computeInfo(FI);
     return;
   }
 
@@ -3572,6 +3590,15 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
   }
 
   return ABIArgInfo::getDirect();
+}
+
+unsigned
+WinX86_64ABIInfo::getABIInfoKey(const FunctionDecl *FD,
+                                const FunctionType::ExtInfo &Info) const {
+  if (Info.getCC() != CC_X86_64SysV)
+    return 0;
+
+  return getEffectiveX86AVXABILevelForCall(CGT, AVXLevel, FD);
 }
 
 void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {

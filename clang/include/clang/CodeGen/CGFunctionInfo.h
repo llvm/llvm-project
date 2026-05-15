@@ -17,7 +17,6 @@
 
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -653,8 +652,8 @@ class CGFunctionInfo final
   /// Log 2 of the maximum vector width.
   unsigned MaxVectorWidth : 4;
 
-  /// Declaration context used to derive target-specific ABI classification.
-  const FunctionDecl *ABIInfoFD = nullptr;
+  /// Target-specific ABI classification key.
+  unsigned ABIInfoKey = 0;
 
   RequiredArgs Required;
 
@@ -686,7 +685,7 @@ class CGFunctionInfo final
 public:
   static CGFunctionInfo *
   create(unsigned llvmCC, bool instanceMethod, bool chainCall,
-         bool delegateCall, const FunctionDecl *ABIInfoFD,
+         bool delegateCall, unsigned ABIInfoKey,
          const FunctionType::ExtInfo &extInfo,
          ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
          ArrayRef<CanQualType> argTypes, RequiredArgs required);
@@ -813,7 +812,7 @@ public:
     MaxVectorWidth = llvm::countr_zero(Width) + 1;
   }
 
-  const FunctionDecl *getABIInfoFD() const { return ABIInfoFD; }
+  unsigned getABIInfoKey() const { return ABIInfoKey; }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     ID.AddInteger(getASTCallingConvention());
@@ -827,7 +826,7 @@ public:
     ID.AddInteger(RegParm);
     ID.AddBoolean(NoCfCheck);
     ID.AddBoolean(CmseNSCall);
-    ID.AddPointer(ABIInfoFD);
+    ID.AddInteger(ABIInfoKey);
     ID.AddInteger(Required.getOpaqueData());
     ID.AddBoolean(HasExtParameterInfos);
     if (HasExtParameterInfos) {
@@ -840,7 +839,7 @@ public:
   }
   static void Profile(llvm::FoldingSetNodeID &ID, bool InstanceMethod,
                       bool ChainCall, bool IsDelegateCall,
-                      const FunctionDecl *ABIInfoFD,
+                      unsigned ABIInfoKey,
                       const FunctionType::ExtInfo &info,
                       ArrayRef<ExtParameterInfo> paramInfos,
                       RequiredArgs required, CanQualType resultType,
@@ -856,7 +855,7 @@ public:
     ID.AddInteger(info.getRegParm());
     ID.AddBoolean(info.getNoCfCheck());
     ID.AddBoolean(info.getCmseNSCall());
-    ID.AddPointer(ABIInfoFD);
+    ID.AddInteger(ABIInfoKey);
     ID.AddInteger(required.getOpaqueData());
     ID.AddBoolean(!paramInfos.empty());
     if (!paramInfos.empty()) {
