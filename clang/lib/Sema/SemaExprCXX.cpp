@@ -1485,11 +1485,6 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
 }
 
 bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {
-  // If we're outside the body of a member function, then we'll have a specified
-  // type for 'this'.
-  if (CXXThisTypeOverride.isNull())
-    return false;
-
   // Determine whether we're looking into a class that's currently being
   // defined.
   CXXRecordDecl *Class = BaseType->getAsCXXRecordDecl();
@@ -8000,6 +7995,8 @@ Sema::BuildExprRequirement(
     assert(TC && "Type Constraint cannot be null here");
     auto *IDC = TC->getImmediatelyDeclaredConstraint();
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
+
+    SFINAETrap Trap(*this);
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
     bool HasError = Constraint.isInvalid();
     if (!HasError) {
@@ -8009,6 +8006,8 @@ Sema::BuildExprRequirement(
         HasError = true;
     }
     if (HasError) {
+      // FIXME: Capture diagnostics from the SFINAE trap and store them in the
+      // requirement.
       return new (Context) concepts::ExprRequirement(
           createSubstDiagAt(IDC->getExprLoc(),
                             [&](llvm::raw_ostream &OS) {

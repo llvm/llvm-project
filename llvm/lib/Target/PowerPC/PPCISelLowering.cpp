@@ -5363,8 +5363,11 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     // immediately followed by a load of the TOC pointer from the stack save
     // slot into gpr2. For 64-bit ELFv2 ABI with PCRel, do not restore the TOC
     // as it is not saved or used.
-    RetOpc = isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
-                                                 : PPCISD::BCTRL;
+    if (Subtarget.usePointerGlueHelper())
+      RetOpc = PPCISD::BL_LOAD_TOC;
+    else
+      RetOpc = isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
+                                                   : PPCISD::BCTRL;
   } else if (Subtarget.isUsingPCRelativeCalls()) {
     assert(Subtarget.is64BitELFABI() && "PC Relative is only on ELF ABI.");
     RetOpc = PPCISD::CALL_NOTOC;
@@ -5392,6 +5395,9 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
       break;
     case PPCISD::BCTRL:
       RetOpc = PPCISD::BCTRL_RM;
+      break;
+    case PPCISD::BL_LOAD_TOC:
+      RetOpc = PPCISD::BL_LOAD_TOC_RM;
       break;
     case PPCISD::CALL_NOTOC:
       RetOpc = PPCISD::CALL_NOTOC_RM;
@@ -5604,6 +5610,23 @@ static void prepareDescriptorIndirectCall(SelectionDAG &DAG, SDValue &Callee,
   prepareIndirectCall(DAG, LoadFuncPtr, Glue, Chain, dl);
 }
 
+static void prepareOutOfLineGlueCall(SelectionDAG &DAG, SDValue &Callee,
+                                     SDValue &Glue, SDValue &Chain,
+                                     SDValue CallSeqStart, const CallBase *CB,
+                                     const SDLoc &dl, bool hasNest,
+                                     const PPCSubtarget &Subtarget) {
+  // On AIX there is a feature ("out of line glue code") which uses a special
+  // trampoline function ._ptrgl to do the indirect call. If this option is
+  // enabled we instead simply load the address of the descriptor into gpr11,
+  // with the arguments in the 'normal' registers and branch to the ._ptrgl
+  // stub.
+  const MCRegister PtrGlueReg = Subtarget.getGlueCodeDescriptorRegister();
+  SDValue MoveToPhysicalReg =
+      DAG.getCopyToReg(Chain, dl, PtrGlueReg, Callee, Glue);
+  Chain = MoveToPhysicalReg.getValue(0);
+  Glue = MoveToPhysicalReg.getValue(1);
+}
+
 static void
 buildCallOperands(SmallVectorImpl<SDValue> &Ops,
                   PPCTargetLowering::CallFlags CFlags, const SDLoc &dl,
@@ -5621,7 +5644,12 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
   // If it's a direct call pass the callee as the second operand.
   if (!CFlags.IsIndirect)
     Ops.push_back(Callee);
-  else {
+  else if (Subtarget.usePointerGlueHelper()) {
+    Ops.push_back(Callee);
+    // Add the register used to pass the descriptor address.
+    Ops.push_back(
+        DAG.getRegister(Subtarget.getGlueCodeDescriptorRegister(), RegVT));
+  } else {
     assert(!CFlags.IsPatchPoint && "Patch point calls are not indirect.");
 
     // For the TOC based ABIs, we have saved the TOC pointer to the linkage area
@@ -5703,11 +5731,20 @@ SDValue PPCTargetLowering::FinishCall(
 
   if (!CFlags.IsIndirect)
     Callee = transformCallee(Callee, DAG, dl, Subtarget);
-  else if (Subtarget.usesFunctionDescriptors())
-    prepareDescriptorIndirectCall(DAG, Callee, Glue, Chain, CallSeqStart, CB,
-                                  dl, CFlags.HasNest, Subtarget);
-  else
+  else if (Subtarget.usesFunctionDescriptors()) {
+    if (Subtarget.usePointerGlueHelper()) {
+      prepareOutOfLineGlueCall(DAG, Callee, Glue, Chain, CallSeqStart, CB, dl,
+                               CFlags.HasNest, Subtarget);
+      SDValue PtrGlueCallee =
+          DAG.getExternalSymbol("_ptrgl", getPointerTy(DAG.getDataLayout()));
+      Callee = transformCallee(PtrGlueCallee, DAG, dl, Subtarget);
+    } else {
+      prepareDescriptorIndirectCall(DAG, Callee, Glue, Chain, CallSeqStart, CB,
+                                    dl, CFlags.HasNest, Subtarget);
+    }
+  } else {
     prepareIndirectCall(DAG, Callee, Glue, Chain, dl);
+  }
 
   // Build the operand list for the call instruction.
   SmallVector<SDValue, 8> Ops;
@@ -7751,7 +7788,7 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
   // For indirect calls, we need to save the TOC base to the stack for
   // restoration after the call.
-  if (CFlags.IsIndirect) {
+  if (CFlags.IsIndirect && !Subtarget.usePointerGlueHelper()) {
     assert(!CFlags.IsTailCall && "Indirect tail-calls not supported.");
     const MCRegister TOCBaseReg = Subtarget.getTOCPointerRegister();
     const MCRegister StackPtrReg = Subtarget.getStackPointerRegister();
@@ -9772,7 +9809,10 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         getCanonicalConstSplat(SextVal, UseSize, Op.getValueType(), DAG, dl);
     if (SplatSize != 8)
       return Res;
-    return BuildIntrinsicOp(Intrinsic::ppc_altivec_vupklsw, Res, DAG, dl);
+    SDValue IntrinsicOp =
+        BuildIntrinsicOp(Intrinsic::ppc_altivec_vupklsw,
+                         DAG.getBitcast(MVT::v4i32, Res), DAG, dl, MVT::v2i64);
+    return DAG.getBitcast(Op.getValueType(), IntrinsicOp);
   }
 
   // Two instruction sequences.
@@ -11564,16 +11604,6 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
            "llvm.ppc.disassemble.dmr must carry a chain argument.");
     return DAG.getStore(Op.getOperand(0), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
-  }
-  case Intrinsic::ppc_amo_stwat:
-  case Intrinsic::ppc_amo_stdat: {
-    SDLoc dl(Op);
-    SDValue Chain = Op.getOperand(0);
-    SDValue Ptr = Op.getOperand(ArgStart + 1);
-    SDValue Val = Op.getOperand(ArgStart + 2);
-    SDValue FC = Op.getOperand(ArgStart + 3);
-
-    return DAG.getNode(PPCISD::STAT, dl, MVT::Other, Chain, Val, Ptr, FC);
   }
   default:
     break;
@@ -14772,75 +14802,6 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(Val, getDefRegState(MI.getOpcode() == PPC::LQX_PSEUDO))
         .addImm(0)
         .addReg(Ptr);
-    break;
-  }
-  case PPC::LWAT_PSEUDO:
-  case PPC::LDAT_PSEUDO: {
-    DebugLoc DL = MI.getDebugLoc();
-    Register DstReg = MI.getOperand(0).getReg();
-    Register PtrReg = MI.getOperand(1).getReg();
-    Register ValReg = MI.getOperand(2).getReg();
-    unsigned FC = MI.getOperand(3).getImm();
-    bool IsLwat = MI.getOpcode() == PPC::LWAT_PSEUDO;
-    Register Val64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (IsLwat)
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), Val64)
-          .addReg(ValReg)
-          .addImm(PPC::sub_32);
-    else
-      Val64 = ValReg;
-
-    Register G8rPair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    Register UndefG8r = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), UndefG8r);
-    BuildMI(*BB, MI, DL, TII->get(PPC::REG_SEQUENCE), G8rPair)
-        .addReg(UndefG8r)
-        .addImm(PPC::sub_gp8_x0)
-        .addReg(Val64)
-        .addImm(PPC::sub_gp8_x1);
-
-    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(IsLwat ? PPC::LWAT : PPC::LDAT), PairResult)
-        .addReg(G8rPair)
-        .addReg(PtrReg)
-        .addImm(FC);
-    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
-        .addReg(PairResult, {}, PPC::sub_gp8_x0);
-    if (IsLwat)
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64, {}, PPC::sub_32);
-    else
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64);
-    break;
-  }
-  case PPC::LWAT_COND_PSEUDO:
-  case PPC::LDAT_COND_PSEUDO: {
-    DebugLoc DL = MI.getDebugLoc();
-    Register DstReg = MI.getOperand(0).getReg();
-    Register PtrReg = MI.getOperand(1).getReg();
-    unsigned FC = MI.getOperand(2).getImm();
-    bool IsLwat_Cond = MI.getOpcode() == PPC::LWAT_COND_PSEUDO;
-
-    Register Pair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Pair);
-
-    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(IsLwat_Cond ? PPC::LWAT : PPC::LDAT),
-            PairResult)
-        .addReg(Pair)
-        .addReg(PtrReg)
-        .addImm(FC);
-    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
-        .addReg(PairResult, {}, PPC::sub_gp8_x0);
-    if (IsLwat_Cond)
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64, {}, PPC::sub_32);
-    else
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64);
     break;
   }
   default:
