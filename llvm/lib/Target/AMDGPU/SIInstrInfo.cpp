@@ -7103,14 +7103,37 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
     Copy.addReg(AMDGPU::EXEC, RegState::Implicit);
 }
 
+// When a terminator is emitted into a block, no non-terminator instruction may
+// follow it. Split the block: create a new fall-through block after \p BB for
+// subsequent non-terminator instructions.
+// This is similar to SIWholeQuadMode::splitBlock and could be factored out.
+static MachineBasicBlock *
+splitBlockForTerminator(MachineBasicBlock *BB,
+                        MachineDominatorTree *MDT) {
+  MachineFunction &MF = *BB->getParent();
+  MachineBasicBlock *NewBB = MF.CreateMachineBasicBlock();
+  MF.insert(std::next(BB->getIterator()), NewBB);
+  NewBB->transferSuccessorsAndUpdatePHIs(BB);
+  BB->addSuccessor(NewBB);
+  if (MDT) {
+    MDT->addNewBlock(NewBB, BB);
+    for (MachineBasicBlock *Succ : NewBB->successors()) {
+      if (MDT->dominates(BB, Succ))
+        MDT->changeImmediateDominator(Succ, NewBB);
+    }
+  }
+  return NewBB;
+}
+
 // Emit the actual waterfall loop, executing the wrapped instruction for each
 // unique value of \p ScalarOps across all lanes. In the best case we execute 1
 // iteration, in the worst case we execute 64 (once per lane).
 static void emitLoadScalarOpsFromVGPRLoop(
     const SIInstrInfo &TII, MachineRegisterInfo &MRI, MachineBasicBlock &PredBB,
-    MachineBasicBlock &LoopBB, MachineBasicBlock &BodyBB, const DebugLoc &DL,
-    ArrayRef<MachineOperand *> ScalarOps, ArrayRef<Register> PhySGPRs = {}) {
-  MachineFunction &MF = *LoopBB.getParent();
+    MachineBasicBlock *LoopBB, MachineBasicBlock &BodyBB, const DebugLoc &DL,
+    ArrayRef<MachineOperand *> ScalarOps, MachineDominatorTree *MDT,
+    ArrayRef<Register> PhySGPRs = {}) {
+  MachineFunction &MF = *LoopBB->getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
@@ -7125,7 +7148,11 @@ static void emitLoadScalarOpsFromVGPRLoop(
   // [v_cmpx_eq].
   bool UseNewExecInstructions = ST.hasNoSdstCMPX();
 
-  MachineBasicBlock::iterator I = LoopBB.begin();
+  // v_cmpx_term instructions are terminators. Each v_cmpx_term is placed at
+  // the end of LoopBB, then the block is split so subsequent non-terminator
+  // instructions go into the new fall-through block.
+  MachineBasicBlock *LoopTarget = LoopBB;
+  MachineBasicBlock::iterator I = LoopBB->begin();
   Register CondReg;
 
   Register PhiExec;
@@ -7138,7 +7165,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
     BuildMI(PredBB, PredBB.end(), DL, TII.get(LMC.MovOpc), InitExec)
         .addReg(LMC.ExecReg);
 
-    BuildMI(LoopBB, I, DL, TII.get(TargetOpcode::PHI), PhiExec)
+    BuildMI(*LoopBB, I, DL, TII.get(TargetOpcode::PHI), PhiExec)
         .addReg(InitExec)
         .addMBB(&PredBB)
         .addReg(NewExec)
@@ -7164,17 +7191,19 @@ static void emitLoadScalarOpsFromVGPRLoop(
       }
       Register CurReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
-      BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurReg)
+      BuildMI(*LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurReg)
           .addReg(VScalarOp);
 
       if (UseNewExecInstructions) {
-        BuildMI(LoopBB, I, DL, TII.get(LMC.CmpXEqU32Opc))
+        BuildMI(*LoopBB, I, DL, TII.get(LMC.CmpXEqU32TermOpc))
             .addReg(CurReg)
             .addReg(VScalarOp);
+        LoopBB = splitBlockForTerminator(LoopBB, MDT);
+        I = LoopBB->end();
       } else {
         Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
 
-        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U32_e64), NewCondReg)
+        BuildMI(*LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U32_e64), NewCondReg)
             .addReg(CurReg)
             .addReg(VScalarOp);
 
@@ -7183,7 +7212,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
           CondReg = NewCondReg;
         else { // If not the first, we create an AND.
           Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
-          BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
+          BuildMI(*LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
               .addReg(CondReg)
               .addReg(NewCondReg);
           CondReg = AndReg;
@@ -7214,11 +7243,11 @@ static void emitLoadScalarOpsFromVGPRLoop(
             MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
         // Read the next variant <- also loop target.
-        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurRegLo)
+        BuildMI(*LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurRegLo)
             .addReg(VScalarOp, VScalarOpUndef, TRI->getSubRegFromChannel(Idx));
 
         // Read the next variant <- also loop target.
-        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurRegHi)
+        BuildMI(*LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurRegHi)
             .addReg(VScalarOp, VScalarOpUndef,
                     TRI->getSubRegFromChannel(Idx + 1));
 
@@ -7227,7 +7256,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
 
         // Comparison is to be done as 64-bit.
         Register CurReg = MRI.createVirtualRegister(&AMDGPU::SGPR_64RegClass);
-        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), CurReg)
+        BuildMI(*LoopBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), CurReg)
             .addReg(CurRegLo)
             .addImm(AMDGPU::sub0)
             .addReg(CurRegHi)
@@ -7237,12 +7266,14 @@ static void emitLoadScalarOpsFromVGPRLoop(
             NumSubRegs <= 2 ? 0 : TRI->getSubRegFromChannel(Idx, 2);
 
         if (UseNewExecInstructions) {
-          BuildMI(LoopBB, I, DL, TII.get(LMC.CmpXEqU64Opc))
+          BuildMI(*LoopBB, I, DL, TII.get(LMC.CmpXEqU64TermOpc))
               .addReg(CurReg)
               .addReg(VScalarOp, VScalarOpUndef, SubReg);
+          LoopBB = splitBlockForTerminator(LoopBB, MDT);
+          I = LoopBB->end();
         } else {
           Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
-          BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64), NewCondReg)
+          BuildMI(*LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64), NewCondReg)
               .addReg(CurReg)
               .addReg(VScalarOp, VScalarOpUndef, SubReg);
 
@@ -7251,7 +7282,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
             CondReg = NewCondReg;
           else { // If not the first, we create an AND.
             Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
-            BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
+            BuildMI(*LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
                 .addReg(CondReg)
                 .addReg(NewCondReg);
             CondReg = AndReg;
@@ -7265,7 +7296,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
 
       // Build scalar ScalarOp.
       auto Merge =
-          BuildMI(LoopBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), SScalarOp);
+          BuildMI(*LoopBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), SScalarOp);
       unsigned Channel = 0;
       for (Register Piece : ReadlanePieces) {
         Merge.addReg(Piece).addImm(TRI->getSubRegFromChannel(Channel++));
@@ -7290,7 +7321,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
     MRI.setSimpleHint(SaveExec, CondReg);
 
     // Update EXEC to matching lanes, saving original to SaveExec.
-    BuildMI(LoopBB, I, DL, TII.get(LMC.AndSaveExecOpc), SaveExec)
+    BuildMI(*LoopBB, I, DL, TII.get(LMC.AndSaveExecOpc), SaveExec)
         .addReg(CondReg, RegState::Kill);
   }
 
@@ -7308,7 +7339,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
         .addReg(SaveExec);
   }
 
-  BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);
+  BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP))
+      .addMBB(LoopTarget);
 }
 
 // Build a waterfall loop around \p MI, replacing the VGPR \p ScalarOp register
@@ -7407,8 +7439,8 @@ generateWaterFallLoop(const SIInstrInfo &TII, MachineInstr &MI,
     }
   }
 
-  emitLoadScalarOpsFromVGPRLoop(TII, MRI, MBB, *LoopBB, *BodyBB, DL, ScalarOps,
-                                PhySGPRs);
+  emitLoadScalarOpsFromVGPRLoop(TII, MRI, MBB, LoopBB, *BodyBB, DL, ScalarOps,
+                                MDT, PhySGPRs);
 
   MachineBasicBlock::iterator First = RemainderBB->begin();
   // Restore SCC
