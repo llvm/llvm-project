@@ -268,7 +268,7 @@ MCRegister SPIRVNonSemanticDebugHandler::getCachedOpStringReg(StringRef S) {
   assert(NonSemanticOpStringsSectionEmitted &&
          "getCachedOpStringReg requires emitNonSemanticDebugStrings() first");
   auto It = OpStringContentCache.find(S);
-  assert(It == OpStringContentCache.end() &&
+  assert(It != OpStringContentCache.end() &&
          "NSDI OpString missing from cache; emitNonSemanticDebugStrings must "
          "cache every string used in section 10");
   return It->second;
