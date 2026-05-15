@@ -764,7 +764,7 @@ public:
   // have ctors, dtors, or overloaded operators, while implicit built-in
   // HLSL records such as resource classes can. It would be nice to use the
   // isImplicit() methods to determine that, but this flag is not propagated
-  // to template-instanticated classes.
+  // to template-instantiated classes.
   //
   /// Determines whether this class has any user provided special members.
   bool hasUserProvidedSpecialMembers() const {
@@ -778,7 +778,7 @@ public:
   ///
   /// This value is used for lazy creation of default constructors.
   bool needsImplicitDefaultConstructor() const {
-    // In HLSL, only built-in records like resources classes can have
+    // In HLSL, only built-in records like resource classes can have
     // constructors and overloadable operators.
     if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
       return false;
@@ -816,7 +816,7 @@ public:
   /// Determine whether this class needs an implicit copy
   /// constructor to be lazily declared.
   bool needsImplicitCopyConstructor() const {
-    // In HLSL, only built-in records like resources classes can have
+    // In HLSL, only built-in records like resource classes can have
     // constructors and overloadable operators.
     if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
       return false;
@@ -914,7 +914,7 @@ public:
   /// Determine whether this class should get an implicit move
   /// constructor or if any existing special member function inhibits this.
   bool needsImplicitMoveConstructor() const {
-    // In HLSL, only built-in records like resources classes can have
+    // In HLSL, only built-in records like resource classes can have
     // constructors and overloadable operators.
     if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
       return false;
@@ -952,7 +952,7 @@ public:
   /// Determine whether this class needs an implicit copy
   /// assignment operator to be lazily declared.
   bool needsImplicitCopyAssignment() const {
-    // In HLSL, only built-in records like resources classes can have
+    // In HLSL, only built-in records like resource classes can have
     // constructors and overloadable operators.
     if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
       return false;
@@ -1015,7 +1015,7 @@ public:
   /// assignment operator or if any existing special member function inhibits
   /// this.
   bool needsImplicitMoveAssignment() const {
-    // In HLSL, only built-in records like resources classes can have
+    // In HLSL, only built-in records like resource classes can have
     // constructors and overloadable operators.
     if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
       return false;
