@@ -3024,10 +3024,6 @@ public:
   /// enumeration types whose underlying type is a unsigned integer type.
   bool isUnsignedIntegerOrEnumerationType() const;
 
-  // Determine whether this is an unsigned integer type or an unsigned integer
-  // vector type.
-  bool isUnsignedIntegerOrVectorType() const;
-
   /// Return true if this is a fixed point type according to
   /// ISO/IEC JTC1 SC22 WG14 N1169.
   bool isFixedPointType() const;
