@@ -193,8 +193,8 @@ public:
     }
 
     Locker py_lock(&m_interpreter,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN,
-                   Locker::FreeLock | Locker::TearDownSession);
+                   Locker::AcquireLock | Locker::InitStdio | Locker::NoSTDIN,
+                   Locker::FreeLock | Locker::TearDownStdio);
 
     PythonObject result = {};
 
@@ -415,8 +415,8 @@ public:
                                  error);
 
     Locker py_lock(&m_interpreter,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN,
-                   Locker::FreeLock | Locker::TearDownSession);
+                   Locker::AcquireLock | Locker::InitStdio | Locker::NoSTDIN,
+                   Locker::FreeLock | Locker::TearDownStdio);
 
     // Get the interpreter dictionary.
     auto dict =
@@ -511,8 +511,8 @@ protected:
                                  error);
 
     Locker py_lock(&m_interpreter,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN,
-                   Locker::FreeLock | Locker::TearDownSession);
+                   Locker::AcquireLock | Locker::InitStdio | Locker::NoSTDIN,
+                   Locker::FreeLock | Locker::TearDownStdio);
 
     PythonObject implementor(PyRefType::Borrowed,
                              (PyObject *)m_object_instance_sp->GetValue());
