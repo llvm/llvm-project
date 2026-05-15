@@ -7,14 +7,14 @@
 define <2 x float> @callee_v2f32(<2 x float> %x, <2 x float> %y) {
 ; RV64-LABEL: callee_v2f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fmv.w.x fa5, a3
-; RV64-NEXT:    fmv.w.x fa4, a1
-; RV64-NEXT:    fmv.w.x fa3, a2
-; RV64-NEXT:    fmv.w.x fa2, a0
+; RV64-NEXT:    fmv.w.x fa5, a2
+; RV64-NEXT:    fmv.w.x fa4, a0
+; RV64-NEXT:    fmv.w.x fa3, a3
+; RV64-NEXT:    fmv.w.x fa2, a1
 ; RV64-NEXT:    fadd.s fa5, fa4, fa5
 ; RV64-NEXT:    fadd.s fa4, fa2, fa3
-; RV64-NEXT:    fmv.x.w a0, fa4
-; RV64-NEXT:    fmv.x.w a1, fa5
+; RV64-NEXT:    fmv.x.w a0, fa5
+; RV64-NEXT:    fmv.x.w a1, fa4
 ; RV64-NEXT:    ret
 ;
 ; RV64LP64F-LABEL: callee_v2f32:

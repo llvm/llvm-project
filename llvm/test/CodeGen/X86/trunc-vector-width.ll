@@ -4,16 +4,16 @@
 define void @test(ptr %a0) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqu (%rdi), %ymm0
-; CHECK-NEXT:    vmovq {{.*#+}} xmm1 = [0,4,0,0]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = mem[0],ymm0[1,2,3,4,5,6,7]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,u,u,u,u,u,u,u,u,u,u,u,u,u,u,16,20,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; CHECK-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
-; CHECK-NEXT:    vpextrb $1, %xmm0, (%rax)
-; CHECK-NEXT:    vpextrb $4, %xmm0, (%rax)
-; CHECK-NEXT:    vpextrb $8, %xmm0, (%rax)
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    movzbl 32(%rdi), %eax
+; CHECK-NEXT:    movzbl 16(%rdi), %ecx
+; CHECK-NEXT:    vmovdqu (%rdi), %xmm0
+; CHECK-NEXT:    vpextrb $4, %xmm0, %edx
+; CHECK-NEXT:    notb %dl
+; CHECK-NEXT:    notb %cl
+; CHECK-NEXT:    notb %al
+; CHECK-NEXT:    movb %dl, (%rax)
+; CHECK-NEXT:    movb %cl, (%rax)
+; CHECK-NEXT:    movb %al, (%rax)
 ; CHECK-NEXT:    retq
   %load = load <64 x i8>, ptr %a0, align 1
   %shuf = shufflevector <64 x i8> %load, <64 x i8> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
