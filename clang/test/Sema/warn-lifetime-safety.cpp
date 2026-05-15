@@ -3284,3 +3284,47 @@ void assign_non_capturing_to_function_ref(function_ref &r) {
 }
 
 } // namespace GH126600
+
+namespace GH188832 {
+inline namespace __1 {
+template <class T>
+struct __optional_storage_base {
+  T& operator*() &;
+  T* operator->();
+  T& value() &;
+};
+
+template <class T>
+struct [[gsl::Owner]] optional : __optional_storage_base<T> {
+  ~optional();
+};
+} // namespace __1
+
+const MyObj& return_optional_deref() {
+  optional<MyObj> opt;
+  return *opt; // expected-warning {{address of stack memory is returned later}} \
+               // expected-note {{returned here}}
+}
+
+const MyObj& return_optional_value() {
+  optional<MyObj> opt;
+  return opt.value(); // expected-warning {{address of stack memory is returned later}} \
+                      // expected-note {{returned here}}
+}
+
+const int* return_optional_arrow() {
+  optional<MyObj> opt;
+  return &opt->id; // expected-warning {{address of stack memory is returned later}} \
+                   // expected-note {{returned here}}
+}
+
+void deref_use_after_scope() {
+  const MyObj* p;
+  {
+    optional<MyObj> opt;
+    p = &*opt; // expected-warning {{object whose reference is captured does not live long enough}}
+  }            // expected-note {{destroyed here}}
+  (void)p->id; // expected-note {{later used here}}
+}
+
+} // namespace GH188832
