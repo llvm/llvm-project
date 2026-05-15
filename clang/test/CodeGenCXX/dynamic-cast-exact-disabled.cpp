@@ -1,10 +1,12 @@
+// RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -O1 -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK,EXACT
 // RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -O0 -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK,INEXACT
-// RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -O1 -fvisibility=hidden -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK,INEXACT
 // RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -O1 -fapple-kext -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK,INEXACT
 // RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -O1 -fno-assume-unique-vtables -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK,INEXACT
 
 struct A { virtual ~A(); };
-struct B final : A { };
+A::~A() {}
+struct B final : A { ~B(); };
+B::~B() {}
 
 // CHECK-LABEL: @_Z5exactP1A
 B *exact(A *a) {
@@ -16,10 +18,12 @@ B *exact(A *a) {
 struct C {
   virtual ~C();
 };
+C::~C() {}
 
 struct D final : private C {
-
+  virtual ~D();
 };
+D::~D() {}
 
 // CHECK-LABEL: @_Z5exactP1C
 D *exact(C *a) {
