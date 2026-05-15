@@ -1959,7 +1959,7 @@ RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations() {
 
   std::optional<addr_t> pc = riscv_emulator->ReadPC();
   if (!pc)
-    return llvm::createStringErrorV("Can't read PC");
+    return llvm::createStringError("Can't read PC");
 
   auto inst = riscv_emulator->ReadInstructionAt(*pc);
   if (!inst) {
@@ -2022,7 +2022,7 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
   do {
     inst = riscv_emulator->ReadInstructionAt(pc);
     if (!inst)
-      return llvm::createStringErrorV("Can't read instruction");
+      return llvm::createStringError("Can't read instruction");
 
     if (B *branch = std::get_if<B>(&inst->decoded))
       bp_addrs.push_back(pc + SignExt(branch->imm));
