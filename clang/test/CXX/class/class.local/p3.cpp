@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -verify-directives %s
 
 void f1() {
   struct X {
@@ -21,10 +21,12 @@ void f2() {
 }
 
 // A class nested within a local class is a local class.
-void f3(int a) { // expected-note{{'a' declared here}}
+void f3(int a) { // #a-param
   struct X {
     struct Y {
-      int f() { return a; } // expected-error{{reference to local variable 'a' declared in enclosing function 'f3'}}
+      int f() { return a; }
+      // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'f3'}}
+       // expected-note@#a-param {{'a' declared here}}
     };
   };
 }
@@ -62,30 +64,38 @@ void f4() {
     };
   }
   {
-    struct A { struct B; }; // expected-note {{'A' declared here}}
+    struct A { struct B; }; // #A1
     {
-      struct A::B {}; // expected-error {{nested local class 'B' must be defined in the same block scope as its parent class 'A'}}
+      struct A::B {};
+      // expected-error@-1 {{nested local class 'B' must be defined in the same block scope as its parent class 'A'}}
+      //   expected-note@#A1 {{'A' declared here}}
     }
   }
   {
-    struct A { struct B { struct C; }; }; // expected-note {{'A' declared here}}
+    struct A { struct B { struct C; }; }; // #A2
     {
-      struct A::B::C {}; // expected-error {{nested local class 'C' must be defined in the same block scope as its parent class 'A'}}
+      struct A::B::C {};
+      // expected-error@-1 {{nested local class 'C' must be defined in the same block scope as its parent class 'A'}}
+      //   expected-note@#A2 {{'A' declared here}}
     }
   }
   {
-    struct A { struct B; }; // expected-note {{'A' declared here}}
+    struct A { struct B; }; // #A3
     using AliasForA = A;
     {
-      struct AliasForA::B {}; // expected-error {{nested local class 'B' must be defined in the same block scope as its parent class 'A'}}
+      struct AliasForA::B {}; 
+      // expected-error@-1 {{nested local class 'B' must be defined in the same block scope as its parent class 'A'}}
+      //   expected-note@#A3 {{'A' declared here}}
     }
   }
 }
 
 template <typename>
 void f5() {
-  struct A { struct B; }; // expected-note {{'A' declared here}}
+  struct A { struct B; }; // #A4
   {
-    struct A::B {}; // expected-error {{nested local class 'B' must be defined in the same block scope as its parent class 'A'}}
+    struct A::B {};
+    // expected-error@-1 {{nested local class 'B' must be defined in the same block scope as its parent class 'A'}}
+    //   expected-note@#A4 {{'A' declared here}}
   }
 }
