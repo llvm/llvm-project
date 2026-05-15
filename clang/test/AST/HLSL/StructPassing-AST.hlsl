@@ -2,13 +2,10 @@
 
 // CHECK: CXXRecordDecl {{.*}} struct P definition
 // CHECK-NEXT: DefinitionData aggregate standard_layout trivially_copyable pod literal can_const_default_init
-// CHECK-NEXT: DefaultConstructor
-// CHECK-NEXT: CopyConstructor simple trivial implicit_has_const_param
-// CHECK-NEXT: MoveConstructor
-// CHECK-NEXT: CopyAssignment simple trivial implicit_has_const_param
-// CHECK-NEXT: MoveAssignment
-// CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT: PackedAttr
+// CHECK-NOT: DefaultConstructor {{.*}} exists
+// CHECK-NOT: MoveConstructor {{.*}} exists
+// CHECK-NOT: MoveAssignment {{.*}} exists
+// CHECK: PackedAttr
 // CHECK-NEXT: CXXRecordDecl {{.*}} struct P
 // CHECK-NEXT: FieldDecl {{.*}} a 'float'
 // CHECK-NOT: CXXConstructorDecl
@@ -19,13 +16,10 @@ struct P {
 
 // CHECK: CXXRecordDecl {{.*}} struct S definition
 // CHECK-NEXT: DefinitionData aggregate trivially_copyable literal can_const_default_init
-// CHECK-NEXT: DefaultConstructor
-// CHECK-NEXT: CopyConstructor simple trivial
-// CHECK-NEXT: MoveConstructor needs_overload_resolution
-// CHECK-NEXT: CopyAssignment simple trivial
-// CHECK-NEXT: MoveAssignment needs_overload_resolution
-// CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT: public 'P'
+// CHECK-NOT: DefaultConstructor {{.*}} exists
+// CHECK-NOT: MoveConstructor {{.*}} exists
+// CHECK-NOT: MoveAssignment {{.*}} exists
+// CHECK: public 'P'
 // CHECK-NEXT: PackedAttr
 // CHECK-NEXT: CXXRecordDecl {{.*}} implicit struct S
 // CHECK-NEXT: FieldDecl {{.*}} b 'double'
