@@ -11,6 +11,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DJB.h"
@@ -103,12 +104,12 @@ public:
     return 0;
   }
 
-  StringPoolValueType GetMangledCounterpart(const char *ccstr) {
+  StringPoolValueType GetMangledCounterpart(llvm::StringRef str) {
+    const char *const ccstr = str.data();
     if (ccstr != nullptr) {
-      const StringPoolEntryType &entry = GetStringMapEntryFromKeyData(ccstr);
-      const PoolEntry &pool = selectPool(entry.getKey());
+      const PoolEntry &pool = selectPool(str);
       std::shared_lock<PoolMutex> lock(pool.m_mutex);
-      return entry.getValue();
+      return GetStringMapEntryFromKeyData(ccstr).getValue();
     }
     return nullptr;
   }
@@ -171,10 +172,9 @@ public:
     {
       // Now assign the demangled const string as the counterpart of the
       // mangled const string...
-      StringPoolEntryType &entry = GetStringMapEntryFromKeyData(mangled_ccstr);
       PoolEntry &pool = selectPool(mangled);
       std::lock_guard<PoolMutex> lock(pool.m_mutex);
-      entry.setValue(demangled_ccstr);
+      GetStringMapEntryFromKeyData(mangled_ccstr).setValue(demangled_ccstr);
     }
 
     // Return the constant demangled C string
@@ -347,7 +347,7 @@ void ConstString::SetStringWithMangledCounterpart(llvm::StringRef demangled,
 }
 
 bool ConstString::GetMangledCounterpart(ConstString &counterpart) const {
-  counterpart.m_string = StringPool().GetMangledCounterpart(m_string);
+  counterpart.m_string = StringPool().GetMangledCounterpart(GetStringRef());
   return (bool)counterpart;
 }
 
