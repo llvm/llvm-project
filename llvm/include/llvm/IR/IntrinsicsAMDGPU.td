@@ -3221,6 +3221,16 @@ def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch"
     "", [SDNPMemOperand]
   >;
 
+def int_amdgcn_global_prefetch_masked : ClangBuiltin<"__builtin_amdgcn_global_prefetch_masked">,
+  Intrinsic<[],
+  [LLVMQualPointerType<1>,    // Pointer
+   llvm_i32_ty,               // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
+   llvm_i1_ty],               // predicate value
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
+     IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>],
+    "", [SDNPMemOperand]
+  >;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
