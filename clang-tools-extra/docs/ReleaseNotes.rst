@@ -468,6 +468,11 @@ Changes in existing checks
   by fixing a false positive on implicitly generated functions such as
   inherited constructors.
 
+- Improved :doc:`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by adding the
+  `IgnoreMacros` option. When enabled, unscoped ``enum`` declarations within
+  macros are ignored.
+
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
   algorithms: ``std::accumulate``, ``std::replace_copy``, and

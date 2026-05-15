@@ -75,8 +75,7 @@ LIBC_INLINE double asinpi(double x) {
           constexpr unsigned SHIFT_53 = 128 - FPBits::SIG_LEN - 1;
           using MantT = typename Float128::MantissaType;
           MantT m53 = r.mantissa >> SHIFT_53;
-          LIBC_CONSTEXPR MantT ALL_ONES_53 =
-              (MantT(1) << (FPBits::SIG_LEN + 1)) - 1;
+          constexpr MantT ALL_ONES_53 = (MantT(1) << (FPBits::SIG_LEN + 1)) - 1;
           if (m53 == ALL_ONES_53) {
             // All 53 bits set. carry happens if rounding rounds away
             // from zero at this precision.

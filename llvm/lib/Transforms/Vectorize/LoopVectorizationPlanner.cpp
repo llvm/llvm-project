@@ -61,6 +61,11 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
     cl::desc("Assume the target supports masked memory operations (used for "
              "testing)."));
 
+static cl::opt<bool> ForceTargetSupportsGatherScatterOps(
+    "force-target-supports-gather-scatter-ops", cl::init(false), cl::Hidden,
+    cl::desc("Assume the target supports gather/scatter operations (used for "
+             "testing)."));
+
 bool VFSelectionContext::isLegalMaskedLoadOrStore(Instruction *I,
                                                   ElementCount VF) const {
   assert(isa<LoadInst>(I) || isa<StoreInst>(I));
@@ -83,7 +88,8 @@ bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
   Align Align = getLoadStoreAlignment(V);
   if (VF.isVector())
     Ty = VectorType::get(Ty, VF);
-  return (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
+  return ForceTargetSupportsGatherScatterOps ||
+         (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
          (SI && TTI.isLegalMaskedScatter(Ty, Align));
 }
 

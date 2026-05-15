@@ -3,7 +3,7 @@
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
 
-; CHECK: error: Invalid value for Version: 4
+; CHECK: error: Invalid Root Signature Version: 4
 
 define void @main() #0 {
 entry:

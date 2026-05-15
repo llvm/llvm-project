@@ -1550,7 +1550,14 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
       consumerOp->emitWarning("Expected layout for non-1D vectors.");
     return success(); // uniform non-tensor-data vector does not require layout
   }
-  // Get the consumer expected layout at this operand.
+  // Region branch ops (e.g. scf.for) and their terminators (e.g. scf.yield)
+  // forward their operands to successor region inputs / parent op results;
+  // their consumer layout is resolved through that forwarding, not at this
+  // use point.
+  if (isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(
+          consumerOp))
+    return success();
+
   auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
   if (!consumerLayout)
     return consumerOp->emitError(
