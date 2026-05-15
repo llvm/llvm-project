@@ -4329,6 +4329,37 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
   return DemandedElts.popcount() * (Insert + Extract) * VecInstCost;
 }
 
+std::optional<InstructionCost> AArch64TTIImpl::getNarrowIntPromoteCost(
+    Type *Ty, TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, ArrayRef<const Value *> Args, bool IsSigned,
+    std::function<InstructionCost(Type *)> InstCost) const {
+
+  if (!Ty->isIntegerTy() || Ty->getScalarSizeInBits() >= 32)
+    return std::nullopt;
+
+  Type *PromotedTy = Ty->getWithNewBitWidth(32);
+  unsigned ExtOpc = IsSigned ? Instruction::SExt : Instruction::ZExt;
+  InstructionCost ExtCost = getCastInstrCost(
+      ExtOpc, PromotedTy, Ty, TTI::CastContextHint::None, CostKind);
+
+  InstructionCost Cost = 0;
+  auto NeedExt = [&](TTI::OperandValueInfo OI, unsigned Idx) {
+    if (OI.isConstant())
+      return false;
+    if (Idx < Args.size() &&
+        (isa<SExtInst>(Args[Idx]) || isa<ZExtInst>(Args[Idx])))
+      return false;
+    return true;
+  };
+
+  if (NeedExt(Op1Info, 0))
+    Cost += ExtCost;
+  if (NeedExt(Op2Info, 1))
+    Cost += ExtCost;
+
+  return Cost + InstCost(PromotedTy);
+}
+
 std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
     Type *Ty, TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
     TTI::OperandValueInfo Op2Info, bool IncludeTrunc, bool CanUseSVE,
@@ -4399,6 +4430,18 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
              getCastInstrCost(Instruction::ZExt, Ty, ExtTy,
                               TTI::CastContextHint::None, CostKind);
     return LT.first;
+  }
+
+  if ((ISD == ISD::SDIV || ISD == ISD::UDIV) ||
+      (ISD == ISD::SREM || ISD == ISD::UREM)) {
+    if (auto PromotedCost = getNarrowIntPromoteCost(
+            Ty, CostKind, Op1Info, Op2Info, Args,
+            /*IsSigned=*/ISD == ISD::SDIV || ISD == ISD::SREM,
+            [&](Type *PromotedTy) {
+              return getArithmeticInstrCost(Opcode, PromotedTy, CostKind,
+                                            Op1Info, Op2Info);
+            }))
+      return *PromotedCost;
   }
 
   switch (ISD) {

@@ -488,6 +488,11 @@ public:
 
   bool preferPredicatedReductionSelect() const override { return ST->hasSVE(); }
 
+  std::optional<InstructionCost> getNarrowIntPromoteCost(
+    Type *Ty, TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, ArrayRef<const Value *> Args, bool IsSigned,
+    std::function<InstructionCost(Type *)> InstCost) const;
+
   /// FP16 and BF16 operations are lowered to fptrunc(op(fpext, fpext) if the
   /// architecture features are not present.
   std::optional<InstructionCost> getFP16BF16PromoteCost(
