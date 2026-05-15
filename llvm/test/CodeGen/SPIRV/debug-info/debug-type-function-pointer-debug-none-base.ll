@@ -1,4 +1,4 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 ; TODO(#109287): spirv-val coverage remains disabled for DebugTypePointer with
 ; DebugInfoNone as the base type.
 ;

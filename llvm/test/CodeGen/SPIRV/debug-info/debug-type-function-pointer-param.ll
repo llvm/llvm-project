@@ -1,14 +1,14 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; void (*)(addrspace(4) i32*) — DebugTypePointer + DebugTypeFunction includes the pointer parameter operand.
 
-; CHECK-SPIRV: [[ext_inst_non_semantic:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
-; CHECK-SPIRV-DAG: [[type_void:%[0-9]+]] = OpTypeVoid
-; CHECK-SPIRV-DAG: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG: [[flag_zero:%[0-9]+]] = OpConstant [[type_int32]] 0{{$}}
-; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypePointer
-; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeFunction [[flag_zero]] [[type_void]] {{%[0-9]+}}
+; CHECK: [[ext:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+; CHECK-DAG: [[type_void:%[0-9]+]] = OpTypeVoid
+; CHECK-DAG: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
+; CHECK-DAG: [[flag_zero:%[0-9]+]] = OpConstant [[type_int32]] 0{{$}}
+; CHECK-DAG: OpExtInst [[type_void]] [[ext]] DebugTypePointer
+; CHECK-DAG: OpExtInst [[type_void]] [[ext]] DebugTypeFunction [[flag_zero]] [[type_void]] {{%[0-9]+}}
 
 target triple = "spirv64-unknown-unknown"
 
