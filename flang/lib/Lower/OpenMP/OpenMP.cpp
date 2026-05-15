@@ -78,9 +78,10 @@ static llvm::SmallVector<Object>
 makeObjects(llvm::ArrayRef<const semantics::Symbol *> syms) {
   llvm::SmallVector<Object> objects;
   objects.reserve(syms.size());
-  llvm::transform(syms, std::back_inserter(objects), [](const semantics::Symbol *sym) {
-    return Object{const_cast<semantics::Symbol *>(sym), std::nullopt};
-  });
+  llvm::transform(
+      syms, std::back_inserter(objects), [](const semantics::Symbol *sym) {
+        return Object{const_cast<semantics::Symbol *>(sym), std::nullopt};
+      });
   return objects;
 }
 

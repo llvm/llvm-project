@@ -35,7 +35,8 @@ struct EntryBlockArgsEntry {
   llvm::SmallVector<const Fortran::semantics::Symbol *> getSyms() const {
     llvm::SmallVector<const Fortran::semantics::Symbol *> syms;
     syms.reserve(objects.size());
-    llvm::transform(objects, std::back_inserter(syms), [](const Fortran::lower::omp::Object &object) { return object.sym(); });
+    llvm::transform(objects, std::back_inserter(syms),
+        [](const Fortran::lower::omp::Object &object) { return object.sym(); });
     return syms;
   }
 };
@@ -63,7 +64,10 @@ struct EntryBlockArgs {
     llvm::SmallVector<const semantics::Symbol *> syms;
     auto appendSyms = [&syms](const EntryBlockArgsEntry &entry) {
       syms.reserve(syms.size() + entry.objects.size());
-    llvm::transform(entry.objects, std::back_inserter(syms), [](const Fortran::lower::omp::Object &object) { return object.sym(); });
+      llvm::transform(entry.objects, std::back_inserter(syms),
+          [](const Fortran::lower::omp::Object &object) {
+            return object.sym();
+          });
     };
     appendSyms(hasDeviceAddr);
     appendSyms(inReduction);

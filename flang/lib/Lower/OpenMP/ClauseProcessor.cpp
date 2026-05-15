@@ -1552,7 +1552,9 @@ static llvm::SmallVector<const semantics::Symbol *>
 getObjectsSyms(llvm::ArrayRef<Object> objects) {
   llvm::SmallVector<const semantics::Symbol *> syms;
   syms.reserve(objects.size());
-  llvm::transform(objects, std::back_inserter(syms), [](const Fortran::lower::omp::Object &object) { return object.sym(); });
+  llvm::transform(
+      objects, std::back_inserter(syms),
+      [](const Fortran::lower::omp::Object &object) { return object.sym(); });
   return syms;
 }
 
