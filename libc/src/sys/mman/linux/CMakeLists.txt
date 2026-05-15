@@ -19,6 +19,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  memfd_create
+  SRCS
+    memfd_create.cpp
+  HDRS
+    ../memfd_create.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.memfd_create
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   mmap
   SRCS
     mmap.cpp

@@ -33,9 +33,7 @@
 	//   sp+#20: r5     (parameter)
 	//   sp+#24: r31    (return address back to sled's deallocframe)
 	//   sp+#28: (padding for 8-byte alignment)
-	{
-		sp = add(sp, #-32)
-	}
+	sp = add(sp, #-32)
 	memw(sp+#0) = r0
 	memw(sp+#4) = r1
 	memw(sp+#8) = r2
@@ -53,18 +51,14 @@
 	r4 = memw(sp+#16)
 	r5 = memw(sp+#20)
 	r31 = memw(sp+#24)
-	{
-		sp = add(sp, #32)
-	}
+	sp = add(sp, #32)
 .endm
 
 .macro CALL_PATCHED_FUNC entry_type
 	// Load the address of the global handler function pointer,
 	// then dereference it to get the actual handler.
 	r8 = ##ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
-	{
-		r8 = memw(r8+#0)
-	}
+	r8 = memw(r8+#0)
 	// Skip if handler is not registered (null).
 	{
 		p0 = cmp.eq(r8, #0)
@@ -77,9 +71,7 @@
 		r0 = r7
 		r1 = \entry_type
 	}
-	{
-		callr r8
-	}
+	callr r8
 0:
 .endm
 
@@ -126,6 +118,52 @@ ASM_SYMBOL(__xray_FunctionTailExit):
 	RESTORE_REGISTERS
 	jumpr r31
 	ASM_SIZE(__xray_FunctionTailExit)
+	CFI_ENDPROC
+
+// __xray_*Event have default visibility so that they can be referenced by user
+// DSOs that do not link against the runtime.
+
+	.globl ASM_SYMBOL(__xray_CustomEvent)
+	ASM_TYPE_FUNCTION(__xray_CustomEvent)
+ASM_SYMBOL(__xray_CustomEvent):
+	CFI_STARTPROC
+	SAVE_REGISTERS
+
+	// Arguments (r0=ptr, r1=size) are already set by the inline sled.
+	// Load the handler address.
+	r8 = ##ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)
+	r8 = memw(r8+#0)
+	{
+		p0 = cmp.eq(r8, #0)
+		if (p0.new) jump:nt 0f
+	}
+	callr r8
+0:
+	RESTORE_REGISTERS
+	jumpr r31
+	ASM_SIZE(__xray_CustomEvent)
+	CFI_ENDPROC
+
+
+	.globl ASM_SYMBOL(__xray_TypedEvent)
+	ASM_TYPE_FUNCTION(__xray_TypedEvent)
+ASM_SYMBOL(__xray_TypedEvent):
+	CFI_STARTPROC
+	SAVE_REGISTERS
+
+	// Arguments (r0=type, r1=ptr, r2=size) are already set by the inline sled.
+	// Load the handler address.
+	r8 = ##ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)
+	r8 = memw(r8+#0)
+	{
+		p0 = cmp.eq(r8, #0)
+		if (p0.new) jump:nt 0f
+	}
+	callr r8
+0:
+	RESTORE_REGISTERS
+	jumpr r31
+	ASM_SIZE(__xray_TypedEvent)
 	CFI_ENDPROC
 
 NO_EXEC_STACK_DIRECTIVE

@@ -16,11 +16,13 @@ namespace clang::tidy::cppcoreguidelines {
 UseEnumClassCheck::UseEnumClassCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreUnscopedEnumsInClasses(
-          Options.get("IgnoreUnscopedEnumsInClasses", false)) {}
+          Options.get("IgnoreUnscopedEnumsInClasses", false)),
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void UseEnumClassCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreUnscopedEnumsInClasses",
                 IgnoreUnscopedEnumsInClasses);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void UseEnumClassCheck::registerMatchers(MatchFinder *Finder) {
@@ -33,9 +35,12 @@ void UseEnumClassCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseEnumClassCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *UnscopedEnum = Result.Nodes.getNodeAs<EnumDecl>("unscoped_enum");
+  const SourceLocation SourceLoc = UnscopedEnum->getLocation();
 
-  diag(UnscopedEnum->getLocation(),
-       "enum %0 is unscoped, use 'enum class' instead")
+  if (IgnoreMacros && SourceLoc.isMacroID())
+    return;
+
+  diag(SourceLoc, "enum %0 is unscoped, use 'enum class' instead")
       << UnscopedEnum;
 }
 
