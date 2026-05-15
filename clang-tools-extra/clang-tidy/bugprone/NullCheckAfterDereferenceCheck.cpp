@@ -13,6 +13,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
+#include <clang/Analysis/FlowSensitive/AdornedCFG.h>
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
@@ -22,7 +23,6 @@
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
-#include <clang/Analysis/FlowSensitive/AdornedCFG.h>
 #include <memory>
 #include <vector>
 
@@ -80,9 +80,9 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
 
   llvm::transform(Diagnostics, std::back_inserter(ExpandedDiagnostics),
                   [&](Diagnoser::DiagnosticEntry Entry) -> ExpandedResult {
-                    if (auto Val = Diagnoser.WarningLocToVal[Entry.Location];
-                        auto DerefExpr = Diagnoser.ValToDerefLoc[Val]) {
-                      return {Entry, DerefExpr->getBeginLoc()};
+                    const auto *Val = Diagnoser.WarningLocToVal[Entry.Location];
+                    if (Val && Diagnoser.ValToDerefLoc[Val]) {
+                      return {Entry, Diagnoser.ValToDerefLoc[Val]->getBeginLoc()};
                     }
 
                     return {Entry, std::nullopt};
@@ -94,18 +94,18 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
 void NullCheckAfterDereferenceCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
 
-  auto containsPointerValue =
+  auto ContainsPointerValue =
       hasDescendant(NullPointerAnalysisModel::ptrValueMatcher());
   Finder->addMatcher(
       decl(anyOf(functionDecl(unless(isExpansionInSystemHeader()),
                               // FIXME: Remove the filter below when lambdas are
                               // well supported by the check.
                               unless(hasDeclContext(cxxRecordDecl(isLambda()))),
-                              hasBody(containsPointerValue)),
+                              hasBody(ContainsPointerValue)),
                  cxxConstructorDecl(
                      unless(hasDeclContext(cxxRecordDecl(isLambda()))),
                      hasAnyConstructorInitializer(
-                         withInitializer(containsPointerValue)))))
+                         withInitializer(ContainsPointerValue)))))
           .bind(FuncID),
       this);
 }

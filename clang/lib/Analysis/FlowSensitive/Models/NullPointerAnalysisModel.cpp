@@ -34,7 +34,6 @@
 
 namespace clang::dataflow {
 
-namespace {
 using namespace ast_matchers;
 using Diagnoser = NullCheckAfterDereferenceDiagnoser;
 
@@ -44,6 +43,7 @@ constexpr char kValue[] = "value";
 constexpr char kIsNonnull[] = "is-nonnull";
 constexpr char kIsNull[] = "is-null";
 
+namespace {
 enum class SatisfiabilityResult {
   // Returned when the value was not initialized yet.
   Nullptr,
@@ -61,66 +61,67 @@ enum class SatisfiabilityResult {
 };
 
 enum class CompareResult { Same, Different, Top, Unknown };
+} // namespace
 
 using SR = SatisfiabilityResult;
 using CR = CompareResult;
 
 // FIXME: These AST matchers should also be exported via the
 // NullPointerAnalysisModel class, for tests
-auto ptrWithBinding(llvm::StringRef VarName = kVar) {
+static auto ptrWithBinding(llvm::StringRef VarName = kVar) {
   return expr(hasType(isAnyPointer())).bind(VarName);
 }
 
-auto derefMatcher() {
+static auto derefMatcher() {
   return unaryOperator(hasOperatorName("*"), hasUnaryOperand(ptrWithBinding()));
 }
 
-auto arrowMatcher() {
+static auto arrowMatcher() {
   return memberExpr(allOf(isArrow(), hasObjectExpression(ptrWithBinding())));
 }
 
-auto castExprMatcher() {
+static auto castExprMatcher() {
   return castExpr(hasCastKind(CK_PointerToBoolean),
                   hasSourceExpression(ptrWithBinding()))
       .bind(kCond);
 }
 
-auto nullptrMatcher(llvm::StringRef VarName = kVar) {
+static auto nullptrMatcher(llvm::StringRef VarName = kVar) {
   return castExpr(hasCastKind(CK_NullToPointer)).bind(VarName);
 }
 
-auto addressofMatcher() {
+static auto addressofMatcher() {
   return unaryOperator(hasOperatorName("&")).bind(kVar);
 }
 
-auto functionCallMatcher() {
+static auto functionCallMatcher() {
   return callExpr(callee(functionDecl(hasAnyParameter(
       anyOf(hasType(pointerType()), hasType(referenceType()))))));
 }
 
-auto assignMatcher() {
+static auto assignMatcher() {
   return binaryOperation(isAssignmentOperator(), hasLHS(ptrWithBinding()),
                          hasRHS(expr().bind(kValue)));
 }
 
-auto nullCheckExprMatcher() {
+static auto nullCheckExprMatcher() {
   return binaryOperator(hasAnyOperatorName("==", "!="),
                         hasOperands(ptrWithBinding(), nullptrMatcher(kValue)));
 }
 
 // FIXME: When TK_IgnoreUnlessSpelledInSource is removed from ptrWithBinding(),
 // this matcher should be merged with nullCheckExprMatcher().
-auto equalExprMatcher() {
+static auto equalExprMatcher() {
   return binaryOperator(
       hasAnyOperatorName("==", "!="),
       hasOperands(ptrWithBinding(kVar), ptrWithBinding(kValue)));
 }
 
-auto anyPointerMatcher() { return expr(hasType(isAnyPointer())).bind(kVar); }
+static auto anyPointerMatcher() { return expr(hasType(isAnyPointer())).bind(kVar); }
 
 // Only computes simple comparisons against the literals True and False in the
 // environment. Faster, but produces many Unknown values.
-SatisfiabilityResult shallowComputeSatisfiability(BoolValue *Val,
+static SatisfiabilityResult shallowComputeSatisfiability(BoolValue *Val,
                                                   const Environment &Env) {
   if (!Val)
     return SR::Nullptr;
@@ -139,7 +140,7 @@ SatisfiabilityResult shallowComputeSatisfiability(BoolValue *Val,
 
 // Computes satisfiability by using the flow condition. Slower, but more
 // precise.
-SatisfiabilityResult computeSatisfiability(BoolValue *Val,
+static SatisfiabilityResult computeSatisfiability(BoolValue *Val,
                                            const Environment &Env) {
   // Early return with the fast compute values.
   if (SatisfiabilityResult ShallowResult =
@@ -157,12 +158,12 @@ SatisfiabilityResult computeSatisfiability(BoolValue *Val,
   return SR::Unknown;
 }
 
-inline BoolValue &getVal(llvm::StringRef Name, Value &PtrValue) {
+static inline BoolValue &getVal(llvm::StringRef Name, Value &PtrValue) {
   return *cast<BoolValue>(PtrValue.getProperty(Name));
 }
 
 // Assigns initial pointer null- and nonnull-values to a given Value.
-void initializeNullnessProperties(Value &PtrValue, Environment &Env) {
+static void initializeNullnessProperties(Value &PtrValue, Environment &Env) {
   Arena &A = Env.arena();
 
   auto *IsNull = cast_or_null<BoolValue>(PtrValue.getProperty(kIsNull));
@@ -188,7 +189,7 @@ void initializeNullnessProperties(Value &PtrValue, Environment &Env) {
   Env.assume(A.makeOr(IsNull->formula(), IsNonnull->formula()));
 }
 
-void setGLValue(const Expr &E, Value &Val, Environment &Env) {
+static void setGLValue(const Expr &E, Value &Val, Environment &Env) {
   StorageLocation *SL = Env.getStorageLocation(E);
   if (!SL) {
     SL = &Env.createStorageLocation(E);
@@ -198,7 +199,7 @@ void setGLValue(const Expr &E, Value &Val, Environment &Env) {
   Env.setValue(*SL, Val);
 }
 
-void setUnknownValue(const Expr &E, Value &Val, Environment &Env) {
+static void setUnknownValue(const Expr &E, Value &Val, Environment &Env) {
   if (E.isGLValue())
     setGLValue(E, Val, Env);
   else
@@ -207,7 +208,7 @@ void setUnknownValue(const Expr &E, Value &Val, Environment &Env) {
 
 // Gets a pointer's value, and initializes it to (Unknown, Unknown) if it hasn't
 // been initialized already.
-Value *getValue(const Expr &Var, Environment &Env) {
+static Value *getValue(const Expr &Var, Environment &Env) {
   if (Value *EnvVal = Env.getValue(Var)) {
     // FIXME: The framework usually creates the values for us, but without the
     // null-properties.
@@ -219,12 +220,12 @@ Value *getValue(const Expr &Var, Environment &Env) {
   return nullptr;
 }
 
-bool hasTopOrNullValue(const Value *Val, const Environment &Env) {
+static bool hasTopOrNullValue(const Value *Val, const Environment &Env) {
   return !Val || isa_and_present<TopBoolValue>(Val->getProperty(kIsNull)) ||
          isa_and_present<TopBoolValue>(Val->getProperty(kIsNonnull));
 }
 
-void matchDereferenceExpr(const Stmt *stmt,
+static void matchDereferenceExpr(const Stmt *stmt,
                           const MatchFinder::MatchResult &Result,
                           Environment &Env) {
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -239,7 +240,7 @@ void matchDereferenceExpr(const Stmt *stmt,
   Env.assume(Env.arena().makeNot(IsNull.formula()));
 }
 
-void matchNullCheckExpr(const Expr *NullCheck,
+static void matchNullCheckExpr(const Expr *NullCheck,
                         const MatchFinder::MatchResult &Result,
                         Environment &Env) {
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -247,8 +248,9 @@ void matchNullCheckExpr(const Expr *NullCheck,
 
   // (bool)p or (p != nullptr)
   bool IsNonnullOp = true;
-  if (const auto *BinOp = dyn_cast<BinaryOperator>(NullCheck);
-      BinOp->getOpcode() == BO_EQ) {
+  
+  const auto *BinOp = dyn_cast<BinaryOperator>(NullCheck);
+  if (BinOp && BinOp->getOpcode() == BO_EQ) {
     IsNonnullOp = false;
   }
 
@@ -273,7 +275,7 @@ void matchNullCheckExpr(const Expr *NullCheck,
       A.makeImplies(A.makeNot(CondFormula), A.makeNot(IsNonnull.formula())));
 }
 
-void matchEqualExpr(const BinaryOperator *EqualExpr,
+static void matchEqualExpr(const BinaryOperator *EqualExpr,
                     const MatchFinder::MatchResult &Result, Environment &Env) {
   bool IsNotEqualsOp = EqualExpr->getOpcode() == BO_NE;
 
@@ -317,7 +319,7 @@ void matchEqualExpr(const BinaryOperator *EqualExpr,
       A.makeNot(A.makeAnd(LHSNull.formula(), RHSNull.formula()))));
 }
 
-void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &Result,
+static void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &Result,
                       Environment &Env) {
   const auto *PrVar = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(PrVar != nullptr);
@@ -333,7 +335,7 @@ void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &Result,
   PtrValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(false));
 }
 
-void matchAddressofExpr(const Expr *expr,
+static void matchAddressofExpr(const Expr *expr,
                         const MatchFinder::MatchResult &Result,
                         Environment &Env) {
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -354,7 +356,7 @@ void matchAddressofExpr(const Expr *expr,
   PtrValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(true));
 }
 
-void matchPtrArgFunctionExpr(const CallExpr *fncall,
+static void matchPtrArgFunctionExpr(const CallExpr *fncall,
                              const MatchFinder::MatchResult &Result,
                              Environment &Env) {
   for (const auto *Arg : fncall->arguments()) {
@@ -398,7 +400,7 @@ void matchPtrArgFunctionExpr(const CallExpr *fncall,
   }
 }
 
-void matchAnyPointerExpr(const Expr *fncall,
+static void matchAnyPointerExpr(const Expr *fncall,
                          const MatchFinder::MatchResult &Result,
                          Environment &Env) {
   // This is not necessarily a prvalue, since operators such as prefix ++ are
@@ -418,7 +420,7 @@ void matchAnyPointerExpr(const Expr *fncall,
   setUnknownValue(*Var, *PtrValue, Env);
 }
 
-Diagnoser::ResultType
+static Diagnoser::ResultType
 diagnoseDerefLocation(const Expr *Deref, const MatchFinder::MatchResult &Result,
                       Diagnoser::DiagnoseArgs &Data) {
   auto [ValToDerefLoc, WarningLocToVal, Env] = Data;
@@ -439,7 +441,7 @@ diagnoseDerefLocation(const Expr *Deref, const MatchFinder::MatchResult &Result,
   return {};
 }
 
-Diagnoser::ResultType
+static Diagnoser::ResultType
 diagnoseAssignLocation(const Expr *Assign,
                        const MatchFinder::MatchResult &Result,
                        Diagnoser::DiagnoseArgs &Data) {
@@ -460,7 +462,7 @@ diagnoseAssignLocation(const Expr *Assign,
   return {};
 }
 
-NullCheckAfterDereferenceDiagnoser::ResultType
+static NullCheckAfterDereferenceDiagnoser::ResultType
 diagnoseNullCheckExpr(const Expr *NullCheck,
                       const MatchFinder::MatchResult &Result,
                       const Diagnoser::DiagnoseArgs &Data) {
@@ -507,7 +509,7 @@ diagnoseNullCheckExpr(const Expr *NullCheck,
   return {};
 }
 
-NullCheckAfterDereferenceDiagnoser::ResultType
+static NullCheckAfterDereferenceDiagnoser::ResultType
 diagnoseEqualExpr(const Expr *PtrCheck, const MatchFinder::MatchResult &Result,
                   Diagnoser::DiagnoseArgs &Data) {
   auto [ValToDerefLoc, WarningLocToVal, Env] = Data;
@@ -539,7 +541,7 @@ diagnoseEqualExpr(const Expr *PtrCheck, const MatchFinder::MatchResult &Result,
   return NullVarLocations;
 }
 
-auto buildTransferMatchSwitch() {
+static auto buildTransferMatchSwitch() {
   return CFGMatchSwitchBuilder<Environment>()
       .CaseOfCFGStmt<Stmt>(derefMatcher(), matchDereferenceExpr)
       .CaseOfCFGStmt<Stmt>(arrowMatcher(), matchDereferenceExpr)
@@ -553,7 +555,7 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
-auto buildDiagnoseMatchSwitch() {
+static auto buildDiagnoseMatchSwitch() {
   return CFGMatchSwitchBuilder<Diagnoser::DiagnoseArgs, Diagnoser::ResultType>()
       .CaseOfCFGStmt<Expr>(derefMatcher(), diagnoseDerefLocation)
       .CaseOfCFGStmt<Expr>(arrowMatcher(), diagnoseDerefLocation)
@@ -563,8 +565,6 @@ auto buildDiagnoseMatchSwitch() {
       .CaseOfCFGStmt<Expr>(equalExprMatcher(), diagnoseEqualExpr)
       .Build();
 }
-
-} // namespace
 
 NullPointerAnalysisModel::NullPointerAnalysisModel(ASTContext &Context)
     : DataflowAnalysis<NullPointerAnalysisModel, NoopLattice>(Context),
@@ -614,7 +614,7 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
     // Handle special cases.
     if (LHSVar == RHSVar)
       return LHSVar ? *LHSVar : MergedEnv.makeAtomicBoolValue();
-    else if (isa_and_nonnull<TopBoolValue>(LHSVar) ||
+    if (isa_and_nonnull<TopBoolValue>(LHSVar) ||
              isa_and_nonnull<TopBoolValue>(RHSVar))
       return MergedEnv.makeTopBoolValue();
 
@@ -695,7 +695,7 @@ ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
     if (isa_and_nonnull<TopBoolValue>(LHSVar) ||
         isa_and_nonnull<TopBoolValue>(RHSVar))
       return CR::Top;
-    else if (LHSVar == RHSVar)
+    if (LHSVar == RHSVar)
       return LHSVar ? CR::Same : CR::Unknown;
 
     return CR::Different;
@@ -717,7 +717,7 @@ ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
 }
 
 // Different in that it replaces differing boolean values with Top.
-ComparisonResult compareAndReplace(QualType Type, Value &Val1,
+static ComparisonResult compareAndReplace(QualType Type, Value &Val1,
                                    const Environment &Env1, Value &Val2,
                                    Environment &Env2) {
 
@@ -755,7 +755,7 @@ ComparisonResult compareAndReplace(QualType Type, Value &Val1,
         isa_and_nonnull<TopBoolValue>(RHSVar)) {
       Val2.setProperty(Name, Env2.makeTopBoolValue());
       return CR::Top;
-    } else if (LHSVar == RHSVar)
+    } if (LHSVar == RHSVar)
       return LHSVar ? CR::Same : CR::Unknown;
 
     return CR::Different;
