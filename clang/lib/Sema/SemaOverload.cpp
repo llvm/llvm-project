@@ -7805,7 +7805,8 @@ bool Sema::diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
         // is very difficult. Ideally, we should handle them more gracefully.
         if (DIA->getCond()->isValueDependent() ||
             !DIA->getCond()->EvaluateWithSubstitution(
-                Result, Context, cast<FunctionDecl>(DIA->getParent()), Args, ThisArg))
+                Result, Context, cast<FunctionDecl>(DIA->getParent()), Args,
+                ThisArg))
           return false;
         return Result.isInt() && Result.getInt().getBoolValue();
       });
