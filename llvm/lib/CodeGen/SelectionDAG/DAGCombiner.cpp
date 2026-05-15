@@ -23885,14 +23885,15 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
   if (!LegalTypes)
     return SDValue();
 
-  if (ST->isTruncatingStore() || ST->isIndexed())
+  if (!ST->isSimple() || ST->isTruncatingStore() || ST->isIndexed())
     return SDValue();
 
   SDValue Chain = ST->getChain();
   SDValue Value = ST->getValue();
 
   unsigned Opc = Value.getOpcode();
-  if (Opc != ISD::CONCAT_VECTORS)
+  if (Opc != ISD::CONCAT_VECTORS || Value.getNumOperands() != 2 ||
+      !Value->hasOneUse())
     return SDValue();
 
   SDValue T1 = Value.getOperand(0);
