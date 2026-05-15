@@ -247,6 +247,7 @@ void IR2VecTool::writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
 
   OS << "Function: " << F.getName() << "\n";
 
+  // Generate embeddings based on the specified level
   switch (Level) {
   case FunctionLevel:
     Emb->getFunctionVector().print(OS);
