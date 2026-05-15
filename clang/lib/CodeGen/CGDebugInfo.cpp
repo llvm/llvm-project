@@ -349,9 +349,8 @@ ApplyInlineDebugLocation::~ApplyInlineDebugLocation() {
 
 static llvm::DILocation *createBuiltinInlineAt(CodeGenFunction &CGF,
                                                GlobalDecl GD) {
-  if (!CGF.getDebugInfo()) {
+  if (!CGF.getDebugInfo())
     return nullptr;
-  }
   auto &DI = *CGF.getDebugInfo();
   return DI.createBuiltinFunctionLocation(CGF.Builder, GD);
 }
