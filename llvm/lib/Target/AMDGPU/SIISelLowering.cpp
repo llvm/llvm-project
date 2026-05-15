@@ -5016,7 +5016,8 @@ SITargetLowering::splitKillBlock(MachineInstr &MI,
   MachineInstr *SplitIt = &MI;
 
   // Scan backwards from MI to see if SCC is defined before the KILL.
-  for (auto It = MachineBasicBlock::reverse_iterator(MI), E = BB->rend();
+  for (auto It = MachineBasicBlock::reverse_iterator(MI.getIterator()),
+            E = BB->rend();
        It != E; ++It) {
     if (It->isDebugInstr())
       continue;
@@ -5032,12 +5033,9 @@ SITargetLowering::splitKillBlock(MachineInstr &MI,
       break;
   }
 
-  MachineBasicBlock *SplitBB = BB->splitAt(*SplitIt, /*UpdateLiveIns=*/true);
-
-  // the KILL instruction (MI) is hosited and appended to the very end of the
-  // original block (BB).
-  if (&MI != SplitIt)
-    BB->splice(BB->end(), SplitBB, MI);
+  MachineInstr *SplitPoint =
+      SplitIt != &BB->front() ? SplitIt->getPrevNode() : &MI;
+  MachineBasicBlock *SplitBB = BB->splitAt(*SplitPoint, /*UpdateLiveIns=*/true);
 
   MI.setDesc(TII->getKillTerminatorFromPseudo(MI.getOpcode()));
 
