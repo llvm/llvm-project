@@ -919,9 +919,6 @@ public:
   /// in classification, and write the results back into FI.
   void computeABIInfoUsingLib(CGFunctionInfo &FI);
 
-  unsigned getDefaultX86AVXABILevel() const;
-  unsigned getEffectiveX86AVXABILevel(const FunctionDecl *FD) const;
-
   CGCXXABI &getCXXABI() const { return *ABI; }
   llvm::LLVMContext &getLLVMContext() { return VMContext; }
 

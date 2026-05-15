@@ -6278,25 +6278,6 @@ const ABIInfo &CodeGenModule::getABIInfo() {
   return getTargetCodeGenInfo().getABIInfo();
 }
 
-unsigned CodeGenModule::getDefaultX86AVXABILevel() const {
-  return static_cast<unsigned>(::getDefaultX86AVXABILevel(Target));
-}
-
-unsigned
-CodeGenModule::getEffectiveX86AVXABILevel(const FunctionDecl *FD) const {
-  X86AVXABILevel Level = ::getDefaultX86AVXABILevel(Target);
-  if (!FD)
-    return static_cast<unsigned>(Level);
-
-  llvm::StringMap<bool> FeatureMap;
-  Context.getFunctionFeatureMap(FeatureMap, FD);
-  if (FeatureMap.lookup("avx512f"))
-    return static_cast<unsigned>(std::max(Level, X86AVXABILevel::AVX512));
-  if (FeatureMap.lookup("avx"))
-    return static_cast<unsigned>(std::max(Level, X86AVXABILevel::AVX));
-  return static_cast<unsigned>(Level);
-}
-
 /// Pass IsTentative as true if you want to create a tentative definition.
 void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
                                             bool IsTentative) {

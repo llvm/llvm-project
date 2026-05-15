@@ -852,10 +852,10 @@ const CGFunctionInfo &CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,
                                                 const CallArgList &args,
                                                 const FunctionDecl *ABIInfoFD) {
   assert(signature.arg_size() <= args.size());
-  unsigned ABIInfoKey =
-      CGM.getABIInfo().getABIInfoKey(ABIInfoFD, signature.getExtInfo());
+  unsigned X86ABIAVXLevel =
+      CGM.getABIInfo().getX86ABIAVXLevel(ABIInfoFD, signature.getExtInfo());
   if (signature.arg_size() == args.size() &&
-      signature.getABIInfoKey() == ABIInfoKey)
+      signature.getX86ABIAVXLevel() == X86ABIAVXLevel)
     return signature;
 
   ExtParameterInfoList paramInfos;
@@ -878,7 +878,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,
 
   const CGFunctionInfo *newFI = findOrInsertCGFunctionInfo(
       signature.isInstanceMethod(), signature.isChainCall(),
-      signature.isDelegateCall(), ABIInfoKey, signature.getExtInfo(),
+      signature.isDelegateCall(), X86ABIAVXLevel, signature.getExtInfo(),
       paramInfos, signature.getRequiredArgs(), signature.getReturnType(),
       argTypes);
   return *newFI;
@@ -970,23 +970,23 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
       (opts & FnInfoOpts::IsChainCall) == FnInfoOpts::IsChainCall;
   bool isDelegateCall =
       (opts & FnInfoOpts::IsDelegateCall) == FnInfoOpts::IsDelegateCall;
-  unsigned ABIInfoKey = CGM.getABIInfo().getABIInfoKey(ABIInfoFD, info);
+  unsigned X86ABIAVXLevel = CGM.getABIInfo().getX86ABIAVXLevel(ABIInfoFD, info);
 
   const CGFunctionInfo *newFI = findOrInsertCGFunctionInfo(
-      isInstanceMethod, isChainCall, isDelegateCall, ABIInfoKey, info,
+      isInstanceMethod, isChainCall, isDelegateCall, X86ABIAVXLevel, info,
       paramInfos, required, resultType, argTypes);
   return *newFI;
 }
 
 CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
     bool isInstanceMethod, bool isChainCall, bool isDelegateCall,
-    unsigned ABIInfoKey, const FunctionType::ExtInfo &info,
+    unsigned X86ABIAVXLevel, const FunctionType::ExtInfo &info,
     ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
     RequiredArgs required, CanQualType resultType,
     ArrayRef<CanQualType> argTypes) {
   llvm::FoldingSetNodeID ID;
   CGFunctionInfo::Profile(ID, isInstanceMethod, isChainCall, isDelegateCall,
-                          ABIInfoKey, info, paramInfos, required, resultType,
+                          X86ABIAVXLevel, info, paramInfos, required, resultType,
                           argTypes);
 
   void *insertPos = nullptr;
@@ -998,7 +998,7 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
 
   // Construct the function info.  We co-allocate the ArgInfos.
   FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
-                              ABIInfoKey, info, paramInfos, resultType, argTypes,
+                              X86ABIAVXLevel, info, paramInfos, resultType, argTypes,
                               required);
   FunctionInfos.InsertNode(FI, insertPos);
 
@@ -1043,7 +1043,7 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
 
 CGFunctionInfo *CGFunctionInfo::create(
     unsigned llvmCC, bool instanceMethod, bool chainCall, bool delegateCall,
-    unsigned ABIInfoKey, const FunctionType::ExtInfo &info,
+    unsigned X86ABIAVXLevel, const FunctionType::ExtInfo &info,
     ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
     ArrayRef<CanQualType> argTypes, RequiredArgs required) {
   assert(paramInfos.empty() || paramInfos.size() == argTypes.size());
@@ -1068,7 +1068,7 @@ CGFunctionInfo *CGFunctionInfo::create(
   FI->Required = required;
   FI->HasRegParm = info.getHasRegParm();
   FI->RegParm = info.getRegParm();
-  FI->ABIInfoKey = ABIInfoKey;
+  FI->X86ABIAVXLevel = X86ABIAVXLevel;
   FI->ArgStruct = nullptr;
   FI->ArgStructAlign = 0;
   FI->NumArgs = argTypes.size();

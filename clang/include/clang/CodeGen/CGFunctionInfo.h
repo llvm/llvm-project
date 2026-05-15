@@ -652,8 +652,8 @@ class CGFunctionInfo final
   /// Log 2 of the maximum vector width.
   unsigned MaxVectorWidth : 4;
 
-  /// Target-specific ABI classification key.
-  unsigned ABIInfoKey = 0;
+  /// X86 AVX Level, can be different from global / module level AVX level because of target attributes
+  unsigned X86ABIAVXLevel = 0;
 
   RequiredArgs Required;
 
@@ -685,7 +685,7 @@ class CGFunctionInfo final
 public:
   static CGFunctionInfo *
   create(unsigned llvmCC, bool instanceMethod, bool chainCall,
-         bool delegateCall, unsigned ABIInfoKey,
+         bool delegateCall, unsigned X86ABIAVXLevel,
          const FunctionType::ExtInfo &extInfo,
          ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
          ArrayRef<CanQualType> argTypes, RequiredArgs required);
@@ -812,7 +812,7 @@ public:
     MaxVectorWidth = llvm::countr_zero(Width) + 1;
   }
 
-  unsigned getABIInfoKey() const { return ABIInfoKey; }
+  unsigned getX86ABIAVXLevel() const { return X86ABIAVXLevel; }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     ID.AddInteger(getASTCallingConvention());
@@ -826,7 +826,7 @@ public:
     ID.AddInteger(RegParm);
     ID.AddBoolean(NoCfCheck);
     ID.AddBoolean(CmseNSCall);
-    ID.AddInteger(ABIInfoKey);
+    ID.AddInteger(X86ABIAVXLevel);
     ID.AddInteger(Required.getOpaqueData());
     ID.AddBoolean(HasExtParameterInfos);
     if (HasExtParameterInfos) {
@@ -839,7 +839,7 @@ public:
   }
   static void Profile(llvm::FoldingSetNodeID &ID, bool InstanceMethod,
                       bool ChainCall, bool IsDelegateCall,
-                      unsigned ABIInfoKey,
+                      unsigned X86ABIAVXLevel,
                       const FunctionType::ExtInfo &info,
                       ArrayRef<ExtParameterInfo> paramInfos,
                       RequiredArgs required, CanQualType resultType,
@@ -855,7 +855,7 @@ public:
     ID.AddInteger(info.getRegParm());
     ID.AddBoolean(info.getNoCfCheck());
     ID.AddBoolean(info.getCmseNSCall());
-    ID.AddInteger(ABIInfoKey);
+    ID.AddInteger(X86ABIAVXLevel);
     ID.AddInteger(required.getOpaqueData());
     ID.AddBoolean(!paramInfos.empty());
     if (!paramInfos.empty()) {

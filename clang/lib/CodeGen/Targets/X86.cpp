@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace clang;
@@ -1210,17 +1211,6 @@ static unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
   llvm_unreachable("Unknown AVXLevel");
 }
 
-static unsigned getEffectiveX86AVXABILevelForCall(CodeGenTypes &CGT,
-                                                  X86AVXABILevel AVXLevel,
-                                                  const FunctionDecl *FD) {
-  if (CGT.getTarget().getTriple().isPS() ||
-      CGT.getContext().getLangOpts().getClangABICompat() <=
-          LangOptions::ClangABI::Ver22)
-    return static_cast<unsigned>(AVXLevel);
-
-  return CGT.getCGM().getEffectiveX86AVXABILevel(FD);
-}
-
 /// X86_64ABIInfo - The X86_64 ABI information.
 class X86_64ABIInfo : public ABIInfo {
   enum Class {
@@ -1395,7 +1385,7 @@ public:
   }
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  unsigned getABIInfoKey(const FunctionDecl *FD,
+  unsigned getX86ABIAVXLevel(const FunctionDecl *FD,
                          const FunctionType::ExtInfo &Info) const override;
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
@@ -1416,7 +1406,7 @@ public:
         IsMingw64(getTarget().getTriple().isWindowsGNUEnvironment()) {}
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  unsigned getABIInfoKey(const FunctionDecl *FD,
+  unsigned getX86ABIAVXLevel(const FunctionDecl *FD,
                          const FunctionType::ExtInfo &Info) const override;
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
@@ -1772,6 +1762,27 @@ void X86_64ABIInfo::postMerge(unsigned AggregateSize, Class &Lo,
     Lo = Memory;
   if (Hi == SSEUp && Lo != SSE)
     Hi = SSE;
+}
+
+static X86AVXABILevel getEffectiveX86AVXABILevel(CodeGenTypes &CGT, X86AVXABILevel GlobalAVXLevel, const FunctionDecl *FD) {
+  // Always return global AVX level on PlayStation
+  if (CGT.getTarget().getTriple().isPS() ||
+      CGT.getContext().getLangOpts().getClangABICompat() <=
+          LangOptions::ClangABI::Ver22) {
+            return GlobalAVXLevel;
+          }
+
+  X86AVXABILevel Level = GlobalAVXLevel;
+  if (!FD)
+    return Level;
+
+  llvm::StringMap<bool> FeatureMap;
+  CGT.getCGM().getContext().getFunctionFeatureMap(FeatureMap, FD);
+  if (FeatureMap.lookup("avx512f"))
+    return std::max(Level, X86AVXABILevel::AVX512);
+  if (FeatureMap.lookup("avx"))
+    return std::max(Level, X86AVXABILevel::AVX);
+  return Level;
 }
 
 X86_64ABIInfo::Class X86_64ABIInfo::merge(Class Accum, Class Field) {
@@ -2976,12 +2987,9 @@ X86_64ABIInfo::classifyRegCallStructType(QualType Ty, unsigned &NeededInt,
 }
 
 unsigned
-X86_64ABIInfo::getABIInfoKey(const FunctionDecl *FD,
+X86_64ABIInfo::getX86ABIAVXLevel(const FunctionDecl *FD,
                              const FunctionType::ExtInfo &Info) const {
-  if (Info.getCC() == CC_Win64)
-    return 0;
-
-  return getEffectiveX86AVXABILevelForCall(CGT, AVXLevel, FD);
+  return static_cast<unsigned>(getEffectiveX86AVXABILevel(CGT, AVXLevel, FD));
 }
 
 void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
@@ -2995,11 +3003,11 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     return;
   }
 
-  assert(FI.getABIInfoKey() <=
+  assert(FI.getX86ABIAVXLevel() <=
              static_cast<unsigned>(X86AVXABILevel::AVX512) &&
-         "Unexpected X86 AVX ABI key");
+         "Unexpected X86 AVX ABI level");
   X86AVXABILevel EffectiveAVXLevel =
-      static_cast<X86AVXABILevel>(FI.getABIInfoKey());
+      static_cast<X86AVXABILevel>(FI.getX86ABIAVXLevel());
   if (EffectiveAVXLevel != AVXLevel) {
     X86_64ABIInfo EffectiveABIInfo(CGT, EffectiveAVXLevel);
     EffectiveABIInfo.computeInfo(FI);
@@ -3510,12 +3518,14 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
 }
 
 unsigned
-WinX86_64ABIInfo::getABIInfoKey(const FunctionDecl *FD,
+WinX86_64ABIInfo::getX86ABIAVXLevel(const FunctionDecl *FD,
                                 const FunctionType::ExtInfo &Info) const {
-  if (Info.getCC() != CC_X86_64SysV)
-    return 0;
+  if (Info.getCC() == CC_X86_64SysV)
+  {
+    return static_cast<unsigned>(getEffectiveX86AVXABILevel(CGT, AVXLevel, FD));
+  }
 
-  return getEffectiveX86AVXABILevelForCall(CGT, AVXLevel, FD);
+  return static_cast<unsigned>(AVXLevel);
 }
 
 void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
