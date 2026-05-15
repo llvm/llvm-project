@@ -1984,15 +1984,14 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
       Instruction *User = cast<Instruction>(U.getUser());
       if (isa<AllocaInst>(&I) && User->isLifetimeStartOrEnd()) {
         LifetimeMarkers.push_back(User);
-        UsesToRename.push_back(&U);
       } else {
         if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
           if (UserPN->getIncomingBlock(U) == BB)
             continue;
         } else if (User->getParent() == BB)
           continue;
-        UsesToRename.push_back(&U);
       }
+      UsesToRename.push_back(&U);
     }
 
     // Find debug values outside of the block
@@ -2025,12 +2024,7 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
     bool HasPhiArg = false;
     for (Instruction *User : LifetimeMarkers) {
       auto *CB = cast<CallBase>(User);
-
-      // Lifetime markers have two common signatures:
-      // @llvm.lifetime.start.p0(ptr)
-      // @llvm.lifetime.start(i64, ptr)
-      if (isa<PHINode>(
-              CB->getOperand(CB->arg_size() - 1)->stripPointerCasts())) {
+      if (isa<PHINode>(CB->getOperand(0))) {
         HasPhiArg = true;
         break;
       }
