@@ -22,17 +22,17 @@ namespace fs = std::filesystem;
 using namespace fs;
 
 int main(int, char**) {
-    scoped_test_env env;
+  scoped_test_env env;
 
-    const path parent_dir = env.create_dir("parent");
-    const path child_dir = env.create_dir(parent_dir / "child");
-    permissions(parent_dir, perms::owner_read | perms::owner_write);
+  const path parent_dir = env.create_dir("parent");
+  const path child_dir  = env.create_dir(parent_dir / "child");
+  permissions(parent_dir, perms::owner_read | perms::owner_write);
 
-    const auto BadRet = static_cast<std::uintmax_t>(-1);
-    std::error_code ec;
-    assert(fs::remove_all(parent_dir, ec) == BadRet);
-    assert(ec == std::errc::permission_denied);
+  const auto BadRet = static_cast<std::uintmax_t>(-1);
+  std::error_code ec;
+  assert(fs::remove_all(parent_dir, ec) == BadRet);
+  assert(ec == std::errc::permission_denied);
 
-    permissions(parent_dir, perms::owner_all);
-    return 0;
+  permissions(parent_dir, perms::owner_all);
+  return 0;
 }
