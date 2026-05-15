@@ -4021,12 +4021,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Builder.CreateCall(F, {Begin, End}));
   }
   case Builtin::BI__builtin_trap: {
-    EmitTrapCall(Intrinsic::trap);
+    llvm::CallInst *Trap = EmitTrapCall(Intrinsic::trap);
     Trap->setDoesNotReturn();
     Trap->setDoesNotThrow();
     Builder.CreateUnreachable();
     if (Builder.GetInsertBlock()) {
-      // Dummy block for the ret void - it'll be cleaned up
+      // Dummy block for the ret void - it'll be cleaned up.
       llvm::BasicBlock *DeadBB = createBasicBlock("dead.trap");
       EmitBlock(DeadBB);
     }
