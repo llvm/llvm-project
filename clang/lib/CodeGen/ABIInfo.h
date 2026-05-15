@@ -26,6 +26,7 @@ class FixedVectorType;
 namespace clang {
 class ASTContext;
 class CodeGenOptions;
+class FunctionDecl;
 class TargetInfo;
 
 namespace CodeGen {
@@ -68,6 +69,14 @@ public:
   /// Return the calling convention to use for system runtime
   /// functions.
   llvm::CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
+
+  /// Return a target-specific key for ABI information that affects function
+  /// lowering but is not captured by the source signature.
+  virtual unsigned
+  getABIInfoKey(const FunctionDecl *,
+                const FunctionType::ExtInfo &) const {
+    return 0;
+  }
 
   virtual void computeInfo(CodeGen::CGFunctionInfo &FI) const = 0;
 

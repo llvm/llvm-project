@@ -187,7 +187,8 @@ const char X86AVXABITestProgram[] =
     "  mytest_avx_fn(hello);\n"
     "  mytest_avx_method_holder holder = mytest_avx_method_holder();\n"
     "  holder.method(hello);\n"
-    "}\n";
+    "}\n"
+    "__attribute__((target(\"avx\"))) void caller2() {}\n";
 
 static void test_generic_codegen_fns(MyASTConsumer *my) {
   bool mytest_fn_ok = false;
@@ -286,17 +287,20 @@ static void test_x86_avx_abi_codegen_fns(MyASTConsumer *my) {
   CodeGen::CodeGenModule &CGM = my->Builder->CGM();
   const ASTContext &Ctx = my->toplevel_decls.front()->getASTContext();
 
-  // First get the caller decl, which we need to determine call ABI
+  // First get the caller decls, which we need to determine call ABI.
   FunctionDecl *callerDecl = nullptr;
+  FunctionDecl *caller2Decl = nullptr;
   for (auto decl : my->toplevel_decls) {
     if (FunctionDecl *fd = dyn_cast<FunctionDecl>(decl)) {
-      if (fd->getName() != "caller")
-        continue;
-
-      callerDecl = fd;
-      break;
+      if (fd->getName() == "caller")
+        callerDecl = fd;
+      else if (fd->getName() == "caller2")
+        caller2Decl = fd;
     }
   }
+  ASSERT_TRUE(callerDecl);
+  ASSERT_TRUE(caller2Decl);
+  ASSERT_NE(callerDecl, caller2Decl);
 
   for (auto decl : my->toplevel_decls) {
     if (FunctionDecl *fd = dyn_cast<FunctionDecl>(decl)) {
@@ -312,7 +316,12 @@ static void test_x86_avx_abi_codegen_fns(MyASTConsumer *my) {
           CGM, Ctx.getCanonicalType(FPT->getReturnType()), ArgTypes,
           FPT->getExtInfo(), {},
           CodeGen::RequiredArgs::forPrototypePlus(FPT, 0), callerDecl);
-      ASSERT_EQ(FnInfo.getABIInfoFD(), callerDecl);
+      const CodeGen::CGFunctionInfo &FnInfo2 = CodeGen::arrangeFreeFunctionCall(
+          CGM, Ctx.getCanonicalType(FPT->getReturnType()), ArgTypes,
+          FPT->getExtInfo(), {},
+          CodeGen::RequiredArgs::forPrototypePlus(FPT, 0), caller2Decl);
+      ASSERT_EQ(&FnInfo, &FnInfo2);
+      ASSERT_EQ(FnInfo.getABIInfoKey(), 1u);
       ASSERT_TRUE(FnInfo.getReturnInfo().isDirect());
       ASSERT_TRUE(FnInfo.arg_begin()->info.isDirect());
       mytest_avx_fn_ok = true;
@@ -332,7 +341,7 @@ static void test_x86_avx_abi_codegen_fns(MyASTConsumer *my) {
           CGM, Ctx.getCanonicalType(FPT->getReturnType()), ArgTypes,
           FPT->getExtInfo(), {},
           CodeGen::RequiredArgs::forPrototypePlus(FPT, 1), callerDecl);
-      ASSERT_EQ(FnInfo.getABIInfoFD(), callerDecl);
+      ASSERT_EQ(FnInfo.getABIInfoKey(), 1u);
       ASSERT_TRUE(FnInfo.getReturnInfo().isDirect());
       ASSERT_TRUE(FnInfo.arg_begin()[1].info.isDirect());
       mytest_avx_method_ok = true;
