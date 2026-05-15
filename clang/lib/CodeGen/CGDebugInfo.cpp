@@ -1214,6 +1214,8 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::SatULongFract:
     Encoding = llvm::dwarf::DW_ATE_unsigned_fixed;
     break;
+  case BuiltinType::MetaInfo:
+    llvm_unreachable("std::meta::info is consteval-only type");
   }
 
   BTName = BT->getName(CGM.getLangOpts());
