@@ -4755,19 +4755,14 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
                               DNT.getNameLoc(), Sema::LookupOrdinaryName,
                               SemaRef.forRedeclarationInCurContext());
           SemaRef.LookupQualifiedName(Result, DC);
-          if (Result.getResultKind() == LookupResultKind::Found) {
-            NamedDecl *FoundD = *Result.begin();
-            UsingShadowDecl *FoundUsingShadow =
-                dyn_cast<UsingShadowDecl>(FoundD);
-            NamedDecl *Underlying =
-                FoundUsingShadow ? FoundUsingShadow->getTargetDecl() : FoundD;
-            if (auto *CTD = dyn_cast<ClassTemplateDecl>(Underlying)) {
-              Template = FoundUsingShadow ? TemplateName(FoundUsingShadow)
-                                          : TemplateName(CTD);
-              Template = SemaRef.Context.getQualifiedTemplateName(
-                  QualifierLoc.getNestedNameSpecifier(),
-                  /*TemplateKeyword=*/false, Template);
-            }
+          if (auto *CTD = Result.getAsSingle<ClassTemplateDecl>()) {
+            auto *FoundUsingShadow =
+                dyn_cast<UsingShadowDecl>(Result.getRepresentativeDecl());
+            Template = FoundUsingShadow ? TemplateName(FoundUsingShadow)
+                                        : TemplateName(CTD);
+            Template = SemaRef.Context.getQualifiedTemplateName(
+                QualifierLoc.getNestedNameSpecifier(),
+                /*TemplateKeyword=*/false, Template);
           }
         }
       }
