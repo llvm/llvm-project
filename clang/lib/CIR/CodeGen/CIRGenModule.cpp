@@ -2724,7 +2724,7 @@ void CIRGenModule::setGlobalVisibility(cir::CIRGlobalValueInterface gv,
       d->getAttr<OMPDeclareTargetDeclAttr>()->getDevType() !=
           OMPDeclareTargetDeclAttr::DT_NoHost &&
       lv.getVisibility() == HiddenVisibility) {
-    gv.setGlobalVisibility(cir::VisibilityKind::Protected);
+    llvm_unreachable("setGlobalVisibility: OpenMP is NYI");
     return;
   }
 
