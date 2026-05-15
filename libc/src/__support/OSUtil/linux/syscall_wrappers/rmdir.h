@@ -26,7 +26,7 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> rmdir(const char *path) {
 #ifdef SYS_unlinkat
-  int ret = syscall_impl<int>(SYS_unlinkat, AT_FDCWD, path, 0);
+  int ret = syscall_impl<int>(SYS_unlinkat, AT_FDCWD, path, AT_REMOVEDIR);
 #elif defined(SYS_rmdir)
   int ret = syscall_impl<int>(SYS_rmdir, path);
 #else
