@@ -147,7 +147,7 @@ uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
 // uninitialized_default_construct
 
 template <class _ValueType, class _ForwardIterator, class _Sentinel>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 __uninitialized_default_construct(_ForwardIterator __first, _Sentinel __last) {
   auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
