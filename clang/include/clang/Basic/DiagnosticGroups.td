@@ -631,7 +631,14 @@ This warning may produce false-positives diagnostics when it cannot fully model 
   }];
 }
 
-def LifetimeSafetyMisplacedLifetimebound : DiagGroup<"lifetime-safety-misplaced-lifetimebound"> {
+def LifetimeSafetyCrossTUMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-cross-tu-misplaced-lifetimebound">;
+def LifetimeSafetyIntraTUMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-intra-tu-misplaced-lifetimebound">;
+def LifetimeSafetyMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-misplaced-lifetimebound",
+                [LifetimeSafetyCrossTUMisplacedLifetimebound,
+                 LifetimeSafetyIntraTUMisplacedLifetimebound]> {
     code Documentation = [{
 Detects function definitions whose parameters or implicit this argument are marked as [[clang::lifetimebound]] when the corresponding declaration is not.
 }];

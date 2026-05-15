@@ -12,6 +12,7 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 
 namespace clang ::lifetimes {
 
@@ -46,6 +47,9 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD);
 const LifetimeBoundAttr *
 getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD);
 
+const std::pair<const Decl *, WarningScope>
+getUnannotatedDeclBestMatch(const FunctionDecl *FD,
+                            const ParmVarDecl *PVD = nullptr);
 /// Returns the lifetimebound attribute for the implicit this parameter, if it
 /// exists on any redeclaration.
 const LifetimeBoundAttr *

@@ -61,6 +61,7 @@ private:
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
   llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
+  llvm::DenseMap<const Decl *, WarningScope> DeclarationsToAnnotate;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
   const LiveOriginsAnalysis &LiveOrigins;
@@ -135,6 +136,10 @@ public:
       if (PVD->hasAttr<LifetimeBoundAttr>()) {
         // Track that this lifetimebound parameter correctly escapes.
         VerifiedLiftimeboundEscapes.insert(PVD);
+        if (auto [UnannotatedFDecl, Scope] =
+                getUnannotatedDeclBestMatch(cast<FunctionDecl>(FD), PVD);
+            UnannotatedFDecl)
+          DeclarationsToAnnotate.try_emplace(UnannotatedFDecl, Scope);
       } else {
         // Otherwise, suggest lifetimebound for parameter escaping through
         // return or a field in constructor.
@@ -152,6 +157,10 @@ public:
         VerifiedLiftimeboundEscapes.insert(MD);
       else if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
         AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
+      if (getDirectImplicitObjectLifetimeBoundAttr(MD))
+        if (auto [UnannotatedFDecl, Scope] = getUnannotatedDeclBestMatch(MD);
+            UnannotatedFDecl)
+          DeclarationsToAnnotate.try_emplace(UnannotatedFDecl, Scope);
     };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
@@ -346,11 +355,11 @@ public:
 
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*PVD, SM))
       SemaHelper->suggestLifetimeboundToParmVar(
-          SuggestionScope::CrossTU,
+          WarningScope::CrossTU,
           CrossTUDecl->getParamDecl(PVD->getFunctionScopeIndex()),
           EscapeTarget);
     else
-      SemaHelper->suggestLifetimeboundToParmVar(SuggestionScope::IntraTU, PVD,
+      SemaHelper->suggestLifetimeboundToParmVar(WarningScope::IntraTU, PVD,
                                                 EscapeTarget);
   }
 
@@ -360,11 +369,10 @@ public:
                                   const Expr *EscapeExpr) {
     if (const FunctionDecl *CrossTUDecl = getCrossTUDecl(*MD, SM))
       SemaHelper->suggestLifetimeboundToImplicitThis(
-          SuggestionScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl),
-          EscapeExpr);
+          WarningScope::CrossTU, cast<CXXMethodDecl>(CrossTUDecl), EscapeExpr);
     else
-      SemaHelper->suggestLifetimeboundToImplicitThis(SuggestionScope::IntraTU,
-                                                     MD, EscapeExpr);
+      SemaHelper->suggestLifetimeboundToImplicitThis(WarningScope::IntraTU, MD,
+                                                     EscapeExpr);
   }
 
   void suggestAnnotations() {
@@ -420,21 +428,13 @@ public:
     const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
-
-    const FunctionDecl *FDecl = FDef->getPreviousDecl();
-    if (!FDecl)
-      return;
-
-    if (isa<CXXMethodDecl>(FDef) &&
-        getDirectImplicitObjectLifetimeBoundAttr(FDef) &&
-        !getDirectImplicitObjectLifetimeBoundAttr(FDecl))
-      SemaHelper->reportMisplacedLifetimebound(FDef, FDecl);
-
-    for (auto [PVDDef, PVDDecl] :
-         llvm::zip_equal(FDef->parameters(), FDecl->parameters())) {
-      if (PVDDef->hasAttr<LifetimeBoundAttr>() &&
-          !PVDDecl->hasAttr<LifetimeBoundAttr>())
-        SemaHelper->reportMisplacedLifetimebound(PVDDef, PVDDecl);
+    for (auto [Decl, Scope] : DeclarationsToAnnotate) {
+      if (const auto *MD = dyn_cast<CXXMethodDecl>(Decl))
+        SemaHelper->reportMisplacedLifetimebound(Scope,
+                                                 cast<CXXMethodDecl>(FDef), MD);
+      else if (const auto *PVD = dyn_cast<ParmVarDecl>(Decl))
+        SemaHelper->reportMisplacedLifetimebound(
+            Scope, FDef->getParamDecl(PVD->getFunctionScopeIndex()), PVD);
     }
   }
 
