@@ -373,7 +373,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {&Plan.getVF(), getConstantInt(Part)},
           {true, true});
-      Copy->setOperand(0, WideCanIV->getOperand(0));
       Copy->addOperand(VFxPart);
       continue;
     }
