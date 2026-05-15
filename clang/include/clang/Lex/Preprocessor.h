@@ -1179,7 +1179,7 @@ private:
   ///
   /// This is an optional side structure that can be enabled with
   /// \c createPreprocessingRecord() prior to preprocessing.
-  PreprocessingRecord *Record = nullptr;
+  std::unique_ptr<PreprocessingRecord> Record = nullptr;
 
   /// Cached tokens state.
   using CachedTokensTy = SmallVector<Token, 1>;
@@ -1361,7 +1361,7 @@ public:
                                                 std::move(Callbacks));
     Callbacks = std::move(C);
   }
-  void removePPCallbacks() { Callbacks.reset(); }
+  void removePPCallbacks();
   /// \}
 
   /// Get the number of tokens processed so far.
@@ -1661,7 +1661,7 @@ public:
 
   /// Retrieve the preprocessing record, or NULL if there is no
   /// preprocessing record.
-  PreprocessingRecord *getPreprocessingRecord() const { return Record; }
+  PreprocessingRecord *getPreprocessingRecord() const { return Record.get(); }
 
   /// Create a new preprocessing record, which will keep track of
   /// all macro expansions, macro definitions, etc.

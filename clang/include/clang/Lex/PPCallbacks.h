@@ -775,6 +775,250 @@ public:
   }
 };
 
+/// Simple wrapper class for a callback owned by someone else.
+class PPCallbacksRef : public PPCallbacks {
+  PPCallbacks *Ref;
+
+public:
+  explicit PPCallbacksRef(PPCallbacks *Ref) : Ref(Ref) {}
+
+  ~PPCallbacksRef() override {}
+
+  void FileChanged(SourceLocation Loc, FileChangeReason Reason,
+                   SrcMgr::CharacteristicKind FileType,
+                   FileID PrevFID) override {
+    Ref->FileChanged(Loc, Reason, FileType, PrevFID);
+  }
+
+  void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
+                        SrcMgr::CharacteristicKind FileType, FileID PrevFID,
+                        SourceLocation Loc) override {
+    Ref->LexedFileChanged(FID, Reason, FileType, PrevFID, Loc);
+  }
+
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
+                   SrcMgr::CharacteristicKind FileType) override {
+    Ref->FileSkipped(SkippedFile, FilenameTok, FileType);
+  }
+
+  bool EmbedFileNotFound(StringRef FileName) override {
+    return Ref->EmbedFileNotFound(FileName);
+  }
+
+  void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &Params) override {
+    Ref->EmbedDirective(HashLoc, FileName, IsAngled, File, Params);
+  }
+
+  bool FileNotFound(StringRef FileName) override {
+    return Ref->FileNotFound(FileName);
+  }
+
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+                          StringRef FileName, bool IsAngled,
+                          CharSourceRange FilenameRange,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
+                          SrcMgr::CharacteristicKind FileType) override {
+    Ref->InclusionDirective(HashLoc, IncludeTok, FileName, IsAngled,
+                            FilenameRange, File, SearchPath, RelativePath,
+                            SuggestedModule, ModuleImported, FileType);
+  }
+
+  void EnteredSubmodule(Module *M, SourceLocation ImportLoc,
+                        bool ForPragma) override {
+    Ref->EnteredSubmodule(M, ImportLoc, ForPragma);
+  }
+
+  void LeftSubmodule(Module *M, SourceLocation ImportLoc,
+                     bool ForPragma) override {
+    Ref->LeftSubmodule(M, ImportLoc, ForPragma);
+  }
+
+  void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
+                    const Module *Imported) override {
+    Ref->moduleImport(ImportLoc, Path, Imported);
+  }
+
+  void moduleLoadSkipped(Module *Skipped) override {
+    Ref->moduleLoadSkipped(Skipped);
+  }
+
+  void EndOfMainFile() override { Ref->EndOfMainFile(); }
+
+  void Ident(SourceLocation Loc, StringRef str) override {
+    Ref->Ident(Loc, str);
+  }
+
+  void PragmaDirective(SourceLocation Loc,
+                       PragmaIntroducerKind Introducer) override {
+    Ref->PragmaDirective(Loc, Introducer);
+  }
+
+  void PragmaComment(SourceLocation Loc, const IdentifierInfo *Kind,
+                     StringRef Str) override {
+    Ref->PragmaComment(Loc, Kind, Str);
+  }
+
+  void PragmaMark(SourceLocation Loc, StringRef Trivia) override {
+    Ref->PragmaMark(Loc, Trivia);
+  }
+
+  void PragmaDetectMismatch(SourceLocation Loc, StringRef Name,
+                            StringRef Value) override {
+    Ref->PragmaDetectMismatch(Loc, Name, Value);
+  }
+
+  void PragmaDebug(SourceLocation Loc, StringRef DebugType) override {
+    Ref->PragmaDebug(Loc, DebugType);
+  }
+
+  void PragmaMessage(SourceLocation Loc, StringRef Namespace,
+                     PragmaMessageKind Kind, StringRef Str) override {
+    Ref->PragmaMessage(Loc, Namespace, Kind, Str);
+  }
+
+  void PragmaDiagnosticPush(SourceLocation Loc, StringRef Namespace) override {
+    Ref->PragmaDiagnosticPush(Loc, Namespace);
+  }
+
+  void PragmaDiagnosticPop(SourceLocation Loc, StringRef Namespace) override {
+    Ref->PragmaDiagnosticPop(Loc, Namespace);
+  }
+
+  void PragmaDiagnostic(SourceLocation Loc, StringRef Namespace,
+                        diag::Severity mapping, StringRef Str) override {
+    Ref->PragmaDiagnostic(Loc, Namespace, mapping, Str);
+  }
+
+  void HasEmbed(SourceLocation Loc, StringRef FileName, bool IsAngled,
+                OptionalFileEntryRef File) override {
+    Ref->HasEmbed(Loc, FileName, IsAngled, File);
+  }
+
+  void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
+                  OptionalFileEntryRef File,
+                  SrcMgr::CharacteristicKind FileType) override {
+    Ref->HasInclude(Loc, FileName, IsAngled, File, FileType);
+  }
+
+  void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *Name,
+                             SourceLocation StateLoc, unsigned State) override {
+    Ref->PragmaOpenCLExtension(NameLoc, Name, StateLoc, State);
+  }
+
+  void PragmaWarning(SourceLocation Loc, PragmaWarningSpecifier WarningSpec,
+                     ArrayRef<int> Ids) override {
+    Ref->PragmaWarning(Loc, WarningSpec, Ids);
+  }
+
+  void PragmaWarningPush(SourceLocation Loc, int Level) override {
+    Ref->PragmaWarningPush(Loc, Level);
+  }
+
+  void PragmaWarningPop(SourceLocation Loc) override {
+    Ref->PragmaWarningPop(Loc);
+  }
+
+  void PragmaExecCharsetPush(SourceLocation Loc, StringRef Str) override {
+    Ref->PragmaExecCharsetPush(Loc, Str);
+  }
+
+  void PragmaExecCharsetPop(SourceLocation Loc) override {
+    Ref->PragmaExecCharsetPop(Loc);
+  }
+
+  void PragmaAssumeNonNullBegin(SourceLocation Loc) override {
+    Ref->PragmaAssumeNonNullBegin(Loc);
+  }
+
+  void PragmaAssumeNonNullEnd(SourceLocation Loc) override {
+    Ref->PragmaAssumeNonNullEnd(Loc);
+  }
+
+  void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
+                    SourceRange Range, const MacroArgs *Args) override {
+    Ref->MacroExpands(MacroNameTok, MD, Range, Args);
+  }
+
+  void MacroDefined(const Token &MacroNameTok,
+                    const MacroDirective *MD) override {
+    Ref->MacroDefined(MacroNameTok, MD);
+  }
+
+  void MacroUndefined(const Token &MacroNameTok, const MacroDefinition &MD,
+                      const MacroDirective *Undef) override {
+    Ref->MacroUndefined(MacroNameTok, MD, Undef);
+  }
+
+  void Defined(const Token &MacroNameTok, const MacroDefinition &MD,
+               SourceRange Range) override {
+    Ref->Defined(MacroNameTok, MD, Range);
+  }
+
+  void SourceRangeSkipped(SourceRange Range, SourceLocation EndifLoc) override {
+    Ref->SourceRangeSkipped(Range, EndifLoc);
+  }
+
+  /// Hook called whenever an \#if is seen.
+  void If(SourceLocation Loc, SourceRange ConditionRange,
+          ConditionValueKind ConditionValue) override {
+    Ref->If(Loc, ConditionRange, ConditionValue);
+  }
+
+  /// Hook called whenever an \#elif is seen.
+  void Elif(SourceLocation Loc, SourceRange ConditionRange,
+            ConditionValueKind ConditionValue, SourceLocation IfLoc) override {
+    Ref->Elif(Loc, ConditionRange, ConditionValue, IfLoc);
+  }
+
+  /// Hook called whenever an \#ifdef is seen.
+  void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+             const MacroDefinition &MD) override {
+    Ref->Ifdef(Loc, MacroNameTok, MD);
+  }
+
+  /// Hook called whenever an \#elifdef is taken.
+  void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+               const MacroDefinition &MD) override {
+    Ref->Elifdef(Loc, MacroNameTok, MD);
+  }
+  /// Hook called whenever an \#elifdef is skipped.
+  void Elifdef(SourceLocation Loc, SourceRange ConditionRange,
+               SourceLocation IfLoc) override {
+    Ref->Elifdef(Loc, ConditionRange, IfLoc);
+  }
+
+  /// Hook called whenever an \#ifndef is seen.
+  void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
+              const MacroDefinition &MD) override {
+    Ref->Ifndef(Loc, MacroNameTok, MD);
+  }
+
+  /// Hook called whenever an \#elifndef is taken.
+  void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+                const MacroDefinition &MD) override {
+    Ref->Elifndef(Loc, MacroNameTok, MD);
+  }
+  /// Hook called whenever an \#elifndef is skipped.
+  void Elifndef(SourceLocation Loc, SourceRange ConditionRange,
+                SourceLocation IfLoc) override {
+    Ref->Elifndef(Loc, ConditionRange, IfLoc);
+  }
+
+  /// Hook called whenever an \#else is seen.
+  void Else(SourceLocation Loc, SourceLocation IfLoc) override {
+    Ref->Else(Loc, IfLoc);
+  }
+
+  /// Hook called whenever an \#endif is seen.
+  void Endif(SourceLocation Loc, SourceLocation IfLoc) override {
+    Ref->Endif(Loc, IfLoc);
+  }
+};
+
 }  // end namespace clang
 
 #endif

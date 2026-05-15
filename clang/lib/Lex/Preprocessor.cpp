@@ -240,6 +240,17 @@ void Preprocessor::FinalizeForModelFile() {
   PragmaHandlers = std::move(PragmaHandlersBackup);
 }
 
+void Preprocessor::removePPCallbacks() {
+  Callbacks.reset();
+
+  // This callback was owned by \c Callbacks, clear it.
+  DirTracer = nullptr;
+
+  // This callback is important to the Preprocessor and ASTReader, preserve it.
+  if (Record)
+    addPPCallbacks(std::make_unique<PPCallbacksRef>(Record.get()));
+}
+
 void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
   std::string TokenStr;
   llvm::raw_string_ostream OS(TokenStr);
@@ -1726,8 +1737,8 @@ void Preprocessor::createPreprocessingRecord() {
   if (Record)
     return;
 
-  Record = new PreprocessingRecord(getSourceManager());
-  addPPCallbacks(std::unique_ptr<PPCallbacks>(Record));
+  Record = std::make_unique<PreprocessingRecord>(getSourceManager());
+  addPPCallbacks(std::make_unique<PPCallbacksRef>(Record.get()));
 }
 
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
