@@ -402,7 +402,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     // This only helps when the base is already divergent — if the base is
     // uniform, the default order naturally reuses the uniform dominating GEP.
     if (UI->isDivergentAtUse(GEP->getOperandUse(0)) &&
-        !UI->isDivergentAtUse(LHSUse) && UI->isDivergentAtUse(RHSUse)) {
+        UI->isUniformAtUse(LHSUse) && UI->isDivergentAtUse(RHSUse)) {
       LLVM_DEBUG(
           dbgs() << "NARY: Preferring uniform remainder for GEP index\n");
       if (GetElementPtrInst *NewGEP =
@@ -529,8 +529,8 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(const Use &LHSUse,
     // divergent. The symmetric case (A and RHS uniform, B divergent) is already
     // handled by the default order which tries (A op RHS) op B first.
     User *LHSOp = cast<User>(LHS);
-    if (!UI->isDivergentAtUse(LHSOp->getOperandUse(1)) &&
-        !UI->isDivergentAtUse(RHSUse) &&
+    if (UI->isUniformAtUse(LHSOp->getOperandUse(1)) &&
+        UI->isUniformAtUse(RHSUse) &&
         UI->isDivergentAtUse(LHSOp->getOperandUse(0))) {
       LLVM_DEBUG(dbgs() << "NARY: Preferring uniform grouping for " << *I
                         << "\n");
@@ -720,11 +720,10 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   //   - minmax(minmax(A, RHS), B): groups A and RHS
   //   - minmax(minmax(B, RHS), A): groups B and RHS
   User *LHSOp = cast<User>(LHS);
-  unsigned AIdx = (LHSOp->getOperand(0) == A) ? 0 : 1;
   unsigned RHSIdx = (I->getOperand(0) == RHS) ? 0 : 1;
-  if (!UI->isDivergentAtUse(LHSOp->getOperandUse(1 - AIdx)) &&
-      !UI->isDivergentAtUse(I->getOperandUse(RHSIdx)) &&
-      UI->isDivergentAtUse(LHSOp->getOperandUse(AIdx))) {
+  if (UI->isUniformAtUse(LHSOp->getOperandUse(1)) &&
+      UI->isUniformAtUse(I->getOperandUse(RHSIdx)) &&
+      UI->isDivergentAtUse(LHSOp->getOperandUse(0))) {
     LLVM_DEBUG(dbgs() << "NARY: Preferring uniform grouping for minmax " << *I
                       << "\n");
     // Try (B op RHS) op A first - groups uniform B with uniform RHS
