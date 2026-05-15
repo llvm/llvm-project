@@ -321,6 +321,9 @@ struct Object {
   std::vector<Part> Parts;
 };
 
+LLVM_ABI Expected<std::unique_ptr<DXContainerYAML::Object>>
+fromDXContainer(object::DXContainer &DXC);
+
 } // namespace DXContainerYAML
 } // namespace llvm
 
