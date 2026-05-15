@@ -802,15 +802,21 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
 
-  setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
+  setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
                      {MVT::i16, MVT::i32, MVT::i64}, Legal);
+  // PTX abs.s is undefined for INT_MIN, so ISD::ABS (which requires
+  // abs(INT_MIN) == INT_MIN) must be expanded. ABS_MIN_POISON matches
+  // PTX abs semantics since INT_MIN input is poison/undefined.
+  setOperationAction(ISD::ABS, {MVT::i16, MVT::i32, MVT::i64}, Expand);
+  setOperationAction(ISD::ABS_MIN_POISON, {MVT::i16, MVT::i32, MVT::i64},
+                     Legal);
 
   setOperationAction({ISD::CTPOP, ISD::CTLZ, ISD::CTLZ_ZERO_POISON}, MVT::i16,
                      Promote);
   setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i32, Legal);
   setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i64, Custom);
 
-  setI16x2OperationAction(ISD::ABS, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::ABS_MIN_POISON, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SMIN, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SMAX, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::UMIN, MVT::v2i16, Legal, Custom);
@@ -3491,6 +3497,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ROTR:
     return lowerROT(Op, DAG);
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:

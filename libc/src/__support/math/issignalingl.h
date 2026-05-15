@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR int issignalingl(long double x) {
+LIBC_INLINE constexpr int issignalingl(long double x) {
   return fputil::issignaling_impl(x);
 }
 

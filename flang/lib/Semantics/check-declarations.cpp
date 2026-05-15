@@ -3540,6 +3540,24 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       context_.SetError(symbol);
     }
   }
+  // F2023 C1807 - a procedure defined in a submodule shall not have a binding
+  // label unless its interface is declared in the ancestor module.
+  const std::string *bindName{symbol.GetBindName()};
+  if (symbol.has<SubprogramDetails>() &&
+      !symbol.get<SubprogramDetails>().isInterface() && bindName &&
+      !bindName->empty() && symbol.owner().IsSubmodule()) {
+    const Symbol *iface{FindSeparateModuleSubprogramInterface(&symbol)};
+    bool ok{false};
+    if (iface) {
+      const Scope *ifaceModule{FindModuleOrSubmoduleContaining(iface->owner())};
+      ok = ifaceModule && ifaceModule->IsModule();
+    }
+    if (!ok) {
+      messages_.Say(symbol.name(),
+          "A procedure defined in a submodule shall not have a binding label unless its interface is declared in the ancestor module"_err_en_US);
+      context_.SetError(symbol);
+    }
+  }
   if (symbol.has<ObjectEntityDetails>()) {
     whyNot = WhyNotInteroperableObject(symbol);
   } else if (symbol.has<ProcEntityDetails>() ||
