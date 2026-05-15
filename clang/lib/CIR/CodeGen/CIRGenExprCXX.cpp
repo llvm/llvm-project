@@ -1032,7 +1032,6 @@ void CIRGenFunction::emitNewArrayInitializer(
   Address endOfInit = Address::invalid();
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   CleanupDeactivationScope deactivation(*this);
-  bool pushedCleanup = false;
 
   CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
   CharUnits elementAlign =
@@ -1157,7 +1156,6 @@ void CIRGenFunction::emitNewArrayInitializer(
       pushIrregularPartialArrayCleanup(beginPtr.getPointer(), endOfInit,
                                        elementType, elementAlign,
                                        getDestroyer(dtorKind));
-      pushedCleanup = true;
     }
 
     CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
