@@ -2796,7 +2796,8 @@ void CIRGenModule::setGlobalVisibility(cir::CIRGlobalValueInterface gv,
   }
 
   if (getASTContext().getLangOpts().HLSL && !d->isInExportDeclContext()) {
-    llvm_unreachable("setGlobalVisibility: HLSL is NYI");
+    gv.setGlobalVisibility(cir::VisibilityKind::Hidden);
+    return;
   }
 
   assert(!cir::MissingFeatures::opGlobalDLLImportExport());
