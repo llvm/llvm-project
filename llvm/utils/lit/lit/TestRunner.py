@@ -1894,6 +1894,7 @@ def _parseKeywords(sourcepath, additional_parsers=[], require_script=True):
         IntegratedTestKeywordParser(
             "REDEFINE:", ParserKind.REDEFINE, initial_value=script
         ),
+        IntegratedTestKeywordParser("DISABLE_DAEMON:", ParserKind.SPACE_LIST),
     ]
     keyword_parsers = {p.keyword: p for p in builtin_parsers}
 
@@ -1985,6 +1986,8 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     test.unsupported += parsed["UNSUPPORTED:"] or []
     if parsed["ALLOW_RETRIES:"]:
         test.allowed_retries = parsed["ALLOW_RETRIES:"][0]
+    if parsed["DISABLE_DAEMON:"]:
+        test.disabled_llvm_daemon_tools = parsed["DISABLE_DAEMON:"]
 
     # Enforce REQUIRES:
     missing_required_features = test.getMissingRequiredFeatures()
@@ -2161,6 +2164,15 @@ def executeShTest(
 
     if litConfig.noExecute:
         return lit.Test.Result(Test.PASS)
+
+    # Remove in-process built-ins corresponding to daemon tools that were
+    # disabled by "DISABLE_DAEMON:".
+    extra_inproc_builtins = {
+        key: inproc_builtin
+        for key, inproc_builtin in extra_inproc_builtins.items()
+        if inproc_builtin.llvm_daemon_tool_identifier
+        not in test.disabled_llvm_daemon_tools
+    }
 
     tmpDir, tmpBase = getTempPaths(test)
     substitutions = list(extra_substitutions)

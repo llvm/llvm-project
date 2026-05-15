@@ -293,6 +293,10 @@ class Test:
             self.previous_elapsed = abs(time)
             self.previous_failure = time < 0
 
+        # LLVM daemon tools which have been disabled for this test by
+        # "DISABLE_DAEMON:".
+        self.disabled_llvm_daemon_tools = []
+
     def setResult(self, result):
         assert self.result is None, "result already set"
         assert isinstance(result, Result), "unexpected result type"

@@ -1,0 +1,5 @@
+# This test should fail, because the ExampleDaemon in-process built-in is
+# disabled by the "DISABLE_DAEMON" directive, so the %invoke-ExampleDaemon
+# command should not be found.
+DISABLE_DAEMON: ExampleDaemon
+RUN: %invoke-ExampleDaemon
