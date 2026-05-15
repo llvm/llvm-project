@@ -34,7 +34,7 @@ __attribute__((constant)) __constant__ int constantVar;
 __device__ int nonconstVal = 42;
 
 // CIR-DEVICE: cir.func {{.*}} protected {{.*}} @_Z10kernelFuncv()
-// LLVM-DEVICE: define protected void @_Z10kernelFuncv()
+// LLVM-DEVICE: define protected ptx_kernel void @_Z10kernelFuncv()
 // OGCG-DEVICE: define protected ptx_kernel void @_Z10kernelFuncv()
 __attribute__((global)) __global__ void kernelFunc() {
 }
