@@ -4513,18 +4513,16 @@ static void AddMacroResults(Preprocessor &PP, ResultBuilder &Results,
 
   Results.EnterNewScope();
 
-  for (Preprocessor::macro_iterator M = PP.macro_begin(LoadExternal),
-                                    MEnd = PP.macro_end(LoadExternal);
-       M != MEnd; ++M) {
-    auto MD = PP.getMacroDefinition(M->first);
+  for (const auto &M : PP.macros(LoadExternal)) {
+    auto MD = PP.getMacroDefinition(M.first);
     if (IncludeUndefined || MD) {
       MacroInfo *MI = MD.getMacroInfo();
       if (MI && MI->isUsedForHeaderGuard())
         continue;
 
       Results.AddResult(
-          Result(M->first, MI,
-                 getMacroUsagePriority(M->first->getName(), PP.getLangOpts(),
+          Result(M.first, MI,
+                 getMacroUsagePriority(M.first->getName(), PP.getLangOpts(),
                                        TargetTypeIsPointer)));
     }
   }
@@ -10365,11 +10363,9 @@ void SemaCodeCompletion::CodeCompletePreprocessorMacroName(bool IsDefinition) {
     CodeCompletionBuilder Builder(Results.getAllocator(),
                                   Results.getCodeCompletionTUInfo());
     Results.EnterNewScope();
-    for (Preprocessor::macro_iterator M = SemaRef.PP.macro_begin(),
-                                      MEnd = SemaRef.PP.macro_end();
-         M != MEnd; ++M) {
+    for (const auto &M : SemaRef.PP.macros()) {
       Builder.AddTypedTextChunk(
-          Builder.getAllocator().CopyString(M->first->getName()));
+          Builder.getAllocator().CopyString(M.first->getName()));
       Results.AddResult(CodeCompletionResult(
           Builder.TakeString(), CCP_CodePattern, CXCursor_MacroDefinition));
     }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-lifetimebound-violation -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-lifetimebound-violation -Wno-dangling -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -131,3 +131,20 @@ struct ThisAndMixedParams {
     return cond() ? lb(a) : not_lb(b);
   }
 };
+
+struct AssignmentCorr {
+  AssignmentCorr& operator=(const AssignmentCorr& other) {
+    return *this;
+  }
+};
+
+struct AssignementIncorr {
+  AssignementIncorr& operator=(const AssignementIncorr& other) {
+    AssignementIncorr tmp;
+    return tmp;
+  }
+};
+
+void implicit_lifetimebound_in_nested_std_namespace() {
+  (void)std::basic_string_view<char>("hello");
+}

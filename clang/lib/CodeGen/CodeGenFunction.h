@@ -4610,6 +4610,15 @@ public:
   llvm::CallInst *EmitRuntimeCall(llvm::FunctionCallee callee,
                                   ArrayRef<llvm::Value *> args,
                                   const Twine &name = "");
+  llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                    const Twine &Name = "");
+  llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                    ArrayRef<llvm::Value *> Args,
+                                    const Twine &Name = "");
+  llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                    ArrayRef<llvm::Type *> Types,
+                                    ArrayRef<llvm::Value *> Args,
+                                    const Twine &Name = "");
   llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
                                           const Twine &name = "");
   llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,

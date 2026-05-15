@@ -28,6 +28,7 @@
 
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "ProcessElfCore.h"
 #include "ThreadElfCore.h"
@@ -199,10 +200,10 @@ Status ProcessElfCore::DoLoadCore() {
   /// PT_AARCH64_MEMTAG_MTE - Contains AArch64 MTE memory tags for a range of
   ///                         Process Address Space.
   for (const elf::ELFProgramHeader &H : segments) {
-    DataExtractor data = core->GetSegmentData(H);
 
     // Parse thread contexts and auxv structure
     if (H.p_type == llvm::ELF::PT_NOTE) {
+      DataExtractor data = core->GetSegmentData(H);
       if (llvm::Error error = ParseThreadContextsFromNoteSegment(H, data))
         return Status::FromError(std::move(error));
     }
@@ -256,42 +257,43 @@ Status ProcessElfCore::DoLoadCore() {
   // the main executable using data we found in the core file notes.
   lldb::ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
   if (!exe_module_sp) {
-    if (!m_nt_file_entries.empty()) {
-      std::string executable_path = GetMainExecutablePath();
-      ModuleSpec exe_module_spec;
-      exe_module_spec.GetArchitecture() = arch;
-      exe_module_spec.GetUUID() = FindModuleUUID(executable_path);
-      exe_module_spec.GetFileSpec().SetFile(executable_path,
-                                            FileSpec::Style::native);
-      if (exe_module_spec.GetFileSpec()) {
-        exe_module_sp =
-            GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
-        if (!exe_module_sp) {
-          // Create an ELF file from memory for the main executable. The dynamic
-          // loader requires the main executable so that it can extract the
-          // DT_DEBUG key/value pair from the dynamic section and get the list
-          // of shared libraries.
-          std::optional<lldb::addr_t> exe_header_addr;
-
-          // We need to find its load address
-          for (const NT_FILE_Entry &file_entry : m_nt_file_entries) {
-            if (file_entry.path == executable_path) {
-              exe_header_addr = file_entry.start;
-              break;
-            }
-          }
-          if (exe_header_addr) {
-            if (llvm::Expected<lldb::ModuleSP> module_sp_or_err =
-                    ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
-                                         *exe_header_addr))
-              exe_module_sp = *module_sp_or_err;
-            else
-              llvm::consumeError(module_sp_or_err.takeError());
-          }
+    ModuleSpec exe_module_spec;
+    if (GetMainExecutableModuleSpec(exe_module_spec)) {
+      exe_module_sp =
+          GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
+      if (!exe_module_sp) {
+        // Create an ELF file from memory for the main executable. The dynamic
+        // loader requires the main executable so that it can extract the
+        // DT_DEBUG key/value pair from the dynamic section and get the list
+        // of shared libraries.
+        std::optional<NT_FILE_Entry> exe_header =
+            GetNTFileEntryForExecutableELFHeader();
+        if (exe_header) {
+          if (llvm::Expected<lldb::ModuleSP> module_sp_or_err =
+                  ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
+                                       exe_header->start,
+                                       exe_header->end - exe_header->start))
+            exe_module_sp = *module_sp_or_err;
+          else
+            llvm::consumeError(module_sp_or_err.takeError());
         }
-        if (exe_module_sp)
-          GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
+        // Create a placeholder module for the main executable if we failed to
+        // create an ELF module from memory.
+        if (!exe_module_sp) {
+          lldb::addr_t load_addr =
+              exe_header ? exe_header->start : LLDB_INVALID_ADDRESS;
+          lldb::addr_t size =
+              exe_header ? (exe_header->end - exe_header->start) : 0;
+          exe_module_sp =
+              Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
+                  exe_module_spec, load_addr, size);
+          if (exe_module_spec.GetPlatformFileSpec())
+            exe_module_sp->SetPlatformFileSpec(
+                exe_module_spec.GetPlatformFileSpec());
+        }
       }
+      if (exe_module_sp)
+        GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
     }
   }
   return error;
@@ -313,30 +315,69 @@ void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
   }
 }
 
-std::string ProcessElfCore::GetMainExecutablePath() {
-  // Always try to read the program name from core file memory first via the
-  // AUXV_AT_EXECFN entry. This value is the address of a null terminated C
-  // string that contains the program path.
+/// Correctly create a FileSpec from a path found in a core file.
+///
+/// This method will guess the path style more intelligently that specifying
+/// a native path style since core files can contain paths from a different
+/// system than the host system.
+static FileSpec CreateFileSpecFromPath(llvm::StringRef path) {
+  FileSpec::Style path_style = FileSpec::Style::native;
+  if (auto guessed_style = FileSpec::GuessPathStyle(path))
+    path_style = *guessed_style;
+  return FileSpec(path, path_style);
+}
+
+bool ProcessElfCore::GetMainExecutableModuleSpec(ModuleSpec &exe_spec) {
   AuxVector aux_vector(m_auxv);
-  std::string execfn_str;
-  if (auto execfn = aux_vector.GetAuxValue(AuxVector::AUXV_AT_EXECFN)) {
-    Status error;
-    if (ReadCStringFromMemory(*execfn, execfn_str, error))
-      return execfn_str;
+  exe_spec.GetArchitecture() = GetTarget().GetArchitecture();
+
+  // Find the NT_FILE_Entry for the main executable's ELF header.
+  std::optional<NT_FILE_Entry> exe_header =
+      GetNTFileEntryForExecutableELFHeader();
+  if (exe_header) {
+    exe_spec.GetFileSpec() = CreateFileSpecFromPath(exe_header->path);
+    exe_spec.GetUUID() = FindModuleUUID(exe_header->path);
   }
 
-  if (m_nt_file_entries.empty())
-    return {};
-
-  // The first entry in the NT_FILE might be our executable
-  std::string executable_path = m_nt_file_entries[0].path;
-  // Prefer the NT_FILE entry matching m_executable_name as main executable.
-  for (const NT_FILE_Entry &file_entry : m_nt_file_entries)
-    if (llvm::StringRef(file_entry.path).ends_with("/" + m_executable_name)) {
-      executable_path = file_entry.path;
-      break;
+  // If we failed to find the executable program in the NT_FILE list with the
+  // program header address, then we can read the executable name from the value
+  // of the AUXV_AT_EXECFN in the AUX vector. The reason we don't use this file
+  // all of the time is if the program is launched using a symlink, the value of
+  // the AUXV_AT_EXECFN string will be the symlink itself. The same goes for the
+  // m_executable_name found in the NT_PRPSINFO section, it will be the name of
+  // the symlink. Even if we did find a path above, we want to fill in this path
+  // if it is different from main executable's path in the platform file name
+  // in case someone needs to know how the executable was launched.
+  if (auto execfn = aux_vector.GetAuxValue(AuxVector::AUXV_AT_EXECFN)) {
+    Status error;
+    std::string execfn_str;
+    if (ReadCStringFromMemory(*execfn, execfn_str, error)) {
+      // This path can be a symlink path. Set it as the main file spec if one
+      // hasn't been set, else set the platform file spec.
+      FileSpec execfn_spec = CreateFileSpecFromPath(execfn_str);
+      if (exe_spec.GetFileSpec()) {
+        // Fill in the platform file spec if it differs from the main path from
+        // the resolved file info in the NT_FILE note.
+        if (exe_spec.GetFileSpec() != execfn_spec)
+          exe_spec.GetPlatformFileSpec() = execfn_spec;
+      } else {
+        // We don't have an executable file spec yet, lets set it.
+        exe_spec.GetFileSpec() = execfn_spec;
+        exe_spec.GetUUID() = FindModuleUUID(execfn_str);
+      }
     }
-  return executable_path;
+  }
+
+  // If we didn't set the executable file spec yet, lets set it from the info
+  // from the NT_PRPSINFO. This usually is just a basename of the actual path
+  // used to launch the binary, so this can be a symlink basename. But it will
+  // be better than nothing since we will create a placeholder module for any
+  // files that don't exist.
+  if (!exe_spec.GetFileSpec() && !m_executable_name.empty())
+    exe_spec.GetFileSpec() = CreateFileSpecFromPath(m_executable_name);
+
+  // We succeeded if we got a path.
+  return (bool)exe_spec.GetFileSpec();
 }
 
 UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
@@ -1166,4 +1207,52 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
   }
   info.SetArguments(m_process_args.as_args(), /*first_arg_is_executable=*/true);
   return true;
+}
+
+/// Find the NT_FILE entry that contains an address.
+std::optional<ProcessElfCore::NT_FILE_Entry>
+ProcessElfCore::GetNTFileEntryContainingAddress(lldb::addr_t addr) {
+  for (const NT_FILE_Entry &file_entry : m_nt_file_entries) {
+    if (file_entry.start <= addr && addr < file_entry.end)
+      return file_entry;
+  }
+  return std::nullopt;
+}
+
+std::optional<ProcessElfCore::NT_FILE_Entry>
+ProcessElfCore::GetNTFileEntryForExecutableELFHeader() {
+  /// This method will search for the first NT_FILE entry that contains the
+  /// executable's ELF header. We use the AUXV_AT_PHDR from the aux vector to
+  /// find the address of the main executable's program headers and then find
+  /// the NT_FILE entry that contains this address.
+  ///
+  /// Previously we would try to find the first NT_FILE entry that had a path
+  /// that ended with the executable name found in the NT_PRPSINFO note, but
+  /// this basename can be the name of a symlink and not the actual resolved
+  /// executable file found in the NT_FILE entry so this could fail for cases
+  /// where a symlink was used to launch the program, and that symlink's
+  /// base name was different from the resolved executable file's name in
+  /// the NT_FILE entry.
+  if (m_nt_file_entries.empty())
+    return std::nullopt;
+  // The AUX vector has the load address of the program headers from the main
+  // executable as the value for AUXV_AT_PHDR. We can use this value to find
+  // the NT_FILE entry that contains this address and this will locate the main
+  // executable's mapping that contains the ELF header.
+  AuxVector aux_vector(m_auxv);
+  if (std::optional<uint64_t> opt_value =
+          aux_vector.GetAuxValue(AuxVector::AUXV_AT_PHDR)) {
+    if (std::optional<NT_FILE_Entry> nt =
+            GetNTFileEntryContainingAddress(*opt_value))
+      return *nt;
+  }
+  // Fall back to trying to find the first NT_FILE entry that contains the entry
+  // point address.
+  if (std::optional<uint64_t> opt_value =
+          aux_vector.GetAuxValue(AuxVector::AUXV_AT_ENTRY)) {
+    if (std::optional<NT_FILE_Entry> nt =
+            GetNTFileEntryContainingAddress(*opt_value))
+      return *nt;
+  }
+  return std::nullopt;
 }
