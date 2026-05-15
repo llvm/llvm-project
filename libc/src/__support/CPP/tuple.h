@@ -9,6 +9,22 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_TUPLE_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_TUPLE_H
 
+#if __has_include(<tuple>)
+#include "src/__support/macros/config.h"
+#if __has_include(<features.h>)
+#include <features.h> // NOLINT(llvmlibc-restrict-system-libc-headers)
+#endif
+#include <tuple> // NOLINT(llvmlibc-restrict-system-libc-headers)
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
+template <typename... Ts> using tuple = std::tuple<Ts...>;
+using std::get;
+using std::make_tuple;
+using std::tie;
+using std::tuple_cat;
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
+#else
 #include "src/__support/CPP/type_traits/decay.h"
 #include "src/__support/CPP/utility/integer_sequence.h"
 
@@ -125,29 +141,22 @@ LIBC_INLINE constexpr auto tuple_cat(const Tuples &...tuples) {
 } // namespace LIBC_NAMESPACE_DECL
 
 // Standard namespace definitions required for structured binding support.
-
-#ifdef _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_NAMESPACE_STD
-#else
 namespace std {
-#endif
-
+// Add inline namespace as API tag for libc
+inline namespace LIBC_NAMESPACE_DECL {
 template <class T> struct tuple_size;
 template <size_t Idx, class T> struct tuple_element;
 
 template <typename... Ts>
-struct tuple_size<LIBC_NAMESPACE::cpp::tuple<Ts...>>
-    : LIBC_NAMESPACE::cpp::tuple_size<LIBC_NAMESPACE::cpp::tuple<Ts...>> {};
+struct tuple_size<::LIBC_NAMESPACE::cpp::tuple<Ts...>>
+    : ::LIBC_NAMESPACE::cpp::tuple_size<::LIBC_NAMESPACE::cpp::tuple<Ts...>> {};
 
 template <size_t Idx, typename... Ts>
-struct tuple_element<Idx, LIBC_NAMESPACE::cpp::tuple<Ts...>>
-    : LIBC_NAMESPACE::cpp::tuple_element<Idx,
-                                         LIBC_NAMESPACE::cpp::tuple<Ts...>> {};
-
-#ifdef _LIBCPP_END_NAMESPACE_STD
-_LIBCPP_END_NAMESPACE_STD
-#else
+struct tuple_element<Idx, ::LIBC_NAMESPACE::cpp::tuple<Ts...>>
+    : ::LIBC_NAMESPACE::cpp::tuple_element<
+          Idx, ::LIBC_NAMESPACE::cpp::tuple<Ts...>> {};
+} // namespace LIBC_NAMESPACE_DECL
 } // namespace std
-#endif
 
+#endif // __has_include(<tuple>)
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_TUPLE_H
