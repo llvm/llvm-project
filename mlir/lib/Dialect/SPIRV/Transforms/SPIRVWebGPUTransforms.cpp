@@ -167,10 +167,11 @@ using ExpandSMulExtendedPattern =
 using ExpandUMulExtendedPattern =
     ExpandMulExtendedPattern<UMulExtendedOp, false>;
 
-struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
-  using Base::Base;
+template <typename Op, typename ArithOp>
+struct ExpandAddCarryOrSubBorrowPattern final : OpRewritePattern<Op> {
+  using OpRewritePattern<Op>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(IAddCarryOp op,
+  LogicalResult matchAndRewrite(Op op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     Value lhs = op.getOperand1();
@@ -190,56 +191,29 @@ struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
     Value zero = ConstantOp::create(rewriter, loc, argTy,
                                     getScalarOrSplatAttr(argTy, 0));
 
-    // Calculate the carry by checking if the addition resulted in an overflow.
-    Value out = IAddOp::create(rewriter, loc, lhs, rhs);
-    Value cmp = ULessThanOp::create(rewriter, loc, out, lhs);
-    Value carry = SelectOp::create(rewriter, loc, cmp, one, zero);
+    Value out = ArithOp::create(rewriter, loc, lhs, rhs);
+    // For add: carry iff out < lhs (unsigned overflow).
+    // For sub: borrow iff lhs < rhs (unsigned underflow).
+    Value cmp;
+    if constexpr (std::is_same_v<Op, IAddCarryOp>)
+      cmp = ULessThanOp::create(rewriter, loc, out, lhs);
+    else
+      cmp = ULessThanOp::create(rewriter, loc, lhs, rhs);
+    Value flag = SelectOp::create(rewriter, loc, cmp, one, zero);
 
-    Value add = CompositeConstructOp::create(rewriter, loc,
-                                             op->getResultTypes().front(),
-                                             llvm::ArrayRef({out, carry}));
+    Value result = CompositeConstructOp::create(rewriter, loc,
+                                                op->getResultTypes().front(),
+                                                llvm::ArrayRef({out, flag}));
 
-    rewriter.replaceOp(op, add);
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
 
-struct ExpandSubBorrowPattern final : OpRewritePattern<ISubBorrowOp> {
-  using Base::Base;
-
-  LogicalResult matchAndRewrite(ISubBorrowOp op,
-                                PatternRewriter &rewriter) const override {
-    Location loc = op->getLoc();
-    Value lhs = op.getOperand1();
-    Value rhs = op.getOperand2();
-
-    // Currently, WGSL only supports 32-bit integer types. Any other integer
-    // types should already have been promoted/demoted to i32.
-    Type argTy = lhs.getType();
-    auto elemTy = cast<IntegerType>(getElementTypeOrSelf(argTy));
-    if (elemTy.getIntOrFloatBitWidth() != 32)
-      return rewriter.notifyMatchFailure(
-          loc,
-          llvm::formatv("Unexpected integer type for WebGPU: '{0}'", elemTy));
-
-    Value one = ConstantOp::create(rewriter, loc, argTy,
-                                   getScalarOrSplatAttr(argTy, 1));
-    Value zero = ConstantOp::create(rewriter, loc, argTy,
-                                    getScalarOrSplatAttr(argTy, 0));
-
-    // Calculate the borrow by checking if lhs < rhs (unsigned).
-    Value out = ISubOp::create(rewriter, loc, lhs, rhs);
-    Value cmp = ULessThanOp::create(rewriter, loc, lhs, rhs);
-    Value borrow = SelectOp::create(rewriter, loc, cmp, one, zero);
-
-    Value sub = CompositeConstructOp::create(rewriter, loc,
-                                             op->getResultTypes().front(),
-                                             llvm::ArrayRef({out, borrow}));
-
-    rewriter.replaceOp(op, sub);
-    return success();
-  }
-};
+using ExpandAddCarryPattern =
+    ExpandAddCarryOrSubBorrowPattern<IAddCarryOp, IAddOp>;
+using ExpandSubBorrowPattern =
+    ExpandAddCarryOrSubBorrowPattern<ISubBorrowOp, ISubOp>;
 
 struct ExpandIsInfPattern final : OpRewritePattern<IsInfOp> {
   using Base::Base;
