@@ -1715,9 +1715,11 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   }
 
   LLVM_DEBUG(dbgs() << "<< " << MI);
-  if (MI.isCopy() && MI.getOperand(0).getReg() == MI.getOperand(1).getReg() &&
+  if (MI.isCopy() &&
+      (MI.getOperand(0).getReg() == MI.getOperand(1).getReg() ||
+       MI.getOperand(0).isDead()) &&
       MI.getNumOperands() == 2) {
-    LLVM_DEBUG(dbgs() << "Mark identity copy for removal\n");
+    LLVM_DEBUG(dbgs() << "Mark unnecessary copy for removal: " << MI);
     Coalesced.push_back(&MI);
   }
 }

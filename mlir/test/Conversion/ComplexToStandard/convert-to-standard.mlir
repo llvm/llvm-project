@@ -941,12 +941,11 @@ func.func @complex_mul_with_fmf(%lhs: complex<f32>, %rhs: complex<f32>) -> compl
 // CHECK: %[[LHS_IMAG:.*]] = complex.im %[[LHS]] : complex<f32>
 // CHECK: %[[RHS_REAL:.*]] = complex.re %[[RHS]] : complex<f32>
 // CHECK: %[[RHS_IMAG:.*]] = complex.im %[[RHS]] : complex<f32>
-// CHECK: %[[LHS_REAL_TIMES_RHS_REAL:.*]] = arith.mulf %[[LHS_REAL]], %[[RHS_REAL]] fastmath<nnan,contract> : f32
-// CHECK: %[[LHS_IMAG_TIMES_RHS_IMAG:.*]] = arith.mulf %[[LHS_IMAG]], %[[RHS_IMAG]] fastmath<nnan,contract> : f32
-// CHECK: %[[LHS_IMAG_TIMES_RHS_REAL:.*]] = arith.mulf %[[LHS_IMAG]], %[[RHS_REAL]] fastmath<nnan,contract> : f32
-// CHECK: %[[LHS_REAL_TIMES_RHS_IMAG:.*]] = arith.mulf %[[LHS_REAL]], %[[RHS_IMAG]] fastmath<nnan,contract> : f32
-// CHECK: %[[REAL:.*]] = arith.subf %[[LHS_REAL_TIMES_RHS_REAL]], %[[LHS_IMAG_TIMES_RHS_IMAG]] fastmath<nnan,contract> : f32
-// CHECK: %[[IMAG:.*]] = arith.addf %[[LHS_IMAG_TIMES_RHS_REAL]], %[[LHS_REAL_TIMES_RHS_IMAG]] fastmath<nnan,contract> : f32
+// CHECK: %[[REAL_TMP:.*]] = arith.mulf %[[LHS_IMAG]], %[[RHS_IMAG]] fastmath<nnan,contract> : f32
+// CHECK: %[[NEG_REAL_TMP:.*]] = arith.negf %[[REAL_TMP]] fastmath<nnan,contract> : f32
+// CHECK: %[[REAL:.*]] = math.fma %[[LHS_REAL]], %[[RHS_REAL]], %[[NEG_REAL_TMP]] fastmath<nnan,contract> : f32
+// CHECK: %[[IMAG_TMP:.*]] = arith.mulf %[[LHS_IMAG]], %[[RHS_REAL]] fastmath<nnan,contract> : f32
+// CHECK: %[[IMAG:.*]] = math.fma %[[LHS_REAL]], %[[RHS_IMAG]], %[[IMAG_TMP]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT:.*]] = complex.create %[[REAL]], %[[IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
 
@@ -963,23 +962,21 @@ func.func @complex_atan2_with_fmf(%lhs: complex<f32>,
 // CHECK: %[[VAR2:.*]] = complex.im %arg1 : complex<f32>
 // CHECK: %[[VAR4:.*]] = complex.re %arg1 : complex<f32>
 // CHECK: %[[VAR6:.*]] = complex.im %arg1 : complex<f32>
-// CHECK: %[[VAR8:.*]] = arith.mulf %[[VAR0]], %[[VAR4]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR10:.*]] = arith.mulf %[[VAR2]], %[[VAR6]] fastmath<nnan,contract> : f32
+// CHECK: %[[NEG_VAR10:.*]] = arith.negf %[[VAR10]] fastmath<nnan,contract> : f32
+// CHECK: %[[VAR12:.*]] = math.fma %[[VAR0]], %[[VAR4]], %[[NEG_VAR10]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR13:.*]] = arith.mulf %[[VAR2]], %[[VAR4]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR15:.*]] = arith.mulf %[[VAR0]], %[[VAR6]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR12:.*]] = arith.subf %[[VAR8]], %[[VAR10]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR17:.*]] = arith.addf %[[VAR13]], %[[VAR15]] fastmath<nnan,contract> : f32
+// CHECK: %[[VAR17:.*]] = math.fma %[[VAR0]], %[[VAR6]], %[[VAR13]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR89:.*]] = complex.create %[[VAR12]], %[[VAR17]] : complex<f32>
 // CHECK: %[[VAR90:.*]] = complex.re %arg0 : complex<f32>
 // CHECK: %[[VAR92:.*]] = complex.im %arg0 : complex<f32>
 // CHECK: %[[VAR94:.*]] = complex.re %arg0 : complex<f32>
 // CHECK: %[[VAR96:.*]] = complex.im %arg0 : complex<f32>
-// CHECK: %[[VAR98:.*]] = arith.mulf %[[VAR90]], %[[VAR94]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR100:.*]] = arith.mulf %[[VAR92]], %[[VAR96]] fastmath<nnan,contract> : f32
+// CHECK: %[[NEG_VAR100:.*]] = arith.negf %[[VAR100]] fastmath<nnan,contract> : f32
+// CHECK: %[[VAR102:.*]] = math.fma %[[VAR90]], %[[VAR94]], %[[NEG_VAR100]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR103:.*]] = arith.mulf %[[VAR92]], %[[VAR94]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR105:.*]] = arith.mulf %[[VAR90]], %[[VAR96]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR102:.*]] = arith.subf %[[VAR98]], %[[VAR100]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR107:.*]] = arith.addf %[[VAR103]], %[[VAR105]] fastmath<nnan,contract> : f32
+// CHECK: %[[VAR107:.*]] = math.fma %[[VAR90]], %[[VAR96]], %[[VAR103]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR179:.*]] = complex.create %[[VAR102]], %[[VAR107]] : complex<f32>
 // CHECK: %[[VAR180:.*]] = complex.re %[[VAR89]] : complex<f32>
 // CHECK: %[[VAR181:.*]] = complex.re %[[VAR179]] : complex<f32>
@@ -1042,12 +1039,11 @@ func.func @complex_atan2_with_fmf(%lhs: complex<f32>,
 // CHECK: %[[VAR232:.*]] = complex.im %[[VAR229]] : complex<f32>
 // CHECK: %[[VAR234:.*]] = complex.re %arg0 : complex<f32>
 // CHECK: %[[VAR236:.*]] = complex.im %arg0 : complex<f32>
-// CHECK: %[[VAR238:.*]] = arith.mulf %[[VAR230]], %[[VAR234]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR240:.*]] = arith.mulf %[[VAR232]], %[[VAR236]] fastmath<nnan,contract> : f32
+// CHECK: %[[NEG_VAR240:.*]] = arith.negf %[[VAR240]] fastmath<nnan,contract> : f32
+// CHECK: %[[VAR242:.*]] = math.fma %[[VAR230]], %[[VAR234]], %[[NEG_VAR240]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR243:.*]] = arith.mulf %[[VAR232]], %[[VAR234]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR245:.*]] = arith.mulf %[[VAR230]], %[[VAR236]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR242:.*]] = arith.subf %[[VAR238]], %[[VAR240]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR247:.*]] = arith.addf %[[VAR243]], %[[VAR245]] fastmath<nnan,contract> : f32
+// CHECK: %[[VAR247:.*]] = math.fma %[[VAR230]], %[[VAR236]], %[[VAR243]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR319:.*]] = complex.create %[[VAR242]], %[[VAR247]] : complex<f32>
 // CHECK: %[[VAR320:.*]] = complex.re %arg1 : complex<f32>
 // CHECK: %[[VAR321:.*]] = complex.re %[[VAR319]] : complex<f32>
@@ -1173,12 +1169,11 @@ func.func @complex_atan2_with_fmf(%lhs: complex<f32>,
 // CHECK: %[[VAR444:.*]] = complex.im %[[VAR441]] : complex<f32>
 // CHECK: %[[VAR446:.*]] = complex.re %[[VAR440]] : complex<f32>
 // CHECK: %[[VAR448:.*]] = complex.im %[[VAR440]] : complex<f32>
-// CHECK: %[[VAR450:.*]] = arith.mulf %[[VAR442]], %[[VAR446]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR452:.*]] = arith.mulf %[[VAR444]], %[[VAR448]] fastmath<nnan,contract> : f32
+// CHECK: %[[NEG_VAR452:.*]] = arith.negf %[[VAR452]] fastmath<nnan,contract> : f32
+// CHECK: %[[VAR454:.*]] = math.fma %[[VAR442]], %[[VAR446]], %[[NEG_VAR452]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR455:.*]] = arith.mulf %[[VAR444]], %[[VAR446]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR457:.*]] = arith.mulf %[[VAR442]], %[[VAR448]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR454:.*]] = arith.subf %[[VAR450]], %[[VAR452]] fastmath<nnan,contract> : f32
-// CHECK: %[[VAR459:.*]] = arith.addf %[[VAR455]], %[[VAR457]] fastmath<nnan,contract> : f32
+// CHECK: %[[VAR459:.*]] = math.fma %[[VAR442]], %[[VAR448]], %[[VAR455]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR531:.*]] = complex.create %[[VAR454]], %[[VAR459]] : complex<f32>
 // CHECK: return %[[VAR531]] : complex<f32>
 

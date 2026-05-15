@@ -904,6 +904,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS32, P3, S32}, {{Vgpr32}, {VgprP3, Vgpr32}}})
       .Any({{DivS64, P3, S64}, {{Vgpr64}, {VgprP3, Vgpr64}}});
 
+  addRulesForGOpcs({G_ATOMICRMW_USUB_SAT, G_ATOMICRMW_USUB_COND})
+      .Any({{DivS32, P0}, {{Vgpr32}, {VgprP0, Vgpr32}}})
+      .Any({{DivS32, P1}, {{Vgpr32}, {VgprP1, Vgpr32}}})
+      .Any({{DivS32, P3}, {{Vgpr32}, {VgprP3, Vgpr32}}});
+
   bool HasAtomicFlatPkAdd16Insts = ST->hasAtomicFlatPkAdd16Insts();
   bool HasAtomicBufferGlobalPkAddF16Insts =
       ST->hasAtomicBufferGlobalPkAddF16NoRtnInsts() ||
@@ -1946,7 +1951,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniB512}, {{SgprB512}, {IntrId, SgprB512}}})
       .Any({{DivB512}, {{VgprB512}, {IntrId, VgprB512}}});
 
-  addRulesForIOpcs({amdgcn_wqm_demote}).Any({{}, {{}, {IntrId, Vcc}}});
+  addRulesForIOpcs({amdgcn_kill, amdgcn_wqm_demote})
+      .Any({{}, {{}, {IntrId, Vcc}}});
 
   addRulesForIOpcs({amdgcn_ballot}, Standard)
       .Uni(S64, {{Sgpr64}, {IntrId, Vcc}})

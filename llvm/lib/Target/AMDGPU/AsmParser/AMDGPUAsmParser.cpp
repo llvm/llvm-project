@@ -5151,7 +5151,8 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
            HasMandatoryLiteral);
       bool IsFP64 = (IsForcedFP64 || AMDGPU::isSISrcFPOperand(Desc, OpIdx)) &&
                     AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
-      bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP64);
+      bool IsValid32Op =
+          IsForcedLit || AMDGPU::isValid32BitLiteral(Value, IsFP64);
 
       if (((!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value) &&
             !IsForcedFP64) ||
