@@ -74,7 +74,7 @@ class VPBuilder {
 
   /// Lightweight SCEV-to-VPlan expander. Converts SCEVConstant, SCEVUnknown,
   /// SCEVVScale and SCEVMulExpr into VPInstructions, falling back to
-  /// VPExpandSCEVRecipe for other, unsupported expressions
+  /// VPExpandSCEVRecipe for other, unsupported expressions.
   class VPSCEVExpander {
     VPBuilder &Builder;
     VPlan &Plan;
@@ -84,7 +84,8 @@ class VPBuilder {
     VPSCEVExpander(VPBuilder &Builder, VPlan &Plan, DebugLoc DL)
         : Builder(Builder), Plan(Plan), DL(DL) {}
 
-    /// Expand \p S into recipes and live-ins using the builder.
+    /// Expand \p S into recipes and live-ins using the builder. Returns nullptr
+    /// if \p S cannot be expanded yet.
     VPValue *expand(const SCEV *S);
   };
 
@@ -101,6 +102,11 @@ class VPBuilder {
                                    const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, {}, MD, DL, Name));
+  }
+
+  VPlan &getPlan() const {
+    assert(getInsertBlock() && "Insert block must be set");
+    return *getInsertBlock()->getPlan();
   }
 
 public:
@@ -446,9 +452,10 @@ public:
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
   }
 
-  /// Expand \p Expr using VPSCEVExpander.
+  /// Expand \p Expr using VPSCEVExpander. Returns nullptr if \p S cannot be
+  /// expanded yet.
   VPValue *expandSCEV(const SCEV *Expr, DebugLoc DL) {
-    VPlan &Plan = *getInsertBlock()->getPlan();
+    VPlan &Plan = getPlan();
     return VPSCEVExpander(*this, Plan, DL).expand(Expr);
   }
 

@@ -1483,7 +1483,11 @@ void VPlanTransforms::addMinimumIterationCheck(
                                     TripCount, Step)) {
       // Generate the minimum iteration check only if we cannot prove the
       // check is known to be true, or known to be false.
+      // // Try to expand SCEVs to VPInstructions in CheckBlock, or to
+      // VPExpandSCEV in Entry failing that.
       VPValue *MinTripCountVPV = Builder.expandSCEV(Step, DL);
+      if (!MinTripCountVPV)
+        MinTripCountVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Step);
       TripCountCheck = Builder.createICmp(
           CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
     } // else step known to be < trip count, use TripCountCheck preset to false.

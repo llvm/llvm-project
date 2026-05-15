@@ -851,23 +851,24 @@ VPValue *VPBuilder::VPSCEVExpander::expand(const SCEV *S) {
     return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
   case scMulExpr: {
     auto *Mul = cast<SCEVMulExpr>(S);
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEVUse &Op : Mul->operands()) {
+      VPValue *OpV = expand(Op);
+      if (!OpV)
+        return nullptr;
+      Ops.push_back(OpV);
+    }
     VPIRFlags::WrapFlagsTy WrapFlags(Mul->hasNoUnsignedWrap(),
                                      Mul->hasNoSignedWrap());
     // Chain the operands with Mul, matching SCEVExpander behavior of applying
     // wrap flags to all chained multiplies.
-    VPValue *Result = expand(Mul->getOperand(0));
-    for (const SCEVUse &Op : drop_begin(Mul->operands()))
-      Result = Builder.createOverflowingOp(Instruction::Mul,
-                                           {Result, expand(Op)}, WrapFlags, DL);
+    VPValue *Result = Ops.front();
+    for (VPValue *Op : drop_begin(Ops))
+      Result = Builder.createOverflowingOp(Instruction::Mul, {Result, Op},
+                                           WrapFlags, DL);
     return Result;
   }
   default:
-    // Unsupported SCEV kind; fall back to VPExpandSCEVRecipe, which must be
-    // inserted in the entry block only, as expandSCEVs can process
-    // VPExpandSCEVRecipes only there.
-    assert(Builder.getInsertBlock() == Plan.getEntry() &&
-           "VPExpandSCEVRecipe fallback requires insertion in the entry block");
-    return Builder.createExpandSCEV(S);
+    return nullptr;
   }
-  llvm_unreachable("all expressions must be handled by switch");
 }
