@@ -194,11 +194,6 @@ struct VPTransformState {
   /// The chosen Vectorization Factor of the loop being vectorized.
   ElementCount VF;
 
-  /// Hold the index to generate specific scalar instructions. Null indicates
-  /// that all instances are to be generated, using either scalar or vector
-  /// instructions.
-  std::optional<VPLane> Lane;
-
   struct DataState {
     // Each value from the original loop, when vectorized, is represented by a
     // vector value in the map.
@@ -372,6 +367,10 @@ struct VPCostContext {
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
   bool useEmulatedMaskMemRefHack(const VPReplicateRecipe *R, ElementCount VF);
+
+  /// Returns true if \p ID is a pseudo intrinsic that is dropped via
+  /// scalarization rather than widened.
+  static bool isFreeScalarIntrinsic(Intrinsic::ID ID);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

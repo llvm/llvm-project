@@ -13,6 +13,7 @@ set(files
   TaskDispatcher.cpp
   ThreadPoolTaskDispatcher.cpp
   sps-ci/AllSPSCI.cpp
+  sps-ci/MemoryAccessSPSCI.cpp
   sps-ci/NativeDylibManagerSPSCI.cpp
   sps-ci/SimpleNativeMemoryMapSPSCI.cpp
   )

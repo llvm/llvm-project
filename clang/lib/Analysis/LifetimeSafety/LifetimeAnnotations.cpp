@@ -13,6 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang::lifetimes {
@@ -71,37 +72,45 @@ getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
   return nullptr;
 }
 
-bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   // Attribute merging doesn't work well with attributes on function types (like
   // 'this' param). We need to check all redeclarations.
-  auto CheckRedecls = [](const FunctionDecl *F) {
-    return llvm::any_of(F->redecls(), [](const FunctionDecl *Redecl) {
-      const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo();
-      return TSI && getLifetimeBoundAttrFromFunctionType(*TSI);
-    });
+  auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
+    for (const FunctionDecl *Redecl : F->redecls())
+      if (const TypeSourceInfo *TSI = Redecl->getTypeSourceInfo())
+        if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
+          return Attr;
+    return nullptr;
   };
 
-  if (CheckRedecls(FD))
-    return true;
-  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern();
-      Pattern && CheckRedecls(Pattern))
+  if (const auto *Attr = CheckRedecls(FD))
+    return Attr;
+  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
+    return CheckRedecls(Pattern);
+  return nullptr;
+}
+
+bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+  if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
 }
 
 bool isInStlNamespace(const Decl *D) {
-  const DeclContext *DC = D->getDeclContext();
-  if (!DC)
-    return false;
-  if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
-    if (const IdentifierInfo *II = ND->getIdentifier()) {
-      StringRef Name = II->getName();
-      if (Name.size() >= 2 && Name.front() == '_' &&
-          (Name[1] == '_' || isUppercase(Name[1])))
-        return true;
-    }
-  return DC->isStdNamespace();
+  for (const DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent()) {
+    if (DC->isStdNamespace())
+      return true;
+    if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
+      if (const IdentifierInfo *II = ND->getIdentifier()) {
+        StringRef Name = II->getName();
+        if (Name.size() >= 2 && Name.front() == '_' &&
+            (Name[1] == '_' || isUppercase(Name[1])))
+          return true;
+      }
+  }
+  return false;
 }
 
 bool isPointerLikeType(QualType QT) {
@@ -139,9 +148,19 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
   if (RunningUnderLifetimeSafety &&
       isGslPointerType(Callee->getFunctionObjectParameterType()) &&
       isReferenceOrPointerLikeType(Callee->getReturnType())) {
-    if (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star ||
-        Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Arrow)
+    // Propagate origins through GSL pointer arithmetic and dereference
+    // operators.
+    switch (Callee->getOverloadedOperator()) {
+    case OO_Arrow:
+    case OO_Star:
+    case OO_Plus:
+    case OO_Minus:
+    case OO_PlusPlus:
+    case OO_MinusMinus:
       return true;
+    default:
+      break;
+    }
     if (Callee->getIdentifier() &&
         (IteratorMembers.contains(Callee->getName()) ||
          InnerPointerGetters.contains(Callee->getName())))
@@ -230,6 +249,22 @@ bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   return false;
 }
 
+bool shouldTrackSecondArgument(const FunctionDecl *FD) {
+  if (FD->getNumParams() < 2)
+    return false;
+  const auto *RD = FD->getParamDecl(1)->getType()->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  // For free-standing `+`/`-` operators annotated with `gsl::Pointer`, track
+  // the second parameter when its type matches the return type.
+  return RD->hasAttr<PointerAttr>() &&
+         (FD->getOverloadedOperator() == OO_Plus ||
+          FD->getOverloadedOperator() == OO_Minus) &&
+         ASTContext::hasSameUnqualifiedType(FD->getParamDecl(1)->getType(),
+                                            FD->getReturnType()) &&
+         !isa<CXXMethodDecl>(FD);
+}
+
 template <typename T> static bool isRecordWithAttr(QualType Type) {
   auto *RD = Type->getAsCXXRecordDecl();
   if (!RD)
@@ -265,6 +300,12 @@ static StringRef getName(const CXXRecordDecl &RD) {
     return CTSD->getSpecializedTemplate()->getName();
   if (RD.getIdentifier())
     return RD.getName();
+  return "";
+}
+
+static StringRef getName(const FunctionDecl &FD) {
+  if (FD.getIdentifier())
+    return FD.getName();
   return "";
 }
 
@@ -385,6 +426,12 @@ bool isInvalidationMethod(const CXXMethodDecl &MD) {
     return false;
 
   return InvalidatingMethods->contains(MD.getName());
+}
+
+bool destructsFirstArg(const FunctionDecl &FD) {
+  if (isa<CXXDestructorDecl>(FD))
+    return true;
+  return isInStlNamespace(&FD) && getName(FD) == "destroy_at";
 }
 
 bool isStdCallableWrapperType(const CXXRecordDecl *RD) {

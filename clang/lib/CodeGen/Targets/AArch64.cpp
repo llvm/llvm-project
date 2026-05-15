@@ -412,6 +412,9 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
         case BuiltinType::SveBoolx4:
           NPRN = std::min(NPRN + 4, 4u);
           break;
+        case BuiltinType::MFloat8:
+          NSRN = std::min(NSRN + 1, 8u);
+          break;
         default:
           if (BT->isSVESizelessBuiltinType())
             NSRN = std::min(

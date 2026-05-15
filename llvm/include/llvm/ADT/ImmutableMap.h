@@ -21,9 +21,9 @@
 
 namespace llvm {
 
-/// ImutKeyValueInfo -Traits class used by ImmutableMap.  While both the first
-/// and second elements in a pair are used to generate profile information,
-/// only the first element (the key) is used by isEqual and isLess.
+/// Traits class used by ImmutableMap. While both the first and second elements
+/// in a pair are used to generate profile information, only the first element
+/// (the key) is used by isEqual and isLess.
 template <typename T, typename S>
 struct ImutKeyValueInfo {
   using value_type = const std::pair<T,S>;
@@ -175,9 +175,9 @@ public:
     return nullptr;
   }
 
-  /// getMaxElement - Returns the <key,value> pair in the ImmutableMap for
-  ///  which key is the highest in the ordering of keys in the map.  This
-  ///  method returns NULL if the map is empty.
+  /// Returns the <key,value> pair in the ImmutableMap for which key is the
+  /// highest in the ordering of keys in the map. This method returns NULL if
+  /// the map is empty.
   [[nodiscard]] value_type *getMaxElement() const {
     return Root ? &(Root->getMaxElement()->getValue()) : nullptr;
   }
@@ -307,9 +307,9 @@ public:
     return nullptr;
   }
 
-  /// getMaxElement - Returns the <key,value> pair in the ImmutableMap for
-  ///  which key is the highest in the ordering of keys in the map.  This
-  ///  method returns NULL if the map is empty.
+  /// Returns the <key,value> pair in the ImmutableMap for which key is the
+  /// highest in the ordering of keys in the map.  This method returns NULL if
+  /// the map is empty.
   [[nodiscard]] value_type *getMaxElement() const {
     return Root ? &(Root->getMaxElement()->getValue()) : nullptr;
   }
