@@ -100,7 +100,7 @@ static_assert(!is_volatile<void()volatile&>::value, "");
 } // namespace cwg713
 
 namespace cwg717 { // cwg717: 3.3
-#if __cplusplus >= 201103L
+#if __cplusplus >= 201103L && __has_feature(cxx_thread_local)
 void f() {
   thread_local extern int i;
   thread_local extern int& j;
