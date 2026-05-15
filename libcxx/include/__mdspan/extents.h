@@ -321,7 +321,7 @@ private:
   template <class _OtherIndexType, size_t _Size, size_t... _Idxs>
   _LIBCPP_HIDE_FROM_ABI static constexpr _Values
   __representability_checked_cast(const span<_OtherIndexType, _Size>& __exts, index_sequence<_Idxs...>) noexcept {
-    return __representability_checked_cast(as_const(__exts[_Idxs])...);
+    return __representability_checked_cast(std::as_const(__exts[_Idxs])...);
   }
 
 public:
