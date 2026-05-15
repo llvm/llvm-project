@@ -259,6 +259,24 @@ vp_depth_first_shallow(const VPBlockBase *G) {
   return depth_first(VPBlockShallowTraversalWrapper<const VPBlockBase *>(G));
 }
 
+/// Returns the VPBasicBlocks forming the loop body of a plain (pre-region)
+/// VPlan in reverse post-order starting from \p Header.
+inline SmallVector<VPBasicBlock *>
+vp_plain_cfg_loop_body(VPBasicBlock *Header) {
+  assert(!Header->getParent() && "Header must not be inside a region");
+  VPBlockBase *Middle = Header->getPredecessors()[1]->getSuccessors()[0];
+  SmallVector<VPBasicBlock *> Result;
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Header);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    if (VPBB == Middle)
+      break;
+    if (!isa<VPIRBasicBlock>(VPBB))
+      Result.push_back(VPBB);
+  }
+  return Result;
+}
+
 /// Returns an iterator range to traverse the graph starting at \p G in
 /// depth-first order while traversing through region blocks.
 inline iterator_range<df_iterator<VPBlockDeepTraversalWrapper<VPBlockBase *>>>

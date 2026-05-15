@@ -13,6 +13,7 @@ set(LLVM_OPTIONAL_SOURCES
   DataFlow/ConstantPropagationAnalysis.cpp
   DataFlow/DeadCodeAnalysis.cpp
   DataFlow/DenseAnalysis.cpp
+  DataFlow/IntegerDivisibilityAnalysis.cpp
   DataFlow/IntegerRangeAnalysis.cpp
   DataFlow/LivenessAnalysis.cpp
   DataFlow/SparseAnalysis.cpp
@@ -37,6 +38,7 @@ add_mlir_library(MLIRAnalysis
   DataFlow/ConstantPropagationAnalysis.cpp
   DataFlow/DeadCodeAnalysis.cpp
   DataFlow/DenseAnalysis.cpp
+  DataFlow/IntegerDivisibilityAnalysis.cpp
   DataFlow/IntegerRangeAnalysis.cpp
   DataFlow/LivenessAnalysis.cpp
   DataFlow/SparseAnalysis.cpp
@@ -53,6 +55,7 @@ add_mlir_library(MLIRAnalysis
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRFunctionInterfaces
+  MLIRInferIntDivisibilityOpInterface
   MLIRInferIntRangeInterface
   MLIRInferStridedMetadataInterface
   MLIRInferTypeOpInterface
