@@ -69,6 +69,8 @@ enum LFIAddrMode : uint8_t {
 #define GET_PairVariantTable_IMPL
 #define GET_SIMDPostTable_IMPL
 #define GET_MemInfoTable_IMPL
+// The LFI tables defined in AArch64LFI.td are emitted into this file alongside
+// the system operand tables (single -gen-searchable-tables output).
 #include "AArch64GenSystemOperands.inc"
 } // namespace llvm::AArch64
 
