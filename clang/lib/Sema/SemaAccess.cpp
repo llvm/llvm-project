@@ -426,6 +426,41 @@ static bool MatchesFriendContext(Sema &S, DeclContext *DC,
                                     ContextArgs, Loc, FailedTSC);
 }
 
+static bool MatchesFriendContext(Sema &S, DeclContext *DC,
+                                 ClassTemplateDecl *FriendCTD,
+                                 DeclContext *FriendDC,
+                                 ArrayRef<TemplateArgument> FriendArgs,
+                                 TemplateParameterList *FriendTPL,
+                                 SourceLocation Loc,
+                                 TemplateSpecCandidateSet *FailedTSC) {
+  auto GetClassTemplateContext =
+      [](const DeclContext *DC,
+         ClassTemplateDecl *Template) -> const CXXRecordDecl * {
+    const auto *RD = dyn_cast<CXXRecordDecl>(DC);
+    if (RD) {
+      ClassTemplateDecl *CTD = RD->getDescribedClassTemplate();
+      if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+        CTD = CTSD->getSpecializedTemplate();
+
+      if (CTD && CTD->getCanonicalDecl() == Template->getCanonicalDecl())
+        return RD;
+    }
+    return nullptr;
+  };
+
+  if (const auto *FriendRecord = dyn_cast<CXXRecordDecl>(FriendDC)) {
+    const CXXRecordDecl *FriendContext =
+        GetClassTemplateContext(FriendRecord->getDeclContext(), FriendCTD);
+    const CXXRecordDecl *Context = GetClassTemplateContext(DC, FriendCTD);
+    if (FriendContext && Context &&
+        FriendContext->getCanonicalDecl() == Context->getCanonicalDecl())
+      return true;
+  }
+
+  return MatchesFriendContext(S, DC, FriendCTD, FriendArgs, FriendTPL, Loc,
+                              FailedTSC);
+}
+
 /// Checks whether one class might instantiate to the other.
 static bool MightInstantiateTo(const CXXRecordDecl *From,
                                const CXXRecordDecl *To) {
@@ -772,11 +807,13 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
     if (!ContextCTD)
       continue;
 
-    if (MightInstantiateTo(ContextCTD->getTemplatedDecl(),
-                           FriendCTD->getTemplatedDecl()) &&
-        MatchesFriendContext(S, RD->getDeclContext(), FriendContextCTD,
-                             FriendArgs, FriendTPL, FriendTD->getLocation(),
-                             FailedTSC))
+    if (!MightInstantiateTo(ContextCTD->getTemplatedDecl(),
+                            FriendCTD->getTemplatedDecl()))
+      continue;
+
+    if (MatchesFriendContext(S, RD->getDeclContext(), FriendContextCTD,
+                             FriendTD->getDeclContext(), FriendArgs, FriendTPL,
+                             FriendTD->getLocation(), FailedTSC))
       return AR_accessible;
   }
 
