@@ -1479,8 +1479,7 @@ void VPlanTransforms::addMinimumIterationCheck(
       // Try to expand Step into VPInstructions in CheckBlock; otherwise fall
       // back to a VPExpandSCEV recipe in the plan's entry block.
       VPValue *MinTripCountVPV =
-          VPSCEVExpander(Builder, *PSE.getSE(), *OrigLoop, DL)
-              .tryToExpand(Step);
+          VPSCEVExpander(Builder, *PSE.getSE(), DL).tryToExpand(Step);
       if (!MinTripCountVPV)
         MinTripCountVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Step);
       TripCountCheck = Builder.createICmp(

@@ -13,7 +13,6 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -894,24 +893,22 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
   return false;
 }
 
-/// Try to find a loop-invariant IR value for \p S in \p OrigLoop's preheader
+/// Try to find a loop-invariant IR value for \p S in the plan's entry block
 /// that can be reused. Returns the corresponding live-in VPValue, or nullptr
 /// if no reusable IR value is found.
 VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   if (isa<SCEVConstant, SCEVUnknown>(S))
     return nullptr;
-  BasicBlock *PH = OrigLoop.getLoopPreheader();
-  if (!PH)
-    return nullptr;
+  BasicBlock *PH =
+      cast<VPIRBasicBlock>(Builder.getPlan().getEntry())->getIRBasicBlock();
   for (Value *V : SE.getSCEVValues(S)) {
     if (V->getType() != S->getType())
       continue;
-    // Non-instruction values (arguments, globals) are always reusable.
+    // Only reuse instructions in the plan's entry block, as instructions in
+    // sibling branches may not dominate the entry block.
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       return Builder.getPlan().getOrAddLiveIn(V);
-    // Only reuse instructions in the loop preheader, as instructions in
-    // sibling branches may not dominate this loop's preheader.
     if (I->getParent() != PH)
       continue;
     SmallVector<Instruction *> DropPoisonGeneratingInsts;

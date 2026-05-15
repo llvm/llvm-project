@@ -454,12 +454,9 @@ struct VPlanTransforms {
       VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights);
 
   /// Try to expand VPExpandSCEVRecipes in \p Plan's entry block to
-  /// VPInstructions. Recipes that cannot be expanded (casts, min/max) are kept
-  /// for later IR-level expansion by expandSCEVs. Should run before CSE so
-  /// that duplicate expansions are eliminated. Existing loop-invariant IR
-  /// values are reused as live-ins.
-  static void expandSCEVExpressions(VPlan &Plan, ScalarEvolution &SE,
-                                    Loop &OrigLoop);
+  /// VPInstructions. Recipes that cannot be expanded (like casts, min/max) are
+  /// kept for later IR-level expansion.
+  static void expandSCEVsToVPInstructions(VPlan &Plan, ScalarEvolution &SE);
 
   /// Expand remaining VPExpandSCEVRecipes in \p Plan's entry block using
   /// SCEVExpander. Each VPExpandSCEVRecipe is replaced with a live-in wrapping

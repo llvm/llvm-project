@@ -821,13 +821,13 @@ define void @fp_iv_loop3(float %init, ptr noalias nocapture %A, ptr noalias noca
 ; VEC4_INTERL1-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; VEC4_INTERL1:       [[SCALAR_PH]]:
 ; VEC4_INTERL1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_LR_PH]] ]
-; VEC4_INTERL1-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi float [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 1.000000e-01, %[[FOR_BODY_LR_PH]] ]
-; VEC4_INTERL1-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi float [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[FOR_BODY_LR_PH]] ]
+; VEC4_INTERL1-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi float [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 1.000000e-01, %[[FOR_BODY_LR_PH]] ]
+; VEC4_INTERL1-NEXT:    [[BC_RESUME_VAL10:%.*]] = phi float [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[FOR_BODY_LR_PH]] ]
 ; VEC4_INTERL1-NEXT:    br label %[[FOR_BODY:.*]]
 ; VEC4_INTERL1:       [[FOR_BODY]]:
 ; VEC4_INTERL1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; VEC4_INTERL1-NEXT:    [[Y_012:%.*]] = phi float [ [[BC_RESUME_VAL7]], %[[SCALAR_PH]] ], [ [[CONV1:%.*]], %[[FOR_BODY]] ]
-; VEC4_INTERL1-NEXT:    [[X_011:%.*]] = phi float [ [[BC_RESUME_VAL8]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; VEC4_INTERL1-NEXT:    [[Y_012:%.*]] = phi float [ [[BC_RESUME_VAL9]], %[[SCALAR_PH]] ], [ [[CONV1:%.*]], %[[FOR_BODY]] ]
+; VEC4_INTERL1-NEXT:    [[X_011:%.*]] = phi float [ [[BC_RESUME_VAL10]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; VEC4_INTERL1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; VEC4_INTERL1-NEXT:    store float [[X_011]], ptr [[ARRAYIDX]], align 4
 ; VEC4_INTERL1-NEXT:    [[ADD]] = fadd fast float [[X_011]], [[TMP0]]
@@ -904,13 +904,13 @@ define void @fp_iv_loop3(float %init, ptr noalias nocapture %A, ptr noalias noca
 ; VEC4_INTERL2-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; VEC4_INTERL2:       [[SCALAR_PH]]:
 ; VEC4_INTERL2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_LR_PH]] ]
-; VEC4_INTERL2-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi float [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 1.000000e-01, %[[FOR_BODY_LR_PH]] ]
-; VEC4_INTERL2-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi float [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[FOR_BODY_LR_PH]] ]
+; VEC4_INTERL2-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi float [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 1.000000e-01, %[[FOR_BODY_LR_PH]] ]
+; VEC4_INTERL2-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi float [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[FOR_BODY_LR_PH]] ]
 ; VEC4_INTERL2-NEXT:    br label %[[FOR_BODY:.*]]
 ; VEC4_INTERL2:       [[FOR_BODY]]:
 ; VEC4_INTERL2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; VEC4_INTERL2-NEXT:    [[Y_012:%.*]] = phi float [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ], [ [[CONV1:%.*]], %[[FOR_BODY]] ]
-; VEC4_INTERL2-NEXT:    [[X_011:%.*]] = phi float [ [[BC_RESUME_VAL7]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; VEC4_INTERL2-NEXT:    [[Y_012:%.*]] = phi float [ [[BC_RESUME_VAL8]], %[[SCALAR_PH]] ], [ [[CONV1:%.*]], %[[FOR_BODY]] ]
+; VEC4_INTERL2-NEXT:    [[X_011:%.*]] = phi float [ [[BC_RESUME_VAL9]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; VEC4_INTERL2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; VEC4_INTERL2-NEXT:    store float [[X_011]], ptr [[ARRAYIDX]], align 4
 ; VEC4_INTERL2-NEXT:    [[ADD]] = fadd fast float [[X_011]], [[TMP0]]
@@ -1056,13 +1056,13 @@ define void @fp_iv_loop3(float %init, ptr noalias nocapture %A, ptr noalias noca
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; VEC2_INTERL1_PRED_STORE:       [[SCALAR_PH]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_LR_PH]] ]
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi float [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 1.000000e-01, %[[FOR_BODY_LR_PH]] ]
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi float [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[FOR_BODY_LR_PH]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL10:%.*]] = phi float [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 1.000000e-01, %[[FOR_BODY_LR_PH]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi float [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[FOR_BODY_LR_PH]] ]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[FOR_BODY:.*]]
 ; VEC2_INTERL1_PRED_STORE:       [[FOR_BODY]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[Y_012:%.*]] = phi float [ [[BC_RESUME_VAL7]], %[[SCALAR_PH]] ], [ [[CONV1:%.*]], %[[FOR_BODY]] ]
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[X_011:%.*]] = phi float [ [[BC_RESUME_VAL8]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[Y_012:%.*]] = phi float [ [[BC_RESUME_VAL10]], %[[SCALAR_PH]] ], [ [[CONV1:%.*]], %[[FOR_BODY]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[X_011:%.*]] = phi float [ [[BC_RESUME_VAL11]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[X_011]], ptr [[ARRAYIDX]], align 4
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[ADD]] = fadd fast float [[X_011]], [[TMP0]]
@@ -1635,11 +1635,11 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; VEC2_INTERL1_PRED_STORE:       [[SCALAR_PH]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi float [ [[DOTCAST]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi float [ [[DOTCAST]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[FOR_BODY:.*]]
 ; VEC2_INTERL1_PRED_STORE:       [[FOR_BODY]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_INC:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[J:%.*]] = phi float [ [[J_NEXT:%.*]], %[[FOR_INC]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[J:%.*]] = phi float [ [[J_NEXT:%.*]], %[[FOR_INC]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[I]]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[VAR1:%.*]] = load float, ptr [[VAR0]], align 4
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[VAR2:%.*]] = fcmp fast oeq float [[VAR1]], 0.000000e+00
@@ -2058,11 +2058,11 @@ define void @fp_iv_used_in_gep_fadd(float %init, ptr noalias nocapture %A, float
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; VEC2_INTERL1_PRED_STORE:       [[SCALAR_PH]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi float [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi float [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[FOR_BODY:.*]]
 ; VEC2_INTERL1_PRED_STORE:       [[FOR_BODY]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[X_05:%.*]] = phi float [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[X_05:%.*]] = phi float [ [[BC_RESUME_VAL7]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[C:%.*]] = fptoui float [[X_05]] to i32
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP17:%.*]] = sext i32 [[C]] to i64
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[TMP17]]
@@ -2373,11 +2373,11 @@ define void @fp_iv_used_in_gep_fsub(float %init, ptr noalias nocapture %A, float
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; VEC2_INTERL1_PRED_STORE:       [[SCALAR_PH]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi float [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi float [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[FOR_BODY:.*]]
 ; VEC2_INTERL1_PRED_STORE:       [[FOR_BODY]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[X_05:%.*]] = phi float [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[X_05:%.*]] = phi float [ [[BC_RESUME_VAL7]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[C:%.*]] = fptoui float [[X_05]] to i32
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP17:%.*]] = sext i32 [[C]] to i64
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[TMP17]]

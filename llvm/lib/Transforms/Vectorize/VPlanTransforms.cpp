@@ -5281,21 +5281,23 @@ void VPlanTransforms::materializeAliasMaskCheckBlock(
   Plan.getVFxUF().replaceAllUsesWith(ClampedVF);
 }
 
-void VPlanTransforms::expandSCEVExpressions(VPlan &Plan, ScalarEvolution &SE,
-                                            Loop &OrigLoop) {
+void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
+                                                  ScalarEvolution &SE) {
   auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
   VPBuilder Builder(Entry, Entry->begin());
-  VPSCEVExpander Expander(Builder, SE, OrigLoop);
+  VPSCEVExpander Expander(Builder, SE);
 
   // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander. During
-  // the transition, unsupported SCEV expressions are still expanded to
-  // VPExpandSCEVRecipes.
+  // the transition, unsupported VPExpandSCEVRecipes are skipped and left for
+  // late expansion.
   for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
     auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpSCEV)
       continue;
     Builder.setInsertPoint(ExpSCEV);
     VPValue *Expanded = Expander.tryToExpand(ExpSCEV->getSCEV());
+    if (!Expanded)
+      continue;
     ExpSCEV->replaceAllUsesWith(Expanded);
     if (Plan.getTripCount() == ExpSCEV)
       Plan.resetTripCount(Expanded);
