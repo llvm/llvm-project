@@ -1,9 +1,14 @@
-//===-- Unittests for getwchar --------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for getwchar
+///
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
@@ -24,7 +29,7 @@
 using LlvmLibcGetwcharTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcGetwcharTest, ReadValidWideCharacters) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_valid.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -56,7 +61,7 @@ TEST_F(LlvmLibcGetwcharTest, ReadValidWideCharacters) {
 }
 
 TEST_F(LlvmLibcGetwcharTest, ReadUtf8) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_utf8.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -86,7 +91,7 @@ TEST_F(LlvmLibcGetwcharTest, ReadUtf8) {
 }
 
 TEST_F(LlvmLibcGetwcharTest, EndOfFileBehavior) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_eof.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -108,7 +113,7 @@ TEST_F(LlvmLibcGetwcharTest, EndOfFileBehavior) {
 }
 
 TEST_F(LlvmLibcGetwcharTest, ReadError) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_readerr.test"));
 
   // Redirect stdin using a write-only stream
@@ -128,7 +133,7 @@ TEST_F(LlvmLibcGetwcharTest, ReadError) {
 }
 
 TEST_F(LlvmLibcGetwcharTest, ByteOrientedMisuse) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_bytemode.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
@@ -151,7 +156,7 @@ TEST_F(LlvmLibcGetwcharTest, ByteOrientedMisuse) {
 }
 
 TEST_F(LlvmLibcGetwcharTest, InteractionWithUngetwc) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_unget.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
