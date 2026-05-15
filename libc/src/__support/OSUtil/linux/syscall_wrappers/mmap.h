@@ -46,8 +46,8 @@ LIBC_INLINE ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags,
   // TODO: Reject sizes that are (after page alignment) larger than PTRDIFF_MAX.
   // This is mainly relevant for 32-bit architectures.
 
-  return syscall_checked<void*>(syscall_number, addr, size, prot, flags, fd,
-                                offset_for_syscall);
+  return syscall_checked<void *>(syscall_number, addr, size, prot, flags, fd,
+                                 offset_for_syscall);
 }
 
 } // namespace linux_syscalls
