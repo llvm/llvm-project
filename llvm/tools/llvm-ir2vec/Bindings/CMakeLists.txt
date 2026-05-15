@@ -19,7 +19,7 @@ else()
   )
   
   if(NOT STATUS EQUAL "0")
-    message(FATAL_ERROR "nanobind not found (install via 'pip install nanobind' or set nanobind_DIR)")
+      message(FATAL_ERROR "nanobind not found (install via 'pip install nanobind' or set nanobind_DIR)")
   endif()
   
   message(STATUS "found nanobind at: ${PACKAGE_DIR}")
@@ -36,8 +36,8 @@ nanobind_add_module(ir2vec MODULE PyIR2Vec.cpp)
 # This follows the pattern established by MLIR Python bindings
 # (see mlir/cmake/modules/AddMLIRPython.cmake).
 target_compile_options(ir2vec PRIVATE -fexceptions -frtti)
+
 target_link_libraries(ir2vec PRIVATE LLVMEmbUtils)
 target_include_directories(ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 message(STATUS "Python bindings for llvm-ir2vec will be built with nanobind")
-set(LLVM_IR2VEC_TEST_PYTHON_BINDINGS True CACHE INTERNAL "" FORCE)
