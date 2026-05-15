@@ -54,6 +54,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
@@ -75,7 +76,7 @@ class SymbolContextScope;
 using namespace lldb;
 using namespace lldb_private;
 
-static user_id_t g_value_obj_uid = 0;
+static std::atomic<user_id_t> g_value_obj_uid{0};
 
 // FIXME: this will return true for vector types whose elements
 // are floats. Audit all usages of this function and call
@@ -2922,7 +2923,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
             new lldb_private::DataBufferHeap(&addr, sizeof(lldb::addr_t)));
         m_addr_of_valobj_sp = ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            compiler_type.GetPointerType(), ConstString(name.c_str()), buffer,
+            compiler_type.GetPointerType(), ConstString(name), buffer,
             endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize(),
             LLDB_INVALID_ADDRESS, this->GetManager());
       }

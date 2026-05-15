@@ -85,6 +85,7 @@ if (BUILD_FORTRAN_MODULES)
     "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod"
     "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.h"
     DESTINATION ${destination}
+    COMPONENT openmp
   )
 endif ()
 

@@ -1870,11 +1870,29 @@ define i16 @test_bitcast_bfloattoi16(bfloat %a) #0 {
 }
 
 define bfloat @test_bitcast_i16tobfloat(i16 %a) #0 {
-; CHECK-LABEL: test_bitcast_i16tobfloat:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_bitcast_i16tobfloat:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    fmov s0, w0
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_bitcast_i16tobfloat:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    fmov s0, w0
+; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_bitcast_i16tobfloat:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    fmov s0, w0
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_bitcast_i16tobfloat:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    fmov s0, w0
+; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-BF16-GI-NEXT:    ret
   %r = bitcast i16 %a to bfloat
   ret bfloat %r
 }
