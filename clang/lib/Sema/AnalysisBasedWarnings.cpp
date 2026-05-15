@@ -607,6 +607,8 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   // enums in a switch(X) have explicit case statements.
   CFGBlock::FilterOptions FO;
   FO.IgnoreDefaultsWithCoveredEnums = 1;
+  FO.StrictEnumSwitchCoverage =
+      AC.getASTContext().getLangOpts().StrictEnumSwitchCoverage;
 
   for (CFGBlock::filtered_pred_iterator I =
            cfg->getExit().filtered_pred_start_end(FO);
@@ -2843,6 +2845,8 @@ void sema::AnalysisBasedWarnings::issueWarningsForRegisteredVarDecl(
   AC.getCFGBuildOptions().AddTemporaryDtors = true;
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
+  AC.getCFGBuildOptions().ForceStrictEnumSwitchCoverage =
+      S.getLangOpts().StrictEnumSwitchCoverage;
 
   auto Range = VarDeclPossiblyUnreachableDiags.equal_range(VD);
   auto SecondRange =
@@ -2927,6 +2931,8 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     AC.getCFGBuildOptions().AddParameterLifetimes = true;
     AC.getCFGBuildOptions().AddInitializers = true;
     AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
+    AC.getCFGBuildOptions().ForceStrictEnumSwitchCoverage =
+        S.getLangOpts().StrictEnumSwitchCoverage;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
     if (AC.getCFG())
       runLifetimeSafetyAnalysis(AC, &SemaHelper, LSStats, S.CollectStats);
@@ -3037,6 +3043,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddTemporaryDtors = true;
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
+  AC.getCFGBuildOptions().ForceStrictEnumSwitchCoverage =
+      S.getLangOpts().StrictEnumSwitchCoverage;
 
   bool EnableLifetimeSafetyAnalysis =
       S.getLangOpts().EnableLifetimeSafety &&

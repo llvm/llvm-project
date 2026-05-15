@@ -4482,6 +4482,11 @@ def fstrict_enums : Flag<["-"], "fstrict-enums">, Group<f_Group>,
   HelpText<"Enable optimizations based on the strict definition of an enum's "
            "value range">,
   MarshallingInfoFlag<CodeGenOpts<"StrictEnums">>;
+defm strict_enum_switch_coverage : BoolFOption<"strict-enum-switch-coverage",
+  LangOpts<"StrictEnumSwitchCoverage">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable strict coverage checking for enum switch statements based on the underlying type's value range">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
+
 defm strict_vtable_pointers : BoolFOption<"strict-vtable-pointers",
   CodeGenOpts<"StrictVTablePointers">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],

@@ -1045,9 +1045,12 @@ public:
     unsigned IgnoreNullPredecessors : 1;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreDefaultsWithCoveredEnums : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned StrictEnumSwitchCoverage : 1;
 
     FilterOptions()
-        : IgnoreNullPredecessors(1), IgnoreDefaultsWithCoveredEnums(0) {}
+        : IgnoreNullPredecessors(1), IgnoreDefaultsWithCoveredEnums(0),
+          StrictEnumSwitchCoverage(0) {}
   };
 
   static bool FilterEdge(const FilterOptions &F, const CFGBlock *Src,
@@ -1285,6 +1288,7 @@ public:
     bool AddVirtualBaseBranches = false;
     bool OmitImplicitValueInitializers = false;
     bool AssumeReachableDefaultInSwitchStatements = false;
+    bool ForceStrictEnumSwitchCoverage = false;
 
     BuildOptions() = default;
 

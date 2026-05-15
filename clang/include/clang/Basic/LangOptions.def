@@ -210,6 +210,7 @@ ENUM_LANGOPT(MSPointerToMemberRepresentationMethod, PragmaMSPointersToMembersKin
 ENUM_LANGOPT(DefaultCallingConv, DefaultCallingConvention, 3, DCC_None, NotCompatible, "default calling convention")
 
 LANGOPT(ShortEnums        , 1, 0, NotCompatible, "short enum types")
+LANGOPT(StrictEnumSwitchCoverage, 1, 0, Benign, "Strict enum switch coverage")
 
 LANGOPT(OpenCL            , 1, 0, NotCompatible, "OpenCL")
 LANGOPT(OpenCLVersion     , 32, 0, NotCompatible, "OpenCL C version")
