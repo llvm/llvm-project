@@ -266,6 +266,119 @@ class CreateNdDescToXeVMPattern
   }
 };
 
+class LoadNdMXScaleToXeVMPattern : public OpConversionPattern<xegpu::LoadNdOp> {
+  using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::LoadNdOp op, xegpu::LoadNdOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // load_nd ops for MX A Scale and B Scale are not directly supported by
+    // Intel HW's 2D block load. Lower this special case to an alternative
+    // code sequence using simple loads.
+    auto tdescTy = op.getTensorDescType();
+    if (tdescTy.getElementType() != rewriter.getF8E8M0Type())
+      return failure();
+    if (tdescTy.getRank() != 2)
+      return failure();
+    // Supported tile shapes are
+    // 8x1 or 8x2 for A Scale and
+    // 1x16 or 2x16 for B Scale
+    auto tileShape = tdescTy.getShape();
+    bool isAScale = tileShape[0] == 8;
+    bool isBScale = tileShape[1] == 16;
+    if (!isAScale && !isBScale)
+      return failure();
+    Type resTy = getTypeConverter()->convertType(op.getValue().getType());
+    auto resVecTy = dyn_cast<VectorType>(resTy);
+    if (resVecTy) {
+      if (resVecTy.getRank() != 1)
+        return failure();
+      if (resVecTy.getShape()[0] != 2)
+        return failure();
+    }
+    if (isAScale) {
+      if (tileShape[1] != 1 && tileShape[1] != 2)
+        return failure();
+    }
+    if (isBScale) {
+      if (tileShape[0] != 1 && tileShape[0] != 2)
+        return failure();
+    }
+    auto mixedOffsets = op.getMixedOffsets();
+    int64_t opOffsetSize = mixedOffsets.size();
+    if (opOffsetSize != 2)
+      return rewriter.notifyMatchFailure(
+          op, "Expected offset rank to match descriptor rank.");
+    auto loc = op.getLoc();
+    // Get address space from tensor descriptor memory space.
+    auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
+        getContext(), getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
+    auto tdesc = adaptor.getTensorDesc();
+    VectorType payloadI64Ty = VectorType::get(4, rewriter.getI64Type());
+    Value payLoadAsI64 =
+        vector::BitCastOp::create(rewriter, loc, payloadI64Ty, tdesc);
+    Value basePtr = vector::ExtractOp::create(
+        rewriter, loc, payLoadAsI64, static_cast<int>(NdTdescOffset::BasePtr));
+    // Get the target integer type for index type.
+    Type indexType = getTypeConverter()->convertType(rewriter.getIndexType());
+    if (indexType != rewriter.getI64Type())
+      basePtr = LLVM::TruncOp::create(rewriter, loc, indexType, basePtr);
+    Value basePitch = vector::ExtractOp::create(
+        rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BasePitch));
+    if (indexType != rewriter.getI32Type())
+      basePitch = LLVM::SExtOp::create(rewriter, loc, indexType, basePitch);
+    Value offsetW =
+        getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[1]);
+    offsetW =
+        getValueOrCreateCastToIndexLike(rewriter, loc, indexType, offsetW);
+    Value offsetH =
+        getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
+    offsetH =
+        getValueOrCreateCastToIndexLike(rewriter, loc, indexType, offsetH);
+    Value idX = xevm::WorkitemIdXOp::create(rewriter, loc, indexType, {});
+    // Adjust offsetH and offsetW with thread id X
+    if (isAScale) {
+      // 16 lanes but only 8 rows: Divide idX by 2 to wraparound
+      Value one = LLVM::ConstantOp::create(rewriter, op.getLoc(), indexType, 1);
+      idX = LLVM::AShrOp::create(rewriter, loc, idX, one);
+      offsetH = LLVM::AddOp::create(rewriter, loc, offsetH, idX);
+    }
+    if (isBScale) {
+      offsetW = LLVM::AddOp::create(rewriter, loc, offsetW, idX);
+    }
+    // basePtr = basePtr + basePitch * offsetH + offsetW
+    Value tmp = LLVM::MulOp::create(rewriter, loc, basePitch, offsetH);
+    tmp = LLVM::AddOp::create(rewriter, loc, tmp, offsetW);
+    basePtr = LLVM::AddOp::create(rewriter, loc, basePtr, tmp);
+
+    // Convert base pointer (i64) to LLVM pointer type.
+    Value basePtrLLVM =
+        LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
+    Value loaded;
+
+    if (isAScale) {
+      loaded = LLVM::LoadOp::create(rewriter, loc, resTy, basePtrLLVM);
+    }
+    if (isBScale) {
+      if (!resVecTy) {
+        loaded = LLVM::LoadOp::create(rewriter, loc, resTy, basePtrLLVM);
+      } else {
+        loaded = LLVM::UndefOp::create(rewriter, loc, resTy);
+        Value elem = LLVM::LoadOp::create(rewriter, loc, rewriter.getI8Type(),
+                                          basePtrLLVM);
+        loaded = vector::InsertOp::create(rewriter, loc, elem, loaded, 0);
+        basePtr = LLVM::AddOp::create(rewriter, loc, basePtr, basePitch);
+        basePtrLLVM =
+            LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
+        elem = LLVM::LoadOp::create(rewriter, loc, rewriter.getI8Type(),
+                                    basePtrLLVM);
+        loaded = vector::InsertOp::create(rewriter, loc, elem, loaded, 1);
+      }
+    }
+    rewriter.replaceOp(op, loaded);
+    return success();
+  }
+};
+
 template <
     typename OpType,
     typename = std::enable_if_t<llvm::is_one_of<
@@ -287,6 +400,10 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
       return rewriter.notifyMatchFailure(
           op, "Expected offset rank to match descriptor rank.");
     auto elemType = tdescTy.getElementType();
+    // MX scale type load has a special handler.
+    if (elemType == rewriter.getF8E8M0Type())
+      return failure();
+
     auto elemBitSize = elemType.getIntOrFloatBitWidth();
     bool isSubByte = elemBitSize < 8;
     uint64_t wScaleFactor = 1;
@@ -1458,4 +1575,6 @@ void mlir::populateXeGPUToXeVMConversionPatterns(
   patterns.add<FenceToXeVMPattern, DpasToXeVMPattern>(typeConverter,
                                                       patterns.getContext());
   patterns.add<DpasMxToXeVMPattern>(typeConverter, patterns.getContext());
+  patterns.add<LoadNdMXScaleToXeVMPattern>(typeConverter,
+                                           patterns.getContext());
 }
