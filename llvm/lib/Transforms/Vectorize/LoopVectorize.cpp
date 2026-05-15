@@ -364,10 +364,10 @@ cl::opt<bool> llvm::EnableLoopVectorization(
     "vectorize-loops", cl::init(true), cl::Hidden,
     cl::desc("Run the Loop vectorization passes"));
 
-static cl::opt<cl::boolOrDefault> ForceSafeDivisor(
-    "force-widen-divrem-via-safe-divisor", cl::Hidden,
-    cl::desc(
-        "Override cost based safe divisor widening for div/rem instructions"));
+static cl::opt<cl::boolOrDefault>
+    ForceMaskedDivRem("force-widen-divrem-via-masked-intrinsic", cl::Hidden,
+                      cl::desc("Override cost based masked intrinsic widening "
+                               "for div/rem instructions"));
 
 static cl::opt<bool> EnableEarlyExitVectorization(
     "enable-early-exit-vectorization", cl::init(true), cl::Hidden,
@@ -1065,10 +1065,10 @@ public:
   /// lowering should be used for div/rem.  This incorporates an override
   /// option so it is not simply a cost comparison.
   bool isDivRemScalarWithPredication(InstructionCost ScalarCost,
-                                     InstructionCost SafeDivisorCost) const {
-    switch (ForceSafeDivisor) {
+                                     InstructionCost MaskedCost) const {
+    switch (ForceMaskedDivRem) {
     case cl::BOU_UNSET:
-      return ScalarCost < SafeDivisorCost;
+      return ScalarCost < MaskedCost;
     case cl::BOU_TRUE:
       return false;
     case cl::BOU_FALSE:
@@ -1114,7 +1114,7 @@ public:
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
   /// First result is for scalarization (will be invalid for scalable
-  /// vectors); second is for the safe-divisor strategy.
+  /// vectors); second is for the masked intrinsic strategy.
   std::pair<InstructionCost, InstructionCost>
   getDivRemSpeculationCost(Instruction *I, ElementCount VF);
 
@@ -2379,11 +2379,11 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   case Instruction::SDiv:
   case Instruction::SRem:
   case Instruction::URem: {
-    // We have the option to use the safe-divisor idiom to avoid predication.
-    // The cost based decision here will always select safe-divisor for
-    // scalable vectors as scalarization isn't legal.
-    const auto [ScalarCost, SafeDivisorCost] = getDivRemSpeculationCost(I, VF);
-    return isDivRemScalarWithPredication(ScalarCost, SafeDivisorCost);
+    // We have the option to use the llvm.masked.udiv intrinsics to avoid
+    // predication. The cost based decision here will always select the masked
+    // intrinsics for scalable vectors as scalarization isn't legal.
+    const auto [ScalarCost, MaskedCost] = getDivRemSpeculationCost(I, VF);
+    return isDivRemScalarWithPredication(ScalarCost, MaskedCost);
   }
   }
 }
@@ -2465,6 +2465,21 @@ uint64_t LoopVectorizationCostModel::getPredBlockCostDivisor(
   return std::round((double)HeaderFreq / BBFreq);
 }
 
+static Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::UDiv:
+    return Intrinsic::masked_udiv;
+  case Instruction::SDiv:
+    return Intrinsic::masked_sdiv;
+  case Instruction::URem:
+    return Intrinsic::masked_urem;
+  case Instruction::SRem:
+    return Intrinsic::masked_srem;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+}
+
 std::pair<InstructionCost, InstructionCost>
 LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
                                                      ElementCount VF) {
@@ -2506,22 +2521,12 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
         getPredBlockCostDivisor(Config.CostKind, I->getParent());
   }
 
-  InstructionCost SafeDivisorCost = 0;
   auto *VecTy = toVectorTy(I->getType(), VF);
-  // The cost of the select guard to ensure all lanes are well defined
-  // after we speculate above any internal control flow.
-  SafeDivisorCost +=
-      TTI.getCmpSelInstrCost(Instruction::Select, VecTy,
-                             toVectorTy(Type::getInt1Ty(I->getContext()), VF),
-                             CmpInst::BAD_ICMP_PREDICATE, Config.CostKind);
-
-  SmallVector<const Value *, 4> Operands(I->operand_values());
-  SafeDivisorCost += TTI.getArithmeticInstrCost(
-      I->getOpcode(), VecTy, Config.CostKind,
-      {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-      {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-      Operands, I);
-  return {ScalarizationCost, SafeDivisorCost};
+  auto *MaskTy = toVectorTy(Type::getInt1Ty(I->getContext()), VF);
+  IntrinsicCostAttributes ICA(getMaskedDivRemIntrinsic(I->getOpcode()), VecTy,
+                              {VecTy, VecTy, MaskTy});
+  InstructionCost MaskedCost = TTI.getIntrinsicInstrCost(ICA, Config.CostKind);
+  return {ScalarizationCost, MaskedCost};
 }
 
 bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
@@ -5268,9 +5273,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::URem:
   case Instruction::SRem:
     if (VF.isVector() && isPredicatedInst(I)) {
-      const auto [ScalarCost, SafeDivisorCost] = getDivRemSpeculationCost(I, VF);
-      return isDivRemScalarWithPredication(ScalarCost, SafeDivisorCost) ?
-        ScalarCost : SafeDivisorCost;
+      const auto [ScalarCost, MaskedCost] = getDivRemSpeculationCost(I, VF);
+      return isDivRemScalarWithPredication(ScalarCost, MaskedCost) ? ScalarCost
+                                                                   : MaskedCost;
     }
     // We've proven all lanes safe to speculate, fall through.
     [[fallthrough]];
@@ -6528,7 +6533,7 @@ bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
                                                              Range);
 }
 
-VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
+VPRecipeWithIRFlags *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   auto *I = VPI->getUnderlyingInstr();
   switch (VPI->getOpcode()) {
   default:
@@ -6536,20 +6541,13 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:
-  case Instruction::URem: {
-    // If not provably safe, use a select to form a safe divisor before widening the
-    // div/rem operation itself.  Otherwise fall through to general handling below.
-    if (CM.isPredicatedInst(I)) {
-      SmallVector<VPValue *> Ops(VPI->operandsWithoutMask());
-      VPValue *Mask = VPI->getMask();
-      VPValue *One = Plan.getConstantInt(I->getType(), 1u);
-      auto *SafeRHS =
-          Builder.createSelect(Mask, Ops[1], One, VPI->getDebugLoc());
-      Ops[1] = SafeRHS;
-      return new VPWidenRecipe(*I, Ops, *VPI, *VPI, VPI->getDebugLoc());
-    }
+  case Instruction::URem:
+    // If not provably safe, use a masked intrinsic.
+    if (CM.isPredicatedInst(I))
+      return new VPWidenIntrinsicRecipe(
+          getMaskedDivRemIntrinsic(VPI->getOpcode()), VPI->operands(),
+          I->getType(), {}, {}, VPI->getDebugLoc());
     [[fallthrough]];
-  }
   case Instruction::Add:
   case Instruction::And:
   case Instruction::AShr:

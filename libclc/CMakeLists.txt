@@ -201,30 +201,25 @@ libclc_add_builtin_library(${LIBCLC_CLC_TARGET}
   COMPILE_OPTIONS ${compile_flags}
   INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
   COMPILE_DEFINITIONS ${common_defs}
+  SOURCE_SUB_DIR clc
   FOLDER "libclc/Device IR/CLC"
 )
 
+# Build, link, and install the final OpenCL builtins library.
 set(LIBCLC_OPENCL_TARGET opencl)
-libclc_add_builtin_library(${LIBCLC_OPENCL_TARGET}
+libclc_add_library(libclc-${LIBCLC_TARGET}
+  ARCH ${LIBCLC_TARGET_ARCH}
+  TRIPLE ${clang_triple}
+  TARGET_TRIPLE ${LIBCLC_TARGET}
   COMPILE_OPTIONS ${compile_flags} "SHELL:-Xclang -fdeclare-opencl-builtins"
   INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
     ${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
   COMPILE_DEFINITIONS ${common_defs}
-  FOLDER "libclc/Device IR/Intermediate"
-)
-
-add_subdirectory(clc)
-add_subdirectory(opencl)
-
-# Link and install the final OpenCL builtins library.
-libclc_add_library(libclc-${LIBCLC_TARGET}
-  ARCH ${LIBCLC_TARGET_ARCH}
-  TRIPLE ${clang_triple}
-  TARGET_TRIPLE ${LIBCLC_TARGET}
-  LIBRARIES ${LIBCLC_OPENCL_TARGET}
   INTERNALIZE_LIBRARIES ${LIBCLC_CLC_TARGET}
   OPT_FLAGS ${opt_flags}
+  SOURCE_TARGET ${LIBCLC_OPENCL_TARGET}
+  SOURCE_SUB_DIR opencl
   OUTPUT_FILENAME libclc
   PARENT_TARGET libclc-opencl-builtins
 )
