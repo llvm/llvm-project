@@ -99,13 +99,16 @@ public:
 /// path and the module file name with the (optional) context hash. For all
 /// other types of module files, this is just the file system path.
 class ModuleFileName {
+  enum Kind : unsigned {
+    InMemory = 0,
+    Explicit = 1,
+    ImplicitSuffixLength,
+  };
+
   std::string Path;
-  /// The kind of the module file.
-  ///   0 in-memory
-  ///   1 explicit
-  ///   2+ implicit; the value denotes the length of the implicit module file
-  ///      path suffix that follows the module cache directory path in \c Path
-  unsigned Kind;
+  /// The kind of the module file (\c Kind), or the length of the implicit
+  /// module file name suffix in \c Path (integer values 2+).
+  Kind KindOrSuffixLength;
 
 public:
   /// Creates an empty module file name.
@@ -115,7 +118,7 @@ public:
   static ModuleFileName makeFromRaw(StringRef Name, unsigned RawKind) {
     ModuleFileName File;
     File.Path = Name;
-    File.Kind = RawKind;
+    File.KindOrSuffixLength = static_cast<Kind>(RawKind);
     return File;
   }
 
@@ -123,7 +126,7 @@ public:
   static ModuleFileName makeInMemory(StringRef Name) {
     ModuleFileName File;
     File.Path = Name;
-    File.Kind = 0;
+    File.KindOrSuffixLength = InMemory;
     return File;
   }
 
@@ -131,7 +134,7 @@ public:
   static ModuleFileName makeExplicit(std::string Name) {
     ModuleFileName File;
     File.Path = std::move(Name);
-    File.Kind = 1;
+    File.KindOrSuffixLength = Explicit;
     return File;
   }
 
@@ -147,7 +150,7 @@ public:
            "Suffix for implicit module file name out-of-bounds");
     ModuleFileName File;
     File.Path = std::move(Name);
-    File.Kind = SuffixLength;
+    File.KindOrSuffixLength = static_cast<Kind>(SuffixLength);
     return File;
   }
 
@@ -158,14 +161,20 @@ public:
 
   /// Returns the suffix length for an implicit module name, zero otherwise.
   unsigned getImplicitModuleSuffixLength() const {
-    return Kind >= 2 ? Kind : 0;
+    switch (KindOrSuffixLength) {
+    case InMemory:
+    case Explicit:
+      return 0;
+    default:
+      return KindOrSuffixLength;
+    }
   }
 
   /// Returns \c true iff this is an in-memory module file, \c false otherwise.
-  bool isInMemory() const { return Kind == 0; }
+  bool isInMemory() const { return KindOrSuffixLength == InMemory; }
 
   /// Returns the raw value representing the kind of the module file.
-  unsigned getRawKind() const { return Kind; }
+  unsigned getRawKind() const { return KindOrSuffixLength; }
 
   /// Returns the plain module file name.
   StringRef str() const { return Path; }
