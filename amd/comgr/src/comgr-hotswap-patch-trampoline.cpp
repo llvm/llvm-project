@@ -10,6 +10,8 @@
 /// whose fix is larger than the original instruction:
 ///   - ds_*_2addr_stride64_*  : one 8B DS instruction -> two single-address
 ///     DS instructions
+///   - tensor_load_to_lds     : prepend s_pack_hh_b32_b16 to clear multicast
+///     routing bits in the group descriptor's base SGPR
 ///
 //===----------------------------------------------------------------------===//
 
@@ -22,6 +24,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -29,12 +32,13 @@ using namespace llvm;
 
 namespace COMGR {
 namespace hotswap {
+namespace {
 
 // -- DS stride64 swap table (StringSwitch) ----------------------------------
 //
 // Maps each 2-address DS mnemonic to its single-address replacement.
 
-static StringRef getDs2AddrReplacement(StringRef Mnemonic) {
+StringRef getDs2AddrReplacement(StringRef Mnemonic) {
   return StringSwitch<StringRef>(Mnemonic)
       .Case("ds_load_2addr_stride64_b32", "ds_load_b32")
       .Case("ds_load_2addr_stride64_b64", "ds_load_b64")
@@ -52,7 +56,7 @@ static StringRef getDs2AddrReplacement(StringRef Mnemonic) {
 // building. Sub-register iteration returns ALL fragments (including lo16/hi16);
 // getDirectSubRegs filters to only scalar 32-bit components.
 
-static std::string toAsmRegName(const MCRegisterInfo &MRI, MCRegister Reg) {
+std::string toAsmRegName(const MCRegisterInfo &MRI, MCRegister Reg) {
   const char *N = MRI.getName(Reg);
   if (!N)
     return {};
@@ -64,8 +68,8 @@ static std::string toAsmRegName(const MCRegisterInfo &MRI, MCRegister Reg) {
   return Name.str();
 }
 
-static SmallVector<MCRegister, 4> getDirectSubRegs(MCRegister Reg,
-                                                   const MCRegisterInfo &MRI) {
+SmallVector<MCRegister, 4> getDirectSubRegs(MCRegister Reg,
+                                            const MCRegisterInfo &MRI) {
   SmallVector<MCRegister, 4> Result;
   for (MCPhysReg Sub : MRI.subregs(Reg)) {
     StringRef Name = MRI.getName(Sub);
@@ -77,8 +81,8 @@ static SmallVector<MCRegister, 4> getDirectSubRegs(MCRegister Reg,
 }
 
 // Format a VGPR pair as a range expression: (VGPR0, VGPR1) -> "v[0:1]".
-static std::string fmtRegPair(const MCRegisterInfo &MRI, MCRegister Lo,
-                              MCRegister Hi) {
+std::string fmtRegPair(const MCRegisterInfo &MRI, MCRegister Lo,
+                       MCRegister Hi) {
   std::string LoName = toAsmRegName(MRI, Lo);
   std::string HiName = toAsmRegName(MRI, Hi);
   char Prefix = LoName[0];
@@ -90,7 +94,7 @@ static std::string fmtRegPair(const MCRegisterInfo &MRI, MCRegister Lo,
 // Format a register operand for assembly. Single registers (VGPR0) produce
 // "v0"; register tuples (VGPR0_VGPR1) produce "v[0:1]" by decomposing into
 // their scalar sub-registers.
-static std::string fmtRegOperand(const MCRegisterInfo &MRI, MCRegister Reg) {
+std::string fmtRegOperand(const MCRegisterInfo &MRI, MCRegister Reg) {
   const char *N = MRI.getName(Reg);
   if (!N)
     return {};
@@ -104,7 +108,7 @@ static std::string fmtRegOperand(const MCRegisterInfo &MRI, MCRegister Reg) {
 }
 
 // Format an optional byte offset as " offset:N" (empty string when zero).
-static std::string fmtOffset(uint32_t Offset) {
+std::string fmtOffset(uint32_t Offset) {
   return Offset ? " offset:" + std::to_string(Offset) : "";
 }
 
@@ -129,8 +133,8 @@ struct DsOperands {
 
 // Extract register operands and scaled offsets from a DS 2-address MCInst.
 // Offsets are scaled by 64 * element_size (stride64 encoding).
-static DsOperands extractDsOperands(const MCInst &Inst, StringRef FromMnem,
-                                    const LLVMState &LS) {
+DsOperands extractDsOperands(const MCInst &Inst, StringRef FromMnem,
+                             const LLVMState &LS) {
   DsOperands Ops;
   Ops.MRI = LS.MRI.get();
 
@@ -138,7 +142,7 @@ static DsOperands extractDsOperands(const MCInst &Inst, StringRef FromMnem,
   unsigned ImmsSeen = 0;
   for (unsigned I = 0, E = Inst.getNumOperands(); I < E; ++I) {
     const MCOperand &Op = Inst.getOperand(I);
-    if (Op.isReg() && Op.getReg() != 0)
+    if (Op.isReg() && Op.getReg())
       Ops.Regs.push_back(MCRegister(Op.getReg()));
     else if (Op.isImm()) {
       if (ImmsSeen == 0)
@@ -159,7 +163,7 @@ static DsOperands extractDsOperands(const MCInst &Inst, StringRef FromMnem,
 
 // Split a compound destination register into two formatted destination strings.
 // b32: VReg_64 -> ("v0", "v1"); b64: VReg_128 -> ("v[0:1]", "v[2:3]")
-static std::pair<std::string, std::string>
+std::pair<std::string, std::string>
 splitDstPair(MCRegister CompoundReg, bool IsB64, const MCRegisterInfo &MRI) {
   SmallVector<MCRegister, 4> Subs = getDirectSubRegs(CompoundReg, MRI);
   if (IsB64) {
@@ -174,8 +178,8 @@ splitDstPair(MCRegister CompoundReg, bool IsB64, const MCRegisterInfo &MRI) {
 }
 
 // Expand a DS 2-address load into two single-address loads (dst, addr).
-static std::vector<std::string> expandDs2AddrLoad(const DsOperands &Ops,
-                                                  StringRef ToMnem) {
+std::vector<std::string> expandDs2AddrLoad(const DsOperands &Ops,
+                                           StringRef ToMnem) {
   if (Ops.Regs.size() < 2)
     return {};
   std::pair<std::string, std::string> Dst =
@@ -190,8 +194,8 @@ static std::vector<std::string> expandDs2AddrLoad(const DsOperands &Ops,
 }
 
 // Expand a DS 2-address store into two single-address stores (addr, data).
-static std::vector<std::string> expandDs2AddrStore(const DsOperands &Ops,
-                                                   StringRef ToMnem) {
+std::vector<std::string> expandDs2AddrStore(const DsOperands &Ops,
+                                            StringRef ToMnem) {
   if (Ops.Regs.size() < 3)
     return {};
   const MCRegisterInfo &MRI = *Ops.MRI;
@@ -208,8 +212,8 @@ static std::vector<std::string> expandDs2AddrStore(const DsOperands &Ops,
 
 // Expand a DS 2-address exchange into two single-address exchanges
 // (dst, addr, data).
-static std::vector<std::string> expandDs2AddrXchg(const DsOperands &Ops,
-                                                  StringRef ToMnem) {
+std::vector<std::string> expandDs2AddrXchg(const DsOperands &Ops,
+                                           StringRef ToMnem) {
   if (Ops.Regs.size() < 4)
     return {};
   const MCRegisterInfo &MRI = *Ops.MRI;
@@ -235,10 +239,8 @@ static std::vector<std::string> expandDs2AddrXchg(const DsOperands &Ops,
 // Top-level expansion: extracts operands from the decoded MCInst, computes
 // scaled offsets, then dispatches to the appropriate layout-specific helper.
 
-static std::vector<std::string> expandDs2Addr(const MCInst &Inst,
-                                              StringRef FromMnem,
-                                              StringRef ToMnem,
-                                              const LLVMState &LS) {
+std::vector<std::string> expandDs2Addr(const MCInst &Inst, StringRef FromMnem,
+                                       StringRef ToMnem, const LLVMState &LS) {
   DsOperands Ops = extractDsOperands(Inst, FromMnem, LS);
 
   if (FromMnem.starts_with("ds_load"))
@@ -265,7 +267,7 @@ static std::vector<std::string> expandDs2Addr(const MCInst &Inst,
 // well-formed kernels. If absent (e.g. s_endpgm terminates first), skipping
 // the bump is safe — the hardware wait counter saturates harmlessly.
 
-static bool bumpNextWaitDscnt(PatchContext &Ctx, size_t Idx) {
+bool bumpNextWaitDscnt(PatchContext &Ctx, size_t Idx) {
   const MCInstrInfo &MCII = *Ctx.LS.MCII;
   const MCRegisterInfo &MRI = *Ctx.LS.MRI;
 
@@ -315,7 +317,7 @@ static bool bumpNextWaitDscnt(PatchContext &Ctx, size_t Idx) {
 // instructions. The split doubles the outstanding DS operation count, so
 // bumpNextWaitDscnt adjusts the next s_wait_dscnt accordingly.
 
-static bool patchDs2AddrStride64(PatchContext &Ctx, size_t Idx) {
+bool patchDs2AddrStride64(PatchContext &Ctx, size_t Idx) {
   InternalDecodedInst &DI = Ctx.Decoded[Idx];
   StringRef ToMnem = getDs2AddrReplacement(DI.Mnemonic);
   if (ToMnem.empty())
@@ -338,7 +340,7 @@ static bool patchDs2AddrStride64(PatchContext &Ctx, size_t Idx) {
     return false;
   }
 
-  std::vector<uint8_t> Replacement(Bytes.begin(), Bytes.end());
+  SmallVector<uint8_t> Replacement(Bytes.begin(), Bytes.end());
   if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement))
     return false;
 
@@ -347,18 +349,217 @@ static bool patchDs2AddrStride64(PatchContext &Ctx, size_t Idx) {
   return true;
 }
 
+// -- getDescriptorBaseSgpr --------------------------------------------------
+//
+// Extract the base SGPR MCRegister from the second operand of a
+// tensor_load_to_lds instruction. The second operand is an 8-SGPR group
+// descriptor (SReg_256); we need its first sub-register for the
+// s_pack_hh_b32_b16 fix.
+
+MCRegister getDescriptorBaseSgpr(const MCInst &Inst,
+                                 const MCRegisterInfo &MRI) {
+  if (Inst.getNumOperands() < 2 || !Inst.getOperand(1).isReg())
+    return MCRegister();
+  MCRegister Tuple = MCRegister(Inst.getOperand(1).getReg());
+  SmallVector<MCRegister, 4> Subs = getDirectSubRegs(Tuple, MRI);
+  return Subs.empty() ? MCRegister() : Subs[0];
+}
+
+// -- isSgprLiveAfter --------------------------------------------------------
+//
+// Conservative forward-scan heuristic. Returns true if the given SGPR
+// (identified by its MCRegister) is used before being redefined in the
+// instruction stream following Idx. Conservatively returns true on
+// control-flow-affecting instructions or end of stream.
+
+bool isSgprLiveAfter(const PatchContext &Ctx, size_t Idx,
+                     MCRegister SgprMCReg) {
+  if (!SgprMCReg.isValid())
+    return true;
+
+  const MCRegisterInfo &MRI = *Ctx.LS.MRI;
+  const MCInstrInfo &MCII = *Ctx.LS.MCII;
+
+  for (size_t I = Idx + 1; I < Ctx.Decoded.size(); ++I) {
+    const InternalDecodedInst &DI = Ctx.Decoded[I];
+    if (DI.Mnemonic == "<unknown>" || DI.Mnemonic == "<replaced>")
+      continue;
+
+    const MCInst &Inst = DI.Inst;
+    const MCInstrDesc &Desc = MCII.get(Inst.getOpcode());
+
+    if (DI.Mnemonic == "s_endpgm")
+      return false;
+
+    if (Desc.mayAffectControlFlow(Inst, MRI))
+      return true;
+
+    unsigned NumDefs = Desc.getNumDefs();
+    auto RegInRange = [&](ArrayRef<MCOperand> Ops) {
+      for (const MCOperand &Op : Ops) {
+        if (!Op.isReg() || !Op.getReg())
+          continue;
+        if (MRI.regsOverlap(Op.getReg(), SgprMCReg.id()))
+          return true;
+      }
+      return false;
+    };
+    ArrayRef<MCOperand> Operands = Inst.getOperands();
+    ArrayRef<MCOperand> Defs = Operands.slice(0, NumDefs);
+    ArrayRef<MCOperand> Uses = Operands.slice(NumDefs);
+    if (RegInRange(Uses))
+      return true;
+    if (RegInRange(Defs))
+      return false;
+  }
+
+  return true;
+}
+
+// -- allocScratchVgpr -------------------------------------------------------
+std::optional<unsigned> allocScratchVgpr(PatchContext &Ctx, size_t Idx) {
+  InternalDecodedInst &DI = Ctx.Decoded[Idx];
+  std::string KernelName = Ctx.Elf.findKernelAtOffset(DI.Offset);
+  unsigned KdVgprs = 0;
+  if (std::optional<unsigned> Opt =
+          Ctx.Elf.getKernelVgprCount(KernelName, Ctx.Config.VgprGranuleSize))
+    KdVgprs = *Opt;
+
+  ScratchAllocator Alloc(Ctx.Liveness.LiveBefore[Idx], KdVgprs,
+                         Ctx.Config.MaxVgprs);
+  std::optional<unsigned> ScratchOpt = Alloc.alloc();
+  if (!ScratchOpt)
+    return std::nullopt;
+
+  if (Alloc.extraVgprsNeeded() > 0 && !KernelName.empty()) {
+    KernelPatchStats &Stats = Ctx.KernelStats[KernelName];
+    Stats.ExtraVgprs = std::max(Stats.ExtraVgprs, Alloc.extraVgprsNeeded());
+    Stats.ScratchAboveKd += Alloc.extraVgprsNeeded();
+  }
+
+  return *ScratchOpt;
+}
+
+// -- patchTensorLoadToLds ---------------------------------------------------
+//
+// Prepend s_pack_hh_b32_b16 to clear multicast routing bits in the group
+// descriptor's base SGPR. If the SGPR is live after the tensor_load, bracket
+// the sequence with v_writelane/v_readlane to save and restore its value
+// through a scratch VGPR lane.
+
+bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
+  InternalDecodedInst &DI = Ctx.Decoded[Idx];
+  const MCRegisterInfo &MRI = *Ctx.LS.MRI;
+
+  MCRegister BaseMCReg = getDescriptorBaseSgpr(DI.Inst, MRI);
+  if (!BaseMCReg.isValid()) {
+    log() << "hotswap: error: tensor_load_to_lds: could not extract descriptor "
+             "base register\n";
+    return false;
+  }
+
+  // Idempotency guard: check whether the immediately preceding instruction
+  // matches one of the specific patterns we emit during patching:
+  //   dead-SGPR path: s_pack_hh_b32_b16 sN, 0, sN  (dst == BaseMCReg)
+  //   live-SGPR path: v_writelane_b32 vX, sN, 0     (src == BaseMCReg)
+  if (Idx > 0) {
+    const InternalDecodedInst &Prev = Ctx.Decoded[Idx - 1];
+    const MCInst &PI = Prev.Inst;
+    if (Prev.Mnemonic == "s_pack_hh_b32_b16" && PI.getNumOperands() >= 3 &&
+        PI.getOperand(0).isReg() &&
+        MRI.regsOverlap(PI.getOperand(0).getReg(), BaseMCReg.id()) &&
+        PI.getOperand(1).isImm() && PI.getOperand(1).getImm() == 0)
+      return false;
+    if (Prev.Mnemonic == "v_writelane_b32" && PI.getNumOperands() >= 3 &&
+        PI.getOperand(1).isReg() &&
+        MRI.regsOverlap(PI.getOperand(1).getReg(), BaseMCReg.id()) &&
+        PI.getOperand(2).isImm() && PI.getOperand(2).getImm() == 0)
+      return false;
+  }
+
+  std::string BaseSreg = toAsmRegName(MRI, BaseMCReg);
+
+  std::string PackAsm = "s_pack_hh_b32_b16 " + BaseSreg + ", 0, " + BaseSreg;
+  SmallVector<uint8_t> PackBytes = assembleSingleInst(PackAsm, Ctx.LS);
+  if (PackBytes.empty()) {
+    log() << "hotswap: tensor_load_to_lds pack: assembly failed: " << PackAsm
+          << "\n";
+    return false;
+  }
+
+  bool SgprLive = isSgprLiveAfter(Ctx, Idx, BaseMCReg);
+
+  const uint8_t *OrigInst = Ctx.Text + DI.Offset;
+
+  if (SgprLive) {
+    std::optional<unsigned> ScratchVgpr = allocScratchVgpr(Ctx, Idx);
+    if (!ScratchVgpr) {
+      log() << "hotswap: error: tensor_load_to_lds: no scratch VGPR "
+               "available\n";
+      return false;
+    }
+
+    ScratchPatchInfo SPI;
+    SPI.Offset = DI.Offset;
+    SPI.ScratchRegs.resize(Ctx.Config.MaxVgprs);
+    SPI.ScratchRegs.set(*ScratchVgpr);
+    Ctx.OutScratchPatches.push_back(std::move(SPI));
+
+    std::string V = "v" + std::to_string(*ScratchVgpr);
+    std::string SaveAsm = "v_writelane_b32 " + V + ", " + BaseSreg + ", 0";
+    std::string RestoreAsm = "v_readlane_b32 " + BaseSreg + ", " + V + ", 0";
+    SmallVector<uint8_t> Save = assembleSingleInst(SaveAsm, Ctx.LS);
+    SmallVector<uint8_t> Restore = assembleSingleInst(RestoreAsm, Ctx.LS);
+    if (Save.empty() || Restore.empty()) {
+      log() << "hotswap: tensor_load_to_lds: save/restore assembly failed\n";
+      return false;
+    }
+
+    SmallVector<uint8_t> Replacement;
+    Replacement.append(Save.begin(), Save.end());
+    Replacement.append(PackBytes.begin(), PackBytes.end());
+    Replacement.append(OrigInst, OrigInst + DI.Size);
+    Replacement.append(Restore.begin(), Restore.end());
+
+    if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement))
+      return false;
+
+    log() << "hotswap: tensor_load_to_lds: " << BaseSreg
+          << " live, save/restore via " << V << "\n";
+  } else {
+    SmallVector<uint8_t> Replacement;
+    Replacement.append(PackBytes.begin(), PackBytes.end());
+    Replacement.append(OrigInst, OrigInst + DI.Size);
+
+    if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement))
+      return false;
+
+    log() << "hotswap: tensor_load_to_lds: " << BaseSreg
+          << " dead, no save/restore needed\n";
+  }
+
+  DI.Mnemonic = "<replaced>";
+  return true;
+}
+
+} // anonymous namespace
+
 // -- applyTrampolinePatches -------------------------------------------------
 //
 // Strong-symbol override. Handles B0 errata that produce replacement code
 // larger than the original instruction slot:
 //
 //   ds_*_2addr_stride64_*  -> split into two single-address DS ops
+//   tensor_load_to_lds     -> prepend s_pack_hh_b32_b16 (+ save/restore)
 
 static uint32_t applyTrampolinePatchesImpl(PatchContext &Ctx, size_t Idx) {
   StringRef Mnem(Ctx.Decoded[Idx].Mnemonic);
 
   if (!getDs2AddrReplacement(Mnem).empty())
     return patchDs2AddrStride64(Ctx, Idx) ? 1 : 0;
+
+  if (Mnem == "tensor_load_to_lds")
+    return patchTensorLoadToLds(Ctx, Idx) ? 1 : 0;
 
   return 0;
 }
