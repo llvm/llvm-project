@@ -74,7 +74,10 @@ void Preprocessor::appendMacroDirective(IdentifierInfo *II, MacroDirective *MD){
   auto *OldMD = StoredMD.getLatest();
   MD->setPrevious(OldMD);
   StoredMD.setLatest(MD);
-  StoredMD.overrideActiveModuleMacros(*this, II);
+  StoredMD.overrideActiveModuleMacros(
+      *ExternalSource, BP, *II,
+      PPReferences{CurSubmoduleState->VisibleModules, LeafModuleMacros,
+                   SourceMgr, LangOpts});
 
   if (needModuleMacros()) {
     // Track that we created a new macro directive, so we know we should
@@ -175,84 +178,6 @@ ModuleMacro *Preprocessor::getModuleMacro(Module *Mod,
   return ModuleMacros.FindNodeOrInsertPos(ID, InsertPos);
 }
 
-void Preprocessor::updateModuleMacroInfo(const IdentifierInfo *II,
-                                         FullModuleMacroInfo &Info) {
-  assert(Info.ActiveModuleMacrosGeneration !=
-             CurSubmoduleState->VisibleModules.getGeneration() &&
-         "don't need to update this macro name info");
-  Info.ActiveModuleMacrosGeneration =
-      CurSubmoduleState->VisibleModules.getGeneration();
-
-  auto Leaf = LeafModuleMacros.find(II);
-  if (Leaf == LeafModuleMacros.end()) {
-    // No imported macros at all: nothing to do.
-    return;
-  }
-
-  Info.ActiveModuleMacros.clear();
-
-  // Every macro that's locally overridden is overridden by a visible macro.
-  llvm::DenseMap<ModuleMacro *, int> NumHiddenOverrides;
-  for (auto *O : Info.OverriddenMacros)
-    NumHiddenOverrides[O] = -1;
-
-  // Collect all macros that are not overridden by a visible macro.
-  llvm::SmallVector<ModuleMacro *, 16> Worklist;
-  for (auto *LeafMM : Leaf->second) {
-    assert(LeafMM->getNumOverridingMacros() == 0 && "leaf macro overridden");
-    if (NumHiddenOverrides.lookup(LeafMM) == 0)
-      Worklist.push_back(LeafMM);
-  }
-  while (!Worklist.empty()) {
-    auto *MM = Worklist.pop_back_val();
-    if (CurSubmoduleState->VisibleModules.isVisible(MM->getOwningModule())) {
-      // We only care about collecting definitions; undefinitions only act
-      // to override other definitions.
-      if (MM->getMacroInfo())
-        Info.ActiveModuleMacros.push_back(MM);
-    } else {
-      for (auto *O : MM->overrides())
-        if ((unsigned)++NumHiddenOverrides[O] == O->getNumOverridingMacros())
-          Worklist.push_back(O);
-    }
-  }
-  // Our reverse postorder walk found the macros in reverse order.
-  std::reverse(Info.ActiveModuleMacros.begin(), Info.ActiveModuleMacros.end());
-
-  // Determine whether the macro name is ambiguous.
-  MacroInfo *MI = nullptr;
-  bool IsSystemMacro = true;
-  bool IsAmbiguous = false;
-  if (auto *MD = Info.MD) {
-    while (isa_and_nonnull<VisibilityMacroDirective>(MD))
-      MD = MD->getPrevious();
-    if (auto *DMD = dyn_cast_or_null<DefMacroDirective>(MD)) {
-      MI = DMD->getInfo();
-      IsSystemMacro &= SourceMgr.isInSystemHeader(DMD->getLocation());
-    }
-  }
-  for (auto *Active : Info.ActiveModuleMacros) {
-    auto *NewMI = Active->getMacroInfo();
-
-    // Before marking the macro as ambiguous, check if this is a case where
-    // both macros are in system headers. If so, we trust that the system
-    // did not get it wrong. This also handles cases where Clang's own
-    // headers have a different spelling of certain system macros:
-    //   #define LONG_MAX __LONG_MAX__ (clang's limits.h)
-    //   #define LONG_MAX 0x7fffffffffffffffL (system's limits.h)
-    //
-    // FIXME: Remove the defined-in-system-headers check. clang's limits.h
-    // overrides the system limits.h's macros, so there's no conflict here.
-    if (MI && NewMI != MI &&
-        !MI->isIdenticalTo(*NewMI, *this, /*Syntactically=*/true))
-      IsAmbiguous = true;
-    IsSystemMacro &= Active->getOwningModule()->IsSystem ||
-                     SourceMgr.isInSystemHeader(NewMI->getDefinitionLoc());
-    MI = NewMI;
-  }
-  Info.IsAmbiguous = IsAmbiguous && !IsSystemMacro;
-}
-
 void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
   ArrayRef<ModuleMacro*> Leaf;
   auto LeafIt = LeafModuleMacros.find(II);
@@ -265,7 +190,7 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
 
   llvm::errs() << "MacroState " << State << " " << II->getNameStart();
   const auto ModuleInfo =
-      State ? State->getModuleInfo(*this, II) : ModuleMacroInfo{};
+      State ? getModuleInfo(*State, *II) : ModuleMacroInfo{};
   if (ModuleInfo.IsAmbiguous)
     llvm::errs() << " ambiguous";
   if (State && !State->getOverriddenMacros().empty()) {

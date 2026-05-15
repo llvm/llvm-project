@@ -26,6 +26,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/MacroState.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -873,137 +874,6 @@ private:
   };
   SmallVector<MacroExpandsInfo, 2> DelayedMacroExpandsCallbacks;
 
-  /// Information about a name that has been used to define a module macro.
-  struct FullModuleMacroInfo {
-    /// The most recent macro directive for this identifier.
-    MacroDirective *MD;
-
-    /// The active module macros for this identifier.
-    llvm::TinyPtrVector<ModuleMacro *> ActiveModuleMacros;
-
-    /// The generation number at which we last updated ActiveModuleMacros.
-    /// \see Preprocessor::VisibleModules.
-    unsigned ActiveModuleMacrosGeneration = 0;
-
-    /// Whether this macro name is ambiguous.
-    bool IsAmbiguous = false;
-
-    /// The module macros that are overridden by this macro.
-    llvm::TinyPtrVector<ModuleMacro *> OverriddenMacros;
-
-    FullModuleMacroInfo(MacroDirective *MD) : MD(MD) {}
-  };
-
-  /// The state of a macro for an identifier.
-  class MacroState {
-    mutable llvm::PointerUnion<MacroDirective *, FullModuleMacroInfo *> State;
-
-    FullModuleMacroInfo *getFullModuleInfo(Preprocessor &PP,
-                                           const IdentifierInfo *II) const {
-      if (II->isOutOfDate())
-        PP.updateOutOfDateIdentifier(*II);
-      // FIXME: Find a spare bit on IdentifierInfo and store a
-      //        HasModuleMacros flag.
-      if (!II->hasMacroDefinition() ||
-          (!PP.getLangOpts().Modules &&
-           !PP.getLangOpts().ModulesLocalVisibility) ||
-          !PP.CurSubmoduleState->VisibleModules.getGeneration())
-        return nullptr;
-
-      auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State);
-      if (!Info) {
-        Info = new (PP.getPreprocessorAllocator())
-            FullModuleMacroInfo(cast<MacroDirective *>(State));
-        State = Info;
-      }
-
-      if (PP.CurSubmoduleState->VisibleModules.getGeneration() !=
-          Info->ActiveModuleMacrosGeneration)
-        PP.updateModuleMacroInfo(II, *Info);
-      return Info;
-    }
-
-  public:
-    MacroState() : MacroState(nullptr) {}
-    MacroState(MacroDirective *MD) : State(MD) {}
-
-    MacroState(MacroState &&O) noexcept : State(O.State) {
-      O.State = (MacroDirective *)nullptr;
-    }
-
-    MacroState &operator=(MacroState &&O) noexcept {
-      auto S = O.State;
-      O.State = (MacroDirective *)nullptr;
-      State = S;
-      return *this;
-    }
-
-    ~MacroState() {
-      if (auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State))
-        Info->~FullModuleMacroInfo();
-    }
-
-    MacroDirective *getLatest() const {
-      if (auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State))
-        return Info->MD;
-      return cast<MacroDirective *>(State);
-    }
-
-    void setLatest(MacroDirective *MD) {
-      if (auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State))
-        Info->MD = MD;
-      else
-        State = MD;
-    }
-
-    ModuleMacroInfo getModuleInfo(Preprocessor &PP,
-                                  const IdentifierInfo *II) const {
-      if (auto *Info = getFullModuleInfo(PP, II))
-        return ModuleMacroInfo{Info->ActiveModuleMacros, Info->IsAmbiguous};
-      return {};
-    }
-
-    MacroDirective::DefInfo findDirectiveAtLoc(SourceLocation Loc,
-                                               SourceManager &SourceMgr) const {
-      // FIXME: Incorporate module macros into the result of this.
-      if (auto *Latest = getLatest())
-        return Latest->findDirectiveAtLoc(Loc, SourceMgr);
-      return {};
-    }
-
-    void overrideActiveModuleMacros(Preprocessor &PP, IdentifierInfo *II) {
-      if (auto *Info = getFullModuleInfo(PP, II)) {
-        Info->OverriddenMacros.insert(Info->OverriddenMacros.end(),
-                                      Info->ActiveModuleMacros.begin(),
-                                      Info->ActiveModuleMacros.end());
-        Info->ActiveModuleMacros.clear();
-        Info->IsAmbiguous = false;
-      }
-    }
-
-    ArrayRef<ModuleMacro*> getOverriddenMacros() const {
-      if (auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State))
-        return Info->OverriddenMacros;
-      return {};
-    }
-
-    void setOverriddenMacros(Preprocessor &PP,
-                             ArrayRef<ModuleMacro *> Overrides) {
-      auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State);
-      if (!Info) {
-        if (Overrides.empty())
-          return;
-        Info = new (PP.getPreprocessorAllocator())
-            FullModuleMacroInfo(cast<MacroDirective *>(State));
-        State = Info;
-      }
-      Info->OverriddenMacros.clear();
-      Info->OverriddenMacros.insert(Info->OverriddenMacros.end(),
-                                    Overrides.begin(), Overrides.end());
-      Info->ActiveModuleMacrosGeneration = 0;
-    }
-  };
-
   /// For each IdentifierInfo that was associated with a macro, we
   /// keep a mapping to the history of all macro definitions and #undefs in
   /// the reverse order (the latest one is in the head of the list).
@@ -1074,8 +944,7 @@ private:
 
   /// The list of module macros, for each identifier, that are not overridden by
   /// any other module macro.
-  llvm::DenseMap<const IdentifierInfo *, llvm::TinyPtrVector<ModuleMacro *>>
-      LeafModuleMacros;
+  LeafModuleMacrosMap LeafModuleMacros;
 
   /// Macros that we want to warn because they are not used at the end
   /// of the translation unit.
@@ -1215,6 +1084,14 @@ private:
   llvm::DenseMap<const char *, unsigned> RecordedSkippedRanges;
 
   void updateOutOfDateIdentifier(const IdentifierInfo &II) const;
+
+  ModuleMacroInfo getModuleInfo(const MacroState &MS,
+                                const IdentifierInfo &II) {
+    return MS.getModuleInfo(*ExternalSource, BP, II,
+                            PPReferences{CurSubmoduleState->VisibleModules,
+                                         LeafModuleMacros, SourceMgr,
+                                         LangOpts});
+  }
 
 public:
   Preprocessor(const PreprocessorOptions &PPOpts, DiagnosticsEngine &diags,
@@ -1418,7 +1295,7 @@ public:
     while (isa_and_nonnull<VisibilityMacroDirective>(MD))
       MD = MD->getPrevious();
     return MacroDefinition(dyn_cast_or_null<DefMacroDirective>(MD),
-                           S.getModuleInfo(*this, II));
+                           getModuleInfo(S, *II));
   }
 
   MacroDefinition getMacroDefinitionAtLoc(const IdentifierInfo *II,
@@ -1431,7 +1308,7 @@ public:
     if (auto *MD = S.getLatest())
       DI = MD->findDirectiveAtLoc(Loc, getSourceManager());
     // FIXME: Compute the set of active module macros at the specified location.
-    return MacroDefinition(DI.getDirective(), S.getModuleInfo(*this, II));
+    return MacroDefinition(DI.getDirective(), getModuleInfo(S, *II));
   }
 
   /// Given an identifier, return its latest non-imported MacroDirective
@@ -2608,11 +2485,6 @@ private:
   /// Determine whether we need to create module macros for #defines in the
   /// current context.
   bool needModuleMacros() const;
-
-  /// Update the set of active module macros and ambiguity flag for a module
-  /// macro name.
-  void updateModuleMacroInfo(const IdentifierInfo *II,
-                             FullModuleMacroInfo &Info);
 
   DefMacroDirective *AllocateDefMacroDirective(MacroInfo *MI,
                                                SourceLocation Loc);

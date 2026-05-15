@@ -737,7 +737,8 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc,
         continue;
 
       MacroState MS(Macro.second.getLatest());
-      MS.setOverriddenMacros(*this, Macro.second.getOverriddenMacros());
+      MS.setOverriddenMacros(getPreprocessorAllocator(),
+                             Macro.second.getOverriddenMacros());
       State.Macros.insert(std::make_pair(Macro.first, std::move(MS)));
     }
   }
@@ -860,7 +861,7 @@ Module *Preprocessor::LeaveSubmodule(bool ForPragma) {
           // This macro is exposed to the rest of this compilation as a
           // ModuleMacro; we don't need to track its MacroDirective any more.
           Macro.setLatest(nullptr);
-          Macro.setOverriddenMacros(*this, {});
+          Macro.setOverriddenMacros(getPreprocessorAllocator(), {});
         }
         break;
       }
