@@ -10659,7 +10659,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
-  unsigned OpCode = MI.getOpcode();
+  [[maybe_unused]] unsigned OpCode = MI.getOpcode();
   assert((OpCode == TargetOpcode::G_SMULFIX ||
           OpCode == TargetOpcode::G_UMULFIX) &&
          "Operator must be either G_SMULFIX or G_UMULFIX!");

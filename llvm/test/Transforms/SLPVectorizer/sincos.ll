@@ -8,40 +8,52 @@
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x double>, ptr @phase, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast { <8 x double>, <8 x double> } @llvm.sincos.v8f64(<8 x double> [[TMP0]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <8 x double>, <8 x double> } [[TMP1]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <8 x double>, <8 x double> } [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr @phase, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[TMP1]], 1
 ; CHECK-NEXT:    store double [[TMP2]], ptr @sinval, align 16
 ; CHECK-NEXT:    store double [[TMP3]], ptr @cosval, align 16
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @phase, i64 8), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { double, double } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { double, double } [[TMP5]], 1
 ; CHECK-NEXT:    store double [[TMP6]], ptr getelementptr inbounds nuw (i8, ptr @sinval, i64 8), align 8
 ; CHECK-NEXT:    store double [[TMP7]], ptr getelementptr inbounds nuw (i8, ptr @cosval, i64 8), align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x double> [[TMP5]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x double> [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @phase, i64 16), align 16
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP8]])
+; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { double, double } [[TMP9]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { double, double } [[TMP9]], 1
 ; CHECK-NEXT:    store double [[TMP10]], ptr getelementptr inbounds nuw (i8, ptr @sinval, i64 16), align 16
 ; CHECK-NEXT:    store double [[TMP11]], ptr getelementptr inbounds nuw (i8, ptr @cosval, i64 16), align 16
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <8 x double> [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x double> [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @phase, i64 24), align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP12]])
+; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { double, double } [[TMP13]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { double, double } [[TMP13]], 1
 ; CHECK-NEXT:    store double [[TMP14]], ptr getelementptr inbounds nuw (i8, ptr @sinval, i64 24), align 8
 ; CHECK-NEXT:    store double [[TMP15]], ptr getelementptr inbounds nuw (i8, ptr @cosval, i64 24), align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x double> [[TMP5]], i32 4
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <8 x double> [[TMP4]], i32 4
+; CHECK-NEXT:    [[TMP16:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @phase, i64 32), align 16
+; CHECK-NEXT:    [[TMP17:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP16]])
+; CHECK-NEXT:    [[TMP18:%.*]] = extractvalue { double, double } [[TMP17]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = extractvalue { double, double } [[TMP17]], 1
 ; CHECK-NEXT:    store double [[TMP18]], ptr getelementptr inbounds nuw (i8, ptr @sinval, i64 32), align 16
 ; CHECK-NEXT:    store double [[TMP19]], ptr getelementptr inbounds nuw (i8, ptr @cosval, i64 32), align 16
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <8 x double> [[TMP5]], i32 5
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <8 x double> [[TMP4]], i32 5
+; CHECK-NEXT:    [[TMP20:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @phase, i64 40), align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP20]])
+; CHECK-NEXT:    [[TMP22:%.*]] = extractvalue { double, double } [[TMP21]], 0
+; CHECK-NEXT:    [[TMP23:%.*]] = extractvalue { double, double } [[TMP21]], 1
 ; CHECK-NEXT:    store double [[TMP22]], ptr getelementptr inbounds nuw (i8, ptr @sinval, i64 40), align 8
 ; CHECK-NEXT:    store double [[TMP23]], ptr getelementptr inbounds nuw (i8, ptr @cosval, i64 40), align 8
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x double> [[TMP5]], i32 6
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <8 x double> [[TMP4]], i32 6
+; CHECK-NEXT:    [[TMP24:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @phase, i64 48), align 16
+; CHECK-NEXT:    [[TMP25:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP24]])
+; CHECK-NEXT:    [[TMP26:%.*]] = extractvalue { double, double } [[TMP25]], 0
+; CHECK-NEXT:    [[TMP27:%.*]] = extractvalue { double, double } [[TMP25]], 1
 ; CHECK-NEXT:    store double [[TMP26]], ptr getelementptr inbounds nuw (i8, ptr @sinval, i64 48), align 16
 ; CHECK-NEXT:    store double [[TMP27]], ptr getelementptr inbounds nuw (i8, ptr @cosval, i64 48), align 16
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <8 x double> [[TMP5]], i32 7
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <8 x double> [[TMP4]], i32 7
+; CHECK-NEXT:    [[TMP28:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @phase, i64 56), align 8
+; CHECK-NEXT:    [[TMP29:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP28]])
+; CHECK-NEXT:    [[TMP30:%.*]] = extractvalue { double, double } [[TMP29]], 0
+; CHECK-NEXT:    [[TMP31:%.*]] = extractvalue { double, double } [[TMP29]], 1
 ; CHECK-NEXT:    store double [[TMP30]], ptr getelementptr inbounds nuw (i8, ptr @sinval, i64 56), align 8
 ; CHECK-NEXT:    store double [[TMP31]], ptr getelementptr inbounds nuw (i8, ptr @cosval, i64 56), align 8
 ; CHECK-NEXT:    ret i32 0
