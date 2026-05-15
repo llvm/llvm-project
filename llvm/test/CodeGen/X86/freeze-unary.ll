@@ -209,10 +209,17 @@ declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
 define i32 @freeze_ctlz(i32 %a0) nounwind {
 ; X86-LABEL: freeze_ctlz:
 ; X86:       # %bb.0:
-; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    je .LBB12_1
+; X86-NEXT:  # %bb.2: # %select.false.sink
+; X86-NEXT:    bsrl %eax, %ecx
 ; X86-NEXT:    movl $63, %eax
 ; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    xorl $31, %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB12_1:
+; X86-NEXT:    movl $32, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ctlz:

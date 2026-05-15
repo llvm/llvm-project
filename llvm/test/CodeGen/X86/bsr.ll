@@ -248,26 +248,27 @@ define i64 @cmov_bsr64(i64 %x, i64 %y) nounwind {
 define i64 @cmov_bsr64_undef(i64 %x, i64 %y) nounwind {
 ; X86-LABEL: cmov_bsr64_undef:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    jne .LBB7_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    orl %eax, %edx
+; X86-NEXT:    je .LBB7_1
+; X86-NEXT:  # %bb.2: # %select.false.sink
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    jne .LBB7_3
+; X86-NEXT:  # %bb.4: # %select.false.sink
 ; X86-NEXT:    bsrl %ecx, %eax
 ; X86-NEXT:    xorl $31, %eax
 ; X86-NEXT:    orl $32, %eax
-; X86-NEXT:    orl %edx, %ecx
-; X86-NEXT:    jne .LBB7_5
-; X86-NEXT:  .LBB7_4:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    retl
+; X86-NEXT:    jmp .LBB7_5
 ; X86-NEXT:  .LBB7_1:
-; X86-NEXT:    bsrl %edx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB7_3:
+; X86-NEXT:    bsrl %eax, %eax
 ; X86-NEXT:    xorl $31, %eax
-; X86-NEXT:    orl %edx, %ecx
-; X86-NEXT:    je .LBB7_4
-; X86-NEXT:  .LBB7_5:
+; X86-NEXT:  .LBB7_5: # %select.false.sink
 ; X86-NEXT:    xorl $63, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
@@ -372,20 +373,23 @@ define i128 @cmov_bsr128(i128 %x, i128 %y) nounwind {
 ;
 ; X64-LABEL: cmov_bsr128:
 ; X64:       # %bb.0:
-; X64-NEXT:    bsrq %rsi, %r8
-; X64-NEXT:    xorq $63, %r8
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    movq %rdi, %rdx
+; X64-NEXT:    orq %rsi, %rdx
+; X64-NEXT:    je .LBB8_2
+; X64-NEXT:  # %bb.1: # %select.false.sink
+; X64-NEXT:    bsrq %rsi, %rcx
+; X64-NEXT:    xorq $63, %rcx
 ; X64-NEXT:    movl $127, %eax
 ; X64-NEXT:    bsrq %rdi, %rax
 ; X64-NEXT:    xorq $63, %rax
 ; X64-NEXT:    addq $64, %rax
 ; X64-NEXT:    testq %rsi, %rsi
-; X64-NEXT:    cmovneq %r8, %rax
+; X64-NEXT:    cmovneq %rcx, %rax
 ; X64-NEXT:    xorq $127, %rax
-; X64-NEXT:    xorl %r8d, %r8d
-; X64-NEXT:    orq %rsi, %rdi
-; X64-NEXT:    cmoveq %rdx, %rax
-; X64-NEXT:    cmoveq %rcx, %r8
-; X64-NEXT:    movq %r8, %rdx
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:  .LBB8_2: # %select.end
+; X64-NEXT:    movq %rcx, %rdx
 ; X64-NEXT:    retq
   %1 = tail call i128 @llvm.ctlz.i128(i128 %x, i1 false)
   %2 = xor i128 %1, 127
@@ -404,60 +408,62 @@ define i128 @cmov_bsr128_undef(i128 %x, i128 %y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 28(%ebp), %edx
-; X86-NEXT:    movl 32(%ebp), %edi
-; X86-NEXT:    movl 36(%ebp), %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    jne .LBB9_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    bsrl %edi, %esi
-; X86-NEXT:    xorl $31, %esi
-; X86-NEXT:    orl $32, %esi
-; X86-NEXT:    jmp .LBB9_3
-; X86-NEXT:  .LBB9_1:
-; X86-NEXT:    bsrl %eax, %esi
-; X86-NEXT:    xorl $31, %esi
-; X86-NEXT:  .LBB9_3:
+; X86-NEXT:    movl 36(%ebp), %edx
+; X86-NEXT:    movl 32(%ebp), %esi
+; X86-NEXT:    movl 28(%ebp), %edi
 ; X86-NEXT:    movl 24(%ebp), %ebx
+; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    movl %ebx, %ecx
+; X86-NEXT:    orl %esi, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    je .LBB9_1
+; X86-NEXT:  # %bb.2: # %select.true.sink
 ; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    jne .LBB9_4
-; X86-NEXT:  # %bb.5:
-; X86-NEXT:    bsrl %ebx, %ecx
+; X86-NEXT:    jne .LBB9_3
+; X86-NEXT:  # %bb.4: # %select.true.sink
+; X86-NEXT:    bsrl %esi, %ecx
 ; X86-NEXT:    xorl $31, %ecx
 ; X86-NEXT:    orl $32, %ecx
-; X86-NEXT:    orl %eax, %edi
+; X86-NEXT:    testl %edi, %edi
 ; X86-NEXT:    je .LBB9_7
-; X86-NEXT:    jmp .LBB9_8
-; X86-NEXT:  .LBB9_4:
+; X86-NEXT:  .LBB9_6:
+; X86-NEXT:    bsrl %edi, %edi
+; X86-NEXT:    xorl $31, %edi
+; X86-NEXT:    orl %edx, %esi
+; X86-NEXT:    je .LBB9_9
+; X86-NEXT:    jmp .LBB9_10
+; X86-NEXT:  .LBB9_1:
+; X86-NEXT:    movl 52(%ebp), %esi
+; X86-NEXT:    movl 48(%ebp), %edi
+; X86-NEXT:    movl 44(%ebp), %edx
+; X86-NEXT:    movl 40(%ebp), %ecx
+; X86-NEXT:    jmp .LBB9_11
+; X86-NEXT:  .LBB9_3:
 ; X86-NEXT:    bsrl %edx, %ecx
 ; X86-NEXT:    xorl $31, %ecx
-; X86-NEXT:    orl %eax, %edi
-; X86-NEXT:    jne .LBB9_8
-; X86-NEXT:  .LBB9_7:
-; X86-NEXT:    orl $64, %ecx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:  .LBB9_8:
-; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    orl 32(%ebp), %ebx
-; X86-NEXT:    orl %edx, %ebx
-; X86-NEXT:    jne .LBB9_9
-; X86-NEXT:  # %bb.10:
-; X86-NEXT:    movl 48(%ebp), %edx
-; X86-NEXT:    movl 52(%ebp), %edi
-; X86-NEXT:    movl 40(%ebp), %esi
-; X86-NEXT:    movl 44(%ebp), %ecx
-; X86-NEXT:    jmp .LBB9_11
-; X86-NEXT:  .LBB9_9:
-; X86-NEXT:    xorl $127, %esi
-; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    testl %edi, %edi
+; X86-NEXT:    jne .LBB9_6
+; X86-NEXT:  .LBB9_7: # %select.true.sink
+; X86-NEXT:    bsrl %ebx, %edi
+; X86-NEXT:    xorl $31, %edi
+; X86-NEXT:    orl $32, %edi
+; X86-NEXT:    orl %edx, %esi
+; X86-NEXT:    jne .LBB9_10
+; X86-NEXT:  .LBB9_9: # %select.true.sink
+; X86-NEXT:    orl $64, %edi
+; X86-NEXT:    movl %edi, %ecx
+; X86-NEXT:  .LBB9_10: # %select.true.sink
+; X86-NEXT:    xorl $127, %ecx
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    xorl %edi, %edi
-; X86-NEXT:  .LBB9_11:
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl %edi, 12(%eax)
-; X86-NEXT:    movl %edx, 8(%eax)
-; X86-NEXT:    movl %ecx, 4(%eax)
-; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    xorl %esi, %esi
+; X86-NEXT:  .LBB9_11: # %select.end
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %edi, 8(%eax)
+; X86-NEXT:    movl %esi, 12(%eax)
 ; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -467,19 +473,22 @@ define i128 @cmov_bsr128_undef(i128 %x, i128 %y) nounwind {
 ;
 ; X64-LABEL: cmov_bsr128_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    bsrq %rsi, %r8
-; X64-NEXT:    xorq $63, %r8
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    movq %rdi, %rdx
+; X64-NEXT:    orq %rsi, %rdx
+; X64-NEXT:    je .LBB9_2
+; X64-NEXT:  # %bb.1: # %select.true.sink
+; X64-NEXT:    bsrq %rsi, %rcx
+; X64-NEXT:    xorq $63, %rcx
 ; X64-NEXT:    bsrq %rdi, %rax
 ; X64-NEXT:    xorq $63, %rax
 ; X64-NEXT:    orq $64, %rax
 ; X64-NEXT:    testq %rsi, %rsi
-; X64-NEXT:    cmovneq %r8, %rax
+; X64-NEXT:    cmovneq %rcx, %rax
 ; X64-NEXT:    xorq $127, %rax
-; X64-NEXT:    xorl %r8d, %r8d
-; X64-NEXT:    orq %rsi, %rdi
-; X64-NEXT:    cmoveq %rdx, %rax
-; X64-NEXT:    cmoveq %rcx, %r8
-; X64-NEXT:    movq %r8, %rdx
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:  .LBB9_2: # %select.end
+; X64-NEXT:    movq %rcx, %rdx
 ; X64-NEXT:    retq
   %1 = tail call i128 @llvm.ctlz.i128(i128 %x, i1 true)
   %2 = xor i128 %1, 127

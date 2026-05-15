@@ -122,16 +122,16 @@ define double @foo5(float %p1, double %p2, double %p3) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorps %xmm3, %xmm3
 ; CHECK-NEXT:    ucomiss %xmm3, %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.25E+0,0.0E+0]
 ; CHECK-NEXT:    jae .LBB4_1
-; CHECK-NEXT:  # %bb.2: # %select.false
+; CHECK-NEXT:  # %bb.2: # %select.false.sink
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.25E+0,0.0E+0]
 ; CHECK-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-NEXT:  .LBB4_3: # %select.end
 ; CHECK-NEXT:    subsd %xmm1, %xmm0
 ; CHECK-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB4_1:
-; CHECK-NEXT:    addsd %xmm0, %xmm1
+; CHECK-NEXT:  .LBB4_1: # %select.true.sink
+; CHECK-NEXT:    addsd {{.*}}, %xmm1
 ; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    movapd %xmm1, %xmm2
 ; CHECK-NEXT:    jmp .LBB4_3
@@ -156,27 +156,28 @@ define double @foo6(float %p1, double %p2, double %p3) nounwind {
 ; CHECK-NEXT:    movaps %xmm0, %xmm3
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm3
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.25E+0,0.0E+0]
 ; CHECK-NEXT:    jae .LBB5_1
-; CHECK-NEXT:  # %bb.2: # %select.false
+; CHECK-NEXT:  # %bb.2: # %select.false.sink
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.25E+0,0.0E+0]
 ; CHECK-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-NEXT:  .LBB5_3: # %select.end
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; CHECK-NEXT:    movapd %xmm0, %xmm4
 ; CHECK-NEXT:    jae .LBB5_5
-; CHECK-NEXT:  # %bb.4: # %select.false2
+; CHECK-NEXT:  # %bb.4: # %select.false
 ; CHECK-NEXT:    movapd %xmm1, %xmm4
 ; CHECK-NEXT:  .LBB5_5: # %select.end1
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; CHECK-NEXT:    movapd %xmm4, %xmm1
 ; CHECK-NEXT:    jae .LBB5_7
-; CHECK-NEXT:  # %bb.6: # %select.false4
+; CHECK-NEXT:  # %bb.6: # %select.false3
 ; CHECK-NEXT:    movapd %xmm2, %xmm1
-; CHECK-NEXT:  .LBB5_7: # %select.end3
+; CHECK-NEXT:  .LBB5_7: # %select.end2
 ; CHECK-NEXT:    subsd %xmm4, %xmm0
 ; CHECK-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB5_1:
+; CHECK-NEXT:  .LBB5_1: # %select.true.sink
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.25E+0,0.0E+0]
 ; CHECK-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-NEXT:    jmp .LBB5_3
 entry:
