@@ -228,6 +228,36 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
   for (const auto &entry : llvm::enumerate(recordType.getTypeList())) {
     const auto &memberName = entry.value().first;
     const auto &memberType = entry.value().second;
+
+    // OpenMP 5.0, 5.1, 5.2: Default Map Clause
+    //
+    // "If a component of a derived type list item is a map clause list item
+    // that results  from the predefined default mapper for that derived type,
+    // and the component is not also an explicit list item or the array base
+    // of an explicit list item on the same construct, then: if it has the
+    // POINTER attribute, it is attach-INELIGIBLE. If a list item in a map
+    // clause is an associated pointer that is attach-ineligible, the effect
+    // of the map clause does not apply to its pointer target."
+    //
+    // What this comes down to is we wish to skip emitting a map inside of
+    // the implicit declare mapper generation for pointer components. As well
+    // as preventing any nested record types that are pointers from being
+    // processed further by the declare mapper infrastructure. The
+    // descriptor ("pointer") should be mapped by the containing derived
+    // type, this prevents the data ("pointee") from being mapped and
+    // processed any further. We should, however, keep an eye on if the
+    // record types mapping applying to this descriptor poses issues, or
+    // if attach-ineligible still requires an attach map to be emitted
+    // alongside the descriptor, even if the pointee has no map emitted.
+    // if either case applies, then we will need to emit the maps here and
+    // then opt out of base address expansion for these implicit declare
+    // mappers in the MapInfoFinalization pass.
+    //
+    // Notably, this caveat does not apply to allocatables. They get
+    // deep-copy semantics.
+    if (fir::isPointerType(fir::unwrapRefType(memberType)))
+      continue;
+
     mlir::FlatSymbolRefAttr mapperId;
     if (auto recType = mlir::dyn_cast<fir::RecordType>(
             fir::getFortranElementType(memberType))) {
