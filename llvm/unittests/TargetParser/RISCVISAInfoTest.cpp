@@ -1385,6 +1385,7 @@ Experimental extensions
     zvfbfa               0.1
     zvfofp8min           0.2
     zvkgs                0.7
+    zvvfmm               0.1
     zvvmm                0.1
     zvzip                0.1
     smpmpmt              0.6

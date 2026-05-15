@@ -360,6 +360,59 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
 }
 
 //===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+def Arith_SubUIExtendedOp : Arith_Op<"subui_extended", [Pure,
+    AllTypesMatch<["lhs", "rhs", "diff"]>]> {
+  let summary = [{
+    extended unsigned integer subtraction operation returning difference and
+    borrow bit
+  }];
+
+  let description = [{
+    Performs (N+1)-bit subtraction on zero-extended operands. Returns two
+    results: the N-bit difference (same type as both operands), and the borrow
+    bit (boolean-like), where `1` indicates unsigned subtraction underflow
+    (i.e. `lhs < rhs` when interpreted as unsigned), while `0` indicates no
+    underflow.
+
+    Example:
+
+    ```mlir
+    // Scalar subtraction.
+    %diff, %borrow = arith.subui_extended %b, %c : i64, i1
+
+    // Vector element-wise subtraction.
+    %d:2 = arith.subui_extended %e, %f : vector<4xi32>, vector<4xi1>
+
+    // Tensor element-wise subtraction.
+    %x:2 = arith.subui_extended %y, %z : tensor<4x?xi8>, tensor<4x?xi1>
+    ```
+  }];
+
+  let arguments = (ins Arith_SignlessIntegerOrIndexLike:$lhs, Arith_SignlessIntegerOrIndexLike:$rhs);
+  let results = (outs Arith_SignlessIntegerOrIndexLike:$diff, BoolLike:$borrow);
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict `:` type($diff) `,` type($borrow)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
+      build($_builder, $_state, lhs.getType(), ::getI1SameShape(lhs.getType()),
+            lhs, rhs);
+    }]>
+  ];
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+
+  let extraClassDeclaration = [{
+    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 

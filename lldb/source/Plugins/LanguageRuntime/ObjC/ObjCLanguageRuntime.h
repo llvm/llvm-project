@@ -15,6 +15,8 @@
 #include <optional>
 #include <unordered_set>
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
@@ -340,7 +342,7 @@ protected:
 
   bool AddClass(ObjCISA isa, const ClassDescriptorSP &descriptor_sp) {
     if (isa != 0) {
-      m_isa_to_descriptor[isa] = descriptor_sp;
+      m_isa_to_descriptor.insert_or_assign(isa, descriptor_sp);
       return true;
     }
     return false;
@@ -352,8 +354,8 @@ protected:
   bool AddClass(ObjCISA isa, const ClassDescriptorSP &descriptor_sp,
                 uint32_t class_name_hash) {
     if (isa != 0) {
-      m_isa_to_descriptor[isa] = descriptor_sp;
-      m_hash_to_isa_map.insert(std::make_pair(class_name_hash, isa));
+      m_isa_to_descriptor.insert_or_assign(isa, descriptor_sp);
+      m_hash_to_isa_map[class_name_hash].push_back(isa);
       return true;
     }
     return false;
@@ -419,10 +421,19 @@ private:
 
   typedef std::map<ClassAndSel, lldb::addr_t> MsgImplMap;
   typedef std::map<ClassAndSelStr, lldb::addr_t> MsgImplStrMap;
-  typedef std::map<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
-  typedef std::multimap<uint32_t, ObjCISA> HashToISAMap;
+  typedef llvm::DenseMap<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
+
+  /// Keys are already djbHash values, so use identity as the hash function.
+  struct IdentityHashKeyInfo {
+    static constexpr uint32_t getEmptyKey() { return ~0U; }
+    static constexpr uint32_t getTombstoneKey() { return ~0U - 1; }
+    static unsigned getHashValue(uint32_t Val) { return Val; }
+    static bool isEqual(uint32_t LHS, uint32_t RHS) { return LHS == RHS; }
+  };
+
+  typedef llvm::SmallVector<ObjCISA, 2> ISAVector;
+  typedef llvm::DenseMap<uint32_t, ISAVector, IdentityHashKeyInfo> HashToISAMap;
   typedef ISAToDescriptorMap::iterator ISAToDescriptorIterator;
-  typedef HashToISAMap::iterator HashToISAIterator;
   typedef ThreadSafeDenseMap<void *, uint64_t> TypeSizeCache;
 
   MsgImplMap m_impl_cache;
