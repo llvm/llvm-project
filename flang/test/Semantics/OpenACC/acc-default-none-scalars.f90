@@ -30,6 +30,29 @@ subroutine default_none_scalar_precomputed(x, n, p, q)
   !$acc end parallel loop
 end subroutine
 
+! Non-scalar types always require an explicit data clause even with the flag:
+! character, derived type, allocatable, and pointer variables are excluded
+! from the pre-3.2 scalar extension.
+subroutine default_none_non_scalars()
+  character(10) :: c
+  type :: t
+    integer :: i
+  end type
+  type(t) :: x
+  integer, allocatable :: a
+  integer, pointer :: p
+  !$acc parallel default(none)
+  !ERROR: The DEFAULT(NONE) clause requires that 'c' must be listed in a data-mapping clause
+  c = "hi"
+  !ERROR: The DEFAULT(NONE) clause requires that 'x' must be listed in a data-mapping clause
+  x%i = 1
+  !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
+  a = 1
+  !ERROR: The DEFAULT(NONE) clause requires that 'p' must be listed in a data-mapping clause
+  p = 1
+  !$acc end parallel
+end subroutine
+
 ! Outer serial loop variable and scalars assigned in the outer loop body
 ! are read inside a nested ACC parallel loop.
 subroutine default_none_outer_loop_scalars(x, n, m)
