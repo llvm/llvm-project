@@ -82,3 +82,16 @@ def use_daemon_tool(
     ] = get_daemon_tool_inproc_builtin(tool_name, executable)
 
     return True
+
+
+def disable_daemon_tool(testing_config: TestingConfig, tool_name: str):
+    """
+    Remove the in-process built-in responsible for invoking the given tool as
+    a daemon, so that the tool is run normally instead.
+    """
+
+    testing_config.test_format.extra_inproc_builtins = {
+        key: inproc_builtin
+        for key, inproc_builtin in testing_config.test_format.extra_inproc_builtins.items()
+        if inproc_builtin.llvm_daemon_tool_identifier != tool_name
+    }
