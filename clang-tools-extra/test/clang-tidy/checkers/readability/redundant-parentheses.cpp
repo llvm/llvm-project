@@ -127,8 +127,21 @@ enum class FoldLevel {
   HeaderFlag = 0x2000,
 };
 
+int FoldLevelToInt(FoldLevel l) {
+  return static_cast<int>(l);
+}
+
 constexpr FoldLevel operator&(FoldLevel lhs, FoldLevel rhs) {
   return static_cast<FoldLevel>(static_cast<int>(lhs) & static_cast<int>(rhs));
+}
+
+constexpr FoldLevel operator*(FoldLevel lhs, FoldLevel rhs) {
+  return static_cast<FoldLevel>(static_cast<int>(lhs) * static_cast<int>(rhs));
+}
+
+
+constexpr FoldLevel operator+(FoldLevel lhs, FoldLevel rhs) {
+  return lhs;
 }
 
 constexpr bool UseOperatorAmpersand1(FoldLevel level) {
@@ -149,6 +162,23 @@ constexpr bool UseOperatorAmpersand3(FoldLevel level) {
 
 constexpr bool UseOperatorAmpersand4(FoldLevel level) {
   return ((level & FoldLevel::HeaderFlag) != FoldLevel::None);
+}
+
+constexpr bool UseOperatorAmpersand5(FoldLevel level) {
+  return FoldLevel::None != (level & FoldLevel::HeaderFlag);
+}
+
+constexpr bool UseOperatorAmpersand6(FoldLevel level) {
+  FoldLevel hf = FoldLevel::HeaderFlag;
+  return (((level & hf) * hf) != FoldLevel::None);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    return ((level & hf * hf) != FoldLevel::None);
+}
+
+constexpr bool UseOperatorPlus1(FoldLevel level) {
+  return (FoldLevelToInt(level + FoldLevel::None)) != 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    return FoldLevelToInt(level + FoldLevel::None) != 1;
 }
 
 const int bracket_int_plus_num = (4) + 5;

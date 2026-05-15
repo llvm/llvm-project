@@ -59,7 +59,7 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                 unless(anyOf(isInMacro(),
                              // sizeof(...) is common used.
                              hasParent(unaryExprOrTypeTraitExpr()),
-                             allOf(hasDescendant(cxxOperatorCallExpr()),
+                             allOf(has(cxxOperatorCallExpr()),
                                    hasParent(binaryOperator())))))
           .bind("dup"),
       this);
