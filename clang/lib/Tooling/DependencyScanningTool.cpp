@@ -288,7 +288,10 @@ initVFSForByNameScanning(ArrayRef<std::string> CommandLine) {
   static const std::string FakeInput(
       CompilerInstanceWithContext::MaxNumOfQueries, ' ');
 
-  StringRef InputPath = "/module-include.input";
+  StringRef InputPath =
+      llvm::sys::path::is_style_windows(llvm::sys::path::Style::native)
+          ? "Z:\\module-include.input"
+          : "/module-include.input";
   auto InputBuf = llvm::MemoryBuffer::getMemBuffer(FakeInput, InputPath);
 
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
