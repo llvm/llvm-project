@@ -109,4 +109,6 @@ public:
 } // namespace mca
 } // namespace llvm
 
+#undef DEBUG_TYPE
+
 #endif

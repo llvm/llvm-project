@@ -13,6 +13,8 @@
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 
+#define DEBUG_TYPE "lld-wasm-relocations"
+
 using namespace llvm;
 using namespace llvm::wasm;
 

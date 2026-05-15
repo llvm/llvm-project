@@ -20,6 +20,8 @@
 #include "llvm/Support/Path.h"
 #include <optional>
 
+#define DEBUG_TYPE "lld-wasm-synthetic-sections"
+
 using namespace llvm;
 using namespace llvm::wasm;
 

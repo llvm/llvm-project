@@ -492,4 +492,6 @@ extern OutStruct out;
 } // namespace wasm
 } // namespace lld
 
+#undef DEBUG_TYPE
+
 #endif

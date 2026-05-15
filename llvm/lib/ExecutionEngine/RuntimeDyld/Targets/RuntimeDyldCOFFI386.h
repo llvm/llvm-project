@@ -224,5 +224,7 @@ public:
 
 }
 
+#undef DEBUG_TYPE
+
 #endif
 

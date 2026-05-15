@@ -693,4 +693,6 @@ template <> inline void ConstantUniqueMap<InlineAsm>::freeConstants() {
 
 } // end namespace llvm
 
+#undef DEBUG_TYPE
+
 #endif // LLVM_LIB_IR_CONSTANTSCONTEXT_H

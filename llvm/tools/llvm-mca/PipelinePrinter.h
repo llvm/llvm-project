@@ -66,4 +66,6 @@ public:
 } // namespace mca
 } // namespace llvm
 
+#undef DEBUG_TYPE
+
 #endif // LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H

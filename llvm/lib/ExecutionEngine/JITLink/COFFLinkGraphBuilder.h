@@ -223,4 +223,6 @@ Error COFFLinkGraphBuilder::forEachRelocation(const object::SectionRef &RelSec,
 } // end namespace jitlink
 } // end namespace llvm
 
+#undef DEBUG_TYPE
+
 #endif // LIB_EXECUTIONENGINE_JITLINK_COFFLINKGRAPHBUILDER_H

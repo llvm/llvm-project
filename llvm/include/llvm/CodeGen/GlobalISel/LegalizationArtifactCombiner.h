@@ -1580,4 +1580,6 @@ private:
 
 } // namespace llvm
 
+#undef DEBUG_TYPE
+
 #endif // LLVM_CODEGEN_GLOBALISEL_LEGALIZATIONARTIFACTCOMBINER_H

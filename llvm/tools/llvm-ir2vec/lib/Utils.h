@@ -229,4 +229,6 @@ struct MIRContext {
 
 } // namespace llvm
 
+#undef DEBUG_TYPE
+
 #endif // LLVM_TOOLS_LLVM_IR2VEC_UTILS_UTILS_H

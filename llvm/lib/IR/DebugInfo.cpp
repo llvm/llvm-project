@@ -41,6 +41,8 @@
 #include <cassert>
 #include <optional>
 
+#define DEBUG_TYPE "debug-info"
+
 using namespace llvm;
 using namespace llvm::at;
 using namespace llvm::dwarf;
@@ -2196,7 +2198,7 @@ static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
   LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
 }
 
-#undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "assignment-tracking"
 
 void at::trackAssignments(Function::iterator Start, Function::iterator End,
