@@ -79,6 +79,7 @@ public:
   // Primary key for the comparator: ordinal of this child in its parent's
   // child list, min-merged across CUs to keep record-like type members in
   // source order. Sentinel UINT32_MAX sorts after any real observation.
+  // When set, overwrites the default getKey() in TypeComparator.
   std::atomic<uint32_t> SortKey = {std::numeric_limits<uint32_t>::max()};
 
   /// Children for current type.
