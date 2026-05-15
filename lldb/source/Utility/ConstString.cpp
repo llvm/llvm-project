@@ -26,59 +26,32 @@
 #include <cstdint>
 #include <cstring>
 
-#if defined(__APPLE__)
-#include <os/lock.h>
-#endif
-
 using namespace lldb_private;
 
+#if !defined(__APPLE__)
+using PoolMutex = std::shared_mutex;
+#else
+#include <os/lock.h>
+
 namespace {
-/// Lock guarding each shard of the ConstString pool. On Apple platforms it
-/// wraps os_unfair_lock, which is significantly faster than pthread_rwlock for
-/// concurrent writes, and roughly on par for concurrent reads. On all other
-/// platforms, it wraps std::shared_mutex, preserving reader/writer concurrency.
+/// On Apple platforms os_unfair_lock is significantly faster than
+/// pthread_rwlock for concurrent writes, and roughly on par for concurrent
+/// reads.
 ///
 /// The class satisfies both Lockable and SharedLockable so it composes with
 /// std::lock_guard and std::shared_lock.
 class PoolMutex {
 public:
-  void lock() {
-#if defined(__APPLE__)
-    os_unfair_lock_lock(&m_lock);
-#else
-    m_lock.lock();
-#endif
-  }
-  void unlock() {
-#if defined(__APPLE__)
-    os_unfair_lock_unlock(&m_lock);
-#else
-    m_lock.unlock();
-#endif
-  }
-  void lock_shared() {
-#if defined(__APPLE__)
-    os_unfair_lock_lock(&m_lock);
-#else
-    m_lock.lock_shared();
-#endif
-  }
-  void unlock_shared() {
-#if defined(__APPLE__)
-    os_unfair_lock_unlock(&m_lock);
-#else
-    m_lock.unlock_shared();
-#endif
-  }
+  void lock() { os_unfair_lock_lock(&m_lock); }
+  void unlock() { os_unfair_lock_unlock(&m_lock); }
+  void lock_shared() { os_unfair_lock_lock(&m_lock); }
+  void unlock_shared() { os_unfair_lock_unlock(&m_lock); }
 
 private:
-#if defined(__APPLE__)
   os_unfair_lock m_lock = OS_UNFAIR_LOCK_INIT;
-#else
-  std::shared_mutex m_lock;
-#endif
 };
 } // namespace
+#endif
 
 class Pool {
 public:
