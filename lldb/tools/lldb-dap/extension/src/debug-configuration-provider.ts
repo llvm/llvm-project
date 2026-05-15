@@ -61,6 +61,7 @@ const configurations: Record<string, DefaultConfig> = {
 
   // Keys for platform / target configuration.
   platformName: { type: "string", default: "" },
+  platformUrl: { type: "string", default: "" },
   targetTriple: { type: "string", default: "" },
 
   // Keys for debugger command hooks.

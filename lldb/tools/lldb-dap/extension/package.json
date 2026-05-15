@@ -229,6 +229,11 @@
             "type": "string",
             "description": "Name of the execution platform to override value derived from the program file."
           },
+          "lldb-dap.platformUrl": {
+            "order": 1,
+            "type": "string",
+            "description": "URL used to connect to the execution platform (e.g. \"connect://localhost:1234\"). Only meaningful for remote platforms selected via lldb-dap.platformName."
+          },
           "lldb-dap.initCommands": {
             "order": 2,
             "type": "array",
@@ -576,6 +581,10 @@
                 "type": "string",
                 "description": "Name of the execution platform to override value derived from the program file."
               },
+              "platformUrl": {
+                "type": "string",
+                "description": "URL used to connect to the execution platform (e.g. \"connect://localhost:1234\"). Only meaningful for remote platforms selected via platformName."
+              },
               "initCommands": {
                 "type": "array",
                 "items": {
@@ -814,6 +823,10 @@
               "platformName": {
                 "type": "string",
                 "description": "Name of the execution platform to override value derived from the program file."
+              },
+              "platformUrl": {
+                "type": "string",
+                "description": "URL used to connect to the execution platform (e.g. \"connect://localhost:1234\"). Only meaningful for remote platforms selected via platformName."
               },
               "attachCommands": {
                 "type": "array",
