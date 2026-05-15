@@ -3751,7 +3751,8 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
 }
 
 static std::optional<Fortran::semantics::Symbol::Flag>
-getSingleAccDeclareMappingFlag(const Fortran::semantics::Symbol &ultimate) {
+getSingleAccDeclareMappingFlag(const Fortran::semantics::Symbol &ultimate,
+                               mlir::Location loc) {
   std::optional<Fortran::semantics::Symbol::Flag> found;
   for (Fortran::semantics::Symbol::Flag f : {
            Fortran::semantics::Symbol::Flag::AccCreate,
@@ -3765,8 +3766,10 @@ getSingleAccDeclareMappingFlag(const Fortran::semantics::Symbol &ultimate) {
            Fortran::semantics::Symbol::Flag::AccPresent,
        }) {
     if (ultimate.test(f)) {
-      assert(!found.has_value() &&
-             "more than one ACC DECLARE data-mapping flag on a symbol");
+      if (found.has_value()) {
+        fir::emitFatalError(
+            loc, "more than one ACC DECLARE data-mapping flag on a symbol");
+      }
       found = f;
     }
   }
@@ -3894,8 +3897,8 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                                "clause");
                         }
                         std::optional<Fortran::semantics::Symbol::Flag>
-                            parentMapping{
-                                getSingleAccDeclareMappingFlag(parentUlt)};
+                            parentMapping{getSingleAccDeclareMappingFlag(
+                                parentUlt, operandLocation)};
                         if (!parentMapping) {
                           fir::emitFatalError(
                               operandLocation,
