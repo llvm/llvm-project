@@ -87,6 +87,9 @@ public:
 /// \param Context - Context which will be used for the parsed LLVM IR module.
 /// \param ProcessIRFunction - function to run on every IR function or stub
 /// loaded from the MIR file.
+/// \param StdinSource - Read from a different source instead of STDIN, for
+/// in-process tool execution. This is provided to the tool's run function, for
+/// example by the daemon driver.
 LLVM_ABI std::unique_ptr<MIRParser> createMIRParserFromFile(
     StringRef Filename, SMDiagnostic &Error, LLVMContext &Context,
     std::function<void(Function &)> ProcessIRFunction = nullptr,
