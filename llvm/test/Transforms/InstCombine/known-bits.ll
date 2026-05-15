@@ -1785,14 +1785,14 @@ define i32 @test_none(float nofpclass(all) %x) {
 
 ; We cannot make assumptions about the sign of result of sqrt
 ; when the input is a negative value (except for -0).
-define i1 @pr92217() {
+define i1 @pr92217(float nofpclass(nan zero pnorm psub pinf) %a) {
 ; CHECK-LABEL: @pr92217(
-; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float f0xF6F5F4F3)
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x = call float @llvm.sqrt.f32(float 0xC6DEBE9E60000000)
+  %x = call float @llvm.sqrt.f32(float %a)
   %y = bitcast float %x to i32
   %cmp = icmp slt i32 %y, 0
   ret i1 %cmp
