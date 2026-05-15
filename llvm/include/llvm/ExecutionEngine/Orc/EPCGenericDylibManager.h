@@ -18,6 +18,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EPCGENERICDYLIBMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICDYLIBMANAGER_H
 
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
@@ -89,7 +90,7 @@ public:
 
   /// Search for symbols in the target process.
   LLVM_ABI void
-  lookupSymbolsAsync(ArrayRef<DylibManager::LookupRequest> Request,
+  lookupSymbolsAsync(tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
                      DylibManager::SymbolLookupCompleteFn Complete) override;
 
 private:

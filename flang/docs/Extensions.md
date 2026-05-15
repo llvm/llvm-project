@@ -527,6 +527,14 @@ end program
 * Default exponent of zero, e.g. `3.14159E`, on a READ from a
   fixed-width input field.  Includes the case with only an
   exponent letter for compatibility with other compilers.
+* Allow a data object or function pointer as the `C_LOC()`
+  argument (not just pointers/targets). The compiler will not
+  reason about aliases created through non-target non-pointer
+  arguments and code generated using such aliases may exhibit
+  unexpected behavior. This is for compatibility with
+  legacy code; legacy code should be updated to be correct.
+  This could be removed at any time.
+  [-frelaxed-c-loc-checks]
 
 ### Extensions and legacy features deliberately not supported
 

@@ -530,3 +530,17 @@ void nocrash_on_locint_offset(void *addr, void* from, struct S s) {
   size_t iAdd = (size_t) addr;
   memcpy(((void *) &(s.f)), from, iAdd);
 }
+
+// PR#190457 - Crash on memcpy with zero-size element type (empty struct).
+// In the GNU C extension, empty structs have sizeof == 0, which caused a
+// division by zero in checkInit. On MSVC targets, even in C mode, empty
+// structs have nonzero sizeof (due to ABI requirements), so the overflow
+// warnings don't fire there.
+void nocrash_on_empty_struct_memcpy(void) {
+  struct {} a[10];
+  __builtin_memcpy(&a[2], a, 2); // no-crash
+#if !defined(_WIN32) || defined(__MINGW32__)
+  // expected-warning@-2 {{'memcpy' will always overflow; destination buffer has size 0, but size argument is 2}}
+  // expected-warning@-3 {{Memory copy function overflows the destination buffer}}
+#endif
+}

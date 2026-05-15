@@ -45,7 +45,7 @@ bb:
   %tmp8 = getelementptr inbounds i8, ptr %tmp2, i64 12
   br label %header
 
-header:                                              ; preds = %latch, %bb
+header:
   %tmp10 = phi i64 [ %tmp41, %latch ], [ 3, %bb ]
   %tmp11 = add nsw i64 %tmp10, -1
   %storeaddr12 = getelementptr inbounds i32, ptr %tmp6, i64 %tmp11
@@ -59,11 +59,11 @@ header:                                              ; preds = %latch, %bb
   store i8 %tmp17, ptr %tmp18, align 1
   br i1 %tmp15, label %bb19, label %bb20
 
-bb19:                                             ; preds = %header
+bb19:
   store i32 0, ptr %storeaddr12, align 4
   br label %bb20
 
-bb20:                                             ; preds = %bb19, %header
+bb20:
   %tmp21 = add nuw nsw i64 %tmp10, 1
   %storeaddr22 = getelementptr inbounds i32, ptr %tmp6, i64 %tmp10
   %tmp23 = load i32, ptr %storeaddr22, align 4
@@ -76,11 +76,11 @@ bb20:                                             ; preds = %bb19, %header
   store i8 %tmp27, ptr %tmp28, align 1
   br i1 %tmp25, label %bb29, label %bb30
 
-bb29:                                             ; preds = %bb20
+bb29:
   store i32 0, ptr %storeaddr22, align 4
   br label %bb30
 
-bb30:                                             ; preds = %bb29, %bb20
+bb30:
   %tmp31 = add nuw nsw i64 %tmp10, 2
   %storeaddr32 = getelementptr inbounds i32, ptr %tmp6, i64 %tmp21
   %tmp33 = load i32, ptr %storeaddr32, align 4
@@ -93,15 +93,15 @@ bb30:                                             ; preds = %bb29, %bb20
   store i8 %tmp37, ptr %tmp38, align 1
   br i1 %tmp35, label %bb39, label %latch
 
-bb39:                                             ; preds = %bb30
+bb39:
   store i32 0, ptr %storeaddr32, align 4
   br label %latch
 
-latch:                                             ; preds = %bb39, %bb30
+latch:
   %tmp41 = add nuw nsw i64 %tmp10, 3
   %tmp42 = icmp ugt i64 %tmp31, 67
   br i1 %tmp42, label %exit, label %header
 
-exit:                                             ; preds = %latch
+exit:
   ret void
 }

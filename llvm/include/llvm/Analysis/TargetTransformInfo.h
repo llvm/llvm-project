@@ -754,9 +754,9 @@ public:
   // vectorization should be considered.
   LLVM_ABI unsigned getEpilogueVectorizationMinVF() const;
 
-  /// Query the target whether it would be prefered to create a predicated
+  /// Query the target whether it would be preferred to create a tail-folded
   /// vector loop, which can avoid the need to emit a scalar epilogue loop.
-  LLVM_ABI bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const;
+  LLVM_ABI bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const;
 
   /// Query the target what the preferred style of tail folding is.
   LLVM_ABI TailFoldingStyle getPreferredTailFoldingStyle() const;
@@ -1038,8 +1038,6 @@ public:
   /// Return true if the input function is internal, should use fastcc calling
   /// convention.
   LLVM_ABI bool useFastCCForInternalCall(Function &F) const;
-
-  LLVM_ABI bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
 
   /// Identifies if the vector form of the intrinsic has a scalar operand.
   LLVM_ABI bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,

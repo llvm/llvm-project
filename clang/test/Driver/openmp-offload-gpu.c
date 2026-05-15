@@ -428,3 +428,32 @@
 // RUN:   | FileCheck --check-prefix=NO-PROFILE %s
 //
 // NO-PROFILE-NOT: --device-compiler=amdgcn-amd-amdhsa=-fprofile-generate
+
+//
+// Check that `-fsanitize=` flags are forwarded to link in the runtime
+// only if present in the resource directory.
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --offload-arch=gfx906 -fsanitize=undefined \
+// RUN:     -fsanitize-minimal-runtime -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=UBSAN %s
+//
+// UBSAN: clang-linker-wrapper{{.*}}--device-compiler=amdgcn-amd-amdhsa=-fsanitize=undefined
+// UBSAN-SAME: --device-compiler=amdgcn-amd-amdhsa=-fsanitize-minimal-runtime
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --offload-arch=gfx906 -fsanitize=undefined \
+// RUN:     -fsanitize-minimal-runtime -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=NO-UBSAN %s
+//
+// NO-UBSAN-NOT: --device-compiler=amdgcn-amd-amdhsa=-fsanitize=undefined
+
+// Check that --cuda-path and --rocm-path are forwarded unconditionally
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda --rocm-path=%S/Inputs/rocm \
+// RUN:     --offload-arch=sm_89 --offload-arch=gfx906 -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CUDA-PATH %s
+// CUDA-PATH: clang-linker-wrapper{{.*}} "--device-compiler=--cuda-path={{.*}}"{{.*}}"--device-compiler=--rocm-path={{.*}}"

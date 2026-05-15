@@ -14,6 +14,7 @@ add_clang_library(clangCIR
   CIRGenBuiltin.cpp
   CIRGenBuiltinAArch64.cpp
   CIRGenBuiltinAMDGPU.cpp
+  CIRGenBuiltinNVPTX.cpp
   CIRGenAMDGPU.cpp
   CIRGenBuiltinRISCV.cpp
   CIRGenBuiltinX86.cpp
@@ -43,6 +44,7 @@ add_clang_library(clangCIR
   CIRGenOpenACCClause.cpp
   CIRGenOpenACCRecipe.cpp
   CIRGenOpenMPClause.cpp
+  CIRGenOpenMPRuntime.cpp
   CIRGenPointerAuth.cpp
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp

@@ -426,8 +426,23 @@ void gh173847_test() {
 }
 
 int gh173605(int x) {
-  static constexpr int c = c; // expected-error {{constexpr variable 'c' must be initialized by a constant expression}}\
-                              // expected-note {{read of object outside its lifetime is not allowed in a constant expression}}
+  static constexpr int c = c; // expected-error {{constexpr variable 'c' must be initialized by a constant expression}} \
+                              // expected-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                              // expected-note {{declared here}}
   static int justincase = justincase; // expected-error {{initializer element is not a compile-time constant}}
   return x;
 }
+
+
+struct designated_init_A { int a; int b; int c : 2; double d; int e[5]; };
+struct designated_init_B { struct designated_init_A a; int y; };
+constexpr struct designated_init_A designated_init_a = {1, 2, 3, 4.0, 5, 6, 7, 8, 9};
+constexpr struct designated_init_B designated_init_b =
+  {designated_init_a, .a.a = 10, .a.c = 11, .a.d = 12.0, .a.e[1] = 13, .y = 14}; // expected-warning 4 {{initializer partially overrides prior initialization of this subobject}} // expected-note 4 {{previous initialization}}
+static_assert(designated_init_b.a.a == 10);
+static_assert(designated_init_b.a.b == 2);
+static_assert(designated_init_b.a.c == -1);
+static_assert(designated_init_b.a.d == 12.0); // expected-warning {{folding it to a constant is a GNU extension}}
+static_assert(designated_init_b.a.e[0] == 5); // expected-warning {{folding it to a constant is a GNU extension}}
+static_assert(designated_init_b.a.e[1] == 13); // expected-warning {{folding it to a constant is a GNU extension}}
+static_assert(designated_init_b.y == 14);

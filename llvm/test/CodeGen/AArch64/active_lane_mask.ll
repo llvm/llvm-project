@@ -183,8 +183,8 @@ define <vscale x 1 x i1> @lane_mask_nxv1i1_i32(i32 %index, i32 %TC) {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uqadd z0.s, z0.s, z1.s
 ; CHECK-NEXT:    mov z1.s, w1
-; CHECK-NEXT:    cmphi p0.s, p0/z, z1.s, z0.s
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    cmphi p1.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i32(i32 %index, i32 %TC)
@@ -303,8 +303,8 @@ define <16 x i1> @lane_mask_v16i1_i8(i8 %index, i8 %TC) {
 ; CHECK-STREAMING-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-STREAMING-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-STREAMING-NEXT:    mov z1.b, w1
-; CHECK-STREAMING-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
-; CHECK-STREAMING-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-STREAMING-NEXT:    cmphi p1.b, p0/z, z1.b, z0.b
+; CHECK-STREAMING-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-STREAMING-NEXT:    ret
   %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i8(i8 %index, i8 %TC)
   ret <16 x i1> %active.lane.mask
@@ -329,8 +329,8 @@ define <8 x i1> @lane_mask_v8i1_i8(i8 %index, i8 %TC) {
 ; CHECK-STREAMING-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-STREAMING-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-STREAMING-NEXT:    mov z1.b, w1
-; CHECK-STREAMING-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
-; CHECK-STREAMING-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-STREAMING-NEXT:    cmphi p1.b, p0/z, z1.b, z0.b
+; CHECK-STREAMING-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-STREAMING-NEXT:    ret
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i8(i8 %index, i8 %TC)
   ret <8 x i1> %active.lane.mask
@@ -360,8 +360,8 @@ define <4 x i1> @lane_mask_v4i1_i8(i8 %index, i8 %TC) {
 ; CHECK-STREAMING-NEXT:    mov z1.h, w1
 ; CHECK-STREAMING-NEXT:    umin z0.h, z0.h, #255
 ; CHECK-STREAMING-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-STREAMING-NEXT:    cmphi p0.h, p0/z, z1.h, z0.h
-; CHECK-STREAMING-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-STREAMING-NEXT:    cmphi p1.h, p0/z, z1.h, z0.h
+; CHECK-STREAMING-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-STREAMING-NEXT:    ret
   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i8(i8 %index, i8 %TC)
   ret <4 x i1> %active.lane.mask
@@ -389,8 +389,8 @@ define <2 x i1> @lane_mask_v2i1_i8(i8 %index, i8 %TC) {
 ; CHECK-STREAMING-NEXT:    and w8, w1, #0xff
 ; CHECK-STREAMING-NEXT:    mov z1.s, w8
 ; CHECK-STREAMING-NEXT:    umin z0.s, z0.s, #255
-; CHECK-STREAMING-NEXT:    cmphi p0.s, p0/z, z1.s, z0.s
-; CHECK-STREAMING-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-STREAMING-NEXT:    cmphi p1.s, p0/z, z1.s, z0.s
+; CHECK-STREAMING-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-STREAMING-NEXT:    ret
   %active.lane.mask = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i8(i8 %index, i8 %TC)
   ret <2 x i1> %active.lane.mask

@@ -53,14 +53,13 @@ int metadirective1() {
 // CHECK: ret void
 
 
-// CHECK: define internal void @[[METADIRECTIVE]]_omp_outlined
+// CHECK: define internal {{(spir_func )?}}void @[[METADIRECTIVE]]_omp_outlined
 // CHECK: entry:
 // CHECK: call{{.*}} void @__kmpc_distribute_static_init
 // CHECK: omp.loop.exit:
 // CHECK: call{{.*}} void @__kmpc_distribute_static_fini
 
-
-// CHECK: define internal void @[[METADIRECTIVE]]_omp_outlined_omp_outlined
+// CHECK: define internal {{(spir_func )?}}void @[[METADIRECTIVE]]_omp_outlined_omp_outlined
 // CHECK: entry:
 // CHECK: call{{.*}} void @__kmpc_for_static_init_4
 // CHECK: omp.inner.for.body:
