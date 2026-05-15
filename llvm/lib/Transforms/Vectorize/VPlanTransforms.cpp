@@ -1680,6 +1680,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(Def, m_Broadcast(m_VPValue(X))))
+    return Def->replaceUsesWithIf(
+        X, [Def](const VPUser &U, unsigned) { return U.usesScalars(Def); });
+
   if (isa<VPPhi, VPWidenPHIRecipe, VPHeaderPHIRecipe>(Def)) {
     if (Def->getNumOperands() == 1) {
       Def->replaceAllUsesWith(Def->getOperand(0));
@@ -1821,6 +1825,22 @@ static void reassociateHeaderMask(VPlan &Plan) {
   }
 }
 
+static std::optional<Instruction::BinaryOps>
+getUnmaskedDivRemOpcode(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::masked_udiv:
+    return Instruction::UDiv;
+  case Intrinsic::masked_sdiv:
+    return Instruction::SDiv;
+  case Intrinsic::masked_urem:
+    return Instruction::URem;
+  case Intrinsic::masked_srem:
+    return Instruction::SRem;
+  default:
+    return {};
+  }
+}
+
 static void narrowToSingleScalarRecipes(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
@@ -1828,7 +1848,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe,
+               VPWidenIntrinsicRecipe>(&R))
         continue;
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
@@ -1851,6 +1872,25 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
             Builder.createNaryOp(VPInstruction::ExtractLastLane, ExtractOp);
         Clone->setOperand(0, ExtractOp);
         RepR->eraseFromParent();
+        continue;
+      }
+
+      // Narrow llvm.masked.{u,s}{div,rem} intrinsics with a safe divisor.
+      if (auto *IntrR = dyn_cast<VPWidenIntrinsicRecipe>(RepOrWidenR)) {
+        if (!vputils::onlyFirstLaneUsed(IntrR))
+          continue;
+        auto Opc = getUnmaskedDivRemOpcode(IntrR->getVectorIntrinsicID());
+        if (!Opc)
+          continue;
+        VPBuilder Builder(IntrR);
+        VPValue *SafeDivisor = Builder.createSelect(
+            IntrR->getOperand(2), IntrR->getOperand(1),
+            Plan.getConstantInt(IntrR->getResultType(), 1));
+        VPValue *Clone = Builder.createNaryOp(
+            *Opc, {IntrR->getOperand(0), SafeDivisor},
+            VPIRFlags::getDefaultFlags(*Opc), IntrR->getDebugLoc());
+        IntrR->replaceAllUsesWith(Clone);
+        IntrR->eraseFromParent();
         continue;
       }
 
@@ -2863,6 +2903,21 @@ static inline RemoveMask_match<Op0_t, Op1_t> m_RemoveMask(const Op0_t &In,
   return RemoveMask_match<Op0_t, Op1_t>(In, Out);
 }
 
+static std::optional<Intrinsic::ID> getVPDivRemIntrinsic(Intrinsic::ID IntrID) {
+  switch (IntrID) {
+  case Intrinsic::masked_udiv:
+    return Intrinsic::vp_udiv;
+  case Intrinsic::masked_sdiv:
+    return Intrinsic::vp_sdiv;
+  case Intrinsic::masked_urem:
+    return Intrinsic::vp_urem;
+  case Intrinsic::masked_srem:
+    return Intrinsic::vp_srem;
+  default:
+    return std::nullopt;
+  }
+}
+
 /// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
 /// EVL-based recipe without the header mask. Returns nullptr if no EVL-based
 /// recipe could be created.
@@ -2975,6 +3030,15 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {RHS, Plan->getTrue(), LHS, &EVL},
         TypeInfo.inferScalarType(LHS), {}, {}, DL);
+
+  if (auto *IntrR = dyn_cast<VPWidenIntrinsicRecipe>(&CurRecipe))
+    if (auto VPID = getVPDivRemIntrinsic(IntrR->getVectorIntrinsicID()))
+      if (match(IntrR->getOperand(2), m_RemoveMask(HeaderMask, Mask)))
+        return new VPWidenIntrinsicRecipe(*VPID,
+                                          {IntrR->getOperand(0),
+                                           IntrR->getOperand(1),
+                                           Mask ? Mask : Plan->getTrue(), &EVL},
+                                          IntrR->getResultType(), {}, {}, DL);
 
   return nullptr;
 }
@@ -5977,6 +6041,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     ExtendedOp = NegRecipe;
   }
 
+  assert((Chain.RK != RecurKind::FAddChainWithSubs) &&
+         "FSub chain reduction isn't supported");
+
   // FIXME: Do these transforms before invoking the cost-model.
   ExtendedOp = optimizeExtendsForPartialReduction(ExtendedOp, TypeInfo);
 
@@ -6028,7 +6095,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   // If this is the last value in a sub-reduction chain, then update the PHI
   // node to start at `0` and update the reduction-result to subtract from
   // the PHI's start value.
-  if (Chain.RK != RecurKind::Sub)
+  if (Chain.RK != RecurKind::Sub && Chain.RK != RecurKind::FSub)
     return;
 
   VPValue *OldStartValue = StartInst->getOperand(0);
@@ -6039,7 +6106,8 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   assert(RdxResult && "Could not find reduction result");
 
   VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
-  constexpr unsigned SubOpc = Instruction::BinaryOps::Sub;
+  unsigned SubOpc = Chain.RK == RecurKind::FSub ? Instruction::BinaryOps::FSub
+                                                : Instruction::BinaryOps::Sub;
   VPInstruction *NewResult = Builder.createNaryOp(
       SubOpc, {OldStartValue, RdxResult}, VPIRFlags::getDefaultFlags(SubOpc),
       RdxPhi->getDebugLoc());
@@ -6064,12 +6132,20 @@ getPartialReductionLinkCost(VPCostContext &CostCtx,
   if (RdxType->isFloatingPointTy())
     Flags = Link.ReductionBinOp->getFastMathFlags();
 
-  unsigned Opcode = Link.RK == RecurKind::Sub
-                        ? (unsigned)Instruction::Add
-                        : Link.ReductionBinOp->getOpcode();
+  auto GetLinkOpcode = [&Link]() -> unsigned {
+    switch (Link.RK) {
+    case RecurKind::Sub:
+      return Instruction::Add;
+    case RecurKind::FSub:
+      return Instruction::FAdd;
+    default:
+      return Link.ReductionBinOp->getOpcode();
+    }
+  };
+
   return CostCtx.TTI.getPartialReductionCost(
-      Opcode, ExtendedOp.ExtendA.SrcType, ExtendedOp.ExtendB.SrcType, RdxType,
-      VF, ExtendedOp.ExtendA.Kind, ExtendedOp.ExtendB.Kind, BinOpc,
+      GetLinkOpcode(), ExtendedOp.ExtendA.SrcType, ExtendedOp.ExtendB.SrcType,
+      RdxType, VF, ExtendedOp.ExtendA.Kind, ExtendedOp.ExtendB.Kind, BinOpc,
       CostCtx.CostKind, Flags);
 }
 

@@ -19,6 +19,58 @@
 #define __CLC_GEN_MAX INFINITY
 #endif
 
+#if __has_builtin(__builtin_amdgcn_update_dpp)
+
+_CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __CLC_FUNCTION_INCLUSIVE(__CLC_GENTYPE x) {
+  __CLC_GENTYPE id = (__CLC_GENTYPE)__CLC_SUBGROUP_SCAN_ID_VAL;
+
+  x = __CLC_FUNCTION_IMPL(x, (__CLC_GENTYPE)__builtin_amdgcn_update_dpp(
+                                 id, x, DPP_ROW_SHR | 1, 0xf, 0xf, 0));
+  x = __CLC_FUNCTION_IMPL(x, (__CLC_GENTYPE)__builtin_amdgcn_update_dpp(
+                                 id, x, DPP_ROW_SHR | 2, 0xf, 0xf, 0));
+  x = __CLC_FUNCTION_IMPL(x, (__CLC_GENTYPE)__builtin_amdgcn_update_dpp(
+                                 id, x, DPP_ROW_SHR | 4, 0xf, 0xf, 0));
+  x = __CLC_FUNCTION_IMPL(x, (__CLC_GENTYPE)__builtin_amdgcn_update_dpp(
+                                 id, x, DPP_ROW_SHR | 8, 0xf, 0xf, 0));
+
+#if __has_builtin(__builtin_amdgcn_permlanex16)
+  x = __CLC_FUNCTION_IMPL(x, (__CLC_GENTYPE)__builtin_amdgcn_update_dpp(
+                                 id, __clc_amdgpu_permlanex16(id, x, -1, -1),
+                                 DPP_ID_PERM, 0xa, 0xf, 0));
+  if (__builtin_amdgcn_wavefrontsize() == 64) {
+    __CLC_GENTYPE lane31 = __clc_sub_group_broadcast(x, 31);
+    x = __CLC_FUNCTION_IMPL(x, (__CLC_GENTYPE)__builtin_amdgcn_update_dpp(
+                                   id, lane31, DPP_ID_PERM, 0xc, 0xf, 0));
+  }
+#else
+  x = __CLC_FUNCTION_IMPL(x, (__CLC_GENTYPE)__builtin_amdgcn_update_dpp(
+                                 id, x, DPP_ROW_BCAST15, 0xa, 0xf, 0));
+  x = __CLC_FUNCTION_IMPL(x, (__CLC_GENTYPE)__builtin_amdgcn_update_dpp(
+                                 id, x, DPP_ROW_BCAST31, 0xc, 0xf, 0));
+#endif
+
+  return x;
+}
+
+_CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __CLC_FUNCTION_EXCLUSIVE(__CLC_GENTYPE x) {
+  __CLC_GENTYPE s = __CLC_FUNCTION_INCLUSIVE(x);
+  __CLC_GENTYPE id = (__CLC_GENTYPE)__CLC_SUBGROUP_SCAN_ID_VAL;
+
+  __CLC_GENTYPE r = (__CLC_GENTYPE)__builtin_amdgcn_update_dpp(
+      id, s, DPP_ROW_SHR | 1, 0xf, 0xf, 0);
+
+  uint l = __clc_get_sub_group_local_id();
+  r = (l == 16) ? __clc_sub_group_broadcast(s, 15) : r;
+  if (__builtin_amdgcn_wavefrontsize() == 64) {
+    r = (l == 32) ? __clc_sub_group_broadcast(s, 31) : r;
+    r = (l == 48) ? __clc_sub_group_broadcast(s, 47) : r;
+  }
+
+  return r;
+}
+
+#else // !__has_builtin(__builtin_amdgcn_update_dpp)
+
 _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __CLC_FUNCTION_INCLUSIVE(__CLC_GENTYPE x) {
   uint l = __clc_get_sub_group_local_id();
 
@@ -76,6 +128,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __CLC_FUNCTION_EXCLUSIVE(__CLC_GENTYPE x) {
 
   return (l == 0) ? __CLC_SUBGROUP_SCAN_ID_VAL : s;
 }
+
+#endif // __has_builtin(__builtin_amdgcn_update_dpp)
 
 #undef __CLC_GEN_MIN
 #undef __CLC_GEN_MAX
