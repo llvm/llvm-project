@@ -1026,7 +1026,7 @@ public:
            !hasUserDeclaredMoveConstructor() &&
            !hasUserDeclaredDestructor() &&
            (!isLambda() || lambdaIsDefaultConstructibleAndAssignable());
- }
+  }
 
   /// Determine whether we need to eagerly declare a move assignment
   /// operator for this class.

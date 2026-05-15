@@ -1086,7 +1086,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
         ParamType = CGM.getTypes().ConvertType(PD->getType());
       else
         ParamType = Param.getType();
-      
+
       auto AttrBegin = PD->specific_attr_begin<HLSLAppliedSemanticAttr>();
       auto AttrEnd = PD->specific_attr_end<HLSLAppliedSemanticAttr>();
       auto Result =
