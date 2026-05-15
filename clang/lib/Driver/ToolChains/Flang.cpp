@@ -267,18 +267,13 @@ void Flang::addCodegenOptions(const ArgList &Args,
 void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
   const Driver &D = TC.getDriver();
-  DiagnosticsEngine &Diags = D.getDiags();
   LTOKind LTOMode = D.getLTOMode();
   // LTO mode is parsed by the Clang driver library.
   assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
   if (LTOMode == LTOK_Full)
     CmdArgs.push_back("-flto=full");
-  else if (LTOMode == LTOK_Thin) {
-    Diags.Report(
-        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                              "the option '-flto=thin' is a work in progress"));
+  else if (LTOMode == LTOK_Thin)
     CmdArgs.push_back("-flto=thin");
-  }
   Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
                             options::OPT_fno_fat_lto_objects});
 }

@@ -11605,16 +11605,6 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getStore(Op.getOperand(0), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }
-  case Intrinsic::ppc_amo_stwat:
-  case Intrinsic::ppc_amo_stdat: {
-    SDLoc dl(Op);
-    SDValue Chain = Op.getOperand(0);
-    SDValue Ptr = Op.getOperand(ArgStart + 1);
-    SDValue Val = Op.getOperand(ArgStart + 2);
-    SDValue FC = Op.getOperand(ArgStart + 3);
-
-    return DAG.getNode(PPCISD::STAT, dl, MVT::Other, Chain, Val, Ptr, FC);
-  }
   default:
     break;
   }

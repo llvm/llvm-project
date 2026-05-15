@@ -1716,6 +1716,9 @@ void CodeGenModule::Release() {
   if (getCodeGenOpts().StackProtectorGuardOffset != INT_MAX)
     getModule().setStackProtectorGuardOffset(
         getCodeGenOpts().StackProtectorGuardOffset);
+  if (getCodeGenOpts().StackProtectorGuardValueWidth != UINT_MAX)
+    getModule().setStackProtectorGuardValueWidth(
+        getCodeGenOpts().StackProtectorGuardValueWidth);
   if (getCodeGenOpts().StackAlignment)
     getModule().setOverrideStackAlignment(getCodeGenOpts().StackAlignment);
   if (getCodeGenOpts().SkipRaxSetup)

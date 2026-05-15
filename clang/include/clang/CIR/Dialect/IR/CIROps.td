@@ -3289,7 +3289,7 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
     UnitAttr:$is_volatile
   );
 
-  let results = (outs CIR_IntType:$result);
+  let results = (outs CIR_AnyIntOrBoolType:$result);
 
   let assemblyFormat = [{
     (`align` `(` $alignment^ `)`)?
@@ -3376,7 +3376,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
     UnitAttr:$is_volatile
     );
 
-  let results = (outs CIR_IntType:$result);
+  let results = (outs CIR_AnyIntOrBoolType:$result);
 
   let assemblyFormat = [{
     (`align` `(` $alignment^ `)`)?

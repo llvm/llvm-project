@@ -6932,6 +6932,7 @@ cc_binary(
         ":BinaryFormat",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":MC",
         ":Object",
         ":ObjectYAML",
         ":Support",
