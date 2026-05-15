@@ -194,9 +194,23 @@ ReductionProcessor::getReductionName(ReductionIdentifier redId,
   case ReductionIdentifier::NEQV:
     reductionName = "neqv_reduction";
     break;
-  default:
-    reductionName = "other_reduction";
+  case ReductionIdentifier::MAX:
+    reductionName = "max_reduction";
     break;
+  case ReductionIdentifier::MIN:
+    reductionName = "min_reduction";
+    break;
+  case ReductionIdentifier::IAND:
+    reductionName = "iand_reduction";
+    break;
+  case ReductionIdentifier::IOR:
+    reductionName = "ior_reduction";
+    break;
+  case ReductionIdentifier::IEOR:
+    reductionName = "ieor_reduction";
+    break;
+  default:
+    llvm_unreachable("unsupported reduction identifier");
   }
 
   return getReductionName(reductionName, kindMap, ty, isByRef);

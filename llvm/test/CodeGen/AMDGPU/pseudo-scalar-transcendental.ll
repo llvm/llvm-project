@@ -762,26 +762,17 @@ define amdgpu_cs half @srcmods_neg_f16(half inreg %src) {
   ret half %result
 }
 
-; TODO: SelectionDAG should avoid generating v_rcp_iflag_f32.
 define amdgpu_cs float @fdiv_f32_i32(float inreg %a, i32 inreg %b) {
-; GFX12-SDAG-LABEL: fdiv_f32_i32:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_cvt_f32_u32 s1, s1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX12-SDAG-NEXT:    v_rcp_iflag_f32_e32 v0, s1
-; GFX12-SDAG-NEXT:    v_mul_f32_e32 v0, s0, v0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: fdiv_f32_i32:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_cvt_f32_u32 s1, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX12-GISEL-NEXT:    v_s_rcp_f32 s1, s1
-; GFX12-GISEL-NEXT:    s_mul_f32 s0, s0, s1
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: fdiv_f32_i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_cvt_f32_u32 s1, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-NEXT:    v_s_rcp_f32 s1, s1
+; GFX12-NEXT:    s_mul_f32 s0, s0, s1
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: fdiv_f32_i32:
 ; GCN-GISEL:       ; %bb.0:
