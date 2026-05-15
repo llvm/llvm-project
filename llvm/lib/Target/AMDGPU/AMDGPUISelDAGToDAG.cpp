@@ -325,7 +325,6 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
   return false;
 }
 
-// TODO: To support sext and any_ext.
 bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
   // This is special case for pattern of common compare + select if it can be
   // selected to SALU. The pattern will be directly selected to `s_cselect`, to
@@ -379,8 +378,9 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
 
       break;
     case ISD::ZERO_EXTEND:
-        MadeChange |= preprocessZeroExtend(N);
-        break;
+      // TODO: To support sext and any_ext.
+      MadeChange |= preprocessZeroExtend(N);
+      break;
 
     default:
       break;
