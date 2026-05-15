@@ -2818,12 +2818,6 @@ void WorkshareOp::build(OpBuilder &builder, OperationState &state,
 // WorkshareLoopWrapperOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult WorkshareLoopWrapperOp::verify() {
-  if (!(*this)->getParentOfType<WorkshareOp>())
-    return emitOpError() << "must be nested in an omp.workshare";
-  return success();
-}
-
 LogicalResult WorkshareLoopWrapperOp::verifyRegions() {
   if (isa_and_nonnull<LoopWrapperInterface>((*this)->getParentOp()) ||
       getNestedWrapper())
