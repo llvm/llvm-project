@@ -1,8 +1,6 @@
 if(NOT LLVM_ENABLE_PIC)
   message(FATAL_ERROR "Python bindings require LLVM_ENABLE_PIC=ON. "
-                      "Please reconfigure LLVM with -DLLVM_ENABLE_PIC=ON. Skipping IR2Vec Python bindings.")
-  set(LLVM_IR2VEC_TEST_PYTHON_BINDINGS False CACHE INTERNAL "" FORCE)
-  return()
+                      "Please reconfigure LLVM with -DLLVM_ENABLE_PIC=ON")
 endif()
 
 set(BINDINGS_MINIMUM_PYTHON_VERSION 3.10)
@@ -21,9 +19,7 @@ else()
   )
   
   if(NOT STATUS EQUAL "0")
-    message(WARNING "nanobind not found (install via 'pip install nanobind' or set nanobind_DIR). Skipping IR2Vec Python bindings.")
-    set(LLVM_IR2VEC_TEST_PYTHON_BINDINGS False CACHE INTERNAL "" FORCE)
-    return()
+    message(FATAL_ERROR "nanobind not found (install via 'pip install nanobind' or set nanobind_DIR)")
   endif()
   
   message(STATUS "found nanobind at: ${PACKAGE_DIR}")
