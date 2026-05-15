@@ -18,8 +18,8 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 
@@ -652,7 +652,8 @@ class CGFunctionInfo final
   /// Log 2 of the maximum vector width.
   unsigned MaxVectorWidth : 4;
 
-  /// X86 AVX Level, can be different from global / module level AVX level because of target attributes
+  /// X86 AVX Level, can be different from global / module level AVX level
+  /// because of target attributes
   unsigned X86ABIAVXLevel = 0;
 
   RequiredArgs Required;
