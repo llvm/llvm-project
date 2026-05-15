@@ -586,7 +586,7 @@ MachineSMEABI::findStateChangeInsertionPoint(
   auto BestCandidate = std::make_pair(InsertPt, PhysLiveRegs);
   for (MachineBasicBlock::iterator I = InsertPt; I != PrevStateChangeI; --I) {
     if (I->isDebugInstr())
-        continue;
+      continue;
 
     // Don't move before/into a call (which may have a state change before it).
     if (I->getOpcode() == TII->getCallFrameDestroyOpcode() || I->isCall())
