@@ -2020,15 +2020,13 @@ bool LoopInterchangeTransform::transform(
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
 
-  // check if there are any Single path Phi Nodes in InnerLoop-Pre Header
-
+  // Check if there are any single path Phi nodes in the inner loop preheader.
   if (InnerLoopPreHeader && InnerLoopPreHeader != OuterLoopHeader) {
-
     for (PHINode &P : make_early_inc_range(InnerLoopPreHeader->phis())) {
-      if (P.getNumIncomingValues() == 1) {
+      assert(P.getNumIncomingValues() == 1 &&
+            "Expected single-incoming PHIs in inner loop preheader");
         P.replaceAllUsesWith(P.getIncomingValue(0));
         P.eraseFromParent();
-      }
     }
   }
 
