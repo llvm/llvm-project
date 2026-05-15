@@ -59,10 +59,10 @@ The AMDGPU memory model *does not change the structure of happens-before*, but
 changes the rules that determine how operations may observe the side-effects of
 other operations that happen before them.
 
-Consider a write W that ``happens-before`` a read R to the same address:
+Consider a write *W* that ``happens-before`` a read *R* to the same address:
 
-- R can potentially observe the side-effects of W **only if W is visible** to R.
-- W can potentially be visible to R **only if W is first made available** to R.
+- *R* can potentially observe the side-effects of *W* **only if W is visible** to *R*.
+- *W* can potentially be visible to *R* **only if W is first made available** to *R*.
 
 The instructions used in the default LLVM memory model automatically satisfy
 these necessary conditions, and hence they can be explained using the rules from
@@ -80,10 +80,10 @@ store-available
    cmpxchg      [syncscope("<target-scope>")]
 
 The ``@llvm.amdgcn.av.global.store.b128`` intrinsic performs a non-atomic
-store-available operation on ``ptr`` whose side-effects are made available to
+*store-available* operation on ``ptr`` whose side-effects are made available to
 :ref:`its instance<amdgpu-scopes>` of ``scope``.
 
-An atomic operation that results in a store operation is a store-available
+An atomic operation that results in a store operation is a *store-available*
 operation with scope ``syncscope``.
 
 load-visible
@@ -97,10 +97,10 @@ load-visible
    cmpxchg      [syncscope("<target-scope>")]
 
 The ``@llvm.amdgcn.av.global.load.b128`` intrinsic performs a non-atomic
-load-visible operation which ensures the visibility of all side-effects on
+*load-visible* operation which ensures the visibility of all side-effects on
 ``ptr`` available at :ref:`its instance<amdgpu-scopes>` of ``scope``.
 
-An atomic operation that results in a read operation is a load-visible operation
+An atomic operation that results in a read operation is a *load-visible* operation
 with scope ``syncscope``.
 
 .. note::
@@ -116,7 +116,7 @@ with scope ``syncscope``.
    If the metadata is dropped or ignored, there is no guarantee that the store
    will become available at the intended scope. In implementation terms, the
    store may be completed at a nearer cache than the one required for that
-   scope. A corresponding load-visible that does not access the same near cache
+   scope. A corresponding *load-visible* that does not access the same near cache
    will fail to observe this store.
 
 MakeAvailable and MakeVisible
@@ -138,9 +138,10 @@ A synchronization operation with at least ``acquire`` ordering is a
 ``MakeVisible`` operation with scope ``syncscope``, if it does not have the
 ``!amdgcn-av-none`` metadata.
 
-These operations include MakeVisible and MakeAvailable operations by default.
+These operations include ``MakeVisible`` and ``MakeAvailable`` operations by default.
 The presence of this metadata removes this ability and essentially creates
-"non-av" ordering operations.
+*non-av* ordering operations, i.e., ordering operations that do not establish
+availability or visibility.
 
 For an atomic operation which itself accesses memory (e.g., ``store atomic``
 or ``load atomic``), the metadata does not affect the availability or the
@@ -166,27 +167,29 @@ that scope, or a *scope instance* for short. Each memory access or
 synchronization operation belongs to at most one instance of every scope defined
 by the target.
 
-A "subscope" is a scope that is a subset of another scope. A "subscope instance"
-is a scope instance that is a subset of another scope instance.
+- A scope instance *S1* is a *subscope instance* of a scope instance *S2* if
+  *S1* is a subset of *S2*.
+- A scope *S1* is a *subscope* of a scope *S2* if every instance of *S1* is a
+  subset of some instance of *S2*.
 
-When an operation X specifies a scope S, it indicates the instance of S that
-contains X. This scope instance is also termed as *X's instance of scope S* or
-just "X's scope instance", when S is implied by the context.
+When an operation *X* specifies a scope *S*, it indicates the instance of *S* that
+contains *X*. This scope instance is also termed as *X's instance of scope S* or
+just "*X*'s scope instance", when *S* is implied by the context.
 
 When an operation does not specify a scope, it indicates the singleton instance
 of the LLVM system-wide scope defined below.
 
-**Inclusive Scopes**: Two operations X and Y are said to have *inclusive scopes*
+**Inclusive Scopes**: Two operations *X* and *Y* are said to have *inclusive scopes*
 if the scope instance of each operation contains the other operation. In that
-case, the *common scope instance* S' of X and Y is the intersection of their
-scope instances. The scope corresponding to S' is also termed as the *common
-scope* of X and Y. [Informational note -- Since scopes are arranged in a linear
-hierarchy, clearly S' is the smaller of the two scope instances.]
+case, the *common scope instance* *S'* of *X* and *Y* is the intersection of their
+scope instances. The scope corresponding to *S'* is also termed as the *common
+scope* of *X* and *Y*. [Informational note -- Since scopes are arranged in a linear
+hierarchy, clearly *S'* is the smaller of the two scope instances.]
 
 LLVM scopes
 -----------
 
-LLVM defines the following scopes:
+The LLVM Language Reference defines the following :ref:`scopes<syncscope>`:
 
 - A "singlethread" scope. Each thread has a corresponding "singlethread" scope
   instance that contains the memory accesses and synchronization operations
@@ -199,17 +202,17 @@ LLVM defines the following scopes:
 AMDGPU scopes
 -------------
 
-The AMDGPU backend defines the following scopes:
+The AMDGPU backend defines the following target-defined scopes:
 
-- "system" (the anonymous system-wide scope in LLVM)
+- The anonymous system-wide scope (same as LLVM)
 - "agent" scope
 - "cluster" scope
 - "workgroup" scope
 - "wavefront" scope
 - "singlethread" scope (same as LLVM)
 
-These are arranged from largest scope ("system") to smallest scope
-("singlethread"). Every scope instance (except the singleton "system" scope
+These are arranged from largest scope ("") to smallest scope
+("singlethread"). Every scope instance (except the singleton default scope
 instance) is included in a scope instance at the level above it.
 
 Ordering
@@ -221,115 +224,132 @@ Ordering
    eventually make that a parameter similar to the storage class parameter on
    operations and orders in Vulkan.
 
-An operation X is an *availability operation* on a write W if:
+Availability Operation
+----------------------
 
-- X is W itself, and W is a store-available operation, or,
-- X is a MakeAvailable operation that follows W in program order, or,
-- X is a MakeAvailable operation whose scope instance includes W, and there is
-  an availability operation Z on W such that:
+An operation *X* is an *availability operation* on a write *W* if one of the
+following holds:
 
-  - Z happens-before X, and,
-  - Z's scope instance includes X.
+- *X* is *W* itself, and *W* is a *store-available* operation, or,
+- *X* is a ``MakeAvailable`` operation that follows *W* in program order, or,
+- *X* is a ``MakeAvailable`` operation whose scope instance includes *W*, and there is
+  an availability operation *Z* on *W* such that:
 
-Then X makes W available in its own scope instance S and every subscope instance
-of S that also includes W.
+  - *Z* happens-before *X*, and,
+  - *Z*'s scope instance includes *X*.
 
-An operation Y is a *visibility operation* on a write W if:
+Then *X* makes *W* available in its own scope instance *S* and every subscope instance
+of *S* that also includes *W*.
 
-- Y is a load-visible operation to the same address, or a MakeVisible operation,
-  and,
-- There exists an *availability* or *visibility* operation X on write W such
-  that:
+Visibility Operation
+--------------------
 
-  - X happens-before Y, and,
-  - X and Y specify inclusive scopes.
+An operation *Y* is a *visibility operation* on a write *W* if *Y* is a
+*load-visible* operation to the same address, or a ``MakeVisible`` operation,
+and one of the following holds:
 
-Then Y makes W visible in the common scope instance S of X and Y, and every
-subscope instance of S that includes Y.
+- There exists an *availability* operation *X* on write *W* such that:
+
+  - *X* happens-before *Y*, and,
+  - *X* and *Y* specify inclusive scopes.
+
+  Then *Y* makes *W* visible in the common scope instance *S* of *X* and *Y*,
+  and every subscope instance of *S* that includes *Y*.
+
+- There exists a *visibility* operation *X* on write *W* such that:
+
+  - *X* happens-before *Y*, and,
+  - *X* makes *W* visible in a scope instance *S1* that includes *Y*, and,
+  - *X* is included in the scope instance *S2* of *Y*.
+
+  Then *Y* makes *W* visible in the intersection of *S1* and *S2*, and every
+  subscope instance of *S2* that includes *Y*.
 
 Location Order
 --------------
 
-A write W is location-ordered before an access Y to the same address if W is
-program-ordered before Y.
+A write *W* is *location-ordered* before an access *Y* to the same address if *W* is
+program-ordered before *Y*.
 
-A write W is location-ordered before a write W1 to the same address if there
-exists an availability operation Z on W such that:
+A write *W* is *location-ordered* before a write *W1* to the same address if there
+exists an availability operation *Z* on *W* such that:
 
-- Z happens-before W1, and,
-- W1 is included in Z's scope instance.
+- *Z* happens-before *W1*, and,
+- *W1* is included in *Z*'s scope instance.
 
-A write W is location-ordered before a read R to the same address if there
-exists a visibility operation Z on write W such that:
+A write *W* is *location-ordered* before a read *R* to the same address if there
+exists a visibility operation *Z* on write *W* such that:
 
-- Z is R itself, or,
-- Z precedes R in program order.
+- *Z* is *R* itself, or,
+- *Z* precedes *R* in program order.
 
-The AMDGPU memory model overrides the :ref:`definition of each
-byte<memmodel>` in the LLVM memory model as follows.
+The AMDGPU memory model overrides the definition of each byte in the
+:ref:`LLVM memory model<memmodel>` as follows.
 
-Every (defined) read operation R reads a series of bytes written by (defined)
-write operations. Each initialized global is assumed to have an initial write
-operation which is atomic and defined to be location-ordered before any other
+Every (defined) read operation *R* reads a series of bytes written by (defined)
+write operations. Each initialized global is assumed to have an initial
+system-scoped atomic write operation that is *location-ordered* before any other
 read or write to that same location.
 
-For each byte of a read R, R may see any write to the same byte, except:
+For each byte of a read *R*, *R* may see any write to the same byte, except:
 
-- If a write W1 is location-ordered before a write W2, and W2 is
-  location-ordered before a read R, then R may not see W1.
-- If a read R happens-before a write W3, then R may not see W3.
+- If a write *W1* is *location-ordered* before a write *W2*, and *W2* is
+  *location-ordered* before a read *R*, then *R* may not see *W1*.
+- If a read *R* happens-before a write *W3*, then *R* may not see *W3*.
 
-The value returned by R is then defined as follows:
+The value returned by *R* is then defined as follows:
 
-- If no write is location-ordered before a read R, then R returns ``undef``.
-- Otherwise if the set consisting of R and all writes that R may see contains
-  only atomic operations with inclusive scopes, then R returns the value written
+- If no write is *location-ordered* before a read *R*, then *R* returns ``undef``.
+- Otherwise if the set consisting of *R* and all writes that *R* may see contains
+  only atomic operations with inclusive scopes, then *R* returns the value written
   by one of those writes.
-- Otherwise, if R may see some write that is not location-ordered before R,
-  then R returns ``undef``.
-- Otherwise, if R may see exactly one write W, then R returns the value written
-  by W.
-- Otherwise, R returns ``undef``.
+- Otherwise, if *R* may see some write that is not *location-ordered* before *R*,
+  then *R* returns ``undef``.
+- Otherwise, if *R* may see exactly one write *W*, then *R* returns the value written
+  by *W*.
+- Otherwise, *R* returns ``undef``.
 
 Properties
-----------
+==========
 
-[This section is informational.]
+.. tip::
+
+   This section is informational.
 
 The following properties follow from the definitions above:
 
-1. **Happens-before is necessary for location-order.** A write W is
-   location-ordered before a read R only if W happens-before R. This follows
+1. **Happens-before is necessary for location-order.** A write *W* is
+   *location-ordered* before a read *R* only if *W* happens-before *R*. This follows
    from the definition of availability and visibility operations, which always
    require a happens-before link with the preceding operation in the chain.
 
 2. **A write cannot be made available in a scope that does not contain it.** The
-   definition of an availability operation X requires that X's scope instance
-   includes W as a precondition. Since every scope instance that includes X also
-   includes W, availability cannot reach a scope instance that excludes W. In
+   definition of an availability operation *X* requires that *X*'s scope instance
+   includes *W* as a precondition. Since every scope instance that includes *X* also
+   includes *W*, availability cannot reach a scope instance that excludes *W*. In
    other words, availability can only "expand outwards" into progressively
    larger scopes.
 
 3. **Visibility is bounded by availability.** When a write is available in a
    scope instance, it can be made visible in that scope instance by a visibility
-   operation with the corresponding scope. Subsequent MakeVisible operations
+   operation with the corresponding scope. Subsequent ``MakeVisible`` operations
    make that write visible into narrower scope instances towards the observer.
 
 4. **A write can be made visible in a scope instance that does not contain it.**
    The definition of a *visibility operation* anchors scope instances to the
-   observer (Y), not to the original write. The only precondition is that the
+   observer (*Y*), not to the original write. The only precondition is that the
    write must already be visible or available in the scope instance of the
    visibility operation.
 
-5. **Availability and visibility chains.** For a write W to be visible to a read
-   R anywhere in the system, the sufficient condition is a chain of
+5. **Availability and visibility chains.** For a write *W* to be visible to a read
+   *R* anywhere in the system, the sufficient condition is a chain of
    happens-before edges that include availability and visibility operations with
-   inclusive scopes. It is not necessary that W and R themselves have inclusive
+   inclusive scopes. It is not necessary that *W* and *R* themselves have inclusive
    scopes. Each link in the availability and visibility definitions only checks
    the immediate predecessor, so intermediate operations can bridge scope gaps
    that the endpoints cannot satisfy directly. Such a chain passes through at
    least one availability operation and at least one visibility operation with
-   inclusive scopes, such that their common scope includes both W and R.
+   inclusive scopes, such that their common scope includes both *W* and *R*.
 
 .. _amdgcn-av-vulkan:
 
@@ -343,16 +363,16 @@ particular, the following instructions are equivalent.
    :header: "LLVM", "SPIRV", "Available/Visible Semantics"
    :widths: 25, 25, 50
 
-   "``load``", "OpLoad NonPrivatePointer", "\-"
-   "``load-visible``", "OpLoad NonPrivatePointer", "MakePointerVisible"
-   "``store``", "OpStore NonPrivatePointer", "\-"
-   "``store-available``", "OpStore NonPrivatePointer", "MakePointerAvailable"
-   "``load atomic``", "OpAtomicLoad", "MakePointerVisible. Also MakeVisible when order is at least ``acquire``."
-   "``load atomic !amdgcn-av-none``", "OpAtomicLoad", "MakePointerVisible"
-   "``store atomic``", "OpAtomicStore", "MakePointerAvailable. Also MakeAvailable when order is at least ``release``."
-   "``store atomic !amdgcn-av-none``", "OpAtomicStore", "MakePointerAvailable"
-   "``fence``", "OpMemoryBarrier", "MakeAvailable when order is at least ``release``, and MakeVisible when order is at least ``acquire``."
-   "``fence !amdgcn-av-none``", "OpMemoryBarrier", "\-"
+   "``load``", "``OpLoad NonPrivatePointer``", "\-"
+   "``load-visible``", "``OpLoad NonPrivatePointer``", "``MakePointerVisible``"
+   "``store``", "``OpStore NonPrivatePointer``", "\-"
+   "``store-available``", "``OpStore NonPrivatePointer``", "``MakePointerAvailable``"
+   "``load atomic``", "``OpAtomicLoad``", "``MakePointerVisible``. Also ``MakeVisible`` when order is at least ``acquire``."
+   "``load atomic !amdgcn-av-none``", "``OpAtomicLoad``", "``MakePointerVisible``"
+   "``store atomic``", "``OpAtomicStore``", "``MakePointerAvailable``. Also ``MakeAvailable`` when order is at least ``release``."
+   "``store atomic !amdgcn-av-none``", "``OpAtomicStore``", "``MakePointerAvailable``"
+   "``fence``", "``OpMemoryBarrier``", "``MakeAvailable`` when order is at least ``release``, and ``MakeVisible`` when order is at least ``acquire``."
+   "``fence !amdgcn-av-none``", "``OpMemoryBarrier``", "\-"
 
 .. note::
 
@@ -361,7 +381,7 @@ particular, the following instructions are equivalent.
    ``cmpxchg``. The ordering and semantics of these operations can be determined
    by combining suitable rules such as:
 
-   - "MakeAvailable if the order is at least ``release``, and the operation
+   - "``MakeAvailable`` if the order is at least ``release``, and the operation
      results in a store",
    - "Only if ``!amdgcn-av-none`` is absent", etc.
 
@@ -372,6 +392,6 @@ a. LLVM fence/atomic ordering operations have ``MakeAvailable`` /
    LLVM memory model is a "strong" subset of the Vulkan memory model.
 b. The AMDGPU memory model described here makes it possible to opt-out of the
    default availability and visibility semantics, and instead specify it on
-   select places including the new load-visible and store-available operations.
+   select places including the new *load-visible* and *store-available* operations.
    This expands the subset of the Vulkan memory model that can now be expressed
    in LLVM IR.

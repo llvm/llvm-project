@@ -1150,6 +1150,15 @@ supported for the ``amdgcn`` target.
 Memory Scopes
 -------------
 
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
+
 This section provides LLVM memory synchronization scopes supported by the AMDGPU
 backend memory model when the target triple OS is ``amdhsa`` (see
 :ref:`amdgpu-amdhsa-memory-model` and :ref:`amdgpu-target-triples`).
@@ -7095,6 +7104,15 @@ code (see :ref:`memmodel`).
 
 The AMDGPU backend supports the memory synchronization scopes specified in
 :ref:`amdgpu-memory-scopes`.
+
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
 
 The code sequences used to implement the memory model specify the order of
 instructions that a single thread must execute. The ``s_waitcnt`` and cache
