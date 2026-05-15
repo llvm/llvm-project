@@ -18537,7 +18537,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
               Diag(NameLoc, diag::err_local_nested_class_invalid_scope)
                   << Name << OutermostClass;
               Diag(OutermostClass->getLocation(), diag::note_previous_decl)
-                  << OutermostClass << OutermostClass->getLocation();
+                  << OutermostClass;
             }
           }
         }
