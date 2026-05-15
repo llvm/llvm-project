@@ -1585,8 +1585,28 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
 
   // Out-of-line definitions shouldn't be pushed into scope in C++, unless they
   // are function-local declarations.
-  if (getLangOpts().CPlusPlus && D->isOutOfLine() && !S->getFnParent())
-    return;
+  if (getLangOpts().CPlusPlus && D->isOutOfLine()) {
+    if (!S->getFnParent())
+      return;
+
+    // Even inside a function, an out-of-line definition of a type that is
+    // nested inside a local class must not be pushed into the enclosing
+    // function scope. For example:
+    //
+    //   class A { public: class B; };
+    //   class A::B {};   // out-of-line definition inside the function
+    //   B b;             // must fail - only A::B is valid
+    //   Wrapper{B{}}     // must also fail
+    //
+    // Per C++ scoping rules only the qualified form A::B is accessible.
+    // Without this guard, PushOnScopeChains would add B to the function's
+    // local scope, making it findable via unqualified lookup, which is
+    // incorrect. The condition targets TagDecls (class/struct/union/enum)
+    // whose DeclContext is a CXXRecordDecl, i.e., types that are members
+    // of a local class being defined out-of-line.
+    if (isa<TagDecl>(D) && isa<CXXRecordDecl>(D->getDeclContext()))
+      return;
+  }
 
   // Template instantiations should also not be pushed into scope.
   if (isa<FunctionDecl>(D) &&
@@ -7926,7 +7946,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     if (CurContext->isRecord()) {
       if (SC == SC_Static) {
-        if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
+        if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
           // Walk up the enclosing DeclContexts to check for any that are
           // incompatible with static data members.
           const DeclContext *FunctionOrMethod = nullptr;
@@ -7948,8 +7968,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             Diag(D.getIdentifierLoc(),
                  diag::err_static_data_member_not_allowed_in_local_class)
                 << Name << RD->getDeclName() << RD->getTagKind();
-            Invalid = true;
-            RD->setInvalidDecl();
           } else if (AnonStruct) {
             // C++ [class.static.data]p4: Unnamed classes and classes contained
             // directly or indirectly within unnamed classes shall not contain
@@ -9133,12 +9151,6 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       NewVD->setInvalidDecl();
       return;
     }
-  }
-
-  if (!NewVD->hasLocalStorage() && NewVD->hasAttr<BlocksAttr>()) {
-    Diag(NewVD->getLocation(), diag::err_block_on_nonlocal);
-    NewVD->setInvalidDecl();
-    return;
   }
 
   if (!NewVD->hasLocalStorage() && T->isSizelessType() &&

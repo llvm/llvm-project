@@ -43,7 +43,7 @@ define float @test(ptr nocapture readonly %pA, ptr nocapture readonly %pB, i32 %
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <4 x float> [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = fdiv fast <4 x float> [[TMP12]], [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul fast <4 x float> [[TMP12]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select ninf <4 x i1> [[TMP7]], <4 x float> [[TMP13]], <4 x float> splat (float -0.000000e+00)
 ; CHECK-NEXT:    [[PREDPHI]] = fadd reassoc arcp contract afn <4 x float> [[VEC_PHI]], [[TMP14]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -78,7 +78,7 @@ define float @test(ptr nocapture readonly %pA, ptr nocapture readonly %pB, i32 %
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP20]], [[TMP19]]
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float [[TMP17]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = tail call fast float @llvm.fabs.f32(float [[SUB]])
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float [[TMP21]], [[ADD]]
+; CHECK-NEXT:    [[DIV:%.*]] = fmul fast float [[TMP21]], [[ADD]]
 ; CHECK-NEXT:    [[ADD4:%.*]] = fadd fast float [[DIV]], [[ACCUM_017]]
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
@@ -117,7 +117,7 @@ if.then:
   %add = fadd fast float %3, %2
   %sub = fsub fast float %0, %1
   %4 = tail call fast float @llvm.fabs.f32(float %sub)
-  %div = fdiv fast float %4, %add
+  %div = fmul fast float %4, %add
   %add4 = fadd fast float %div, %accum.017
   br label %if.end
 

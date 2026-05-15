@@ -176,6 +176,8 @@ protected:
     ValueObjectPrinter printer(*valobj_sp, &result.GetOutputStream(), options);
     if (llvm::Error error = printer.PrintValueObject())
       result.AppendError(toString(std::move(error)));
+    else
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   CommandOptions m_options;
@@ -492,7 +494,7 @@ may even involve JITing and running code in the target program.)");
       // Access the default max-depth from the target. This is because
       // GetRepeatCommand is called before ParseOptions, which is when
       // m_varobj_options.max_depth becomes assigned.
-      if (auto target_sp = GetDebugger().GetSelectedTarget()) {
+      if (auto target_sp = GetCommandInterpreter().GetSelectedTarget()) {
         auto [default_depth, _] =
             target_sp->GetMaximumDepthOfChildrenToDisplay();
         // Insert the depth after `frame variable`, before positional args.
