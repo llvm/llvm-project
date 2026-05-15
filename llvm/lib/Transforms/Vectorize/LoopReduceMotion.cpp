@@ -197,14 +197,14 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
     }
   }
 
-  bool transform_success = false;
+  bool Changed = false;
   SmallVector<Instruction *, 8> StackRecur;
   SmallVector<PHINode *, 8> Stack;
-  int phi_count = 0;
+  int phiCount = 0;
   for (PHINode &PN : Header->phis()) {
     Stack.push_back(&PN);
-    phi_count++;
-    if (phi_count >= 8)
+    phiCount++;
+    if (phiCount >= 8)
       return false;
   }
 
@@ -229,8 +229,8 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
       continue;
 
     // Don't match if the Recurrence Value has other use in loop
-    bool hasOtherUse = llvm::any_of(
-        make_early_inc_range(RecurrenceValueFromPHI->users()), [&](User *U) {
+    bool hasOtherUse = llvm::any_of(RecurrenceValueFromPHI->users(),
+                                    [&](User *U) {
           auto *Inst = dyn_cast<Instruction>(U);
           return Inst && Inst != PN && L.contains(Inst->getParent());
         });
@@ -308,15 +308,11 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
         if (phi && phi->getParent() == LandingPad && !phi->use_empty()) {
           phi->replaceAllUsesWith(FinalNode);
           llvm::RecursivelyDeleteDeadPHINode(phi);
-          transform_success = true;
+          Changed = true;
         }
       }
     }
   }
 
-  if (transform_success) {
-    return true;
-  }
-
-  return false;
+  return Changed;
 }
