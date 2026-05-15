@@ -5556,6 +5556,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
   }
 
   combinedInfo.Types.emplace_back(baseFlag);
+  combinedInfo.DontAddMemberOfInMapper.emplace_back(false);
   combinedInfo.DevicePointers.emplace_back(
       mapData.DevicePointers[mapDataIndex]);
   // Only attach the mapper to the base entry when we are mapping the whole
@@ -5626,6 +5627,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
 
     if (targetDirective == TargetDirectiveEnumTy::TargetUpdate || hasMapClose) {
       combinedInfo.Types.emplace_back(mapFlag);
+      combinedInfo.DontAddMemberOfInMapper.emplace_back(false);
       combinedInfo.DevicePointers.emplace_back(
           mapData.DevicePointers[mapDataIndex]);
       combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
@@ -5662,6 +5664,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
             mapData,
             cast<omp::MapInfoOp>(parentClause.getMembers()[v].getDefiningOp()));
         combinedInfo.Types.emplace_back(mapFlag);
+        combinedInfo.DontAddMemberOfInMapper.emplace_back(false);
         combinedInfo.DevicePointers.emplace_back(
             mapData.DevicePointers[mapDataOverlapIdx]);
         combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
@@ -5684,6 +5687,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
       }
 
       combinedInfo.Types.emplace_back(mapFlag);
+      combinedInfo.DontAddMemberOfInMapper.emplace_back(false);
       combinedInfo.DevicePointers.emplace_back(
           mapData.DevicePointers[mapDataIndex]);
       combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
@@ -5733,6 +5737,7 @@ static void processMapMembersWithParent(
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
       ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
       combinedInfo.Types.emplace_back(mapFlag);
+      combinedInfo.DontAddMemberOfInMapper.emplace_back(false);
       combinedInfo.DevicePointers.emplace_back(
           llvm::OpenMPIRBuilder::DeviceInfoTy::None);
       combinedInfo.Mappers.emplace_back(nullptr);
@@ -5762,6 +5767,7 @@ static void processMapMembersWithParent(
     }
 
     combinedInfo.Types.emplace_back(mapFlag);
+    combinedInfo.DontAddMemberOfInMapper.emplace_back(false);
     combinedInfo.DevicePointers.emplace_back(
         mapData.DevicePointers[memberDataIdx]);
     combinedInfo.Mappers.emplace_back(mapData.Mappers[memberDataIdx]);
@@ -5820,6 +5826,7 @@ static void processIndividualMap(MapInfoData &mapData, size_t mapDataIdx,
   combinedInfo.Mappers.emplace_back(mapData.Mappers[mapDataIdx]);
   combinedInfo.Names.emplace_back(mapData.Names[mapDataIdx]);
   combinedInfo.Types.emplace_back(mapFlag);
+  combinedInfo.DontAddMemberOfInMapper.emplace_back(false);
   combinedInfo.Sizes.emplace_back(mapData.Sizes[mapDataIdx]);
 }
 
