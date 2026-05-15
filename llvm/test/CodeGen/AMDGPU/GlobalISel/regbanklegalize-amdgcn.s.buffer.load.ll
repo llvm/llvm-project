@@ -36,9 +36,9 @@ define amdgpu_ps void @s_buffer_load_i32_sgpr_rsrc_sgpr_offset(<4 x i32> inreg %
   ret void
 }
 
-; Case 1b: i64, SGPR rsrc, SGPR offset
-define amdgpu_ps void @s_buffer_load_i64_sgpr_rsrc_sgpr_offset(<4 x i32> inreg %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i64_sgpr_rsrc_sgpr_offset:
+; Case 1b: v2i32, SGPR rsrc, SGPR offset
+define amdgpu_ps void @s_buffer_load_v2i32_sgpr_rsrc_sgpr_offset(<4 x i32> inreg %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
+; GFX10-LABEL: s_buffer_load_v2i32_sgpr_rsrc_sgpr_offset:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_mov_b32 s0, s2
 ; GFX10-NEXT:    s_mov_b32 s1, s3
@@ -54,7 +54,7 @@ define amdgpu_ps void @s_buffer_load_i64_sgpr_rsrc_sgpr_offset(<4 x i32> inreg %
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_load_i64_sgpr_rsrc_sgpr_offset:
+; GFX12-LABEL: s_buffer_load_v2i32_sgpr_rsrc_sgpr_offset:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], s4 offset:0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
@@ -64,8 +64,8 @@ define amdgpu_ps void @s_buffer_load_i64_sgpr_rsrc_sgpr_offset(<4 x i32> inreg %
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[8:9]
 ; GFX12-NEXT:    s_endpgm
-  %val = call i64 @llvm.amdgcn.s.buffer.load.i64(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i64 %val, ptr addrspace(1) %out
+  %val = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %rsrc, i32 %soffset, i32 0)
+  store <2 x i32> %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -275,9 +275,9 @@ define amdgpu_ps void @s_buffer_load_i32_sgpr_rsrc_vgpr_offset(<4 x i32> inreg %
   ret void
 }
 
-; Case 2b: i64, SGPR rsrc, VGPR offset
-define amdgpu_ps void @s_buffer_load_i64_sgpr_rsrc_vgpr_offset(<4 x i32> inreg %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i64_sgpr_rsrc_vgpr_offset:
+; Case 2b: v2i32, SGPR rsrc, VGPR offset
+define amdgpu_ps void @s_buffer_load_v2i32_sgpr_rsrc_vgpr_offset(<4 x i32> inreg %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
+; GFX10-LABEL: s_buffer_load_v2i32_sgpr_rsrc_vgpr_offset:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_mov_b32 s0, s2
 ; GFX10-NEXT:    s_mov_b32 s1, s3
@@ -289,15 +289,15 @@ define amdgpu_ps void @s_buffer_load_i64_sgpr_rsrc_vgpr_offset(<4 x i32> inreg %
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_load_i64_sgpr_rsrc_vgpr_offset:
+; GFX12-LABEL: s_buffer_load_v2i32_sgpr_rsrc_vgpr_offset:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
 ; GFX12-NEXT:    s_endpgm
-  %val = call i64 @llvm.amdgcn.s.buffer.load.i64(<4 x i32> %rsrc, i32 %offset, i32 0)
-  store i64 %val, ptr addrspace(1) %out
+  %val = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %rsrc, i32 %offset, i32 0)
+  store <2 x i32> %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -505,9 +505,9 @@ define amdgpu_ps void @s_buffer_load_i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
   ret void
 }
 
-; Case 3b: i64, VGPR rsrc, SGPR offset
-define amdgpu_ps void @s_buffer_load_i64_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i64_vgpr_rsrc_sgpr_offset:
+; Case 3b: v2i32, VGPR rsrc, SGPR offset
+define amdgpu_ps void @s_buffer_load_v2i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
+; GFX10-LABEL: s_buffer_load_v2i32_vgpr_rsrc_sgpr_offset:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s2
 ; GFX10-NEXT:    s_mov_b32 s8, s3
@@ -536,7 +536,7 @@ define amdgpu_ps void @s_buffer_load_i64_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
 ; GFX10-NEXT:    global_store_dwordx2 v0, v[4:5], s[8:9]
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_load_i64_vgpr_rsrc_sgpr_offset:
+; GFX12-LABEL: s_buffer_load_v2i32_vgpr_rsrc_sgpr_offset:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v6, s0
 ; GFX12-NEXT:    s_mov_b32 s8, s1
@@ -567,8 +567,8 @@ define amdgpu_ps void @s_buffer_load_i64_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b64 v0, v[4:5], s[8:9]
 ; GFX12-NEXT:    s_endpgm
-  %val = call i64 @llvm.amdgcn.s.buffer.load.i64(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i64 %val, ptr addrspace(1) %out
+  %val = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %rsrc, i32 %soffset, i32 0)
+  store <2 x i32> %val, ptr addrspace(1) %out
   ret void
 }
 ; Case 3c: i96, VGPR rsrc, SGPR offset
@@ -847,9 +847,9 @@ define amdgpu_ps void @s_buffer_load_i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, 
   ret void
 }
 
-; Case 4b: i64, VGPR rsrc, VGPR offset
-define amdgpu_ps void @s_buffer_load_i64_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i64_vgpr_rsrc_vgpr_offset:
+; Case 4b: v2i32, VGPR rsrc, VGPR offset
+define amdgpu_ps void @s_buffer_load_v2i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
+; GFX10-LABEL: s_buffer_load_v2i32_vgpr_rsrc_vgpr_offset:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
@@ -875,7 +875,7 @@ define amdgpu_ps void @s_buffer_load_i64_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, 
 ; GFX10-NEXT:    global_store_dwordx2 v0, v[5:6], s[2:3]
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_load_i64_vgpr_rsrc_vgpr_offset:
+; GFX12-LABEL: s_buffer_load_v2i32_vgpr_rsrc_vgpr_offset:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX12-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
@@ -903,8 +903,8 @@ define amdgpu_ps void @s_buffer_load_i64_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b64 v0, v[5:6], s[0:1]
 ; GFX12-NEXT:    s_endpgm
-  %val = call i64 @llvm.amdgcn.s.buffer.load.i64(<4 x i32> %rsrc, i32 %offset, i32 0)
-  store i64 %val, ptr addrspace(1) %out
+  %val = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %rsrc, i32 %offset, i32 0)
+  store <2 x i32> %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -1038,779 +1038,9 @@ define amdgpu_ps void @s_buffer_load_v8i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc
   ret void
 }
 
-; ----------------------------------------------------------------------------
-; Case 5: Sub-dword, uniform — SGPR rsrc + SGPR offset
-; ----------------------------------------------------------------------------
-
-; Case 5a: i8 signed, SGPR rsrc, SGPR offset
-define amdgpu_ps void @s_buffer_load_i8_sgpr_rsrc_sgpr_offset(<4 x i32> inreg %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i8_sgpr_rsrc_sgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s0, s2
-; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    s_buffer_load_dword s0, s[0:3], s6 offset:0x0
-; GFX10-NEXT:    s_mov_b32 s4, s7
-; GFX10-NEXT:    s_mov_b32 s5, s8
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    global_store_byte v1, v0, s[4:5]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_i8_sgpr_rsrc_sgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_u8 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_mov_b32 s8, s5
-; GFX12-NEXT:    s_mov_b32 s9, s6
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s0
-; GFX12-NEXT:    global_store_b8 v1, v0, s[8:9]
-; GFX12-NEXT:    s_endpgm
-  %val = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i8 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 5b: i8 unsigned, SGPR rsrc, SGPR offset
-define amdgpu_ps void @s_buffer_load_u8_sgpr_rsrc_sgpr_offset(<4 x i32> inreg %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_u8_sgpr_rsrc_sgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s0, s2
-; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    s_buffer_load_dword s0, s[0:3], s6 offset:0x0
-; GFX10-NEXT:    s_mov_b32 s4, s7
-; GFX10-NEXT:    s_mov_b32 s5, s8
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    global_store_byte v1, v0, s[4:5]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_u8_sgpr_rsrc_sgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_u8 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_mov_b32 s8, s5
-; GFX12-NEXT:    s_mov_b32 s9, s6
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s0
-; GFX12-NEXT:    global_store_b8 v1, v0, s[8:9]
-; GFX12-NEXT:    s_endpgm
-  %val = call i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i8 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 5c: i16 signed, SGPR rsrc, SGPR offset
-define amdgpu_ps void @s_buffer_load_i16_sgpr_rsrc_sgpr_offset(<4 x i32> inreg %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i16_sgpr_rsrc_sgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s0, s2
-; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    s_buffer_load_dword s0, s[0:3], s6 offset:0x0
-; GFX10-NEXT:    s_mov_b32 s4, s7
-; GFX10-NEXT:    s_mov_b32 s5, s8
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    global_store_short v1, v0, s[4:5]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_i16_sgpr_rsrc_sgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_u16 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_mov_b32 s8, s5
-; GFX12-NEXT:    s_mov_b32 s9, s6
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX12-NEXT:    global_store_b16 v1, v0, s[8:9]
-; GFX12-NEXT:    s_endpgm
-  %val = call i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i16 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 5d: i16 unsigned, SGPR rsrc, SGPR offset
-define amdgpu_ps void @s_buffer_load_u16_sgpr_rsrc_sgpr_offset(<4 x i32> inreg %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_u16_sgpr_rsrc_sgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s0, s2
-; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    s_buffer_load_dword s0, s[0:3], s6 offset:0x0
-; GFX10-NEXT:    s_mov_b32 s4, s7
-; GFX10-NEXT:    s_mov_b32 s5, s8
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    global_store_short v1, v0, s[4:5]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_u16_sgpr_rsrc_sgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_u16 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_mov_b32 s8, s5
-; GFX12-NEXT:    s_mov_b32 s9, s6
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX12-NEXT:    global_store_b16 v1, v0, s[8:9]
-; GFX12-NEXT:    s_endpgm
-  %val = call i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i16 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; ----------------------------------------------------------------------------
-; Case 6: Sub-dword, divergent offset, SGPR rsrc
-; ----------------------------------------------------------------------------
-
-; Case 6a: i8 signed, SGPR rsrc, VGPR offset
-define amdgpu_ps void @s_buffer_load_i8_sgpr_rsrc_vgpr_offset(<4 x i32> inreg %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i8_sgpr_rsrc_vgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s0, s2
-; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_byte v1, v0, s[6:7]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_i8_sgpr_rsrc_vgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    buffer_load_u8 v0, v0, s[0:3], null offen
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b8 v1, v0, s[4:5]
-; GFX12-NEXT:    s_endpgm
-  %val = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> %rsrc, i32 %offset, i32 0)
-  store i8 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 6b: i8 unsigned, SGPR rsrc, VGPR offset
-define amdgpu_ps void @s_buffer_load_u8_sgpr_rsrc_vgpr_offset(<4 x i32> inreg %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_u8_sgpr_rsrc_vgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s0, s2
-; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_byte v1, v0, s[6:7]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_u8_sgpr_rsrc_vgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    buffer_load_u8 v0, v0, s[0:3], null offen
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b8 v1, v0, s[4:5]
-; GFX12-NEXT:    s_endpgm
-  %val = call i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32> %rsrc, i32 %offset, i32 0)
-  store i8 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 6c: i16 signed, SGPR rsrc, VGPR offset
-define amdgpu_ps void @s_buffer_load_i16_sgpr_rsrc_vgpr_offset(<4 x i32> inreg %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i16_sgpr_rsrc_vgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s0, s2
-; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_short v1, v0, s[6:7]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_i16_sgpr_rsrc_vgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    buffer_load_u16 v0, v0, s[0:3], null offen
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b16 v1, v0, s[4:5]
-; GFX12-NEXT:    s_endpgm
-  %val = call i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32> %rsrc, i32 %offset, i32 0)
-  store i16 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 6d: i16 unsigned, SGPR rsrc, VGPR offset
-define amdgpu_ps void @s_buffer_load_u16_sgpr_rsrc_vgpr_offset(<4 x i32> inreg %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_u16_sgpr_rsrc_vgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s0, s2
-; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_short v1, v0, s[6:7]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_u16_sgpr_rsrc_vgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    buffer_load_u16 v0, v0, s[0:3], null offen
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b16 v1, v0, s[4:5]
-; GFX12-NEXT:    s_endpgm
-  %val = call i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32> %rsrc, i32 %offset, i32 0)
-  store i16 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; ----------------------------------------------------------------------------
-; Case 7: Sub-dword, divergent rsrc, SGPR offset
-; ----------------------------------------------------------------------------
-; TODO: Emit s_buffer_load in this case
-; Case 7a: u8 unsigned, VGPR rsrc, SGPR offset
-define amdgpu_ps void @s_buffer_load_u8_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_u8_vgpr_rsrc_sgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_mov_b32_e32 v4, s2
-; GFX10-NEXT:    s_mov_b32 s8, s3
-; GFX10-NEXT:    s_mov_b32 s9, s4
-; GFX10-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-NEXT:  .LBB29_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX10-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX10-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX10-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX10-NEXT:    buffer_load_dword v1, v4, s[4:7], 0 offen
-; GFX10-NEXT:    ; implicit-def: $vgpr0
-; GFX10-NEXT:    ; implicit-def: $vgpr4
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execnz .LBB29_1
-; GFX10-NEXT:  ; %bb.2:
-; GFX10-NEXT:    s_mov_b32 exec_lo, s1
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_byte v0, v1, s[8:9]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_u8_vgpr_rsrc_sgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v4, s0
-; GFX12-NEXT:    s_mov_b32 s8, s1
-; GFX12-NEXT:    s_mov_b32 s9, s2
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB29_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
-; GFX12-NEXT:    ; implicit-def: $vgpr0
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB29_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b8 v0, v1, s[8:9]
-; GFX12-NEXT:    s_endpgm
-  %val = call i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i8 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 7b: i8 signed, VGPR rsrc, SGPR offset
-define amdgpu_ps void @s_buffer_load_i8_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i8_vgpr_rsrc_sgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_mov_b32_e32 v4, s2
-; GFX10-NEXT:    s_mov_b32 s8, s3
-; GFX10-NEXT:    s_mov_b32 s9, s4
-; GFX10-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-NEXT:  .LBB30_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX10-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX10-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX10-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX10-NEXT:    buffer_load_dword v1, v4, s[4:7], 0 offen
-; GFX10-NEXT:    ; implicit-def: $vgpr0
-; GFX10-NEXT:    ; implicit-def: $vgpr4
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execnz .LBB30_1
-; GFX10-NEXT:  ; %bb.2:
-; GFX10-NEXT:    s_mov_b32 exec_lo, s1
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_byte v0, v1, s[8:9]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_i8_vgpr_rsrc_sgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v4, s0
-; GFX12-NEXT:    s_mov_b32 s8, s1
-; GFX12-NEXT:    s_mov_b32 s9, s2
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB30_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
-; GFX12-NEXT:    ; implicit-def: $vgpr0
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB30_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b8 v0, v1, s[8:9]
-; GFX12-NEXT:    s_endpgm
-  %val = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i8 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 7c: u16 unsigned, VGPR rsrc, SGPR offset
-define amdgpu_ps void @s_buffer_load_u16_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_u16_vgpr_rsrc_sgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_mov_b32_e32 v4, s2
-; GFX10-NEXT:    s_mov_b32 s8, s3
-; GFX10-NEXT:    s_mov_b32 s9, s4
-; GFX10-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-NEXT:  .LBB31_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX10-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX10-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX10-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX10-NEXT:    buffer_load_dword v1, v4, s[4:7], 0 offen
-; GFX10-NEXT:    ; implicit-def: $vgpr0
-; GFX10-NEXT:    ; implicit-def: $vgpr4
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execnz .LBB31_1
-; GFX10-NEXT:  ; %bb.2:
-; GFX10-NEXT:    s_mov_b32 exec_lo, s1
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_short v0, v1, s[8:9]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_u16_vgpr_rsrc_sgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v4, s0
-; GFX12-NEXT:    s_mov_b32 s8, s1
-; GFX12-NEXT:    s_mov_b32 s9, s2
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB31_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
-; GFX12-NEXT:    ; implicit-def: $vgpr0
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB31_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b16 v0, v1, s[8:9]
-; GFX12-NEXT:    s_endpgm
-  %val = call i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i16 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 7d: i16 signed, VGPR rsrc, SGPR offset
-define amdgpu_ps void @s_buffer_load_i16_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i16_vgpr_rsrc_sgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_mov_b32_e32 v4, s2
-; GFX10-NEXT:    s_mov_b32 s8, s3
-; GFX10-NEXT:    s_mov_b32 s9, s4
-; GFX10-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-NEXT:  .LBB32_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX10-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX10-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX10-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX10-NEXT:    buffer_load_dword v1, v4, s[4:7], 0 offen
-; GFX10-NEXT:    ; implicit-def: $vgpr0
-; GFX10-NEXT:    ; implicit-def: $vgpr4
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execnz .LBB32_1
-; GFX10-NEXT:  ; %bb.2:
-; GFX10-NEXT:    s_mov_b32 exec_lo, s1
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_short v0, v1, s[8:9]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_i16_vgpr_rsrc_sgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v4, s0
-; GFX12-NEXT:    s_mov_b32 s8, s1
-; GFX12-NEXT:    s_mov_b32 s9, s2
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
-; GFX12-NEXT:  .LBB32_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
-; GFX12-NEXT:    ; implicit-def: $vgpr0
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB32_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b16 v0, v1, s[8:9]
-; GFX12-NEXT:    s_endpgm
-  %val = call i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i16 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; ----------------------------------------------------------------------------
-; Case 8: Sub-dword, both rsrc and offset divergent
-; ----------------------------------------------------------------------------
-
-; Case 8a: u8 unsigned, VGPR rsrc, VGPR offset
-define amdgpu_ps void @s_buffer_load_u8_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_u8_vgpr_rsrc_vgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-NEXT:  .LBB33_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX10-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX10-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX10-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX10-NEXT:    buffer_load_dword v1, v4, s[4:7], 0 offen
-; GFX10-NEXT:    ; implicit-def: $vgpr0
-; GFX10-NEXT:    ; implicit-def: $vgpr4
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execnz .LBB33_1
-; GFX10-NEXT:  ; %bb.2:
-; GFX10-NEXT:    s_mov_b32 exec_lo, s1
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_byte v0, v1, s[2:3]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_u8_vgpr_rsrc_vgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s3, exec_lo
-; GFX12-NEXT:  .LBB33_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
-; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
-; GFX12-NEXT:    ; implicit-def: $vgpr0
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
-; GFX12-NEXT:    s_cbranch_execnz .LBB33_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s3
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX12-NEXT:    s_endpgm
-  %val = call i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32> %rsrc, i32 %offset, i32 0)
-  store i8 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 8b: i8 signed, VGPR rsrc, VGPR offset
-define amdgpu_ps void @s_buffer_load_i8_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i8_vgpr_rsrc_vgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-NEXT:  .LBB34_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX10-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX10-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX10-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX10-NEXT:    buffer_load_dword v1, v4, s[4:7], 0 offen
-; GFX10-NEXT:    ; implicit-def: $vgpr0
-; GFX10-NEXT:    ; implicit-def: $vgpr4
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execnz .LBB34_1
-; GFX10-NEXT:  ; %bb.2:
-; GFX10-NEXT:    s_mov_b32 exec_lo, s1
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_byte v0, v1, s[2:3]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_i8_vgpr_rsrc_vgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s3, exec_lo
-; GFX12-NEXT:  .LBB34_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
-; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
-; GFX12-NEXT:    ; implicit-def: $vgpr0
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
-; GFX12-NEXT:    s_cbranch_execnz .LBB34_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s3
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX12-NEXT:    s_endpgm
-  %val = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> %rsrc, i32 %offset, i32 0)
-  store i8 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 8c: u16 unsigned, VGPR rsrc, VGPR offset
-define amdgpu_ps void @s_buffer_load_u16_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_u16_vgpr_rsrc_vgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-NEXT:  .LBB35_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX10-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX10-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX10-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX10-NEXT:    buffer_load_dword v1, v4, s[4:7], 0 offen
-; GFX10-NEXT:    ; implicit-def: $vgpr0
-; GFX10-NEXT:    ; implicit-def: $vgpr4
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execnz .LBB35_1
-; GFX10-NEXT:  ; %bb.2:
-; GFX10-NEXT:    s_mov_b32 exec_lo, s1
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_short v0, v1, s[2:3]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_u16_vgpr_rsrc_vgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s3, exec_lo
-; GFX12-NEXT:  .LBB35_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
-; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
-; GFX12-NEXT:    ; implicit-def: $vgpr0
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
-; GFX12-NEXT:    s_cbranch_execnz .LBB35_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s3
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX12-NEXT:    s_endpgm
-  %val = call i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32> %rsrc, i32 %offset, i32 0)
-  store i16 %val, ptr addrspace(1) %out
-  ret void
-}
-
-; Case 8d: i16 signed, VGPR rsrc, VGPR offset
-define amdgpu_ps void @s_buffer_load_i16_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
-; GFX10-LABEL: s_buffer_load_i16_vgpr_rsrc_vgpr_offset:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s1, exec_lo
-; GFX10-NEXT:  .LBB36_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX10-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX10-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX10-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX10-NEXT:    buffer_load_dword v1, v4, s[4:7], 0 offen
-; GFX10-NEXT:    ; implicit-def: $vgpr0
-; GFX10-NEXT:    ; implicit-def: $vgpr4
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execnz .LBB36_1
-; GFX10-NEXT:  ; %bb.2:
-; GFX10-NEXT:    s_mov_b32 exec_lo, s1
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_short v0, v1, s[2:3]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_buffer_load_i16_vgpr_rsrc_vgpr_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s3, exec_lo
-; GFX12-NEXT:  .LBB36_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
-; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
-; GFX12-NEXT:    ; implicit-def: $vgpr0
-; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
-; GFX12-NEXT:    s_cbranch_execnz .LBB36_1
-; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s3
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX12-NEXT:    s_endpgm
-  %val = call i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32> %rsrc, i32 %offset, i32 0)
-  store i16 %val, ptr addrspace(1) %out
-  ret void
-}
-
 declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
-declare i64 @llvm.amdgcn.s.buffer.load.i64(<4 x i32>, i32, i32 immarg)
+declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32 immarg)
 declare i96 @llvm.amdgcn.s.buffer.load.i96(<4 x i32>, i32, i32 immarg)
 declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32 immarg)
 declare <8 x i32> @llvm.amdgcn.s.buffer.load.v8i32(<4 x i32>, i32, i32 immarg)
 declare <16 x i32> @llvm.amdgcn.s.buffer.load.v16i32(<4 x i32>, i32, i32 immarg)
-declare i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32>, i32, i32)
-declare i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32>, i32, i32)
-declare i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32>, i32, i32)
-declare i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32>, i32, i32)

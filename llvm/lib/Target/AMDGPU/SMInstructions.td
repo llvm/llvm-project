@@ -1081,7 +1081,6 @@ defm : SMRD_Pattern <"S_LOAD_DWORDX16", vt>;
 
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2i32>;
-defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   i64>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX3",   v3i32, false>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8i32>;

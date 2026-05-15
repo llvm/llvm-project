@@ -36,7 +36,7 @@ RegBankLegalizeHelper::RegBankLegalizeHelper(
     MachineIRBuilder &B, const MachineUniformityInfo &MUI,
     const RegisterBankInfo &RBI, const RegBankLegalizeRules &RBLRules)
     : MF(B.getMF()), MFI(MF.getInfo<SIMachineFunctionInfo>()),
-      ST(MF.getSubtarget<GCNSubtarget>()), B(B), MRI(*B.getMRI()), MUI(MUI),
+      ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()), B(B), MRI(*B.getMRI()), MUI(MUI),
       RBI(RBI), MORE(MF, nullptr), RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
@@ -304,8 +304,6 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
 unsigned RegBankLegalizeHelper::setBufferOffsets(
     MachineIRBuilder &B, Register CombinedOffset, Register &VOffsetReg,
     Register &SOffsetReg, int64_t &InstOffsetVal, Align Alignment) {
-  const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
-  const SIInstrInfo &TII = *ST.getInstrInfo();
   if (std::optional<int64_t> Imm =
           getIConstantVRegSExtVal(CombinedOffset, MRI)) {
     uint32_t SOffset, ImmOffset;
@@ -316,10 +314,7 @@ unsigned RegBankLegalizeHelper::setBufferOffsets(
       return SOffset + ImmOffset;
     }
   }
-  Register Base;
-  unsigned Offset;
-  std::tie(Base, Offset) =
-      AMDGPU::getBaseWithConstantOffset(MRI, CombinedOffset);
+  auto [Base, Offset] = AMDGPU::getBaseWithConstantOffset(MRI, CombinedOffset);
   uint32_t SOffset, ImmOffset;
   if ((int)Offset > 0 &&
       TII.splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
@@ -809,9 +804,9 @@ bool RegBankLegalizeHelper::lowerUniMAD64(MachineInstr &MI) {
   Register Src0 = MI.getOperand(2).getReg();
   Register Src1 = MI.getOperand(3).getReg();
   Register Src2 = MI.getOperand(4).getReg();
-
+  
   const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
-
+  
   // Keep the multiplication on the SALU.
   Register DstLo = B.buildMul(SgprRB_S32, Src0, Src1).getReg(0);
   Register DstHi = MRI.createVirtualRegister(SgprRB_S32);
@@ -1427,10 +1422,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       executeInWaterfallLoop(B, {OpsToWaterfall, Span.begin(), Span.end()});
     }
     if (NumLoads != 1) {
-      if (Ty.isVector())
-        B.buildConcatVectors(Dst, LoadParts);
-      else
-        B.buildMergeLikeInstr(Dst, LoadParts);
+      B.buildMergeLikeInstr(Dst, LoadParts);
     }
     // We removed the instruction earlier with a waterfall loop.
     if (RSrcBank == SgprRB)

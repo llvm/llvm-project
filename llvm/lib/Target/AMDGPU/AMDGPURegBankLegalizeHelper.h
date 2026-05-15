@@ -18,6 +18,7 @@
 namespace llvm {
 
 class MachineIRBuilder;
+class SIInstrInfo;
 class SIMachineFunctionInfo;
 
 namespace AMDGPU {
@@ -41,6 +42,7 @@ class RegBankLegalizeHelper {
   MachineFunction &MF;
   const SIMachineFunctionInfo *MFI;
   const GCNSubtarget &ST;
+  const SIInstrInfo &TII;
   MachineIRBuilder &B;
   MachineRegisterInfo &MRI;
   const MachineUniformityInfo &MUI;
