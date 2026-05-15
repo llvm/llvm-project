@@ -2951,41 +2951,47 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   bool UnsafeBufferUsageShouldEmitSuggestions =  // Should != Can.
       UnsafeBufferUsageCanEmitSuggestions &&
       DiagOpts.ShowSafeBufferUsageSuggestions;
-  bool UnsafeBufferUsageShouldSuggestSuggestions =
-      UnsafeBufferUsageCanEmitSuggestions &&
-      !DiagOpts.ShowSafeBufferUsageSuggestions;
-  UnsafeBufferUsageReporter R(S, UnsafeBufferUsageShouldSuggestSuggestions);
+  // When the '-fsafe-buffer-usage-suggestions' option is enabled,
+  // the '-Wunsafe-buffer-usage' analysis is performed at the end of the
+  // translation unit. Otherwise, the analysis is more efficiently performed at
+  // the end of each Decl during parsing.
+  if (UnsafeBufferUsageShouldEmitSuggestions) {
+    UnsafeBufferUsageReporter R(S, /*SuggestSuggestions=*/false);
 
-  // The Callback function that performs analyses:
-  auto CallAnalyzers = [&](const Decl *Node) -> void {
-    if (Node->hasAttr<UnsafeBufferUsageAttr>())
-      return;
+    // The Callback function that performs analyses:
+    auto CallAnalyzers = [&](const Decl *Node) -> void {
+      if (Node->hasAttr<UnsafeBufferUsageAttr>())
+        return;
 
-    // Perform unsafe buffer usage analysis:
+      // Perform unsafe buffer usage analysis:
+      if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
+                           Node->getBeginLoc()) ||
+          !Diags.isIgnored(diag::warn_unsafe_buffer_variable,
+                           Node->getBeginLoc()) ||
+          !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
+                           Node->getBeginLoc()) ||
+          !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call,
+                           Node->getBeginLoc())) {
+        clang::checkUnsafeBufferUsage(Node, R,
+                                      /*EmitSuggestion =*/true);
+      }
+
+      // More analysis ...
+    };
+    // Emit per-function analysis-based warnings that require the whole-TU
+    // reasoning. Check if any of them is enabled at all before scanning the
+    // AST:
     if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
-                         Node->getBeginLoc()) ||
-        !Diags.isIgnored(diag::warn_unsafe_buffer_variable,
-                         Node->getBeginLoc()) ||
+                         SourceLocation()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
         !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
-                         Node->getBeginLoc()) ||
-        !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call,
-                         Node->getBeginLoc())) {
-      clang::checkUnsafeBufferUsage(Node, R,
-                                    UnsafeBufferUsageShouldEmitSuggestions);
+                         SourceLocation()) ||
+        (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call,
+                          SourceLocation()) &&
+         S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */)) {
+      CallableVisitor(CallAnalyzers, TU->getOwningModule())
+          .TraverseTranslationUnitDecl(TU);
     }
-
-    // More analysis ...
-  };
-  // Emit per-function analysis-based warnings that require the whole-TU
-  // reasoning. Check if any of them is enabled at all before scanning the AST:
-  if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
-                       SourceLocation()) ||
-      (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation()) &&
-       S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */)) {
-    CallableVisitor(CallAnalyzers, TU->getOwningModule())
-        .TraverseTranslationUnitDecl(TU);
   }
 
   if (S.getLangOpts().CPlusPlus &&
@@ -3219,6 +3225,37 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
                                          cfg->getNumBlockIDs());
     } else {
       ++NumFunctionsWithBadCFGs;
+    }
+  }
+
+  // UnsafeBufferUsage analysis settings.
+  bool UnsafeBufferUsageCanEmitSuggestions = S.getLangOpts().CPlusPlus20;
+  bool UnsafeBufferUsageShouldEmitSuggestions = // Should != Can.
+      UnsafeBufferUsageCanEmitSuggestions &&
+      Diags.getDiagnosticOptions().ShowSafeBufferUsageSuggestions;
+  bool UnsafeBufferUsageShouldSuggestSuggestions =
+      UnsafeBufferUsageCanEmitSuggestions &&
+      !Diags.getDiagnosticOptions().ShowSafeBufferUsageSuggestions;
+
+  // If the '-fsafe-buffer-usage-suggestions' option is not specified or C++20
+  // is not available, '-Wunsafe-buffer-usage' warnings are analyzed at the end
+  // of each Decl. This is because only '-fsafe-buffer-usage-suggestions'
+  // requires visibility of the whole translation unit, hence the cumbersome
+  // post-TU analysis, which deserializes and scans pre-compiled ASTs.
+  if (!UnsafeBufferUsageShouldEmitSuggestions &&
+      !D->hasAttr<UnsafeBufferUsageAttr>()) {
+    UnsafeBufferUsageReporter R(S, UnsafeBufferUsageShouldSuggestSuggestions);
+
+    // Perform unsafe buffer usage analysis:
+    if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
+                         D->getBeginLoc()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_variable, D->getBeginLoc()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
+                         D->getBeginLoc()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call,
+                         D->getBeginLoc())) {
+      clang::checkUnsafeBufferUsage(
+          D, R, /*UnsafeBufferUsageShouldEmitSuggestions=*/false);
     }
   }
 }
