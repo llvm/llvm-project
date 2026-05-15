@@ -781,10 +781,8 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   }
 
   lowerVGPR2SGPRCopies(MF);
-
   // Postprocessing
   fixSCCCopies(MF);
-
   for (auto *MI : S2VCopies) {
     // Check if it is still valid
     if (MI->isCopy()) {
@@ -1015,9 +1013,6 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
     }
   }
 
-  for (auto I : Info.SChain) {
-    LLVM_DEBUG(dbgs() << "Chain 12345:"; I->dump(););
-  }
   V2SCopies[Info.ID] = std::move(Info);
 }
 
