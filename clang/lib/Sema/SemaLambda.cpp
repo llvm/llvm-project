@@ -2092,10 +2092,10 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
     const VarDecl *Var = nullptr;
     if (isOpenMP) {
       if (auto *BD = dyn_cast_or_null<BindingDecl>(Capture.getVariable())) {
-        assert(Capture.isReferenceCapture() &&
-               "OpenMP structured binding capture must be by reference");
         Var = cast<VarDecl>(BD->getDecomposedDecl());
-        FieldType = Context.getLValueReferenceType(Var->getType());
+        FieldType = Var->getType();
+        if (Capture.isReferenceCapture())
+          FieldType = Context.getLValueReferenceType(Var->getType());
       }
     }
     if (!Var)

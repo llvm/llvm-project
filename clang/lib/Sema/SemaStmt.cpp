@@ -4672,6 +4672,7 @@ static bool
 buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
                              SmallVectorImpl<CapturedStmt::Capture> &Captures,
                              SmallVectorImpl<Expr *> &CaptureInits) {
+  bool HasError = false; // Track if any errors occurred.
   llvm::SmallPtrSet<VarDecl *, 4> CapturedDecomposed;
   for (const sema::Capture &Cap : RSI->Captures) {
     if (Cap.isInvalid())
@@ -4686,13 +4687,17 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
               << CapVar;
           S.Diag(CapVar->getLocation(), diag::note_entity_declared_at)
               << CapVar;
-          return true;
+          HasError = true; // Mark error but continue.
+          continue;        // Skip this capture, move to next.
         }
-        VarDecl *DD = cast<VarDecl>(BD->getDecomposedDecl());
-        if (!CapturedDecomposed.insert(DD).second) {
-          continue; // Skip duplicate.
+        CapVar = cast<VarDecl>(BD->getDecomposedDecl());
+      }
+      if (RSI->CapRegionKind == CR_OpenMP) {
+        if (auto *DD = dyn_cast<DecompositionDecl>(CapVar)) {
+          if (!CapturedDecomposed.insert(DD).second) {
+            continue; // Skip duplicate
+          }
         }
-        CapVar = DD;
       }
     }
 
@@ -4741,7 +4746,7 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
     }
     CaptureInits.push_back(Init.get());
   }
-  return false;
+  return HasError;
 }
 
 static std::optional<int>

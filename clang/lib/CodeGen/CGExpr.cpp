@@ -3600,22 +3600,35 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
 
   auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
   Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
+  QualType DREType = DD->getType().getNonReferenceType();
+  DeclarationNameInfo NameInfo(DD->getDeclName(), SourceLocation());
+  DeclRefExpr *DRE = DeclRefExpr::Create(
+      getContext(), NestedNameSpecifierLoc(), SourceLocation(), DD,
+      /*RefersToEnclosingVariableOrCapture=*/true, NameInfo, DREType,
+      VK_LValue);
+  LValue BaseLVal = EmitDeclRefLValue(DRE);
+  QualType CanonType = DREType.getCanonicalType();
+  Address Addr = BaseLVal.getAddress();
+  llvm::Type *ExpectedTy = CGM.getTypes().ConvertTypeForMem(CanonType);
+  if (auto *ASE = dyn_cast<ArraySubscriptExpr>(BindingExpr)) {
+    if (Addr.getElementType() != ExpectedTy)
+      Addr = Addr.withElementType(ExpectedTy);
 
-  if (isa<ArraySubscriptExpr>(BindingExpr))
-    return EmitLValue(BD->getBinding(), NotKnownNonNull);
+    Expr::EvalResult Result;
+    ASE->getIdx()->EvaluateAsInt(Result, getContext());
+    uint64_t Idx = Result.Val.getInt().getZExtValue();
+    Address EltAddr = Builder.CreateConstArrayGEP(Addr, Idx);
+    return MakeAddrLValue(EltAddr, BD->getType(), BaseLVal.getBaseInfo(),
+                          CGM.getTBAAInfoForSubobject(BaseLVal, BD->getType()));
+  }
 
   if (auto *ME = dyn_cast<MemberExpr>(BindingExpr)) {
-    // DeclRefExpr type must be the non-reference type — EmitDeclRefLValue
-    // checks VD->getType()->isReferenceType() and calls
-    // EmitLoadOfReferenceLValue automatically.
-    QualType DREType = DD->getType().getNonReferenceType();
-    DeclarationNameInfo NameInfo(DD->getDeclName(), SourceLocation());
-    DeclRefExpr *DRE = DeclRefExpr::Create(
-        getContext(), NestedNameSpecifierLoc(), SourceLocation(), DD,
-        /*RefersToEnclosingVariableOrCapture=*/true, NameInfo, DREType,
-        VK_LValue);
-    LValue CapLVal = EmitDeclRefLValue(DRE);
-    return EmitLValueForField(CapLVal, cast<FieldDecl>(ME->getMemberDecl()));
+    if (Addr.getElementType() != ExpectedTy) {
+      Addr = Addr.withElementType(ExpectedTy);
+      BaseLVal = MakeAddrLValue(Addr, CanonType, BaseLVal.getBaseInfo(),
+                                BaseLVal.getTBAAInfo());
+    }
+    return EmitLValueForField(BaseLVal, cast<FieldDecl>(ME->getMemberDecl()));
   }
 
   // Sema ensures tuple-like bindings are rejected earlier, so this path

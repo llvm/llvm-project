@@ -19504,8 +19504,10 @@ static bool captureInCapturedRegion(
   if (IsTopScope && Kind != TryCaptureKind::Implicit) {
     ByRef = (Kind == TryCaptureKind::ExplicitByRef);
   } else if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
+    bool IsBindingDecl = isa<BindingDecl>(Var);
     // Using an LValue reference type is consistent with Lambdas (see below).
-    if (S.OpenMP().isOpenMPCapturedDecl(Var)) {
+    if (VarDecl *VD = S.OpenMP().isOpenMPCapturedDecl(Var)) {
+      Var = VD; // Capture the DecompositionDecl.
       bool HasConst = DeclRefType.isConstQualified();
       DeclRefType = DeclRefType.getUnqualifiedType();
       // Don't lose diagnostics about assignments to const.
@@ -19513,7 +19515,8 @@ static bool captureInCapturedRegion(
         DeclRefType.addConst();
     }
     // Do not capture firstprivates in tasks.
-    if (S.OpenMP().isOpenMPPrivateDecl(Var, RSI->OpenMPLevel,
+    if (!IsBindingDecl &&
+        S.OpenMP().isOpenMPPrivateDecl(Var, RSI->OpenMPLevel,
                                        RSI->OpenMPCaptureLevel) != OMPC_unknown)
       return true;
     ByRef = S.OpenMP().isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,

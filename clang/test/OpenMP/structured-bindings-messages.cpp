@@ -119,30 +119,41 @@ namespace std {
 void use(int);
 
 void test_pair() {
-  auto [a, b] = std::make_pair(1, 2); // expected-note{{'a' declared here}}
+  auto [a, b] = std::make_pair(1, 2);
+  // expected-note@-1{{'a' declared here}}
+  // expected-note@-2{{'b' declared here}}
 #pragma omp parallel
   {
-    // expected-error@+1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
     use(a + b);
+    // expected-error@-1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+    // expected-error@-2{{capturing tuple-like structured binding 'b' is not yet supported in OpenMP}}
   }
 }
 
 void test_tuple() {
   std::tuple<int, int, int> t = {1, 2, 3};
-  auto [x, y, z] = t; // expected-note{{'x' declared here}}
+  auto [x, y, z] = t;
+  // expected-note@-1{{'x' declared here}}
+  // expected-note@-2{{'y' declared here}}
+  // expected-note@-3{{'z' declared here}}
 #pragma omp parallel
   {
-    // expected-error@+1{{capturing tuple-like structured binding 'x' is not yet supported in OpenMP}}
     use(x + y + z);
+    // expected-error@-1{{capturing tuple-like structured binding 'x' is not yet supported in OpenMP}}
+    // expected-error@-2{{capturing tuple-like structured binding 'y' is not yet supported in OpenMP}}
+    // expected-error@-3{{capturing tuple-like structured binding 'z' is not yet supported in OpenMP}}
   }
 }
 
 void test_array() {
   std::array<int, 2> arr = {1, 2};
-  auto [p, q] = arr; // expected-note{{'p' declared here}}
+  auto [p, q] = arr;
+  // expected-note@-1{{'p' declared here}}
+  // expected-note@-2{{'q' declared here}}
 #pragma omp parallel
   {
-    // expected-error@+1{{capturing tuple-like structured binding 'p' is not yet supported in OpenMP}}
     use(p + q);
+    // expected-error@-1{{capturing tuple-like structured binding 'p' is not yet supported in OpenMP}}
+    // expected-error@-2{{capturing tuple-like structured binding 'q' is not yet supported in OpenMP}}
   }
 }
