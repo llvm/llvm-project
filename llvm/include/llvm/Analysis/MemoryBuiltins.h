@@ -85,6 +85,11 @@ LLVM_ABI bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
 LLVM_ABI Value *getFreedOperand(const CallBase *CB,
                                 const TargetLibraryInfo *TLI);
 
+/// If this if a call to a free function, return the freed operand number, or
+/// -1.
+LLVM_ABI int getFreedOperandNo(const CallBase *CB,
+                               const TargetLibraryInfo *TLI);
+
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
 //

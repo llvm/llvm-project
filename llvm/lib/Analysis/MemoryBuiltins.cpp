@@ -247,12 +247,13 @@ getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
   AllocFnsTy Result;
   // Because allocsize only tells us how many bytes are allocated, we're not
   // really allowed to assume anything, so we use MallocLike.
+  // TODO: `alloc-family should be consulted here.`
   Result.AllocTy = MallocLike;
   Result.NumParams = CB->arg_size();
   Result.FstParam = Args.first;
   Result.SndParam = Args.second.value_or(-1);
-  // Allocsize has no way to specify an alignment argument
-  Result.AlignParam = -1;
+  // AllocAlign defines the alignment parameter.
+  Result.AlignParam = CB->getArgOperandNoWithAttribute(Attribute::AllocAlign);
   return Result;
 }
 
@@ -554,19 +555,26 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   return true;
 }
 
-Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
+int llvm::getFreedOperandNo(const CallBase *CB, const TargetLibraryInfo *TLI) {
   if (const Function *Callee = getCalledFunction(CB)) {
     LibFunc TLIFn;
     if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
         isLibFreeFunction(Callee, TLIFn)) {
       // All currently supported free functions free the first argument.
-      return CB->getArgOperand(0);
+      return 0;
     }
   }
 
   if (checkFnAllocKind(CB, AllocFnKind::Free))
-    return CB->getArgOperandWithAttribute(Attribute::AllocatedPointer);
+    return CB->getArgOperandNoWithAttribute(Attribute::AllocatedPointer);
 
+  return -1;
+}
+
+Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
+  int Index = getFreedOperandNo(CB, TLI);
+  if (Index >= 0)
+    return CB->getArgOperand(Index);
   return nullptr;
 }
 
@@ -592,20 +600,7 @@ llvm::getDeallocationCallInfo(const CallBase *CB,
     }
   }
 
-  Value *FO = getFreedOperand(CB, TLI);
-  if (!FO)
-    return std::nullopt;
-
-  for (const auto &[Idx, Param] : enumerate(CB->args())) {
-    if (Param != FO)
-      continue;
-    if (DCI.FreedOperandArgNo >= 0) {
-      DCI.FreedOperandArgNo = -1;
-      break;
-    }
-    DCI.FreedOperandArgNo = Idx;
-  }
-
+  DCI.FreedOperandArgNo = getFreedOperandNo(CB, TLI);
   DCI.Family = getAllocationFamily(CB, TLI);
   return DCI;
 }
