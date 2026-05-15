@@ -1815,8 +1815,8 @@ void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
 // Returns true iff symbol qualifies for the pre-OpenACC-3.2 DEFAULT(NONE)
 // scalar extension: an intrinsic numeric or logical non-array, non-pointer,
 // non-allocatable variable.  Characters, derived types, allocatables, and
-// pointers are excluded because their data-sharing semantics under DEFAULT(NONE)
-// differ materially from plain scalar copy.
+// pointers are excluded because their data-sharing semantics under
+// DEFAULT(NONE) differ materially from plain scalar copy.
 static bool IsAccScalar(const Symbol &symbol) {
   if (IsAllocatable(symbol) || IsPointer(symbol))
     return false;
@@ -1847,8 +1847,7 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
           if (context_.IsEnabled(
                   common::LanguageFeature::AccDefaultNoneScalars) &&
               IsAccScalar(symbol)) {
-            context_.Warn(common::UsageWarning::AccImplicitScalar,
-                name.source,
+            context_.Warn(common::UsageWarning::AccImplicitScalar, name.source,
                 "Implicit attribute inferred for DEFAULT(NONE) scalar '%s' (-facc-allow-default-none-scalars)"_warn_en_US,
                 symbol.name());
           } else {
