@@ -6,9 +6,7 @@
 ; Sanitizer runtime calls (e.g. __asan_malloc_impl) are introduced after the
 ; Attributor runs and may use AGPRs, so the Attributor cannot safely infer zero.
 
-; Capture attribute group numbers from the define lines (before the attributes
-; section). All CHECK-LABELs must precede the attribute section checks below.
-
+; Control: no sanitizer -- amdgpu-agpr-alloc=0 must be inferred.
 define amdgpu_kernel void @kernel_no_sanitizer() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_no_sanitizer(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -53,6 +51,19 @@ define amdgpu_kernel void @kernel_sanitize_hwaddress() sanitize_hwaddress {
   ret void
 }
 
+; A sanitized function with a user-defined amdgpu-agpr-alloc (value "4" mimics a
+; user annotation, e.g. from inline asm constraints -- not an Attributor-inferred
+; value). The pessimistic fixpoint does not call manifest(), so the pre-existing
+; attribute is preserved as-is.
+define amdgpu_kernel void @kernel_sanitize_address_preannotated() #0 {
+; CHECK: Function Attrs: sanitize_address
+; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_address_preannotated(
+; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
 ; A non-sanitized kernel calling a sanitized callee. The callee's pessimistic
 ; fixpoint propagates up, so the caller must not get amdgpu-agpr-alloc=0 either.
 define void @sanitized_callee() sanitize_address {
@@ -66,7 +77,7 @@ define void @sanitized_callee() sanitize_address {
 
 define amdgpu_kernel void @kernel_calls_sanitized_callee() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_sanitized_callee(
-; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    call void @sanitized_callee()
 ; CHECK-NEXT:    ret void
 ;
@@ -74,11 +85,8 @@ define amdgpu_kernel void @kernel_calls_sanitized_callee() {
   ret void
 }
 
-; Control: no sanitizer -- amdgpu-agpr-alloc=0 must be inferred.
+attributes #0 = { sanitize_address "amdgpu-agpr-alloc"="4" }
 
-; Sanitizer functions: amdgpu-agpr-alloc=0 must NOT appear.
-
-; Caller of a sanitized callee: also no amdgpu-agpr-alloc=0.
 
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
@@ -86,5 +94,6 @@ define amdgpu_kernel void @kernel_calls_sanitized_callee() {
 ; CHECK: attributes #[[ATTR2]] = { sanitize_memory "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR3]] = { sanitize_thread "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR4]] = { sanitize_hwaddress "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR5]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR5]] = { sanitize_address "amdgpu-agpr-alloc"="4" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR6]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
 ;.
