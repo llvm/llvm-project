@@ -27,6 +27,7 @@ bool OSAtomicCompareAndSwap(char32_t __oldValue, int __newValue,
                             volatile int *_theValue);
 int gh197211_flag;
 void gh197211_test() {
+  // Adding the func inside if block just to replicate the original issue.
   if (OSAtomicCompareAndSwap(0, 0, &gh197211_flag))
     ;
 }
