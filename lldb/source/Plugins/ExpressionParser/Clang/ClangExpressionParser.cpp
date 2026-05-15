@@ -280,7 +280,8 @@ public:
           // Find the range of the primary location.
           for (const auto &range : Info.getRanges()) {
             if (range.getBegin() != sloc)
-              continue SourceLocation end = range.getEnd();
+              continue;
+            SourceLocation end = range.getEnd();
             if (range.isTokenRange())
               end = clang::Lexer::getLocForEndOfToken(end, 0, sm, m_lang_opts);
             // FIXME: This is probably not handling wide characters correctly.
