@@ -1,9 +1,14 @@
-//===-- Unittests for fputws ----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for fputws
+///
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
@@ -20,7 +25,7 @@
 using LlvmLibcFputwsTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcFputwsTest, WriteWideString) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputws_string.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -87,7 +92,7 @@ TEST_F(LlvmLibcFputwsTest, WriteWideString) {
 }
 
 TEST_F(LlvmLibcFputwsTest, EmptyString) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputws_empty.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -107,7 +112,7 @@ TEST_F(LlvmLibcFputwsTest, EmptyString) {
 }
 
 TEST_F(LlvmLibcFputwsTest, InvalidStream) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputws_invalid.test"));
 
   // Create the file first
@@ -129,7 +134,7 @@ TEST_F(LlvmLibcFputwsTest, InvalidStream) {
 
 #if WCHAR_MAX > 0xFFFF
 TEST_F(LlvmLibcFputwsTest, EncodingErrorEILSEQ) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputws_eilseq.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -147,7 +152,7 @@ TEST_F(LlvmLibcFputwsTest, EncodingErrorEILSEQ) {
 #endif
 
 TEST_F(LlvmLibcFputwsTest, ByteModeFailure) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputws_bytemode.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
