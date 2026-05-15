@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=armv7a-eabi < %s -o - | FileCheck %s --check-prefix=ARM
 ; RUN: llc -mtriple=thumbv6m-none-eabi < %s -o - | FileCheck %s --check-prefix=THUMB1
 ; RUN: llc -mtriple=thumbv7m-none-eabi < %s -o - | FileCheck %s --check-prefix=THUMB2
+; RUN: llc -mtriple=thumbv8.1m.main-none-eabi < %s -o - | FileCheck %s --check-prefix=THUMB8
 
 define i16 @fold_srem_1_i16(i16 %x) {
 ; ARM-LABEL: fold_srem_1_i16:
@@ -18,6 +19,11 @@ define i16 @fold_srem_1_i16(i16 %x) {
 ; THUMB2:       @ %bb.0:
 ; THUMB2-NEXT:    movs r0, #0
 ; THUMB2-NEXT:    bx lr
+;
+; THUMB8-LABEL: fold_srem_1_i16:
+; THUMB8:       @ %bb.0:
+; THUMB8-NEXT:    movs r0, #0
+; THUMB8-NEXT:    bx lr
   %1 = srem i16 %x, 1
   ret i16 %1
 }
@@ -37,6 +43,11 @@ define i32 @fold_srem_1_i32(i32 %x) {
 ; THUMB2:       @ %bb.0:
 ; THUMB2-NEXT:    movs r0, #0
 ; THUMB2-NEXT:    bx lr
+;
+; THUMB8-LABEL: fold_srem_1_i32:
+; THUMB8:       @ %bb.0:
+; THUMB8-NEXT:    movs r0, #0
+; THUMB8-NEXT:    bx lr
   %1 = srem i32 %x, 1
   ret i32 %1
 }
@@ -67,6 +78,14 @@ define i16 @fold_srem_2_i16(i16 %x) {
 ; THUMB2-NEXT:    bic r1, r1, #1
 ; THUMB2-NEXT:    subs r0, r0, r1
 ; THUMB2-NEXT:    bx lr
+;
+; THUMB8-LABEL: fold_srem_2_i16:
+; THUMB8:       @ %bb.0:
+; THUMB8-NEXT:    uxth r1, r0
+; THUMB8-NEXT:    add.w r1, r0, r1, lsr #15
+; THUMB8-NEXT:    bic r1, r1, #1
+; THUMB8-NEXT:    subs r0, r0, r1
+; THUMB8-NEXT:    bx lr
   %1 = srem i16 %x, 2
   ret i16 %1
 }
@@ -94,6 +113,13 @@ define i32 @fold_srem_2_i32(i32 %x) {
 ; THUMB2-NEXT:    bic r1, r1, #1
 ; THUMB2-NEXT:    subs r0, r0, r1
 ; THUMB2-NEXT:    bx lr
+;
+; THUMB8-LABEL: fold_srem_2_i32:
+; THUMB8:       @ %bb.0:
+; THUMB8-NEXT:    and r1, r0, #1
+; THUMB8-NEXT:    cmp r0, #0
+; THUMB8-NEXT:    cneg r0, r1, mi
+; THUMB8-NEXT:    bx lr
   %1 = srem i32 %x, 2
   ret i32 %1
 }
@@ -126,6 +152,15 @@ define i16 @fold_srem_pow2_i16(i16 %x) {
 ; THUMB2-NEXT:    bic r1, r1, #63
 ; THUMB2-NEXT:    subs r0, r0, r1
 ; THUMB2-NEXT:    bx lr
+;
+; THUMB8-LABEL: fold_srem_pow2_i16:
+; THUMB8:       @ %bb.0:
+; THUMB8-NEXT:    sxth r1, r0
+; THUMB8-NEXT:    ubfx r1, r1, #25, #6
+; THUMB8-NEXT:    add r1, r0
+; THUMB8-NEXT:    bic r1, r1, #63
+; THUMB8-NEXT:    subs r0, r0, r1
+; THUMB8-NEXT:    bx lr
   %1 = srem i16 %x, 64
   ret i16 %1
 }
@@ -133,10 +168,10 @@ define i16 @fold_srem_pow2_i16(i16 %x) {
 define i32 @fold_srem_pow2_i32(i32 %x) {
 ; ARM-LABEL: fold_srem_pow2_i32:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    asr r1, r0, #31
-; ARM-NEXT:    add r1, r0, r1, lsr #26
-; ARM-NEXT:    bic r1, r1, #63
-; ARM-NEXT:    sub r0, r0, r1
+; ARM-NEXT:    and r1, r0, #63
+; ARM-NEXT:    rsbs r0, r0, #0
+; ARM-NEXT:    andpl r1, r0, #63
+; ARM-NEXT:    mov r0, r1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: fold_srem_pow2_i32:
@@ -156,6 +191,14 @@ define i32 @fold_srem_pow2_i32(i32 %x) {
 ; THUMB2-NEXT:    bic r1, r1, #63
 ; THUMB2-NEXT:    subs r0, r0, r1
 ; THUMB2-NEXT:    bx lr
+;
+; THUMB8-LABEL: fold_srem_pow2_i32:
+; THUMB8:       @ %bb.0:
+; THUMB8-NEXT:    and r1, r0, #63
+; THUMB8-NEXT:    rsbs r0, r0, #0
+; THUMB8-NEXT:    and r0, r0, #63
+; THUMB8-NEXT:    csneg r0, r1, r0, mi
+; THUMB8-NEXT:    bx lr
   %1 = srem i32 %x, 64
   ret i32 %1
 }
@@ -190,6 +233,16 @@ define i16 @fold_srem_smax_i16(i16 %x) {
 ; THUMB2-NEXT:    bics r1, r2
 ; THUMB2-NEXT:    add r0, r1
 ; THUMB2-NEXT:    bx lr
+;
+; THUMB8-LABEL: fold_srem_smax_i16:
+; THUMB8:       @ %bb.0:
+; THUMB8-NEXT:    sxth r1, r0
+; THUMB8-NEXT:    movw r2, #32767
+; THUMB8-NEXT:    ubfx r1, r1, #16, #15
+; THUMB8-NEXT:    add r1, r0
+; THUMB8-NEXT:    bics r1, r2
+; THUMB8-NEXT:    add r0, r1
+; THUMB8-NEXT:    bx lr
   %1 = srem i16 %x, 32768
   ret i16 %1
 }
@@ -197,10 +250,10 @@ define i16 @fold_srem_smax_i16(i16 %x) {
 define i32 @fold_srem_smax_i32(i32 %x) {
 ; ARM-LABEL: fold_srem_smax_i32:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    asr r1, r0, #31
-; ARM-NEXT:    add r1, r0, r1, lsr #1
-; ARM-NEXT:    and r1, r1, #-2147483648
-; ARM-NEXT:    add r0, r0, r1
+; ARM-NEXT:    bic r1, r0, #-2147483648
+; ARM-NEXT:    rsbs r0, r0, #0
+; ARM-NEXT:    bicpl r1, r0, #-2147483648
+; ARM-NEXT:    mov r0, r1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: fold_srem_smax_i32:
@@ -220,6 +273,14 @@ define i32 @fold_srem_smax_i32(i32 %x) {
 ; THUMB2-NEXT:    and r1, r1, #-2147483648
 ; THUMB2-NEXT:    add r0, r1
 ; THUMB2-NEXT:    bx lr
+;
+; THUMB8-LABEL: fold_srem_smax_i32:
+; THUMB8:       @ %bb.0:
+; THUMB8-NEXT:    asrs r1, r0, #31
+; THUMB8-NEXT:    add.w r1, r0, r1, lsr #1
+; THUMB8-NEXT:    and r1, r1, #-2147483648
+; THUMB8-NEXT:    add r0, r1
+; THUMB8-NEXT:    bx lr
   %1 = srem i32 %x, 2147483648
   ret i32 %1
 }

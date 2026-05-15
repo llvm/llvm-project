@@ -409,6 +409,8 @@ class VectorType;
                                              bool ConsiderFlags,
                                              unsigned Depth) const override;
 
+    bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
+
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                           const MachineFunction &MF) const override {
       // Do not merge to larger than i32.
@@ -621,6 +623,8 @@ class VectorType;
                                const MachineFunction &MF) const override;
 
     SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
+                          SmallVectorImpl<SDNode *> &Created) const override;
+    SDValue BuildSREMPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                           SmallVectorImpl<SDNode *> &Created) const override;
 
     bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
