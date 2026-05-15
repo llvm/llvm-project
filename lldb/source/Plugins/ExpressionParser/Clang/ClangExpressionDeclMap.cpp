@@ -1801,7 +1801,7 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
   m_found_entities.AddNewlyConstructedVariable(entity);
 
   std::string decl_name(context.m_decl_name.getAsString());
-  entity->SetName(ConstString(decl_name));
+  entity->SetName(decl_name);
   entity->SetRegisterInfo(reg_info);
   entity->EnableParserVars(GetParserID());
   ClangExpressionVariable::ParserVars *parser_vars =
@@ -1950,7 +1950,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
   m_found_entities.AddNewlyConstructedVariable(entity);
 
   std::string decl_name(context.m_decl_name.getAsString());
-  entity->SetName(ConstString(decl_name));
+  entity->SetName(decl_name);
   entity->SetCompilerType(function_clang_type);
   entity->EnableParserVars(GetParserID());
 
