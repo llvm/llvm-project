@@ -257,10 +257,8 @@ public:
     auto chipStr = xegpu::getChipStr(createNdOp);
     // Check if the chip is supported.
     assert(chipStr &&
-           (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
-            chipStr.value() == "cri") &&
-           "Expecting target chip to be pvc, bmg or cri for transpose "
-           "optimization.");
+           (chipStr.value() == "pvc" || chipStr.value() == "bmg") &&
+           "Expecting target chip to be pvc, bmg for transpose optimization.");
     const uArch *targetuArch = xegpu::uArch::getUArch(chipStr.value());
 
     auto convertType = tryOptimize(tdescTy, targetuArch);
@@ -574,14 +572,12 @@ struct XeGPUPeepHoleOptimizerPass final
     bool isTargetSupported = false;
     getOperation()->walk([&](gpu::GPUFuncOp funcOp) {
       auto chipStr = xegpu::getChipStr(funcOp);
-      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
-                      chipStr.value() == "cri"))
+      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg"))
         isTargetSupported = true;
     });
 
     if (!isTargetSupported) {
-      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC, BMG and CRI "
-                "targets."
+      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC, BMG targets."
              << "\n";
       return;
     }
