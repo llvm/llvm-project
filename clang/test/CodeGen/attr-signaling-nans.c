@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NO-SIGNALING
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsignaling-nans %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SIGNALING
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fno-signaling-nans %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NO-SIGNALING
+// Here msp430 is used as a target that do not support signaling NaNs.
 // RUN: %clang_cc1 -triple msp430-unknown-unknown -fsignaling-nans %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NO-SIGNALING
 
 float func_01(float x) {

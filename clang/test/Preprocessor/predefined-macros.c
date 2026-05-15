@@ -354,6 +354,6 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-SIGNALING-NANS
 // CHECK-SIGNALING-NANS: #define __SUPPORT_SNAN__
 
-// RUN: %clang_cc1 %s -E -dM -fno-signaling-nans -o - \
+// RUN: %clang_cc1 %s -E -dM -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-SIGNALING-NANS
 // CHECK-NO-SIGNALING-NANS-NOT: __SUPPORT_SNAN__
