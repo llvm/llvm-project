@@ -11,23 +11,16 @@ define void @buildvector_store_middle(ptr %p, float %a0, float %a1, float %a2, f
 ; CHECK-LABEL: define void @buildvector_store_middle(
 ; CHECK-SAME: ptr [[P:%.*]], float [[A0:%.*]], float [[A1:%.*]], float [[A2:%.*]], float [[A3:%.*]], float [[A4:%.*]], float [[A5:%.*]], float [[A6:%.*]], float [[A7:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[A0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[A1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP1]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[V2:%.*]] = fadd float [[A2]], 1.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[A3]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[A4]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[A5]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[A6]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP6]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[V7:%.*]] = fadd float [[A7]], 1.000000e+00
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[P]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 2
-; CHECK-NEXT:    store float [[V2]], ptr [[P2]], align 4
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
-; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[P3]], align 4
-; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds float, ptr [[P]], i64 7
-; CHECK-NEXT:    store float [[V7]], ptr [[P7]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x float> poison, float [[A0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x float> [[TMP0]], float [[A1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x float> [[TMP1]], float [[A2]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x float> [[TMP2]], float [[A3]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x float> [[TMP3]], float [[A4]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x float> [[TMP4]], float [[A5]], i32 5
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x float> [[TMP5]], float [[A6]], i32 6
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x float> [[TMP6]], float [[A7]], i32 7
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <8 x float> [[TMP7]], splat (float 1.000000e+00)
+; CHECK-NEXT:    store <8 x float> [[TMP8]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -64,14 +57,17 @@ define void @buildvector_store_start(ptr %p, float %a0, float %a1, float %a2, fl
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[A2]], i32 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[A3]], i32 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP3]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> poison, float [[A4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[A5]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP6]], float [[A6]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[A7]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x float> [[TMP8]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[A4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[A5]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x float> [[TMP6]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> poison, float [[A6]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> [[TMP8]], float [[A7]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x float> [[TMP9]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds float, ptr [[P]], i64 4
-; CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[P4]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP7]], ptr [[P4]], align 4
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds float, ptr [[P]], i64 6
+; CHECK-NEXT:    store <2 x float> [[TMP10]], ptr [[P6]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -147,9 +143,8 @@ define void @buildvector_store_duplicate_offset(ptr %p, float %a0, float %a1, fl
 ; CHECK-LABEL: define void @buildvector_store_duplicate_offset(
 ; CHECK-SAME: ptr [[P:%.*]], float [[A0:%.*]], float [[A1:%.*]], float [[A2:%.*]], float [[A3:%.*]], float [[A4:%.*]], float [[A5:%.*]], float [[A6:%.*]], float [[A7:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[A0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[A1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP1]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[V0:%.*]] = fadd float [[A0]], 1.000000e+00
+; CHECK-NEXT:    [[V1:%.*]] = fadd float [[A1]], 1.000000e+00
 ; CHECK-NEXT:    [[V2:%.*]] = fadd float [[A2]], 1.000000e+00
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[A3]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[A4]], i32 1
@@ -157,8 +152,9 @@ define void @buildvector_store_duplicate_offset(ptr %p, float %a0, float %a1, fl
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[A6]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP6]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[V7:%.*]] = fadd float [[A7]], 1.000000e+00
+; CHECK-NEXT:    store float [[V0]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr [[P]], i64 1
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[P]], align 4
+; CHECK-NEXT:    store float [[V1]], ptr [[P1]], align 4
 ; CHECK-NEXT:    store float [[V2]], ptr [[P1]], align 4
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 2
 ; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[P2]], align 4
@@ -188,4 +184,43 @@ entry:
   %p6 = getelementptr inbounds float, ptr %p, i64 6
   store float %v7, ptr %p6, align 4
   ret void
+}
+
+define float @buildvector_store_intervening_load(ptr %p, float %a0, float %a1, float %a2, float %a3, float %a4) {
+; CHECK-LABEL: define float @buildvector_store_intervening_load(
+; CHECK-SAME: ptr [[P:%.*]], float [[A0:%.*]], float [[A1:%.*]], float [[A2:%.*]], float [[A3:%.*]], float [[A4:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V0:%.*]] = fadd float [[A0]], 1.000000e+00
+; CHECK-NEXT:    [[V1:%.*]] = fadd float [[A1]], 1.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[A2]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[A3]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP1]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[V4:%.*]] = fadd float [[A4]], 1.000000e+00
+; CHECK-NEXT:    store float [[V0]], ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr [[P]], i64 1
+; CHECK-NEXT:    [[OLD:%.*]] = load float, ptr [[P1]], align 4
+; CHECK-NEXT:    store float [[V1]], ptr [[P1]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 2
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[P2]], align 4
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds float, ptr [[P]], i64 4
+; CHECK-NEXT:    store float [[V4]], ptr [[P4]], align 4
+; CHECK-NEXT:    ret float [[OLD]]
+;
+entry:
+  %v0 = fadd float %a0, 1.000000e+00
+  %v1 = fadd float %a1, 1.000000e+00
+  %v2 = fadd float %a2, 1.000000e+00
+  %v3 = fadd float %a3, 1.000000e+00
+  %v4 = fadd float %a4, 1.000000e+00
+  store float %v0, ptr %p, align 4
+  %p1 = getelementptr inbounds float, ptr %p, i64 1
+  %old = load float, ptr %p1, align 4
+  store float %v1, ptr %p1, align 4
+  %p2 = getelementptr inbounds float, ptr %p, i64 2
+  %b0 = insertelement <2 x float> poison, float %v2, i32 0
+  %b1 = insertelement <2 x float> %b0, float %v3, i32 1
+  store <2 x float> %b1, ptr %p2, align 4
+  %p4 = getelementptr inbounds float, ptr %p, i64 4
+  store float %v4, ptr %p4, align 4
+  ret float %old
 }

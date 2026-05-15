@@ -26773,6 +26773,94 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 }
 
 namespace {
+/// Walk a build-vector chain (a sequence of insertelement instructions feeding
+/// undef/poison) starting at \p V and collect the lane values plus the chain
+/// instructions. Returns true when V is a complete fixed-vector buildvector
+/// that fully covers all lanes.
+///
+/// The walk goes from the stored value toward the root, so for a lane that is
+/// inserted more than once, the later insert is seen first and wins (matching
+/// the runtime semantics of repeated insertelement).
+static bool collectBuildVector(Value *V, SmallVectorImpl<Value *> &Elts,
+                               SmallVectorImpl<Instruction *> &Insts) {
+  auto *VecTy = dyn_cast<FixedVectorType>(V->getType());
+  if (!VecTy)
+    return false;
+  Elts.assign(VecTy->getNumElements(), nullptr);
+  Value *Cur = V;
+  while (auto *IE = dyn_cast<InsertElementInst>(Cur)) {
+    if (!IE->hasOneUse())
+      return false;
+    auto *Idx = dyn_cast<ConstantInt>(IE->getOperand(2));
+    if (!Idx || Idx->getValue().uge(Elts.size()))
+      return false;
+    unsigned LaneIdx = Idx->getZExtValue();
+    if (!Elts[LaneIdx])
+      Elts[LaneIdx] = IE->getOperand(1);
+    Insts.push_back(IE);
+    Cur = IE->getOperand(0);
+  }
+  if (!isa<UndefValue>(Cur))
+    return false;
+  return all_of(Elts, [](Value *Elt) { return Elt != nullptr; });
+}
+
+/// Return the lane-element type of \p SI. For a normal scalar store this is
+/// the value type; for a build-vector store it is the inserted-element type.
+static Type *getStoreChainType(StoreInst *SI) {
+  SmallVector<Value *, 16> Elts;
+  SmallVector<Instruction *, 16> Insts;
+  if (collectBuildVector(SI->getValueOperand(), Elts, Insts))
+    return Elts.front()->getType();
+  return SI->getValueOperand()->getType();
+}
+
+/// Returns true if SI's value is built from a fixed-vector insertelement chain
+/// rooted at undef/poison.
+static bool isBuildVectorStore(StoreInst *SI) {
+  SmallVector<Value *, 16> Elts;
+  SmallVector<Instruction *, 16> Insts;
+  return collectBuildVector(SI->getValueOperand(), Elts, Insts);
+}
+
+/// A store-chain element after breaking stores into scalar lanes.
+///
+/// A scalar store contributes one lane. A simple build-vector store contributes
+/// one lane per inserted element, so a store of <a, b, c, d> to p[3] is
+/// modeled as lanes p[3] = a, p[4] = b, p[5] = c, p[6] = d.
+///
+/// Store: the original StoreInst that this lane belongs to (the same StoreInst
+///   is shared by every lane of a build-vector store).
+/// ScalarValue: the value stored at this lane (the value operand for a scalar
+///   store, or the i-th inserted element for a build-vector store).
+/// Offset: the chain distance, set to 0 at construction and rewritten by the
+///   chain analyzer to the lane's distance from the chain base. Distinct from
+///   Lane so that distance and build-vector position are not conflated.
+/// Lane: the lane's position inside its build-vector store (0 for scalar
+///   stores).
+/// IsVectorLane: true when this lane comes from a build-vector store.
+struct StoreLane {
+  StoreInst *Store = nullptr;
+  Value *ScalarValue = nullptr;
+  int64_t Offset = 0;
+  unsigned Lane = 0;
+  bool IsVectorLane = false;
+
+  StoreLane() = default;
+  StoreLane(StoreInst *Store, Value *ScalarValue, int64_t Offset, unsigned Lane,
+            bool IsVectorLane)
+      : Store(Store), ScalarValue(ScalarValue), Offset(Offset), Lane(Lane),
+        IsVectorLane(IsVectorLane) {}
+
+  /// Per-lane alignment, taking the lane offset within a build-vector store
+  /// into account.
+  Align getAlignment(TypeSize EltSize) const {
+    uint64_t StoreOffset = IsVectorLane ? Lane : 0;
+    return commonAlignment(Store->getAlign(),
+                           StoreOffset * EltSize.getFixedValue());
+  }
+};
+
 /// A group of related stores which we are in the process of vectorizing,
 /// a subset of which may already be vectorized. Stores context information
 /// about the group as a whole as well as information about what VFs need
@@ -26781,7 +26869,7 @@ class StoreChainContext {
 public:
   using SizePair = std::pair<unsigned, unsigned>;
 
-  explicit StoreChainContext(ArrayRef<Value *> Ops,
+  explicit StoreChainContext(ArrayRef<StoreLane> Ops,
                              ArrayRef<SizePair> RangeSizes,
                              SmallVector<unsigned> &RangeSizesByIdx,
                              unsigned Stride)
@@ -26799,17 +26887,24 @@ public:
   unsigned getMaxVF() const { return MaxVF; }
   /// Return the stride of the context
   unsigned getStride() const { return Stride; }
+  /// Return the lane operands that compose this chain.
+  ArrayRef<StoreLane> getOperands() const { return Operands; }
+  /// Return true if the chain contains at least one build-vector store lane.
+  bool hasVectorLane() const {
+    return any_of(Operands,
+                  [](const StoreLane &Lane) { return Lane.IsVectorLane; });
+  }
   /// Attempt to vectorize Operands for the given VF
   /// Returns false if no more attempts should be made for the context
   bool vectorizeOneVF(const TargetTransformInfo &TTI, unsigned VF,
                       BoUpSLP::ValueSet &VectorizedStores, bool &Changed,
                       llvm::function_ref<std::optional<bool>(
-                          ArrayRef<Value *>, unsigned, unsigned, unsigned &)>
+                          ArrayRef<StoreLane>, unsigned, unsigned, unsigned &)>
                           VectorizeStoreChain);
   /// Add an additional store to the chain
   /// \p Store store too append to Operands
   /// \p Idx position within TryToVectorize::StoreSeq
-  void addOperand(Value *Store, unsigned Idx);
+  void addOperand(StoreLane Store, unsigned Idx);
 
 private:
   bool isNotVectorized(const SizePair &P) const {
@@ -26886,8 +26981,8 @@ private:
   Type *StoreTy = nullptr;
   /// Which VFs do we want to attempt for this chain
   std::queue<unsigned> CandidateVFs;
-  /// Stores that compose this chain
-  BoUpSLP::ValueList Operands;
+  /// Stores that compose this chain.
+  SmallVector<StoreLane> Operands;
   /// Track the TreeSizes of prior vectorization attempts using each element,
   /// to help us find early exit cases
   /// - first: contains pointer into RangeSizesByIdx to help us track
@@ -26912,7 +27007,7 @@ private:
   SmallDenseMap<Value *, SizePair> NonSchedulable;
 };
 
-void StoreChainContext::addOperand(Value *Store, unsigned Idx) {
+void StoreChainContext::addOperand(StoreLane Store, unsigned Idx) {
   Operands.push_back(Store);
   RangeSizesStorage.push_back({Idx, 1});
 }
@@ -26949,10 +27044,8 @@ bool StoreChainContext::initializeContext(
   assert((Stride == 1 || !SLPReVec) &&
          "Strided stores not supported for revectorization");
   if (!Visited
-           .insert({Operands.front(),
-                    cast<StoreInst>(Operands.front())->getValueOperand(),
-                    Operands.back(),
-                    cast<StoreInst>(Operands.back())->getValueOperand(),
+           .insert({Operands.front().Store, Operands.front().ScalarValue,
+                    Operands.back().Store, Operands.back().ScalarValue,
                     Operands.size()})
            .second)
     return false;
@@ -26961,15 +27054,23 @@ bool StoreChainContext::initializeContext(
   RangeSizes = MutableArrayRef(RangeSizesStorage);
 
   unsigned MaxVecRegSize = R.getMaxVecRegSize();
-  unsigned EltSize = R.getVectorElementSize(Operands[0]);
+  // Use the lane element type for sizing build-vector store lanes (one
+  // inserted element per lane). Scalar lanes preserve the StoreInst-specific
+  // sizing path (which can follow trunc/sext through the value).
+  unsigned EltSize =
+      Operands[0].IsVectorLane
+          ? DL.getTypeSizeInBits(Operands[0].ScalarValue->getType())
+          : R.getVectorElementSize(Operands[0].Store);
   unsigned MaxElts = llvm::bit_floor(MaxVecRegSize / EltSize);
 
   MaxVF = std::min(R.getMaximumVF(EltSize, Instruction::Store), MaxElts);
-  auto *Store = cast<StoreInst>(Operands[0]);
-  StoreTy = Store->getValueOperand()->getType();
+  StoreInst *Store = Operands[0].Store;
+  StoreTy = Operands[0].IsVectorLane ? Operands[0].ScalarValue->getType()
+                                     : Store->getValueOperand()->getType();
   Type *ValueTy = StoreTy;
-  if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
-    ValueTy = Trunc->getSrcTy();
+  if (!Operands[0].IsVectorLane)
+    if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
+      ValueTy = Trunc->getSrcTy();
   // When REVEC is enabled, StoreTy and ValueTy may be FixedVectorType. But
   // getStoreMinimumVF only support scalar type as arguments. As a result,
   // we need to use the element type of StoreTy and ValueTy to retrieve the
@@ -27143,7 +27244,7 @@ bool StoreChainContext::checkTreeSizes(const unsigned SliceStartIdx,
 bool StoreChainContext::vectorizeOneVF(
     const TargetTransformInfo &TTI, unsigned VF,
     BoUpSLP::ValueSet &VectorizedStores, bool &Changed,
-    llvm::function_ref<std::optional<bool>(ArrayRef<Value *>, unsigned,
+    llvm::function_ref<std::optional<bool>(ArrayRef<StoreLane>, unsigned,
                                            unsigned, unsigned &)>
         VectorizeStoreChain) {
   bool AnyProfitableGraph = false;
@@ -27160,18 +27261,16 @@ bool StoreChainContext::vectorizeOneVF(
         ++SliceStartIdx;
         continue;
       }
-      ArrayRef<Value *> Slice = ArrayRef(Operands).slice(SliceStartIdx, VF);
+      ArrayRef<StoreLane> Slice = ArrayRef(Operands).slice(SliceStartIdx, VF);
       assert(all_of(Slice,
-                    [&](Value *V) {
-                      return cast<StoreInst>(V)->getValueOperand()->getType() ==
-                             cast<StoreInst>(Slice.front())
-                                 ->getValueOperand()
-                                 ->getType();
+                    [&](const StoreLane &Lane) {
+                      return Lane.ScalarValue->getType() ==
+                             Slice.front().ScalarValue->getType();
                     }) &&
-             "Expected all operands of same type.");
+             "Expected all lanes of same scalar type.");
       if (!NonSchedulable.empty()) {
         auto [NonSchedSizeMax, NonSchedSizeMin] =
-            NonSchedulable.lookup(Slice.front());
+            NonSchedulable.lookup(Slice.front().Store);
         if (NonSchedSizeMax > 0 && NonSchedSizeMin <= VF) {
           // VF is too ambitious. Try to vectorize another slice before
           // trying a smaller VF.
@@ -27185,13 +27284,15 @@ bool StoreChainContext::vectorizeOneVF(
       if (!Res) {
         // Update the range of non schedulable VFs for slices starting
         // at SliceStartIdx.
-        NonSchedulable.try_emplace(Slice.front(), std::make_pair(VF, VF))
+        NonSchedulable.try_emplace(Slice.front().Store, std::make_pair(VF, VF))
             .first->getSecond()
             .second = VF;
       } else if (*Res) {
         // Mark the vectorized stores so that we don't vectorize them
-        // again.
-        VectorizedStores.insert_range(Slice);
+        // again. Use the underlying StoreInsts since multiple lanes may
+        // share one StoreInst (build-vector store).
+        for (const StoreLane &Lane : Slice)
+          VectorizedStores.insert(Lane.Store);
         AnyProfitableGraph = RepeatChanged = Changed = true;
         // If we vectorized initial block, no need to try to vectorize
         // it again.
@@ -27262,7 +27363,7 @@ bool StoreChainContext::vectorizeOneVF(
 /// address of this group's BaseInstr.
 class RelatedStoreInsts {
 public:
-  RelatedStoreInsts(unsigned BaseInstrIdx, ArrayRef<StoreInst *> AllStores)
+  RelatedStoreInsts(unsigned BaseInstrIdx, ArrayRef<StoreLane> AllStores)
       : AllStores(AllStores) {
     reset(BaseInstrIdx);
   }
@@ -27288,14 +27389,21 @@ public:
   const DistToInstMap &getStores() const { return Instrs; }
 
   /// If \p SI is related to this group of stores, return the distance of its
-  /// pointer operand to the one the group's BaseInstr.
-  std::optional<int64_t> getPointerDiff(StoreInst &SI, const DataLayout &DL,
+  /// pointer operand to the group's BaseInstr. The distance accounts for the
+  /// build-vector lane offset within \p SI's underlying StoreInst, so for a
+  /// store of <a, b, c, d> at p[3] lane #1 reports distance 4 (in element
+  /// units) relative to a chain rooted at p[3].
+  std::optional<int64_t> getPointerDiff(const StoreLane &SI,
+                                        const DataLayout &DL,
                                         ScalarEvolution &SE) const {
-    StoreInst &BaseStore = *AllStores[BaseInstrIdx];
-    return getPointersDiff(
-        BaseStore.getValueOperand()->getType(), BaseStore.getPointerOperand(),
-        SI.getValueOperand()->getType(), SI.getPointerOperand(), DL, SE,
+    const StoreLane &BaseStore = AllStores[BaseInstrIdx];
+    std::optional<int64_t> Diff = getPointersDiff(
+        BaseStore.ScalarValue->getType(), BaseStore.Store->getPointerOperand(),
+        SI.ScalarValue->getType(), SI.Store->getPointerOperand(), DL, SE,
         /*StrictCheck=*/true);
+    if (!Diff)
+      return std::nullopt;
+    return *Diff + SI.Lane - BaseStore.Lane;
   }
 
   /// Recompute the pointer distances to be based on \p NewBaseInstIdx.
@@ -27318,7 +27426,7 @@ public:
   void clearVectorizedStores(const BoUpSLP::ValueSet &VectorizedStores) {
     DistToInstMap::reverse_iterator LastVectorizedStore = find_if(
         reverse(Instrs), [&](const std::pair<int64_t, unsigned> &DistAndIdx) {
-          return VectorizedStores.contains(AllStores[DistAndIdx.second]);
+          return VectorizedStores.contains(AllStores[DistAndIdx.second].Store);
         });
 
     // Get a forward iterator pointing after the last vectorized store and erase
@@ -27334,8 +27442,8 @@ private:
   /// Maps a pointer distance from \p BaseInstrIdx to an instruction index.
   DistToInstMap Instrs;
 
-  /// Reference to all the stores in the BB being analyzed.
-  ArrayRef<StoreInst *> AllStores;
+  /// Reference to all the lanes in the BB being analyzed.
+  ArrayRef<StoreLane> AllStores;
 };
 
 } // end anonymous namespace
@@ -27344,6 +27452,24 @@ bool SLPVectorizerPass::vectorizeStores(
     ArrayRef<StoreInst *> Stores, BoUpSLP &R,
     DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
         &Visited) {
+  // Convert collected stores into per-lane operands. A scalar store
+  // contributes one lane; a build-vector store contributes one lane per
+  // inserted element. Lane.Offset is the chain distance and is filled in
+  // later by the chain analyzer; Lane.Lane is the build-vector position.
+  SmallVector<StoreLane> StoreLanes;
+  for (StoreInst *SI : Stores) {
+    SmallVector<Value *, 16> Elts;
+    SmallVector<Instruction *, 16> Insts;
+    if (collectBuildVector(SI->getValueOperand(), Elts, Insts)) {
+      for (auto [Idx, V] : enumerate(Elts))
+        StoreLanes.emplace_back(SI, V, /*Offset=*/0, static_cast<unsigned>(Idx),
+                                /*IsVectorLane=*/true);
+      continue;
+    }
+    StoreLanes.emplace_back(SI, SI->getValueOperand(), /*Offset=*/0, /*Lane=*/0,
+                            /*IsVectorLane=*/false);
+  }
+
   // We may run into multiple chains that merge into a single chain. We mark the
   // stores that we vectorized so that we don't visit the same store twice.
   BoUpSLP::ValueSet VectorizedStores;
@@ -27352,7 +27478,6 @@ bool SLPVectorizerPass::vectorizeStores(
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
     SmallVector<unsigned> RangeSizesByIdx(StoreSeq.size(), 1);
     SmallVector<std::unique_ptr<StoreChainContext>> AllContexts;
-    BoUpSLP::ValueList Operands;
     SmallVector<StoreChainContext::SizePair> RangeSizes;
     const unsigned MaxStride = EnableStridedStores ? MaxProfitableStride : 1;
 
@@ -27367,8 +27492,8 @@ bool SLPVectorizerPass::vectorizeStores(
         // Index into StoreSeq if not added to AllContexts yet
         unsigned StoreSeqIdx;
       };
-      // If not added to AllContexts, what is the single store in the chain
-      Value *FirstStore;
+      // If not added to AllContexts, what is the single lane in the chain
+      StoreLane FirstStore;
       // What is the Stride of this chain
       unsigned Stride;
     };
@@ -27383,6 +27508,8 @@ bool SLPVectorizerPass::vectorizeStores(
     int64_t LastDist;
     for (auto [Idx, Data] : enumerate(StoreSeq)) {
       auto &[Dist, InstIdx] = Data;
+      StoreLane Lane = StoreLanes[InstIdx];
+      Lane.Offset = Dist;
       // Clean up chains that can't be continued
       if (Idx > 0)
         for (int64_t D = LastDist;
@@ -27396,12 +27523,12 @@ bool SLPVectorizerPass::vectorizeStores(
       for (auto &Status : Chains[GetChainsKey(Dist)]) {
         if (Status.AddedToAllContexts) {
           // Chain already in AllContexts()
-          AllContexts[Status.AllContextsIdx]->addOperand(Stores[InstIdx], Idx);
+          AllContexts[Status.AllContextsIdx]->addOperand(Lane, Idx);
         } else {
           // Chain just a single element, not yet in AllContexts()
           SmallVector<StoreChainContext::SizePair> RS = {
               {Status.StoreSeqIdx, 1}, {Idx, 1}};
-          BoUpSLP::ValueList Ops = {Status.FirstStore, Stores[InstIdx]};
+          SmallVector<StoreLane> Ops = {Status.FirstStore, Lane};
           AllContexts.emplace_back(std::make_unique<StoreChainContext>(
               Ops, RS, RangeSizesByIdx, Status.Stride));
           Status.AllContextsIdx = AllContexts.size() - 1;
@@ -27409,7 +27536,7 @@ bool SLPVectorizerPass::vectorizeStores(
         unsigned Key = GetChainsKey(Status.Stride + Dist);
         Chains[Key].push_back({/*AddedToAllContexts=*/true,
                                {Status.AllContextsIdx},
-                               /*FirstStore=*/nullptr,
+                               StoreLane(),
                                Status.Stride});
         FoundStrides[Status.Stride] = true;
       }
@@ -27422,7 +27549,7 @@ bool SLPVectorizerPass::vectorizeStores(
         unsigned Key = GetChainsKey(Dist + Stride);
         Chains[Key].push_back({/*AddedToAllContexts=*/false,
                                {/*StoreSeqIdx=*/(unsigned)Idx},
-                               Stores[InstIdx],
+                               Lane,
                                Stride});
       }
     }
@@ -27441,6 +27568,137 @@ bool SLPVectorizerPass::vectorizeStores(
                         return A && (!B || A->getStride() < B->getStride());
                       });
 
+    // Mixed scalar/build-vector slice handling.
+    //
+    // Conceptually a "store reduction": SLP builds a tree on the per-lane
+    // values, treating the original IE chain and StoreInsts together as
+    // the reduction-operation chain via UserIgnoreList. After the tree's
+    // standard cost analysis we add the store-sink-specific cost (one vector
+    // store, minus the replaced scalar store costs); if profitable we let
+    // the standard tree emitter materialize the lane-value vector, then
+    // emit the new <VF x T> store and erase the originals here. The IE
+    // chains feeding any erased build-vector store become trivially dead
+    // and are cleaned up by the standard pass at the end.
+    auto VectorizeBuildVectorStoreSinkSlice =
+        [&](ArrayRef<StoreLane> Chain) -> std::optional<bool> {
+      SmallVector<Value *> LaneValues;
+      SmallVector<std::pair<StoreInst *, unsigned>> Owners;
+      StoreInst *LastOwner = nullptr;
+      for (const StoreLane &Lane : Chain) {
+        LaneValues.push_back(Lane.ScalarValue);
+        if (Lane.Store == LastOwner) {
+          Owners.back().second++;
+        } else {
+          Owners.emplace_back(Lane.Store, 1);
+          LastOwner = Lane.Store;
+        }
+      }
+      // Each build-vector owner must be fully covered by this slice;
+      // otherwise erasing it would lose data outside the slice.
+      for (auto &[SI, Count] : Owners) {
+        SmallVector<Value *, 16> Elts;
+        SmallVector<Instruction *, 16> Insts;
+        if (collectBuildVector(SI->getValueOperand(), Elts, Insts) &&
+            Count != Elts.size())
+          return false;
+      }
+      // UserIgnoreList: original stores plus any IE chain feeding a build-
+      // vector store. SLP treats this exactly like a reduction tree: the
+      // lane values' uses inside listed instructions are not counted as
+      // external uses, since those instructions will be erased after the
+      // new vector store is emitted.
+      SmallDenseSet<Value *> Ignored;
+      for (auto &[SI, _] : Owners) {
+        Ignored.insert(SI);
+        SmallVector<Value *, 16> Elts;
+        SmallVector<Instruction *, 16> Insts;
+        if (collectBuildVector(SI->getValueOperand(), Elts, Insts))
+          for (Instruction *I : Insts)
+            Ignored.insert(I);
+      }
+      // Conservatively require owner stores to appear in the same order in the
+      // block as they appear in the lane range, and reject any intervening
+      // instruction that may read or write memory. The standard scalar store
+      // path gets memory-dependence checks through store-root scheduling; this
+      // manual store sink must not move a wider store across unknown memory.
+      StoreInst *PrevStore = nullptr;
+      for (auto &[SI, _] : Owners) {
+        if (PrevStore && !PrevStore->comesBefore(SI))
+          return false;
+        PrevStore = SI;
+      }
+      StoreInst *FirstStore = Owners.front().first;
+      StoreInst *LastStore = Owners.back().first;
+      for (Instruction &I : make_range(std::next(FirstStore->getIterator()),
+                                       LastStore->getIterator())) {
+        if (Ignored.contains(&I))
+          continue;
+        if (I.mayReadOrWriteMemory())
+          return false;
+      }
+      R.buildTree(LaneValues, Ignored);
+      if (R.isTreeTinyAndNotFullyVectorizable())
+        return false;
+      if (R.isProfitableToReorder()) {
+        R.reorderTopToBottom();
+        R.reorderBottomToTop();
+      }
+      R.transformNodes();
+      R.computeMinimumValueSizes();
+      InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
+      R.buildExternalUses();
+      InstructionCost Cost = R.getTreeCost(TreeCost);
+      // Add the store-sink-specific cost: one new vector store at the
+      // lowest-lane address, with alignment computed from each owner's
+      // base alignment shifted by its lane offset, minus the original
+      // store costs being replaced.
+      Type *EltTy = LaneValues.front()->getType();
+      auto *VecTy = getWidenedType(EltTy, LaneValues.size());
+      TypeSize EltSize = DL->getTypeStoreSize(EltTy);
+      Align CommonAlign = FirstStore->getAlign();
+      int64_t LaneOffset = 0;
+      for (auto &[SI, Count] : Owners) {
+        Align A = commonAlignment(SI->getAlign(),
+                                  LaneOffset * EltSize.getFixedValue());
+        CommonAlign = std::min(CommonAlign, A);
+        LaneOffset += Count;
+      }
+      InstructionCost VecStoreCost = TTI->getMemoryOpCost(
+          Instruction::Store, VecTy, CommonAlign,
+          FirstStore->getPointerAddressSpace(), TTI::TCK_RecipThroughput);
+      InstructionCost ScalarStoreCost = 0;
+      for (auto &[SI, Count] : Owners) {
+        TTI::OperandValueInfo OpInfo =
+            TTI::getOperandInfo(SI->getValueOperand());
+        ScalarStoreCost += TTI->getMemoryOpCost(
+            Instruction::Store, SI->getValueOperand()->getType(),
+            SI->getAlign(), SI->getPointerAddressSpace(),
+            TTI::TCK_RecipThroughput, OpInfo, SI);
+      }
+      Cost += VecStoreCost - ScalarStoreCost;
+      if (Cost >= -SLPCostThreshold)
+        return false;
+      // Standard emitter materializes the lane-value vector.
+      Value *VecValue = R.vectorizeTree();
+      // Emit the new vector store at the first owner's location.
+      IRBuilder<> Builder(FirstStore);
+      if (VecValue->getType() != VecTy) {
+        bool IsSigned = any_of(LaneValues, [&](Value *V) {
+          return !isKnownNonNegative(V, SimplifyQuery(*DL));
+        });
+        VecValue = Builder.CreateIntCast(VecValue, VecTy, IsSigned);
+      }
+      StoreInst *NewSI = Builder.CreateAlignedStore(
+          VecValue, FirstStore->getPointerOperand(), CommonAlign);
+      SmallVector<Value *> OwnerValues;
+      for (auto &[SI, _] : Owners)
+        OwnerValues.push_back(SI);
+      (void)::propagateMetadata(NewSI, OwnerValues);
+      for (auto &[SI, _] : Owners)
+        R.eraseInstruction(SI);
+      return true;
+    };
+
     for (unsigned LimitVF = GlobalMaxVF; LimitVF > 0;
          LimitVF = bit_ceil(LimitVF) / 2) {
       for (auto &CtxPtr : AllContexts) {
@@ -27452,9 +27710,34 @@ bool SLPVectorizerPass::vectorizeStores(
           unsigned VF = *VFUnval;
           if (!Context.vectorizeOneVF(
                   *TTI, VF, VectorizedStores, Changed,
-                  [this, &R](ArrayRef<Value *> Chain, unsigned Idx,
-                             unsigned MinVF, unsigned &Size) {
-                    return vectorizeStoreChain(Chain, R, Idx, MinVF, Size);
+                  [&](ArrayRef<StoreLane> Chain, unsigned Idx, unsigned MinVF,
+                      unsigned &Size) -> std::optional<bool> {
+                    bool HasVec = any_of(Chain, [](const StoreLane &Lane) {
+                      return Lane.IsVectorLane;
+                    });
+                    bool HasScalar = any_of(Chain, [](const StoreLane &Lane) {
+                      return !Lane.IsVectorLane;
+                    });
+                    if (HasVec && HasScalar) {
+                      // Mixed scalar/build-vector slice: store-reduction sink.
+                      Size = 1;
+                      std::optional<bool> Res =
+                          VectorizeBuildVectorStoreSinkSlice(Chain);
+                      if (Res)
+                        Size = R.getTreeSize();
+                      return Res;
+                    }
+                    if (HasVec) {
+                      // All-build-vector slice: nothing to merge with
+                      // surrounding scalar stores; fall through and decline
+                      // so the existing scalar-only path is unaffected.
+                      Size = 1;
+                      return false;
+                    }
+                    SmallVector<Value *> Stores;
+                    for (const StoreLane &Lane : Chain)
+                      Stores.push_back(Lane.Store);
+                    return vectorizeStoreChain(Stores, R, Idx, MinVF, Size);
                   })) {
             CtxPtr.reset();
             break;
@@ -27499,17 +27782,18 @@ bool SLPVectorizerPass::vectorizeStores(
   // after previous store with the same distance most likely have memory
   // dependencies and no need to waste compile time to try to vectorize them.
   // - Try to vectorize the sequence {1, {1, 0}, {3, 2}}.
-  auto FillStoresSet = [&](unsigned Idx, StoreInst *SI) {
+  auto FillStoresSet = [&](unsigned Idx, const StoreLane &Lane) {
     std::optional<int64_t> PtrDist;
-    auto *RelatedStores = find_if(
-        SortedStores, [&PtrDist, SI, this](const RelatedStoreInsts &StoreSeq) {
-          PtrDist = StoreSeq.getPointerDiff(*SI, *DL, *SE);
-          return PtrDist.has_value();
-        });
+    auto *RelatedStores =
+        find_if(SortedStores,
+                [&PtrDist, &Lane, this](const RelatedStoreInsts &StoreSeq) {
+                  PtrDist = StoreSeq.getPointerDiff(Lane, *DL, *SE);
+                  return PtrDist.has_value();
+                });
 
     // We did not find a comparable store, start a new group.
     if (RelatedStores == SortedStores.end()) {
-      SortedStores.emplace_back(Idx, Stores);
+      SortedStores.emplace_back(Idx, StoreLanes);
       return;
     }
 
@@ -27526,19 +27810,20 @@ bool SLPVectorizerPass::vectorizeStores(
     }
   };
   Type *PrevValTy = nullptr;
-  for (auto [I, SI] : enumerate(Stores)) {
-    if (R.isDeleted(SI))
+  for (auto [I, Lane] : enumerate(StoreLanes)) {
+    if (R.isDeleted(Lane.Store))
       continue;
+    Type *LaneTy = Lane.ScalarValue->getType();
     if (!PrevValTy)
-      PrevValTy = SI->getValueOperand()->getType();
+      PrevValTy = LaneTy;
     // Check that we do not try to vectorize stores of different types.
-    if (PrevValTy != SI->getValueOperand()->getType()) {
+    if (PrevValTy != LaneTy) {
       for (RelatedStoreInsts &StoreSeq : SortedStores)
         TryToVectorize(StoreSeq.getStores());
       SortedStores.clear();
-      PrevValTy = SI->getValueOperand()->getType();
+      PrevValTy = LaneTy;
     }
-    FillStoresSet(I, SI);
+    FillStoresSet(I, Lane);
   }
 
   // Final vectorization attempt.
@@ -27562,7 +27847,9 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isSimple())
         continue;
-      if (!isValidElementType(SI->getValueOperand()->getType()))
+      // Build-vector stores are accepted: their per-lane element type drives
+      // the chain so a store of <4 x float> behaves like 4 lanes of float.
+      if (!isValidElementType(getStoreChainType(SI)))
         continue;
       Stores[getUnderlyingObject(SI->getPointerOperand())].push_back(SI);
     }
@@ -31361,11 +31648,13 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   // compatible (have the same opcode, same parent), otherwise it is
   // definitely not profitable to try to vectorize them.
   auto &&StoreSorter = [this](StoreInst *V, StoreInst *V2) {
-    if (V->getValueOperand()->getType()->getTypeID() <
-        V2->getValueOperand()->getType()->getTypeID())
+    // Sort by lane-element type so build-vector stores group with scalar
+    // stores of the same element type (e.g. <4 x float> with float).
+    Type *Ty = getStoreChainType(V);
+    Type *Ty2 = getStoreChainType(V2);
+    if (Ty->getTypeID() < Ty2->getTypeID())
       return true;
-    if (V->getValueOperand()->getType()->getTypeID() >
-        V2->getValueOperand()->getType()->getTypeID())
+    if (Ty->getTypeID() > Ty2->getTypeID())
       return false;
     if (V->getPointerOperandType()->getTypeID() <
         V2->getPointerOperandType()->getTypeID())
@@ -31373,11 +31662,9 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     if (V->getPointerOperandType()->getTypeID() >
         V2->getPointerOperandType()->getTypeID())
       return false;
-    if (V->getValueOperand()->getType()->getScalarSizeInBits() <
-        V2->getValueOperand()->getType()->getScalarSizeInBits())
+    if (Ty->getScalarSizeInBits() < Ty2->getScalarSizeInBits())
       return true;
-    if (V->getValueOperand()->getType()->getScalarSizeInBits() >
-        V2->getValueOperand()->getType()->getScalarSizeInBits())
+    if (Ty->getScalarSizeInBits() > Ty2->getScalarSizeInBits())
       return false;
     // UndefValues are compatible with all other values.
     auto *I1 = dyn_cast<Instruction>(V->getValueOperand());
@@ -31411,10 +31698,16 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     StoreInst *V2 = VL.back();
     if (V1 == V2)
       return true;
-    if (V1->getValueOperand()->getType() != V2->getValueOperand()->getType())
+    bool IsBuildVectorStore = isBuildVectorStore(V1) || isBuildVectorStore(V2);
+    if (getStoreChainType(V1) != getStoreChainType(V2))
       return false;
     if (V1->getPointerOperandType() != V2->getPointerOperandType())
       return false;
+    // Build-vector stores skip the value-operand-instruction compatibility
+    // check below since their value comes from an insertelement chain. A
+    // later commit handles them via a dedicated TreeEntry path.
+    if (IsBuildVectorStore)
+      return true;
     // Undefs are compatible with any other value.
     if (isa<UndefValue>(V1->getValueOperand()) ||
         isa<UndefValue>(V2->getValueOperand()))
@@ -31460,7 +31753,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
                       << Pair.second.size() << ".\n");
 
-    if (!isValidElementType(Pair.second.front()->getValueOperand()->getType()))
+    if (!isValidElementType(getStoreChainType(Pair.second.front())))
       continue;
 
     // Reverse stores to do bottom-to-top analysis. This is important if the
