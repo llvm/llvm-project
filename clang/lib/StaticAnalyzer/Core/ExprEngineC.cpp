@@ -640,7 +640,7 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
         if (getContext().getLangOpts().getCLangStd() ||
             (getContext().getLangOpts().getCPlusPlusLangStd() &&
              !VD->getType()->isReferenceType())) {
-          Dst.Add(Pred);
+          Dst.insert(Pred);
           return;
         }
 
