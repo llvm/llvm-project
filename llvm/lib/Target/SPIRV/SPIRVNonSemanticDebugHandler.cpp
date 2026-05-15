@@ -172,6 +172,8 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   SubroutineTypes.clear();
   DebugTypeRegs.clear();
   OpStringContentCache.clear();
+  I32ConstantCache.clear();
+  GlobalDIEmitted = false;
   NonSemanticOpStringsSectionEmitted = false;
   CachedDebugInfoNoneReg = MCRegister();
   CachedOpTypeVoidReg = MCRegister();
