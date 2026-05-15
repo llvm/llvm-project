@@ -38,6 +38,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -91,42 +92,45 @@ classifyFunction(cir::FuncOp func, const DataLayout &dl, StringRef target,
 
 /// Find the cir.func declaration matching a cir.call's callee, if any.
 /// Returns nullptr if the callee is indirect or the symbol cannot be
-/// resolved (in which case the call is left alone).
-cir::FuncOp lookupCallee(cir::CallOp call, ModuleOp module) {
+/// resolved (in which case the call is left alone).  Takes a SymbolTable
+/// instead of a ModuleOp so the symbol lookup is amortized across all the
+/// call sites the driver walks (ModuleOp::lookupSymbol is linear per call).
+cir::FuncOp lookupCallee(cir::CallOp call, SymbolTable &symbolTable) {
   FlatSymbolRefAttr callee = call.getCalleeAttr();
   if (!callee)
     return nullptr;
-  return module.lookupSymbol<cir::FuncOp>(callee.getValue());
+  return symbolTable.lookup<cir::FuncOp>(callee.getValue());
 }
 
 void CallConvLoweringPass::runOnOperation() {
-  ModuleOp module = getOperation();
+  ModuleOp moduleOp = getOperation();
   MLIRContext *ctx = &getContext();
 
   if (target.empty() == classificationAttr.empty()) {
-    module.emitOpError() << "CallConvLowering requires exactly one of "
-                            "'target' or 'classification-attr' pass options";
+    moduleOp.emitOpError() << "CallConvLowering requires exactly one of "
+                              "'target' or 'classification-attr' pass options";
     signalPassFailure();
     return;
   }
 
-  if (!module->hasAttr(DLTIDialect::kDataLayoutAttrName)) {
-    module.emitOpError()
+  if (!moduleOp->hasAttr(DLTIDialect::kDataLayoutAttrName)) {
+    moduleOp.emitOpError()
         << "CallConvLowering requires a DataLayout (dlti.dl_spec attribute "
            "on the module)";
     signalPassFailure();
     return;
   }
 
-  DataLayout dl(module);
-  CIRABIRewriteContext rewriteCtx(module);
+  DataLayout dl(moduleOp);
+  CIRABIRewriteContext rewriteCtx(moduleOp);
+  SymbolTable symbolTable(moduleOp);
 
   // Phase 1: classify every cir.func.  No IR mutation happens here, so
   // running this as a single up-front walk lets later phases consult any
   // function's classification regardless of visitation order.
   llvm::MapVector<cir::FuncOp, FunctionClassification> classifications;
   bool anyFailed = false;
-  module.walk([&](cir::FuncOp f) {
+  moduleOp.walk([&](cir::FuncOp f) {
     auto fc = classifyFunction(f, dl, target, classificationAttr);
     if (!fc) {
       anyFailed = true;
@@ -145,8 +149,8 @@ void CallConvLoweringPass::runOnOperation() {
   // unresolved callees are silently skipped (they cannot be ABI-rewritten
   // without knowing the callee's classification).
   llvm::DenseMap<cir::FuncOp, SmallVector<cir::CallOp>> callers;
-  module.walk([&](cir::CallOp c) {
-    if (cir::FuncOp callee = lookupCallee(c, module))
+  moduleOp.walk([&](cir::CallOp c) {
+    if (cir::FuncOp callee = lookupCallee(c, symbolTable))
       callers[callee].push_back(c);
   });
 

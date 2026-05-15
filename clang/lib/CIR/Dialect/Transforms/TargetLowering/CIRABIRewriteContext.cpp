@@ -68,9 +68,6 @@ LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
     case ArgKind::Ignore:
       break;
     case ArgKind::Expand:
-      // Expand-of-aggregates at arg sites is planned for a follow-up PR;
-      // Expand at return sites is permanently rejected (see
-      // computeNewReturnType below, matching classic codegen).
       emitError() << "Expand at arg " << idx
                   << " not yet implemented in CallConvLowering";
       return failure();
@@ -90,8 +87,6 @@ LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
 /// Compute the new return type for a function whose return classification
 /// is \p retInfo.  As with `buildNewArgTypes`, only Direct (no coercion)
 /// and Ignore are implemented here; the remaining kinds emit an error.
-/// Classic codegen rejects Expand returns outright (see
-/// CodeGenFunction::EmitFunctionEpilog), and we mirror that behavior.
 Type computeNewReturnType(Type origRetTy, const ArgClassification &retInfo,
                           MLIRContext *ctx,
                           function_ref<InFlightDiagnostic()> emitError) {
@@ -179,8 +174,7 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       // passed at the ABI level, so any remaining uses are vacuous;
       // poison says exactly that.
       SmallVector<unsigned> ignored = ignoredArgIndices(fc);
-      for (int i = static_cast<int>(ignored.size()) - 1; i >= 0; --i) {
-        unsigned blockIdx = ignored[i];
+      for (unsigned blockIdx : llvm::reverse(ignored)) {
         if (blockIdx >= entry.getNumArguments())
           continue;
         BlockArgument arg = entry.getArgument(blockIdx);
@@ -242,6 +236,10 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   if (!needsRewrite(fc))
     return success();
 
+  // TODO: also handle cir::TryCallOp (the throwing-call form used by C++
+  // exceptions) -- templating this routine on the call op type lets the
+  // rewriting logic stay shared.  Will land with the EH-aware follow-up
+  // since the EH paths also need their own ABI considerations.
   auto call = cast<cir::CallOp>(callOp);
 
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
@@ -269,9 +267,12 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   SmallVector<Value> newArgs;
   ValueRange argOperands = call.getArgOperands();
   newArgs.reserve(argOperands.size());
+  // The classifier sees the function's named-arg list; the call site sees
+  // those plus any variadic operands appended at the end.  So argOperands
+  // is at least as long as argInfos.
+  assert(fc.argInfos.size() <= argOperands.size() &&
+         "call has fewer operands than the function has classified args");
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
-    if (idx >= argOperands.size())
-      break;
     if (ac.kind == ArgKind::Ignore)
       continue;
     newArgs.push_back(argOperands[idx]);
