@@ -179,17 +179,13 @@ LogicalResult OperationVerifier::verifyTokenBlockArgument(Block &block,
   if (arg.getType() != tokenType)
     return success();
 
-  Region *parentRegion = block.getParent();
-  if (!parentRegion || !block.isEntryBlock())
+  // The producer-trait check on the parent op (and the token consumer check
+  // on the uses) is performed by `verifyTokenValues` when it iterates the
+  // entry block arguments of an op's regions. Here we only enforce that
+  // tokens are not used as non-entry block arguments.
+  if (!block.getParent() || !block.isEntryBlock())
     return emitError(arg.getLoc(), "token block argument #")
            << idx << " is only allowed in a region entry block";
-
-  Operation *parentOp = parentRegion->getParentOp();
-  if (!parentOp || !parentOp->mightHaveTrait<OpTrait::TokenProducerTrait>())
-    return emitError(arg.getLoc(), "token entry block argument #")
-           << idx
-           << " requires the parent operation to define the "
-              "TokenProducerTrait";
 
   return success();
 }
