@@ -28,20 +28,20 @@ define amdgpu_ps float @vimage_move_to_valu(<8 x i32> %rsrc) {
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub0, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub1, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub2, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub4, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub5, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_4]], %subreg.sub0, [[V_READFIRSTLANE_B32_5]], %subreg.sub1
-  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub4_sub5, implicit-def $exec, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub6, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub7, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_6]], %subreg.sub0, [[V_READFIRSTLANE_B32_7]], %subreg.sub1
-  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE4]], [[REG_SEQUENCE]].sub6_sub7, implicit-def $exec, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_256 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3, [[V_READFIRSTLANE_B32_4]], %subreg.sub4, [[V_READFIRSTLANE_B32_5]], %subreg.sub5, [[V_READFIRSTLANE_B32_6]], %subreg.sub6, [[V_READFIRSTLANE_B32_7]], %subreg.sub7
+  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
+  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
+  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub4_sub5, implicit-def $exec, implicit $exec
+  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE4]], [[REG_SEQUENCE]].sub6_sub7, implicit-def $exec, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.2:
   ; GFX11-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
@@ -80,20 +80,20 @@ define amdgpu_ps float @vimage_move_to_valu(<8 x i32> %rsrc) {
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub0, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub1, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub2, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub4, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub5, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_4]], %subreg.sub0, [[V_READFIRSTLANE_B32_5]], %subreg.sub1
-  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub4_sub5, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub6, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub7, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_6]], %subreg.sub0, [[V_READFIRSTLANE_B32_7]], %subreg.sub1
-  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE4]], [[REG_SEQUENCE]].sub6_sub7, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_256 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3, [[V_READFIRSTLANE_B32_4]], %subreg.sub4, [[V_READFIRSTLANE_B32_5]], %subreg.sub5, [[V_READFIRSTLANE_B32_6]], %subreg.sub6, [[V_READFIRSTLANE_B32_7]], %subreg.sub7
+  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
+  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
+  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub4_sub5, implicit-def $exec, implicit $exec
+  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE4]], [[REG_SEQUENCE]].sub6_sub7, implicit-def $exec, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
   ; GFX12-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
@@ -142,20 +142,20 @@ define amdgpu_ps float @vsample_move_to_valu_rsrc(<8 x i32> %rsrc, <4 x i32> inr
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub0, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub1, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub2, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub4, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub5, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_4]], %subreg.sub0, [[V_READFIRSTLANE_B32_5]], %subreg.sub1
-  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE4]], [[REG_SEQUENCE]].sub4_sub5, implicit-def $exec, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub6, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub7, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_6]], %subreg.sub0, [[V_READFIRSTLANE_B32_7]], %subreg.sub1
-  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE5]], [[REG_SEQUENCE]].sub6_sub7, implicit-def $exec, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:sgpr_256 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3, [[V_READFIRSTLANE_B32_4]], %subreg.sub4, [[V_READFIRSTLANE_B32_5]], %subreg.sub5, [[V_READFIRSTLANE_B32_6]], %subreg.sub6, [[V_READFIRSTLANE_B32_7]], %subreg.sub7
+  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
+  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
+  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE4]], [[REG_SEQUENCE]].sub4_sub5, implicit-def $exec, implicit $exec
+  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE5]], [[REG_SEQUENCE]].sub6_sub7, implicit-def $exec, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.2:
   ; GFX11-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
@@ -199,20 +199,20 @@ define amdgpu_ps float @vsample_move_to_valu_rsrc(<8 x i32> %rsrc, <4 x i32> inr
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub0, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub1, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub2, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub4, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub5, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_4]], %subreg.sub0, [[V_READFIRSTLANE_B32_5]], %subreg.sub1
-  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE4]], [[REG_SEQUENCE]].sub4_sub5, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub6, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub7, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_6]], %subreg.sub0, [[V_READFIRSTLANE_B32_7]], %subreg.sub1
-  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE5]], [[REG_SEQUENCE]].sub6_sub7, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:sgpr_256 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3, [[V_READFIRSTLANE_B32_4]], %subreg.sub4, [[V_READFIRSTLANE_B32_5]], %subreg.sub5, [[V_READFIRSTLANE_B32_6]], %subreg.sub6, [[V_READFIRSTLANE_B32_7]], %subreg.sub7
+  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
+  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
+  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE4]], [[REG_SEQUENCE]].sub4_sub5, implicit-def $exec, implicit $exec
+  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE5]], [[REG_SEQUENCE]].sub6_sub7, implicit-def $exec, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
   ; GFX12-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
@@ -261,12 +261,12 @@ define amdgpu_ps float @vsample_move_to_valu_samp(<8 x i32> inreg %rsrc, <4 x i3
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE1]].sub0, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE1]].sub1, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE2]], [[REG_SEQUENCE1]].sub0_sub1, implicit-def $exec, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE1]].sub2, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE1]].sub3, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE3]], [[REG_SEQUENCE1]].sub2_sub3, implicit-def $exec, implicit $exec
   ; GFX11-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
+  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE2]], [[REG_SEQUENCE1]].sub0_sub1, implicit-def $exec, implicit $exec
+  ; GFX11-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE3]], [[REG_SEQUENCE1]].sub2_sub3, implicit-def $exec, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.2:
   ; GFX11-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
@@ -310,12 +310,12 @@ define amdgpu_ps float @vsample_move_to_valu_samp(<8 x i32> inreg %rsrc, <4 x i3
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE1]].sub0, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE1]].sub1, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE2]], [[REG_SEQUENCE1]].sub0_sub1, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE1]].sub2, implicit $exec
   ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE1]].sub3, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE3]], [[REG_SEQUENCE1]].sub2_sub3, implicit-def $exec, implicit $exec
   ; GFX12-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
+  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE2]], [[REG_SEQUENCE1]].sub0_sub1, implicit-def $exec, implicit $exec
+  ; GFX12-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE3]], [[REG_SEQUENCE1]].sub2_sub3, implicit-def $exec, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
   ; GFX12-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)

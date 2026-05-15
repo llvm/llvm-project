@@ -2117,6 +2117,19 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_AND_SAVEEXEC_B32));
     break;
 
+  case AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term:
+    MI.setDesc(get(AMDGPU::V_CMPX_EQ_U32_nosdst_e32));
+    break;
+  case AMDGPU::V_CMPX_EQ_U32_nosdst_e64_term:
+    MI.setDesc(get(AMDGPU::V_CMPX_EQ_U32_nosdst_e64));
+    break;
+  case AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term:
+    MI.setDesc(get(AMDGPU::V_CMPX_EQ_U64_nosdst_e32));
+    break;
+  case AMDGPU::V_CMPX_EQ_U64_nosdst_e64_term:
+    MI.setDesc(get(AMDGPU::V_CMPX_EQ_U64_nosdst_e64));
+    break;
+
   case AMDGPU::SI_SPILL_S32_TO_VGPR:
     MI.setDesc(get(AMDGPU::V_WRITELANE_B32));
     break;
@@ -3232,6 +3245,10 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
     case AMDGPU::S_ANDN2_B32_term:
     case AMDGPU::S_AND_B32_term:
     case AMDGPU::S_AND_SAVEEXEC_B32_term:
+    case AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term:
+    case AMDGPU::V_CMPX_EQ_U32_nosdst_e64_term:
+    case AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term:
+    case AMDGPU::V_CMPX_EQ_U64_nosdst_e64_term:
       break;
     case AMDGPU::SI_IF:
     case AMDGPU::SI_ELSE:

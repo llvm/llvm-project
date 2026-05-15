@@ -255,7 +255,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI5]].sub0, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI5]].sub1, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE1]], killed [[PHI5]], implicit-def $exec, implicit $exec
+  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE1]], killed [[PHI5]], implicit-def $exec, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.4:
   ; SI-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
@@ -292,7 +292,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI8]].sub0, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI8]].sub1, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_2]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE3]], killed [[PHI8]], implicit-def $exec, implicit $exec
+  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE3]], killed [[PHI8]], implicit-def $exec, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.8:
   ; SI-NEXT:   successors: %bb.7(0x40000000), %bb.9(0x40000000)
@@ -376,7 +376,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI4]].sub0, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI4]].sub1, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE1]], killed [[PHI4]], implicit-def $exec, implicit $exec
+  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE1]], killed [[PHI4]], implicit-def $exec, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.4:
   ; SI-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
@@ -412,7 +412,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI6]].sub0, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI6]].sub1, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_2]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32 [[REG_SEQUENCE3]], killed [[PHI6]], implicit-def $exec, implicit $exec
+  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE3]], killed [[PHI6]], implicit-def $exec, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.8:
   ; SI-NEXT:   successors: %bb.7(0x40000000), %bb.9(0x40000000)
@@ -586,20 +586,20 @@ define protected amdgpu_kernel void @nested_waterfalls(ptr addrspace(1) %tex.coe
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub0, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub1, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32 killed [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub2, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32 killed [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub4, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub5, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_4]], %subreg.sub0, [[V_READFIRSTLANE_B32_5]], %subreg.sub1
-  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32 killed [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub4_sub5, implicit-def $exec, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub6, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub7, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_6]], %subreg.sub0, [[V_READFIRSTLANE_B32_7]], %subreg.sub1
-  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32 killed [[REG_SEQUENCE4]], [[REG_SEQUENCE]].sub6_sub7, implicit-def $exec, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_256 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_1]], %subreg.sub1, killed [[V_READFIRSTLANE_B32_2]], %subreg.sub2, killed [[V_READFIRSTLANE_B32_3]], %subreg.sub3, killed [[V_READFIRSTLANE_B32_4]], %subreg.sub4, killed [[V_READFIRSTLANE_B32_5]], %subreg.sub5, killed [[V_READFIRSTLANE_B32_6]], %subreg.sub6, killed [[V_READFIRSTLANE_B32_7]], %subreg.sub7
+  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term killed [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
+  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term killed [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
+  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term killed [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub4_sub5, implicit-def $exec, implicit $exec
+  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term killed [[REG_SEQUENCE4]], [[REG_SEQUENCE]].sub6_sub7, implicit-def $exec, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.3:
   ; SI-NEXT:   successors: %bb.4(0x80000000)
@@ -613,12 +613,12 @@ define protected amdgpu_kernel void @nested_waterfalls(ptr addrspace(1) %tex.coe
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_8:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_2]].sub0, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_9:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_2]].sub1, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_8]], %subreg.sub0, [[V_READFIRSTLANE_B32_9]], %subreg.sub1
-  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32 killed [[REG_SEQUENCE6]], [[GLOBAL_LOAD_DWORDX4_2]].sub0_sub1, implicit-def $exec, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_10:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_2]].sub2, implicit $exec
   ; SI-NEXT:   [[V_READFIRSTLANE_B32_11:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_2]].sub3, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE7:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_10]], %subreg.sub0, [[V_READFIRSTLANE_B32_11]], %subreg.sub1
-  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32 killed [[REG_SEQUENCE7]], [[GLOBAL_LOAD_DWORDX4_2]].sub2_sub3, implicit-def $exec, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE8:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_8]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_9]], %subreg.sub1, killed [[V_READFIRSTLANE_B32_10]], %subreg.sub2, killed [[V_READFIRSTLANE_B32_11]], %subreg.sub3
+  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term killed [[REG_SEQUENCE6]], [[GLOBAL_LOAD_DWORDX4_2]].sub0_sub1, implicit-def $exec, implicit $exec
+  ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term killed [[REG_SEQUENCE7]], [[GLOBAL_LOAD_DWORDX4_2]].sub2_sub3, implicit-def $exec, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.5:
   ; SI-NEXT:   successors: %bb.4(0x40000000), %bb.6(0x40000000)
