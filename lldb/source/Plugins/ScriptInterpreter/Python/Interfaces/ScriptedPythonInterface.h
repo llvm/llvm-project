@@ -192,8 +192,9 @@ public:
         return create_error("Missing scripting object.");
     }
 
-    Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
-                   Locker::FreeLock);
+    Locker py_lock(&m_interpreter,
+                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN,
+                   Locker::FreeLock | Locker::TearDownSession);
 
     PythonObject result = {};
 
@@ -413,8 +414,9 @@ public:
       return ErrorWithMessage<T>(caller_signature, "missing script class name",
                                  error);
 
-    Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
-                   Locker::FreeLock);
+    Locker py_lock(&m_interpreter,
+                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN,
+                   Locker::FreeLock | Locker::TearDownSession);
 
     // Get the interpreter dictionary.
     auto dict =
@@ -508,8 +510,9 @@ protected:
       return ErrorWithMessage<T>(caller_signature, "python object ill-formed",
                                  error);
 
-    Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
-                   Locker::FreeLock);
+    Locker py_lock(&m_interpreter,
+                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN,
+                   Locker::FreeLock | Locker::TearDownSession);
 
     PythonObject implementor(PyRefType::Borrowed,
                              (PyObject *)m_object_instance_sp->GetValue());
