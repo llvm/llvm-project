@@ -204,7 +204,7 @@ void StackFrameList::SetCurrentInlinedDepth(uint32_t new_depth) {
 }
 
 bool StackFrameList::WereAllFramesFetched() const {
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedReader guard(m_list_mutex);
   return GetAllFramesFetched();
 }
 
@@ -446,7 +446,7 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
                                    InterruptionControl allow_interrupt) {
   // GetFramesUpTo is always called with the intent to add frames, so get the
   // writer lock:
-  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedWriter guard(m_list_mutex);
   // Now that we have the lock, check to make sure someone didn't get there
   // ahead of us:
   if (m_frames.size() > end_idx || GetAllFramesFetched())
@@ -663,7 +663,7 @@ uint32_t StackFrameList::GetNumFrames(bool can_create) {
   }
   uint32_t frame_idx;
   {
-    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+    llvm::sys::ScopedReader guard(m_list_mutex);
     frame_idx = GetVisibleStackFrameIndex(m_frames.size());
   }
   return frame_idx;
@@ -673,7 +673,7 @@ void StackFrameList::Dump(Stream *s) {
   if (s == nullptr)
     return;
 
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedReader guard(m_list_mutex);
 
   const_iterator pos, begin = m_frames.begin(), end = m_frames.end();
   for (pos = begin; pos != end; ++pos) {
@@ -697,7 +697,7 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
   // enough frames for our request we don't want to block other readers, so
   // first acquire the shared lock:
   { // Scope for shared lock:
-    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+    llvm::sys::ScopedReader guard(m_list_mutex);
 
     uint32_t inlined_depth = GetCurrentInlinedDepth();
     if (inlined_depth != UINT32_MAX)
@@ -720,7 +720,7 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
   }
 
   { // Now we're accessing m_frames as a reader, so acquire the reader lock.
-    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+    llvm::sys::ScopedReader guard(m_list_mutex);
     if (idx < m_frames.size()) {
       frame_sp = m_frames[idx];
     } else if (original_idx == 0) {
@@ -773,7 +773,7 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
     {
       // First see if the frame is already realized.  This is the scope for
       // the shared mutex:
-      std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+      llvm::sys::ScopedReader guard(m_list_mutex);
       // Do a binary search in case the stack frame is already in our cache
       collection::const_iterator pos =
           llvm::lower_bound(m_frames, stack_id, CompareStackID);
@@ -792,7 +792,7 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
 }
 
 bool StackFrameList::SetFrameAtIndex(uint32_t idx, StackFrameSP &frame_sp) {
-  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedWriter guard(m_list_mutex);
   if (idx >= m_frames.size())
     m_frames.resize(idx + 1);
   // Make sure allocation succeeded by checking bounds again
@@ -887,7 +887,7 @@ StackFrameList::GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
 }
 
 uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedReader guard(m_list_mutex);
   std::lock_guard<std::recursive_mutex> selected_frame_guard(
       m_selected_frame_mutex);
 
@@ -940,7 +940,7 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
 // does not describe how StackFrameLists are currently used.
 // Clear is currently only used to clear the list in the destructor.
 void StackFrameList::Clear() {
-  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedWriter guard(m_list_mutex);
   m_frames.clear();
   m_concrete_frames_fetched = 0;
   std::lock_guard<std::recursive_mutex> selected_frame_guard(
@@ -950,7 +950,7 @@ void StackFrameList::Clear() {
 
 lldb::StackFrameSP
 StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedReader guard(m_list_mutex);
   const_iterator pos;
   const_iterator begin = m_frames.begin();
   const_iterator end = m_frames.end();
