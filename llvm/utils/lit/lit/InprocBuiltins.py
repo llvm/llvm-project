@@ -224,6 +224,9 @@ class InprocBuiltin:
     """
 
     execute: InprocBuiltinExecuteFn
+    # Identifies this in-process built-in as the daemonized replacement for a
+    # LLVM tool. This is used for disabling daemon tools.
+    llvm_daemon_tool_identifier: str | None = None
 
 
 def executeBuiltinCd(
