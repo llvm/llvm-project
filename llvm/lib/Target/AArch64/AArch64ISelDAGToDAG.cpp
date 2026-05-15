@@ -7996,7 +7996,7 @@ bool AArch64DAGToDAGISel::SelectCmpBranchExtOperand(SDValue N, SDValue &Reg,
   return false;
 }
 
-/// Try to fold AArch64 CSEL/FCMP patterns to FMAXNUM_IEEE/FMINNUM_IEEE.
+/// Try to fold AArch64 CSEL/FCMP patterns to FMAXNM/FMINNM.
 ///
 /// This is intentionally done in PreprocessISelDAG rather than DAGCombine:
 /// doing this earlier based on the defining operation of X can be invalidated
@@ -8004,19 +8004,15 @@ bool AArch64DAGToDAGISel::SelectCmpBranchExtOperand(SDValue N, SDValue &Reg,
 /// instruction selection, so the use of isKnownNeverSNaN(X) applies to the
 /// final SDValue being selected.
 ///
-/// Only handles FCMP(X, C) with scalar FP types, where C is a non-NaN constant
-/// and the CSEL has nsz. The nsz requirement avoids signed-zero mismatches.
-/// The never-sNaN check is required because AArch64 FMAXNM/FMINNM differ from
-/// fcmp+fcsel for signaling NaN inputs.
+/// Only handles FCMP(X, C) with scalar FP types, where C is a non-NaN constant.
+/// The nsz requirement is needed only when C is zero, to avoid signed-zero
+/// mismatches. The never-sNaN check is required because AArch64 FMAXNM/FMINNM
+/// differ from fcmp+fcsel for signaling NaN inputs.
 SDValue AArch64DAGToDAGISel::tryFoldCselToFMaxMin(SDNode &N) {
   EVT VT = N.getValueType(0);
 
   // Scalar FP only.
   if (!VT.isFloatingPoint() || VT.isVector())
-    return SDValue();
-
-  // nsz required: without it, fmaxnm(+0,-0)=+0 but fcmp+fcsel returns -0.
-  if (!N.getFlags().hasNoSignedZeros())
     return SDValue();
 
   SDValue TVal = N.getOperand(0);
@@ -8035,57 +8031,63 @@ SDValue AArch64DAGToDAGISel::tryFoldCselToFMaxMin(SDNode &N) {
   SDValue CmpRHS = Cmp.getOperand(1);
   unsigned CondCode = CC->getZExtValue();
 
-  // Match GT, GE, MI, LS conditions.
-  // When nsz is present, GE and LS have the same semantics as GT and MI
-  // respectively:
-  unsigned IEEEOpc;
-  SDValue Operand, Constant;
+  // Map VT and operation (max/min) to machine opcode.
+  auto getOpc = [](EVT VT, bool isMax) -> unsigned {
+    if (VT == MVT::f16)
+      return isMax ? AArch64::FMAXNMHrr : AArch64::FMINNMHrr;
+    else if (VT == MVT::f32)
+      return isMax ? AArch64::FMAXNMSrr : AArch64::FMINNMSrr;
+    else if (VT == MVT::f64)
+      return isMax ? AArch64::FMAXNMDrr : AArch64::FMINNMDrr;
+    else
+      return 0; // unsupported
+  };
 
+  // Determine whether to use max or min based on condition code and operands.
+  bool isMax;
   if (CondCode == AArch64CC::GT || CondCode == AArch64CC::GE) {
-    if (TVal == CmpLHS && FVal == CmpRHS) {
-      IEEEOpc = ISD::FMAXNUM_IEEE;
-      Operand = CmpLHS;
-      Constant = CmpRHS;
-    } else if (TVal == CmpRHS && FVal == CmpLHS) {
-      IEEEOpc = ISD::FMINNUM_IEEE;
-      Operand = CmpLHS;
-      Constant = CmpRHS;
-    } else {
+    if (TVal == CmpLHS && FVal == CmpRHS)
+      isMax = true;
+    else if (TVal == CmpRHS && FVal == CmpLHS)
+      isMax = false;
+    else
       return SDValue();
-    }
   } else if (CondCode == AArch64CC::MI || CondCode == AArch64CC::LS) {
-    if (TVal == CmpLHS && FVal == CmpRHS) {
-      IEEEOpc = ISD::FMINNUM_IEEE;
-      Operand = CmpLHS;
-      Constant = CmpRHS;
-    } else if (TVal == CmpRHS && FVal == CmpLHS) {
-      IEEEOpc = ISD::FMAXNUM_IEEE;
-      Operand = CmpLHS;
-      Constant = CmpRHS;
-    } else {
+    if (TVal == CmpLHS && FVal == CmpRHS)
+      isMax = false;
+    else if (TVal == CmpRHS && FVal == CmpLHS)
+      isMax = true;
+    else
       return SDValue();
-    }
   } else {
     return SDValue();
   }
 
-  const TargetLowering *TLI = getTargetLowering();
-  if (!TLI->isOperationLegalOrCustom(IEEEOpc, VT))
+  // Get the machine opcode for this VT and operation.
+  unsigned Opc = getOpc(VT, isMax);
+  if (!Opc)
     return SDValue();
 
   // Constant must be non-NaN.
-  auto *CFP = dyn_cast<ConstantFPSDNode>(Constant);
+  auto *CFP = dyn_cast<ConstantFPSDNode>(CmpRHS);
   if (!CFP || CFP->getValueAPF().isNaN())
+    return SDValue();
+
+  // nsz flag required only when constant is zero: fmaxnm(+0,-0)=+0 differs from
+  // fcmp+select's -0. For non-zero constants, semantics are identical.
+  if (CFP->isZero() && !N.getFlags().hasNoSignedZeros())
     return SDValue();
 
   // Only fold if variable operand is never sNaN.
   // This runs after DAG combines, so later combines cannot remove a defining
   // operation used by isKnownNeverSNaN().
-  if (!CurDAG->isKnownNeverSNaN(Operand))
+  if (!CurDAG->isKnownNeverSNaN(CmpLHS))
     return SDValue();
 
   SDLoc DL(&N);
-  return CurDAG->getNode(IEEEOpc, DL, VT, Operand, Constant);
+
+  // Directly emit the machine node
+  return SDValue(CurDAG->getMachineNode(Opc, DL, VT, CmpLHS, CmpRHS), 0);
 }
 
 void AArch64DAGToDAGISel::PreprocessISelDAG() {
