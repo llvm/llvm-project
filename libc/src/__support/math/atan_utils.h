@@ -142,7 +142,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble ATAN_I[65] = {
 //     b = 2^ll + a;
 //     print("{Sign::POS, ", 2^(ll - 128), ",", b, "},");
 // };
-LIBC_INLINE_VAR LIBC_CONSTEXPR Float128 ATAN_I_F128[65] = {
+LIBC_INLINE_VAR constexpr Float128 ATAN_I_F128[65] = {
     {Sign::POS, 0, 0_u128},
     {Sign::POS, -134, 0xfffaaadd'db94d5bb'e78c5640'15f76048_u128},
     {Sign::POS, -133, 0xffeaaddd'4bb12542'779d776d'da8c6214_u128},
@@ -215,7 +215,7 @@ LIBC_INLINE_VAR LIBC_CONSTEXPR Float128 ATAN_I_F128[65] = {
 //                 [0, 2^-7]);
 // > dirtyinfnorm(atan(x) - P, [0, 2^-7]);
 // 0x1.26016ad97f323875760f869684c0898d7b7bb8bep-122
-LIBC_INLINE_VAR LIBC_CONSTEXPR Float128 ATAN_POLY_F128[] = {
+LIBC_INLINE_VAR constexpr Float128 ATAN_POLY_F128[] = {
     {Sign::NEG, -129, 0xaaaaaaaa'aaaaaaaa'aaaaaaa6'003c5d1d_u128},
     {Sign::POS, -130, 0xcccccccc'cccccccc'cca00232'8776b063_u128},
     {Sign::NEG, -130, 0x92492492'49249201'27f5268a'cb24aec0_u128},
@@ -225,8 +225,7 @@ LIBC_INLINE_VAR LIBC_CONSTEXPR Float128 ATAN_POLY_F128[] = {
 };
 
 // Approximate atan for |x| <= 2^-7.
-[[maybe_unused]] LIBC_INLINE LIBC_CONSTEXPR Float128
-atan_eval(const Float128 &x) {
+[[maybe_unused]] LIBC_INLINE constexpr Float128 atan_eval(const Float128 &x) {
   Float128 x_sq = fputil::quick_mul(x, x);
   Float128 x3 = fputil::quick_mul(x, x_sq);
   Float128 p = fputil::polyeval(x_sq, ATAN_POLY_F128[0], ATAN_POLY_F128[1],

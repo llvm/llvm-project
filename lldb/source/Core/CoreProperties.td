@@ -293,8 +293,4 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultFalse,
     Desc<"Controls whether diagnostics can refer directly to the command input, drawing arrows to it. If false, diagnostics will echo the input.">;
-  def GuiMaxConsoleLines: Property<"gui-console-max-lines", "UInt64">,
-    Global,
-    DefaultUnsignedValue<10000>,
-    Desc<"The maximum number of lines to keep in the console output window.">;
 }

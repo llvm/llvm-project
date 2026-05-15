@@ -1298,14 +1298,19 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                                     VecTy, Ctx.CostKind, 0);
   }
   case Instruction::FCmp:
-  case Instruction::ICmp:
-    // FIXME: We don't handle scalar compares here yet. Scalar compares used for
-    // the loop exit condition are handled by the legacy cost model, but other
-    // scalar compares (e.g. in the middle block deciding whether to execute the
-    // scalar epilogue) aren't accounted for.
-    if (vputils::onlyFirstLaneUsed(this))
+  case Instruction::ICmp: {
+    // FIXME: We don't handle scalar compares inside the loop here yet, as loop
+    // exit conditions are handled by the legacy cost model and avoiding all
+    // scalar compares is the simplest way to avoid double-counting compares
+    // that compute the loop exit condition.
+    bool IsScalar = vputils::onlyFirstLaneUsed(this);
+    const VPRegionBlock *Region = getRegion();
+    if (IsScalar && Region &&
+        Region == Region->getPlan()->getVectorLoopRegion())
       return 0;
-    return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
+    return getCostForRecipeWithOpcode(
+        getOpcode(), IsScalar ? ElementCount::getFixed(1) : VF, Ctx);
+  }
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
@@ -1886,9 +1891,28 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
+  assert(getVectorizedTypeVF(Variant->getReturnType()) == VF &&
+         "Variant return type must match VF");
+  return computeCallCost(Variant, Ctx);
+}
+
+InstructionCost VPWidenCallRecipe::computeCallCost(Function *Variant,
+                                                   VPCostContext &Ctx) {
   return Ctx.TTI.getCallInstrCost(nullptr, Variant->getReturnType(),
                                   Variant->getFunctionType()->params(),
                                   Ctx.CostKind);
+}
+
+bool VPWidenCallRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  assert(Variant && "Variant not set");
+  FunctionType *VFTy = Variant->getFunctionType();
+  return all_of(enumerate(args()), [VFTy, &Op](const auto &Arg) {
+    auto [Idx, V] = Arg;
+    Type *ArgTy = VFTy->getParamType(Idx);
+    return V != Op || ArgTy->isIntegerTy() || ArgTy->isFloatingPointTy() ||
+           ArgTy->isPointerTy() || ArgTy->isByteTy();
+  });
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1971,12 +1995,9 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     State.set(this, V);
 }
 
-/// Compute the cost for the intrinsic \p ID with \p Operands, produced by \p R.
-static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
-                                            ArrayRef<const VPValue *> Operands,
-                                            const VPRecipeWithIRFlags &R,
-                                            ElementCount VF,
-                                            VPCostContext &Ctx) {
+InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
+    Intrinsic::ID ID, ArrayRef<const VPValue *> Operands,
+    const VPRecipeWithIRFlags &R, ElementCount VF, VPCostContext &Ctx) {
   Type *ScalarRetTy = Ctx.Types.inferScalarType(&R);
   // Skip the reverse operation cost for the mask.
   // FIXME: Remove this once redundant mask reverse operations can be eliminated
@@ -2020,7 +2041,7 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
                                                     VPCostContext &Ctx) const {
   SmallVector<const VPValue *> ArgOps(operands());
-  return getCostForIntrinsics(VectorIntrinsicID, ArgOps, *this, VF, Ctx);
+  return computeCallCost(VectorIntrinsicID, ArgOps, *this, VF, Ctx);
 }
 
 StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
@@ -3353,34 +3374,10 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Call: {
     auto *CalledFn =
         cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
-
-    SmallVector<const VPValue *> ArgOps(drop_end(operands()));
-    SmallVector<Type *, 4> Tys;
-    for (const VPValue *ArgOp : ArgOps)
-      Tys.push_back(Ctx.Types.inferScalarType(ArgOp));
-
-    if (CalledFn->isIntrinsic() &&
-        VPCostContext::isFreeScalarIntrinsic(CalledFn->getIntrinsicID())) {
-      assert(getCostForIntrinsics(CalledFn->getIntrinsicID(), ArgOps, *this,
-                                  ElementCount::getFixed(1), Ctx) == 0 &&
-             "scalarizing intrinsic should be free");
-      return InstructionCost(0);
-    }
-
     Type *ResultTy = Ctx.Types.inferScalarType(this);
-    InstructionCost ScalarCallCost =
-        Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
-    if (isSingleScalar()) {
-      if (CalledFn->isIntrinsic())
-        ScalarCallCost = std::min(
-            ScalarCallCost,
-            getCostForIntrinsics(CalledFn->getIntrinsicID(), ArgOps, *this,
-                                 ElementCount::getFixed(1), Ctx));
-      return ScalarCallCost;
-    }
-
-    return ScalarCallCost * VF.getFixedValue() +
-           Ctx.getScalarizationOverhead(ResultTy, ArgOps, VF);
+    SmallVector<const VPValue *> ArgOps(drop_end(operands()));
+    return computeCallCost(CalledFn, ResultTy, ArgOps, isSingleScalar(), VF,
+                           Ctx);
   }
   case Instruction::Add:
   case Instruction::Sub:
@@ -3559,6 +3556,40 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   }
 
   return Ctx.getLegacyCost(UI, VF);
+}
+
+InstructionCost VPReplicateRecipe::computeCallCost(
+    Function *CalledFn, Type *ResultTy, ArrayRef<const VPValue *> ArgOps,
+    bool IsSingleScalar, ElementCount VF, VPCostContext &Ctx) {
+  SmallVector<Type *, 4> Tys = map_to_vector<4>(
+      ArgOps, [&](const VPValue *Op) { return Ctx.Types.inferScalarType(Op); });
+
+  Intrinsic::ID IntrinID = CalledFn->getIntrinsicID();
+  auto GetIntrinsicCost = [&] {
+    if (!IntrinID)
+      return InstructionCost::getInvalid();
+    return Ctx.TTI.getIntrinsicInstrCost(
+        IntrinsicCostAttributes(IntrinID, ResultTy, Tys), Ctx.CostKind);
+  };
+
+  if (IntrinID && VPCostContext::isFreeScalarIntrinsic(IntrinID)) {
+    assert(GetIntrinsicCost() == 0 && "scalarizing intrinsic should be free");
+    return 0;
+  }
+
+  InstructionCost ScalarCallCost =
+      Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
+  if (IsSingleScalar) {
+    ScalarCallCost = std::min(ScalarCallCost, GetIntrinsicCost());
+    return ScalarCallCost;
+  }
+
+  // Scalarization overhead is undefined for scalable VFs.
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
+
+  return ScalarCallCost * VF.getFixedValue() +
+         Ctx.getScalarizationOverhead(ResultTy, ArgOps, VF);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

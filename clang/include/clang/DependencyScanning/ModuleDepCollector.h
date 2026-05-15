@@ -102,20 +102,9 @@ public:
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
                     const Module *Imported) override;
 
-  void EndOfMainFile() override;
-
 private:
   /// The parent dependency collector.
   ModuleDepCollector &MDC;
-
-  void handleImport(const Module *Imported);
-
-  /// Returns the ID or nothing if the dependency is spurious and is ignored.
-  std::optional<ModuleID> handleTopLevelModule(serialization::ModuleFile *MF);
-
-  /// Adds direct module dependencies to the ModuleDeps instance. This includes
-  /// prebuilt module and implicitly-built modules.
-  void addAllModuleDeps(serialization::ModuleFile &MF, ModuleDeps &MD);
 };
 
 /// Collects modular and non-modular dependencies of the main file by attaching
@@ -129,6 +118,10 @@ public:
                      CompilerInvocation OriginalCI,
                      const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
                      const ArrayRef<StringRef> StableDirs);
+
+  /// Processes the accumulated dependency information and reports it to the
+  /// \c DependencyConsumer.
+  void run();
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -192,6 +185,15 @@ private:
   /// if needed. The callback is created and added to a Preprocessor instance by
   /// attachToPreprocessor and the Preprocessor instance owns it.
   ModuleDepCollectorPP *CollectorPPPtr = nullptr;
+
+  void handleImport(const Module *Imported);
+
+  /// Returns the ID or nothing if the dependency is spurious and is ignored.
+  std::optional<ModuleID> handleTopLevelModule(serialization::ModuleFile *MF);
+
+  /// Adds direct module dependencies to the ModuleDeps instance. This includes
+  /// prebuilt module and implicitly-built modules.
+  void addAllModuleDeps(serialization::ModuleFile &MF, ModuleDeps &MD);
 
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const serialization::ModuleFile *MF);

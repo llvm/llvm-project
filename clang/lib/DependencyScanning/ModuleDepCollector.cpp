@@ -10,6 +10,7 @@
 
 #include "clang/Basic/MakeSupport.h"
 #include "clang/DependencyScanning/DependencyActionController.h"
+#include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
@@ -558,7 +559,7 @@ void ModuleDepCollectorPP::InclusionDirective(
     // here as `FileChanged` will never see it.
     MDC.addFileDep(FileName);
   }
-  handleImport(SuggestedModule);
+  MDC.handleImport(SuggestedModule);
 }
 
 void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
@@ -573,10 +574,12 @@ void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
     return;
   }
 
-  handleImport(Imported);
+  MDC.handleImport(Imported);
 }
 
-void ModuleDepCollectorPP::handleImport(const Module *Imported) {
+void ModuleDepCollector::handleImport(const Module *Imported) {
+  auto &MDC = *this;
+
   if (!Imported)
     return;
 
@@ -595,7 +598,9 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
   }
 }
 
-void ModuleDepCollectorPP::EndOfMainFile() {
+void ModuleDepCollector::run() {
+  auto &MDC = *this;
+
   FileID MainFileID = MDC.ScanInstance.getSourceManager().getMainFileID();
   MDC.MainFile = std::string(MDC.ScanInstance.getSourceManager()
                                  .getFileEntryRefForID(MainFileID)
@@ -683,7 +688,9 @@ static StringRef makeAbsoluteAndCanonicalize(CompilerInstance &CI,
 }
 
 std::optional<ModuleID>
-ModuleDepCollectorPP::handleTopLevelModule(serialization::ModuleFile *MF) {
+ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
+  auto &MDC = *this;
+
   // If this module has been handled already, just return its ID.
   if (auto ModI = MDC.ModularDeps.find(MF); ModI != MDC.ModularDeps.end())
     return ModI->second->ID;
@@ -812,8 +819,10 @@ ModuleDepCollectorPP::handleTopLevelModule(serialization::ModuleFile *MF) {
   return MD.ID;
 }
 
-void ModuleDepCollectorPP::addAllModuleDeps(serialization::ModuleFile &MF,
-                                            ModuleDeps &MD) {
+void ModuleDepCollector::addAllModuleDeps(serialization::ModuleFile &MF,
+                                          ModuleDeps &MD) {
+  auto &MDC = *this;
+
   llvm::DenseSet<const Module *> Seen;
   for (serialization::ModuleFile *Import : MF.Imports) {
     if (MDC.isPrebuiltModule(Import)) {
