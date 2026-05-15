@@ -709,6 +709,7 @@ def CIR_LoadOp : CIR_Op<"load", [
                            [MemRead]>:$addr,
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
+                       UnitAttr:$nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
@@ -717,6 +718,7 @@ def CIR_LoadOp : CIR_Op<"load", [
   let assemblyFormat = [{
     (`deref` $isDeref^)?
     (`volatile` $is_volatile^)?
+    (`nontemporal` $nontemporal^)?
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
@@ -808,12 +810,14 @@ def CIR_StoreOp : CIR_Op<"store", [
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
                        UnitAttr:$is_volatile,
+                       UnitAttr:$nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
+    (`nontemporal` $nontemporal^)?
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?

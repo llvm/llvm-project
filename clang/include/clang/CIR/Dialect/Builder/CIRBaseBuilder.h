@@ -225,11 +225,12 @@ public:
   }
 
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
-                         bool isVolatile = false, uint64_t alignment = 0) {
+                         bool isVolatile = false, uint64_t alignment = 0,
+                         bool isNontemporal = false) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false, isVolatile,
-                               alignmentAttr, cir::SyncScopeKindAttr{},
-                               cir::MemOrderAttr{});
+                               isNontemporal, alignmentAttr,
+                               cir::SyncScopeKindAttr{}, cir::MemOrderAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
@@ -379,15 +380,15 @@ public:
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
-                           bool isVolatile = false,
+                           bool isVolatile = false, bool isNontemporal = false,
                            mlir::IntegerAttr align = {},
                            cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
     if (mlir::cast<cir::PointerType>(dst.getType()).getPointee() !=
         val.getType())
       dst = createPtrBitcast(dst, val.getType());
-    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, scope,
-                                order);
+    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, isNontemporal,
+                                align, scope, order);
   }
 
   /// Emit a load from an boolean flag variable.
@@ -425,7 +426,8 @@ public:
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     auto addr = createAlloca(loc, getPointerTo(type), type, {}, alignmentAttr);
     return cir::LoadOp::create(*this, loc, addr, /*isDeref=*/false,
-                               /*isVolatile=*/false, alignmentAttr,
+                               /*isVolatile=*/false, /*nontemporal=*/false,
+                               alignmentAttr,
                                /*sync_scope=*/{}, /*mem_order=*/{});
   }
 

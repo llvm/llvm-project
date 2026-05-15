@@ -853,7 +853,7 @@ void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
 
     mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
                                              cir::CastKind::bitcast, exnPtr);
-    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {}, {});
     break;
   }
   case InitCatchKind::TrivialCopy: {
@@ -874,13 +874,13 @@ void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
                                              cir::CastKind::bitcast, exnPtr);
     auto loadOp = cir::LoadOp::create(builder, loc, elementType, srcPtr);
     cir::StoreOp::create(builder, loc, loadOp.getResult(), paramAddr, {}, {},
-                         {}, {});
+                         {}, {}, {});
     break;
   }
   case InitCatchKind::Pointer: {
     mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
                                              cir::CastKind::bitcast, exnPtr);
-    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {}, {});
     break;
   }
   case InitCatchKind::Objc:
