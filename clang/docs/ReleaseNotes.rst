@@ -1041,6 +1041,9 @@ Crash and bug fixes
 
 - Fixed ``security.VAList`` checker producing false positives when analyzing
   C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
+  
+- Fixed a compiler crash when combining ``_Atomic`` and ``__auto_type``
+  in C, for example ``_Atomic __auto_type x = expr``. Fixes #118058.
 
 Improvements
 ^^^^^^^^^^^^
