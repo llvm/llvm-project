@@ -1819,7 +1819,7 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
 }
 
 def EmitC_GetFieldOp
-    : EmitC_Op<"get_field", [Pure,
+    : EmitC_Op<"get_field", [Pure, HasAncestor<"ClassOp">,
                              DeclareOpInterfaceMethods<SymbolUserOpInterface>,
                              CExpressionInterface]> {
   let summary = "Obtain access to a field within a class instance";
@@ -1837,7 +1837,6 @@ def EmitC_GetFieldOp
   let arguments = (ins FlatSymbolRefAttr:$field_name);
   let results = (outs EmitCType:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
-  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
