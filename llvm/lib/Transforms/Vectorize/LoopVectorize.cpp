@@ -937,7 +937,8 @@ public:
     CM_GatherScatter,
     CM_Scalarize,
     CM_VectorCall,
-    CM_IntrinsicCall
+    CM_IntrinsicCall,
+    CM_InvalidDecision
   };
 
   /// Save vectorization decision \p W and \p Cost taken by the cost model for
@@ -5391,6 +5392,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       case LoopVectorizationCostModel::CM_VectorCall:
       case LoopVectorizationCostModel::CM_IntrinsicCall:
         llvm_unreachable_internal("Instr has invalid widening decision");
+      case LoopVectorizationCostModel::CM_InvalidDecision:
+        return TTI::CastContextHint::None;
       }
 
       llvm_unreachable("Unhandled case!");
@@ -5710,6 +5713,12 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
   return CM.ValuesToIgnore.contains(UI) ||
          (IsVector && CM.VecValuesToIgnore.contains(UI)) ||
          SkipCostComputation.contains(UI);
+}
+
+void VPCostContext::invalidateWideningDecision(Instruction *I,
+                                               ElementCount VF) {
+  CM.setWideningDecision(I, VF, LoopVectorizationCostModel::CM_InvalidDecision,
+                         0);
 }
 
 uint64_t VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {

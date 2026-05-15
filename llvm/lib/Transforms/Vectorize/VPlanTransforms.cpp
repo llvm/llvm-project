@@ -6838,6 +6838,9 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
                                                               Range))
         continue;
 
+      for (ElementCount VF : Range)
+        Ctx.invalidateWideningDecision(&LoadR->getIngredient(), VF);
+
       // Get VF as i32 for the vector length operand.
       if (!I32VF) {
         VPBuilder Builder(Plan.getVectorPreheader());
