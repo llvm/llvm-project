@@ -458,11 +458,11 @@ LLVM_ABI bool canSinkOrHoistInst(Instruction &I, AAResults *AA,
 /// Returns true if it is legal to hoist \p LI out of \p CurLoop. This is the
 /// load-specific subset of \c canSinkOrHoistInst: it rejects volatile or
 /// ordered loads, allows constant-memory / invariant.load / invariant.start-
-/// dominated loads unconditionally, and otherwise queries MemorySSA for an
+/// dominated loads unconditionally, and otherwise queries \p MSSA for an
 /// in-loop clobber. \p TargetExecutesOncePerLoop has the same meaning as in
 /// \c canSinkOrHoistInst (set to true when hoisting to the preheader).
 LLVM_ABI bool canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
-                           Loop *CurLoop, MemorySSAUpdater &MSSAU,
+                           Loop *CurLoop, MemorySSA &MSSA,
                            bool TargetExecutesOncePerLoop,
                            SinkAndHoistLICMFlags &LICMFlags,
                            OptimizationRemarkEmitter *ORE = nullptr);

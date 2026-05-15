@@ -1162,7 +1162,7 @@ static MemoryAccess *getClobberingMemoryAccess(MemorySSA &MSSA,
 }
 
 bool llvm::canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
-                        Loop *CurLoop, MemorySSAUpdater &MSSAU,
+                        Loop *CurLoop, MemorySSA &MSSA,
                         bool TargetExecutesOncePerLoop,
                         SinkAndHoistLICMFlags &Flags,
                         OptimizationRemarkEmitter *ORE) {
@@ -1183,13 +1183,12 @@ bool llvm::canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
   if (isLoadInvariantInLoop(&LI, DT, CurLoop))
     return true;
 
-  MemorySSA *MSSA = MSSAU.getMemorySSA();
-  auto *MU = cast<MemoryUse>(MSSA->getMemoryAccess(&LI));
+  auto *MU = cast<MemoryUse>(MSSA.getMemoryAccess(&LI));
 
   bool InvariantGroup = LI.hasMetadata(LLVMContext::MD_invariant_group);
 
   bool Invalidated =
-      pointerInvalidatedByLoop(MSSA, MU, CurLoop, LI, Flags, InvariantGroup);
+      pointerInvalidatedByLoop(&MSSA, MU, CurLoop, LI, Flags, InvariantGroup);
   // Check loop-invariant address because this may also be a sinkable load
   // whose address is not necessarily loop-invariant.
   if (ORE && Invalidated && CurLoop->isLoopInvariant(LI.getPointerOperand()))
@@ -1215,7 +1214,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
   MemorySSA *MSSA = MSSAU.getMemorySSA();
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-    return canHoistLoad(*LI, AA, DT, CurLoop, MSSAU, TargetExecutesOncePerLoop,
+    return canHoistLoad(*LI, AA, DT, CurLoop, *MSSA, TargetExecutesOncePerLoop,
                         Flags, ORE);
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
     // Don't sink calls which can throw.
