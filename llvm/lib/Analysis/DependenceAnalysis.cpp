@@ -1774,11 +1774,6 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
                                                const Loop *CurLoop,
                                                const SCEV *&CurLoopCoeff,
                                                APInt &RunningGCD) const {
-  // If RunningGCD is already 1, exit early.
-  // TODO: It might be better to continue the recursion to find CurLoopCoeff.
-  if (RunningGCD == 1)
-    return true;
-
   const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
   if (!AddRec) {
     assert(isLoopInvariant(Expr, CurLoop) &&
