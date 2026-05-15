@@ -30,7 +30,7 @@ struct BFloat16 {
   LIBC_INLINE BFloat16() = default;
 
   template <typename T>
-  LIBC_INLINE LIBC_CONSTEXPR explicit BFloat16(T value)
+  LIBC_INLINE constexpr explicit BFloat16(T value)
       : bits(static_cast<uint16_t>(0U)) {
     if constexpr (cpp::is_floating_point_v<T>) {
       bits = fputil::cast<bfloat16>(value).bits;
@@ -58,63 +58,63 @@ struct BFloat16 {
   template <cpp::enable_if_t<fputil::get_fp_type<float>() ==
                                  fputil::FPType::IEEE754_Binary32,
                              int> = 0>
-  LIBC_INLINE LIBC_CONSTEXPR operator float() const {
+  LIBC_INLINE constexpr operator float() const {
     uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
     return cpp::bit_cast<float>(x_bits);
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-  LIBC_INLINE LIBC_CONSTEXPR explicit operator T() const {
+  LIBC_INLINE constexpr explicit operator T() const {
     return static_cast<T>(static_cast<float>(*this));
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR bool operator==(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator==(BFloat16 other) const {
     return fputil::equals(*this, other);
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR bool operator!=(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator!=(BFloat16 other) const {
     return !fputil::equals(*this, other);
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR bool operator<(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator<(BFloat16 other) const {
     return fputil::less_than(*this, other);
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR bool operator<=(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator<=(BFloat16 other) const {
     return fputil::less_than_or_equals(*this, other);
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR bool operator>(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator>(BFloat16 other) const {
     return fputil::greater_than(*this, other);
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR bool operator>=(BFloat16 other) const {
+  LIBC_INLINE constexpr bool operator>=(BFloat16 other) const {
     return fputil::greater_than_or_equals(*this, other);
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR BFloat16 operator-() const {
+  LIBC_INLINE constexpr BFloat16 operator-() const {
     fputil::FPBits<bfloat16> result(*this);
     result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
     return result.get_val();
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR BFloat16 operator+(BFloat16 other) const {
+  LIBC_INLINE constexpr BFloat16 operator+(BFloat16 other) const {
     return fputil::generic::add<BFloat16>(*this, other);
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR BFloat16 operator-(BFloat16 other) const {
+  LIBC_INLINE constexpr BFloat16 operator-(BFloat16 other) const {
     return fputil::generic::sub<BFloat16>(*this, other);
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR BFloat16 operator*(BFloat16 other) const {
+  LIBC_INLINE constexpr BFloat16 operator*(BFloat16 other) const {
     return fputil::generic::mul<bfloat16>(*this, other);
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR BFloat16 operator/(BFloat16 other) const {
+  LIBC_INLINE constexpr BFloat16 operator/(BFloat16 other) const {
     return fputil::generic::div<bfloat16>(*this, other);
   }
 
-  LIBC_INLINE LIBC_CONSTEXPR BFloat16 &operator*=(const BFloat16 &other) {
+  LIBC_INLINE constexpr BFloat16 &operator*=(const BFloat16 &other) {
     *this = *this * other;
     return *this;
   }
