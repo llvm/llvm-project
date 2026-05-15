@@ -2347,7 +2347,6 @@ libc_support_library(
         ":__support_osutil_syscall",
         ":hdr_errno_macros",
         ":types_off_t",
-        ":hdr_errno_macros",
     ],
 )
 
