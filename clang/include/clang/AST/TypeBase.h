@@ -3020,7 +3020,7 @@ public:
   /// enumeration types whose underlying type is a signed integer type.
   bool isSignedIntegerOrEnumerationType() const;
 
-  /// Return true if this is an integer type that is unsigned or an
+  /// Determines whether this is an integer type that is unsigned or an
   /// enumeration types whose underlying type is a unsigned integer type.
   bool isUnsignedIntegerOrEnumerationType() const;
 
