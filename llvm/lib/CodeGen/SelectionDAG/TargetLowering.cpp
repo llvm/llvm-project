@@ -13105,10 +13105,11 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
     SDValue ResLoNotNumElts = DAG.getSetCC(
         DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ResVT),
         ResLo, LoNumElts, ISD::SETNE);
-    // |Lo| + ResHi <= total lane count, fits in ResVT; both operands >= 0.
-    SDValue Sum =
-        DAG.getNode(ISD::ADD, DL, ResVT, LoNumElts, ResHi,
-                    SDNodeFlags::NoUnsignedWrap | SDNodeFlags::NoSignedWrap);
+    // Per LangRef, ResVT must be wide enough to hold the total element count,
+    // so the sum cannot wrap as an unsigned add. NSW is not guaranteed since
+    // the count is only required to fit unsigned.
+    SDValue Sum = DAG.getNode(ISD::ADD, DL, ResVT, LoNumElts, ResHi,
+                              SDNodeFlags::NoUnsignedWrap);
     return DAG.getSelect(DL, ResVT, ResLoNotNumElts, ResLo, Sum);
   }
 
