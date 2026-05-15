@@ -3921,6 +3921,14 @@ defm GLOBAL_ATOMIC_OR_X2              : VFLAT_Real_AllAddr_Atomics_gfx13<0x5a, "
 defm GLOBAL_ATOMIC_XOR_X2             : VFLAT_Real_AllAddr_Atomics_gfx13<0x5b, "global_atomic_xor_b64">;
 defm GLOBAL_ATOMIC_INC_X2             : VFLAT_Real_AllAddr_Atomics_gfx13<0x5c, "global_atomic_inc_u64">;
 defm GLOBAL_ATOMIC_DEC_X2             : VFLAT_Real_AllAddr_Atomics_gfx13<0x5d, "global_atomic_dec_u64">;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B8      : VFLAT_Real_AllAddr_gfx13<0x61>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B32     : VFLAT_Real_AllAddr_gfx13<0x62>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B64     : VFLAT_Real_AllAddr_gfx13<0x63>;
+defm GLOBAL_LOAD_ASYNC_TO_LDS_B128    : VFLAT_Real_AllAddr_gfx13<0x64>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B8   : VFLAT_Real_AllAddr_gfx13<0x65>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B32  : VFLAT_Real_AllAddr_gfx13<0x66>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VFLAT_Real_AllAddr_gfx13<0x67>;
+defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VFLAT_Real_AllAddr_gfx13<0x68>;
 defm GLOBAL_ATOMIC_ORDERED_ADD_B64    : VFLAT_Real_AllAddr_Atomics_gfx13<0x75>;
 
 // ENC_VSCRATCH.

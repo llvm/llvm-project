@@ -549,7 +549,8 @@ defm GFX13Insts : AMDGPUSubtargetFeature<"gfx13-insts",
   "Additional instructions for GFX13+",
   /*GenPredicate=*/0,
   /*GenAssemblerPredicate=*/0,
-  [FeatureSWakeupImm,
+  [FeatureMcastLoadInsts,
+   FeatureSWakeupImm,
    FeatureSBarrierLeaveImm,
   ]
 >;
