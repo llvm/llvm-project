@@ -17357,7 +17357,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
 
   QualType T = TInfo->getType().getNonLValueExprType(Context);
   if (!PromoteType.isNull()) {
-    QualType baseType = TInfo->getType();
+    QualType BaseType = TInfo->getType();
     if (const auto *ED = BaseType->getAsEnumDecl())
       BaseType = ED->getIntegerType();
     const auto *BT = BaseType->getAs<BuiltinType>();
