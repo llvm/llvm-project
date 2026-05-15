@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_MMAP_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_MMAP_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/off_t.h"
 #include "src/__support/OSUtil/linux/syscall.h" // syscall_impl, linux_utils::is_valid_mmap
 #include "src/__support/common.h"
@@ -21,14 +22,15 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags,
                                  int fd, off_t offset) {
-  // TODO: Perform POSIX-prescribed argument validation not done by the
-  // linux syscall.
-
+  if (offset < 0)
+    return Error(EINVAL);
 #ifdef SYS_mmap2
   // The mmap2 syscall uses 4k units, regardless of the actual page, size on
   // almost every architecture. If porting to a new architecture (Openrisc,
   // hexagon?), please confirm this code is correct.
   constexpr off_t MMAP2_FACTOR = 4096;
+  if (offset % MMAP2_FACTOR != 0)
+    return Error(EINVAL);
   offset /= MMAP2_FACTOR;
   long syscall_number = SYS_mmap2;
 #elif defined(SYS_mmap)
@@ -37,11 +39,15 @@ LIBC_INLINE ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags,
 #error "mmap or mmap2 syscalls not available."
 #endif
 
-  // Explicit cast to silence "implicit conversion loses integer precision"
-  // warnings when compiling for 32-bit systems.
-  long ret =
-      syscall_impl<long>(syscall_number, reinterpret_cast<long>(addr), size,
-                         prot, flags, fd, static_cast<long>(offset));
+  long offset_for_syscall = offset;
+  if (offset_for_syscall != offset)
+    return Error(EINVAL); // This can happen if long is smaller than off_t
+
+  // TODO: Reject sizes that are (after page alignment) larger than PTRDIFF_MAX.
+  // This is mainly relevant for 32-bit architectures.
+
+  long ret = syscall_impl<long>(syscall_number, addr, size, prot, flags, fd,
+                                offset_for_syscall);
 
   // A negative return value from the syscall can also be an error-free
   // value returned by the syscall. However, since a valid return address
