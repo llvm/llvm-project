@@ -2426,7 +2426,7 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
   assert(getLangOpts().OpenMP && "OpenMP is not allowed");
   D = getCanonicalDecl(D);
 
-   if (auto *BD = dyn_cast<BindingDecl>(D)) {
+  if (auto *BD = dyn_cast<BindingDecl>(D)) {
     if (!BD->getHoldingVar())
       D = cast<VarDecl>(BD->getDecomposedDecl());
   }
