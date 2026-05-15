@@ -688,9 +688,9 @@ define amdgpu_kernel void @v_ctpop_v8i32(ptr addrspace(1) noalias %out, ptr addr
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 13, @13, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T3.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T2.X, 1
+; EG-NEXT:    ALU 11, @13, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T2.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T3.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 6:
 ; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 16, #1
@@ -702,18 +702,16 @@ define amdgpu_kernel void @v_ctpop_v8i32(ptr addrspace(1) noalias %out, ptr addr
 ; EG-NEXT:    ALU clause starting at 13:
 ; EG-NEXT:     BCNT_INT * T1.W, T1.W,
 ; EG-NEXT:     BCNT_INT * T1.Z, T1.Z,
-; EG-NEXT:     BCNT_INT T1.Y, T1.Y,
-; EG-NEXT:     BCNT_INT * T0.W, T0.W,
+; EG-NEXT:     BCNT_INT * T1.Y, T1.Y,
 ; EG-NEXT:     BCNT_INT T1.X, T1.X,
-; EG-NEXT:     BCNT_INT T0.Z, T0.Z,
-; EG-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR T2.X, PV.W, literal.x,
+; EG-NEXT:     BCNT_INT T0.W, T0.W,
+; EG-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     BCNT_INT * T0.Z, T0.Z,
+; EG-NEXT:     ADD_INT T3.X, T2.X, literal.x,
 ; EG-NEXT:     BCNT_INT * T0.Y, T0.Y,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T0.X, T0.X,
-; EG-NEXT:     LSHR * T3.X, KC0[2].Y, literal.x,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
+; EG-NEXT:     BCNT_INT * T0.X, T0.X,
 ;
 ; SI-GISEL-LABEL: v_ctpop_v8i32:
 ; SI-GISEL:       ; %bb.0:
@@ -871,11 +869,11 @@ define amdgpu_kernel void @v_ctpop_v16i32(ptr addrspace(1) noalias %out, ptr add
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @16, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 3 @8
-; EG-NEXT:    ALU 29, @19, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 23, @19, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T7.X, 0
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T3.XYZW, T6.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T5.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T4.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T4.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T5.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 8:
 ; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 16, #1
@@ -889,34 +887,28 @@ define amdgpu_kernel void @v_ctpop_v16i32(ptr addrspace(1) noalias %out, ptr add
 ; EG-NEXT:    ALU clause starting at 19:
 ; EG-NEXT:     BCNT_INT * T1.W, T1.W,
 ; EG-NEXT:     BCNT_INT * T1.Z, T1.Z,
-; EG-NEXT:     BCNT_INT T1.Y, T1.Y,
-; EG-NEXT:     BCNT_INT * T0.W, T0.W,
+; EG-NEXT:     BCNT_INT * T1.Y, T1.Y,
 ; EG-NEXT:     BCNT_INT T1.X, T1.X,
+; EG-NEXT:     BCNT_INT T0.W, T0.W,
+; EG-NEXT:     LSHR * T4.X, KC0[2].Y, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.Z, T0.Z,
-; EG-NEXT:     ADD_INT * T4.W, KC0[2].Y, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR T4.X, PV.W, literal.x,
-; EG-NEXT:     BCNT_INT T0.Y, T0.Y,
 ; EG-NEXT:     BCNT_INT * T3.W, T3.W,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT T5.X, T4.X, literal.x,
+; EG-NEXT:     BCNT_INT T0.Y, T0.Y,
+; EG-NEXT:     BCNT_INT * T3.Z, T3.Z,
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.X, T0.X,
-; EG-NEXT:     BCNT_INT T3.Z, T3.Z,
-; EG-NEXT:     LSHR * T5.X, KC0[2].Y, literal.x,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T3.Y, T3.Y,
 ; EG-NEXT:     BCNT_INT * T2.W, T2.W,
 ; EG-NEXT:     BCNT_INT T3.X, T3.X,
 ; EG-NEXT:     BCNT_INT T2.Z, T2.Z,
-; EG-NEXT:     ADD_INT * T4.W, KC0[2].Y, literal.x,
-; EG-NEXT:    48(6.726233e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR T6.X, PV.W, literal.x,
+; EG-NEXT:     ADD_INT * T6.X, T4.X, literal.x,
+; EG-NEXT:    12(1.681558e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT * T2.Y, T2.Y,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T2.X, T2.X,
-; EG-NEXT:     ADD_INT * T4.W, KC0[2].Y, literal.x,
-; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR * T7.X, PV.W, literal.x,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT * T7.X, T4.X, literal.x,
+; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ;
 ; SI-GISEL-LABEL: v_ctpop_v16i32:
 ; SI-GISEL:       ; %bb.0:
