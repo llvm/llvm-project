@@ -273,7 +273,7 @@ void foo() {
 //
 // C mapper for: map(to: s.a) — per-element entries for struct C
 // (i = array element index, N = __tgt_mapper_num_components()):
-//   &c[i],   &c[i].a,   sizeof(int),   MEMBER_OF(N) | TO | FROM | modifiers
+//   &c[i],   &c[i].a,   sizeof(int),   MEMBER_OF(N) | TO | modifiers
 //
 // CHECK-LABEL: define {{[^@]+}}@.omp_mapper._ZTS1C.default
 // CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]], i64 noundef [[TMP3:%.*]], i64 noundef [[TMP4:%.*]], ptr noundef [[TMP5:%.*]]) #[[ATTR2]] {
