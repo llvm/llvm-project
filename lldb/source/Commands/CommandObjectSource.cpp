@@ -368,7 +368,7 @@ protected:
   // the option.
   bool DumpLinesInFunctions(CommandReturnObject &result) {
     SymbolContextList sc_list_funcs;
-    ConstString name(m_options.symbol_name.c_str());
+    ConstString name(m_options.symbol_name);
     SymbolContextList sc_list_lines;
     Target &target = GetTarget();
     uint32_t addr_byte_size = target.GetArchitecture().GetAddressByteSize();
@@ -903,7 +903,7 @@ protected:
 
     if (!m_options.symbol_name.empty()) {
       SymbolContextList sc_list;
-      ConstString name(m_options.symbol_name.c_str());
+      ConstString name(m_options.symbol_name);
 
       // Displaying the source for a symbol. Search for function named name.
       FindMatchingFunctions(target, name, sc_list);

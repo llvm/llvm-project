@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR int setpayload(double *res, double pl) {
+LIBC_INLINE constexpr int setpayload(double *res, double pl) {
   return static_cast<int>(fputil::setpayload</*IsSignaling=*/false>(*res, pl));
 }
 
