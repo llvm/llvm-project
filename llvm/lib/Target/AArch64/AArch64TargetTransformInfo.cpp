@@ -5028,6 +5028,10 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 TTI::TargetCostKind CostKind,
                                                 TTI::OperandValueInfo OpInfo,
                                                 const Instruction *I) const {
+  // FIXME: Arbitrary cost
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return 4;
+
   EVT VT = TLI->getValueType(DL, Ty, true);
   // Type legalization can't handle structs
   if (VT == MVT::Other)

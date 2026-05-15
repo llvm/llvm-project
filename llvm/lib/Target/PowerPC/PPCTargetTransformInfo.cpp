@@ -779,6 +779,9 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
+  // FIXME: Arbitrary cost
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return 4;
 
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Src, nullptr);
   if (!CostFactor.isValid())

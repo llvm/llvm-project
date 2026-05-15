@@ -1647,6 +1647,10 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
+  // FIXME: Arbitrary cost
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return 4;
+
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
