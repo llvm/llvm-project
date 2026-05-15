@@ -7,7 +7,8 @@
 
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info \
 ; RUN:     -pass-remarks-output=%t -pass-remarks-missed='loop-interchange' \
-; RUN:     -pass-remarks='loop-interchange' -S -da-disable-delinearization-checks
+; RUN:     -pass-remarks='loop-interchange' -S -da-disable-delinearization-checks \
+; RUN:     -loop-interchange-profitabilities=cache
 ; RUN: cat %t |  FileCheck --check-prefix=DELIN %s
 
 @A = common global [100 x [100 x i32]] zeroinitializer
@@ -87,7 +88,7 @@ for.end19:
 ; DELIN-NEXT: Name:            InterchangeNotProfitable
 ; DELIN-NEXT: Function:        test01
 ; DELIN-NEXT: Args:
-; DELIN-NEXT:   - String:          Insufficient information to calculate the cost of loop for interchange.
+; DELIN-NEXT:   - String:          Interchanging loops is not considered to improve cache locality nor vectorizatio
 ; DELIN-NEXT: ...
 
 ;;--------------------------------------Test case 02------------------------------------
