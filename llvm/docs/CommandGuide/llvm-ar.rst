@@ -187,7 +187,8 @@ section to determine which modifiers are applicable to which operations.
  the *count* parameter allows you to supply a positive whole number that
  selects the instance of the given name, with "1" indicating the first
  instance. If :option:`N` is not specified the first member of that name will
- be selected. If *count* is not supplied, the operation fails.*count* cannot be
+ be selected. If *count* is not supplied, the operation fails. *count* cannot be
+ consumed without either :option:`x` or :option:`d`.
 
 .. option:: o
 
@@ -216,7 +217,7 @@ The modifiers below may be applied to any operation.
 
 .. option:: c
 
- For the :option:`r` (replace)and :option:`q` (quick update) operations,
+ For the :option:`r` (replace) and :option:`q` (quick update) operations,
  :program:`llvm-ar` will always create the archive if it doesn't exist.
  Normally, :program:`llvm-ar` will print a warning message indicating that the
  ``archive`` is being created. Using this modifier turns off
@@ -262,7 +263,7 @@ Other
 .. option:: --format=<type>
 
  This option allows for default, gnu, darwin, bsd or coff ``<type>`` to be selected.
- When creating an ``archive`` with the default ``<type>``, :program:``llvm-ar``
+ When creating an ``archive`` with the default ``<type>``, :program:`llvm-ar`
  will attempt to infer it from the input files and fallback to the default
  toolchain target if unable to do so.
 

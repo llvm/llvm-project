@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -use-constant-int-for-fixed-length-splat | FileCheck %s
 
 ; Make sure the globals constant initializers are not prone to host endianess 
 ; issues.

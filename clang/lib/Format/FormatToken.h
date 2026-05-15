@@ -2132,6 +2132,15 @@ inline bool continuesLineComment(const FormatToken &FormatTok,
 // Returns \c true if \c Current starts a new parameter.
 bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style);
 
+// Returns \c true if \c Tok is a function/storage specifier that may appear
+// before a function return type (e.g. ``static``, ``inline``, ``constexpr``).
+inline bool isReturnTypePrefixSpecifier(const FormatToken &Tok) {
+  return Tok.isOneOf(tok::kw_static, tok::kw_extern, tok::kw_inline,
+                     tok::kw_virtual, tok::kw_constexpr, tok::kw_consteval,
+                     tok::kw_friend, tok::kw_export, tok::kw__Noreturn,
+                     tok::kw___forceinline);
+}
+
 } // namespace format
 } // namespace clang
 
