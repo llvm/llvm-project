@@ -363,7 +363,7 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
       return failure();
 
     Location loc = powfOp.getLoc();
-    auto operandType = adaptor.getRhs().getType();
+    Type operandType = adaptor.getRhs().getType();
 
     // Parity-based lowering requires an integer-valued constant exponent.
     // Otherwise fall back to exp(y*log(x)), which yields NaN for x<0 (matches
@@ -375,36 +375,37 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
       return i[0];
     };
 
-    Attribute rhsAttr;
     SmallVector<bool> oddMask;
-    bool isIntegerValued = false;
-    if (matchPattern(adaptor.getRhs(), m_Constant(&rhsAttr))) {
-      isIntegerValued = TypeSwitch<Attribute, bool>(rhsAttr)
-                            .Case([&](FloatAttr a) {
-                              if (!a.getValue().isInteger())
-                                return false;
-                              oddMask.push_back(isOdd(a.getValue()));
-                              return true;
-                            })
-                            .Case([&](SplatElementsAttr a) {
-                              APFloat v = a.getSplatValue<APFloat>();
-                              if (!v.isInteger())
-                                return false;
-                              oddMask.push_back(isOdd(v));
-                              return true;
-                            })
-                            .Case([&](DenseElementsAttr a) {
-                              for (const APFloat &v : a.getValues<APFloat>()) {
-                                if (!v.isInteger())
-                                  return false;
-                                oddMask.push_back(isOdd(v));
-                              }
-                              return true;
-                            })
-                            .Default(false);
-    }
+    auto isIntegerValuedConstant = [&](Value v) -> bool {
+      Attribute attr;
+      if (!matchPattern(v, m_Constant(&attr)))
+        return false;
+      return TypeSwitch<Attribute, bool>(attr)
+          .Case([&](FloatAttr a) {
+            if (!a.getValue().isInteger())
+              return false;
+            oddMask.push_back(isOdd(a.getValue()));
+            return true;
+          })
+          .Case([&](SplatElementsAttr a) {
+            APFloat splat = a.getSplatValue<APFloat>();
+            if (!splat.isInteger())
+              return false;
+            oddMask.push_back(isOdd(splat));
+            return true;
+          })
+          .Case([&](DenseElementsAttr a) {
+            for (const APFloat &elt : a.getValues<APFloat>()) {
+              if (!elt.isInteger())
+                return false;
+              oddMask.push_back(isOdd(elt));
+            }
+            return true;
+          })
+          .Default(false);
+    };
 
-    if (!isIntegerValued) {
+    if (!isIntegerValuedConstant(adaptor.getRhs())) {
       Value log = spirv::GLLogOp::create(rewriter, loc, adaptor.getLhs());
       Value mul = spirv::FMulOp::create(rewriter, loc, adaptor.getRhs(), log);
       rewriter.replaceOpWithNewOp<spirv::GLExpOp>(powfOp, mul);
@@ -428,7 +429,7 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     Value negate = spirv::FNegateOp::create(rewriter, loc, pow);
 
     Value shouldNegate;
-    if (llvm::all_of(oddMask, [](bool b) { return b; })) {
+    if (llvm::all_equal(oddMask)) {
       // Every lane has odd exponent: negate iff lhs < 0.
       shouldNegate = lessThan;
     } else {
