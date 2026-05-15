@@ -256,8 +256,7 @@ public:
     // Get the target uArch info.
     auto chipStr = xegpu::getChipStr(createNdOp);
     // Check if the chip is supported.
-    assert(chipStr &&
-           (chipStr.value() == "pvc" || chipStr.value() == "bmg") &&
+    assert(chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg") &&
            "Expecting target chip to be pvc, bmg for transpose optimization.");
     const uArch *targetuArch = xegpu::uArch::getUArch(chipStr.value());
 
