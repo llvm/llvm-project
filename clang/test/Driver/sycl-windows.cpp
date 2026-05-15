@@ -94,3 +94,15 @@
 // CHECK-DEFAULT-CRT: "-cc1"
 // CHECK-DEFAULT-CRT: "--dependent-lib=LLVMSYCL"
 // CHECK-DEFAULT-CRT-NOT: LLVMSYCLd
+
+/// Test 15: Separate compilation - compile step embeds --dependent-lib in object
+// RUN: %clang -### -fsycl -c -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-SEP-COMPILE %s
+// CHECK-SEP-COMPILE: "--dependent-lib=LLVMSYCL"
+
+/// Test 16: Separate compilation - link step adds -libpath: and -defaultlib: for pre-compiled object
+// RUN: touch %t.obj
+// RUN: %clang -### -fsycl -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %t.obj 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-SEP-LINK %s
+// CHECK-SEP-LINK: "-libpath:{{.*}}{{[/\\]+}}lib"
+// CHECK-SEP-LINK: "-defaultlib:LLVMSYCL"

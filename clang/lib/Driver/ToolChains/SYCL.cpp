@@ -24,7 +24,8 @@ SYCLInstallationDetector::SYCLInstallationDetector(
   StringRef SysRoot = D.SysRoot;
   SmallString<128> DriverDir(D.Dir);
 
-  if (HostTriple.isOSWindows()) {
+  if (HostTriple.isWindowsMSVCEnvironment() ||
+      HostTriple.isWindowsItaniumEnvironment()) {
     // Windows: Check for LLVMSYCL.lib
     // NOTE: Only checks for LLVMSYCL.lib existence (release variant).
     // Debug vs release library selection happens at link time based on CRT
