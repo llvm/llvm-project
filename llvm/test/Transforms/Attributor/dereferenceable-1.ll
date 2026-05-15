@@ -820,7 +820,7 @@ f:
 ; TUNIT: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; TUNIT: attributes #[[ATTR7]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR8]] = { nofree nosync nounwind memory(write) }
-; TUNIT: attributes #[[ATTR9]] = { willreturn memory(write) }
+; TUNIT: attributes #[[ATTR9]] = { nofree willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR10]] = { nounwind }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
@@ -832,7 +832,7 @@ f:
 ; CGSCC: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; CGSCC: attributes #[[ATTR7]] = { nofree nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR8]] = { nofree nosync nounwind memory(write) }
-; CGSCC: attributes #[[ATTR9]] = { willreturn memory(write) }
+; CGSCC: attributes #[[ATTR9]] = { nofree willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR10]] = { nounwind }
 ;.
 ; TUNIT: [[RNG0]] = !{i64 10, i64 100}

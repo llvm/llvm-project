@@ -206,20 +206,35 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 ; TEST 3: both cond.true and cond.false are dead, therfore cond.end is dead as well.
 
 define i32 @all_dead(i32 %a) #0 {
-; CHECK: Function Attrs: noreturn
-; CHECK-LABEL: define {{[^@]+}}@all_dead
-; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-; CHECK:       cond.true:
-; CHECK-NEXT:    call void @no_return_call() #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       cond.false:
-; CHECK-NEXT:    call void @no_return_call() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       cond.end:
-; CHECK-NEXT:    unreachable
+; TUNIT: Function Attrs: noreturn
+; TUNIT-LABEL: define {{[^@]+}}@all_dead
+; TUNIT-SAME: (i32 [[A:%.*]]) #[[ATTR4:[0-9]+]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
+; TUNIT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+; TUNIT:       cond.true:
+; TUNIT-NEXT:    call void @no_return_call() #[[ATTR16]]
+; TUNIT-NEXT:    unreachable
+; TUNIT:       cond.false:
+; TUNIT-NEXT:    call void @no_return_call() #[[ATTR3:[0-9]+]]
+; TUNIT-NEXT:    unreachable
+; TUNIT:       cond.end:
+; TUNIT-NEXT:    unreachable
+;
+; CGSCC: Function Attrs: noreturn
+; CGSCC-LABEL: define {{[^@]+}}@all_dead
+; CGSCC-SAME: (i32 [[A:%.*]]) #[[ATTR4:[0-9]+]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
+; CGSCC-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+; CGSCC:       cond.true:
+; CGSCC-NEXT:    call void @no_return_call() #[[ATTR18]]
+; CGSCC-NEXT:    unreachable
+; CGSCC:       cond.false:
+; CGSCC-NEXT:    call void @no_return_call() #[[ATTR3:[0-9]+]]
+; CGSCC-NEXT:    unreachable
+; CGSCC:       cond.end:
+; CGSCC-NEXT:    unreachable
 ;
 entry:
   %cmp = icmp eq i32 %a, 0
@@ -254,7 +269,7 @@ define i32 @all_live(i32 %a) #0 {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    call void @normal_call()
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo_noreturn() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    call void @normal_call()
@@ -345,7 +360,7 @@ define i32 @invoke_noreturn_nounwind(i32 %a) personality ptr @__gxx_personality_
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    call void @normal_call()
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo_noreturn_nounwind() #[[ATTR3]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo_noreturn_nounwind() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    call void @normal_call()
@@ -917,28 +932,28 @@ define linkonce_odr void @non_exact1() {
 define internal void @middle() {
 ; TUNIT-LABEL: define {{[^@]+}}@middle() {
 ; TUNIT-NEXT:  bb0:
-; TUNIT-NEXT:    call void @non_dead_b0() #[[ATTR18:[0-9]+]]
-; TUNIT-NEXT:    call void @non_dead_b1() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b2() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b3() #[[ATTR18]]
+; TUNIT-NEXT:    call void @non_dead_b0() #[[ATTR11:[0-9]+]]
+; TUNIT-NEXT:    call void @non_dead_b1() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b2() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b3() #[[ATTR11]]
 ; TUNIT-NEXT:    br label [[BB1:%.*]]
 ; TUNIT:       bb1:
-; TUNIT-NEXT:    call void @non_dead_b4() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b5() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b6() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b7() #[[ATTR18]]
+; TUNIT-NEXT:    call void @non_dead_b4() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b5() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b6() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b7() #[[ATTR11]]
 ; TUNIT-NEXT:    br label [[BB2:%.*]]
 ; TUNIT:       bb2:
-; TUNIT-NEXT:    call void @non_dead_b8() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b9() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b10() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b11() #[[ATTR18]]
+; TUNIT-NEXT:    call void @non_dead_b8() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b9() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b10() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b11() #[[ATTR11]]
 ; TUNIT-NEXT:    br label [[BB3:%.*]]
 ; TUNIT:       bb3:
-; TUNIT-NEXT:    call void @non_dead_b12() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b13() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b14() #[[ATTR18]]
-; TUNIT-NEXT:    call void @non_dead_b15() #[[ATTR18]]
+; TUNIT-NEXT:    call void @non_dead_b12() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b13() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b14() #[[ATTR11]]
+; TUNIT-NEXT:    call void @non_dead_b15() #[[ATTR11]]
 ; TUNIT-NEXT:    br label [[BB4:%.*]]
 ; TUNIT:       bb4:
 ; TUNIT-NEXT:    call void @non_exact2()
@@ -946,28 +961,28 @@ define internal void @middle() {
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@middle() {
 ; CGSCC-NEXT:  bb0:
-; CGSCC-NEXT:    call void @non_dead_b0() #[[ATTR20:[0-9]+]]
-; CGSCC-NEXT:    call void @non_dead_b1() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b2() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b3() #[[ATTR20]]
+; CGSCC-NEXT:    call void @non_dead_b0() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b1() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b2() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b3() #[[ATTR19]]
 ; CGSCC-NEXT:    br label [[BB1:%.*]]
 ; CGSCC:       bb1:
-; CGSCC-NEXT:    call void @non_dead_b4() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b5() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b6() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b7() #[[ATTR20]]
+; CGSCC-NEXT:    call void @non_dead_b4() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b5() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b6() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b7() #[[ATTR19]]
 ; CGSCC-NEXT:    br label [[BB2:%.*]]
 ; CGSCC:       bb2:
-; CGSCC-NEXT:    call void @non_dead_b8() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b9() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b10() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b11() #[[ATTR20]]
+; CGSCC-NEXT:    call void @non_dead_b8() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b9() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b10() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b11() #[[ATTR19]]
 ; CGSCC-NEXT:    br label [[BB3:%.*]]
 ; CGSCC:       bb3:
-; CGSCC-NEXT:    call void @non_dead_b12() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b13() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b14() #[[ATTR20]]
-; CGSCC-NEXT:    call void @non_dead_b15() #[[ATTR20]]
+; CGSCC-NEXT:    call void @non_dead_b12() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b13() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b14() #[[ATTR19]]
+; CGSCC-NEXT:    call void @non_dead_b15() #[[ATTR19]]
 ; CGSCC-NEXT:    br label [[BB4:%.*]]
 ; CGSCC:       bb4:
 ; CGSCC-NEXT:    call void @non_exact2()
@@ -2184,7 +2199,7 @@ define internal void @useless_arg_almost_sink(ptr %a) {
 ; TUNIT: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(readwrite, argmem: none)
 ; TUNIT-LABEL: define {{[^@]+}}@useless_arg_almost_sink
 ; TUNIT-SAME: () #[[ATTR13]] {
-; TUNIT-NEXT:    call void @useless_arg_sink() #[[ATTR11:[0-9]+]]
+; TUNIT-NEXT:    call void @useless_arg_sink() #[[ATTR11]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(readwrite, argmem: none)
@@ -2326,7 +2341,7 @@ define i32 @switch_default_dead_caller() {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@switch_default_dead_caller
 ; CGSCC-SAME: () #[[ATTR12]] {
-; CGSCC-NEXT:    [[CALL2:%.*]] = tail call noundef i32 @switch_default_dead() #[[ATTR21:[0-9]+]]
+; CGSCC-NEXT:    [[CALL2:%.*]] = tail call noundef i32 @switch_default_dead() #[[ATTR20:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CALL2]]
 ;
   %call2 = tail call i32 @switch_default_dead(i64 0)
@@ -2576,7 +2591,7 @@ define void @bad_gep() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[N1:%.*]] = alloca i8, i32 0, align 1
 ; TUNIT-NEXT:    [[M2:%.*]] = alloca i8, i32 0, align 1
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR19:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR18:[0-9]+]]
 ; TUNIT-NEXT:    br label [[EXIT:%.*]]
 ; TUNIT:       while.body:
 ; TUNIT-NEXT:    unreachable
@@ -2585,7 +2600,7 @@ define void @bad_gep() {
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    unreachable
 ; TUNIT:       exit:
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR19]]
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR18]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -2594,7 +2609,7 @@ define void @bad_gep() {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[N1:%.*]] = alloca i8, i32 0, align 1
 ; CGSCC-NEXT:    [[M2:%.*]] = alloca i8, i32 0, align 1
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR22:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR21:[0-9]+]]
 ; CGSCC-NEXT:    br label [[EXIT:%.*]]
 ; CGSCC:       while.body:
 ; CGSCC-NEXT:    unreachable
@@ -2603,7 +2618,7 @@ define void @bad_gep() {
 ; CGSCC:       if.end:
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       exit:
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR22]]
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR21]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -2687,8 +2702,7 @@ declare void @llvm.lifetime.end.p0(ptr %1)
 ; TUNIT: attributes #[[ATTR15:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR16]] = { nofree noreturn nounwind }
 ; TUNIT: attributes #[[ATTR17]] = { nofree nounwind willreturn }
-; TUNIT: attributes #[[ATTR18]] = { nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR19]] = { nofree willreturn }
+; TUNIT: attributes #[[ATTR18]] = { nofree willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nofree noreturn nosync nounwind }
 ; CGSCC: attributes #[[ATTR1:[0-9]+]] = { memory(none) }
@@ -2710,7 +2724,6 @@ declare void @llvm.lifetime.end.p0(ptr %1)
 ; CGSCC: attributes #[[ATTR17:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR18]] = { nofree noreturn nounwind }
 ; CGSCC: attributes #[[ATTR19]] = { nofree nounwind willreturn }
-; CGSCC: attributes #[[ATTR20]] = { nounwind willreturn }
-; CGSCC: attributes #[[ATTR21]] = { nofree nosync willreturn }
-; CGSCC: attributes #[[ATTR22]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR20]] = { nofree nosync willreturn }
+; CGSCC: attributes #[[ATTR21]] = { nofree willreturn }
 ;.

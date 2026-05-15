@@ -2281,24 +2281,22 @@ struct AANoFreeImpl : public AANoFree {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    // Make sure that synchronization cannot establish happens-before with a
-    // free on another thread.
-    const IRPosition &IRP = getIRPosition();
-    bool IsKnown;
-    if (!AA::hasAssumedIRAttr<Attribute::NoSync>(
-            A, this, IRPosition::function_scope(IRP), DepClassTy::REQUIRED,
-            IsKnown))
-      return indicatePessimisticFixpoint();
-
     auto CheckForNoFree = [&](Instruction &I) {
-      bool IsKnown;
-      return AA::hasAssumedIRAttr<Attribute::NoFree>(
-          A, this, IRPosition::callsite_function(cast<CallBase>(I)),
-          DepClassTy::REQUIRED, IsKnown);
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        bool IsKnown;
+        return AA::hasAssumedIRAttr<Attribute::NoFree>(
+            A, this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED,
+            IsKnown);
+      }
+      // Make sure that synchronization cannot establish happens-before with a
+      // free on another thread.
+      return AA::isNoSyncInst(A, I, *this);
     };
 
     bool UsedAssumedInformation = false;
-    if (!A.checkForAllCallLikeInstructions(CheckForNoFree, *this,
+    if (!A.checkForAllReadWriteInstructions(CheckForNoFree, *this,
+                                            UsedAssumedInformation) ||
+        !A.checkForAllCallLikeInstructions(CheckForNoFree, *this,
                                            UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 

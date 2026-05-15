@@ -282,7 +282,7 @@ define void @delete_parallel_2() {
 ; CHECK-LABEL: define {{[^@]+}}@delete_parallel_2() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR15]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR18:[0-9]+]]
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..3, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
@@ -329,7 +329,7 @@ define internal void @.omp_outlined..3(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..3
 ; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR18:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR19:[0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
@@ -457,7 +457,7 @@ define internal void @.omp_outlined..5(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..5
 ; CHECK-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull @[[GLOB0]]) #[[ATTR19:[0-9]+]]
+; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull @[[GLOB0]]) #[[ATTR19]]
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !invariant.load [[META1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_single(ptr noundef nonnull @[[GLOB0]], i32 [[TMP]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0

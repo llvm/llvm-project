@@ -950,7 +950,7 @@ l2:
 ; TUNIT: attributes #[[ATTR10]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR11]] = { nofree nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR12]] = { nofree nosync nounwind willreturn memory(read) }
-; TUNIT: attributes #[[ATTR13]] = { willreturn memory(readwrite) }
+; TUNIT: attributes #[[ATTR13]] = { nofree willreturn memory(readwrite) }
 ; TUNIT: attributes #[[ATTR14]] = { nofree nosync nounwind willreturn memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
@@ -967,7 +967,7 @@ l2:
 ; CGSCC: attributes #[[ATTR11]] = { mustprogress nofree nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR12]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR13]] = { nofree willreturn memory(read) }
-; CGSCC: attributes #[[ATTR14]] = { willreturn memory(readwrite) }
+; CGSCC: attributes #[[ATTR14]] = { nofree willreturn memory(readwrite) }
 ; CGSCC: attributes #[[ATTR15]] = { nofree nounwind willreturn memory(write) }
 ;.
 ; TUNIT: [[META0]] = !{}

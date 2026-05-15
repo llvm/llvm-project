@@ -59,8 +59,8 @@ declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)
 ;.
 ; TUNIT: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR1]] = { willreturn }
+; TUNIT: attributes #[[ATTR1]] = { nofree willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR1]] = { willreturn }
+; CGSCC: attributes #[[ATTR1]] = { nofree willreturn }
 ;.
