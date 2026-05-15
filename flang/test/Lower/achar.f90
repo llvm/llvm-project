@@ -27,6 +27,7 @@ end subroutine achar_test1
 ! CHECK: %[[ASSOC:.*]]:3 = hlfir.associate %[[EXPR]]
 ! CHECK: %[[KIND_TMP:.*]] = fir.alloca !fir.char<2,?>(%{{.*}} : index)
 ! CHECK: fir.char_convert %[[ASSOC]]#0 for %{{.*}} to %[[KIND_TMP]] : !fir.ref<!fir.char<1>>, index, !fir.ref<!fir.char<2,?>>
+! CHECK: hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<!fir.char<1>>, i1
 ! CHECK: %[[CONVERTED:.*]]:2 = hlfir.declare %[[KIND_TMP]] typeparams %{{.*}} {uniq_name = ".temp.kindconvert"}
 ! CHECK: %[[SET_LENGTH:.*]] = hlfir.set_length %[[CONVERTED]]#0
 ! CHECK: hlfir.assign %[[SET_LENGTH]] to %[[CH]]#0

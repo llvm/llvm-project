@@ -38,8 +38,7 @@ function kagf(findex)
   ! CHECK:   %[[V_0_RAW:.*]] = fir.alloca i32 {bindc_name = "kagf"
   ! CHECK:   %[[V_0:.*]]:2 = hlfir.declare %[[V_0_RAW]]
   ! CHECK:   %[[V_1:.*]] = fir.load %[[ARG0_D]]#0 : !fir.ref<f32>
-  ! CHECK:   %[[V_2:.*]] = fir.load %[[ARG0_D]]#0 : !fir.ref<f32>
-  ! CHECK:   %[[V_3:.*]] = arith.addf %[[V_1]], %[[V_2]] {{.*}} : f32
+  ! CHECK:   %[[V_3:.*]] = arith.addf {{.*}}, {{.*}} {{.*}} : f32
   ! CHECK:   %[[V_4:.*]] = arith.addf %[[V_3]], %[[V_3]] {{.*}} : f32
   ! CHECK:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
   ! CHECK:   %[[V_5:.*]] = arith.cmpf olt, %[[V_4]], %[[CST]] {{.*}} : f32

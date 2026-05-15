@@ -47,9 +47,12 @@ subroutine foo()
   print *, x, y(45, 46), z
 
   deallocate(x, y, z)
-  ! CHECK: fir.call @{{.*}}AllocatableDeallocate
-  ! CHECK: fir.call @{{.*}}AllocatableDeallocate
-  ! CHECK: fir.call @{{.*}}AllocatableDeallocate
+  ! CHECK: %[[xBoxCastDealloc:.*]] = fir.convert %[[xBoxDecl]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK: fir.call @{{.*}}AllocatableDeallocate(%[[xBoxCastDealloc]], {{.*}})
+  ! CHECK: %[[yBoxCastDealloc:.*]] = fir.convert %[[yBoxDecl]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK: fir.call @{{.*}}AllocatableDeallocate(%[[yBoxCastDealloc]], {{.*}})
+  ! CHECK: %[[zBoxCastDealloc:.*]] = fir.convert %[[zBoxDecl]]#0 : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK: fir.call @{{.*}}AllocatableDeallocate(%[[zBoxCastDealloc]], {{.*}})
 end subroutine
 
 ! test lowering of character allocatables
@@ -76,8 +79,10 @@ subroutine char_deferred(n)
   ! CHECK: fir.call @{{.*}}AllocatableAllocate(%{{.*}}
 
   deallocate(scalar, array)
-  ! CHECK: fir.call @{{.*}}AllocatableDeallocate(%{{.*}}, {{.*}})
-  ! CHECK: fir.call @{{.*}}AllocatableDeallocate(%{{.*}}, {{.*}})
+  ! CHECK: %[[sBoxCastDealloc:.*]] = fir.convert %[[sBoxDecl]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK: fir.call @{{.*}}AllocatableDeallocate(%[[sBoxCastDealloc]], {{.*}})
+  ! CHECK: %[[aBoxCastDealloc:.*]] = fir.convert %[[aBoxDecl]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK: fir.call @{{.*}}AllocatableDeallocate(%[[aBoxCastDealloc]], {{.*}})
 
   ! only testing that the correct length is set in the descriptor.
   allocate(character(n):: scalar, array(40))
