@@ -10659,10 +10659,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
-  unsigned OpCode = MI.getOpcode();
-  assert(OpCode == TargetOpcode::G_SMULFIX ||
-         OpCode == TargetOpcode::G_UMULFIX &&
-             "Operator must be either G_SMULFIX or G_UMULFIX!");
+  [[maybe_unused]] unsigned OpCode = MI.getOpcode();
+  assert((OpCode == TargetOpcode::G_SMULFIX ||
+          OpCode == TargetOpcode::G_UMULFIX) &&
+         "Operator must be either G_SMULFIX or G_UMULFIX!");
   auto [Dst, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
   unsigned Scale = MI.getOperand(3).getImm();
