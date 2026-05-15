@@ -3564,7 +3564,7 @@ protected:
     SymbolContextList sc_list;
 
     if (m_options.m_type == eLookupTypeFunctionOrSymbol) {
-      ConstString function_name(m_options.m_str.c_str());
+      ConstString function_name(m_options.m_str);
       ModuleFunctionSearchOptions function_options;
       function_options.include_symbols = true;
       function_options.include_inlines = false;

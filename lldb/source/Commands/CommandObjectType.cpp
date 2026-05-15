@@ -470,7 +470,7 @@ protected:
 
                 lldb::TypeCategoryImplSP category;
                 DataVisualization::Categories::GetCategory(
-                    ConstString(options->m_category.c_str()), category);
+                    ConstString(options->m_category), category);
 
                 Status error;
 
@@ -689,7 +689,7 @@ protected:
                       .SetSkipReferences(m_command_options.m_skip_references));
     else
       entry = std::make_shared<TypeFormatImpl_EnumType>(
-          ConstString(m_command_options.m_custom_type_name.c_str()),
+          ConstString(m_command_options.m_custom_type_name),
           TypeFormatImpl::Flags()
               .SetCascades(m_command_options.m_cascade)
               .SetSkipPointers(m_command_options.m_skip_pointers)
@@ -1597,7 +1597,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
                                              std::string category_name,
                                              Status *error) {
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()),
+  DataVisualization::Categories::GetCategory(ConstString(category_name),
                                              category);
 
   if (match_type == eFormatterMatchExact) {
@@ -2205,8 +2205,8 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   // now I have a valid provider, let's add it to every type
 
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(
-      ConstString(m_options.m_category.c_str()), category);
+  DataVisualization::Categories::GetCategory(ConstString(m_options.m_category),
+                                             category);
 
   Status error;
 
@@ -2242,7 +2242,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
                                          std::string category_name,
                                          Status *error) {
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()),
+  DataVisualization::Categories::GetCategory(ConstString(category_name),
                                              category);
 
   if (match_type == eFormatterMatchExact) {
@@ -2383,8 +2383,8 @@ private:
                  FilterFormatType type, std::string category_name,
                  Status *error) {
     lldb::TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(
-        ConstString(category_name.c_str()), category);
+    DataVisualization::Categories::GetCategory(ConstString(category_name),
+                                               category);
 
     if (type == eRegularFilter) {
       if (FixArrayTypeNameWithRegex(type_name))
@@ -2506,7 +2506,7 @@ protected:
 
     lldb::TypeCategoryImplSP category;
     DataVisualization::Categories::GetCategory(
-        ConstString(m_options.m_category.c_str()), category);
+        ConstString(m_options.m_category), category);
 
     Status error;
 

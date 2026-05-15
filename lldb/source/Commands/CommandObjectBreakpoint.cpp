@@ -2529,7 +2529,7 @@ protected:
     switch (break_type) {
     case eClearTypeFileAndLine: // Breakpoint by source position
     {
-      const ConstString filename(m_options.m_filename.c_str());
+      const ConstString filename(m_options.m_filename);
       BreakpointLocationCollection loc_coll;
 
       for (size_t i = 0; i < num_breakpoints; ++i) {
@@ -3147,8 +3147,7 @@ protected:
     if (name_list.empty()) {
       result.AppendMessage("No breakpoint names found.");
     } else {
-      for (const std::string &name_str : name_list) {
-        const char *name = name_str.c_str();
+      for (const std::string &name : name_list) {
         // First print out the options for the name:
         Status error;
         BreakpointName *bp_name =
@@ -3166,7 +3165,7 @@ protected:
           BreakpointList &breakpoints = target.GetBreakpointList();
           bool any_set = false;
           for (BreakpointSP bp_sp : breakpoints.Breakpoints()) {
-            if (bp_sp->MatchesName(name)) {
+            if (bp_sp->MatchesName(name.c_str())) {
               StreamString s;
               any_set = true;
               bp_sp->GetDescription(&s, eDescriptionLevelBrief);
