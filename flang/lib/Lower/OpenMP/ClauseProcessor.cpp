@@ -2014,7 +2014,8 @@ bool ClauseProcessor::processMap(
         mapTypeBits |= mlir::omp::ClauseMapFlags::ref_ptr;
         break;
       case Map::RefModifier::RefPtrPtee:
-        mapTypeBits |= mlir::omp::ClauseMapFlags::ref_ptr_ptee;
+        mapTypeBits |= mlir::omp::ClauseMapFlags::ref_ptr |
+                       mlir::omp::ClauseMapFlags::ref_ptee;
         break;
       }
     }

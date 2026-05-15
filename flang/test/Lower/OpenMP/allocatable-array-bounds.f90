@@ -25,7 +25,7 @@
 !HOST: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[DECLARE_1]]#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !HOST: %[[MAP_INFO_MEMBER:.*]] = omp.map.info var_ptr(%[[DECLARE_1]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAR_PTR_PTR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32)   bounds(%[[BOUNDS_1]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
 !HOST: %[[MAP_INFO_1:.*]] = omp.map.info var_ptr(%[[DECLARE_1]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, descriptor, to) capture(ByRef) members(%[[MAP_INFO_MEMBER]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "sp_read(2:5)"}
-!HOST: %[[MAP_INFO_ATTACH:.*]] = omp.map.info var_ptr(%[[DECLARE_1]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr_ptee) capture(ByRef) var_ptr_ptr({{.*}}, i32) bounds({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "sp_read(2:5)"}
+!HOST: %[[MAP_INFO_ATTACH:.*]] = omp.map.info var_ptr(%[[DECLARE_1]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr({{.*}}, i32) bounds({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "sp_read(2:5)"}
 !HOST: %[[LOAD_3:.*]] = fir.load %[[DECLARE_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !HOST: %[[LOAD_4:.*]] = fir.load %[[DECLARE_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !HOST: %[[CONSTANT_5:.*]] = arith.constant 0 : index
@@ -43,7 +43,7 @@
 !HOST: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[DECLARE_2]]#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !HOST: %[[MAP_INFO_MEMBER:.*]] = omp.map.info var_ptr(%[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAR_PTR_PTR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32)   bounds(%[[BOUNDS_2]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
 !HOST: %[[MAP_INFO_2:.*]] = omp.map.info var_ptr(%[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, descriptor, to) capture(ByRef) members(%[[MAP_INFO_MEMBER]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "sp_write(2:5)"}
-!HOST: %[[MAP_INFO_ATTACH:.*]] = omp.map.info var_ptr(%[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr_ptee) capture(ByRef) var_ptr_ptr({{.*}}, i32) bounds({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "sp_write(2:5)"}
+!HOST: %[[MAP_INFO_ATTACH:.*]] = omp.map.info var_ptr(%[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr({{.*}}, i32) bounds({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "sp_write(2:5)"}
 subroutine read_write_section()
     integer, allocatable :: sp_read(:)
     integer, allocatable :: sp_write(:)
@@ -82,7 +82,7 @@ module assumed_allocatable_array_routines
 !HOST: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[DECLARE]]#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !HOST: %[[MAP_INFO_MEMBER:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAR_PTR_PTR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32)   bounds(%[[BOUNDS]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
 !HOST: %[[MAP_INFO:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, descriptor, to) capture(ByRef) members(%[[MAP_INFO_MEMBER]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "arr_read_write(2:5)"}
-!HOST: %[[MAP_ATTACH:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr_ptee) capture(ByRef) var_ptr_ptr({{.*}}, i32) bounds({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "arr_read_write(2:5)"}
+!HOST: %[[MAP_ATTACH:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr({{.*}}, i32) bounds({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "arr_read_write(2:5)"}
 subroutine assumed_shape_array(arr_read_write)
     integer, allocatable, intent(inout) :: arr_read_write(:)
 

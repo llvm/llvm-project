@@ -2144,9 +2144,6 @@ static ParseResult parseMapClause(OpAsmParser &parser,
     if (mapTypeMod == "ref_ptee")
       mapTypeBits |= ClauseMapFlags::ref_ptee;
 
-    if (mapTypeMod == "ref_ptr_ptee")
-      mapTypeBits |= ClauseMapFlags::ref_ptr_ptee;
-
     if (mapTypeMod == "is_device_ptr")
       mapTypeBits |= ClauseMapFlags::is_device_ptr;
 
@@ -2219,8 +2216,6 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     mapTypeStrs.push_back("ref_ptr");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptee))
     mapTypeStrs.push_back("ref_ptee");
-  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr_ptee))
-    mapTypeStrs.push_back("ref_ptr_ptee");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::is_device_ptr))
     mapTypeStrs.push_back("is_device_ptr");
   if (mapFlags == ClauseMapFlags::none)
@@ -2391,7 +2386,8 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
           (!mapInfoOp.getVarPtrPtr() && mapInfoOp.getVarPtrPtrType())) {
         return emitError(
             op->getLoc(),
-            "both the varPtrPtr and varPtrPtrType must be present");
+            "if varPtrPtr or varPtrPtrType is specified, then both "
+            "must be present");
       }
     } else if (!isa<DeclareMapperInfoOp>(op)) {
       return emitError(op->getLoc(),
