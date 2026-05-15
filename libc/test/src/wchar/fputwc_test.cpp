@@ -26,7 +26,7 @@
 using LlvmLibcFputwcTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcFputwcTest, WriteASCII) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputwc_ascii.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -50,7 +50,7 @@ TEST_F(LlvmLibcFputwcTest, WriteASCII) {
 }
 
 TEST_F(LlvmLibcFputwcTest, WriteUtf8) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputwc_utf8.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -103,7 +103,7 @@ TEST_F(LlvmLibcFputwcTest, WriteUtf8) {
 // the UTF-16 range.
 #if WCHAR_MAX > 0xFFFF
 TEST_F(LlvmLibcFputwcTest, EncodingErrorEILSEQ) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputwc_eilseq.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -120,7 +120,7 @@ TEST_F(LlvmLibcFputwcTest, EncodingErrorEILSEQ) {
 #endif
 
 TEST_F(LlvmLibcFputwcTest, InvalidStream) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputwc_invalid.test"));
 
   // Create the file first
@@ -141,7 +141,7 @@ TEST_F(LlvmLibcFputwcTest, InvalidStream) {
 }
 
 TEST_F(LlvmLibcFputwcTest, ByteModeFailure) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("fputwc_bytemode.test"));
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
