@@ -150,7 +150,7 @@ private:
     if (bytes > size_) {
       char *old{buffer_};
       auto oldSize{size_};
-      std::int64_t newSize{size_ + static_cast<int64_t>(minBuffer)};
+      std::int64_t newSize{size_ + static_cast<std::int64_t>(minBuffer)};
       // Grow the buffer geometrically. Using larger expansion steps reduces the
       // number of reallocations and prevents excessive mmap/munmap activity.
       if (newSize > 65536 * 16) {
