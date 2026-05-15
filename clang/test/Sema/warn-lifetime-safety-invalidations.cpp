@@ -494,6 +494,15 @@ void ChangingRegionOwnedByContainerIsOk() {
 namespace InvalidatedField {
 std::string StableString;
 
+struct Sink {
+  std::string *dest_; // expected-note {{this field dangles}}
+
+  Sink(std::string *dest, int n) : dest_(dest) { // expected-warning {{parameter which escapes to a field is later invalidated}}
+    if (n > 0)
+      dest->clear(); // expected-note {{invalidated here}}
+  }
+};
+
 struct S {
   std::string_view FieldFromLocalVector; // expected-note {{this field dangles}}
   std::string_view FieldFromByValueParamVector; // expected-note {{this field dangles}}
