@@ -1364,6 +1364,7 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   unsigned ForcedEncodingSize = 0;
   bool ForcedDPP = false;
   bool ForcedSDWA = false;
+  bool IsSignedDot4Alias = false;
   KernelScopeInfo KernelScope;
   const unsigned HwMode;
 
@@ -6947,6 +6948,9 @@ bool AMDGPUAsmParser::parseInstruction(ParseInstructionInfo &Info,
   // Add the instruction mnemonic
   Name = parseMnemonicSuffix(Name);
 
+  // Remember original mnemonic before alias conversion for v_dot4_i32_i8
+  IsSignedDot4Alias = (Name == "v_dot4_i32_i8");
+
   // If the target architecture uses MnemonicAlias, call it here to parse
   // operands correctly.
   applyMnemonicAliases(Name, getAvailableFeatures(), 0);
@@ -9698,8 +9702,13 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
                           AMDGPUOperand::ImmTyMatrixBReuse, 0);
 
   int NegLoIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_lo);
-  if (NegLoIdx != -1)
+  if (NegLoIdx != -1) {
     addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyNegLo);
+    // v_dot4_i32_i8 alias and user didn't specify neg_lo, set it to 0x3
+    if (IsSignedDot4Alias && Inst.getOperand(NegLoIdx).getImm() == 0) {
+      Inst.getOperand(NegLoIdx).setImm(0x3);
+    }
+  }
 
   int NegHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_hi);
   if (NegHiIdx != -1)
