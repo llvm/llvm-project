@@ -1160,20 +1160,15 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
     R->eraseFromParent();
 }
 
-/// Check if all loads in the loop are dereferenceable. Iterates over all blocks
-/// reachable from \p HeaderVPBB, skipping \p MiddleVPBB. Returns false if any
+/// Check if all loads in the loop are dereferenceable. Iterates over the
+/// loop body blocks reachable from \p HeaderVPBB. Returns false if any
 /// non-dereferenceable load is found.
-static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
-                                       VPBasicBlock *MiddleVPBB, Loop *TheLoop,
+static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB, Loop *TheLoop,
                                        PredicatedScalarEvolution &PSE,
                                        DominatorTree &DT, AssumptionCache *AC) {
   ScalarEvolution &SE = *PSE.getSE();
   const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(HeaderVPBB))) {
-    // Skip blocks outside the loop (exit blocks and their successors).
-    if (VPBB == MiddleVPBB || isa<VPIRBasicBlock>(VPBB))
-      continue;
+  for (VPBasicBlock *VPBB : vp_plain_cfg_loop_body(HeaderVPBB)) {
     for (VPRecipeBase &R : *VPBB) {
       auto *VPI = dyn_cast<VPInstructionWithType>(&R);
       if (!VPI || VPI->getOpcode() != Instruction::Load) {
@@ -1223,8 +1218,7 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
   //       here from handleUncountableEarlyExits, but we need to improve
   //       detection of recipes which may write to memory.
   if (Style != UncountableExitStyle::NoUncountableExit) {
-    if (!areAllLoadsDereferenceable(HeaderVPBB, MiddleVPBB, TheLoop, PSE, DT,
-                                    AC))
+    if (!areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
       return false;
     // TODO: Check target preference for style.
     handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB, Style);

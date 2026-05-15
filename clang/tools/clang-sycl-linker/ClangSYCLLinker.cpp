@@ -468,18 +468,34 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
   return createStringError(inconvertibleErrorCode(), "Unsupported arch");
 }
 
+static constexpr char AttrSYCLModuleId[] = "sycl-module-id";
+
 /// SYCL device code module split mode.
 enum class IRSplitMode {
+  SPLIT_PER_TU,     // one module per translation unit
   SPLIT_PER_KERNEL, // one module per kernel
   SPLIT_NONE        // no splitting
 };
 
-/// Parses the value of \p -module-split-mode.
+/// Parses the value of \p --module-split-mode.
 static std::optional<IRSplitMode> convertStringToSplitMode(StringRef S) {
   return StringSwitch<std::optional<IRSplitMode>>(S)
+      .Case("source", IRSplitMode::SPLIT_PER_TU)
       .Case("kernel", IRSplitMode::SPLIT_PER_KERNEL)
       .Case("none", IRSplitMode::SPLIT_NONE)
       .Default(std::nullopt);
+}
+
+static StringRef splitModeToString(IRSplitMode Mode) {
+  switch (Mode) {
+  case IRSplitMode::SPLIT_PER_TU:
+    return "source";
+  case IRSplitMode::SPLIT_PER_KERNEL:
+    return "kernel";
+  case IRSplitMode::SPLIT_NONE:
+    return "none";
+  }
+  llvm_unreachable("bad split mode");
 }
 
 /// Result of splitting a device module: the bitcode file path and the
@@ -489,63 +505,79 @@ struct SplitModule {
   SmallString<0> Symbols;
 };
 
-static bool isEntryPoint(const Function &F) {
-  return !F.isDeclaration() && F.hasKernelCallingConv();
+static bool isEntryPoint(const Function &F, bool EmitOnlyKernelsAsEntryPoints) {
+  if (F.isDeclaration())
+    return false;
+  if (F.hasKernelCallingConv())
+    return true;
+  if (EmitOnlyKernelsAsEntryPoints)
+    return false;
+  // sycl_external functions carry the "sycl-module-id" attribute.
+  return F.hasFnAttribute(AttrSYCLModuleId);
 }
 
-/// Collect kernel names from \p M and serialize them into a symbol table.
-static SmallString<0> collectSymbols(const Module &M) {
-  SmallVector<StringRef> KernelNames;
+/// Collect entry point names from \p M and serialize them into a symbol table.
+static SmallString<0> collectEntryPoints(const Module &M,
+                                         bool EmitOnlyKernelsAsEntryPoints) {
+  SmallVector<StringRef> Names;
   for (const Function &F : M)
-    if (isEntryPoint(F))
-      KernelNames.push_back(F.getName());
+    if (isEntryPoint(F, EmitOnlyKernelsAsEntryPoints))
+      Names.push_back(F.getName());
   SmallString<0> SymbolData;
-  llvm::offloading::sycl::writeSymbolTable(KernelNames, SymbolData);
+  llvm::offloading::sycl::writeSymbolTable(Names, SymbolData);
   return SymbolData;
 }
 
+/// Functor passed to splitModuleTransitiveFromEntryPoints. For each input
+/// function \p F, returns a numeric group ID (if \p F is an entry point)
+/// determining which device image it lands in, or std::nullopt (for
+/// non-entry-points). SPLIT_PER_KERNEL \p Mode gives each kernel its own ID;
+/// SPLIT_PER_TU \p Mode groups kernels by their "sycl-module-id" attribute
+/// value.
+class EntryPointCategorizer {
+public:
+  EntryPointCategorizer(IRSplitMode Mode, bool EmitOnlyKernelsAsEntryPoints)
+      : Mode(Mode), OnlyKernelsAreEntryPoints(EmitOnlyKernelsAsEntryPoints) {}
+
+  std::optional<int> operator()(const Function &F) {
+    if (!isEntryPoint(F, OnlyKernelsAreEntryPoints))
+      return std::nullopt;
+
+    std::string Key;
+    switch (Mode) {
+    case IRSplitMode::SPLIT_PER_KERNEL:
+      Key = F.getName().str();
+      break;
+    case IRSplitMode::SPLIT_PER_TU:
+      Key = F.getFnAttribute(AttrSYCLModuleId).getValueAsString().str();
+      break;
+    case IRSplitMode::SPLIT_NONE:
+      llvm_unreachable("categorizer cannot be used for SPLIT_NONE");
+    }
+
+    auto [It, Inserted] =
+        StrToId.try_emplace(std::move(Key), static_cast<int>(StrToId.size()));
+    return It->second;
+  }
+
+private:
+  IRSplitMode Mode;
+  bool OnlyKernelsAreEntryPoints;
+  llvm::StringMap<int> StrToId;
+};
+
 /// Splits the fully linked device \p M into one bitcode file per device image
 /// according to \p Mode and returns the list of split images with their symbol
-/// tables.
-///
-/// For SPLIT_NONE, \p LinkedBitcodeFile is returned as-is.
-/// For SPLIT_PER_KERNEL, the module is split into parts such that each part
-/// contains exactly one kernel entry point and its transitive dependencies;
-/// each part is written to a fresh temporary bitcode file.
+/// tables. The module is split transitively from entry points; each part is
+/// written to a fresh temporary bitcode file.
 static Expected<SmallVector<SplitModule, 0>>
 splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
-                IRSplitMode Mode, const ArgList &Args) {
+                IRSplitMode Mode, bool EmitOnlyKernelsAsEntryPoints,
+                const ArgList &Args) {
+  assert(Mode != IRSplitMode::SPLIT_NONE && "SPLIT_NONE is unsupported");
+
   SmallVector<SplitModule, 0> SplitModules;
-
-  if (Mode == IRSplitMode::SPLIT_NONE) {
-    SplitModules.push_back(
-        {SmallString<256>(LinkedBitcodeFile), collectSymbols(*M)});
-    return SplitModules;
-  }
-
-  assert(Mode == IRSplitMode::SPLIT_PER_KERNEL);
-
-  // splitModuleTransitiveFromEntryPoints asserts that at least one entry point
-  // was categorized. If the linked module contains no kernel definitions at
-  // all, there is nothing to split; fall back to shipping the linked module
-  // as a single image.
-  bool HasKernel = llvm::any_of(M->functions(), isEntryPoint);
-  if (!HasKernel) {
-    SplitModules.push_back(
-        {SmallString<256>(LinkedBitcodeFile), collectSymbols(*M)});
-    return SplitModules;
-  }
-
-  // Categorize each kernel function into its own group. Non-kernels and
-  // declarations return std::nullopt so they are pulled into whichever split
-  // transitively needs them.
-  int NextCategory = 0;
-  auto EntryPointCategorizer =
-      [&NextCategory](const Function &F) -> std::optional<int> {
-    if (!isEntryPoint(F))
-      return std::nullopt;
-    return NextCategory++;
-  };
+  EntryPointCategorizer Categorizer(Mode, EmitOnlyKernelsAsEntryPoints);
 
   auto SplitCallback = [&](std::unique_ptr<Module> Part) -> Error {
     Expected<StringRef> BitcodeFileOrErr =
@@ -560,15 +592,38 @@ splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
     WriteBitcodeToFile(*Part, OS);
 
     SplitModules.push_back(
-        {SmallString<256>(*BitcodeFileOrErr), collectSymbols(*Part)});
+        {SmallString<256>(*BitcodeFileOrErr),
+         collectEntryPoints(*Part, EmitOnlyKernelsAsEntryPoints)});
     return Error::success();
   };
 
   if (Error Err = splitModuleTransitiveFromEntryPoints(
-          std::move(M), EntryPointCategorizer, SplitCallback))
+          std::move(M), Categorizer, SplitCallback))
     return Err;
 
+  if (Verbose || DryRun) {
+    errs() << formatv("sycl-module-split: input: {0}, mode: {1}\n",
+                      LinkedBitcodeFile, splitModeToString(Mode));
+    for (const SplitModule &SI : SplitModules) {
+      errs() << formatv("{0} [", SI.ModuleFilePath);
+      llvm::offloading::sycl::forEachSymbol(
+          SI.Symbols, [](StringRef Name) { errs() << Name << " "; });
+      errs() << "]\n";
+    }
+  }
+
   return SplitModules;
+}
+
+/// Returns true if module splitting can be skipped: either \p Mode is
+/// SPLIT_NONE, or \p M contains no entry points (nothing to split from).
+static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
+                               bool EmitOnlyKernelsAsEntryPoints) {
+  if (Mode == IRSplitMode::SPLIT_NONE)
+    return true;
+  return llvm::none_of(M.functions(), [&](const Function &F) {
+    return isEntryPoint(F, EmitOnlyKernelsAsEntryPoints);
+  });
 }
 
 /// Performs the following steps:
@@ -586,7 +641,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   auto &[LinkedModule, LinkedFile] = *LinkedOrErr;
 
   // Determine the requested module split mode.
-  IRSplitMode SplitMode = IRSplitMode::SPLIT_NONE;
+  IRSplitMode SplitMode = IRSplitMode::SPLIT_PER_TU;
   if (Arg *A = Args.getLastArg(OPT_module_split_mode_EQ)) {
     std::optional<IRSplitMode> ModeOrNone =
         convertStringToSplitMode(A->getValue());
@@ -596,20 +651,25 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     SplitMode = *ModeOrNone;
   }
 
-  // Split the linked module into one or more device images.
-  Expected<SmallVector<SplitModule, 0>> SplitModulesOrErr =
-      splitDeviceCode(std::move(LinkedModule), LinkedFile, SplitMode, Args);
-  if (!SplitModulesOrErr)
-    return SplitModulesOrErr.takeError();
-  SmallVector<SplitModule, 0> &SplitModules = *SplitModulesOrErr;
-  if (Verbose) {
-    SmallVector<StringRef> SplitFiles;
-    for (const SplitModule &SI : SplitModules)
-      SplitFiles.push_back(SI.ModuleFilePath);
-    errs() << formatv("sycl-module-split: input: {0}, output: {1}, mode: {2}\n",
-                      LinkedFile, llvm::join(SplitFiles, ", "),
-                      SplitMode == IRSplitMode::SPLIT_PER_KERNEL ? "kernel"
-                                                                 : "none");
+  // TODO: Expose this as a command-line option and default it to false when
+  // device-image dynamic linking is supported, so that sycl_external functions
+  // can be called across device image boundaries.
+  bool EmitOnlyKernelsAsEntryPoints = true;
+
+  SmallVector<SplitModule, 0> SplitModules;
+  if (canSkipModuleSplit(SplitMode, *LinkedModule,
+                         EmitOnlyKernelsAsEntryPoints)) {
+    SplitModules.push_back(
+        {SmallString<256>(LinkedFile),
+         collectEntryPoints(*LinkedModule, EmitOnlyKernelsAsEntryPoints)});
+  } else {
+    Expected<SmallVector<SplitModule, 0>> SplitModulesOrErr =
+        splitDeviceCode(std::move(LinkedModule), LinkedFile, SplitMode,
+                        EmitOnlyKernelsAsEntryPoints, Args);
+    if (!SplitModulesOrErr)
+      return SplitModulesOrErr.takeError();
+
+    SplitModules = std::move(*SplitModulesOrErr);
   }
 
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
