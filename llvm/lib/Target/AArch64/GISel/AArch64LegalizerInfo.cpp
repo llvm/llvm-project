@@ -450,7 +450,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(HasFP16, {f16, v4f16, v8f16})
       .libcallFor({f128})
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
-      .minScalarOrElt(0, MinFPScalar)
+      .widenScalarIf(
+          [=](const LegalityQuery &Q) {
+            return (!HasFP16 && Q.Types[0].getScalarType().isFloat16()) ||
+                   Q.Types[0].getScalarType().isBFloat16();
+          },
+          changeElementTo(0, f32))
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
