@@ -1,14 +1,14 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN:            -target-cpu tahiti -target-feature +tanh-insts -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t-cir.ll
+// RUN:            -target-cpu tahiti --target-feature +tanh-insts fcuda-is-device -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN:            -target-cpu tahiti -target-feature +tanh-insts -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 #define __device__ __attribute__((device))
@@ -110,4 +110,12 @@ __device__ void test_readfirstlane(int* out, int a) {
 // LLVM: call{{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 __device__ void test_dispatch_ptr(__attribute__((address_space(4))) void ** out) {
   *out = (__attribute__((address_space(4))) void *)__builtin_amdgcn_dispatch_ptr();
+}
+
+// CIR-LABEL: @_Z14test_tanhf_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.tanh" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z14test_tanhf_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.tanh.f32(float %{{.*}})
+__device__ void test_tanhf_f32(float* out, float a) {
+  *out = __builtin_amdgcn_tanhf(a);
 }
