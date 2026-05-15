@@ -95,14 +95,14 @@ jobs:
       #   run: |
       #     cmake --build build/clang --target libc-shared-tests
 
-      # - name: Configure CMake - gcc
-      #   run: |
-      #     cmake -B build/gcc -S runtimes -G Ninja \
-      #       -DLLVM_ENABLE_RUNTIMES=libc \
-      #       -DCMAKE_C_COMPILER=${{ matrix.target_triple }}-gcc \
-      #       -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++ \
-      #       -DCMAKE_BUILD_TYPE=Release \
-      #       -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }}
+      - name: Configure CMake - gcc
+        run: |
+          cmake -B build/gcc -S runtimes -G Ninja \
+            -DLLVM_ENABLE_RUNTIMES=libc \
+            -DCMAKE_C_COMPILER=${{ matrix.target_triple }}-gcc \
+            -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++ \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }}
 
       - name: Build and Run - gcc
         env:
