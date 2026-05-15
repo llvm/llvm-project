@@ -2580,12 +2580,14 @@ llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
     // each of them.
     llvm::Error errors = llvm::Error::success();
     bool found_targets = false;
+    bool found_alive_process = false;
     for (const auto &target_sp :
          requesting_debugger.GetTargetList().Targets()) {
       found_targets = true;
       ProcessSP process_sp = target_sp->GetProcessSP();
       if (!process_sp || !process_sp->IsAlive())
         continue;
+      found_alive_process = true;
       errors = llvm::joinErrors(std::move(errors),
                                 process_sp->SetInstrumentationRuntimeEnabled(
                                     *instrumentation_runtime_ty, enable));
@@ -2594,6 +2596,10 @@ llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
       errors =
           llvm::joinErrors(std::move(errors),
                            llvm::createStringError("debugger has no targets"));
+    else if (!found_alive_process)
+      errors = llvm::joinErrors(
+          std::move(errors),
+          llvm::createStringError("no alive processes in debugger"));
 
     return errors;
   }
