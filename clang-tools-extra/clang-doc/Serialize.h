@@ -94,8 +94,7 @@ private:
 
   StringRef getTypeAlias(const TypeAliasDecl *Alias);
 
-  StringRef
-  getInfoRelativePath(const llvm::SmallVectorImpl<doc::Reference> &Namespaces);
+  StringRef getInfoRelativePath(llvm::ArrayRef<doc::Reference> Namespaces);
 
   StringRef getInfoRelativePath(const Decl *D);
 
@@ -118,14 +117,14 @@ private:
 
   void InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info);
   void InsertChild(ScopeChildren &Scope, const RecordInfo &Info);
-  void InsertChild(ScopeChildren &Scope, EnumInfo Info);
-  void InsertChild(ScopeChildren &Scope, FunctionInfo Info);
-  void InsertChild(ScopeChildren &Scope, TypedefInfo Info);
-  void InsertChild(ScopeChildren &Scope, ConceptInfo Info);
-  void InsertChild(ScopeChildren &Scope, VarInfo Info);
+  void InsertChild(ScopeChildren &Scope, EnumInfo &Info);
+  void InsertChild(ScopeChildren &Scope, FunctionInfo &Info);
+  void InsertChild(ScopeChildren &Scope, TypedefInfo &Info);
+  void InsertChild(ScopeChildren &Scope, ConceptInfo &Info);
+  void InsertChild(ScopeChildren &Scope, VarInfo &Info);
 
   template <typename ChildType>
-  OwnedPtr<Info> makeAndInsertIntoParent(ChildType Child);
+  OwnedPtr<Info> makeAndInsertIntoParent(ChildType &Child);
 
   AccessSpecifier getFinalAccessSpecifier(AccessSpecifier FirstAS,
                                           AccessSpecifier SecondAS);
@@ -139,8 +138,9 @@ private:
 
   void parseBases(RecordInfo &I, const CXXRecordDecl *D);
 
-  void parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
-                  bool PublicOnly, bool IsParent,
+  void parseBases(llvm::SmallVectorImpl<BaseRecordInfo> &Bases,
+                  const CXXRecordDecl *D, bool IsFileInRootDir, bool PublicOnly,
+                  bool IsParent,
                   AccessSpecifier ParentAccess = AccessSpecifier::AS_public);
 
   template <typename T>
@@ -165,8 +165,9 @@ private:
   void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
                           Location Loc, bool &IsInAnonymousNamespace);
 
-  void handleCompoundConstraints(const Expr *Constraint,
-                                 OwningVec<ConstraintInfo> &ConstraintInfos);
+  void handleCompoundConstraints(
+      const Expr *Constraint,
+      llvm::SmallVectorImpl<ConstraintInfo> &ConstraintInfos);
 
   void populateConstraints(TemplateInfo &I, const TemplateDecl *D);
 
@@ -176,8 +177,9 @@ private:
 
   template <typename T> void populateMemberTypeInfo(T &I, const Decl *D);
 
-  void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
-                              const DeclaratorDecl *D, bool IsStatic = false);
+  void populateMemberTypeInfo(llvm::SmallVectorImpl<MemberTypeInfo> &Members,
+                              AccessSpecifier &Access, const DeclaratorDecl *D,
+                              bool IsStatic = false);
 
   void parseFriends(RecordInfo &RI, const CXXRecordDecl *D);
 

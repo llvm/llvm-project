@@ -1067,11 +1067,12 @@ bool LLParser::skipModuleSummaryEntry() {
   // support is in place we will look for the tokens corresponding to the
   // expected tags.
   if (Lex.getKind() != lltok::kw_gv && Lex.getKind() != lltok::kw_module &&
-      Lex.getKind() != lltok::kw_typeid && Lex.getKind() != lltok::kw_flags &&
-      Lex.getKind() != lltok::kw_blockcount)
-    return tokError(
-        "Expected 'gv', 'module', 'typeid', 'flags' or 'blockcount' at the "
-        "start of summary entry");
+      Lex.getKind() != lltok::kw_typeid &&
+      Lex.getKind() != lltok::kw_typeidCompatibleVTable &&
+      Lex.getKind() != lltok::kw_flags && Lex.getKind() != lltok::kw_blockcount)
+    return tokError("Expected 'gv', 'module', 'typeid', "
+                    "'typeidCompatibleVTable', 'flags' or 'blockcount' at the "
+                    "start of summary entry");
   if (Lex.getKind() == lltok::kw_flags)
     return parseSummaryIndexFlags();
   if (Lex.getKind() == lltok::kw_blockcount)
@@ -6202,7 +6203,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(linkageName, MDStringField, );                                      \
   OPTIONAL(file, MDField, );                                                   \
   OPTIONAL(line, LineField, );                                                 \
-  OPTIONAL(type, MDField, );                                                   \
+  REQUIRED(type, MDField, (/* AllowNull */ false));                            \
   OPTIONAL(isLocal, MDBoolField, );                                            \
   OPTIONAL(isDefinition, MDBoolField, (true));                                 \
   OPTIONAL(scopeLine, LineField, );                                            \
