@@ -182,6 +182,5 @@ public:
   LLVM_ABI ~ProfileAnnotator();
 };
 
-
 } // namespace llvm
 #endif // LLVM_ANALYSIS_CTXPROFANALYSIS_H
