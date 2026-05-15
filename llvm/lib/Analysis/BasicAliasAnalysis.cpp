@@ -197,22 +197,18 @@ static bool areBothVScale(const Value *V1, const Value *V2) {
 
 CaptureAnalysis::~CaptureAnalysis() = default;
 
-CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(const Value *Object,
-                                                           const Instruction *I,
-                                                           bool OrAt) {
+CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(
+    const Value *Object, const Instruction *I, bool OrAt, bool ReturnCaptures) {
   if (!isIdentifiedFunctionLocal(Object))
     return CaptureComponents::Provenance;
 
-  auto [CacheIt, Inserted] =
-      IsCapturedCache.insert({Object, CaptureComponents::Provenance});
-  if (!Inserted)
-    return CacheIt->second;
+  auto [CacheIt, Inserted] = IsCapturedCache.try_emplace(Object);
+  if (Inserted)
+    CacheIt->second = PointerMayBeCaptured(
+        Object, CaptureComponents::Provenance,
+        [](CaptureComponents CC) { return capturesFullProvenance(CC); });
 
-  CaptureComponents Ret = PointerMayBeCaptured(
-      Object, /*ReturnCaptures=*/false, CaptureComponents::Provenance,
-      [](CaptureComponents CC) { return capturesFullProvenance(CC); });
-  CacheIt->second = Ret;
-  return Ret;
+  return ReturnCaptures ? CacheIt->second.WithRet : CacheIt->second.WithoutRet;
 }
 
 static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
@@ -226,21 +222,23 @@ static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
          !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT, LI);
 }
 
-CaptureComponents
-EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
-                                          const Instruction *I, bool OrAt) {
+CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
+    const Value *Object, const Instruction *I, bool OrAt, bool ReturnCaptures) {
   if (!isIdentifiedFunctionLocal(Object))
     return CaptureComponents::Provenance;
 
   auto Iter = EarliestEscapes.try_emplace(Object);
   if (Iter.second) {
-    std::pair<Instruction *, CaptureComponents> EarliestCapture =
-        FindEarliestCapture(Object, *DT.getRoot()->getParent(),
-                            /*ReturnCaptures=*/false, DT,
-                            CaptureComponents::Provenance);
-    if (EarliestCapture.first)
-      Inst2Obj[EarliestCapture.first].push_back(Object);
-    Iter.first->second = EarliestCapture;
+    auto [EarliestInst, Res] = FindEarliestCapture(
+        Object, *DT.getRoot()->getParent(), DT, CaptureComponents::Provenance);
+    if (EarliestInst)
+      Inst2Obj[EarliestInst].push_back(Object);
+    Iter.first->second = {EarliestInst, Res};
+  }
+
+  if (ReturnCaptures) {
+    assert(!I && "Context instruction not supported if ReturnCaptures");
+    return Iter.first->second.second.WithRet;
   }
 
   auto IsNotCapturedBefore = [&]() {
@@ -263,7 +261,7 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
-  return Iter.first->second.second;
+  return Iter.first->second.second.WithoutRet;
 }
 
 void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
@@ -654,7 +652,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         // because it should be in sync with CaptureTracking. Not using it may
         // cause weird miscompilations where 2 aliasing pointers are assumed to
         // noalias.
-        if (auto *RP = getArgumentAliasingToReturnedPointer(Call, false)) {
+        // Pass MustPreserveOffset=true so we exclude llvm.ptrmask, which can
+        // change the byte offset by clearing low bits and would otherwise
+        // corrupt the symbolic offset we are accumulating in `Decomposed`.
+        if (auto *RP = getArgumentAliasingToReturnedPointer(
+                Call, /*MustPreserveOffset=*/true)) {
           V = RP;
           continue;
         }
@@ -961,6 +963,20 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   ModRefInfo ErrnoMR = ME.getModRef(IRMemLocation::ErrnoMem);
   ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
 
+  // Take into account potential synchronization effects of the call.
+  // We assume synchronization can not occur if the call does not read/write
+  // other memory (this in particular ensures that readonly/argmemonly continue
+  // to work as expected for frontends that do not emit nosync).
+  // FIXME: This should apply to all calls, but is limited to inline asm to
+  // limit impact. This ensures that inline asm memory barriers work correctly.
+  ModRefInfo SyncMR = ModRefInfo::NoModRef;
+  if (isModAndRefSet(OtherMR) && Call->maySynchronize() &&
+      Call->isInlineAsm()) {
+    SyncMR = getSyncEffects(&AAQI.AAR, Loc, AAQI);
+    if (isModAndRefSet(SyncMR))
+      return SyncMR;
+  }
+
   // An identified function-local object that does not escape can only be
   // accessed via call arguments. Reduce OtherMR (which includes accesses to
   // escaped memory) based on that.
@@ -971,8 +987,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   // non-volatile stores for them.
   if (isModOrRefSet(OtherMR) && !isa<Constant>(Object) && Call != Object &&
       (isa<AllocaInst>(Object) || !Call->hasFnAttr(Attribute::ReturnsTwice))) {
-    CaptureComponents CC =
-        AAQI.CA->getCapturesBefore(Object, Call, /*OrAt=*/false);
+    CaptureComponents CC = AAQI.CA->getCapturesBefore(
+        Object, Call, /*OrAt=*/false, /*ReturnCaptures=*/false);
     if (capturesNothing(CC))
       OtherMR = ModRefInfo::NoModRef;
     else if (capturesReadProvenanceOnly(CC))
@@ -1004,7 +1020,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     ArgMR = NewArgMR;
   }
 
-  ModRefInfo Result = ArgMR | OtherMR;
+  ModRefInfo Result = ArgMR | OtherMR | SyncMR;
 
   // Refine accesses to errno memory.
   if ((ErrnoMR | Result) != Result) {
@@ -1666,13 +1682,13 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) &&
-        capturesNothing(AAQI.CA->getCapturesBefore(
-            O2, dyn_cast<Instruction>(O1), /*OrAt*/ true)))
+    if (isEscapeSource(O1) && capturesNothing(AAQI.CA->getCapturesBefore(
+                                  O2, dyn_cast<Instruction>(O1), /*OrAt=*/true,
+                                  /*ReturnCaptures=*/false)))
       return AliasResult::NoAlias;
-    if (isEscapeSource(O2) &&
-        capturesNothing(AAQI.CA->getCapturesBefore(
-            O1, dyn_cast<Instruction>(O2), /*OrAt*/ true)))
+    if (isEscapeSource(O2) && capturesNothing(AAQI.CA->getCapturesBefore(
+                                  O1, dyn_cast<Instruction>(O2), /*OrAt=*/true,
+                                  /*ReturnCaptures=*/false)))
       return AliasResult::NoAlias;
   }
 

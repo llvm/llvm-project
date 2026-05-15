@@ -39,24 +39,6 @@ public:
   static constexpr bool available = true;
 };
 
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookup,
-                             DylibManager::LookupRequest> {
-  using MemberSerialization =
-      SPSArgList<SPSExecutorAddr, SPSRemoteSymbolLookupSet>;
-
-public:
-  static size_t size(const DylibManager::LookupRequest &LR) {
-    return MemberSerialization::size(ExecutorAddr(LR.Handle), LR.Symbols);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const DylibManager::LookupRequest &LR) {
-    return MemberSerialization::serialize(OB, ExecutorAddr(LR.Handle),
-                                          LR.Symbols);
-  }
-};
-
 } // end namespace shared
 
 Expected<EPCGenericDylibManager>
@@ -124,37 +106,10 @@ EPCGenericDylibManager::loadDylib(const char *DylibPath) {
   return open(DylibPath, 0);
 }
 
-/// Async helper to chain together calls to lookupAsync to fulfill all
-/// the requests.
-/// FIXME: The dylib manager should support multiple LookupRequests natively.
-static void
-lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
-                         ArrayRef<DylibManager::LookupRequest> Request,
-                         std::vector<tpctypes::LookupResult> Result,
-                         DylibManager::SymbolLookupCompleteFn Complete) {
-  if (Request.empty())
-    return Complete(std::move(Result));
-
-  auto &Element = Request.front();
-  DylibMgr.lookupAsync(Element.Handle, Element.Symbols,
-                       [&DylibMgr, Request, Complete = std::move(Complete),
-                        Result = std::move(Result)](auto R) mutable {
-                         if (!R)
-                           return Complete(R.takeError());
-                         Result.push_back({});
-                         Result.back().reserve(R->size());
-                         llvm::append_range(Result.back(), *R);
-
-                         lookupSymbolsAsyncHelper(
-                             DylibMgr, Request.drop_front(), std::move(Result),
-                             std::move(Complete));
-                       });
-}
-
 void EPCGenericDylibManager::lookupSymbolsAsync(
-    ArrayRef<DylibManager::LookupRequest> Request,
+    tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
     DylibManager::SymbolLookupCompleteFn Complete) {
-  lookupSymbolsAsyncHelper(*this, Request, {}, std::move(Complete));
+  lookupAsync(H, Symbols, std::move(Complete));
 }
 
 } // end namespace orc

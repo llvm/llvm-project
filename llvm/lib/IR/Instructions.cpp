@@ -4050,6 +4050,10 @@ CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
   return Cmp->getPredicate();
 }
 
+CmpPredicate CmpPredicate::getInverse(CmpPredicate P) {
+  return {CmpInst::getInversePredicate(P), P.hasSameSign()};
+}
+
 CmpPredicate CmpPredicate::getSwapped(CmpPredicate P) {
   return {CmpInst::getSwappedPredicate(P), P.hasSameSign()};
 }
@@ -4360,7 +4364,9 @@ FCmpInst *FCmpInst::cloneImpl() const {
 }
 
 ICmpInst *ICmpInst::cloneImpl() const {
-  return new ICmpInst(getPredicate(), Op<0>(), Op<1>());
+  auto *Result = new ICmpInst(getPredicate(), Op<0>(), Op<1>());
+  Result->setSameSign(hasSameSign());
+  return Result;
 }
 
 ExtractValueInst *ExtractValueInst::cloneImpl() const {
