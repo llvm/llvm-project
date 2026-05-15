@@ -148,11 +148,19 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
       }
     } else {
       if (*x == CUDADataAttr::Device) {
-        if ((y &&
-                (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified ||
-                    *y == CUDADataAttr::Shared ||
-                    *y == CUDADataAttr::Constant)) ||
-            (!y && (isCudaUnified || isCudaManaged))) {
+        if (y &&
+            (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified ||
+                *y == CUDADataAttr::Shared || *y == CUDADataAttr::Constant)) {
+          return true;
+        }
+        // A device dummy carrying !dir$ ignore_tkr(m) opts out of the
+        // -gpu=mem:{unified,managed} relaxation that would otherwise let
+        // an unattributed host actual bind to it. The (m) letter is used
+        // by host modules to mark device-typed dummies as overload
+        // discriminators that should only accept actuals with an explicit
+        // device/managed/unified attribute.
+        if (!y && (isCudaUnified || isCudaManaged) &&
+            !ignoreTKR.test(IgnoreTKR::Managed)) {
           return true;
         }
       } else if (*x == CUDADataAttr::Managed) {
