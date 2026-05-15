@@ -75,7 +75,7 @@
 ;
 ; Input with no entry points still produces an offload image.
 ; RUN: llvm-as %t/no-entry-points.ll -o %t/no-entry-points.bc
-; RUN: clang-sycl-linker --dry-run -triple=spirv64 %t/no-entry-points.bc -o %t/no-entry-points.out
+; RUN: clang-sycl-linker -triple=spirv64 %t/no-entry-points.bc -o %t/no-entry-points.out
 ; RUN: llvm-objdump --offloading %t/no-entry-points.out | FileCheck %s --check-prefix=NO-ENTRY-POINTS
 ; NO-ENTRY-POINTS: OFFLOADING IMAGE [0]:
 ; NO-ENTRY-POINTS: producer        sycl
