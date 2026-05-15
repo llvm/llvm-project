@@ -3333,7 +3333,7 @@ def fir_UseStmtOp
     bool hasRenames() { return getRenames().has_value(); }
 
     /// Returns true if this imports the entire module (no ONLY clause)
-    bool importsAll() { return !hasOnlyClause(); }
+    bool importsAll() { return !(hasOnlyClause() || getHasOnlyWithRenames()); }
 
     /// Returns true if this USE statement has both ONLY clause and renames
     bool hasOnlyWithRenames() { return getHasOnlyWithRenames(); }
