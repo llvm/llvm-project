@@ -263,7 +263,7 @@ define <8 x i8> @udiv_trunc_select(i1 %c) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vdivu.vv v8, v8, v8, v0.t
+; CHECK-NEXT:    vdivu.vx v8, v8, zero, v0.t
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
