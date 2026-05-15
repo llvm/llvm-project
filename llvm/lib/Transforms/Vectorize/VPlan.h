@@ -70,10 +70,6 @@ class LoopVectorizationCostModel;
 
 struct VPCostContext;
 
-namespace Intrinsic {
-typedef unsigned ID;
-}
-
 using VPlanPtr = std::unique_ptr<VPlan>;
 
 /// \enum UncountableExitStyle
@@ -1951,6 +1947,12 @@ public:
   /// Produce a widened version of the vector intrinsic.
   LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
 
+  /// Compute the cost of a vector intrinsic with \p ID and \p Operands.
+  static InstructionCost computeCallCost(Intrinsic::ID ID,
+                                         ArrayRef<const VPValue *> Operands,
+                                         const VPRecipeWithIRFlags &R,
+                                         ElementCount VF, VPCostContext &Ctx);
+
   /// Return the cost of this vector intrinsic.
   LLVM_ABI_FOR_TEST InstructionCost
   computeCost(ElementCount VF, VPCostContext &Ctx) const override;
@@ -2020,6 +2022,9 @@ public:
   /// Return the cost of this VPWidenCallRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
+
+  /// Return the cost of widening a call using the vector function \p Variant.
+  static InstructionCost computeCallCost(Function *Variant, VPCostContext &Ctx);
 
   Function *getCalledScalarFunction() const {
     return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
@@ -3232,6 +3237,13 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
+  /// Return the cost of scalarizing a call to \p CalledFn with argument
+  /// operands \p ArgOps for a given \p VF.
+  static InstructionCost computeCallCost(Function *CalledFn, Type *ResultTy,
+                                         ArrayRef<const VPValue *> ArgOps,
+                                         bool IsSingleScalar, ElementCount VF,
+                                         VPCostContext &Ctx);
+
   bool isSingleScalar() const { return IsSingleScalar; }
 
   bool isPredicated() const { return IsPredicated; }
@@ -3477,13 +3489,6 @@ public:
                               VPCostContext &Ctx) const override {
     // TODO: Compute accurate cost after retiring the legacy cost model.
     return 0;
-  }
-
-  /// Returns true if the recipe uses scalars of operand \p Op.
-  bool usesScalars(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
   }
 
 protected:
@@ -4051,34 +4056,36 @@ protected:
 #endif
 };
 
+/// CastInfo helper for casting from VPRecipeBase to a mixin class that is not
+/// part of the VPRecipeBase class hierarchy (e.g. VPPhiAccessors,
+/// VPIRMetadata).
+namespace vpdetail {
+template <typename VPMixin, typename... RecipeTys>
+struct CastInfoMixinImpl
+    : public DefaultDoCastIfPossible<VPMixin *, VPRecipeBase *,
+                                     CastInfoMixinImpl<VPMixin, RecipeTys...>> {
+  static_assert((std::is_base_of_v<VPMixin, RecipeTys> && ...),
+                "Each type in RecipeTys must derive from VPMixin");
+
+  /// Used by isa.
+  static bool isPossible(VPRecipeBase *R) { return isa<RecipeTys...>(R); }
+
+  /// Used by cast.
+  static VPMixin *doCast(VPRecipeBase *R) {
+    VPMixin *Out = nullptr;
+    ((Out = dyn_cast<RecipeTys>(R)) || ...);
+    assert(Out && "Illegal recipe for cast");
+    return Out;
+  }
+  static VPMixin *castFailed() { return nullptr; }
+};
+} // namespace vpdetail
+
 /// Support casting from VPRecipeBase -> VPPhiAccessors.
 template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase *>
-    : DefaultDoCastIfPossible<VPPhiAccessors *, VPRecipeBase *,
-                              CastInfo<VPPhiAccessors, VPRecipeBase *>> {
-  /// Used by isa.
-  static inline bool isPossible(VPRecipeBase *R) {
-    // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
-    return isa<VPPhi, VPIRPhi, VPWidenPHIRecipe, VPHeaderPHIRecipe>(R);
-  }
-
-  /// Used by cast.
-  static inline VPPhiAccessors *doCast(VPRecipeBase *R) {
-    switch (R->getVPRecipeID()) {
-    case VPRecipeBase::VPInstructionSC:
-      return cast<VPPhi>(R);
-    case VPRecipeBase::VPIRInstructionSC:
-      return cast<VPIRPhi>(R);
-    case VPRecipeBase::VPWidenPHISC:
-      return cast<VPWidenPHIRecipe>(R);
-    default:
-      return cast<VPHeaderPHIRecipe>(R);
-    }
-  }
-
-  /// Used by inherited doCastIfPossible to dyn_cast.
-  static inline VPPhiAccessors *castFailed() { return nullptr; }
-};
+    : vpdetail::CastInfoMixinImpl<VPPhiAccessors, VPPhi, VPIRPhi,
+                                  VPWidenPHIRecipe, VPHeaderPHIRecipe> {};
 
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
@@ -4093,49 +4100,10 @@ struct CastInfo<VPPhiAccessors, VPRecipeBase>
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>
-    : public DefaultDoCastIfPossible<VPIRMetadata *, VPRecipeBase *,
-                                     CastInfo<VPIRMetadata, VPRecipeBase *>> {
-  /// Used by isa.
-  static inline bool isPossible(VPRecipeBase *R) {
-    // NOTE: Each recipe inheriting from VPIRMetadata must be listed here.
-    return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-               VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPReplicateRecipe,
-               VPInterleaveRecipe, VPInterleaveEVLRecipe, VPWidenLoadRecipe,
-               VPWidenLoadEVLRecipe, VPWidenStoreRecipe, VPWidenStoreEVLRecipe>(
-        R);
-  }
-
-  /// Used by cast.
-  static inline VPIRMetadata *doCast(VPRecipeBase *R) {
-    switch (R->getVPRecipeID()) {
-    case VPRecipeBase::VPInstructionSC:
-      return cast<VPInstruction>(R);
-    case VPRecipeBase::VPWidenSC:
-      return cast<VPWidenRecipe>(R);
-    case VPRecipeBase::VPWidenCastSC:
-      return cast<VPWidenCastRecipe>(R);
-    case VPRecipeBase::VPWidenIntrinsicSC:
-      return cast<VPWidenIntrinsicRecipe>(R);
-    case VPRecipeBase::VPWidenCallSC:
-      return cast<VPWidenCallRecipe>(R);
-    case VPRecipeBase::VPReplicateSC:
-      return cast<VPReplicateRecipe>(R);
-    case VPRecipeBase::VPInterleaveSC:
-    case VPRecipeBase::VPInterleaveEVLSC:
-      return cast<VPInterleaveBase>(R);
-    case VPRecipeBase::VPWidenLoadSC:
-    case VPRecipeBase::VPWidenLoadEVLSC:
-    case VPRecipeBase::VPWidenStoreSC:
-    case VPRecipeBase::VPWidenStoreEVLSC:
-      return cast<VPWidenMemoryRecipe>(R);
-    default:
-      llvm_unreachable("Illegal recipe for VPIRMetadata cast");
-    }
-  }
-
-  /// Used by inherited doCastIfPossible to dyn_cast.
-  static inline VPIRMetadata *castFailed() { return nullptr; }
-};
+    : vpdetail::CastInfoMixinImpl<VPIRMetadata, VPInstruction, VPWidenRecipe,
+                                  VPWidenCastRecipe, VPWidenIntrinsicRecipe,
+                                  VPWidenCallRecipe, VPReplicateRecipe,
+                                  VPInterleaveBase, VPWidenMemoryRecipe> {};
 
 template <>
 struct CastInfo<VPIRMetadata, const VPRecipeBase *>
@@ -4566,9 +4534,11 @@ class VPlan {
   SmallVector<VPBlockBase *> CreatedBlocks;
 
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
-  /// wrapping the original header of the scalar loop.
-  VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
-      : Entry(Entry), ScalarHeader(ScalarHeader) {
+  /// wrapping the original header of the scalar loop. The vector loop will have
+  /// index type \p IdxTy.
+  VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader, Type *IdxTy)
+      : Entry(Entry), ScalarHeader(ScalarHeader), VectorTripCount(IdxTy),
+        VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
     Entry->setPlan(this);
     assert(ScalarHeader->getNumSuccessors() == 0 &&
            "scalar header must be a leaf node");
@@ -4577,12 +4547,14 @@ class VPlan {
 public:
   /// Construct a VPlan for \p L. This will create VPIRBasicBlocks wrapping the
   /// original preheader and scalar header of \p L, to be used as entry and
-  /// scalar header blocks of the new VPlan.
-  VPlan(Loop *L);
+  /// scalar header blocks of the new VPlan. The vector loop will have index
+  /// type \p IdxTy.
+  VPlan(Loop *L, Type *IdxTy);
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
-  /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
-  VPlan(BasicBlock *ScalarHeaderBB) {
+  /// wrapping \p ScalarHeaderBB and vector loop index of type \p IdxTy.
+  VPlan(BasicBlock *ScalarHeaderBB, Type *IdxTy)
+      : VectorTripCount(IdxTy), VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
     setEntry(createVPBasicBlock("preheader"));
     ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
   }
@@ -4685,8 +4657,9 @@ public:
 
   /// The backedge taken count of the original loop.
   VPValue *getOrCreateBackedgeTakenCount() {
+    // BTC shares the canonical IV type with VectorTripCount.
     if (!BackedgeTakenCount)
-      BackedgeTakenCount = new VPSymbolicValue();
+      BackedgeTakenCount = new VPSymbolicValue(VectorTripCount.getType());
     return BackedgeTakenCount;
   }
   VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }
@@ -4914,6 +4887,9 @@ public:
     return ScalarPH &&
            is_contained(ScalarPH->getPredecessors(), getMiddleBlock());
   }
+
+  /// The type of the canonical induction variable of the vector loop.
+  Type *getIndexType() const { return VF.getType(); }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

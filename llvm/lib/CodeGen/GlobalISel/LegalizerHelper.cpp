@@ -37,6 +37,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cassert>
 #include <numeric>
 #include <optional>
 
@@ -4968,6 +4969,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case G_SMULFIX:
+  case G_UMULFIX:
+    return lowerMulfix(MI);
   }
 }
 
@@ -10649,6 +10653,45 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   MachineMemOperand *EltLoadMMO = MF.getMachineMemOperand(
       MachinePointerInfo(), MachineMemOperand::MOLoad, LLTTy, EltAlignment);
   MIRBuilder.buildLoad(Dst, VAList, *EltLoadMMO);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
+  unsigned OpCode = MI.getOpcode();
+  assert((OpCode == TargetOpcode::G_SMULFIX ||
+          OpCode == TargetOpcode::G_UMULFIX) &&
+         "Operator must be either G_SMULFIX or G_UMULFIX!");
+  auto [Dst, LHS, RHS] = MI.getFirst3Regs();
+  LLT Ty = MRI.getType(Dst);
+  unsigned Scale = MI.getOperand(3).getImm();
+
+  if (Scale == 0) {
+    MIRBuilder.buildMul(Dst, LHS, RHS);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  // TODO: Port other lowerng paths from SelectionDAG.
+  LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
+  auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
+  MachineInstrBuilder ExtLHS{}, ExtRHS{}, Shift{};
+  if (MI.getOpcode() == TargetOpcode::G_SMULFIX) {
+    ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
+    ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
+  } else {
+    ExtLHS = MIRBuilder.buildZExt(WideTy, LHS);
+    ExtRHS = MIRBuilder.buildZExt(WideTy, RHS);
+  }
+
+  auto Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS);
+  if (MI.getOpcode() == TargetOpcode::G_SMULFIX)
+    Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
+  else
+    Shift = MIRBuilder.buildLShr(WideTy, Mul, ShiftAmt);
+
+  MIRBuilder.buildTrunc(Dst, Shift);
 
   MI.eraseFromParent();
   return Legalized;

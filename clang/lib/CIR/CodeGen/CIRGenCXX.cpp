@@ -295,7 +295,7 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
                                      builder.getInsertionBlock()};
   scope.setAsGlobalInit();
   builder.setInsertionPointToStart(block);
-  mlir::Value getGlobal = builder.createGetGlobal(addr);
+  mlir::Value getGlobal = builder.createGetGlobal(addr, varDecl->getTLSKind());
   // If we're initializing a static local with a guard variable, set the flag
   // that indicates that.
   getGlobal.getDefiningOp<cir::GetGlobalOp>().setStaticLocal(
@@ -328,8 +328,7 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
 void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
                                             cir::GlobalOp addr,
                                             bool performInit) {
-  assert(!varDecl->isStaticLocal() &&
-         varDecl->getTLSKind() == VarDecl::TLS_None);
+  assert(!varDecl->isStaticLocal());
 
   // Create a CIRGenFunction to emit the initializer. While this isn't a true
   // function, the handling works the same way.

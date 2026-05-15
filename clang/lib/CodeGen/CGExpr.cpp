@@ -182,7 +182,7 @@ RawAddress CodeGenFunction::CreateDefaultAlignTempAlloca(llvm::Type *Ty,
                                                          const Twine &Name) {
   CharUnits Align =
       CharUnits::fromQuantity(CGM.getDataLayout().getPrefTypeAlign(Ty));
-  return CreateTempAlloca(Ty, Align, Name);
+  return CreateTempAlloca(Ty, LangAS::Default, Align, Name);
 }
 
 RawAddress CodeGenFunction::CreateIRTempWithoutCast(QualType Ty,
@@ -200,8 +200,9 @@ RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, const Twine &Name,
 RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
                                           const Twine &Name,
                                           RawAddress *Alloca) {
-  RawAddress Result = CreateTempAlloca(ConvertTypeForMem(Ty), Align, Name,
-                                       /*ArraySize=*/nullptr, Alloca);
+  RawAddress Result =
+      CreateTempAlloca(ConvertTypeForMem(Ty), Ty.getAddressSpace(), Align, Name,
+                       /*ArraySize=*/nullptr, Alloca);
 
   if (Ty->isConstantMatrixType()) {
     auto *ArrayTy = cast<llvm::ArrayType>(Result.getElementType());
@@ -3360,19 +3361,18 @@ static Address emitDeclTargetVarDeclLValue(CodeGenFunction &CGF,
                                            const VarDecl *VD, QualType T) {
   std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
-  // Return an invalid address if variable is MT_To (or MT_Enter starting with
-  // OpenMP 5.2, or MT_Local in OpenMP 6.0) and unified memory is not enabled.
-  // For all other cases: MT_Link and MT_To (or MT_Enter/MT_Local) with unified
-  // memory, return a valid address.
-  if (!Res || ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
-                *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
-               !CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory()))
+  // Always return an invalid address for MT_Local, and also for
+  // MT_To/MT_Enter when unified memory is not enabled. These use direct
+  // access (global exists in device image). Otherwise, return a valid
+  // address.
+  if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Local ||
+      ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+        *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+       !CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory()))
     return Address::invalid();
   assert(((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
           ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-            *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
-            *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
+            *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
            CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())) &&
          "Expected link clause OR to clause with unified memory enabled.");
   QualType PtrTy = CGF.getContext().getPointerType(VD->getType());

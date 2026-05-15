@@ -5681,6 +5681,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/GPU/Pipelines/Passes.h"],
     includes = ["include"],
     deps = [
+        ":AMDGPUToROCDL",
         ":AffineToStandard",
         ":ArithToLLVM",
         ":ConversionPasses",
@@ -5689,6 +5690,7 @@ cc_library(
         ":GPUDialect",
         ":GPUToGPURuntimeTransforms",
         ":GPUToNVVMTransforms",
+        ":GPUToROCDLTransforms",
         ":GPUTransforms",
         ":IndexToLLVM",
         ":LLVMDialect",
