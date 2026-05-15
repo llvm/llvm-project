@@ -464,7 +464,6 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         // specified.
         interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr;
         interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptee;
-        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr_ptee;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
@@ -608,9 +607,9 @@ void insertChildMapInfoIntoParent(
           indices.second.memberPlacementIndices));
     } else {
       // NOTE: We do not assign default mapped parents a map type, as
-      // selecting a childs can result in the incorrect map type being
+      // selecting a child can result in the incorrect map type being
       // applied to the parent and data being incorrectly moved to or
-      // from device.
+      // from device. We make an exception currently for present.
       mlir::omp::ClauseMapFlags mapType = mlir::omp::ClauseMapFlags::storage;
 
       for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)

@@ -45,6 +45,8 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK:  store ptr %[[ARG]], ptr %[[BASE_PTRS]], align 8
 // CHECK:  %[[OFFLOAD_PTRS:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 // CHECK:  store ptr %[[NESTED_STRUCT_PTR_MEMBER_GEP]], ptr %[[OFFLOAD_PTRS]], align 8
+// CHECK:  %[[OFFLOAD_SIZES:.*]] = getelementptr inbounds [4 x i64], ptr %.offload_sizes, i32 0, i32 0
+// CHECK:  store i64 %[[DTYPE_SIZE_SEGMENT_CALC_4]], ptr %[[OFFLOAD_SIZES]], align 8
 
 // CHECK:  %[[BASE_PTRS:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 // CHECK:  store ptr %[[ARG]], ptr %[[BASE_PTRS]], align 8

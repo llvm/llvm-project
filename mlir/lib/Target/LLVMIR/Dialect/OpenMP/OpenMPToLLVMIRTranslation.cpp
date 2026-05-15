@@ -5310,9 +5310,6 @@ static bool checkHasClauseMapFlag(omp::ClauseMapFlags flag,
 // Certain flags are discarded here such as RefPtee and co.
 static llvm::omp::OpenMPOffloadMappingFlags
 convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
-  auto mapTypeToBool = [&mlirFlags](omp::ClauseMapFlags flag) {
-    return (mlirFlags & flag) == flag;
-  };
   const bool hasExplicitMap =
       (mlirFlags & ~omp::ClauseMapFlags::is_device_ptr) !=
       omp::ClauseMapFlags::none;
@@ -5320,46 +5317,46 @@ convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
   llvm::omp::OpenMPOffloadMappingFlags mapType =
       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::to))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::to))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::from))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::from))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::always))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::always))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::del))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::del))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::return_param))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::return_param))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::priv))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::priv))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRIVATE;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::literal))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::literal))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::implicit))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::implicit))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::close))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::close))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::present))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::present))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::ompx_hold))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::ompx_hold))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::attach))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::attach))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH;
 
-  if (checkHasClauseMapFlag(mlirFlags, omp::ClauseMapFlags::descriptor))
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::descriptor))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
 
-  if (mapTypeToBool(omp::ClauseMapFlags::is_device_ptr)) {
+  if (bitEnumContainsAll(mlirFlags, omp::ClauseMapFlags::is_device_ptr)) {
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
     if (!hasExplicitMap)
       mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
@@ -5377,11 +5374,10 @@ static void collectMapDataFromMapOperands(
 
   auto checkRefPtrOrPteeMapWithAttach = [](omp::ClauseMapFlags mapType) {
     bool hasRefType =
-        checkHasClauseMapFlag(mapType, omp::ClauseMapFlags::ref_ptr) ||
-        checkHasClauseMapFlag(mapType, omp::ClauseMapFlags::ref_ptee) ||
-        checkHasClauseMapFlag(mapType, omp::ClauseMapFlags::ref_ptr_ptee);
+        bitEnumContainsAll(mapType, omp::ClauseMapFlags::ref_ptr) ||
+        bitEnumContainsAll(mapType, omp::ClauseMapFlags::ref_ptee);
     return hasRefType &&
-           checkHasClauseMapFlag(mapType, omp::ClauseMapFlags::attach);
+           bitEnumContainsAll(mapType, omp::ClauseMapFlags::attach);
   };
 
   auto checkIsAMember = [](const auto &mapVars, auto mapOp) {
@@ -5470,10 +5466,10 @@ static void collectMapDataFromMapOperands(
     bool found = false;
     for (llvm::Value *basePtr : mapData.OriginalValue) {
       auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[index]);
-      // TODO/FIXME: Currently we define an equivelant mapping as
-      // the same base pointer and an equivelant member count, but
-      // that is a loose definition, we may have to extend to check
-      // for other fields (varPtrPtr/invidiual members being mapped)
+      // TODO: Currently we define an equivalent mapping as
+      // the same base pointer and an equivalent member count, but
+      // that is a loose definition. We may have to extend to check
+      // for other fields (varPtrPtr/individual members being mapped).
       // Note: Attach maps are not the same as a normal data transfer
       // they specify to the runtime to perform an attach map and they
       // (at least at the moment) are never something we would aim to
@@ -5592,14 +5588,10 @@ static int getMapDataMemberIdx(MapInfoData &mapData, omp::MapInfoOp memberOp) {
   return std::distance(mapData.MapClause.begin(), res);
 }
 
-static void sortMapIndices(llvm::SmallVector<size_t> &indices,
-                           mlir::omp::MapInfoOp mapInfo,
-                           bool ascending = true) {
-  mlir::ArrayAttr indexAttr = mapInfo.getMembersIndexAttr();
-  if (indexAttr.empty() || indexAttr.size() == 1 || indices.empty() ||
-      indices.size() == 1)
-    return;
-
+static void sortMapIndices(llvm::SmallVectorImpl<size_t> &indices,
+                           omp::MapInfoOp mapInfo, bool first = true) {
+  ArrayAttr indexAttr = mapInfo.getMembersIndexAttr();
+  llvm::SmallVector<size_t> occludedChildren;
   llvm::sort(
       indices.begin(), indices.end(), [&](const size_t a, const size_t b) {
         // Bail early if we are asked to look at the same index. If we do not
@@ -5627,10 +5619,10 @@ static void sortMapIndices(llvm::SmallVector<size_t> &indices,
             continue;
 
           if (aIndex < bIndex)
-            return ascending;
+            return first;
 
           if (aIndex > bIndex)
-            return !ascending;
+            return !first;
         }
 
         // Iterated up until the end of the smallest member and
@@ -5638,6 +5630,10 @@ static void sortMapIndices(llvm::SmallVector<size_t> &indices,
         // the member with the lowest index count, so the "parent"
         return memberIndicesA.size() < memberIndicesB.size();
       });
+
+  for (auto v : occludedChildren)
+    indices.erase(std::remove(indices.begin(), indices.end(), v),
+                  indices.end());
 }
 
 static omp::MapInfoOp getFirstOrLastMappedMemberPtr(omp::MapInfoOp mapInfo,
@@ -5652,30 +5648,7 @@ static omp::MapInfoOp getFirstOrLastMappedMemberPtr(omp::MapInfoOp mapInfo,
   llvm::SmallVector<size_t> indices;
   indices.resize(indexAttr.size());
   std::iota(indices.begin(), indices.end(), 0);
-
-  llvm::sort(indices, [&](const size_t a, const size_t b) {
-    auto memberIndicesA = cast<ArrayAttr>(indexAttr[a]);
-    auto memberIndicesB = cast<ArrayAttr>(indexAttr[b]);
-    for (const auto it : llvm::zip(memberIndicesA, memberIndicesB)) {
-      int64_t aIndex = cast<IntegerAttr>(std::get<0>(it)).getInt();
-      int64_t bIndex = cast<IntegerAttr>(std::get<1>(it)).getInt();
-
-      if (aIndex == bIndex)
-        continue;
-
-      if (aIndex < bIndex)
-        return first;
-
-      if (aIndex > bIndex)
-        return !first;
-    }
-
-    // Iterated the up until the end of the smallest member and
-    // they were found to be equal up to that point, so select
-    // the member with the lowest index count, so the "parent"
-    return memberIndicesA.size() < memberIndicesB.size();
-  });
-
+  sortMapIndices(indices, mapInfo, first);
   return llvm::cast<omp::MapInfoOp>(
       mapInfo.getMembers()[indices.front()].getDefiningOp());
 }
@@ -5756,19 +5729,15 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
   return idx;
 }
 
-static llvm::SmallVector<int64_t> getAsIntegers(mlir::ArrayAttr values) {
-  llvm::SmallVector<int64_t> ints;
-  ints.reserve(values.size());
-  llvm::transform(values, std::back_inserter(ints), [](mlir::Attribute value) {
-    return mlir::cast<mlir::IntegerAttr>(value).getInt();
+static void getAsIntegers(ArrayAttr values, llvm::SmallVector<int64_t> &ints) {
+  llvm::transform(values, std::back_inserter(ints), [](Attribute value) {
+    return cast<IntegerAttr>(value).getInt();
   });
-  return ints;
 }
 
 // Gathers members that are overlapping in the parent, excluding members that
 // themselves overlap, keeping the top-most (closest to parents level) map.
 static void getOverlappedMembers(llvm::SmallVector<size_t> &overlapMapDataIdxs,
-                                 MapInfoData &mapData,
                                  omp::MapInfoOp parentOp) {
   // No members mapped, no overlaps.
   if (parentOp.getMembers().empty())
@@ -5780,43 +5749,38 @@ static void getOverlappedMembers(llvm::SmallVector<size_t> &overlapMapDataIdxs,
     return;
   }
 
-  // 1) collect list of top-level overlapping members from MemberOp
-  llvm::SmallVector<std::pair<int, mlir::ArrayAttr>> memberByIndex;
-  mlir::ArrayAttr indexAttr = parentOp.getMembersIndexAttr();
-  for (auto [memIndex, indicesAttr] : llvm::enumerate(indexAttr))
-    memberByIndex.push_back(
-        std::make_pair(memIndex, mlir::cast<mlir::ArrayAttr>(indicesAttr)));
+  ArrayAttr indexAttr = parentOp.getMembersIndexAttr();
+  size_t numMembers = indexAttr.size();
 
-  // Sort the smallest first (higher up the parent -> member chain), so that
-  // when we remove members, we remove as much as we can in the initial
-  // iterations, shortening the number of passes required.
-  llvm::sort(memberByIndex.begin(), memberByIndex.end(),
-             [&](auto a, auto b) { return a.second.size() < b.second.size(); });
+  // Pre-convert all member indices to integer arrays for efficient comparison.
+  llvm::SmallVector<llvm::SmallVector<int64_t>> memberIndices(numMembers);
+  for (auto [i, indicesAttr] : llvm::enumerate(indexAttr))
+    getAsIntegers(cast<ArrayAttr>(indicesAttr), memberIndices[i]);
 
-  // Remove elements from the vector if there is a parent element that
-  // supersedes it. i.e. if member [0] is mapped, we can remove members [0,1],
-  // [0,2].. etc.
-  for (auto v : make_early_inc_range(memberByIndex)) {
-    auto vArr = getAsIntegers(v.second);
-    memberByIndex.erase(
-        std::remove_if(memberByIndex.begin(), memberByIndex.end(),
-                       [&](auto x) {
-                         if (v == x)
-                           return false;
-
-                         auto xArr = getAsIntegers(x.second);
-                         return std::equal(vArr.begin(), vArr.end(),
-                                           xArr.begin()) &&
-                                xArr.size() >= vArr.size();
-                       }),
-        memberByIndex.end());
+  // For each member, check if it's superseded by another (shorter prefix)
+  // member. If member j's indices are a prefix of member i's indices, then
+  // i is a child of j and should be skipped. e.g. if member [0] is mapped,
+  // we skip members [0,1], [0,2], etc.
+  llvm::SmallDenseSet<size_t> skipIndices;
+  for (size_t i = 0; i < numMembers; ++i) {
+    const auto &iIndices = memberIndices[i];
+    for (size_t j = 0; j < numMembers; ++j) {
+      if (i == j)
+        continue;
+      const auto &jIndices = memberIndices[j];
+      // If j's indices are a strict prefix of i's indices, skip i
+      if (jIndices.size() < iIndices.size() &&
+          std::equal(jIndices.begin(), jIndices.end(), iIndices.begin())) {
+        skipIndices.insert(i);
+        break; // No need to check other potential parents
+      }
+    }
   }
 
-  // Collect the indices from mapData that we need, as we technically need the
-  // base pointer etc. info, which is stored in there and primarily accessible
-  // via index at the moment.
-  for (auto v : memberByIndex)
-    overlapMapDataIdxs.push_back(v.first);
+  // Collect indices of members that are not superseded by a parent.
+  for (size_t i = 0; i < numMembers; ++i)
+    if (!skipIndices.contains(i))
+      overlapMapDataIdxs.push_back(i);
 }
 
 // The intent is to verify if the mapped data being passed is a
@@ -5853,6 +5817,16 @@ static bool isUseDevicePtrItem(omp::MapInfoOp mapInfoOp) {
   }
   return false;
 }
+
+/// This function handles the insertion of a single item of map data from
+/// MapInfoData into the OMPIRBuilder's MapInfo list. Utilising this function
+/// means the map being inserted can be treated as a non-parent map entity,
+/// if the memberOfFlag is set then the map being inserted is treated as
+/// a member map of a larger entity. The insertion into the MapInfo list of
+/// the OMPIRBuilder can vary based on a number of factors, such as if it's
+/// a ref_ptr or ref_ptee map, if it's a member of a record, what construct
+/// the map belongs to and the various map type bit flags that are set for
+/// the map.
 static void
 processIndividualMap(llvm::IRBuilderBase &builder,
                      llvm::OpenMPIRBuilder &ompBuilder, MapInfoData &mapData,
@@ -5861,9 +5835,6 @@ processIndividualMap(llvm::IRBuilderBase &builder,
                      llvm::omp::OpenMPOffloadMappingFlags memberOfFlag =
                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
                      bool isTargetParam = true, int mapDataParentIdx = -1) {
-  // Declare Target Mappings are excluded from being marked as
-  // OMP_MAP_TARGET_PARAM as they are not passed as parameters, they're
-  // marked with OMP_MAP_PTR_AND_OBJ instead.
   auto mapFlag = mapData.Types[mapDataIdx];
   auto mapInfoOp = llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIdx]);
 
@@ -5872,6 +5843,10 @@ processIndividualMap(llvm::IRBuilderBase &builder,
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) ==
                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
 
+  // Declare target variables are not passed to the kernel, and for the moment
+  // attach maps are not passed to the kernel. However, it is possible to create
+  // attach maps that transfer data and thus can be kernel arguments, but our
+  // existing frontend does not do this.
   if (isTargetParam &&
       (targetDirective == TargetDirectiveEnumTy::Target &&
        !mapData.IsDeclareTarget[mapDataIdx]) &&
@@ -5903,8 +5878,8 @@ processIndividualMap(llvm::IRBuilderBase &builder,
   // We apply MAP_PTR_AND_OBJ when within a declare mapper object as it enforces
   // MEMBER_OF mappings on maps that are passed the initial nesting depth, which
   // includes pointed to data and attach members, both of which are technically
-  // not part of the main object. This has the side-affect of causing early
-  // map-backs in certain cases where an implicit declare mapepr has been
+  // not part of the main object. This has the side effect of causing early
+  // map-backs in certain cases where an implicit declare mapper has been
   // emitted for a target region. Applying MAP_PTR_AND_OBJ in these situations
   // circumvents this.
   if (isPtrTy && !isAttachMap && mapData.IsDeclareTarget[mapDataIdx])
@@ -5913,16 +5888,19 @@ processIndividualMap(llvm::IRBuilderBase &builder,
   // if we're provided a mapDataParentIdx, then the data being mapped is
   // part of a larger object (in a parent <-> member mapping) and in this
   // case our BasePointer should be the parent. Except in the edge case
-  // where we are mapping pointee data, in this case we try stay close to
+  // where we are mapping pointee data, where we try staying close to
   // what Clang currently does and utilise the regular base pointer of the
   // data.
+  bool isRefPtee =
+      !bitEnumContainsAll(mapInfoOp.getMapType(),
+                          omp::ClauseMapFlags::ref_ptr) &&
+      bitEnumContainsAll(mapInfoOp.getMapType(), omp::ClauseMapFlags::ref_ptee);
+  bool isRefPtrPtee = bitEnumContainsAll(mapInfoOp.getMapType(),
+                                         omp::ClauseMapFlags::ref_ptr |
+                                             omp::ClauseMapFlags::ref_ptee);
+
   if (!mapInfoOp->getParentOfType<omp::DeclareMapperOp>() &&
-      mapDataParentIdx >= 0 &&
-      !(checkHasClauseMapFlag(mapInfoOp.getMapType(),
-                              omp::ClauseMapFlags::ref_ptee) ||
-        (checkHasClauseMapFlag(mapInfoOp.getMapType(),
-                               omp::ClauseMapFlags::ref_ptr_ptee) &&
-         isPtrTy))) {
+      mapDataParentIdx >= 0 && !(isRefPtee || (isRefPtrPtee && isPtrTy))) {
     combinedInfo.BasePointers.emplace_back(
         mapData.BasePointers[mapDataParentIdx]);
   } else {
@@ -5942,80 +5920,6 @@ processIndividualMap(llvm::IRBuilderBase &builder,
                     builder.CreateIsNull(mapData.Pointers[mapDataIdx]),
                     builder.getInt64(0), mapData.Sizes[mapDataIdx])
               : mapData.Sizes[mapDataIdx]);
-}
-
-// This functions similarly to the check in the OpenMP offload runtime,
-// if we have an attach map type and the size is larger than the 8-bytes
-// for a regular pointer, then it's a descriptor. No other types should
-// be flagged with the attach map type.
-bool isDescriptorMap(LLVM::ModuleTranslation &moduleTranslation,
-                     llvm::Type *type,
-                     llvm::omp::OpenMPOffloadMappingFlags mapType) {
-  if ((mapType & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) !=
-      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH)
-    return false;
-  auto dataLayout = moduleTranslation.getLLVMModule()->getDataLayout();
-  if ((dataLayout.getTypeSizeInBits(type) / 8) <= 8)
-    return false;
-  return true;
-}
-
-static void
-gatherImmediateMembers(llvm::SmallVector<size_t> &immediateMapDataIdxs,
-                       MapInfoData &mapData, omp::MapInfoOp parent, Value map) {
-  mlir::ArrayAttr indexAttr = parent.getMembersIndexAttr();
-  llvm::SmallVector<std::pair<int, mlir::ArrayAttr>> memberByIndex;
-  for (auto [memIndex, indicesAttr] : llvm::enumerate(indexAttr))
-    memberByIndex.push_back(
-        std::make_pair(memIndex, mlir::cast<mlir::ArrayAttr>(indicesAttr)));
-
-  mlir::ArrayAttr searchIdx;
-  if (map.getDefiningOp() != parent) {
-    auto res = llvm::find(parent.getMembers(), map);
-    assert(res != parent.getMembers().end() &&
-           "MapInfoOp for Member not found in parent members");
-    auto mapIdx = std::distance(parent.getMembers().begin(), res);
-    searchIdx = mlir::cast<mlir::ArrayAttr>(indexAttr[mapIdx]);
-    memberByIndex.erase(std::next(memberByIndex.begin(), mapIdx));
-  }
-
-  // Remove anything that has no chance of being an immediate child of the map
-  // we're trying to find immediate children of, due to the depth being greater
-  // than a difference of 1 or equal to the current depth.
-  unsigned int depthMax =
-      (searchIdx == mlir::ArrayAttr()) ? 1 : searchIdx.size() + 1;
-  unsigned int depthCurrent =
-      (searchIdx == mlir::ArrayAttr()) ? 0 : searchIdx.size();
-  memberByIndex.erase(std::remove_if(memberByIndex.begin(), memberByIndex.end(),
-                                     [&](auto a) {
-                                       return a.second.size() > depthMax ||
-                                              a.second.size() == depthCurrent;
-                                     }),
-                      memberByIndex.end());
-  // Remove anything that doesn't have the same set of initial indices as
-  // the member we're trying to finds immediate children, and what we are
-  // left with should be the immediate children. If we're the top level
-  // parent and by extension have no searchIdx, we can skip this step as
-  // everything leftover from the previous step should be an immediate
-  // child.
-  if (searchIdx != mlir::ArrayAttr()) {
-    auto immediateParentIdx = getAsIntegers(searchIdx);
-    memberByIndex.erase(
-        std::remove_if(memberByIndex.begin(), memberByIndex.end(),
-                       [&](auto a) {
-                         auto childIdx = getAsIntegers(a.second);
-                         return !std::equal(immediateParentIdx.begin(),
-                                            immediateParentIdx.end(),
-                                            childIdx.begin());
-                       }),
-        memberByIndex.end());
-  }
-
-  for (auto v : memberByIndex) {
-    immediateMapDataIdxs.push_back(getMapDataMemberIdx(
-        mapData, llvm::cast<omp::MapInfoOp>(
-                     parent.getMembers()[v.first].getDefiningOp())));
-  }
 }
 
 // This creates two insertions into the MapInfosTy data structure for the
@@ -6039,37 +5943,37 @@ static void mapParentWithMembers(
     MapInfoData &mapData, uint64_t mapDataIndex,
     llvm::omp::OpenMPOffloadMappingFlags memberOfFlag,
     TargetDirectiveEnumTy targetDirective) {
-  using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
+  using MapFlags = llvm::omp::OpenMPOffloadMappingFlags;
   assert(!ompBuilder.Config.isTargetDevice() &&
          "function only supported for host device codegen");
+  auto parentClause =
+      llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
+  auto *parentMapper = mapData.Mappers[mapDataIndex];
+
   // Map the first segment of the parent. If a user-defined mapper is attached,
   // include the parent's to/from-style bits (and common modifiers) in this
   // base entry so the mapper receives correct copy semantics via its 'type'
   // parameter. Also keep TARGET_PARAM when required for kernel arguments.
-  llvm::omp::OpenMPOffloadMappingFlags baseFlag =
-      (targetDirective == TargetDirectiveEnumTy::Target &&
-       !mapData.IsDeclareTarget[mapDataIndex])
-          ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM
-          : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
-  auto parentClause =
-      llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
+  MapFlags baseFlag = (targetDirective == TargetDirectiveEnumTy::Target &&
+                       !mapData.IsDeclareTarget[mapDataIndex])
+                          ? MapFlags::OMP_MAP_TARGET_PARAM
+                          : MapFlags::OMP_MAP_NONE;
 
-  auto *parentMapper = mapData.Mappers[mapDataIndex];
   if (parentMapper) {
     // Preserve relevant map-type bits from the parent clause. These include
     // the copy direction (TO/FROM), as well as commonly used modifiers that
     // should be visible to the mapper for correct behaviour.
-    mapFlags parentFlags = mapData.Types[mapDataIndex];
-    mapFlags preserve = mapFlags::OMP_MAP_TO | mapFlags::OMP_MAP_FROM |
-                        mapFlags::OMP_MAP_ALWAYS | mapFlags::OMP_MAP_CLOSE |
-                        mapFlags::OMP_MAP_PRESENT |
-                        mapFlags::OMP_MAP_OMPX_HOLD |
-                        mapFlags::OMP_MAP_IMPLICIT;
+    MapFlags parentFlags = mapData.Types[mapDataIndex];
+    MapFlags preserve = MapFlags::OMP_MAP_TO | MapFlags::OMP_MAP_FROM |
+                        MapFlags::OMP_MAP_ALWAYS | MapFlags::OMP_MAP_CLOSE |
+                        MapFlags::OMP_MAP_PRESENT |
+                        MapFlags::OMP_MAP_OMPX_HOLD |
+                        MapFlags::OMP_MAP_IMPLICIT;
     baseFlag |= (parentFlags & preserve);
   } else {
-    mapFlags parentFlags = mapData.Types[mapDataIndex];
-    mapFlags preserve =
-        mapFlags::OMP_MAP_PRESENT | mapFlags::OMP_MAP_RETURN_PARAM;
+    MapFlags parentFlags = mapData.Types[mapDataIndex];
+    MapFlags preserve =
+        MapFlags::OMP_MAP_PRESENT | MapFlags::OMP_MAP_RETURN_PARAM;
     baseFlag |= (parentFlags & preserve);
   }
 
@@ -6121,8 +6025,10 @@ static void mapParentWithMembers(
     // TODO: May be good to extend MapInfoData to support tracking of both
     // VarPtr/VarPtrPtr BaseType's to better distinguish what's being used more
     // consistently.
-    bool isRefPteeMap = checkHasClauseMapFlag(lastMemberMapInfo.getMapType(),
-                                              omp::ClauseMapFlags::ref_ptee);
+    bool isRefPteeMap = bitEnumContainsAll(lastMemberMapInfo.getMapType(),
+                                           omp::ClauseMapFlags::ref_ptee) &&
+                        !bitEnumContainsAll(lastMemberMapInfo.getMapType(),
+                                            omp::ClauseMapFlags::ref_ptr);
     llvm::Type *castType = mapData.BaseType[lastMemberIdx];
     if (isRefPteeMap)
       castType =
@@ -6140,22 +6046,26 @@ static void mapParentWithMembers(
       /*isSigned=*/false);
   combinedInfo.Sizes.push_back(size);
 
+  // This creates the initial MEMBER_OF mapping that consists of
+  // the parent/top level container (same as above effectively, except
+  // with a fixed initial compile time size and separate maptype which
+  // indicates the true mape type (tofrom etc.). This parent mapping is
+  // only relevant if the structure in its totality is being mapped,
+  // otherwise the above suffices.
   if (!parentClause.getPartialMap()) {
     // TODO: This will need to be expanded to include the whole host of logic
     // for the map flags that Clang currently supports (e.g. it should do some
     // further case specific flag modifications). For the moment, it handles
     // what we support as expected.
-    llvm::omp::OpenMPOffloadMappingFlags mapFlag = mapData.Types[mapDataIndex];
-
-    bool hasMapClose = (llvm::omp::OpenMPOffloadMappingFlags(mapFlag) &
-                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE) ==
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+    MapFlags mapFlag = mapData.Types[mapDataIndex];
+    bool hasMapClose = (MapFlags(mapFlag) & MapFlags::OMP_MAP_CLOSE) ==
+                       MapFlags::OMP_MAP_CLOSE;
     ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
 
     llvm::SmallVector<size_t> overlapIdxs;
     // Find all of the members that "overlap", i.e. occlude other members that
     // were mapped alongside the parent, e.g. member [0], occludes
-    getOverlappedMembers(overlapIdxs, mapData, parentClause);
+    getOverlappedMembers(overlapIdxs, parentClause);
 
     // When we only have one overlap we skip the case that tries to segment the
     // mapping as best it can without creating holes, as the calculation is more
@@ -6196,8 +6106,8 @@ static void mapParentWithMembers(
       // members of derived types.
       mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
 
-      // TODO: We may want to skip arrays/array sections in this as Clang does
-      // so it appears to be an optimisation rather than a neccessity though,
+      // TODO: We may want to skip arrays/array sections in this as Clang does.
+      // It appears to be an optimisation rather than a necessity though,
       // but this requires further investigation. However, we would have to make
       // sure to not exclude maps with bounds that ARE pointers, as these are
       // processed as seperate components, i.e. pointer + data.
@@ -6216,8 +6126,7 @@ static void mapParentWithMembers(
         combinedInfo.BasePointers.emplace_back(
             mapData.BasePointers[mapDataIndex]);
         combinedInfo.Pointers.emplace_back(lowAddr);
-
-        llvm::Value *sizeCalc = builder.CreateIntCast(
+        auto sizeCalc = builder.CreateIntCast(
             builder.CreatePtrDiff(builder.getInt8Ty(),
                                   mapData.OriginalValue[mapDataOverlapIdx],
                                   lowAddr),
@@ -6226,7 +6135,7 @@ static void mapParentWithMembers(
         // (e.g. if lowAddr happens to be the first member), which isn't
         // correct, even if the runtimes is sometimes fine with it so, in these
         // scenarios we select the types size instead.
-        llvm::Value *sizeSel = builder.CreateSelect(
+        auto sizeSel = builder.CreateSelect(
             builder.CreateICmpNE(builder.getInt64(0), sizeCalc), sizeCalc,
             isPtrMap ? llvm::ConstantExpr::getSizeOf(builder.getPtrTy())
                      : mapData.Sizes[mapDataOverlapIdx]);
@@ -6281,10 +6190,11 @@ static void processMapWithMembersOf(LLVM::ModuleTranslation &moduleTranslation,
     // Clang maps array without bounds as pointers (which we do not
     // currently do), whereas we treat them as arrays in all cases
     // currently.
-    processIndividualMap(builder, ompBuilder, mapData, memberDataIdx,
-                         combinedInfo, targetDirective,
-                         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
-                         true, mapDataIndex);
+    processIndividualMap(
+        builder, ompBuilder, mapData, memberDataIdx, combinedInfo,
+        targetDirective,
+        /*MemberOfFlag=*/llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
+        /*isTargetParam=*/true, mapDataIndex);
     return;
   }
 
@@ -6312,8 +6222,8 @@ static void processMapWithMembersOf(LLVM::ModuleTranslation &moduleTranslation,
                            targetDirective);
     } else {
       processIndividualMap(builder, ompBuilder, mapData, mapInfoIdx[i],
-                           combinedInfo, targetDirective, memberOfFlag, false,
-                           mapDataIndex);
+                           combinedInfo, targetDirective, memberOfFlag,
+                           /*isTargetParam=*/false, mapDataIndex);
     }
   }
 }
@@ -6335,7 +6245,7 @@ createAlteredByCaptureMap(MapInfoData &mapData,
           llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) ==
          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
 
-    // if it's declare target, skip it, it's handled separately. However, if
+    // If it's declare target, skip it, it's handled separately. However, if
     // it's declare target, and an attach map, we want to calculate the exact
     // address offset so that we attach correctly.
     if (!mapData.IsDeclareTarget[i] ||
@@ -7025,10 +6935,10 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
         continue;
       auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
       llvm::Value *substitute = mapData.BasePointers[i];
-      if (isDeclareTargetLink(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
-                                                   : mapOp.getVarPtr()) ||
-          (isDeclareTargetTo(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
-                                                  : mapOp.getVarPtr()) &&
+      auto declTarPtr =
+          mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr() : mapOp.getVarPtr();
+      if (isDeclareTargetLink(declTarPtr) ||
+          (isDeclareTargetTo(declTarPtr) &&
            moduleTranslation.getOpenMPBuilder()
                ->Config.hasRequiresUnifiedSharedMemory())) {
         builder.SetCurrentDebugLocation(insn->getDebugLoc());
@@ -7847,9 +7757,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   for (size_t i = 0, e = mapData.OriginalValue.size(); i != e; ++i) {
-    // 1) Declare target arguments are not passed to kernels as arguments
-    // 2) Attach maps are not passed in as arguments to kernels
-    // 3) Children of record objects are not passed in as arguments
+    // 1) Declare target arguments are not passed to kernels as arguments.
+    // 2) Attach maps are not passed in as arguments to kernels.
+    // 3) Children of record objects are not passed in as arguments.
     // TODO: We currently do not handle cases where a member is explicitly
     // passed in as an argument, this will likley need to be handled in
     // the near future, rather than using IsAMember, it may be better to

@@ -34,7 +34,6 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK: %[[MAPPERS:.*]] = alloca [5 x ptr], align 8
 // CHECK: %[[SIZES:.*]] = alloca [5 x i64], align 4
 
-
 // CHECK: %[[VAL_20:.*]] = getelementptr inbounds [5 x ptr], ptr %[[BASEPTRS]], i32 0, i32 0
 // CHECK: %[[BASEPTRS_GEP:.*]] = getelementptr inbounds [5 x ptr], ptr %[[BASEPTRS]], i32 0, i32 0
 // CHECK: %[[PTRS_GEP:.*]] = getelementptr inbounds [5 x ptr], ptr %[[PTRS]], i32 0, i32 0
