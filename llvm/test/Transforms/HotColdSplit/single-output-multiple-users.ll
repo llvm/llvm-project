@@ -10,7 +10,7 @@ define void @two_phis_consume_cold_value(ptr %ctx, i1 %cond) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @two_phis_consume_cold_value.cold.1() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ undef, %[[ENTRY]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ poison, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[B:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ null, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[FP:%.*]] = load ptr, ptr [[CTX]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = tail call i32 [[FP]](ptr [[B]], ptr null)
@@ -26,7 +26,7 @@ cold:
   br label %exit
 
 exit:
-  %a = phi ptr [ %v, %cold ], [ undef, %entry ]
+  %a = phi ptr [ %v, %cold ], [ poison, %entry ]
   %b = phi ptr [ %v, %cold ], [ null, %entry ]
   %fp = load ptr, ptr %ctx, align 8
   %r = tail call i32 %fp(ptr %b, ptr null)

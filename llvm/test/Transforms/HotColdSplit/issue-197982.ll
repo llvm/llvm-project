@@ -69,7 +69,7 @@ define void @writeAsOperandInternal(ptr readonly captures(none) %WriterCtx, i1 %
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @writeAsOperandInternal.cold.1() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[S_SROA_0_0:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ undef, %[[ENTRY]] ]
+; CHECK-NEXT:    [[S_SROA_0_0:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ poison, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ null, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[FP:%.*]] = load ptr, ptr [[WRITERCTX]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = tail call i32 [[FP]](ptr [[P]], ptr null)
@@ -82,11 +82,11 @@ entry:
 if.then:
   tail call void @ctor(ptr null)
   %call.i = load volatile ptr, ptr null, align 4294967296
-  store volatile i32 0, ptr undef, align 4
+  store volatile i32 0, ptr poison, align 4
   br label %if.end
 
 if.end:
-  %s.sroa.0.0 = phi ptr [ %call.i, %if.then ], [ undef, %entry ]
+  %s.sroa.0.0 = phi ptr [ %call.i, %if.then ], [ poison, %entry ]
   %p = phi ptr [ %call.i, %if.then ], [ null, %entry ]
   %fp = load ptr, ptr %WriterCtx, align 8
   %r = tail call i32 %fp(ptr %p, ptr null)
