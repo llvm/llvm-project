@@ -179,10 +179,13 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
 
   // Lock down the interpreter's execution context prior to running the command
   // so we guarantee the selected target, process, thread and frame can't go
-  // away during the execution
-  m_exe_ctx = m_interpreter.GetExecutionContext();
-
+  // away during the execution. The dummy target is only adopted when the
+  // command opts in via eCommandAllowsDummyTarget, so other commands won't
+  // accidentally see it through m_exe_ctx.
   const uint32_t flags = GetFlags().Get();
+  const bool adopt_dummy_target = flags & eCommandAllowsDummyTarget;
+  m_exe_ctx = m_interpreter.GetExecutionContext(adopt_dummy_target);
+
   if (flags & (eCommandRequiresTarget | eCommandRequiresProcess |
                eCommandRequiresThread | eCommandRequiresFrame |
                eCommandTryTargetAPILock)) {
@@ -779,15 +782,24 @@ Target &CommandObject::GetDummyTarget() {
   return m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target &CommandObject::GetTarget() {
-  // Prefer the frozen execution context in the command object.
-  if (Target *target = m_exe_ctx.GetTargetPtr())
-    return *target;
+Target *CommandObject::GetTarget() {
+  // Prefer the frozen execution context in the command object, falling back
+  // to the interpreter's execution context for paths like multi-line
+  // expressions or breakpoint callbacks that run after DoExecute has
+  // finished. Both honor eCommandAllowsDummyTarget when deciding whether to
+  // substitute the dummy target, so no post-hoc filtering is needed.
+  const uint32_t flags = GetFlags().Get();
+  const bool adopt_dummy_target = flags & eCommandAllowsDummyTarget;
+  Target *target = m_exe_ctx.GetTargetPtr();
+  if (!target)
+    target =
+        m_interpreter.GetExecutionContext(adopt_dummy_target).GetTargetPtr();
 
-  // Fallback to the command interpreter's execution context in case we get
-  // called after DoExecute has finished. For example, when doing multi-line
-  // expression that uses an input reader or breakpoint callbacks.
-  return m_interpreter.GetExecutionContext().GetTargetRef();
+  // CheckRequirements has already guaranteed a non-dummy target for any
+  // command declaring a Requires* flag.
+  assert(target || !(flags & (eCommandRequiresTarget | eCommandRequiresProcess |
+                              eCommandRequiresThread | eCommandRequiresFrame)));
+  return target;
 }
 
 Thread *CommandObject::GetDefaultThread() {

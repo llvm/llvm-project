@@ -20486,6 +20486,37 @@ static SDValue performVectorExtCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static bool isOnlyUsedAsMemoryAddress(SDNode *N) {
+  assert((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
+         "Expected add/sub node");
+
+  for (SDUse &Use : N->uses()) {
+    SDNode *User = Use.getUser();
+    switch (User->getOpcode()) {
+    case ISD::LOAD: {
+      auto *Load = cast<LoadSDNode>(User);
+      if (!Load->isUnindexed() || Use.getOperandNo() != 1)
+        return false;
+      break;
+    }
+    case ISD::STORE: {
+      auto *Store = cast<StoreSDNode>(User);
+      if (!Store->isUnindexed() || Use.getOperandNo() != 2)
+        return false;
+      break;
+    }
+    case AArch64ISD::PREFETCH:
+      if (Use.getOperandNo() != 2)
+        return false;
+      break;
+    default:
+      return false;
+    }
+  }
+
+  return true;
+}
+
 static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
@@ -20571,9 +20602,12 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     // Conservatively do not lower to shift+add+shift if the mul might be
     // folded into madd or msub.
-    if (N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::ADD ||
-                           N->user_begin()->getOpcode() == ISD::SUB))
-      return SDValue();
+    if (N->hasOneUse()) {
+      SDNode *User = *N->user_begin();
+      if ((User->getOpcode() == ISD::ADD || User->getOpcode() == ISD::SUB) &&
+          !isOnlyUsedAsMemoryAddress(User))
+        return SDValue();
+    }
   }
   // Use ShiftedConstValue instead of ConstValue to support both shift+add/sub
   // and shift+add+shift.
