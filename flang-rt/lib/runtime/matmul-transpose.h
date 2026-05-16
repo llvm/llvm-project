@@ -1,4 +1,4 @@
-//===-- lib/runtime/matmul-transpose.cpp ------------------------*- C++ -*-===//
+//===-- lib/runtime/matmul-transpose.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,39 +20,21 @@
 // The usefulness of this optimization should be reviewed once Matmul is swapped
 // to use the faster BLAS routines.
 
-#include "flang/Runtime/matmul-transpose.h"
+#ifndef FLANG_RT_RUNTIME_MATMUL_TRANSPOSE_H_
+#define FLANG_RT_RUNTIME_MATMUL_TRANSPOSE_H_
+
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/c-or-cpp.h"
 #include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/matmul-transpose.h"
 #include <cstring>
 
 namespace {
 using namespace Fortran::runtime;
 
-// Contiguous numeric TRANSPOSE(matrix)*matrix multiplication
-//   TRANSPOSE(matrix(n, rows)) * matrix(n,cols) ->
-//             matrix(rows, n)  * matrix(n,cols) -> matrix(rows,cols)
-// The transpose is implemented by swapping the indices of accesses into the LHS
-//
-// Straightforward algorithm:
-//   DO 1 I = 1, NROWS
-//    DO 1 J = 1, NCOLS
-//     RES(I,J) = 0
-//     DO 1 K = 1, N
-//   1  RES(I,J) = RES(I,J) + X(K,I)*Y(K,J)
-//
-// With loop distribution and transposition to avoid the inner sum
-// reduction and to avoid non-unit strides:
-//   DO 1 I = 1, NROWS
-//    DO 1 J = 1, NCOLS
-//   1 RES(I,J) = 0
-//   DO 2 J = 1, NCOLS
-//    DO 2 I = 1, NROWS
-//     DO 2 K = 1, N
-//   2  RES(I,J) = RES(I,J) + X(K,I)*Y(K,J) ! loop-invariant last term
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool X_HAS_STRIDED_COLUMNS, bool Y_HAS_STRIDED_COLUMNS>
 inline static RT_API_ATTRS void MatrixTransposedTimesMatrix(
@@ -111,20 +93,6 @@ inline static RT_API_ATTRS void MatrixTransposedTimesMatrixHelper(
   }
 }
 
-// Contiguous numeric matrix*vector multiplication
-//   matrix(rows,n) * column vector(n) -> column vector(rows)
-// Straightforward algorithm:
-//   DO 1 I = 1, NROWS
-//    RES(I) = 0
-//    DO 1 K = 1, N
-//   1 RES(I) = RES(I) + X(K,I)*Y(K)
-// With loop distribution and transposition to avoid the inner
-// sum reduction and to avoid non-unit strides:
-//   DO 1 I = 1, NROWS
-//   1 RES(I) = 0
-//   DO 2 I = 1, NROWS
-//    DO 2 K = 1, N
-//   2 RES(I) = RES(I) + X(K,I)*Y(K)
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT,
     bool X_HAS_STRIDED_COLUMNS>
 inline static RT_API_ATTRS void MatrixTransposedTimesVector(
@@ -162,7 +130,6 @@ inline static RT_API_ATTRS void MatrixTransposedTimesVectorHelper(
   }
 }
 
-// Implements an instance of MATMUL for given argument types.
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 inline static RT_API_ATTRS void DoMatmulTranspose(Descriptor &result,
     const Descriptor &x, const Descriptor &y, Terminator &terminator,
@@ -212,11 +179,8 @@ inline static RT_API_ATTRS void DoMatmulTranspose(Descriptor &result,
   if constexpr (RCAT != TypeCategory::Logical) {
     if (x.IsContiguous(1) && y.IsContiguous(1) &&
         (isAllocating || result.IsContiguous())) {
-      // Contiguous numeric matrices (maybe with columns
-      // separated by a stride).
       Fortran::common::optional<std::size_t> xColumnByteStride;
       if (!x.IsContiguous()) {
-        // X's columns are strided.
         SubscriptValue xAt[2]{};
         x.GetLowerBounds(xAt);
         xAt[1]++;
@@ -224,14 +188,12 @@ inline static RT_API_ATTRS void DoMatmulTranspose(Descriptor &result,
       }
       Fortran::common::optional<std::size_t> yColumnByteStride;
       if (!y.IsContiguous()) {
-        // Y's columns are strided.
         SubscriptValue yAt[2]{};
         y.GetLowerBounds(yAt);
         yAt[1]++;
         yColumnByteStride = y.SubscriptsToByteOffset(yAt);
       }
       if (resRank == 2) { // M*M -> M
-        // TODO: use BLAS-3 GEMM for supported types.
         MatrixTransposedTimesMatrixHelper<RCAT, RKIND, XT, YT>(
             result.template OffsetElement<WriteResult>(), rows, cols,
             x.OffsetElement<XT>(), y.OffsetElement<YT>(), n, xColumnByteStride,
@@ -239,14 +201,11 @@ inline static RT_API_ATTRS void DoMatmulTranspose(Descriptor &result,
         return;
       }
       if (xRank == 2) { // M*V -> V
-        // TODO: use BLAS-2 GEMM for supported types.
         MatrixTransposedTimesVectorHelper<RCAT, RKIND, XT, YT>(
             result.template OffsetElement<WriteResult>(), rows, n,
             x.OffsetElement<XT>(), y.OffsetElement<YT>(), xColumnByteStride);
         return;
       }
-      // else V*M -> V (not allowed because TRANSPOSE() is only defined for rank
-      // 1 matrices
       terminator.Crash(
           "MATMUL-TRANSPOSE: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
           static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
@@ -256,7 +215,6 @@ inline static RT_API_ATTRS void DoMatmulTranspose(Descriptor &result,
       return;
     }
   }
-  // General algorithms for LOGICAL and noncontiguity
   SubscriptValue xLB[2], yLB[2], resLB[2];
   x.GetLowerBounds(xLB);
   y.GetLowerBounds(yLB);
@@ -315,7 +273,6 @@ inline static RT_API_ATTRS void DoMatmulTranspose(Descriptor &result,
       *result.template Element<WriteResult>(resAt) = res_i;
     }
   } else { // V*M -> V
-    // TRANSPOSE(V) not allowed by fortran standard
     terminator.Crash(
         "MATMUL-TRANSPOSE: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
         static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
@@ -349,10 +306,6 @@ struct MatmulTransposeHelper {
 };
 } // namespace
 
-namespace Fortran::runtime {
-extern "C" {
-RT_EXT_API_GROUP_BEGIN
-
 #define MATMUL_INSTANCE(XCAT, XKIND, YCAT, YKIND) \
   void RTDEF(MatmulTranspose##XCAT##XKIND##YCAT##YKIND)(Descriptor & result, \
       const Descriptor &x, const Descriptor &y, const char *sourceFile, \
@@ -369,10 +322,4 @@ RT_EXT_API_GROUP_BEGIN
         YKIND>{}(result, x, y, sourceFile, line, false); \
   }
 
-#define MATMUL_FORCE_ALL_TYPES 0
-
-#include "flang/Runtime/matmul-instances.inc"
-
-RT_EXT_API_GROUP_END
-} // extern "C"
-} // namespace Fortran::runtime
+#endif // FLANG_RT_RUNTIME_MATMUL_TRANSPOSE_H_
