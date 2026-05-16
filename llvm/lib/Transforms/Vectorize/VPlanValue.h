@@ -80,12 +80,12 @@ public:
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
   enum {
-    VPVIRValueSC,             /// A live-in VPValue wrapping an IR Value.
-    VPVSymbolicSC,            /// A symbolic live-in VPValue without IR backing.
-    VPVStandaloneRecipeValueSC, /// A standalone VPValue defined by a recipe.
-    VPVSingleDefValueSC,        /// A VPValue embedded in a VPSingleDefRecipe.
-    VPRegionValueSC,            /// A VPValue sub-class that is defined by a
-                                /// region, like a loop region canonical IV.
+    VPVIRValueSC,        /// A live-in VPValue wrapping an IR Value.
+    VPVSymbolicSC,       /// A symbolic live-in VPValue without IR backing.
+    VPVMultiDefValueSC,  /// A VPValue defined by a multi-def recipe.
+    VPVSingleDefValueSC, /// A VPValue defined by a VPSingleDefRecipe.
+    VPRegionValueSC,     /// A VPValue sub-class that is defined by a
+                         /// region, like a loop region canonical IV.
   };
 
   VPValue(const VPValue &) = delete;
@@ -326,7 +326,7 @@ public:
   LLVM_ABI_FOR_TEST virtual ~VPRecipeValue() = 0;
 
   static bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPVStandaloneRecipeValueSC ||
+    return V->getVPValueID() == VPVMultiDefValueSC ||
            V->getVPValueID() == VPVSingleDefValueSC;
   }
 };
@@ -342,7 +342,7 @@ protected:
                                      Value *UV = nullptr);
 
 public:
-  ~VPSingleDefValue() override;
+  ~VPSingleDefValue() override = default;
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSingleDefValueSC;
@@ -359,12 +359,12 @@ class VPMultiDefValue : public VPRecipeValue {
 public:
   LLVM_ABI_FOR_TEST VPMultiDefValue(VPRecipeBase *Def, Value *UV = nullptr);
 
-  ~VPMultiDefValue() override;
+  ~VPMultiDefValue() override = default;
 
   VPRecipeBase *getDef() const { return Def; }
 
   static bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPVStandaloneRecipeValueSC;
+    return V->getVPValueID() == VPVMultiDefValueSC;
   }
 };
 

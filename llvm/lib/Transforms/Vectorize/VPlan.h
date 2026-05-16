@@ -601,7 +601,7 @@ protected:
 
 /// VPSingleDefRecipe is a base class for recipes for modeling a sequence of one
 /// or more output IR that define a single result VPValue. Note that
-/// VPRecipeBase must be inherited from before VPValue.
+/// VPSingleDefRecipe must inherit from VPRecipeBase before VPSingleDefValue.
 class VPSingleDefRecipe : public VPRecipeBase, public VPSingleDefValue {
 public:
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,

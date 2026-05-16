@@ -128,12 +128,12 @@ bool VPRecipeValue::isDefinedBy(const VPDef *D) const {
 #endif
 
 VPRecipeBase *VPValue::getDefiningRecipe() {
-  auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  if (!DefValue)
+  auto *RecipeValue = dyn_cast<VPRecipeValue>(this);
+  if (!RecipeValue)
     return nullptr;
-  if (auto *MultiDef = dyn_cast<VPMultiDefValue>(DefValue))
+  if (auto *MultiDef = dyn_cast<VPMultiDefValue>(RecipeValue))
     return MultiDef->getDef();
-  return static_cast<VPSingleDefRecipe *>(DefValue);
+  return static_cast<VPSingleDefRecipe *>(RecipeValue);
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
@@ -158,15 +158,11 @@ VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV)
   Def->addDefinedValue(this);
 }
 
-VPSingleDefValue::~VPSingleDefValue() {}
-
 VPMultiDefValue::VPMultiDefValue(VPRecipeBase *Def, Value *UV)
-    : VPRecipeValue(VPVStandaloneRecipeValueSC, UV), Def(Def) {
+    : VPRecipeValue(VPVMultiDefValueSC, UV), Def(Def) {
   assert(Def && "VPMultiDefValue requires a defining recipe");
   Def->addDefinedValue(this);
 }
-
-VPMultiDefValue::~VPMultiDefValue() {}
 
 // Get the top-most entry block of \p Start. This is the entry block of the
 // containing VPlan. This function is templated to support both const and non-const blocks
