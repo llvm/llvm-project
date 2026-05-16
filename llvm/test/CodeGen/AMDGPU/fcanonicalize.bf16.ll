@@ -81,15 +81,23 @@ define amdgpu_kernel void @s_test_canonicalize_var_bf16(ptr addrspace(1) %out, i
 }
 
 define <2 x bfloat> @v_test_canonicalize_build_vector_v2bf16(bfloat %lo, bfloat %hi) #1 {
-; GFX1250-LABEL: v_test_canonicalize_build_vector_v2bf16:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v1, 16, v1 :: v_dual_lshlrev_b32 v0, 16, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; FAKE16-LABEL: v_test_canonicalize_build_vector_v2bf16:
+; FAKE16:       ; %bb.0:
+; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; FAKE16-NEXT:    s_wait_kmcnt 0x0
+; FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; REAL16-LABEL: v_test_canonicalize_build_vector_v2bf16:
+; REAL16:       ; %bb.0:
+; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; REAL16-NEXT:    s_wait_kmcnt 0x0
+; REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %ins0 = insertelement <2 x bfloat> poison, bfloat %lo, i32 0
   %ins1 = insertelement <2 x bfloat> %ins0, bfloat %hi, i32 1
   %canonicalized = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %ins1)
@@ -695,17 +703,12 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2bf16(ptr addrspace(1) %out)
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_lshlrev_b32 v0, 16, v0
-; GFX1250-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; GFX1250-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x bfloat>, ptr addrspace(1) %out, i32 %tid
@@ -716,46 +719,20 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2bf16(ptr addrspace(1) %out)
 }
 
 define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2bf16(ptr addrspace(1) %out) #1 {
-; FAKE16-LABEL: v_test_canonicalize_fabs_var_v2bf16:
-; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; FAKE16-NEXT:    v_mov_b32_e32 v2, 0
-; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
-; FAKE16-NEXT:    s_wait_loadcnt 0x0
-; FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; FAKE16-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
-; FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; FAKE16-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; FAKE16-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; FAKE16-NEXT:    v_max_num_f32_e32 v1, v1, v1
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; FAKE16-NEXT:    global_store_b32 v2, v0, s[0:1]
-; FAKE16-NEXT:    s_endpgm
-;
-; REAL16-LABEL: v_test_canonicalize_fabs_var_v2bf16:
-; REAL16:       ; %bb.0:
-; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; REAL16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; REAL16-NEXT:    v_mov_b32_e32 v2, 0
-; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
-; REAL16-NEXT:    s_wait_loadcnt 0x0
-; REAL16-NEXT:    v_and_b16 v0.l, 0x7fff, v0.l
-; REAL16-NEXT:    v_and_b16 v1.l, 0x7fff, v0.h
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; REAL16-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; REAL16-NEXT:    global_store_b32 v2, v0, s[0:1]
-; REAL16-NEXT:    s_endpgm
+; GFX1250-LABEL: v_test_canonicalize_fabs_var_v2bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x bfloat>, ptr addrspace(1) %out, i32 %tid
   %val = load <2 x bfloat>, ptr addrspace(1) %gep
@@ -766,46 +743,20 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2bf16(ptr addrspace(1) 
 }
 
 define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2bf16(ptr addrspace(1) %out) #1 {
-; FAKE16-LABEL: v_test_canonicalize_fneg_fabs_var_v2bf16:
-; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; FAKE16-NEXT:    v_mov_b32_e32 v2, 0
-; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
-; FAKE16-NEXT:    s_wait_loadcnt 0x0
-; FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; FAKE16-NEXT:    v_or_b32_e32 v0, 0x8000, v0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
-; FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; FAKE16-NEXT:    v_or_b32_e32 v1, 0x8000, v1
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; FAKE16-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; FAKE16-NEXT:    v_max_num_f32_e32 v1, v1, v1
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; FAKE16-NEXT:    global_store_b32 v2, v0, s[0:1]
-; FAKE16-NEXT:    s_endpgm
-;
-; REAL16-LABEL: v_test_canonicalize_fneg_fabs_var_v2bf16:
-; REAL16:       ; %bb.0:
-; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; REAL16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; REAL16-NEXT:    v_mov_b32_e32 v2, 0
-; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
-; REAL16-NEXT:    s_wait_loadcnt 0x0
-; REAL16-NEXT:    v_or_b16 v0.l, 0x8000, v0.l
-; REAL16-NEXT:    v_or_b16 v1.l, 0x8000, v0.h
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; REAL16-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; REAL16-NEXT:    global_store_b32 v2, v0, s[0:1]
-; REAL16-NEXT:    s_endpgm
+; GFX1250-LABEL: v_test_canonicalize_fneg_fabs_var_v2bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x bfloat>, ptr addrspace(1) %out, i32 %tid
   %val = load <2 x bfloat>, ptr addrspace(1) %gep
@@ -817,46 +768,18 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2bf16(ptr addrspac
 }
 
 define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2bf16(ptr addrspace(1) %out) #1 {
-; FAKE16-LABEL: v_test_canonicalize_fneg_var_v2bf16:
-; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; FAKE16-NEXT:    v_mov_b32_e32 v2, 0
-; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
-; FAKE16-NEXT:    s_wait_loadcnt 0x0
-; FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
-; FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; FAKE16-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; FAKE16-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; FAKE16-NEXT:    v_max_num_f32_e32 v1, v1, v1
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; FAKE16-NEXT:    global_store_b32 v2, v0, s[0:1]
-; FAKE16-NEXT:    s_endpgm
-;
-; REAL16-LABEL: v_test_canonicalize_fneg_var_v2bf16:
-; REAL16:       ; %bb.0:
-; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; REAL16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; REAL16-NEXT:    v_mov_b32_e32 v2, 0
-; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
-; REAL16-NEXT:    s_wait_loadcnt 0x0
-; REAL16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
-; REAL16-NEXT:    v_xor_b16 v1.l, 0x8000, v0.h
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; REAL16-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; REAL16-NEXT:    global_store_b32 v2, v0, s[0:1]
-; REAL16-NEXT:    s_endpgm
+; GFX1250-LABEL: v_test_canonicalize_fneg_var_v2bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x bfloat>, ptr addrspace(1) %out, i32 %tid
   %val = load <2 x bfloat>, ptr addrspace(1) %gep
@@ -871,15 +794,10 @@ define amdgpu_kernel void @s_test_canonicalize_var_v2bf16(ptr addrspace(1) %out,
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_and_b32 s3, s2, 0xffff0000
-; GFX1250-NEXT:    s_lshl_b32 s2, s2, 16
-; GFX1250-NEXT:    v_max_num_f32_e64 v0, s3, s3
-; GFX1250-NEXT:    v_max_num_f32_e64 v1, s2, s2
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v1, v0
-; GFX1250-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, s2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %val = bitcast i32 %val.arg to <2 x bfloat>
   %canonicalized = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %val)
@@ -1112,34 +1030,13 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2bf16(ptr addrspa
 }
 
 define <3 x bfloat> @v_test_canonicalize_var_v3bf16(<3 x bfloat> %val) #1 {
-; FAKE16-LABEL: v_test_canonicalize_var_v3bf16:
-; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff0000, v0
-; FAKE16-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; FAKE16-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v0, v0, v0
-; FAKE16-NEXT:    v_max_num_f32_e32 v1, v1, v1
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v2
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
-; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; REAL16-LABEL: v_test_canonicalize_var_v3bf16:
-; REAL16:       ; %bb.0:
-; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; REAL16-NEXT:    v_and_b32_e32 v2, 0xffff0000, v0
-; REAL16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; REAL16-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v2, v2, v2
-; REAL16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v2
-; REAL16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: v_test_canonicalize_var_v3bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <3 x bfloat> @llvm.canonicalize.v3bf16(<3 x bfloat> %val)
   ret <3 x bfloat> %canonicalized
 }
@@ -1149,15 +1046,8 @@ define <4 x bfloat> @v_test_canonicalize_var_v4bf16(<4 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v2, 0xffff0000, v1
-; GFX1250-NEXT:    v_and_b32_e32 v3, 0xffff0000, v0
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
-; GFX1250-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v3
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v2
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <4 x bfloat> @llvm.canonicalize.v4bf16(<4 x bfloat> %val)
   ret <4 x bfloat> %canonicalized
@@ -1178,31 +1068,12 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v2bf16(ptr addrspace(1) %ou
 }
 
 define <2 x bfloat> @v_test_canonicalize_reg_undef_v2bf16(bfloat %val) #1 {
-; FAKE16-LABEL: v_test_canonicalize_reg_undef_v2bf16:
-; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; FAKE16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; FAKE16-NEXT:    s_movk_i32 s0, 0x7fc0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; FAKE16-NEXT:    v_perm_b32 v0, s0, v0, 0x5040100
-; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; REAL16-LABEL: v_test_canonicalize_reg_undef_v2bf16:
-; REAL16:       ; %bb.0:
-; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, 0x7fc0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; REAL16-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; REAL16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: v_test_canonicalize_reg_undef_v2bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x bfloat> poison, bfloat %val, i32 0
   %canonicalized = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %vec)
   ret <2 x bfloat> %canonicalized
@@ -1214,25 +1085,17 @@ define <2 x bfloat> @v_test_canonicalize_undef_reg_v2bf16(bfloat %val) #1 {
 ; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; FAKE16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; FAKE16-NEXT:    s_movk_i32 s0, 0x7fc0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; FAKE16-NEXT:    v_perm_b32 v0, v0, s0, 0x5040100
+; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_undef_reg_v2bf16:
 ; REAL16:       ; %bb.0:
 ; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
-; REAL16-NEXT:    v_mov_b16_e32 v0.l, 0x7fc0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; REAL16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x bfloat> poison, bfloat %val, i32 1
   %canonicalized = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %vec)
@@ -1292,26 +1155,20 @@ define <2 x bfloat> @v_test_canonicalize_reg_k_v2bf16(bfloat %val) #1 {
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; FAKE16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; FAKE16-NEXT:    s_movk_i32 s0, 0x4000
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; FAKE16-NEXT:    v_perm_b32 v0, s0, v0, 0x5040100
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_reg_k_v2bf16:
 ; REAL16:       ; %bb.0:
 ; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, 0x4000
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; REAL16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; REAL16-NEXT:    v_mov_b16_e32 v1.h, 0x4000
+; REAL16-NEXT:    v_mov_b16_e32 v1.l, v0.l
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v1 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <2 x bfloat> poison, bfloat %val, i32 0
   %vec1 = insertelement <2 x bfloat> %vec0, bfloat 2.0, i32 1
@@ -1324,26 +1181,20 @@ define <2 x bfloat> @v_test_canonicalize_k_reg_v2bf16(bfloat %val) #1 {
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; FAKE16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; FAKE16-NEXT:    s_movk_i32 s0, 0x4000
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; FAKE16-NEXT:    v_perm_b32 v0, v0, s0, 0x5040100
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_k_reg_v2bf16:
 ; REAL16:       ; %bb.0:
 ; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
-; REAL16-NEXT:    v_mov_b16_e32 v0.l, 0x4000
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; REAL16-NEXT:    v_mov_b16_e32 v1.l, 0x4000
+; REAL16-NEXT:    v_mov_b16_e32 v1.h, v0.l
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v1 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <2 x bfloat> poison, bfloat 2.0, i32 0
   %vec1 = insertelement <2 x bfloat> %vec0, bfloat %val, i32 1
@@ -1368,48 +1219,38 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v4bf16(ptr addrspace(1) %ou
 }
 
 define <4 x bfloat> @v_test_canonicalize_reg_undef_undef_undef_v4bf16(bfloat %val) #1 {
-; FAKE16-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4bf16:
-; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_dual_mov_b32 v1, 0x7fc07fc0 :: v_dual_lshlrev_b32 v0, 16, v0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; FAKE16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; FAKE16-NEXT:    s_movk_i32 s0, 0x7fc0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; FAKE16-NEXT:    v_perm_b32 v0, s0, v0, 0x5040100
-; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; REAL16-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4bf16:
-; REAL16:       ; %bb.0:
-; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, 0x7fc0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; REAL16-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; REAL16-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
-; REAL16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <4 x bfloat> poison, bfloat %val, i32 0
   %canonicalized = call <4 x bfloat> @llvm.canonicalize.v4bf16(<4 x bfloat> %vec)
   ret <4 x bfloat> %canonicalized
 }
 
 define <4 x bfloat> @v_test_canonicalize_reg_reg_undef_undef_v4bf16(bfloat %val0, bfloat %val1) #1 {
-; GFX1250-LABEL: v_test_canonicalize_reg_reg_undef_undef_v4bf16:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v1, 16, v1 :: v_dual_lshlrev_b32 v0, 16, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; GFX1250-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; FAKE16-LABEL: v_test_canonicalize_reg_reg_undef_undef_v4bf16:
+; FAKE16:       ; %bb.0:
+; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; FAKE16-NEXT:    s_wait_kmcnt 0x0
+; FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; FAKE16-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
+; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; REAL16-LABEL: v_test_canonicalize_reg_reg_undef_undef_v4bf16:
+; REAL16:       ; %bb.0:
+; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; REAL16-NEXT:    s_wait_kmcnt 0x0
+; REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; REAL16-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <4 x bfloat> poison, bfloat %val0, i32 0
   %vec1 = insertelement <4 x bfloat> %vec0, bfloat %val1, i32 1
   %canonicalized = call <4 x bfloat> @llvm.canonicalize.v4bf16(<4 x bfloat> %vec1)
@@ -1421,32 +1262,20 @@ define <4 x bfloat> @v_test_canonicalize_reg_undef_reg_reg_v4bf16(bfloat %val0, 
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v2, 16, v2
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; FAKE16-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; FAKE16-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v1, v1, v1
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; FAKE16-NEXT:    s_movk_i32 s0, 0x7fc0
-; FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v2
+; FAKE16-NEXT:    v_perm_b32 v1, v2, v1, 0x5040100
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; FAKE16-NEXT:    v_perm_b32 v0, s0, v0, 0x5040100
+; FAKE16-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4bf16:
 ; REAL16:       ; %bb.0:
 ; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v2, 16, v2
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; REAL16-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; REAL16-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v1, v1, v1
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v3, v0, s0
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, 0x7fc0
-; REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v2
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; REAL16-NEXT:    v_mov_b16_e32 v0.l, v3.l
+; REAL16-NEXT:    v_mov_b16_e32 v1.h, v2.l
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; REAL16-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <4 x bfloat> poison, bfloat %val0, i32 0
   %vec1 = insertelement <4 x bfloat> %vec0, bfloat %val1, i32 2
@@ -1460,20 +1289,9 @@ define <6 x bfloat> @v_test_canonicalize_var_v6bf16(<6 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v3, 0xffff0000, v2
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX1250-NEXT:    v_and_b32_e32 v4, 0xffff0000, v1
-; GFX1250-NEXT:    v_and_b32_e32 v5, 0xffff0000, v0
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_dual_max_num_f32 v3, v3, v3 :: v_dual_max_num_f32 v4, v4, v4
-; GFX1250-NEXT:    v_dual_max_num_f32 v5, v5, v5 :: v_dual_max_num_f32 v0, v0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v2, v2, v2
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v5
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v4
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v2, v2, v3
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <6 x bfloat> @llvm.canonicalize.v6bf16(<6 x bfloat> %val)
   ret <6 x bfloat> %canonicalized
@@ -1484,25 +1302,10 @@ define <8 x bfloat> @v_test_canonicalize_var_v8bf16(<8 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v5, 0xffff0000, v2
-; GFX1250-NEXT:    v_and_b32_e32 v4, 0xffff0000, v3
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX1250-NEXT:    v_and_b32_e32 v6, 0xffff0000, v1
-; GFX1250-NEXT:    v_and_b32_e32 v7, 0xffff0000, v0
-; GFX1250-NEXT:    v_dual_max_num_f32 v5, v5, v5 :: v_dual_lshlrev_b32 v0, 16, v0
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v1, 16, v1 :: v_dual_lshlrev_b32 v2, 16, v2
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_dual_max_num_f32 v4, v4, v4 :: v_dual_max_num_f32 v6, v6, v6
-; GFX1250-NEXT:    v_dual_max_num_f32 v7, v7, v7 :: v_dual_max_num_f32 v0, v0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v2, v2, v2
-; GFX1250-NEXT:    v_max_num_f32_e32 v3, v3, v3
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v7
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v6
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v2, v2, v5
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v3, v3, v4
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v3, 1.0, v3 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <8 x bfloat> @llvm.canonicalize.v8bf16(<8 x bfloat> %val)
   ret <8 x bfloat> %canonicalized
@@ -1513,30 +1316,12 @@ define <12 x bfloat> @v_test_canonicalize_var_v12bf16(<12 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v6, 0xffff0000, v5
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX1250-NEXT:    v_and_b32_e32 v7, 0xffff0000, v4
-; GFX1250-NEXT:    v_and_b32_e32 v8, 0xffff0000, v3
-; GFX1250-NEXT:    v_and_b32_e32 v9, 0xffff0000, v2
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v4, 16, v4 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX1250-NEXT:    v_and_b32_e32 v10, 0xffff0000, v1
-; GFX1250-NEXT:    v_and_b32_e32 v11, 0xffff0000, v0
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX1250-NEXT:    v_dual_max_num_f32 v6, v6, v6 :: v_dual_max_num_f32 v5, v5, v5
-; GFX1250-NEXT:    v_dual_max_num_f32 v7, v7, v7 :: v_dual_max_num_f32 v8, v8, v8
-; GFX1250-NEXT:    v_dual_max_num_f32 v9, v9, v9 :: v_dual_max_num_f32 v10, v10, v10
-; GFX1250-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v11, v11, v11
-; GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v2, v2, v2
-; GFX1250-NEXT:    v_dual_max_num_f32 v3, v3, v3 :: v_dual_max_num_f32 v4, v4, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v11
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v10
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v2, v2, v9
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v3, v3, v8
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v4, v4, v7
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v5, v5, v6
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v3, 1.0, v3 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v4, 1.0, v4 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v5, 1.0, v5 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <12 x bfloat> @llvm.canonicalize.v12bf16(<12 x bfloat> %val)
   ret <12 x bfloat> %canonicalized
@@ -1547,38 +1332,14 @@ define <16 x bfloat> @v_test_canonicalize_var_v16bf16(<16 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v8, 0xffff0000, v7
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX1250-NEXT:    v_and_b32_e32 v9, 0xffff0000, v6
-; GFX1250-NEXT:    v_and_b32_e32 v10, 0xffff0000, v5
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-NEXT:    v_dual_max_num_f32 v8, v8, v8 :: v_dual_lshlrev_b32 v5, 16, v5
-; GFX1250-NEXT:    v_dual_max_num_f32 v7, v7, v7 :: v_dual_lshlrev_b32 v6, 16, v6
-; GFX1250-NEXT:    v_and_b32_e32 v11, 0xffff0000, v4
-; GFX1250-NEXT:    v_and_b32_e32 v12, 0xffff0000, v3
-; GFX1250-NEXT:    v_and_b32_e32 v13, 0xffff0000, v2
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v4, 16, v4 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX1250-NEXT:    v_and_b32_e32 v14, 0xffff0000, v1
-; GFX1250-NEXT:    v_and_b32_e32 v15, 0xffff0000, v0
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    v_dual_max_num_f32 v9, v9, v9 :: v_dual_lshlrev_b32 v2, 16, v2
-; GFX1250-NEXT:    v_max_num_f32_e32 v6, v6, v6
-; GFX1250-NEXT:    v_dual_max_num_f32 v10, v10, v10 :: v_dual_max_num_f32 v5, v5, v5
-; GFX1250-NEXT:    v_dual_max_num_f32 v11, v11, v11 :: v_dual_max_num_f32 v12, v12, v12
-; GFX1250-NEXT:    v_dual_max_num_f32 v13, v13, v13 :: v_dual_max_num_f32 v14, v14, v14
-; GFX1250-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v15, v15, v15
-; GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v2, v2, v2
-; GFX1250-NEXT:    v_dual_max_num_f32 v3, v3, v3 :: v_dual_max_num_f32 v4, v4, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v15
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v14
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v2, v2, v13
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v3, v3, v12
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v4, v4, v11
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v5, v5, v10
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v6, v6, v9
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v7, v7, v8
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v3, 1.0, v3 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v4, 1.0, v4 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v5, 1.0, v5 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v6, 1.0, v6 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v7, 1.0, v7 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <16 x bfloat> @llvm.canonicalize.v16bf16(<16 x bfloat> %val)
   ret <16 x bfloat> %canonicalized
@@ -1589,67 +1350,22 @@ define <32 x bfloat> @v_test_canonicalize_var_v32bf16(<32 x bfloat> %val) #1 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v16, 0xffff0000, v15
-; GFX1250-NEXT:    v_and_b32_e32 v18, 0xffff0000, v13
-; GFX1250-NEXT:    v_and_b32_e32 v20, 0xffff0000, v11
-; GFX1250-NEXT:    v_and_b32_e32 v22, 0xffff0000, v9
-; GFX1250-NEXT:    v_and_b32_e32 v24, 0xffff0000, v7
-; GFX1250-NEXT:    v_dual_max_num_f32 v16, v16, v16 :: v_dual_lshlrev_b32 v15, 16, v15
-; GFX1250-NEXT:    v_and_b32_e32 v17, 0xffff0000, v14
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v14, 16, v14 :: v_dual_lshlrev_b32 v13, 16, v13
-; GFX1250-NEXT:    v_max_num_f32_e32 v18, v18, v18
-; GFX1250-NEXT:    v_and_b32_e32 v19, 0xffff0000, v12
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v12, 16, v12 :: v_dual_lshlrev_b32 v11, 16, v11
-; GFX1250-NEXT:    v_max_num_f32_e32 v20, v20, v20
-; GFX1250-NEXT:    v_and_b32_e32 v21, 0xffff0000, v10
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v10, 16, v10 :: v_dual_lshlrev_b32 v9, 16, v9
-; GFX1250-NEXT:    v_max_num_f32_e32 v22, v22, v22
-; GFX1250-NEXT:    v_and_b32_e32 v23, 0xffff0000, v8
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v8, 16, v8 :: v_dual_lshlrev_b32 v7, 16, v7
-; GFX1250-NEXT:    v_max_num_f32_e32 v24, v24, v24
-; GFX1250-NEXT:    v_and_b32_e32 v25, 0xffff0000, v6
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX1250-NEXT:    v_and_b32_e32 v26, 0xffff0000, v5
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX1250-NEXT:    v_and_b32_e32 v27, 0xffff0000, v4
-; GFX1250-NEXT:    v_and_b32_e32 v28, 0xffff0000, v3
-; GFX1250-NEXT:    v_and_b32_e32 v29, 0xffff0000, v2
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v4, 16, v4 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX1250-NEXT:    v_and_b32_e32 v30, 0xffff0000, v1
-; GFX1250-NEXT:    v_and_b32_e32 v31, 0xffff0000, v0
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    v_dual_max_num_f32 v15, v15, v15 :: v_dual_lshlrev_b32 v2, 16, v2
-; GFX1250-NEXT:    v_dual_max_num_f32 v17, v17, v17 :: v_dual_max_num_f32 v14, v14, v14
-; GFX1250-NEXT:    v_dual_max_num_f32 v13, v13, v13 :: v_dual_max_num_f32 v19, v19, v19
-; GFX1250-NEXT:    v_dual_max_num_f32 v12, v12, v12 :: v_dual_max_num_f32 v11, v11, v11
-; GFX1250-NEXT:    v_dual_max_num_f32 v21, v21, v21 :: v_dual_max_num_f32 v10, v10, v10
-; GFX1250-NEXT:    v_dual_max_num_f32 v9, v9, v9 :: v_dual_max_num_f32 v23, v23, v23
-; GFX1250-NEXT:    v_dual_max_num_f32 v8, v8, v8 :: v_dual_max_num_f32 v7, v7, v7
-; GFX1250-NEXT:    v_dual_max_num_f32 v25, v25, v25 :: v_dual_max_num_f32 v6, v6, v6
-; GFX1250-NEXT:    v_dual_max_num_f32 v26, v26, v26 :: v_dual_max_num_f32 v5, v5, v5
-; GFX1250-NEXT:    v_dual_max_num_f32 v27, v27, v27 :: v_dual_max_num_f32 v28, v28, v28
-; GFX1250-NEXT:    v_dual_max_num_f32 v29, v29, v29 :: v_dual_max_num_f32 v30, v30, v30
-; GFX1250-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v31, v31, v31
-; GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v2, v2, v2
-; GFX1250-NEXT:    v_dual_max_num_f32 v3, v3, v3 :: v_dual_max_num_f32 v4, v4, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v31
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v30
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v2, v2, v29
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v3, v3, v28
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v4, v4, v27
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v5, v5, v26
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v6, v6, v25
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v7, v7, v24
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v8, v8, v23
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v9, v9, v22
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v10, v10, v21
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v11, v11, v20
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v12, v12, v19
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v13, v13, v18
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v14, v14, v17
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v15, v15, v16
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v3, 1.0, v3 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v4, 1.0, v4 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v5, 1.0, v5 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v6, 1.0, v6 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v7, 1.0, v7 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v8, 1.0, v8 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v9, 1.0, v9 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v10, 1.0, v10 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v11, 1.0, v11 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v12, 1.0, v12 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v13, 1.0, v13 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v14, 1.0, v14 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v15, 1.0, v15 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <32 x bfloat> @llvm.canonicalize.v32bf16(<32 x bfloat> %val)
   ret <32 x bfloat> %canonicalized
@@ -1661,138 +1377,39 @@ define <64 x bfloat> @v_test_canonicalize_var_v64bf16(<64 x bfloat> %val) #1 {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_load_b32 v31, off, s32
-; GFX1250-NEXT:    v_and_b32_e32 v81, 0xffff0000, v0
-; GFX1250-NEXT:    v_and_b32_e32 v38, 0xffff0000, v24
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
-; GFX1250-NEXT:    v_and_b32_e32 v39, 0xffff0000, v23
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
-; GFX1250-NEXT:    v_and_b32_e32 v80, 0xffff0000, v6
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v6, 16, v6
-; GFX1250-NEXT:    v_and_b32_e32 v82, 0xffff0000, v1
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX1250-NEXT:    v_max_num_f32_e32 v81, v81, v81
-; GFX1250-NEXT:    v_and_b32_e32 v83, 0xffff0000, v2
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX1250-NEXT:    v_and_b32_e32 v34, 0xffff0000, v28
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
-; GFX1250-NEXT:    v_and_b32_e32 v35, 0xffff0000, v27
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
-; GFX1250-NEXT:    v_and_b32_e32 v36, 0xffff0000, v26
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
-; GFX1250-NEXT:    v_and_b32_e32 v48, 0xffff0000, v22
-; GFX1250-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v82, v82, v82
-; GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v83, v83, v83
-; GFX1250-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v24, v24, v24
-; GFX1250-NEXT:    v_max_num_f32_e32 v39, v39, v39
-; GFX1250-NEXT:    v_dual_max_num_f32 v23, v23, v23 :: v_dual_max_num_f32 v48, v48, v48
-; GFX1250-NEXT:    v_and_b32_e32 v32, 0xffff0000, v30
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
-; GFX1250-NEXT:    v_and_b32_e32 v33, 0xffff0000, v29
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
-; GFX1250-NEXT:    v_and_b32_e32 v37, 0xffff0000, v25
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v25, 16, v25 :: v_dual_lshlrev_b32 v22, 16, v22
-; GFX1250-NEXT:    v_and_b32_e32 v49, 0xffff0000, v21
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
-; GFX1250-NEXT:    v_and_b32_e32 v50, 0xffff0000, v20
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; GFX1250-NEXT:    v_and_b32_e32 v51, 0xffff0000, v19
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
-; GFX1250-NEXT:    v_and_b32_e32 v52, 0xffff0000, v18
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; GFX1250-NEXT:    v_and_b32_e32 v53, 0xffff0000, v17
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; GFX1250-NEXT:    v_and_b32_e32 v54, 0xffff0000, v16
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
-; GFX1250-NEXT:    v_and_b32_e32 v55, 0xffff0000, v15
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; GFX1250-NEXT:    v_and_b32_e32 v64, 0xffff0000, v14
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; GFX1250-NEXT:    v_and_b32_e32 v65, 0xffff0000, v13
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; GFX1250-NEXT:    v_and_b32_e32 v66, 0xffff0000, v12
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; GFX1250-NEXT:    v_and_b32_e32 v67, 0xffff0000, v11
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; GFX1250-NEXT:    v_and_b32_e32 v68, 0xffff0000, v10
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; GFX1250-NEXT:    v_and_b32_e32 v69, 0xffff0000, v9
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; GFX1250-NEXT:    v_and_b32_e32 v70, 0xffff0000, v8
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX1250-NEXT:    v_and_b32_e32 v71, 0xffff0000, v7
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v81
-; GFX1250-NEXT:    v_and_b32_e32 v81, 0xffff0000, v5
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v82
-; GFX1250-NEXT:    v_and_b32_e32 v82, 0xffff0000, v4
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v2, v2, v83
-; GFX1250-NEXT:    v_and_b32_e32 v83, 0xffff0000, v3
-; GFX1250-NEXT:    v_dual_max_num_f32 v32, v32, v32 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX1250-NEXT:    v_dual_max_num_f32 v27, v27, v27 :: v_dual_max_num_f32 v36, v36, v36
-; GFX1250-NEXT:    v_dual_max_num_f32 v26, v26, v26 :: v_dual_max_num_f32 v37, v37, v37
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v23, v23, v39
-; GFX1250-NEXT:    v_dual_max_num_f32 v30, v30, v30 :: v_dual_max_num_f32 v33, v33, v33
-; GFX1250-NEXT:    v_dual_max_num_f32 v29, v29, v29 :: v_dual_max_num_f32 v34, v34, v34
-; GFX1250-NEXT:    v_dual_max_num_f32 v28, v28, v28 :: v_dual_max_num_f32 v35, v35, v35
-; GFX1250-NEXT:    v_dual_max_num_f32 v25, v25, v25 :: v_dual_max_num_f32 v38, v38, v38
-; GFX1250-NEXT:    v_dual_max_num_f32 v22, v22, v22 :: v_dual_max_num_f32 v49, v49, v49
-; GFX1250-NEXT:    v_dual_max_num_f32 v21, v21, v21 :: v_dual_max_num_f32 v50, v50, v50
-; GFX1250-NEXT:    v_dual_max_num_f32 v20, v20, v20 :: v_dual_max_num_f32 v51, v51, v51
-; GFX1250-NEXT:    v_dual_max_num_f32 v19, v19, v19 :: v_dual_max_num_f32 v52, v52, v52
-; GFX1250-NEXT:    v_dual_max_num_f32 v18, v18, v18 :: v_dual_max_num_f32 v53, v53, v53
-; GFX1250-NEXT:    v_dual_max_num_f32 v17, v17, v17 :: v_dual_max_num_f32 v54, v54, v54
-; GFX1250-NEXT:    v_dual_max_num_f32 v16, v16, v16 :: v_dual_max_num_f32 v55, v55, v55
-; GFX1250-NEXT:    v_dual_max_num_f32 v15, v15, v15 :: v_dual_max_num_f32 v64, v64, v64
-; GFX1250-NEXT:    v_dual_max_num_f32 v14, v14, v14 :: v_dual_max_num_f32 v65, v65, v65
-; GFX1250-NEXT:    v_dual_max_num_f32 v13, v13, v13 :: v_dual_max_num_f32 v66, v66, v66
-; GFX1250-NEXT:    v_dual_max_num_f32 v12, v12, v12 :: v_dual_max_num_f32 v67, v67, v67
-; GFX1250-NEXT:    v_dual_max_num_f32 v11, v11, v11 :: v_dual_max_num_f32 v68, v68, v68
-; GFX1250-NEXT:    v_dual_max_num_f32 v10, v10, v10 :: v_dual_max_num_f32 v69, v69, v69
-; GFX1250-NEXT:    v_dual_max_num_f32 v9, v9, v9 :: v_dual_max_num_f32 v70, v70, v70
-; GFX1250-NEXT:    v_dual_max_num_f32 v8, v8, v8 :: v_dual_max_num_f32 v71, v71, v71
-; GFX1250-NEXT:    v_dual_max_num_f32 v80, v80, v80 :: v_dual_max_num_f32 v81, v81, v81
-; GFX1250-NEXT:    v_dual_max_num_f32 v82, v82, v82 :: v_dual_max_num_f32 v83, v83, v83
-; GFX1250-NEXT:    v_dual_max_num_f32 v3, v3, v3 :: v_dual_max_num_f32 v4, v4, v4
-; GFX1250-NEXT:    v_dual_max_num_f32 v5, v5, v5 :: v_dual_max_num_f32 v6, v6, v6
-; GFX1250-NEXT:    v_max_num_f32_e32 v7, v7, v7
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v26, v26, v36
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v3, v3, v83
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v4, v4, v82
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v5, v5, v81
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v6, v6, v80
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v7, v7, v71
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v8, v8, v70
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v9, v9, v69
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v10, v10, v68
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v11, v11, v67
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v12, v12, v66
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v13, v13, v65
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v14, v14, v64
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v15, v15, v55
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v16, v16, v54
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v17, v17, v53
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v18, v18, v52
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v19, v19, v51
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v20, v20, v50
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v21, v21, v49
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v22, v22, v48
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v24, v24, v38
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v25, v25, v37
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v27, v27, v35
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v28, v28, v34
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v29, v29, v33
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v30, v30, v32
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v2, 1.0, v2 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v3, 1.0, v3 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v4, 1.0, v4 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v5, 1.0, v5 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v6, 1.0, v6 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v7, 1.0, v7 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v8, 1.0, v8 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v9, 1.0, v9 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v10, 1.0, v10 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v11, 1.0, v11 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v12, 1.0, v12 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v13, 1.0, v13 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v14, 1.0, v14 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v15, 1.0, v15 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v16, 1.0, v16 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v17, 1.0, v17 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v18, 1.0, v18 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v19, 1.0, v19 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v20, 1.0, v20 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v21, 1.0, v21 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v22, 1.0, v22 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v23, 1.0, v23 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v24, 1.0, v24 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v25, 1.0, v25 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v26, 1.0, v26 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v27, 1.0, v27 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v28, 1.0, v28 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v29, 1.0, v29 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_pk_mul_bf16 v30, 1.0, v30 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v39, 0xffff0000, v31
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v31, 16, v31
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_max_num_f32_e32 v36, v39, v39
-; GFX1250-NEXT:    v_max_num_f32_e32 v31, v31, v31
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v31, v31, v36
+; GFX1250-NEXT:    v_pk_mul_bf16 v31, 1.0, v31 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <64 x bfloat> @llvm.canonicalize.v64bf16(<64 x bfloat> %val)
   ret <64 x bfloat> %canonicalized
