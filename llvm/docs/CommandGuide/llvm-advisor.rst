@@ -1,310 +1,448 @@
-llvm-advisor - LLVM compilation analysis tool
-=============================================
+llvm-advisor - LLVM compilation snapshot and analysis tool
+===========================================================
 
 .. program:: llvm-advisor
 
 SYNOPSIS
 --------
 
-:program:`llvm-advisor` [*options*] *compiler* [*compiler-args...*]
-
-:program:`llvm-advisor` **view** [*options*] *compiler* [*compiler-args...*]
+:program:`llvm-advisor` <command> [*options*]
 
 DESCRIPTION
 -----------
 
-The :program:`llvm-advisor` tool is a compilation analysis utility that acts as
-a wrapper around compiler commands to collect detailed information about the
-compilation process. It captures compilation data, optimization information, 
-and diagnostic details that can be used to analyze and improve build performance 
-and code optimization. The tool requires no external dependencies beyond a 
-standard LLVM/Clang installation and Python 3 for the web viewer.
+The :program:`llvm-advisor` tool is a compilation analysis utility that captures
+and analyzes compilation snapshots from LLVM-based builds. It uses ``compile_commands.json``
+to identify compilation units, captures detailed analysis data using configurable
+capabilities, and provides tools for comparing, querying, and inspecting results.
 
-:program:`llvm-advisor` intercepts compiler invocations and instruments them
-to extract and collect data including:
+:program:`llvm-advisor` operates on the concept of **snapshots** - immutable
+records of a compilation captured at a point in time. Each snapshot contains:
 
-* LLVM IR, assembly, and preprocessed source code output
-* AST dumps in both text and JSON formats  
-* Include dependency trees and macro expansion information
-* Compiler diagnostics, warnings, and static analysis results
-* Debug information and DWARF data analysis
-* Compilation timing reports (via ``-ftime-report``)
-* Runtime profiling and coverage data (when profiler is enabled)
-* Binary size analysis and symbol information
-* Optimization remarks from compiler passes
+* LLVM IR and assembly output
+* Optimization remarks and analysis data
+* Compiler diagnostics and warnings
+* Debug information
+* Runtime profiling data (when correlated)
+* Results from multiple analysis capabilities
 
-The tool supports two primary modes of operation:
+The captured data is stored in a content-addressable storage system and can be
+queried, compared, and analyzed using the CLI or HTTP server interface.
 
-**Data Collection Mode**: The default mode where :program:`llvm-advisor` wraps
-the compiler command, collects analysis data, and stores it in a
-hierarchically organized output directory for later analysis.
+GLOBAL OPTIONS
+--------------
 
-**View Mode**: When invoked with the **view** subcommand, :program:`llvm-advisor`
-performs data collection and then automatically launches a web-based interface
-with interactive visualization and analysis capabilities. The web viewer provides
-a REST API for programmatic access to the collected data.
+.. option:: --store <directory>
 
-All collected data is stored in a timestamped, structured format within the output
-directory (default: ``.llvm-advisor``) and can be analyzed using the built-in web
-viewer or external tools.
+ Specify the advisor store directory where snapshots and analysis data are
+ stored. Defaults to platform-specific location (``~/.local/share/llvm-advisor``
+ on Linux, ``~/Library/Application Support/llvm-advisor`` on macOS).
 
-OPTIONS
--------
+.. option:: --capability-dir <directory>
 
-.. option:: --config <file>
+ Directory containing capability JSON specifications. Defaults to
+ ``config/capabilities`` relative to the advisor installation.
 
- Specify a configuration file to customize :program:`llvm-advisor` behavior.
- The configuration file uses JSON format and can override default settings
- for output directory, verbosity, and other options.
+.. option:: --plugin <path>
 
-.. option:: --output-dir <directory>
-
- Specify the directory where compilation analysis data will be stored.
- If the directory doesn't exist, it will be created. The default output
- directory is ``.llvm-advisor`` in the current working directory.
-
-.. option:: --verbose
-
- Enable verbose output to display detailed information about the analysis
- process, including the compiler command being executed and the location
- of collected data.
-
-.. option:: --keep-temps
-
- Preserve temporary files created during the analysis process. By default,
- temporary files are cleaned up automatically. This option is useful for
- debugging or when you need to examine intermediate analysis results.
-
-.. option:: --no-profiler
-
- Disable the automatic addition of compiler profiling flags during compilation.
- By default, :program:`llvm-advisor` adds flags like ``-fprofile-instr-generate``
- and ``-fcoverage-mapping`` to collect runtime profiling data. This option
- disables that behavior, reducing compilation overhead but limiting the
- coverage and profiling data available for analysis.
-
-.. option:: --port <port>
-
- Specify the port number for the web server when using the **view** command.
- The default port is 8000. The web viewer will be accessible at
- ``http://localhost:<port>``.
+ Load an external advisor plugin (.so/.dylib/.dll). May be repeated to load
+ multiple plugins. Plugins can register custom capabilities at runtime.
 
 .. option:: --help, -h
 
- Display usage information and available options.
+ Display usage information and available commands.
 
 COMMANDS
 --------
 
-:program:`llvm-advisor` supports the following commands:
+:program:`llvm-advisor` supports the following subcommands:
 
-Data Collection (Default)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+**capture**
+~~~~~~~~~~~
 
-When no subcommand is specified, :program:`llvm-advisor` operates in data
-collection mode:
+Create a snapshot of a build based on ``compile_commands.json``:
 
 .. code-block:: console
 
-  llvm-advisor [options] <compiler> [compiler-args...]
+  llvm-advisor capture [--source-root <dir>] [--build-root <dir>]
+                       [--profile <profile.json>]
+                       [--capability <id>...]
 
-This mode wraps the specified compiler command, collects analysis data during
-compilation, and stores the results in the output directory.
+Captures compilation data for all units in ``compile_commands.json``. The tool
+auto-detects source and build roots if not specified. Capabilities can be
+specified via profile file or individual ``--capability`` flags.
 
-View Mode
+**list**
+~~~~~~~
+
+List snapshots or compilation units:
+
+.. code-block:: console
+
+  llvm-advisor list [--snapshot <id>]
+
+Without options, lists all snapshots. With ``--snapshot``, lists units in that
+snapshot. Use ``latest`` to refer to the most recent snapshot.
+
+**query**
 ~~~~~~~~~
 
-The **view** subcommand combines data collection with automatic web viewer
-launch:
+Run capabilities for a unit or snapshot:
 
 .. code-block:: console
 
-  llvm-advisor view [options] <compiler> [compiler-args...]
+  llvm-advisor query --snapshot <id> --capability <id>...
+                    [--unit <id>]
 
-In this mode, :program:`llvm-advisor` first performs compilation with data
-collection, then launches a web server providing an interactive interface
-to analyze the collected data. The web viewer remains active until manually
-terminated.
+Executes specified capabilities and outputs results as JSON. Can target a
+specific unit or the entire snapshot.
+
+**inspect**
+~~~~~~~~~~~
+
+Inspect and display capability results:
+
+.. code-block:: console
+
+  llvm-advisor inspect [<mode>] --snapshot <id>
+                       [--unit <id>] [--capability <id>]
+                       [--file <path>] [--line <num>]
+                       [--output-format json|text]
+
+Displays capability results in human-readable or JSON format. Supports filtering
+by file, line, and other criteria. Available modes: ``ir``, ``ir-diff``, ``cfg``,
+``dom``, ``callgraph``, ``dag``, and others.
+
+**compare**
+~~~~~~~~~~~
+
+Compare two snapshots:
+
+.. code-block:: console
+
+  llvm-advisor compare --before <id> --after <id>
+
+Generates a detailed comparison report between two snapshots, highlighting
+differences in optimization, performance metrics, and diagnostic data.
+
+**serve**
+~~~~~~~~~
+
+Run the embedded HTTP server:
+
+.. code-block:: console
+
+  llvm-advisor serve [--port <port>]
+
+Launches an HTTP server (default port 8080) providing REST API access to all
+snapshot data and analysis results.
+
+**capabilities**
+~~~~~~~~~~~~~~~~
+
+List available capabilities:
+
+.. code-block:: console
+
+  llvm-advisor capabilities
+
+Displays all registered capabilities and their metadata.
+
+**runtime-ingest**
+~~~~~~~~~~~~~~~~~~~
+
+Ingest runtime execution data:
+
+.. code-block:: console
+
+  llvm-advisor runtime-ingest --snapshot <id>
+                              --kind <type>
+                              --data <path>
+
+Ingests runtime data (PGO, coverage, memprof, etc.) into a snapshot for
+correlation and analysis.
+
+**runtime-correlate**
+~~~~~~~~~~~~~~~~~~~~~
+
+Correlate runtime data with captured units:
+
+.. code-block:: console
+
+  llvm-advisor runtime-correlate --snapshot <id>
+
+Links ingested runtime data to specific compilation units.
+
+**insight-list**
+~~~~~~~~~~~~~~~~
+
+List available insights:
+
+.. code-block:: console
+
+  llvm-advisor insight-list [--snapshot <id>] [--unit <id>]
+
+Displays available insight analyses for the given context.
+
+**insight**
+~~~~~~~~~~~
+
+Run insight analysis:
+
+.. code-block:: console
+
+  llvm-advisor insight --name <name> --snapshot <id>
+                       [--unit <id>] [--baseline <id>]
+
+Executes a named insight analysis and returns results.
+
+**health**
+~~~~~~~~~~
+
+Check service health:
+
+.. code-block:: console
+
+  llvm-advisor health
+
+Verifies the advisor service is operational.
+
+**inspect-storage**
+~~~~~~~~~~~~~~~~~~~
+
+Inspect storage state:
+
+.. code-block:: console
+
+  llvm-advisor inspect-storage
+
+Displays information about the content-addressable storage backend.
+
+**maintenance-compact**
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Compact CAS storage:
+
+.. code-block:: console
+
+  llvm-advisor maintenance-compact
+
+Performs maintenance operations on the storage system to reclaim space.
 
 EXAMPLES
 --------
 
-Basic Usage
-~~~~~~~~~~~
+Basic Snapshot Capture
+~~~~~~~~~~~~~~~~~~~~~~
 
-Analyze a simple C compilation:
-
-.. code-block:: console
-
-  llvm-advisor clang -O2 -g main.c -o main
-
-This command will compile ``main.c`` using clang with ``-O2`` optimization
-and debug information, while collecting analysis data in the 
-``.llvm-advisor`` directory. The output will be organized as:
-
-.. code-block:: text
-
-  .llvm-advisor/
-  └── main/
-      └── main_20250825_143022/  # Timestamped compilation session
-          ├── ir/main.ll         # LLVM IR output
-          ├── assembly/main.s    # Assembly output  
-          ├── ast/main.ast       # AST dump
-          ├── diagnostics/       # Compiler warnings/errors
-          └── ...               # Additional analysis data
-
-Complex C++ Project
-~~~~~~~~~~~~~~~~~~~
-
-Analyze a C++ compilation with custom output directory:
+Capture a snapshot from a CMake project:
 
 .. code-block:: console
 
-  llvm-advisor --output-dir analysis-results clang++ -O3 -std=c++17 app.cpp lib.cpp -o app
+  cd /path/to/project
+  llvm-advisor capture
 
-Compile with maximum optimization and store analysis results in the
-``analysis-results`` directory.
+The tool automatically detects ``compile_commands.json`` and captures all
+compilation units using default capabilities.
 
-Interactive Analysis
-~~~~~~~~~~~~~~~~~~~~
+Capture with Specific Capabilities
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Compile and immediately launch the web viewer:
-
-.. code-block:: console
-
-  llvm-advisor view --port 8080 clang -O2 main.c
-
-This will compile ``main.c``, collect analysis data, and launch a web interface
-accessible at ``http://localhost:8080`` for interactive analysis.
-
-Configuration File Usage
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Use a custom configuration file:
+Capture specific analyses:
 
 .. code-block:: console
 
-  llvm-advisor --config custom-config.json --verbose clang++ -O1 project.cpp
+  llvm-advisor capture --capability llvm.ir.view --capability llvm.mca.report
 
-Example configuration file (``custom-config.json``):
+This captures only IR and machine code analysis results.
 
-.. code-block:: json
+Using a Profile
+~~~~~~~~~~~~~~~
 
-  {
-    "outputDir": "compilation-analysis",
-    "verbose": true,
-    "keepTemps": false,
-    "runProfiler": true,
-    "timeout": 120
-  }
-
-Integration with Build Systems
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:program:`llvm-advisor` can be integrated into existing build systems by
-substituting the compiler command:
+Capture with a predefined profile:
 
 .. code-block:: console
 
-  # Instead of: make CC=clang CXX=clang++
-  make CC="llvm-advisor clang" CXX="llvm-advisor clang++"
+  llvm-advisor capture --profile config/capabilities/catalog.json
 
-  # For CMake projects:
-  cmake -DCMAKE_C_COMPILER="llvm-advisor clang" \
-        -DCMAKE_CXX_COMPILER="llvm-advisor clang++" \
-        ..
+Load capability specifications from a profile file.
 
-Accessing Historical Data
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The timestamped directory structure allows you to analyze compilation trends
-over time:
+List All Snapshots
+~~~~~~~~~~~~~~~~~~
 
 .. code-block:: console
 
-  # View most recent compilation results
-  llvm-advisor view --output-dir .llvm-advisor
+  llvm-advisor list
 
-  # Each unit directory contains multiple timestamped runs
-  ls .llvm-advisor/myproject/
-  # Output: myproject_20250825_140512  myproject_20250825_143022
+Shows all captured snapshots with their IDs and metadata.
 
-The web viewer automatically uses the most recent compilation run for analysis,
-but all historical data remains accessible in the timestamped directories.
+List Units in a Snapshot
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: console
+
+  llvm-advisor list --snapshot latest
+
+Lists all compilation units in the most recent snapshot.
+
+Query a Snapshot
+~~~~~~~~~~~~~~~~
+
+Run capabilities and get results as JSON:
+
+.. code-block:: console
+
+  llvm-advisor query --snapshot latest --capability llvm.ir.view
+
+Outputs JSON results of the specified capability.
+
+Inspect IR Output
+~~~~~~~~~~~~~~~~~
+
+View LLVM IR for a specific unit:
+
+.. code-block:: console
+
+  llvm-advisor inspect ir --snapshot latest --unit main.cpp
+
+Compare Two Snapshots
+~~~~~~~~~~~~~~~~~~~~~
+
+Generate a detailed comparison:
+
+.. code-block:: console
+
+  llvm-advisor compare --before snapshot-1 --after snapshot-2
+
+Displays differences in optimization and diagnostics between snapshots.
+
+Run the Web Server
+~~~~~~~~~~~~~~~~~~
+
+Start the HTTP interface:
+
+.. code-block:: console
+
+  llvm-advisor serve --port 8080
+
+Access analysis at ``http://localhost:8080``.
+
+Ingest PGO Data
+~~~~~~~~~~~~~~~
+
+Add profiling information to a snapshot:
+
+.. code-block:: console
+
+  llvm-advisor runtime-ingest --snapshot latest --kind pgo-instr --data profile.profraw
+  llvm-advisor runtime-correlate --snapshot latest
+
+Links profiling data to compilation units for optimization analysis.
 
 CONFIGURATION
 -------------
 
-:program:`llvm-advisor` can be configured using a JSON configuration file
-specified with the :option:`--config` option. The configuration file supports
-the following options:
+:program:`llvm-advisor` can be configured through environment variables and
+command-line options.
 
-**outputDir** (string)
-  Default output directory for analysis data.
+**Environment Variables**
 
-**verbose** (boolean)
-  Enable verbose output by default.
+``LLVM_ADVISOR_STORE``
+  Override the default store directory.
 
-**keepTemps** (boolean)
-  Preserve temporary files by default.
+**Capability Configuration**
 
-**runProfiler** (boolean)
-  Enable performance profiling during compilation.
+Capabilities are defined in JSON format in the capability directory
+(``config/capabilities/catalog.json``). Each capability specifies:
 
-**timeout** (integer)
-  Timeout in seconds for compilation analysis (default: 60).
+* Capability ID (e.g., ``llvm.ir.view``)
+* Name and description
+* Required parameters
+* Output format
+* Readiness status (experimental, beta, stable)
+
+**Custom Profiles**
+
+You can create custom capability profiles as JSON files:
+
+.. code-block:: json
+
+  {
+    "capabilities": [
+      "llvm.ir.view",
+      "llvm.mca.report",
+      "llvm.cfg"
+    ]
+  }
+
+Then reference with ``--profile custom-profile.json`` during capture.
 
 OUTPUT FORMAT
 -------------
 
-:program:`llvm-advisor` generates analysis data in a structured format within
-the output directory. The tool organizes data hierarchically by compilation unit
-and timestamp, allowing multiple compilation sessions to be tracked over time.
+:program:`llvm-advisor` stores data in a content-addressable storage system
+under the store directory. Data is organized by snapshot and accessed through
+capability results.
 
-The typical output structure includes:
+**Query Output**
 
-.. code-block:: text
+When running queries or inspections, output is typically JSON:
 
-  .llvm-advisor/
-  └── {compilation-unit}/           # One directory per compilation unit
-      └── {unit-name}_{timestamp}/  # Timestamped compilation runs
-          ├── ir/                   # LLVM IR files (.ll)
-          ├── assembly/             # Assembly output (.s)
-          ├── ast/                  # AST dumps (.ast) and JSON (.ast.json)
-          ├── preprocessed/         # Preprocessed source (.i/.ii)
-          ├── include-tree/         # Include hierarchy information
-          ├── dependencies/         # Dependency analysis (.deps.txt)
-          ├── debug/                # Debug information and DWARF data
-          ├── static-analyzer/      # Static analysis results
-          ├── diagnostics/          # Compiler diagnostics and warnings
-          ├── coverage/             # Code coverage data
-          ├── time-trace/           # Compilation time traces
-          ├── runtime-trace/        # Runtime tracing information
-          ├── binary-analysis/      # Binary size and symbol analysis
-          ├── pgo/                  # Profile-guided optimization data
-          ├── ftime-report/         # Compilation timing reports
-          ├── version-info/         # Compiler version information
-          └── sources/              # Source file copies and metadata
+.. code-block:: json
 
-Each compilation run creates a new timestamped directory, preserving the history
-of compilation sessions. The most recent run is automatically used by the web
-viewer for analysis.
+  {
+    "capability": "llvm.ir.view",
+    "unit": "main.cpp",
+    "success": true,
+    "value": {
+      "ir": "; ... LLVM IR content ..."
+    }
+  }
+
+**Compare Output**
+
+Comparison results include changes, metrics, and diffs:
+
+.. code-block:: json
+
+  {
+    "baseline": {
+      "snapshot": "id-1",
+      "value": {...}
+    },
+    "candidate": {
+      "snapshot": "id-2",
+      "value": {...}
+    },
+    "diff": {
+      "changed": true,
+      "changes": [...]
+    }
+  }
+
+**Snapshot Metadata**
+
+Each snapshot contains:
+
+* Snapshot ID and creation timestamp
+* List of compilation units captured
+* Capabilities that were run
+* Runtime data if correlated
+* Storage hashes for content integrity
 
 EXIT STATUS
 -----------
 
-:program:`llvm-advisor` returns the same exit status as the wrapped compiler
-command. If the compilation succeeds, it returns 0. If the compilation fails
-or :program:`llvm-advisor` encounters an internal error, it returns a non-zero
-exit status.
+:program:`llvm-advisor` returns 0 on success and non-zero on failure.
 
-:program:`llvm-advisor` returns exit code 1 for various error conditions including:
+Exit code 1 indicates:
 
-* Invalid command line arguments or missing compiler command
-* Configuration file parsing errors  
-* Output directory creation failures
-* Web viewer launch failures (view mode only)
-* Data collection or extraction errors
+* Invalid command line arguments
+* Missing or invalid snapshot ID
+* Capability execution failure
+* Storage access errors
+* Malformed input data
+* Service unavailable errors
 
 SEE ALSO
 --------
