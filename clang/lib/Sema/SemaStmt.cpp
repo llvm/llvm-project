@@ -1294,8 +1294,7 @@ static void checkEnumTypesInSwitchStmt(Sema &S, const Expr *Cond,
 
 static bool areSwitchCasesExhaustive(
     unsigned CondWidthBeforePromotion, bool CondIsSignedBeforePromotion,
-    unsigned CondWidth,
-    ArrayRef<std::pair<llvm::APSInt, CaseStmt *>> CaseVals,
+    unsigned CondWidth, ArrayRef<std::pair<llvm::APSInt, CaseStmt *>> CaseVals,
     ArrayRef<std::pair<llvm::APSInt, CaseStmt *>> CaseRanges,
     ArrayRef<llvm::APSInt> HiVals) {
   unsigned CheckWidth = std::max(CondWidthBeforePromotion, CondWidth) + 1;
