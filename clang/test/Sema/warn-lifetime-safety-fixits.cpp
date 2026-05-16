@@ -52,7 +52,7 @@ View param_with_attr(View a [[maybe_unused]]) {
 
 View param_default(View a = View()) {
   // CHECK: :[[@LINE-1]]:20: warning: parameter in intra-TU function should be marked
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:35-[[@LINE-2]]:35}:" {{\[\[}}clang::lifetimebound]]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:26-[[@LINE-2]]:26}:" {{\[\[}}clang::lifetimebound]]"
   return a;
 }
 

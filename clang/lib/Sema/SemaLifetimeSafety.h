@@ -242,7 +242,7 @@ public:
       FixItText = "[[clang::lifetimebound]] ";
     } else if (ParmToAnnotate->hasDefaultArg()) {
       // If the parameter has a default argument, place the attribute after the
-      // named parameter.
+      // named argument.
       InsertionPoint =
           Lexer::getLocForEndOfToken(ParmToAnnotate->getLocation(), 0,
                                      S.getSourceManager(), S.getLangOpts());
