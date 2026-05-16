@@ -8,13 +8,16 @@
 
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#V4:]] = OpTypeVector %[[#I32]] 4
+
 ; CHECK-DAG: %[[#PI:]] = OpPoisonKHR %[[#I32]]
 ; CHECK-DAG: %[[#PV:]] = OpPoisonKHR %[[#V4]]
 
 ; CHECK: %[[#FS:]] = OpFreezeKHR %[[#I32]] %[[#PI]]
 ; CHECK: OpStore %[[#]] %[[#FS]]
+
 ; CHECK: %[[#FVP:]] = OpFreezeKHR %[[#V4]] %[[#PV]]
 ; CHECK: OpStore %[[#]] %[[#FVP]]
+
 ; CHECK: %[[#FV:]] = OpFreezeKHR %[[#V4]] %[[#]]
 ; CHECK: OpStore %[[#]] %[[#FV]]
 
