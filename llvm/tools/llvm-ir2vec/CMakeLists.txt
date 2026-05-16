@@ -1,6 +1,10 @@
 set(LLVM_LINK_COMPONENTS
+  Analysis
+  CodeGen
+  Core
   # IR reading (used by llvm-ir2vec.cpp directly)
   IRReader
+  Support
 
   # Machine IR components (for -mode=mir)
   MIRParser
