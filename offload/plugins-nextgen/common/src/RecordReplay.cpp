@@ -253,15 +253,15 @@ Error NativeRecordReplayTy::recordDescImpl(
   // Add minimum and maximum for allowed number of teams. If zero, it means
   // there was no restriction provided by the program.
   json::Array JsonTeamsLimits;
-  JsonTeamsLimits.push_back(KernelArgs.NumTeams[0]);
-  JsonTeamsLimits.push_back(KernelArgs.NumTeams[0]);
+  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
+  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
   JsonKernelInfo["TeamsLimits"] = json::Value(std::move(JsonTeamsLimits));
 
   // Add minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
   json::Array JsonThreadsLimits;
-  JsonThreadsLimits.push_back(uint32_t(KernelArgs.ThreadLimit[0] > 0));
-  JsonThreadsLimits.push_back(KernelArgs.ThreadLimit[0]);
+  JsonThreadsLimits.push_back(uint32_t(KernelArgs.UserThreadLimit[0] > 0));
+  JsonThreadsLimits.push_back(KernelArgs.UserThreadLimit[0]);
   JsonKernelInfo["ThreadsLimits"] = json::Value(std::move(JsonThreadsLimits));
 
   json::Array JsonArgPtrs;

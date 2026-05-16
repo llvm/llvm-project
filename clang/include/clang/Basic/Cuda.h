@@ -90,6 +90,9 @@ unsigned CudaArchToID(OffloadArch Arch);
 /// Check if the CUDA architecture is an accelerated variant (e.g. sm_90a).
 bool IsNVIDIAAcceleratedOffloadArch(OffloadArch Arch);
 
+/// Check if the CUDA architecture is a family-specific variant (e.g. sm_100f).
+bool IsNVIDIAFamilySpecificOffloadArch(OffloadArch Arch);
+
 } // namespace clang
 
 #endif
