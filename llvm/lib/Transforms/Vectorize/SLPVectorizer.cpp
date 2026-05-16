@@ -302,7 +302,7 @@ static const unsigned MaxPHINumOperands = 128;
 /// be inevitably scalarized.
 static bool isValidElementType(Type *Ty) {
   // TODO: Support ScalableVectorType.
-  if (SLPReVec && isVectorizedTy(Ty))
+  if (SLPReVec && isVectorizedTy(Ty) && !getVectorizedTypeVF(Ty).isScalable())
     Ty = toScalarizedTy(Ty);
   return canVectorizeTy(Ty) && !Ty->isX86_FP80Ty() && !Ty->isPPC_FP128Ty() &&
          !Ty->isVoidTy();
