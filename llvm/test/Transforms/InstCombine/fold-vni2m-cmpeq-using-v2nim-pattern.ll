@@ -230,15 +230,15 @@ define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_possibly_poisoned_input_using_s
   ret <4 x i32> %select
 }
 
-; NEGATIVE - POSSIBLY POISONED INPUT USING AND
-; `and` is transformed into `select` by a previous optimization, causing the optimization to fail.
+; POSITIVE - POSSIBLY POISONED INPUT USING AND
 define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_possibly_poisoned_input_using_and(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_possibly_poisoned_input_using_and(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; CHECK-NEXT:    [[AND:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[SHUFFLE]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i64> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i1> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[AND:%.*]] = bitcast <2 x i64> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[AND]]
 ;
   %cmp = icmp eq <4 x i32> %a, %b

@@ -2805,6 +2805,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *CastedAnd = foldCastedBitwiseLogic(I))
     return CastedAnd;
 
+  if (Instruction *Folded = foldVecCmpOnHalfElementSize(I))
+    return Folded;
+
   if (Instruction *Sel = foldBinopOfSextBoolToSelect(I))
     return Sel;
 
@@ -2897,9 +2900,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
           simplifyAndOrWithOpReplaced(Op1, Op0, Constant::getAllOnesValue(Ty),
                                       /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateAnd(Op0, V);
-
-  if (Instruction *Folded = foldVecCmpOnHalfElementSize(I))
-    return Folded;
 
   return nullptr;
 }
