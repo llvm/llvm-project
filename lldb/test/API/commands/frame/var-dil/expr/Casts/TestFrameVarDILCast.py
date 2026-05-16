@@ -292,3 +292,18 @@ class TestFrameVarDILCast(TestBase):
         legacy = frame.GetValueForVariablePath("(char)a", lldb.eDILModeLegacy)
         self.assertFailure(simple.GetError())
         self.assertFailure(legacy.GetError())
+
+        # Check enum casting
+        self.expect_var_path("(UnscopedEnum) 0", value="kZero")
+        self.expect_var_path("(UnscopedEnum) ((char) 1)", value="kOne")
+        self.expect_var_path("(UnscopedEnum) 1.5", value="kOne")
+        self.expect_var_path("(UnscopedEnum) enum_one8", value="kOne")
+        self.expect_var_path("(UnscopedEnumInt8) 1ULL", value="kOne8")
+        self.expect_var_path("(UnscopedEnumInt8) -1.5", value="kMinusOne8")
+        self.expect_var_path("(UnscopedEnumInt8) 1.5", value="kOne8")
+        self.expect_var_path("(UnscopedEnumInt8) enum_one", value="kOne8")
+        self.expect(
+            "frame variable '(UnscopedEnum) ifoo'",
+            error=True,
+            substrs=["Cast from 'InnerFoo' to 'UnscopedEnum' is not allowed"],
+        )

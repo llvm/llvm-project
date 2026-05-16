@@ -1528,13 +1528,7 @@ void DXILBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
                                            SmallVectorImpl<uint64_t> &Record,
                                            unsigned Abbrev) {
   Record.push_back(N->isDistinct());
-  DISourceLanguageName Lang = N->getSourceLanguage();
-  if (Lang.hasVersionedName()) {
-    auto LangName = static_cast<dwarf::SourceLanguageName>(Lang.getName());
-    Lang = dwarf::toDW_LANG(LangName, Lang.getVersion())
-               .value_or(dwarf::SourceLanguage{});
-  }
-  Record.push_back(Lang.getUnversionedName());
+  Record.push_back(N->getSourceLanguage().getUnversionedName());
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawProducer()));
   Record.push_back(N->isOptimized());
@@ -1544,7 +1538,7 @@ void DXILBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back(N->getEmissionKind());
   Record.push_back(VE.getMetadataOrNullID(N->getEnumTypes().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getRetainedTypes().get()));
-  Record.push_back(/* subprograms */ 0);
+  Record.push_back(VE.getMetadataOrNullID(DebugInfo.MDExtra.lookup(N)));
   Record.push_back(VE.getMetadataOrNullID(N->getGlobalVariables().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getImportedEntities().get()));
   Record.push_back(N->getDWOId());
@@ -1571,7 +1565,7 @@ void DXILBitcodeWriter::writeDISubprogram(const DISubprogram *N,
   Record.push_back(N->getVirtualIndex());
   Record.push_back(N->getFlags());
   Record.push_back(N->isOptimized());
-  Record.push_back(VE.getMetadataOrNullID(N->getRawUnit()));
+  Record.push_back(VE.getMetadataOrNullID(DebugInfo.MDExtra.lookup(N)));
   Record.push_back(VE.getMetadataOrNullID(N->getTemplateParams().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getDeclaration()));
   Record.push_back(VE.getMetadataOrNullID(N->getRetainedNodes().get()));
@@ -1888,9 +1882,13 @@ void DXILBitcodeWriter::writeFunctionMetadataAttachment(const Function &F) {
   F.getAllMetadata(MDs);
   if (!MDs.empty()) {
     for (const auto &I : MDs) {
+      if (I.first == LLVMContext::MD_dbg)
+        continue;
       Record.push_back(I.first);
       Record.push_back(VE.getMetadataID(I.second));
     }
+  }
+  if (!Record.empty()) {
     Stream.EmitRecord(bitc::METADATA_ATTACHMENT, Record, 0);
     Record.clear();
   }
