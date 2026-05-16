@@ -360,7 +360,8 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
 mlir::Value ComplexExprEmitter::VisitExpr(Expr *e) {
   cgf.cgm.errorUnsupported(e, "complex expression");
   mlir::Type complexTy = cgf.convertType(e->getType());
-  return builder.getNullValue(complexTy, cgf.getLoc(e->getExprLoc()));
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+  return builder.getConstant(loc, cir::PoisonAttr::get(complexTy));
 }
 
 mlir::Value
