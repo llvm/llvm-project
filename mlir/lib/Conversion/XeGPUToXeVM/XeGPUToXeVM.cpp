@@ -337,9 +337,11 @@ class LoadNdMXScaleToXeVMPattern : public OpConversionPattern<xegpu::LoadNdOp> {
     Value idX = xevm::WorkitemIdXOp::create(rewriter, loc, indexType, {});
     // Adjust offsetH and offsetW with thread id X
     if (isAScale) {
-      // 16 lanes but only 8 rows: Divide idX by 2 to wraparound
-      Value one = LLVM::ConstantOp::create(rewriter, op.getLoc(), indexType, 1);
-      idX = LLVM::AShrOp::create(rewriter, loc, idX, one);
+      // 16 lanes but only 8 rows: Get the remainder of divide by 8 to
+      // wraparound
+      Value eight =
+          LLVM::ConstantOp::create(rewriter, op.getLoc(), indexType, 8);
+      idX = LLVM::SRemOp::create(rewriter, loc, idX, eight);
       offsetH = LLVM::AddOp::create(rewriter, loc, offsetH, idX);
     }
     if (isBScale) {
