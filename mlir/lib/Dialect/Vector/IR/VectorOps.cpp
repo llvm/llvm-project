@@ -25,6 +25,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -5556,6 +5557,59 @@ static AffineMap inverseWithUnusedDims(AffineMap map) {
 }
 
 namespace {
+
+/// Folds transfer_read(tensor.empty) when fully in-bounds.
+///
+/// Since tensor.empty has unspecified contents, reading from it produces
+/// an unspecified value, which is exactly the semantics of ub.poison.
+///
+///   Case 1 — fully in-bounds, no mask:
+///     %e = tensor.empty() : tensor<128xf16>
+///     %r = vector.transfer_read %e[%c0], %pad {in_bounds = [true]}
+///   ->
+///     %r = ub.poison : vector<128xf16>
+///
+///   Case 2 — fully in-bounds, masked:
+///     %e = tensor.empty() : tensor<128xf16>
+///     %r = vector.transfer_read %e[%c0], %pad, %mask {in_bounds = [true]}
+///   ->
+///     %r = vector.broadcast %pad : f16 to vector<128xf16>
+///
+///     In-bounds lanes read unspecified (poison-refinable) contents from
+///     tensor.empty, so we may replace them with pad. For masked in-bounds
+///     reads, a select(mask, poison, pad) is also equivalent to pad because
+///     poison can be refined to any value.
+struct FoldTransferReadOfEmptyTensor
+    : public vector::MaskableOpRewritePattern<TransferReadOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
+
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(TransferReadOp op, MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
+    if (!op.hasPureTensorSemantics())
+      return failure();
+
+    if (!op.getBase().getDefiningOp<tensor::EmptyOp>())
+      return failure();
+
+    if (!op.getPermutationMap().isMinorIdentity())
+      return failure();
+
+    if (op.hasOutOfBoundsDim())
+      return failure();
+
+    if (!maskingOp && !op.getMask()) {
+      return ub::PoisonOp::create(rewriter, op.getLoc(), op.getType())
+          ->getResult(0);
+    }
+
+    Value pad = op.getPadding();
+    return vector::BroadcastOp::create(rewriter, pad.getLoc(), op.getType(),
+                                       pad)
+        ->getResult(0);
+  }
+};
+
 /// Store to load forwarding for transfer operations with permuation maps.
 /// Even if the permutation maps are different we can still propagate the store
 /// into the load if the size of the dimensions read and written match. Then we
@@ -5656,7 +5710,8 @@ struct TransferReadAfterWriteToBroadcast
 
 void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
-  results.add<TransferReadAfterWriteToBroadcast>(context);
+  results.add<FoldTransferReadOfEmptyTensor, TransferReadAfterWriteToBroadcast>(
+      context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
