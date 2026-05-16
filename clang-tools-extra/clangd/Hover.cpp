@@ -1681,6 +1681,43 @@ markup::Document HoverInfo::presentDoxygen() const {
   return Output;
 }
 
+markup::Document HoverInfo::presentKernelDoc() const {
+  markup::Document Output;
+
+  markup::Paragraph &Header = Output.addHeading(3);
+  if (!Definition.empty()) {
+    Output.addRuler();
+    definitionScopeToMarkup(Output);
+  } else {
+    Header.appendCode(Name);
+  }
+
+  Output.addRuler();
+  KernelDocInfo DocInfo = parseKernelDoc(Documentation);
+  renderKernelDocToMarkup(DocInfo, Output);
+
+  if (Parameters && !Parameters->empty() && DocInfo.Params.empty()) {
+    Output.addHeading(3).appendText("Parameters");
+    markup::BulletList &L = Output.addBulletList();
+    for (const auto &Param : *Parameters)
+      L.addItem().addParagraph().appendCode(llvm::to_string(Param));
+  }
+
+  if (ReturnType && ReturnType->AKA.value_or(ReturnType->Type) != "void") {
+    if (DocInfo.Returns.empty() && DocInfo.ReturnItems.empty()) {
+      Output.addHeading(3).appendText("Returns");
+      Output.addParagraph().appendCode(llvm::to_string(*ReturnType));
+    }
+  }
+
+  appendCommonMetadata(Output);
+
+  if (!Provider.empty())
+    providerToMarkupParagraph(Output);
+
+  return Output;
+}
+
 markup::Document HoverInfo::presentDefault() const {
   markup::Document Output;
   // Header contains a text of the form:
@@ -1771,6 +1808,9 @@ std::string HoverInfo::present(MarkupKind Kind) const {
       return presentDefault().asMarkdown();
     if (Cfg.Documentation.CommentFormat == Config::CommentFormatPolicy::Doxygen)
       return presentDoxygen().asMarkdown();
+    if (Cfg.Documentation.CommentFormat ==
+        Config::CommentFormatPolicy::KernelDoc)
+      return presentKernelDoc().asMarkdown();
     if (Cfg.Documentation.CommentFormat ==
         Config::CommentFormatPolicy::PlainText)
       // If the user prefers plain text, we use the present() method to generate

@@ -216,6 +216,8 @@ struct Config {
     Markdown,
     /// Treat comments as doxygen.
     Doxygen,
+    /// Treat comments as kernel-doc.
+    KernelDoc,
   };
 
   struct {

@@ -820,6 +820,7 @@ struct FragmentCompiler {
                   .map("Plaintext", Config::CommentFormatPolicy::PlainText)
                   .map("Markdown", Config::CommentFormatPolicy::Markdown)
                   .map("Doxygen", Config::CommentFormatPolicy::Doxygen)
+                  .map("KernelDoc", Config::CommentFormatPolicy::KernelDoc)
                   .value())
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Documentation.CommentFormat = *Val;

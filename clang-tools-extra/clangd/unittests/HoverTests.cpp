@@ -5304,6 +5304,76 @@ TEST(Hover, CDoxygenFunction) {
   EXPECT_EQ(Rendered, ExpectedRender);
 }
 
+TEST(Hover, CKernelDocFunction) {
+  Annotations T(R"c(
+    /**
+     * my_alloc() - Allocate a buffer.
+     * @size: the size of the buffer to allocate
+     * @flags: allocation flags
+     *
+     * Allocates a contiguous buffer of at least @size bytes.
+     *
+     * Context: Process context. May sleep if %GFP_KERNEL is used.
+     * Return: Pointer to the buffer or %NULL on failure.
+     */
+    void *[[^my_alloc]](int size, int flags);
+  )c");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.Filename = "TestTU.c";
+  TU.ExtraArgs = {"-std=c17"};
+  auto AST = TU.build();
+
+  Config Cfg;
+  Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::KernelDoc;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+
+  EXPECT_EQ(H->Name, "my_alloc");
+  EXPECT_EQ(H->Kind, index::SymbolKind::Function);
+
+  auto Rendered = H->present(MarkupKind::Markdown);
+  EXPECT_NE(Rendered.find("Allocate a buffer."), std::string::npos);
+  EXPECT_NE(Rendered.find("`size`"), std::string::npos);
+  EXPECT_NE(Rendered.find("`flags`"), std::string::npos);
+  EXPECT_NE(Rendered.find("### Parameters"), std::string::npos);
+  EXPECT_NE(Rendered.find("### Returns"), std::string::npos);
+  EXPECT_NE(Rendered.find("### Context"), std::string::npos);
+  EXPECT_NE(Rendered.find("`GFP_KERNEL`"), std::string::npos);
+  EXPECT_NE(Rendered.find("`NULL`"), std::string::npos);
+}
+
+TEST(Hover, CKernelDocInlineMember) {
+  Annotations T(R"c(
+    /**
+     * struct my_device - A device structure.
+     * @name: the device name
+     */
+    struct my_device {
+      /** @bar: the status flags */
+      int [[^bar]];
+    };
+  )c");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.Filename = "TestTU.c";
+  TU.ExtraArgs = {"-std=c17"};
+  auto AST = TU.build();
+
+  Config Cfg;
+  Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::KernelDoc;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+
+  EXPECT_EQ(H->Name, "bar");
+  auto Rendered = H->present(MarkupKind::Markdown);
+  EXPECT_NE(Rendered.find("the status flags"), std::string::npos);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

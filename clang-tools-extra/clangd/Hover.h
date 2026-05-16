@@ -138,6 +138,9 @@ private:
   /// Parse and render the hover information as Doxygen documentation.
   markup::Document presentDoxygen() const;
 
+  /// Parse and render the hover information as kernel-doc documentation.
+  markup::Document presentKernelDoc() const;
+
   /// Render the hover information as a default documentation.
   markup::Document presentDefault() const;
 };
