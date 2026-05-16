@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest'
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:70cbd7591abe'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
@@ -103,7 +103,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++ \
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
-            -DLIBC_CONF_USE_MEM_BUILTINS
+            -DLIBC_CONF_USE_MEM_BUILTINS=ON
 
       - name: Build and Run - gcc
         env:
