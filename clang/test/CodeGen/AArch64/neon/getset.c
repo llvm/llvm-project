@@ -20,9 +20,6 @@
 //===------------------------------------------------------===//
 // 2.1.9.7 Extract one element from vector
 //===------------------------------------------------------===//
-// TODO(cir): Once the mf8 extract-lane builtins are implemented in ClangIR,
-// migrate their coverage from fp8-intrinsics/acle_neon_fp8_untyped.c.
-//
 // This section covers both vget_lane/vgetq_lane and the scalar
 // vdup[b/h/s/d]_(lane|laneq)_* builtins.
 
@@ -30,7 +27,7 @@
 uint8_t test_vget_lane_u8(uint8x8_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x {{.*}}>
 
-// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VGET_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
 // LLVM: ret i8 [[VGET_LANE]]
   return vget_lane_u8(a, 7);
@@ -60,7 +57,7 @@ uint32_t test_vget_lane_u32(uint32x2_t a) {
 int8_t test_vget_lane_s8(int8x8_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !s8i>
 
-// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VGET_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
 // LLVM: ret i8 [[VGET_LANE]]
   return vget_lane_s8(a, 7);
@@ -90,7 +87,7 @@ int32_t test_vget_lane_s32(int32x2_t a) {
 poly8_t test_vget_lane_p8(poly8x8_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x {{.*}}>
 
-// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VGET_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
 // LLVM: ret i8 [[VGET_LANE]]
   return vget_lane_p8(a, 7);
@@ -104,6 +101,15 @@ poly16_t test_vget_lane_p16(poly16x4_t a) {
 // LLVM: [[VGET_LANE:%.*]] = extractelement <4 x i16> [[A]], i32 3
 // LLVM: ret i16 [[VGET_LANE]]
   return vget_lane_p16(a, 3);
+}
+
+// ALL-LABEL: @test_vget_lane_mf8(
+mfloat8_t test_vget_lane_mf8(mfloat8x8_t a) {
+// CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x {{.*}}>
+
+// LLVM-SAME: <8 x i8> [[A:%.*]])
+// LLVM: [[VGET_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
+  return vget_lane_mf8(a, 7);
 }
 
 // ALL-LABEL: @test_vget_lane_f16(
@@ -145,7 +151,7 @@ float64_t test_vget_lane_f64(float64x1_t a) {
 uint8_t test_vgetq_lane_u8(uint8x16_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x {{.*}}>
 
-// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
 // LLVM: ret i8 [[VGETQ_LANE]]
   return vgetq_lane_u8(a, 15);
@@ -175,7 +181,7 @@ uint32_t test_vgetq_lane_u32(uint32x4_t a) {
 int8_t test_vgetq_lane_s8(int8x16_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x !s8i>
 
-// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
 // LLVM: ret i8 [[VGETQ_LANE]]
   return vgetq_lane_s8(a, 15);
@@ -205,7 +211,7 @@ int32_t test_vgetq_lane_s32(int32x4_t a) {
 poly8_t test_vgetq_lane_p8(poly8x16_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x {{.*}}>
 
-// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
 // LLVM: ret i8 [[VGETQ_LANE]]
   return vgetq_lane_p8(a, 15);
@@ -219,6 +225,15 @@ poly16_t test_vgetq_lane_p16(poly16x8_t a) {
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[A]], i32 7
 // LLVM: ret i16 [[VGETQ_LANE]]
   return vgetq_lane_p16(a, 7);
+}
+
+// ALL-LABEL: @test_vgetq_lane_mf8(
+mfloat8_t test_vgetq_lane_mf8(mfloat8x16_t a) {
+// CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x {{.*}}>
+
+// LLVM-SAME: <16 x i8> [[A:%.*]])
+// LLVM: [[VGETQ_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
+  return vgetq_lane_mf8(a, 15);
 }
 
 // ALL-LABEL: @test_vgetq_lane_f16(
@@ -362,7 +377,7 @@ float64_t test_vdupd_laneq_f64(float64x2_t a) {
 int8_t test_vdupb_lane_s8(int8x8_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !s8i>
 
-// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VDUP_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
 // LLVM: ret i8 [[VDUP_LANE]]
   return vdupb_lane_s8(a, 7);
@@ -402,7 +417,7 @@ int64_t test_vdupd_lane_s64(int64x1_t a) {
 uint8_t test_vdupb_lane_u8(uint8x8_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x {{.*}}>
 
-// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VDUP_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
 // LLVM: ret i8 [[VDUP_LANE]]
   return vdupb_lane_u8(a, 7);
@@ -442,7 +457,7 @@ uint64_t test_vdupd_lane_u64(uint64x1_t a) {
 int8_t test_vdupb_laneq_s8(int8x16_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x !s8i>
 
-// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VDUPQ_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
 // LLVM: ret i8 [[VDUPQ_LANE]]
   return vdupb_laneq_s8(a, 15);
@@ -482,7 +497,7 @@ int64_t test_vdupd_laneq_s64(int64x2_t a) {
 uint8_t test_vdupb_laneq_u8(uint8x16_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x {{.*}}>
 
-// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VDUPQ_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
 // LLVM: ret i8 [[VDUPQ_LANE]]
   return vdupb_laneq_u8(a, 15);
@@ -522,7 +537,7 @@ uint64_t test_vdupd_laneq_u64(uint64x2_t a) {
 poly8_t test_vdupb_lane_p8(poly8x8_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x {{.*}}>
 
-// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VDUP_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
 // LLVM: ret i8 [[VDUP_LANE]]
   return vdupb_lane_p8(a, 7);
@@ -538,11 +553,20 @@ poly16_t test_vduph_lane_p16(poly16x4_t a) {
   return vduph_lane_p16(a, 3);
 }
 
+// ALL-LABEL: @test_vdupb_lane_mf8(
+mfloat8_t test_vdupb_lane_mf8(mfloat8x8_t a) {
+// CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x {{.*}}>
+
+// LLVM-SAME: <8 x i8> [[A:%.*]])
+// LLVM: [[VDUP_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
+  return vdupb_lane_mf8(a, 7);
+}
+
 // ALL-LABEL: @test_vdupb_laneq_p8(
 poly8_t test_vdupb_laneq_p8(poly8x16_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x {{.*}}>
 
-// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]])
 // LLVM: [[VDUPQ_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
 // LLVM: ret i8 [[VDUPQ_LANE]]
   return vdupb_laneq_p8(a, 15);
@@ -556,4 +580,13 @@ poly16_t test_vduph_laneq_p16(poly16x8_t a) {
 // LLVM: [[VDUPQ_LANE:%.*]] = extractelement <8 x i16> [[A]], i32 7
 // LLVM: ret i16 [[VDUPQ_LANE]]
   return vduph_laneq_p16(a, 7);
+}
+
+// ALL-LABEL: @test_vdupb_laneq_mf8(
+mfloat8_t test_vdupb_laneq_mf8(mfloat8x16_t a) {
+// CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<16 x {{.*}}>
+
+// LLVM-SAME: <16 x i8> [[A:%.*]])
+// LLVM: [[VDUPQ_LANE:%.*]] = extractelement <16 x i8> [[A]], i32 15
+  return vdupb_laneq_mf8(a, 15);
 }
