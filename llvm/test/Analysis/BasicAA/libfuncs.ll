@@ -117,7 +117,7 @@ declare ptr @memccpy(ptr, ptr, i32, i64)
 ; CHECK-LABEL: Function: test_memccpy_const_size
 ; CHECK:      Just Mod:  Ptr: i8* %a        <->  %res = call ptr @memccpy(ptr %a, ptr %b, i32 42, i64 4)
 ; CHECK-NEXT: Just Ref:  Ptr: i8* %b        <->  %res = call ptr @memccpy(ptr %a, ptr %b, i32 42, i64 4)
-; CHECK-NEXT: Just Mod:  Ptr: i8* %res      <->  %res = call ptr @memccpy(ptr %a, ptr %b, i32 42, i64 4)
+; CHECK-NEXT: Both ModRef: Ptr: i8* %res      <->  %res = call ptr @memccpy(ptr %a, ptr %b, i32 42, i64 4)
 ; CHECK-NEXT: Just Mod:  Ptr: i8* %a.gep.1  <->  %res = call ptr @memccpy(ptr %a, ptr %b, i32 42, i64 4)
 ; CHECK-NEXT: NoModRef:  Ptr: i8* %a.gep.5  <->  %res = call ptr @memccpy(ptr %a, ptr %b, i32 42, i64 4)
 ; CHECK-NEXT: Just Ref:  Ptr: i8* %b.gep.1  <->  %res = call ptr @memccpy(ptr %a, ptr %b, i32 42, i64 4)
@@ -321,7 +321,7 @@ declare ptr @__memcpy_chk(ptr writeonly, ptr readonly, i64, i64)
 define ptr @test_memcpy_chk_const_size(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-LABEL: Function: test_memcpy_chk_const_size
 ; CHECK:       Just Mod:  Ptr: i8* %a	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 4, i64 %n)
-; CHECK-NEXT:  Just Mod:  Ptr: i8* %res	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 4, i64 %n)
+; CHECK-NEXT:  Both ModRef: Ptr: i8* %res	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 4, i64 %n)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 4, i64 %n)
 ; CHECK-NEXT:  NoModRef:  Ptr: i8* %a.gep.5	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 4, i64 %n)
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.1	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 4, i64 %n)
@@ -345,7 +345,7 @@ entry:
 define ptr @test_memcpy_chk_variable_size(ptr noalias %a, ptr noalias %b, i64 %n.1, i64 %n.2) {
 ; CHECK-LABEL: Function: test_memcpy_chk_variable_size
 ; CHECK:       Just Mod:  Ptr: i8* %a	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 %n.1, i64 %n.2)
-; CHECK-NEXT:  Just Mod:  Ptr: i8* %res	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 %n.1, i64 %n.2)
+; CHECK-NEXT:  Both ModRef: Ptr: i8* %res	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 %n.1, i64 %n.2)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 %n.1, i64 %n.2)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.5	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 %n.1, i64 %n.2)
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.1	<->  %res = tail call ptr @__memcpy_chk(ptr %a, ptr %b, i64 %n.1, i64 %n.2)
