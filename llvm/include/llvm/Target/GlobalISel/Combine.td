@@ -670,8 +670,8 @@ def binop_with_neg : GICombineRule<
 
 def urem_pow2_to_mask : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_UREM):$root,
-    [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(*${root}, 2); }]),
+  (match (G_UREM $dst, $x, $y):$root,
+    [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(${y}); }]),
   (apply [{ Helper.applySimplifyURemByPow2(*${root}); }])
 >;
 
@@ -1349,7 +1349,15 @@ def srem_by_const : GICombineRule<
    [{ return Helper.matchSDivOrSRemByConst(*${root}); }]),
   (apply [{ Helper.applySDivOrSRemByConst(*${root}); }])>;
 
-def intrem_combines : GICombineGroup<[urem_by_const, srem_by_const]>;
+def srem_pow2_to_mask : GICombineRule<
+  (defs root:$root),
+  (match (G_SREM $dst, $x, $y):$root,
+   [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(${y},
+                                                      /*OrNegative=*/true); }]),
+  (apply [{ Helper.applySimplifySRemByPow2(*${root}); }])>;
+
+def intrem_combines : GICombineGroup<[srem_pow2_to_mask, urem_by_const,
+                                      srem_by_const]>;
 
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1827,6 +1835,13 @@ def combine_shuffle_vector_to_build_vector : GICombineRule<
   (defs root:$root),
   (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
   (apply [{ Helper.applyCombineShuffleToBuildVector(*${root}); }])>;
+
+// Combines buildvector operations
+def combine_build_vector_of_bitcast : GICombineRule<
+  (defs root:$root, register_vector_matchinfo:$matchinfo),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+         [{ return Helper.matchCombineBuildVectorOfBitcast(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineBuildVectorOfBitcast(*${root}, ${matchinfo}); }])>;
 
 def insert_vector_element_idx_undef : GICombineRule<
    (defs root:$root),

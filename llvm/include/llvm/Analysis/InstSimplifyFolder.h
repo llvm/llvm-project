@@ -120,11 +120,9 @@ public:
     return simplifyCastInst(Op, V, DestTy, SQ);
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource = nullptr) const override {
-    FastMathFlags FMF;
-    if (auto *FPMO = dyn_cast_if_present<FPMathOperator>(FMFSource))
-      FMF = FPMO->getFastMathFlags();
+  Value *
+  FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
+                      FastMathFlags FMF = FastMathFlags()) const override {
     return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, FMF, SQ);
   }
 

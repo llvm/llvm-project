@@ -183,7 +183,7 @@ public:
   }
 
   Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource) const override {
+                             FastMathFlags FMF) const override {
     // Use TargetFolder or InstSimplifyFolder instead.
     return nullptr;
   }

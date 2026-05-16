@@ -2256,9 +2256,9 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
   auto Flipped = getFlippedStrictnessPredicateAndConstant(Predicate, C1);
 
   auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
-    return IsIntrinsic ? ConstantFoldBinaryIntrinsic(Opcode, LHS, RHS,
-                                                     LHS->getType(), nullptr)
-                       : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
+    return IsIntrinsic
+               ? ConstantFoldBinaryIntrinsic(Opcode, LHS, RHS, LHS->getType())
+               : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
   };
 
   if (C3 == FoldBinaryOpOrIntrinsic(C1, C2)) {

@@ -433,10 +433,10 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
   // Create temporary dim3 grid_dim, block_dim.
   ParmVarDecl *GridDimParam = cudaLaunchKernelFD->getParamDecl(1);
   QualType Dim3Ty = GridDimParam->getType();
-  Address GridDim =
-      CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "grid_dim");
-  Address BlockDim =
-      CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "block_dim");
+  Address GridDim = CGF.CreateMemTempWithoutCast(
+      Dim3Ty, CharUnits::fromQuantity(8), "grid_dim");
+  Address BlockDim = CGF.CreateMemTempWithoutCast(
+      Dim3Ty, CharUnits::fromQuantity(8), "block_dim");
   Address ShmemSize = CGF.CreateTempAlloca(SizeTy, LangAS::Default,
                                            CGM.getSizeAlign(), "shmem_size");
   Address Stream = CGF.CreateTempAlloca(PtrTy, LangAS::Default,

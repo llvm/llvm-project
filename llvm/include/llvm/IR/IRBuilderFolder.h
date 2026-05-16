@@ -78,7 +78,7 @@ public:
 
   virtual Value *
   FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                      Instruction *FMFSource = nullptr) const = 0;
+                      FastMathFlags FMF = FastMathFlags()) const = 0;
 
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators

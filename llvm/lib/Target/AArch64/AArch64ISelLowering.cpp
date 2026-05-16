@@ -5572,9 +5572,21 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
 
   assert(ArgVT == MVT::i16);
 
-  Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
-  Op = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Op);
-  return DAG.getTargetExtractSubreg(AArch64::hsub, DL, OpVT, Op);
+  // If the input from a vector, extract directly from it.
+  if (Src.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    Op = DAG.getNode(ISD::BITCAST, DL,
+                     Src.getOperand(0).getValueType().changeElementType(
+                         *DAG.getContext(), OpVT),
+                     Src.getOperand(0));
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op,
+                       Src.getOperand(1));
+  }
+
+  Op = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8i16, Src);
+  Op = DAG.getNode(ISD::BITCAST, DL,
+                   EVT::getVectorVT(*DAG.getContext(), OpVT, 8), Op);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op,
+                     DAG.getConstant(0, DL, MVT::i64));
 }
 
 // Returns lane if Op extracts from a two-element vector and lane is constant
@@ -18894,8 +18906,10 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
 }
 
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    Instruction *Load, Value *Mask, IntrinsicInst *DI) const {
+    Instruction *Load, Value *Mask, IntrinsicInst *DI,
+    const APInt &GapMask) const {
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
+  assert(GapMask.getBitWidth() == Factor);
   if (Factor != 2 && Factor != 3 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching ld2, ld3 and ld4 patterns failed\n");
     return false;
@@ -18904,6 +18918,10 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
   if (!LI)
     return false;
   assert(!Mask && "Unexpected mask on a load\n");
+
+  // Gap mask is currently not supported.
+  if (!GapMask.isAllOnes())
+    return false;
 
   VectorType *VTy = getDeinterleavedVectorType(DI);
 
@@ -19608,7 +19626,7 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
   // Look through an optional post-ABS ZEXT from v16i16 -> v16i32.
   if (VecReduceOp0.getOpcode() == ISD::ZERO_EXTEND &&
       VecReduceOp0->getValueType(0) == MVT::v16i32 &&
-      VecReduceOp0->getOperand(0)->getOpcode() == ISD::ABS &&
+      ISD::isAbsOpcode(VecReduceOp0->getOperand(0)->getOpcode()) &&
       VecReduceOp0->getOperand(0)->getValueType(0) == MVT::v16i16) {
     SawTrailingZext = true;
     VecReduceOp0 = VecReduceOp0.getOperand(0);
@@ -19617,8 +19635,8 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
   // Peel off an optional post-ABS extend (v16i16 -> v16i32).
   MVT AbsInputVT = SawTrailingZext ? MVT::v16i16 : MVT::v16i32;
   // Assumed v16i16 or v16i32 abs input
-  unsigned Opcode = VecReduceOp0.getOpcode();
-  if (Opcode != ISD::ABS || VecReduceOp0->getValueType(0) != AbsInputVT)
+  if (!ISD::isAbsOpcode(VecReduceOp0.getOpcode()) ||
+      VecReduceOp0->getValueType(0) != AbsInputVT)
     return SDValue();
 
   SDValue ABS = VecReduceOp0;
@@ -20468,6 +20486,37 @@ static SDValue performVectorExtCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static bool isOnlyUsedAsMemoryAddress(SDNode *N) {
+  assert((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
+         "Expected add/sub node");
+
+  for (SDUse &Use : N->uses()) {
+    SDNode *User = Use.getUser();
+    switch (User->getOpcode()) {
+    case ISD::LOAD: {
+      auto *Load = cast<LoadSDNode>(User);
+      if (!Load->isUnindexed() || Use.getOperandNo() != 1)
+        return false;
+      break;
+    }
+    case ISD::STORE: {
+      auto *Store = cast<StoreSDNode>(User);
+      if (!Store->isUnindexed() || Use.getOperandNo() != 2)
+        return false;
+      break;
+    }
+    case AArch64ISD::PREFETCH:
+      if (Use.getOperandNo() != 2)
+        return false;
+      break;
+    default:
+      return false;
+    }
+  }
+
+  return true;
+}
+
 static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
@@ -20553,9 +20602,12 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     // Conservatively do not lower to shift+add+shift if the mul might be
     // folded into madd or msub.
-    if (N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::ADD ||
-                           N->user_begin()->getOpcode() == ISD::SUB))
-      return SDValue();
+    if (N->hasOneUse()) {
+      SDNode *User = *N->user_begin();
+      if ((User->getOpcode() == ISD::ADD || User->getOpcode() == ISD::SUB) &&
+          !isOnlyUsedAsMemoryAddress(User))
+        return SDValue();
+    }
   }
   // Use ShiftedConstValue instead of ConstValue to support both shift+add/sub
   // and shift+add+shift.

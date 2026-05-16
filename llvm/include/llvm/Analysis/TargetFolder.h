@@ -192,11 +192,11 @@ public:
   }
 
   Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource) const override {
+                             FastMathFlags FMF) const override {
     auto *C1 = dyn_cast<Constant>(LHS);
     auto *C2 = dyn_cast<Constant>(RHS);
     if (C1 && C2)
-      return ConstantFoldBinaryIntrinsic(ID, C1, C2, Ty, FMFSource);
+      return ConstantFoldBinaryIntrinsic(ID, C1, C2, Ty);
     return nullptr;
   }
 
