@@ -355,7 +355,7 @@ define i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_max_i8_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -382,7 +382,7 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_max_i8_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -409,7 +409,7 @@ define i8 @atomicrmw_max_i8_release(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_max_i8_release(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -436,7 +436,7 @@ define i8 @atomicrmw_max_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_max_i8_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -463,7 +463,7 @@ define i8 @atomicrmw_max_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_max_i8_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -490,7 +490,7 @@ define i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_min_i8_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -517,7 +517,7 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_min_i8_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -544,7 +544,7 @@ define i8 @atomicrmw_min_i8_release(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_min_i8_release(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -571,7 +571,7 @@ define i8 @atomicrmw_min_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_min_i8_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -598,7 +598,7 @@ define i8 @atomicrmw_min_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_min_i8_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -625,7 +625,7 @@ define i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_umax_i8_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -652,7 +652,7 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_umax_i8_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -679,7 +679,7 @@ define i8 @atomicrmw_umax_i8_release(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_umax_i8_release(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -706,7 +706,7 @@ define i8 @atomicrmw_umax_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_umax_i8_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -733,7 +733,7 @@ define i8 @atomicrmw_umax_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_umax_i8_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -760,7 +760,7 @@ define i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_umin_i8_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -787,7 +787,7 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_umin_i8_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -814,7 +814,7 @@ define i8 @atomicrmw_umin_i8_release(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_umin_i8_release(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -841,7 +841,7 @@ define i8 @atomicrmw_umin_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_umin_i8_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -868,7 +868,7 @@ define i8 @atomicrmw_umin_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: define i8 @atomicrmw_umin_i8_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @__atomic_load_1(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1245,7 +1245,7 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_max_i16_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1272,7 +1272,7 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_max_i16_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1299,7 +1299,7 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_max_i16_release(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1326,7 +1326,7 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_max_i16_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1353,7 +1353,7 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_max_i16_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1380,7 +1380,7 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_min_i16_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1407,7 +1407,7 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_min_i16_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1434,7 +1434,7 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_min_i16_release(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1461,7 +1461,7 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_min_i16_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1488,7 +1488,7 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_min_i16_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1515,7 +1515,7 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_umax_i16_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1542,7 +1542,7 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_umax_i16_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1569,7 +1569,7 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_umax_i16_release(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1596,7 +1596,7 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_umax_i16_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1623,7 +1623,7 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_umax_i16_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1650,7 +1650,7 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_umin_i16_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1677,7 +1677,7 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_umin_i16_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1704,7 +1704,7 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_umin_i16_release(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1731,7 +1731,7 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_umin_i16_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -1758,7 +1758,7 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: define i16 @atomicrmw_umin_i16_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @__atomic_load_2(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2106,7 +2106,7 @@ define i32 @atomicrmw_max_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_max_i32_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2133,7 +2133,7 @@ define i32 @atomicrmw_max_i32_acquire(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_max_i32_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2160,7 +2160,7 @@ define i32 @atomicrmw_max_i32_release(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_max_i32_release(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2187,7 +2187,7 @@ define i32 @atomicrmw_max_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_max_i32_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2214,7 +2214,7 @@ define i32 @atomicrmw_max_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_max_i32_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2241,7 +2241,7 @@ define i32 @atomicrmw_min_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_min_i32_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2268,7 +2268,7 @@ define i32 @atomicrmw_min_i32_acquire(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_min_i32_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2295,7 +2295,7 @@ define i32 @atomicrmw_min_i32_release(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_min_i32_release(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2322,7 +2322,7 @@ define i32 @atomicrmw_min_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_min_i32_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2349,7 +2349,7 @@ define i32 @atomicrmw_min_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_min_i32_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2376,7 +2376,7 @@ define i32 @atomicrmw_umax_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_umax_i32_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2403,7 +2403,7 @@ define i32 @atomicrmw_umax_i32_acquire(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_umax_i32_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2430,7 +2430,7 @@ define i32 @atomicrmw_umax_i32_release(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_umax_i32_release(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2457,7 +2457,7 @@ define i32 @atomicrmw_umax_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_umax_i32_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2484,7 +2484,7 @@ define i32 @atomicrmw_umax_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_umax_i32_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2511,7 +2511,7 @@ define i32 @atomicrmw_umin_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_umin_i32_monotonic(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2538,7 +2538,7 @@ define i32 @atomicrmw_umin_i32_acquire(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_umin_i32_acquire(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2565,7 +2565,7 @@ define i32 @atomicrmw_umin_i32_release(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_umin_i32_release(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2592,7 +2592,7 @@ define i32 @atomicrmw_umin_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_umin_i32_acq_rel(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -2619,7 +2619,7 @@ define i32 @atomicrmw_umin_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: define i32 @atomicrmw_umin_i32_seq_cst(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__atomic_load_4(ptr [[A]], i32 0)
 ; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CHECK:       [[ATOMICRMW_START]]:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]

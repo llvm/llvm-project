@@ -122,7 +122,7 @@ LIBC_INLINE_VAR constexpr cpp::array<uint32_t, 32> EXP2_MID_5_BITS = {
 // the polynomials approximating lower parts of e^x and e^(-x) is shared and
 // only done once.
 template <bool IsSinh>
-LIBC_INLINE LIBC_CONSTEXPR float16 eval_sinh_or_cosh(float16 x) {
+LIBC_INLINE constexpr float16 eval_sinh_or_cosh(float16 x) {
   float xf = x;
   float kf = fputil::nearest_integer(xf * (LOG2F_E * 0x1.0p+5f));
   int x_hi_mid_p = static_cast<int>(kf);

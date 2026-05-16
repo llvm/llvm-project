@@ -30,14 +30,13 @@ define i64 @func2(i64 %x, i64 %y) {
 ;
 ; CHECK-GI-LABEL: func2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    asr x8, x1, #63
+; CHECK-GI-NEXT:    umulh x8, x0, x1
+; CHECK-GI-NEXT:    asr x9, x1, #63
+; CHECK-GI-NEXT:    mul x10, x0, x1
+; CHECK-GI-NEXT:    madd x8, x0, x9, x8
 ; CHECK-GI-NEXT:    asr x9, x0, #63
-; CHECK-GI-NEXT:    umulh x10, x0, x1
-; CHECK-GI-NEXT:    mul x8, x0, x8
 ; CHECK-GI-NEXT:    madd x8, x9, x1, x8
-; CHECK-GI-NEXT:    mul x9, x0, x1
-; CHECK-GI-NEXT:    add x8, x8, x10
-; CHECK-GI-NEXT:    extr x0, x8, x9, #2
+; CHECK-GI-NEXT:    extr x0, x8, x10, #2
 ; CHECK-GI-NEXT:    ret
   %tmp = call i64 @llvm.smul.fix.i64(i64 %x, i64 %y, i32 2)
   ret i64 %tmp
@@ -109,14 +108,13 @@ define i64 @func7(i64 %x, i64 %y) nounwind {
 ;
 ; CHECK-GI-LABEL: func7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    asr x8, x1, #63
+; CHECK-GI-NEXT:    umulh x8, x0, x1
+; CHECK-GI-NEXT:    asr x9, x1, #63
+; CHECK-GI-NEXT:    mul x10, x0, x1
+; CHECK-GI-NEXT:    madd x8, x0, x9, x8
 ; CHECK-GI-NEXT:    asr x9, x0, #63
-; CHECK-GI-NEXT:    umulh x10, x0, x1
-; CHECK-GI-NEXT:    mul x8, x0, x8
 ; CHECK-GI-NEXT:    madd x8, x9, x1, x8
-; CHECK-GI-NEXT:    mul x9, x0, x1
-; CHECK-GI-NEXT:    add x8, x8, x10
-; CHECK-GI-NEXT:    extr x0, x8, x9, #32
+; CHECK-GI-NEXT:    extr x0, x8, x10, #32
 ; CHECK-GI-NEXT:    ret
   %tmp = call i64 @llvm.smul.fix.i64(i64 %x, i64 %y, i32 32)
   ret i64 %tmp
@@ -132,14 +130,13 @@ define i64 @func8(i64 %x, i64 %y) nounwind {
 ;
 ; CHECK-GI-LABEL: func8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    asr x8, x1, #63
+; CHECK-GI-NEXT:    umulh x8, x0, x1
+; CHECK-GI-NEXT:    asr x9, x1, #63
+; CHECK-GI-NEXT:    mul x10, x0, x1
+; CHECK-GI-NEXT:    madd x8, x0, x9, x8
 ; CHECK-GI-NEXT:    asr x9, x0, #63
-; CHECK-GI-NEXT:    umulh x10, x0, x1
-; CHECK-GI-NEXT:    mul x8, x0, x8
 ; CHECK-GI-NEXT:    madd x8, x9, x1, x8
-; CHECK-GI-NEXT:    mul x9, x0, x1
-; CHECK-GI-NEXT:    add x8, x8, x10
-; CHECK-GI-NEXT:    extr x0, x8, x9, #63
+; CHECK-GI-NEXT:    extr x0, x8, x10, #63
 ; CHECK-GI-NEXT:    ret
   %tmp = call i64 @llvm.smul.fix.i64(i64 %x, i64 %y, i32 63)
   ret i64 %tmp
@@ -216,53 +213,49 @@ define <4 x i64> @smulfix_4xi64(<4 x i64> %x, <4 x i64> %y) nounwind {
 ;
 ; CHECK-GI-LABEL: smulfix_4xi64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    mov d2, v2.d[1]
+; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    asr x10, x9, #63
-; CHECK-GI-NEXT:    asr x12, x8, #63
-; CHECK-GI-NEXT:    mul x11, x8, x9
-; CHECK-GI-NEXT:    mul x10, x8, x10
-; CHECK-GI-NEXT:    umulh x8, x8, x9
-; CHECK-GI-NEXT:    madd x9, x12, x9, x10
-; CHECK-GI-NEXT:    fmov x12, d2
-; CHECK-GI-NEXT:    fmov x10, d0
-; CHECK-GI-NEXT:    mov d0, v3.d[1]
-; CHECK-GI-NEXT:    asr x13, x12, #63
-; CHECK-GI-NEXT:    asr x15, x10, #63
-; CHECK-GI-NEXT:    mul x14, x10, x12
-; CHECK-GI-NEXT:    mul x13, x10, x13
-; CHECK-GI-NEXT:    fmov x0, d0
-; CHECK-GI-NEXT:    add x8, x9, x8
-; CHECK-GI-NEXT:    extr x8, x8, x11, #32
-; CHECK-GI-NEXT:    umulh x10, x10, x12
-; CHECK-GI-NEXT:    asr x1, x0, #63
+; CHECK-GI-NEXT:    mov d2, v2.d[1]
+; CHECK-GI-NEXT:    umulh x10, x8, x9
+; CHECK-GI-NEXT:    asr x11, x9, #63
+; CHECK-GI-NEXT:    fmov x13, d2
+; CHECK-GI-NEXT:    mul x12, x8, x9
+; CHECK-GI-NEXT:    madd x10, x8, x11, x10
+; CHECK-GI-NEXT:    fmov x11, d0
+; CHECK-GI-NEXT:    asr x8, x8, #63
+; CHECK-GI-NEXT:    asr x15, x13, #63
+; CHECK-GI-NEXT:    mov d0, v1.d[1]
+; CHECK-GI-NEXT:    umulh x14, x11, x13
+; CHECK-GI-NEXT:    madd x8, x8, x9, x10
+; CHECK-GI-NEXT:    asr x10, x11, #63
+; CHECK-GI-NEXT:    madd x9, x11, x15, x14
+; CHECK-GI-NEXT:    mul x11, x11, x13
+; CHECK-GI-NEXT:    extr x8, x8, x12, #32
+; CHECK-GI-NEXT:    madd x9, x10, x13, x9
+; CHECK-GI-NEXT:    fmov x10, d1
+; CHECK-GI-NEXT:    fmov x13, d3
+; CHECK-GI-NEXT:    mov d1, v3.d[1]
+; CHECK-GI-NEXT:    umulh x14, x10, x13
+; CHECK-GI-NEXT:    asr x15, x13, #63
+; CHECK-GI-NEXT:    fmov x17, d1
+; CHECK-GI-NEXT:    mul x16, x10, x13
+; CHECK-GI-NEXT:    extr x9, x9, x11, #32
+; CHECK-GI-NEXT:    madd x14, x10, x15, x14
+; CHECK-GI-NEXT:    fmov x15, d0
+; CHECK-GI-NEXT:    asr x10, x10, #63
+; CHECK-GI-NEXT:    asr x0, x17, #63
 ; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    madd x12, x15, x12, x13
-; CHECK-GI-NEXT:    fmov x15, d3
-; CHECK-GI-NEXT:    fmov x13, d1
-; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    asr x16, x15, #63
-; CHECK-GI-NEXT:    asr x18, x13, #63
-; CHECK-GI-NEXT:    mul x17, x13, x15
-; CHECK-GI-NEXT:    mul x16, x13, x16
-; CHECK-GI-NEXT:    add x9, x12, x10
-; CHECK-GI-NEXT:    extr x9, x9, x14, #32
-; CHECK-GI-NEXT:    umulh x13, x13, x15
+; CHECK-GI-NEXT:    umulh x18, x15, x17
 ; CHECK-GI-NEXT:    mov v0.d[1], x9
-; CHECK-GI-NEXT:    madd x15, x18, x15, x16
-; CHECK-GI-NEXT:    fmov x16, d1
-; CHECK-GI-NEXT:    mul x18, x16, x1
-; CHECK-GI-NEXT:    asr x1, x16, #63
-; CHECK-GI-NEXT:    umulh x2, x16, x0
-; CHECK-GI-NEXT:    add x10, x15, x13
-; CHECK-GI-NEXT:    extr x10, x10, x17, #32
-; CHECK-GI-NEXT:    madd x18, x1, x0, x18
+; CHECK-GI-NEXT:    madd x10, x10, x13, x14
+; CHECK-GI-NEXT:    asr x14, x15, #63
+; CHECK-GI-NEXT:    madd x13, x15, x0, x18
+; CHECK-GI-NEXT:    mul x15, x15, x17
+; CHECK-GI-NEXT:    extr x10, x10, x16, #32
+; CHECK-GI-NEXT:    madd x13, x14, x17, x13
 ; CHECK-GI-NEXT:    fmov d1, x10
-; CHECK-GI-NEXT:    mul x16, x16, x0
-; CHECK-GI-NEXT:    add x12, x18, x2
-; CHECK-GI-NEXT:    extr x11, x12, x16, #32
+; CHECK-GI-NEXT:    extr x11, x13, x15, #32
 ; CHECK-GI-NEXT:    mov v1.d[1], x11
 ; CHECK-GI-NEXT:    ret
   %tmp = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> %x, <4 x i64> %y, i32 32)

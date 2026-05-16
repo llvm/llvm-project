@@ -116,7 +116,30 @@ static void reduceChildren(OwningVec<T> &Children,
         Children, [Ptr](const auto &C) { return C.Ptr->USR == Ptr->USR; });
 
     if (It == Children.end()) {
-      Children.push_back(*allocateListNodeTransient<T>(Ptr));
+      InfoNode<T> *NewNode = allocateListNodePersistent<T>(Ptr->USR);
+      NewNode->Ptr->merge(std::move(*Ptr));
+      Children.push_back(*NewNode);
+    } else {
+      It->Ptr->merge(std::move(*Ptr));
+    }
+  }
+}
+
+template <>
+void reduceChildren<Reference>(OwningVec<Reference> &Children,
+                               OwningVec<Reference> &&ChildrenToMerge) {
+  while (!ChildrenToMerge.empty()) {
+    Reference *Ptr = ChildrenToMerge.front().Ptr;
+    ChildrenToMerge.pop_front();
+
+    auto It = llvm::find_if(
+        Children, [Ptr](const auto &C) { return C.Ptr->USR == Ptr->USR; });
+    if (It == Children.end()) {
+      InfoNode<Reference> *NewNode = allocateListNodePersistent<Reference>();
+      NewNode->Ptr->USR = Ptr->USR;
+      NewNode->Ptr->RefType = Ptr->RefType;
+      NewNode->Ptr->merge(std::move(*Ptr));
+      Children.push_back(*NewNode);
     } else {
       It->Ptr->merge(std::move(*Ptr));
     }
@@ -129,9 +152,106 @@ static void mergeUnkeyed(OwningVec<T> &Target, OwningVec<T> &&Source) {
     T *Ptr = Source.front().Ptr;
     Source.pop_front();
 
-    if (!llvm::any_of(Target, [Ptr](const auto &E) { return *E.Ptr == *Ptr; }))
-      Target.push_back(*allocateListNodeTransient<T>(Ptr));
+    if (!llvm::any_of(Target,
+                      [Ptr](const auto &E) { return *E.Ptr == *Ptr; })) {
+      Target.push_back(*allocateListNodePersistent<T>(*Ptr));
+    }
   }
+}
+
+template <>
+void mergeUnkeyed<CommentInfo>(OwningVec<CommentInfo> &Target,
+                               OwningVec<CommentInfo> &&Source) {
+  while (!Source.empty()) {
+    CommentInfo *Ptr = Source.front().Ptr;
+    Source.pop_front();
+
+    if (!llvm::any_of(Target,
+                      [Ptr](const auto &E) { return *E.Ptr == *Ptr; })) {
+      Target.push_back(
+          *allocateListNodePersistent<CommentInfo>(*Ptr, PersistentArena));
+    }
+  }
+}
+
+llvm::Error mergeSingleInfo(doc::OwnedPtr<doc::Info> &Reduced,
+                            doc::OwnedPtr<doc::Info> &&NewInfo,
+                            llvm::BumpPtrAllocator &Arena) {
+  if (!Reduced) {
+    switch (NewInfo->IT) {
+    case InfoType::IT_namespace:
+      Reduced = allocatePtr<NamespaceInfo>(Arena, NewInfo->USR);
+      break;
+    case InfoType::IT_record:
+      Reduced = allocatePtr<RecordInfo>(Arena, NewInfo->USR);
+      break;
+    case InfoType::IT_enum:
+      Reduced = allocatePtr<EnumInfo>(Arena, NewInfo->USR);
+      break;
+    case InfoType::IT_function:
+      Reduced = allocatePtr<FunctionInfo>(Arena, NewInfo->USR);
+      break;
+    case InfoType::IT_typedef:
+      Reduced = allocatePtr<TypedefInfo>(Arena, NewInfo->USR);
+      break;
+    case InfoType::IT_concept:
+      Reduced = allocatePtr<ConceptInfo>(Arena, NewInfo->USR);
+      break;
+    case InfoType::IT_variable:
+      Reduced = allocatePtr<VarInfo>(Arena, NewInfo->USR);
+      break;
+    case InfoType::IT_friend:
+      Reduced = allocatePtr<FriendInfo>(Arena, NewInfo->USR);
+      break;
+    default:
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "unknown info type");
+    }
+  }
+
+  if (Reduced->IT != NewInfo->IT)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "info types mismatch");
+
+  switch (Reduced->IT) {
+  case InfoType::IT_namespace:
+    static_cast<NamespaceInfo *>(getPtr(Reduced))
+        ->merge(std::move(*static_cast<NamespaceInfo *>(getPtr(NewInfo))));
+    break;
+  case InfoType::IT_record:
+    static_cast<RecordInfo *>(getPtr(Reduced))
+        ->merge(std::move(*static_cast<RecordInfo *>(getPtr(NewInfo))));
+    break;
+  case InfoType::IT_enum:
+    static_cast<EnumInfo *>(getPtr(Reduced))
+        ->merge(std::move(*static_cast<EnumInfo *>(getPtr(NewInfo))));
+    break;
+  case InfoType::IT_function:
+    static_cast<FunctionInfo *>(getPtr(Reduced))
+        ->merge(std::move(*static_cast<FunctionInfo *>(getPtr(NewInfo))));
+    break;
+  case InfoType::IT_typedef:
+    static_cast<TypedefInfo *>(getPtr(Reduced))
+        ->merge(std::move(*static_cast<TypedefInfo *>(getPtr(NewInfo))));
+    break;
+  case InfoType::IT_concept:
+    static_cast<ConceptInfo *>(getPtr(Reduced))
+        ->merge(std::move(*static_cast<ConceptInfo *>(getPtr(NewInfo))));
+    break;
+  case InfoType::IT_variable:
+    static_cast<VarInfo *>(getPtr(Reduced))
+        ->merge(std::move(*static_cast<VarInfo *>(getPtr(NewInfo))));
+    break;
+  case InfoType::IT_friend:
+    static_cast<FriendInfo *>(getPtr(Reduced))
+        ->merge(std::move(*static_cast<FriendInfo *>(getPtr(NewInfo))));
+    break;
+  default:
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "unknown info type");
+  }
+
+  return llvm::Error::success();
 }
 
 // Dispatch function.
@@ -162,6 +282,20 @@ llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values) {
                                    "unexpected info type");
   }
   llvm_unreachable("unhandled enumerator");
+}
+
+TemplateSpecializationInfo::TemplateSpecializationInfo(
+    const TemplateSpecializationInfo &Other, llvm::BumpPtrAllocator &Arena)
+    : SpecializationOf(Other.SpecializationOf) {
+  Params = allocateArray(Other.Params, Arena);
+}
+
+TemplateInfo::TemplateInfo(const TemplateInfo &Other,
+                           llvm::BumpPtrAllocator &Arena) {
+  Params = allocateArray(Other.Params, Arena);
+  if (Other.Specialization)
+    Specialization = TemplateSpecializationInfo(*Other.Specialization, Arena);
+  Constraints = allocateArray(Other.Constraints, Arena);
 }
 
 bool CommentInfo::operator==(const CommentInfo &Other) const {
@@ -273,10 +407,14 @@ bool Reference::mergeable(const Reference &Other) {
 
 void Reference::merge(Reference &&Other) {
   assert(mergeable(Other));
+  assert(RefType != InfoType::IT_default &&
+         "Merging reference with default InfoType");
   if (Name.empty())
     Name = Other.Name;
   if (Path.empty())
     Path = Other.Path;
+  if (QualName.empty())
+    QualName = Other.QualName;
   if (DocumentationFileName.empty())
     DocumentationFileName = Other.DocumentationFileName;
 }
@@ -291,16 +429,42 @@ void FriendInfo::merge(FriendInfo &&Other) {
   SymbolInfo::merge(std::move(Other));
 }
 
+FriendInfo::FriendInfo(const FriendInfo &Other, llvm::BumpPtrAllocator &Arena)
+    : SymbolInfo(Other, Arena) {
+  Ref = Other.Ref;
+  if (Other.Template)
+    Template.emplace(*Other.Template, Arena);
+  if (Other.ReturnType)
+    ReturnType = Other.ReturnType;
+  if (!Other.Params.empty())
+    Params = allocateArray(Other.Params, Arena);
+  IsClass = Other.IsClass;
+}
+
+Info::Info(const Info &Other, llvm::BumpPtrAllocator &Arena)
+    : Path(Other.Path), Name(Other.Name),
+      DocumentationFileName(Other.DocumentationFileName), USR(Other.USR),
+      ParentUSR(Other.ParentUSR), IT(Other.IT) {
+  Namespace = allocateArray(Other.Namespace, Arena);
+  if (!Other.Description.empty()) {
+    for (const auto &Desc : Other.Description) {
+      CommentInfo *NewDesc = allocatePtr<CommentInfo>(Arena, Desc, Arena);
+      Description.push_back(*allocateListNode<CommentInfo>(Arena, NewDesc));
+    }
+  }
+}
+
 void Info::mergeBase(Info &&Other) {
   assert(mergeable(Other));
+  assert(IT != InfoType::IT_default && "Merging info with default InfoType");
   if (USR == EmptySID)
     USR = Other.USR;
   if (Name == "")
     Name = Other.Name;
   if (Path == "")
     Path = Other.Path;
-  if (Namespace.empty())
-    Namespace = std::move(Other.Namespace);
+  if (Namespace.empty() && !Other.Namespace.empty())
+    Namespace = allocateArray(Other.Namespace, PersistentArena);
   // Unconditionally extend the description, since each decl may have a comment.
   mergeUnkeyed(Description, std::move(Other.Description));
   if (ParentUSR == EmptySID)
@@ -313,6 +477,17 @@ bool Info::mergeable(const Info &Other) {
   return IT == Other.IT && USR == Other.USR;
 }
 
+SymbolInfo::SymbolInfo(const SymbolInfo &Other, llvm::BumpPtrAllocator &Arena)
+    : Info(Other, Arena), DefLoc(Other.DefLoc), MangledName(Other.MangledName),
+      IsStatic(Other.IsStatic) {
+  if (!Other.Loc.empty()) {
+    for (const auto &L : Other.Loc) {
+      Location *NewL = allocatePtr<Location>(Arena, L);
+      Loc.push_back(*allocateListNode<Location>(Arena, NewL));
+    }
+  }
+}
+
 void SymbolInfo::merge(SymbolInfo &&Other) {
   assert(mergeable(Other));
   if (!DefLoc)
@@ -322,6 +497,8 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
   // Unconditionally extend the list of locations, since we want all of them.
   mergeUnkeyed(Loc, std::move(Other.Loc));
   mergeBase(std::move(Other));
+  if (!IsStatic)
+    IsStatic = Other.IsStatic;
 }
 
 NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
@@ -343,37 +520,76 @@ void NamespaceInfo::merge(NamespaceInfo &&Other) {
 RecordInfo::RecordInfo(SymbolID USR, StringRef Name, StringRef Path)
     : SymbolInfo(InfoType::IT_record, USR, Name, Path) {}
 
+// FIXME: This constructor is currently unsafe for cross-arena copies of
+// populated records. Because a default copy of ScopeChildren will shallow-copy
+// the intrusive pointers, leading to a use-after-free when the TransientArena
+// is reset. Subsequent patches will address this by deep-copying children
+// individually via reduceChildren.
+RecordInfo::RecordInfo(const RecordInfo &Other, llvm::BumpPtrAllocator &Arena)
+    : SymbolInfo(Other, Arena), TagType(Other.TagType),
+      IsTypeDef(Other.IsTypeDef) {
+  Members = deepCopyArray(Other.Members, Arena);
+  Parents = allocateArray(Other.Parents, Arena);
+  VirtualParents = allocateArray(Other.VirtualParents, Arena);
+  Bases = deepCopyArray(Other.Bases, Arena);
+  Friends = deepCopyArray(Other.Friends, Arena);
+}
+
+MemberTypeInfo::MemberTypeInfo(const MemberTypeInfo &Other,
+                               llvm::BumpPtrAllocator &Arena)
+    : FieldTypeInfo(Other), Access(Other.Access), IsStatic(Other.IsStatic) {
+  if (!Other.Description.empty()) {
+    for (const auto &Desc : Other.Description) {
+      CommentInfo *NewDesc = allocatePtr<CommentInfo>(Arena, Desc, Arena);
+      Description.push_back(*allocateListNode<CommentInfo>(Arena, NewDesc));
+    }
+  }
+}
+
 void RecordInfo::merge(RecordInfo &&Other) {
   assert(mergeable(Other));
   if (!llvm::to_underlying(TagType))
     TagType = Other.TagType;
   IsTypeDef = IsTypeDef || Other.IsTypeDef;
-  if (Members.empty())
-    Members = std::move(Other.Members);
-  if (Bases.empty())
-    Bases = std::move(Other.Bases);
-  if (Parents.empty())
-    Parents = std::move(Other.Parents);
-  if (VirtualParents.empty())
-    VirtualParents = std::move(Other.VirtualParents);
-  if (Friends.empty())
-    Friends = std::move(Other.Friends);
+  if (Members.empty() && !Other.Members.empty())
+    Members = deepCopyArray(Other.Members, PersistentArena);
+  if (Bases.empty() && !Other.Bases.empty())
+    Bases = deepCopyArray(Other.Bases, PersistentArena);
+  if (Parents.empty() && !Other.Parents.empty())
+    Parents = allocateArray(Other.Parents, PersistentArena);
+  if (VirtualParents.empty() && !Other.VirtualParents.empty())
+    VirtualParents = allocateArray(Other.VirtualParents, PersistentArena);
+  if (Friends.empty() && !Other.Friends.empty())
+    Friends = deepCopyArray(Other.Friends, PersistentArena);
   // Reduce children if necessary.
   reduceChildren(Children.Records, std::move(Other.Children.Records));
   reduceChildren(Children.Functions, std::move(Other.Children.Functions));
   reduceChildren(Children.Enums, std::move(Other.Children.Enums));
   reduceChildren(Children.Typedefs, std::move(Other.Children.Typedefs));
-  if (!Template)
-    Template = Other.Template;
+  if (!Template && Other.Template)
+    Template = TemplateInfo(*Other.Template, PersistentArena);
   SymbolInfo::merge(std::move(Other));
+}
+
+EnumValueInfo::EnumValueInfo(const EnumValueInfo &Other,
+                             llvm::BumpPtrAllocator &Arena)
+    : Name(Other.Name), Value(Other.Value), ValueExpr(Other.ValueExpr) {
+  if (!Other.Description.empty()) {
+    for (const auto &Desc : Other.Description) {
+      CommentInfo *NewDesc = allocatePtr<CommentInfo>(Arena, Desc, Arena);
+      Description.push_back(*allocateListNode<CommentInfo>(Arena, NewDesc));
+    }
+  }
 }
 
 void EnumInfo::merge(EnumInfo &&Other) {
   assert(mergeable(Other));
   if (!Scoped)
     Scoped = Other.Scoped;
-  if (Members.empty())
-    Members = std::move(Other.Members);
+  if (!BaseType && Other.BaseType)
+    BaseType = std::move(Other.BaseType);
+  if (Members.empty() && !Other.Members.empty())
+    Members = deepCopyArray(Other.Members, PersistentArena);
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -387,10 +603,10 @@ void FunctionInfo::merge(FunctionInfo &&Other) {
     ReturnType = std::move(Other.ReturnType);
   if (Parent.USR == EmptySID && Parent.Name == "")
     Parent = std::move(Other.Parent);
-  if (Params.empty())
-    Params = std::move(Other.Params);
-  if (!Template)
-    Template = Other.Template;
+  if (Params.empty() && !Other.Params.empty())
+    Params = allocateArray(Other.Params, PersistentArena);
+  if (!Template && Other.Template)
+    Template = TemplateInfo(*Other.Template, PersistentArena);
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -400,8 +616,8 @@ void TypedefInfo::merge(TypedefInfo &&Other) {
     IsUsing = Other.IsUsing;
   if (Underlying.Type.Name == "")
     Underlying = Other.Underlying;
-  if (!Template)
-    Template = Other.Template;
+  if (!Template && Other.Template)
+    Template = TemplateInfo(*Other.Template, PersistentArena);
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -411,10 +627,11 @@ void ConceptInfo::merge(ConceptInfo &&Other) {
     IsType = Other.IsType;
   if (ConstraintExpression.empty())
     ConstraintExpression = std::move(Other.ConstraintExpression);
-  if (Template.Constraints.empty())
-    Template.Constraints = std::move(Other.Template.Constraints);
-  if (Template.Params.empty())
-    Template.Params = std::move(Other.Template.Params);
+  if (Template.Constraints.empty() && !Other.Template.Constraints.empty())
+    Template.Constraints =
+        allocateArray(Other.Template.Constraints, PersistentArena);
+  if (Template.Params.empty() && !Other.Template.Params.empty())
+    Template.Params = allocateArray(Other.Template.Params, PersistentArena);
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -428,6 +645,11 @@ void VarInfo::merge(VarInfo &&Other) {
 }
 
 BaseRecordInfo::BaseRecordInfo() : RecordInfo() {}
+
+BaseRecordInfo::BaseRecordInfo(const BaseRecordInfo &Other,
+                               llvm::BumpPtrAllocator &Arena)
+    : RecordInfo(Other, Arena), Access(Other.Access),
+      IsVirtual(Other.IsVirtual), IsParent(Other.IsParent) {}
 
 BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
                                bool IsVirtual, AccessSpecifier Access,
