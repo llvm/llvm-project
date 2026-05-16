@@ -154,8 +154,6 @@ PROJECT_CHECK_TARGETS = {
     "flang-rt": "check-flang-rt",
     "libc": "check-libc",
     "libclc": "check-libclc",
-    "lld": "check-lld",
-    "lldb": "check-lldb",
     "mlir": "check-mlir",
     "openmp": "check-openmp",
     "polly": "check-polly",

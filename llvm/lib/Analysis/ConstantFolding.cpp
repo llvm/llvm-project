@@ -4684,14 +4684,8 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 } // end anonymous namespace
 
 Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
-                                            Constant *RHS, Type *Ty,
-                                            Instruction *FMFSource) {
-  auto *Call = dyn_cast_if_present<CallBase>(FMFSource);
-  // Ensure we check flags like StrictFP that might prevent this from getting
-  // folded before generating a result.
-  if (Call && !canConstantFoldCallTo(Call, Call->getCalledFunction()))
-    return nullptr;
-  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS}, Call);
+                                            Constant *RHS, Type *Ty) {
+  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS}, nullptr);
 }
 
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,

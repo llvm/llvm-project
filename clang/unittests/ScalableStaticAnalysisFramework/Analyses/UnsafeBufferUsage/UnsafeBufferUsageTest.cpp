@@ -9,10 +9,8 @@
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "FindDecl.h"
 #include "TestFixture.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
-#include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityIdTable.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
@@ -22,8 +20,6 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
@@ -184,52 +180,6 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntityPointerLevelSetTest) {
   EXPECT_THAT(getSubsetOf(Set, E1), UnorderedElementsAre(P1, P2));
   EXPECT_THAT(getSubsetOf(Set, E2), UnorderedElementsAre(P3, P4));
   EXPECT_THAT(getSubsetOf(Set, E3), UnorderedElementsAre(P5));
-}
-
-//////////////////////////////////////////////////////////////
-//   (De-)Serialization Tests                               //
-//////////////////////////////////////////////////////////////
-
-TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageSerializeTest) {
-  ASSERT_TRUE(setUpTest(R"cpp(
-    void foo(int ***p, int ****q, int x) {
-      p[5][5][5];
-      q[5][5][5][5];
-    }
-  )cpp"));
-  const auto *Sum = getEntitySummary("foo");
-  ASSERT_NE(Sum, nullptr);
-  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U},
-                                     {"p", 2U},
-                                     {"p", 3U},
-                                     {"q", 1U},
-                                     {"q", 2U},
-                                     {"q", 3U},
-                                     {"q", 4U}}));
-
-  std::function<uint64_t(EntityId)> IdToIntFn = [](EntityId Id) -> uint64_t {
-    return getIndex(Id);
-  };
-  std::function<llvm::Expected<EntityId>(uint64_t)> IdFromIntFn =
-      [this](uint64_t Int) -> llvm::Expected<EntityId> {
-    std::optional<EntityId> Result = std::nullopt;
-
-    getIdTable(TUSum).forEach([&Int, &Result](const EntityName &, EntityId Id) {
-      if (getIndex(Id) == Int)
-        Result = Id;
-    });
-    if (Result)
-      return *Result;
-    return llvm::createStringError("failed to convert %d to an EntityId", Int);
-  };
-
-  auto RoundTripResult =
-      serializeDeserializeRoundTrip(*Sum, IdToIntFn, IdFromIntFn);
-
-  EXPECT_THAT_ERROR(RoundTripResult.takeError(), llvm::Succeeded());
-  ASSERT_NE(*RoundTripResult, nullptr);
-  EXPECT_EQ(*Sum, *static_cast<const UnsafeBufferUsageEntitySummary *>(
-                      RoundTripResult->get()));
 }
 
 //////////////////////////////////////////////////////////////

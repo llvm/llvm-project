@@ -24,31 +24,35 @@ namespace Fortran::runtime {
 
 // MAXLOC & MINLOC
 
-template <typename T, bool IS_MAX, bool BACK> struct NumericCompare {
+template <typename T, bool IS_MAX> struct NumericCompare {
   using Type = T;
-  explicit RT_API_ATTRS NumericCompare(std::size_t /*elemLen; ignored*/) {}
+  explicit RT_API_ATTRS NumericCompare(std::size_t /*elemLen*/, bool back)
+      : back_{back} {}
   RT_API_ATTRS bool operator()(const T &value, const T &previous) const {
     if (std::is_floating_point_v<T> && previous != previous) {
-      return BACK || value == value; // replace NaN
+      return back_ || value == value; // replace NaN
     } else if (value == previous) {
-      return BACK;
+      return back_;
     } else if constexpr (IS_MAX) {
       return value > previous;
     } else {
       return value < previous;
     }
   }
+
+private:
+  bool back_;
 };
 
-template <typename T, bool IS_MAX, bool BACK> class CharacterCompare {
+template <typename T, bool IS_MAX> class CharacterCompare {
 public:
   using Type = T;
-  explicit RT_API_ATTRS CharacterCompare(std::size_t elemLen)
-      : chars_{elemLen / sizeof(T)} {}
+  explicit RT_API_ATTRS CharacterCompare(std::size_t elemLen, bool back)
+      : chars_{elemLen / sizeof(T)}, back_{back} {}
   RT_API_ATTRS bool operator()(const T &value, const T &previous) const {
     int cmp{CharacterScalarCompare<T>(&value, &previous, chars_, chars_)};
     if (cmp == 0) {
-      return BACK;
+      return back_;
     } else if constexpr (IS_MAX) {
       return cmp > 0;
     } else {
@@ -58,13 +62,15 @@ public:
 
 private:
   std::size_t chars_;
+  bool back_;
 };
 
 template <typename COMPARE> class ExtremumLocAccumulator {
 public:
   using Type = typename COMPARE::Type;
-  RT_API_ATTRS ExtremumLocAccumulator(const Descriptor &array)
-      : array_{array}, argRank_{array.rank()}, compare_{array.ElementBytes()} {
+  RT_API_ATTRS ExtremumLocAccumulator(const Descriptor &array, bool back)
+      : array_{array}, argRank_{array.rank()},
+        compare_{array.ElementBytes(), back} {
     Reinitialize();
   }
   RT_API_ATTRS void Reinitialize() {
@@ -108,27 +114,22 @@ private:
 template <typename ACCUMULATOR, typename CPPTYPE>
 static RT_API_ATTRS void LocationHelper(const char *intrinsic,
     Descriptor &result, const Descriptor &x, int kind, const Descriptor *mask,
-    Terminator &terminator) {
-  ACCUMULATOR accumulator{x};
+    Terminator &terminator, bool back) {
+  ACCUMULATOR accumulator{x, back};
   DoTotalReduction<CPPTYPE>(x, 0, mask, accumulator, intrinsic, terminator);
   ApplyIntegerKind<LocationResultHelper<ACCUMULATOR>::template Functor, void>(
       kind, terminator, accumulator, result);
 }
 
 template <TypeCategory CAT, int KIND, bool IS_MAX,
-    template <typename, bool, bool> class COMPARE>
+    template <typename, bool> class COMPARE>
 inline RT_API_ATTRS void DoMaxOrMinLoc(const char *intrinsic,
     Descriptor &result, const Descriptor &x, int kind, const char *source,
     int line, const Descriptor *mask, bool back) {
   using CppType = CppTypeFor<CAT, KIND>;
   Terminator terminator{source, line};
-  if (back) {
-    LocationHelper<ExtremumLocAccumulator<COMPARE<CppType, IS_MAX, true>>,
-        CppType>(intrinsic, result, x, kind, mask, terminator);
-  } else {
-    LocationHelper<ExtremumLocAccumulator<COMPARE<CppType, IS_MAX, false>>,
-        CppType>(intrinsic, result, x, kind, mask, terminator);
-  }
+  LocationHelper<ExtremumLocAccumulator<COMPARE<CppType, IS_MAX>>, CppType>(
+      intrinsic, result, x, kind, mask, terminator, back);
 }
 
 template <bool IS_MAX> struct CharacterMaxOrMinLocHelper {
@@ -367,34 +368,20 @@ RT_EXT_API_GROUP_END
 // MAXLOC/MINLOC with DIM=
 
 template <TypeCategory CAT, int KIND, bool IS_MAX,
-    template <typename, bool, bool> class COMPARE, bool BACK>
-static RT_API_ATTRS void DoPartialMaxOrMinLocDirection(const char *intrinsic,
+    template <typename, bool> class COMPARE>
+static RT_API_ATTRS void DoPartialMaxOrMinLoc(const char *intrinsic,
     Descriptor &result, const Descriptor &x, int kind, int dim,
-    const Descriptor *mask, Terminator &terminator) {
+    const Descriptor *mask, Terminator &terminator, bool back) {
   using CppType = CppTypeFor<CAT, KIND>;
-  using Accumulator = ExtremumLocAccumulator<COMPARE<CppType, IS_MAX, BACK>>;
-  Accumulator accumulator{x};
+  using Accumulator = ExtremumLocAccumulator<COMPARE<CppType, IS_MAX>>;
+  Accumulator accumulator{x, back};
   ApplyIntegerKind<PartialLocationHelper<Accumulator>::template Functor, void>(
       kind, terminator, result, x, dim, mask, terminator, intrinsic,
       accumulator);
 }
 
-template <TypeCategory CAT, int KIND, bool IS_MAX,
-    template <typename, bool, bool> class COMPARE>
-inline RT_API_ATTRS void DoPartialMaxOrMinLoc(const char *intrinsic,
-    Descriptor &result, const Descriptor &x, int kind, int dim,
-    const Descriptor *mask, bool back, Terminator &terminator) {
-  if (back) {
-    DoPartialMaxOrMinLocDirection<CAT, KIND, IS_MAX, COMPARE, true>(
-        intrinsic, result, x, kind, dim, mask, terminator);
-  } else {
-    DoPartialMaxOrMinLocDirection<CAT, KIND, IS_MAX, COMPARE, false>(
-        intrinsic, result, x, kind, dim, mask, terminator);
-  }
-}
-
 template <TypeCategory CAT, bool IS_MAX,
-    template <typename, bool, bool> class COMPARE>
+    template <typename, bool> class COMPARE>
 struct DoPartialMaxOrMinLocHelper {
   template <int KIND> struct Functor {
     // NVCC inlines more aggressively which causes too many specializations of
@@ -404,7 +391,7 @@ struct DoPartialMaxOrMinLocHelper {
         Descriptor &result, const Descriptor &x, int kind, int dim,
         const Descriptor *mask, bool back, Terminator &terminator) const {
       DoPartialMaxOrMinLoc<CAT, KIND, IS_MAX, COMPARE>(
-          intrinsic, result, x, kind, dim, mask, back, terminator);
+          intrinsic, result, x, kind, dim, mask, terminator, back);
     }
   };
 };

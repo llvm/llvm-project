@@ -1,39 +1,35 @@
 set(LLVM_LINK_COMPONENTS
-  # Core LLVM components for IR processing
-  Analysis
-  Core
+  # IR reading (used by llvm-ir2vec.cpp directly)
   IRReader
-  Support
-  
+
   # Machine IR components (for -mode=mir)
-  CodeGen           
   MIRParser
   MC
-  Target
-  
+
   # Target initialization (required for MIR parsing)
   AllTargetsAsmParsers
   AllTargetsCodeGens
   AllTargetsDescs
   AllTargetsInfos
   TargetParser
-  )
+)
 
-# Add the lib subdirectory
+# Build the utility libraries first
 add_subdirectory(lib)
 
 # Main executable
 add_llvm_tool(llvm-ir2vec
   llvm-ir2vec.cpp
-  
+
   DEPENDS
   intrinsics_gen
 )
 
-target_link_libraries(llvm-ir2vec PRIVATE LLVMEmbUtils)
+# Link both libraries: IR tool for IR mode, MIR tool for MIR mode
+target_link_libraries(llvm-ir2vec PRIVATE LLVMIREmbUtils LLVMMIREmbUtils)
 
-option(LLVM_IR2VEC_ENABLE_PYTHON_BINDINGS 
-  "Build Python bindings for llvm-ir2vec" 
+option(LLVM_IR2VEC_ENABLE_PYTHON_BINDINGS
+  "Build Python bindings for llvm-ir2vec"
   OFF)
 
 set(LLVM_IR2VEC_TEST_PYTHON_BINDINGS False CACHE INTERNAL "")

@@ -495,6 +495,10 @@ defm VMovB64Inst : AMDGPUSubtargetFeature<"v-mov-b64-inst",
   "Has v_mov_b64 instruction"
 >;
 
+defm VMulU64Inst : AMDGPUSubtargetFeature<"v-mul-u64-inst",
+  "Has v_mul_u64 instruction."
+>;
+
 defm GFX950Insts : AMDGPUSubtargetFeature<"gfx950-insts",
   "Additional instructions for GFX950+",
   /*GenPredicate=*/1,
@@ -1558,6 +1562,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess, FeatureImageInsts,
+   FeatureExtendedImageInsts,
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
@@ -2139,6 +2144,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
    FeatureVMovB64Inst,
+   FeatureVMulU64Inst,
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2534,6 +2540,11 @@ def isGFX1170Only :
 def isGFX11Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+
+def isGFX11GFX12 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX13Insts))>;
 
 def isGFX11PlusNot12_50 :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&"
