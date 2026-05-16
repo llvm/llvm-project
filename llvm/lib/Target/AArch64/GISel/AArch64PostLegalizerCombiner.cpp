@@ -835,11 +835,10 @@ bool runCombiner(MachineFunction &MF, GISelCSEInfo *CSEInfo,
                  bool EnableOpt, bool IsOptNone) {
   if (MF.getProperties().hasFailedISel())
     return false;
-  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
   const Function &F = MF.getFunction();
 
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
-  const auto *LI = ST.getLegalizerInfo();
+  const LegalizerInfo *LI = ST.getLegalizerInfo();
 
   CombinerInfo CInfo(/*AllowIllegalOps=*/true, /*ShouldLegalizeIllegal=*/false,
                      /*LegalizerInfo=*/nullptr, EnableOpt, F.hasOptSize(),
@@ -871,6 +870,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::Legalized);
+  }
 
 private:
   bool IsOptNone;

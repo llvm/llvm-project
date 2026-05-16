@@ -118,6 +118,10 @@ public:
 
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::Legalized);
+  }
 };
 
 class AArch64PostSelectOptimizePass
