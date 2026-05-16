@@ -686,7 +686,8 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     }
 
     bool isForLane() const {
-      auto parent = dyn_cast<LayoutAttr>(getParent());
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       return parent.isForLane();
     }
 

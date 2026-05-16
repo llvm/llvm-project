@@ -354,15 +354,16 @@ public:
     return getGlobalViewAttr(type, globalOp, arAttr);
   }
 
-  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global,
-                              bool threadLocal = false) {
+  cir::GetGlobalOp createGetGlobal(mlir::Location loc, cir::GlobalOp global,
+                                   bool threadLocal = false) {
     assert(!cir::MissingFeatures::addressSpace());
     return cir::GetGlobalOp::create(*this, loc,
                                     getPointerTo(global.getSymType()),
                                     global.getSymNameAttr(), threadLocal);
   }
 
-  mlir::Value createGetGlobal(cir::GlobalOp global, bool threadLocal = false) {
+  cir::GetGlobalOp createGetGlobal(cir::GlobalOp global,
+                                   bool threadLocal = false) {
     return createGetGlobal(global.getLoc(), global, threadLocal);
   }
 
@@ -797,6 +798,13 @@ public:
 
   mlir::IntegerAttr getAlignmentAttr(int64_t alignment) {
     return alignment ? getI64IntegerAttr(alignment) : mlir::IntegerAttr();
+  }
+
+  // Materialize an alignment value as a CIR integer constant of the given
+  // integer type.
+  cir::ConstantOp getAlignment(mlir::Location loc, mlir::Type t,
+                               clang::CharUnits alignment) {
+    return getConstantInt(loc, t, alignment.getQuantity());
   }
 
   mlir::IntegerAttr getSizeFromCharUnits(clang::CharUnits size) {

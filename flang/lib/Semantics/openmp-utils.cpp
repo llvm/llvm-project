@@ -119,29 +119,6 @@ std::string TryVersion(unsigned version) {
   return "try -fopenmp-version=" + std::to_string(version);
 }
 
-const parser::Designator *GetDesignatorFromObj(
-    const parser::OmpObject &object) {
-  return std::get_if<parser::Designator>(&object.u);
-}
-
-const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object) {
-  if (auto *desg{GetDesignatorFromObj(object)}) {
-    return std::get_if<parser::DataRef>(&desg->u);
-  }
-  return nullptr;
-}
-
-const parser::ArrayElement *GetArrayElementFromObj(
-    const parser::OmpObject &object) {
-  if (auto *dataRef{GetDataRefFromObj(object)}) {
-    using ElementIndirection = common::Indirection<parser::ArrayElement>;
-    if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
-      return &ind->value();
-    }
-  }
-  return nullptr;
-}
-
 const Symbol *GetObjectSymbol(const parser::OmpObject &object) {
   // Some symbols may be missing if the resolution failed, e.g. when an
   // undeclared name is used with implicit none.
@@ -154,29 +131,11 @@ const Symbol *GetObjectSymbol(const parser::OmpObject &object) {
   return nullptr;
 }
 
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object) {
-  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
-    return name->source;
-  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
-    return GetLastName(*desg).source;
-  }
-  return std::nullopt;
-}
-
 const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
   if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
     if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
       return GetObjectSymbol(*object);
     }
-  }
-  return nullptr;
-}
-
-const parser::OmpObject *GetArgumentObject(
-    const parser::OmpArgument &argument) {
-  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
-    return std::get_if<parser::OmpObject>(&locator->u);
   }
   return nullptr;
 }
@@ -246,6 +205,13 @@ bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
     return !GetArrayElementFromObj(object);
   }
   return false;
+}
+
+const Symbol *GetHostSymbol(const Symbol &sym) {
+  if (auto *details{sym.detailsIf<HostAssocDetails>()}) {
+    return &details->symbol();
+  }
+  return nullptr;
 }
 
 bool IsMapEnteringType(parser::OmpMapType::Value type) {
@@ -617,7 +583,7 @@ static bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
 }
 
 LoopControl::LoopControl(const parser::LoopControl::Bounds &x) {
-  iv = x.Name().thing.symbol;
+  iv = x.Name().thing;
   lbound = fromParserExpr(parser::UnwrapRef<parser::Expr>(x.Lower()));
   ubound = fromParserExpr(parser::UnwrapRef<parser::Expr>(x.Upper()));
   if (auto &inc{x.Step()}) {
@@ -627,7 +593,7 @@ LoopControl::LoopControl(const parser::LoopControl::Bounds &x) {
 
 LoopControl::LoopControl(const parser::ConcurrentControl &x) {
   auto &[name, lower, upper, inc]{x.t};
-  iv = name.symbol;
+  iv = name;
   lbound = fromParserExpr(parser::UnwrapRef<parser::Expr>(lower));
   ubound = fromParserExpr(parser::UnwrapRef<parser::Expr>(upper));
   if (inc) {
@@ -646,7 +612,8 @@ std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x) {
     controls.emplace_back(std::get<parser::LoopControl::Bounds>(control.u));
   } else if (x.IsDoConcurrent()) {
     const parser::LoopControl &control{*x.GetLoopControl()};
-    auto &header{parser::UnwrapRef<parser::ConcurrentHeader>(control)};
+    auto &concurrent{std::get<parser::LoopControl::Concurrent>(control.u)};
+    auto &header{std::get<parser::ConcurrentHeader>(concurrent.t)};
     for (auto &cc : std::get<std::list<parser::ConcurrentControl>>(header.t)) {
       controls.emplace_back(cc);
     }
@@ -1817,8 +1784,8 @@ WithReason<bool> LoopSequence::isRectangular(
   SymbolVector outerIVs;
   for (auto *sequence : llvm::reverse(outer)) {
     for (auto &control : sequence->getLoopControls()) {
-      if (control.iv) {
-        outerIVs.emplace_back(*control.iv);
+      if (control.iv.symbol) {
+        outerIVs.emplace_back(*control.iv.symbol);
       }
     }
   }
@@ -1826,7 +1793,7 @@ WithReason<bool> LoopSequence::isRectangular(
   WithReason<bool> result(true);
 
   for (auto &control : getLoopControls()) {
-    if (!control.iv || !control.lbound.value || !control.ubound.value) {
+    if (!control.iv.symbol || !control.lbound.value || !control.ubound.value) {
       continue;
     }
     CheckSymbolExprOverlap(result, outerIVs, *control.lbound.value,

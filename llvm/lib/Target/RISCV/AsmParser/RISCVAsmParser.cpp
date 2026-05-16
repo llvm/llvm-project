@@ -206,6 +206,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseJALOffset(OperandVector &Operands);
   ParseStatus parseVTypeI(OperandVector &Operands);
   ParseStatus parseMaskReg(OperandVector &Operands);
+  ParseStatus parseVScaleReg(OperandVector &Operands);
   ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseInsnCDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseGPRAsFPR(OperandVector &Operands);
@@ -301,8 +302,8 @@ public:
   static bool isSymbolDiff(const MCExpr *Expr);
 
   RISCVAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII) {
+                 const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII) {
     MCAsmParserExtension::Initialize(Parser);
 
     Parser.addAliasForDirective(".half", ".2byte");
@@ -311,7 +312,7 @@ public:
     Parser.addAliasForDirective(".dword", ".8byte");
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
-    auto ABIName = StringRef(Options.ABIName);
+    auto ABIName = StringRef(getTargetOptions().ABIName);
     if (ABIName.ends_with("f") && !getSTI().hasFeature(RISCV::FeatureStdExtF)) {
       errs() << "Hard-float 'f' ABI can't be used for a target that "
                 "doesn't support the F instruction set extension (ignoring "
@@ -2522,6 +2523,26 @@ ParseStatus RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
+ParseStatus RISCVAsmParser::parseVScaleReg(OperandVector &Operands) {
+  if (getLexer().isNot(AsmToken::Identifier))
+    return ParseStatus::NoMatch;
+
+  StringRef Name = getLexer().getTok().getIdentifier();
+  if (!Name.consume_back(".scale"))
+    return Error(getLoc(), "expected '.scale' suffix");
+  MCRegister Reg = matchRegisterNameHelper(Name);
+
+  if (!Reg)
+    return ParseStatus::NoMatch;
+  if (Reg != RISCV::V0)
+    return ParseStatus::NoMatch;
+  SMLoc S = getLoc();
+  SMLoc E = getTok().getEndLoc();
+  getLexer().Lex();
+  Operands.push_back(RISCVOperand::createReg(Reg, S, E));
+  return ParseStatus::Success;
+}
+
 ParseStatus RISCVAsmParser::parseGPRAsFPR64(OperandVector &Operands) {
   if (!isRV64() || getSTI().hasFeature(RISCV::FeatureStdExtF))
     return ParseStatus::NoMatch;
@@ -3903,6 +3924,20 @@ unsigned getLMULFromVectorRegister(MCRegister Reg) {
   return 1;
 }
 
+static bool isZvvfmmScaleOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  case RISCV::VFWMMACC_VV_SCALE:
+  case RISCV::VFQMMACC_VV_SCALE:
+  case RISCV::VF8WMMACC_VV_SCALE:
+  case RISCV::VFWIMMACC_VV:
+  case RISCV::VFQIMMACC_VV:
+  case RISCV::VF8WIMMACC_VV:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
   unsigned Opcode = Inst.getOpcode();
@@ -3937,6 +3972,30 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
       SMLoc Loc = Operands[1]->getStartLoc();
       return Error(Loc, "rs1 and rs2 must be different");
     }
+  }
+
+  if (isZvvfmmScaleOpcode(Opcode)) {
+    auto CheckOperandDoesNotOverlapV0 = [&](int OperandIdx,
+                                            unsigned ParsedIdx) {
+      if (Inst.getOperand(OperandIdx).getReg() == RISCV::V0)
+        return Error(Operands[ParsedIdx]->getStartLoc(),
+                     "vd, vs1, and vs2 cannot overlap v0.scale");
+      return false;
+    };
+
+    int DestIdx =
+        RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vd);
+    int VS1Idx =
+        RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vs1);
+    int VS2Idx =
+        RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vs2);
+    assert(DestIdx >= 0 && VS1Idx >= 0 && VS2Idx >= 0 &&
+           "Unexpected Zvvfmm scaled operand list");
+
+    if (CheckOperandDoesNotOverlapV0(DestIdx, 1) ||
+        CheckOperandDoesNotOverlapV0(VS1Idx, 2) ||
+        CheckOperandDoesNotOverlapV0(VS2Idx, 3))
+      return true;
   }
 
   const MCInstrDesc &MCID = MII.get(Opcode);

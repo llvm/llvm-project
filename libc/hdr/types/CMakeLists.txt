@@ -160,6 +160,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_stat
+  HDRS
+    struct_stat.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_stat
+)
+
+add_proxy_header_library(
   ssize_t
   HDRS
     ssize_t.h
@@ -391,6 +399,15 @@ add_proxy_header_library(
     struct_linger.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_linger
+    libc.include.sys_socket
+)
+
+add_proxy_header_library(
+  struct_cmsghdr
+  HDRS
+    struct_cmsghdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_cmsghdr
     libc.include.sys_socket
 )
 

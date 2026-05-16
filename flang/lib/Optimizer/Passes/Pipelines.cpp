@@ -13,6 +13,7 @@
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
+#include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "llvm/Support/CommandLine.h"
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
@@ -397,6 +398,11 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
       pm, fir::createAbstractResultOpt);
   addPassToGPUModuleOperations<PassConstructor>(pm,
                                                 fir::createAbstractResultOpt);
+  pm.addPass(fir::createRematerializeFIRBoxOpsPass());
+  // Do not run CSE between rematerialization and FIR-to-LLVM lowering. CSE will
+  // undo the createRematerializeFIRBoxOps pass.
+  // LLVM-level CSE can clean up redundant operations after FIR box conversion
+  // has materialized region-local allocas.
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
@@ -440,6 +446,12 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   }
 
   fir::addFIRToLLVMPass(pm, config);
+
+  // Convert applicable OpenMP stack allocations to shared memory allocations
+  // for GPU targets. This pass must run after any alloca-generating passes to
+  // ensure all are adequately accounted for.
+  if (config.EnableOpenMP && !config.EnableOpenMPSimd)
+    pm.addPass(mlir::omp::createStackToSharedPass());
 }
 
 /// Create a pass pipeline for lowering from MLIR to LLVM IR
