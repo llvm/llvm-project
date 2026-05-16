@@ -1705,6 +1705,16 @@ add_header_library(
 )
 
 add_header_library(
+  isnanf16
+  HDRS
+    isnanf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   issignaling
   HDRS
     issignaling.h

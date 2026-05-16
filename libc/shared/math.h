@@ -289,6 +289,7 @@
 #include "math/iscanonicall.h"
 #include "math/isnan.h"
 #include "math/isnanf.h"
+#include "math/isnanf16.h"
 #include "math/isnanl.h"
 #include "math/issignaling.h"
 #include "math/issignalingbf16.h"
