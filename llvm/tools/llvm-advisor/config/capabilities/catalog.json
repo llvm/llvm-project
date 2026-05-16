@@ -1,0 +1,630 @@
+{
+  "capabilities": [
+    {
+      "id": "build.command.meta",
+      "name": "Build command metadata",
+      "version": "1",
+      "runner": "builtin.build_meta",
+      "readiness": "L0",
+      "dependencies": []
+    },
+    {
+      "id": "build.dependency.headers",
+      "name": "Header dependencies",
+      "version": "1",
+      "runner": "builtin.header_deps",
+      "readiness": "L0",
+      "dependencies": []
+    },
+    {
+      "id": "build.time_trace",
+      "name": "Clang time trace",
+      "version": "1",
+      "runner": "builtin.time_trace",
+      "readiness": "L0",
+      "dependencies": []
+    },
+    {
+      "id": "build.preprocessor.output",
+      "name": "Preprocessor output",
+      "version": "1",
+      "runner": "builtin.preprocessor",
+      "readiness": "L2",
+      "dependencies": []
+    },
+    {
+      "id": "build.macro_expansion",
+      "name": "Macro expansions",
+      "version": "1",
+      "runner": "builtin.macro_expansion",
+      "readiness": "L2",
+      "dependencies": []
+    },
+    {
+      "id": "clang.modules",
+      "name": "Clang modules",
+      "version": "1",
+      "runner": "builtin.modules",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.ir.summary",
+      "name": "LLVM IR summary",
+      "version": "1",
+      "runner": "builtin.ir_summary",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.ir.function_stats",
+      "name": "LLVM IR function statistics",
+      "version": "1",
+      "runner": "builtin.ir_function_stats",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.ir.summary"
+      ]
+    },
+    {
+      "id": "llvm.obj.summary",
+      "name": "Object file summary",
+      "version": "1",
+      "runner": "builtin.object_summary",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "clang.diag.summary",
+      "name": "Clang diagnostics summary",
+      "version": "1",
+      "runner": "builtin.clang_diag_summary",
+      "summary": "diagnostic collection requires a Clang frontend action capture",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "clang.diag.sarif",
+      "name": "Clang SARIF diagnostics",
+      "version": "1",
+      "runner": "builtin.clang_diag_sarif",
+      "summary": "SARIF diagnostics require a Clang diagnostic consumer capture",
+      "readiness": "L1",
+      "dependencies": [
+        "clang.diag.summary"
+      ]
+    },
+    {
+      "id": "clang.ast.summary",
+      "name": "Clang AST summary",
+      "version": "1",
+      "runner": "builtin.clang_ast_summary",
+      "summary": "AST summary requires a stored AST artifact or frontend action",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "clang.ast.json",
+      "name": "Clang AST JSON",
+      "version": "1",
+      "runner": "builtin.clang_ast_json",
+      "summary": "AST JSON requires a stored AST artifact or frontend action",
+      "readiness": "L1",
+      "dependencies": [
+        "clang.ast.summary"
+      ]
+    },
+    {
+      "id": "llvm.inlining.tree",
+      "name": "Inlining tree",
+      "version": "1",
+      "runner": "builtin.inlining_tree",
+      "summary": "inlining tree requires optimization remarks or debug locations",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.remarks.summary",
+      "name": "Optimization remarks summary",
+      "version": "1",
+      "runner": "builtin.remarks_summary",
+      "summary": "remarks summary requires an optimization remarks artifact",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.remarks.instruction_mix",
+      "name": "Remarks instruction mix",
+      "version": "1",
+      "runner": "builtin.remarks_mix",
+      "summary": "instruction mix requires parsed optimization remarks",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.remarks.summary"
+      ]
+    },
+    {
+      "id": "llvm.remarks.size_diff",
+      "name": "Remarks size diff",
+      "version": "1",
+      "runner": "builtin.remarks_size_diff",
+      "summary": "size diff requires comparable remarks inputs",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.remarks.summary"
+      ]
+    },
+    {
+      "id": "llvm.pass.stats",
+      "name": "LLVM pass statistics",
+      "version": "1",
+      "runner": "builtin.pass_stats",
+      "summary": "pass statistics require -stats JSON capture",
+      "readiness": "L2",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.pass.timing",
+      "name": "LLVM pass timing",
+      "version": "1",
+      "runner": "builtin.pass_timing",
+      "summary": "pass timing requires TimePassesHandler capture",
+      "readiness": "L2",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.ir.similarity",
+      "name": "LLVM IR similarity",
+      "version": "1",
+      "runner": "builtin.ir_similarity",
+      "summary": "similarity requires stored IR for compared units",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.ir.summary"
+      ]
+    },
+    {
+      "id": "llvm.bcanalyzer",
+      "name": "Bitcode analysis",
+      "version": "1",
+      "runner": "builtin.bcanalyzer",
+      "summary": "bitcode analysis requires a stored bitcode artifact",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.ir.passes.list",
+      "name": "LLVM pass list",
+      "version": "1",
+      "runner": "builtin.passes_list",
+      "summary": "pass list requires pass instrumentation capture",
+      "readiness": "L2",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.ir.view",
+      "name": "LLVM IR view",
+      "version": "1",
+      "runner": "builtin.ir_view",
+      "summary": "IR view requires a stored IR artifact",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.ir.summary"
+      ]
+    },
+    {
+      "id": "llvm.ir.diff",
+      "name": "LLVM IR diff",
+      "version": "1",
+      "runner": "builtin.ir_diff",
+      "summary": "IR diff requires two stored IR artifacts",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.ir.summary"
+      ]
+    },
+    {
+      "id": "llvm.cfg",
+      "name": "LLVM CFG",
+      "version": "1",
+      "runner": "builtin.cfg",
+      "summary": "CFG requires stored IR and function selection",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.ir.summary"
+      ]
+    },
+    {
+      "id": "llvm.dom_tree",
+      "name": "LLVM dominator tree",
+      "version": "1",
+      "runner": "builtin.dom_tree",
+      "summary": "dominator tree requires stored IR and function selection",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.ir.summary"
+      ]
+    },
+    {
+      "id": "llvm.call_graph",
+      "name": "LLVM call graph",
+      "version": "1",
+      "runner": "builtin.call_graph",
+      "summary": "call graph requires stored IR",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.ir.summary"
+      ]
+    },
+    {
+      "id": "llvm.loop_info",
+      "name": "LLVM loop info",
+      "version": "1",
+      "runner": "builtin.loop_info",
+      "summary": "loop info requires stored IR and function selection",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.ir.summary"
+      ]
+    },
+    {
+      "id": "llvm.selection_dag",
+      "name": "LLVM SelectionDAG",
+      "version": "1",
+      "runner": "builtin.selection_dag",
+      "summary": "SelectionDAG requires codegen capture",
+      "readiness": "L2",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.machine_ir",
+      "name": "LLVM Machine IR",
+      "version": "1",
+      "runner": "builtin.machine_ir",
+      "summary": "Machine IR requires codegen capture",
+      "readiness": "L2",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.asm.view",
+      "name": "Assembly view",
+      "version": "1",
+      "runner": "builtin.asm_view",
+      "summary": "assembly view requires an assembly or object artifact",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.remarks.detail",
+      "name": "Optimization remarks detail",
+      "version": "1",
+      "runner": "builtin.remarks_detail",
+      "summary": "remarks detail requires an optimization remarks artifact",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.remarks.summary"
+      ]
+    },
+    {
+      "id": "llvm.obj.readobj",
+      "name": "Readobj detail",
+      "version": "1",
+      "runner": "builtin.readobj",
+      "summary": "readobj detail requires an object artifact",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.obj.summary"
+      ]
+    },
+    {
+      "id": "llvm.debug.summary",
+      "name": "Debug info summary",
+      "version": "1",
+      "runner": "builtin.debug_summary",
+      "summary": "debug summary requires debug info in an object artifact",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.obj.summary"
+      ]
+    },
+    {
+      "id": "llvm.debug.detail",
+      "name": "Debug info detail",
+      "version": "1",
+      "runner": "builtin.debug_detail",
+      "summary": "debug detail requires DWARF debug info",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.debug.summary"
+      ]
+    },
+    {
+      "id": "llvm.debug.consistency",
+      "name": "Debug info consistency",
+      "version": "1",
+      "runner": "builtin.debug_consistency",
+      "summary": "debug consistency requires DWARF verification input",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.debug.summary"
+      ]
+    },
+    {
+      "id": "llvm.cgdata",
+      "name": "CodeGen data",
+      "version": "1",
+      "runner": "builtin.cgdata",
+      "summary": "codegen data requires a CGData artifact",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "lld.mapfile",
+      "name": "LLD map file",
+      "version": "1",
+      "runner": "builtin.linker_map",
+      "summary": "mapfile analysis requires a linker map artifact",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.lto.summary",
+      "name": "LTO summary",
+      "version": "1",
+      "runner": "builtin.lto_summary",
+      "summary": "LTO summary requires a module summary index",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.lto.function_stats",
+      "name": "LTO function statistics",
+      "version": "1",
+      "runner": "builtin.lto_function_stats",
+      "summary": "LTO function statistics require a module summary index",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.lto.summary"
+      ]
+    },
+    {
+      "id": "offload.binary.inspect",
+      "name": "Offload binary inspection",
+      "version": "1",
+      "runner": "builtin.offload_binary",
+      "summary": "offload binary inspection requires an offload binary artifact",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "offload.host.profile",
+      "name": "Offload host profile",
+      "version": "1",
+      "runner": "builtin.offload_summary",
+      "summary": "offload host profile requires offload runtime traces",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "offload.device.profile",
+      "name": "Offload device profile",
+      "version": "1",
+      "runner": "builtin.device_profile",
+      "summary": "offload device profile requires device runtime traces",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "offload.memory.transfer",
+      "name": "Offload memory transfers",
+      "version": "1",
+      "runner": "builtin.memory_transfer",
+      "summary": "memory transfer analysis requires offload runtime traces",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "offload.sync.points",
+      "name": "Offload synchronization points",
+      "version": "1",
+      "runner": "builtin.sync_points",
+      "summary": "sync point analysis requires offload runtime traces",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.mca.report",
+      "name": "MCA throughput analysis",
+      "version": "1",
+      "runner": "builtin.mca_report",
+      "summary": "MCA throughput and port pressure analysis for an assembly region",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.asm.view"
+      ]
+    },
+    {
+      "id": "llvm.exegesis",
+      "name": "Exegesis hardware benchmarking",
+      "version": "1",
+      "runner": "builtin.exegesis",
+      "summary": "actual hardware latency and throughput benchmarking via llvm-exegesis; requires native target",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "clang.template_stats",
+      "name": "Template instantiation statistics",
+      "version": "1",
+      "runner": "builtin.template_stats",
+      "summary": "slowest template instantiations by total CPU time, extracted from -ftime-trace",
+      "readiness": "L2",
+      "dependencies": [
+        "build.time_trace"
+      ]
+    },
+    {
+      "id": "clang.static_analysis",
+      "name": "Clang static analyzer",
+      "version": "1",
+      "runner": "builtin.clang_static_analysis",
+      "summary": "static analysis requires a Clang frontend action with -analyze; substantially more expensive than compilation",
+      "readiness": "L2",
+      "dependencies": []
+    },
+    {
+      "id": "lld.mapfile.diff",
+      "name": "Linker map delta",
+      "version": "1",
+      "runner": "generic.unavailable",
+      "summary": "linker map diff requires two lld.mapfile results from different snapshots",
+      "readiness": "L0",
+      "dependencies": [
+        "lld.mapfile"
+      ]
+    },
+    {
+      "id": "offload.host.regions",
+      "name": "Offload host regions",
+      "version": "1",
+      "runner": "builtin.host_regions",
+      "summary": "offload region map requires OpenMP/CUDA pragma analysis of the source",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "offload.device.trace",
+      "name": "Offload device trace",
+      "version": "1",
+      "runner": "builtin.device_trace",
+      "summary": "device kernel execution trace requires offload runtime instrumentation",
+      "readiness": "L3",
+      "dependencies": [
+        "offload.binary.inspect"
+      ]
+    },
+    {
+      "id": "offload.memory.profile",
+      "name": "Offload memory profile",
+      "version": "1",
+      "runner": "builtin.memory_profile",
+      "summary": "detailed memory profiling requires offload runtime traces with memory tracking enabled",
+      "readiness": "L3",
+      "dependencies": [
+        "offload.memory.transfer"
+      ]
+    },
+    {
+      "id": "offload.sync.analysis",
+      "name": "Offload synchronization analysis",
+      "version": "1",
+      "runner": "builtin.sync_analysis",
+      "summary": "synchronization bottleneck analysis requires offload sync point runtime traces",
+      "readiness": "L3",
+      "dependencies": [
+        "offload.sync.points"
+      ]
+    },
+    {
+      "id": "runtime.pgo.instr",
+      "name": "PGO instrumentation profile",
+      "version": "1",
+      "runner": "builtin.pgo_instr",
+      "summary": "PGO instrumentation profile requires .profdata from llvm-profdata merge",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "runtime.pgo.sample",
+      "name": "PGO sample profile",
+      "version": "1",
+      "runner": "builtin.pgo_sample",
+      "summary": "PGO sample profile requires .profdata from llvm-profgen",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "runtime.pgo.memprof",
+      "name": "Memory profile",
+      "version": "1",
+      "runner": "builtin.memprof",
+      "summary": "memory profile requires -fmemory-profile instrumented binary",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "runtime.coverage",
+      "name": "Source coverage",
+      "version": "1",
+      "runner": "builtin.coverage",
+      "summary": "coverage requires -fprofile-instr-generate -fcoverage-mapping build and .profdata",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "runtime.xray",
+      "name": "XRay function call trace",
+      "version": "1",
+      "runner": "builtin.xray",
+      "summary": "XRay tracing requires -fxray-instrument build and XRay log file",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "runtime.xray.diff",
+      "name": "XRay trace comparison",
+      "version": "1",
+      "runner": "generic.unavailable",
+      "summary": "XRay diff requires two XRay trace files from different runs; ingest both then compare",
+      "readiness": "L3",
+      "dependencies": [
+        "runtime.xray"
+      ]
+    },
+    {
+      "id": "runtime.sanitizer.asan",
+      "name": "AddressSanitizer report",
+      "version": "1",
+      "runner": "builtin.sanitizer_asan",
+      "summary": "ASan report requires -fsanitize=address build and ASan output",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "runtime.sanitizer.ubsan",
+      "name": "UndefinedBehaviorSanitizer report",
+      "version": "1",
+      "runner": "builtin.sanitizer_ubsan",
+      "summary": "UBSan report requires -fsanitize=undefined build",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "runtime.sanitizer.msan",
+      "name": "MemorySanitizer report",
+      "version": "1",
+      "runner": "builtin.sanitizer_msan",
+      "summary": "MSan report requires -fsanitize=memory build",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "runtime.sanitizer.tsan",
+      "name": "ThreadSanitizer report",
+      "version": "1",
+      "runner": "builtin.sanitizer_tsan",
+      "summary": "TSan report requires -fsanitize=thread build",
+      "readiness": "L3",
+      "dependencies": []
+    },
+    {
+      "id": "runtime.sancov",
+      "name": "SanitizeCoverage analysis",
+      "version": "1",
+      "runner": "builtin.sancov",
+      "summary": "SanCov analysis requires -fsanitize-coverage=trace-pc-guard build and .sancov files",
+      "readiness": "L3",
+      "dependencies": []
+    }
+  ]
+}
