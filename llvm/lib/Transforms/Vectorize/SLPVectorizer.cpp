@@ -20532,7 +20532,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     });
     // Try to find the perfect match in another gather node at first.
     auto *It = find_if(FirstEntries, [=](const TreeEntry *EntryPtr) {
-      return EntryPtr->isSame(VL) || EntryPtr->isSame(TE->Scalars);
+      return (EntryPtr->getVectorFactor() == TE->Scalars.size() &&
+              EntryPtr->isSame(TE->Scalars)) ||
+             EntryPtr->isSame(VL);
     });
     if (It != FirstEntries.end() &&
         (IsReusedNodeFound || (*It)->getVectorFactor() == VL.size() ||
