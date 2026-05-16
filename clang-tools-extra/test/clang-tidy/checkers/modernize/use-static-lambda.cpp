@@ -115,6 +115,33 @@ void withoutParameterList() {
   (void)L;
 }
 
+// No '()' — every lambda-specifier kind that may appear without explicit params.
+void noParamSpecifiers() {
+  // noexcept without '()'
+  auto L1 = [] noexcept { return 1; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L1 = [] static noexcept { return 1; };
+  (void)L1;
+
+  // trailing return type without '()'
+  auto L2 = [] -> int { return 1; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L2 = [] static -> int { return 1; };
+  (void)L2;
+
+  // constexpr without '()'
+  auto L3 = [] constexpr { return 1; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L3 = [] static constexpr { return 1; };
+  (void)L3;
+
+  // noexcept + trailing return type without '()'
+  auto L4 = [] noexcept -> int { return 1; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L4 = [] static noexcept -> int { return 1; };
+  (void)L4;
+}
+
 void combinations() {
   // no '()' with a requires-clause
   auto L1 = []<typename T> requires (sizeof(T) > 0) { return T{}; };
@@ -133,6 +160,12 @@ void combinations() {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
   // CHECK-FIXES: auto L3 = []<typename T> {{\[\[nodiscard\]\]}} static { return T{}; };
   (void)L3;
+
+  // no '()' with trailing return type and template params
+  auto L4 = []<typename T> -> T { return T{}; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: lambda with empty capture list can be marked 'static' [modernize-use-static-lambda]
+  // CHECK-FIXES: auto L4 = []<typename T> static -> T { return T{}; };
+  (void)L4;
 }
 
 // The check must not produce duplicate diagnostics for template instantiations.

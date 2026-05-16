@@ -51,9 +51,10 @@ void UseStaticLambdaCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceManager &SM = *Result.SourceManager;
   const LangOptions &LangOpts = getLangOpts();
 
+  SourceLocation InsertLoc;
+  StringRef InsertStr;
+
   if (Lambda->hasExplicitParameters()) {
-    // Lambda has an explicit parameter list: [...](params) { ... }.
-    // Insert 'static' right after the closing ')'.
     const TypeSourceInfo *TSI = CallOp->getTypeSourceInfo();
     if (!TSI)
       return;
@@ -63,22 +64,58 @@ void UseStaticLambdaCheck::check(const MatchFinder::MatchResult &Result) {
     const SourceLocation RParenLoc = FTL.getRParenLoc();
     if (RParenLoc.isInvalid())
       return;
-    const SourceLocation InsertLoc =
-        Lexer::getLocForEndOfToken(RParenLoc, 0, SM, LangOpts);
-    diag(LambdaLoc, "lambda with empty capture list can be marked 'static'")
-        << FixItHint::CreateInsertion(InsertLoc, " static");
+    InsertLoc = Lexer::getLocForEndOfToken(RParenLoc, 0, SM, LangOpts);
+    InsertStr = " static";
   } else {
-    // No explicit parameter list. Insert just before '{' so 'static' ends up
-    // after any template params, requires-clause, or leading attributes.
-    const auto *Body = cast<CompoundStmt>(Lambda->getBody());
-    if (!Body)
+    SourceLocation ScanStart = Lambda->getIntroducerRange().getEnd();
+    if (Lambda->isGenericLambda()) {
+      if (const TemplateParameterList *TPL = Lambda->getTemplateParameterList()) {
+        // Skip past the template requires-clause if present, otherwise past '>'.
+        if (const Expr *Req = TPL->getRequiresClause())
+          ScanStart = Req->getEndLoc();
+        else
+          ScanStart = TPL->getRAngleLoc();
+      }
+    }
+    ScanStart = Lexer::getLocForEndOfToken(ScanStart, 0, SM, LangOpts);
+    if (ScanStart.isInvalid())
       return;
-    const SourceLocation LBracLoc = Body->getLBracLoc();
-    if (LBracLoc.isInvalid())
-      return;
-    diag(LambdaLoc, "lambda with empty capture list can be marked 'static'")
-        << FixItHint::CreateInsertion(LBracLoc, "static ");
+
+    // Scan forward, tracking '[' / ']' depth to skip [[attr]] blocks.
+    SourceLocation CurLoc = ScanStart;
+    int Depth = 0;
+    while (true) {
+      Token RawTok;
+      if (Lexer::getRawToken(CurLoc, RawTok, SM, LangOpts,
+                             /*IgnoreWhiteSpace=*/true))
+        break;
+      if (RawTok.is(tok::l_square)) {
+        ++Depth;
+      } else if (RawTok.is(tok::r_square)) {
+        if (--Depth < 0)
+          break; // malformed source
+        if (Depth == 0) {
+          // Finished consuming one [[...]] block; keep scanning.
+          CurLoc = Lexer::getLocForEndOfToken(RawTok.getLocation(), 0, SM,
+                                              LangOpts);
+          continue;
+        }
+      } else if (Depth == 0) {
+        // Outside any attribute block: this is the insertion point.
+        InsertLoc = RawTok.getLocation();
+        break;
+      }
+      CurLoc =
+          Lexer::getLocForEndOfToken(RawTok.getLocation(), 0, SM, LangOpts);
+    }
+    InsertStr = "static ";
   }
+
+  if (InsertLoc.isInvalid())
+    return;
+
+  diag(LambdaLoc, "lambda with empty capture list can be marked 'static'")
+      << FixItHint::CreateInsertion(InsertLoc, InsertStr);
 }
 
 } // namespace clang::tidy::modernize
