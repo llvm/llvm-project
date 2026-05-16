@@ -130,6 +130,10 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_COPT_MEMCPY_X86_USE_NTA_STORES")
   endif()
 
+  if(LIBC_CONF_USE_MEM_BUILTINS)
+    libc_add_definition(config_options "LIBC_COPT_USE_MEM_BUILTINS")
+  endif()
+
   if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
     libc_add_definition(config_options "LIBC_TYPES_TIME_T_IS_32_BIT")
   endif()

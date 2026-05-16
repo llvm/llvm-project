@@ -55,7 +55,6 @@ int main()
 // CHECK-NEXT:    [[MIN1_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[MIN1_ADDR]] to ptr
 // CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
-// CHECK-NEXT:    [[DOTTHREADID_TEMP__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 // CHECK-NEXT:    store i64 [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[TMP1]], ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[MAX1]], ptr [[MAX1_ADDR_ASCAST]], align 8
@@ -71,10 +70,11 @@ int main()
 // CHECK:       user_code.entry:
 // CHECK-NEXT:    [[TMP6:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
 // CHECK-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    store i32 [[TMP6]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[TMP6]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[DOTADDR1_ASCAST]], align 8
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l27_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP7]], i64 [[TMP8]], ptr [[TMP2]], ptr [[TMP3]], ptr [[TMP4]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[TMP9:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l27_omp_outlined(ptr [[TMP9]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP7]], i64 [[TMP8]], ptr [[TMP2]], ptr [[TMP3]], ptr [[TMP4]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:

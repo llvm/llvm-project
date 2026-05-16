@@ -3380,7 +3380,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         // may be aliased, copy it to ensure that the parameter variable is
         // mutable and has a unique adress, as C requires.
         if (ArgI.getIndirectRealign() || ArgI.isIndirectAliased()) {
-          RawAddress AlignedTemp = CreateMemTemp(Ty, "coerce");
+          RawAddress AlignedTemp = CreateMemTempWithoutCast(Ty, "coerce");
 
           // Copy from the incoming argument pointer to the temporary with the
           // appropriate alignment.
@@ -3510,8 +3510,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             ParameterABI::SwiftErrorResult) {
           QualType pointeeTy = Ty->getPointeeType();
           assert(pointeeTy->isPointerType());
-          RawAddress temp =
-              CreateMemTemp(pointeeTy, getPointerAlign(), "swifterror.temp");
+          RawAddress temp = CreateMemTempWithoutCast(
+              pointeeTy, getPointerAlign(), "swifterror.temp");
           Address arg = makeNaturalAddressForPointer(
               V, pointeeTy, getContext().getTypeAlignInChars(pointeeTy));
           llvm::Value *incomingErrorValue = Builder.CreateLoad(arg);
@@ -3565,8 +3565,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
 
       RawAddress DebugAddr = Address::invalid();
-      Address Alloca =
-          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), Arg->getName(), &DebugAddr);
+      Address Alloca = CreateMemTempWithoutCast(
+          Ty, getContext().getDeclAlign(Arg), Arg->getName());
 
       // Pointer to store into.
       Address Ptr = emitAddressAtOffset(*this, Alloca, ArgI);
@@ -3656,9 +3656,9 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     case ABIArgInfo::CoerceAndExpand: {
       // Reconstruct into a temporary.
       RawAddress DebugAddr = Address::invalid();
-      RawAddress alloca =
-          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), "tmp", &DebugAddr);
-      ArgVals.push_back(ParamValue::forIndirect(alloca, DebugAddr));
+      Address alloca =
+          CreateMemTempWithoutCast(Ty, getContext().getDeclAlign(Arg));
+      ArgVals.push_back(ParamValue::forIndirect(alloca));
 
       auto coercionType = ArgI.getCoerceAndExpandType();
       auto unpaddedCoercionType = ArgI.getUnpaddedCoerceAndExpandType();
@@ -3699,8 +3699,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       // we need to create a temporary and reconstruct it from the
       // arguments.
       RawAddress DebugAddr = Address::invalid();
-      RawAddress Alloca =
-          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), "tmp", &DebugAddr);
+      Address Alloca =
+          CreateMemTempWithoutCast(Ty, getContext().getDeclAlign(Arg));
       LValue LV = MakeAddrLValue(Alloca, Ty);
       ArgVals.push_back(ParamValue::forIndirect(Alloca, DebugAddr));
 
@@ -3717,8 +3717,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     case ABIArgInfo::TargetSpecific: {
       auto *AI = Fn->getArg(FirstIRArg);
       AI->setName(Arg->getName() + ".target_coerce");
-      Address Alloca =
-          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), Arg->getName());
+      Address Alloca = CreateMemTempWithoutCast(
+          Ty, getContext().getDeclAlign(Arg), Arg->getName());
       Address Ptr = emitAddressAtOffset(*this, Alloca, ArgI);
       CGM.getABIInfo().createCoercedStore(AI, Ptr, ArgI, false, *this);
       if (CodeGenFunction::hasScalarEvaluationKind(Ty)) {
@@ -3739,7 +3739,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       if (!hasScalarEvaluationKind(Ty)) {
         RawAddress DebugAddr = Address::invalid();
         RawAddress Alloca = CreateMemTemp(Ty, "tmp", &DebugAddr);
-        ArgVals.push_back(ParamValue::forIndirect(Alloca, DebugAddr));
+        ArgVals.push_back(
+            ParamValue::forIndirect(CreateMemTempWithoutCast(Ty)));
       } else {
         llvm::Value *U = llvm::UndefValue::get(ConvertType(Arg->getType()));
         ArgVals.push_back(ParamValue::forDirect(U));
@@ -5046,7 +5047,7 @@ struct DestroyUnpassedArg final : EHScopeStack::Cleanup {
 RValue CallArg::getRValue(CodeGenFunction &CGF) const {
   if (!HasLV)
     return RV;
-  LValue Copy = CGF.MakeAddrLValue(CGF.CreateMemTemp(Ty), Ty);
+  LValue Copy = CGF.MakeAddrLValue(CGF.CreateMemTempWithoutCast(Ty), Ty);
   CGF.EmitAggregateCopy(Copy, LV, Ty, AggValueSlot::DoesNotOverlap,
                         LV.isVolatile());
   IsUsed = true;
@@ -5625,7 +5626,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           // For indirect things such as overaligned structs, replace the
           // placeholder with a regular aggregate temporary alloca. Store the
           // address of this alloca into the struct.
-          Addr = CreateMemTemp(info_it->type, "inalloca.indirect.tmp");
+          Addr =
+              CreateMemTempWithoutCast(info_it->type, "inalloca.indirect.tmp");
           Address ArgSlot = Builder.CreateStructGEP(
               ArgMemory, ArgInfo.getInAllocaFieldIndex());
           Builder.CreateStore(Addr.getPointer(), ArgSlot);
@@ -5770,8 +5772,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           swiftErrorArg = makeNaturalAddressForPointer(
               V, pointeeTy, getContext().getTypeAlignInChars(pointeeTy));
 
-          swiftErrorTemp =
-              CreateMemTemp(pointeeTy, getPointerAlign(), "swifterror.temp");
+          swiftErrorTemp = CreateMemTempWithoutCast(
+              pointeeTy, getPointerAlign(), "swifterror.temp");
           V = swiftErrorTemp.getPointer();
           cast<llvm::AllocaInst>(V)->setSwiftError(true);
 
@@ -5806,7 +5808,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // FIXME: Avoid the conversion through memory if possible.
       Address Src = Address::invalid();
       if (!I->isAggregate()) {
-        Src = CreateMemTemp(I->Ty, "coerce");
+        Src = CreateMemTempWithoutCast(I->Ty, "coerce");
         I->copyInto(*this, Src);
       } else {
         Src = I->hasLValue() ? I->getKnownLValue().getAddress()
@@ -5963,7 +5965,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     case ABIArgInfo::TargetSpecific: {
       Address Src = Address::invalid();
       if (!I->isAggregate()) {
-        Src = CreateMemTemp(I->Ty, "target_coerce");
+        Src = CreateMemTempWithoutCast(I->Ty, "target_coerce");
         I->copyInto(*this, Src);
       } else {
         Src = I->hasLValue() ? I->getKnownLValue().getAddress()
@@ -6499,7 +6501,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             getContext().getTypeInfoDataSizeInChars(RetTy).Width.getQuantity();
 
         if (!DestPtr.isValid()) {
-          DestPtr = CreateMemTemp(RetTy, "coerce");
+          DestPtr = CreateMemTempWithoutCast(RetTy, "coerce");
           DestIsVolatile = false;
           DestSize = getContext().getTypeSizeInChars(RetTy).getQuantity();
         }
@@ -6524,7 +6526,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Address StorePtr = emitAddressAtOffset(*this, DestPtr, RetAI);
         bool DestIsVolatile = ReturnValue.isVolatile();
         if (!DestPtr.isValid()) {
-          DestPtr = CreateMemTemp(RetTy, "target_coerce");
+          DestPtr = CreateMemTempWithoutCast(RetTy, "target_coerce");
           DestIsVolatile = false;
         }
         CGM.getABIInfo().createCoercedStore(CI, StorePtr, RetAI, DestIsVolatile,
