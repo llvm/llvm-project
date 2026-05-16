@@ -1321,10 +1321,18 @@ static Value *foldVecCmpEqOnHalfElementSize(Instruction &I,
 
   auto Equal = m_SExtOrSelf(m_ICmp(Pred, m_Value(L), m_Value(R)));
   auto Shuffle = m_SExtOrSelf(m_Shuffle(Equal, m_Poison(), m_Mask(Mask)));
-  if (!match(&I,
-             m_SExtOrSelf(m_CombineOr(m_c_And(Equal, Shuffle),
-                                      m_Select(Equal, Shuffle, m_Zero())))) ||
-      Pred != CmpInst::ICMP_EQ)
+  auto And = m_SExtOrSelf(m_c_And(Equal, Shuffle));
+  auto Select = m_SExtOrSelf(m_Select(Equal, Shuffle, m_Zero()));
+
+  // We can only treat "select" instruction as "logical and" if we can guarantee
+  // the input is not poisoned. Since, "logical and" may allow poison to
+  // propagate in cases where "select" instruction do not.
+  if (!match(&I, And) &&
+      !(match(&I, Select) && isGuaranteedNotToBeUndefOrPoison(L) &&
+        isGuaranteedNotToBeUndefOrPoison(R)))
+    return nullptr;
+
+  if (Pred != CmpInst::ICMP_EQ)
     return nullptr;
 
   auto *OldVecType = cast<FixedVectorType>(L->getType());
@@ -1390,12 +1398,20 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
   auto EqUpper = m_SExtOrSelf(
       m_Shuffle(m_SExtOrSelf(m_c_ICmp(PredEq, m_Value(A), m_Value(B))),
                 m_Poison(), m_Mask(MaskUpper2)));
-  auto And =
-      m_SExtOrSelf(m_CombineOr(m_c_And(GreaterLower, EqUpper),
-                               m_Select(EqUpper, GreaterLower, m_Zero())));
-  auto Or = m_SExtOrSelf(m_c_Or(And, GreaterUpper));
+  auto OrAnd = m_SExtOrSelf(
+      m_c_Or(m_SExtOrSelf(m_c_And(GreaterLower, EqUpper)), GreaterUpper));
+  auto OrSelect = m_SExtOrSelf(m_c_Or(
+      m_SExtOrSelf(m_Select(EqUpper, GreaterLower, m_Zero())), GreaterUpper));
 
-  if (!match(&I, Or) || Greater1 != Greater2 || MaskUpper1 != MaskUpper2 ||
+  // We can only treat "select" instruction as "logical and" if we can guarantee
+  // the input is not poisoned. Since, "logical and" may allow poison to
+  // propagate in cases where "select" instruction do not.
+  if (!match(&I, OrAnd) &&
+      !(match(&I, OrSelect) && isGuaranteedNotToBeUndefOrPoison(A) &&
+        isGuaranteedNotToBeUndefOrPoison(B)))
+    return nullptr;
+
+  if (Greater1 != Greater2 || MaskUpper1 != MaskUpper2 ||
       PredEq != ICmpInst::ICMP_EQ)
     return nullptr;
 
