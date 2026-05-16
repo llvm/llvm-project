@@ -230,7 +230,8 @@ define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_possibly_poisoned_input_using_s
   ret <4 x i32> %select
 }
 
-; POSITIVE - POSSIBLY POISONED INPUT USING AND
+; NEGATIVE - POSSIBLY POISONED INPUT USING AND
+; `and` is transformed into `select` by a previous optimization, causing the optimization to fail.
 define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_possibly_poisoned_input_using_and(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_possibly_poisoned_input_using_and(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
