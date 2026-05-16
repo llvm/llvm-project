@@ -400,12 +400,8 @@ public:
   void emitCFILLVMRegisterPair(int64_t Register, int64_t R1, int64_t R1Size,
                                int64_t R2, int64_t R2Size, SMLoc Loc) override;
   void emitCFILLVMVectorRegisters(
-<<<<<<< HEAD
       int64_t Register,
       std::vector<MCCFIInstruction::VectorRegisterWithLane> VRs,
-=======
-      int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
->>>>>>> c46f4315db72
       SMLoc Loc) override;
   void emitCFILLVMVectorOffset(int64_t Register, int64_t RegisterSize,
                                int64_t MaskRegister, int64_t MaskRegisterSize,
@@ -2223,11 +2219,7 @@ void MCAsmStreamer::emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
 }
 
 void MCAsmStreamer::emitCFILLVMVectorRegisters(
-<<<<<<< HEAD
     int64_t Register, std::vector<MCCFIInstruction::VectorRegisterWithLane> VRs,
-=======
-    int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
->>>>>>> c46f4315db72
     SMLoc Loc) {
   MCStreamer::emitCFILLVMVectorRegisters(Register, VRs, Loc);
 
