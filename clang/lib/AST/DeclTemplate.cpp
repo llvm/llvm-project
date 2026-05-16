@@ -1880,11 +1880,10 @@ TemplateArgumentLoc
 ExplicitInstantiationDecl::getTemplateArg(unsigned I) const {
   if (const auto *Args = getTrailingArgsInfo())
     return (*Args)[I];
-  // Must be a class template -- args live in the TemplateSpecializationTypeLoc.
-  return getRawTypeSourceInfo()
-      ->getTypeLoc()
-      .castAs<TemplateSpecializationTypeLoc>()
-      .getArgLoc(I);
+  if (auto TL = getClassTypeLoc())
+    if (auto TST = TL->getAs<TemplateSpecializationTypeLoc>())
+      return TST.getArgLoc(I);
+  llvm_unreachable("template arguments not found in trailing args or TypeLoc");
 }
 
 SourceLocation ExplicitInstantiationDecl::getTemplateArgsLAngleLoc() const {
