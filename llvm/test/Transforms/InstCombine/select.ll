@@ -5425,9 +5425,7 @@ exit:
 define i1 @select_replacement_trunc_nuw_i1(i8 %x) {
 ; CHECK-LABEL: define i1 @select_replacement_trunc_nuw_i1(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[X]], 2
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP]], i1 true, i1 [[TRUNC]]
+; CHECK-NEXT:    [[SELECT:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[SELECT]]
 ;
   %icmp = icmp eq i8 %x, 2
@@ -5439,9 +5437,7 @@ define i1 @select_replacement_trunc_nuw_i1(i8 %x) {
 define <2 x i1> @select_replacement_trunc_nuw_i1_vec(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i1> @select_replacement_trunc_nuw_i1_vec(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq <2 x i8> [[X]], splat (i8 2)
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw <2 x i8> [[X]] to <2 x i1>
-; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[ICMP]], <2 x i1> splat (i1 true), <2 x i1> [[TRUNC]]
+; CHECK-NEXT:    [[SELECT:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[SELECT]]
 ;
   %icmp = icmp eq <2 x i8> %x, <i8 2, i8 2>

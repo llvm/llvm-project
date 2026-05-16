@@ -1772,21 +1772,36 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // We have an 'EQ' comparison, so the select's false value will propagate.
   // Example:
   // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
-  SmallVector<Instruction *> DropFlags;
-  if ((CanReplaceCmpLHSWithRHS &&
-       simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
-                              /* AllowRefinement */ false,
-                              &DropFlags) == TrueVal) ||
-      (CanReplaceCmpRHSWithLHS &&
-       simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
-                              /* AllowRefinement */ false,
-                              &DropFlags) == TrueVal)) {
-    for (Instruction *I : DropFlags) {
-      I->dropPoisonGeneratingAnnotations();
-      Worklist.add(I);
+  auto Simpilfies = [&](Value *FalseValue) -> bool {
+    SmallVector<Instruction *> DropFlags;
+    if ((CanReplaceCmpLHSWithRHS &&
+         simplifyWithOpReplaced(FalseValue, CmpLHS, CmpRHS, SQ,
+                                /* AllowRefinement */ false,
+                                &DropFlags) == TrueVal) ||
+        (CanReplaceCmpRHSWithLHS &&
+         simplifyWithOpReplaced(FalseValue, CmpRHS, CmpLHS, SQ,
+                                /* AllowRefinement */ false,
+                                &DropFlags) == TrueVal)) {
+      for (Instruction *I : DropFlags) {
+        I->dropPoisonGeneratingAnnotations();
+        Worklist.add(I);
+      }
+      return true;
     }
+    return false;
+  };
 
-    return replaceInstUsesWith(Sel, FalseVal);
+  Value *A;
+  if (FalseVal->getType()->isIntOrIntVectorTy(1) &&
+      match(FalseVal, m_NUWTrunc(m_Value(A)))) {
+    auto *NewICmp = new ICmpInst(CmpInst::Predicate::ICMP_NE, A,
+                                 ConstantInt::getNullValue(A->getType()));
+    if (Simpilfies(NewICmp)) {
+      return NewICmp;
+    }
+    delete NewICmp;
+  } else if (Simpilfies(FalseInst)) {
+    return replaceInstUsesWith(Sel, FalseInst);
   }
 
   return nullptr;
