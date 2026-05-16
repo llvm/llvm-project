@@ -72,6 +72,13 @@
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc -o a.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NOTARGET
 ; NOTARGET: Target triple must be specified
+;
+; Input with no entry points still produces an offload image.
+; RUN: llvm-as %t/no-entry-points.ll -o %t/no-entry-points.bc
+; RUN: clang-sycl-linker -triple=spirv64 %t/no-entry-points.bc -o %t/no-entry-points.out
+; RUN: llvm-objdump --offloading %t/no-entry-points.out | FileCheck %s --check-prefix=NO-ENTRY-POINTS
+; NO-ENTRY-POINTS: OFFLOADING IMAGE [0]:
+; NO-ENTRY-POINTS: producer        sycl
 
 ;--- input1.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
@@ -92,3 +99,11 @@ define spir_kernel void @kernel_b() #0 {
 }
 
 attributes #0 = { "sycl-module-id"="TU2.cpp" }
+
+;--- no-entry-points.ll
+target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
+target triple = "spirv64"
+
+define spir_func i32 @helper() {
+  ret i32 0
+}

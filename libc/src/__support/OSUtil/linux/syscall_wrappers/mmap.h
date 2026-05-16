@@ -39,7 +39,7 @@ LIBC_INLINE ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags,
 #error "mmap or mmap2 syscalls not available."
 #endif
 
-  long offset_for_syscall = offset;
+  long offset_for_syscall = static_cast<long>(offset);
   if (offset_for_syscall != offset)
     return Error(EINVAL); // This can happen if long is smaller than off_t
 

@@ -698,8 +698,6 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   // Collect all images to be packed into a single OffloadBinary.
   SmallVector<OffloadingImage> Images;
   for (SplitModule &SI : SplitModules) {
-    if (SI.Symbols.empty())
-      continue;
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
         llvm::MemoryBuffer::getFileOrSTDIN(SI.ModuleFilePath);
     if (std::error_code EC = FileOrErr.getError()) {

@@ -264,6 +264,8 @@ public:
   bool visitLog(FPMathOperator &Log, Intrinsic::ID IID);
   bool visitMbcntLo(IntrinsicInst &I) const;
   bool visitMbcntHi(IntrinsicInst &I) const;
+  bool visitVectorReduceAdd(IntrinsicInst &I);
+  bool visitSaturatingAdd(IntrinsicInst &I);
   bool run();
 };
 
@@ -2066,6 +2068,11 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
     return visitMbcntLo(I);
   case Intrinsic::amdgcn_mbcnt_hi:
     return visitMbcntHi(I);
+  case Intrinsic::vector_reduce_add:
+    return visitVectorReduceAdd(I);
+  case Intrinsic::uadd_sat:
+  case Intrinsic::sadd_sat:
+    return visitSaturatingAdd(I);
   default:
     return false;
   }
@@ -2403,6 +2410,148 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
     return false;
 
   return tryReplaceWithWorkitemId(I, Wave);
+}
+
+/// Check if type is <4 x i8>.
+static bool isV4I8(Type *Ty) {
+  FixedVectorType *VTy = dyn_cast<FixedVectorType>(Ty);
+  return VTy && VTy->getNumElements() == 4 &&
+         VTy->getElementType()->isIntegerTy(8);
+}
+
+/// Helper to match the dot4 pattern: mul(zext/sext <4 x i8>, zext/sext <4 x
+/// i8>) Returns true if pattern matches and signedness matches IsSigned.
+/// Sets A, B to the <4 x i8> sources.
+static bool matchDot4Pattern(Value *MulOp, Value *&A, Value *&B,
+                             bool IsSigned) {
+  Value *Src0, *Src1;
+  if (!match(MulOp, m_Mul(m_Value(Src0), m_Value(Src1))))
+    return false;
+
+  // Check that result type is <4 x i32>
+  FixedVectorType *MulTy = dyn_cast<FixedVectorType>(MulOp->getType());
+  if (!MulTy || MulTy->getNumElements() != 4 ||
+      !MulTy->getElementType()->isIntegerTy(32))
+    return false;
+
+  // Match zext or sext based on IsSigned
+  Value *ExtSrc0, *ExtSrc1;
+  if (IsSigned) {
+    if (!match(Src0, m_SExt(m_Value(ExtSrc0))) || !isV4I8(ExtSrc0->getType()))
+      return false;
+    if (!match(Src1, m_SExt(m_Value(ExtSrc1))) || !isV4I8(ExtSrc1->getType()))
+      return false;
+  } else {
+    if (!match(Src0, m_ZExt(m_Value(ExtSrc0))) || !isV4I8(ExtSrc0->getType()))
+      return false;
+    if (!match(Src1, m_ZExt(m_Value(ExtSrc1))) || !isV4I8(ExtSrc1->getType()))
+      return false;
+  }
+
+  A = ExtSrc0;
+  B = ExtSrc1;
+  return true;
+}
+
+/// Try to convert vector.reduce.add(mul(zext/sext <4 x i8>, zext/sext <4 x
+/// i8>)) to a dot4 intrinsic call (non-saturating case only).
+bool AMDGPUCodeGenPrepareImpl::visitVectorReduceAdd(IntrinsicInst &I) {
+  // Check if we have dot4 instructions available
+  if (!ST.hasDot7Insts() || (!ST.hasDot1Insts() && !ST.hasDot8Insts()))
+    return false;
+
+  Value *A = nullptr, *B = nullptr;
+
+  // Try unsigned first, then signed
+  bool IsSigned = false;
+  if (!matchDot4Pattern(I.getArgOperand(0), A, B, /*IsSigned=*/false)) {
+    if (!matchDot4Pattern(I.getArgOperand(0), A, B, /*IsSigned=*/true))
+      return false;
+    IsSigned = true;
+  }
+
+  LLVMContext &Ctx = I.getContext();
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+  IRBuilder<> Builder(&I);
+
+  // Bitcast <4 x i8> to i32
+  Value *ASrc = Builder.CreateBitCast(A, I32Ty);
+  Value *BSrc = Builder.CreateBitCast(B, I32Ty);
+
+  // Non-saturating case: accumulator is 0, clamp is false
+  Value *Acc = ConstantInt::get(I32Ty, 0);
+  Value *Clamp = ConstantInt::getFalse(Ctx);
+
+  Intrinsic::ID DotIID =
+      IsSigned ? Intrinsic::amdgcn_sdot4 : Intrinsic::amdgcn_udot4;
+
+  Value *Dot = Builder.CreateIntrinsic(DotIID, {}, {ASrc, BSrc, Acc, Clamp});
+  Dot->takeName(&I);
+
+  I.replaceAllUsesWith(Dot);
+  DeadVals.push_back(&I);
+
+  return true;
+}
+
+/// Try to convert uadd.sat/sadd.sat(vector.reduce.add(mul(...)), c) to a
+/// saturating dot4 intrinsic. This combine starts at the root (saturating add)
+/// and looks at its operands.
+bool AMDGPUCodeGenPrepareImpl::visitSaturatingAdd(IntrinsicInst &I) {
+  // Check if we have dot4 instructions available
+  if (!ST.hasDot7Insts() || (!ST.hasDot1Insts() && !ST.hasDot8Insts()))
+    return false;
+
+  Intrinsic::ID IID = I.getIntrinsicID();
+  bool IsSigned = (IID == Intrinsic::sadd_sat);
+
+  // Look for vector.reduce.add as one of the operands (commutative match)
+  Value *Op0 = I.getArgOperand(0);
+  Value *Op1 = I.getArgOperand(1);
+  Value *MulOp = nullptr;
+  Value *Accum = nullptr;
+  IntrinsicInst *ReduceInst = nullptr;
+
+  if (match(Op0, m_Intrinsic<Intrinsic::vector_reduce_add>(m_Value(MulOp)))) {
+    ReduceInst = cast<IntrinsicInst>(Op0);
+    Accum = Op1;
+  } else if (match(Op1,
+                   m_Intrinsic<Intrinsic::vector_reduce_add>(m_Value(MulOp)))) {
+    ReduceInst = cast<IntrinsicInst>(Op1);
+    Accum = Op0;
+  } else {
+    return false;
+  }
+
+  Value *A = nullptr, *B = nullptr;
+
+  if (!matchDot4Pattern(MulOp, A, B, IsSigned))
+    return false;
+
+  LLVMContext &Ctx = I.getContext();
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+  IRBuilder<> Builder(&I);
+
+  // Bitcast <4 x i8> to i32
+  Value *ASrc = Builder.CreateBitCast(A, I32Ty);
+  Value *BSrc = Builder.CreateBitCast(B, I32Ty);
+
+  // Saturating case: use the accumulator and set clamp to true
+  Value *Clamp = ConstantInt::getTrue(Ctx);
+
+  Intrinsic::ID DotIID =
+      IsSigned ? Intrinsic::amdgcn_sdot4 : Intrinsic::amdgcn_udot4;
+
+  Value *Dot = Builder.CreateIntrinsic(DotIID, {}, {ASrc, BSrc, Accum, Clamp});
+  Dot->takeName(&I);
+
+  I.replaceAllUsesWith(Dot);
+  DeadVals.push_back(&I);
+  // The reduce.add will be dead after this and cleaned up later
+  if (ReduceInst->use_empty())
+    DeadVals.push_back(ReduceInst);
+
+  return true;
 }
 
 char AMDGPUCodeGenPrepare::ID = 0;
