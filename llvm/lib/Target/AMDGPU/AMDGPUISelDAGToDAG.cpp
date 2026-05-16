@@ -334,7 +334,7 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
   if (N->isDivergent())
     return false;
 
-  EVT ResType = N->getOperand(0).getValueType();
+  EVT ResType = N->getValueType(0);
   if (ResType != MVT::i32 && ResType != MVT::i64)
     return false;
 
@@ -356,10 +356,10 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
       CurDAG->getCopyToReg(Chain, DL, AMDGPU::SCC, CondNode, SDValue());
   SDValue Ops[4] = {TrueValue, FalseValue, CopyToSCC.getValue(1),
                     CopyToSCC.getValue(1)};
-  unsigned SelectCode =
-      ResType == MVT::i32 ? AMDGPU::S_CSELECT_B32 : AMDGPU::S_CSELECT_B64;
+  bool IsInt32 = ResType == MVT::i32;
+  unsigned SelectCode = IsInt32 ? AMDGPU::S_CSELECT_B32 : AMDGPU::S_CSELECT_B64;
   MachineSDNode *CSelectNode = CurDAG->getMachineNode(
-      SelectCode, DL, CurDAG->getVTList(MVT::i32), Ops);
+      SelectCode, DL, CurDAG->getVTList(IsInt32 ? MVT::i32 : MVT::i64), Ops);
   CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), SDValue(CSelectNode, 0));
 
   return true;
