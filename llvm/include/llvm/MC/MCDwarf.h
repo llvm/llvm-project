@@ -534,6 +534,7 @@ public:
     OpLLVMVectorRegisters,
     OpLLVMVectorOffset,
     OpLLVMVectorRegisterMask,
+<<<<<<< HEAD
   };
 
   /// Held in ExtraFields when OpLLVMRegisterPair.
@@ -567,6 +568,8 @@ public:
     unsigned SpillRegisterLaneSizeInBits;
     unsigned MaskRegister;
     unsigned MaskRegisterSizeInBits;
+=======
+>>>>>>> c46f4315db72
   };
 
   // Held in ExtraFields for most common OpTypes, exceptions follow.
@@ -584,6 +587,38 @@ public:
   // Held in ExtraFields when OpLabel.
   struct LabelFields {
     MCSymbol *CfiLabel = nullptr;
+  };
+  /// Held in ExtraFields when OpLLVMRegisterPair.
+  struct RegisterPairFields {
+    unsigned Register;
+    unsigned Reg1, Reg2;
+    unsigned Reg1SizeInBits, Reg2SizeInBits;
+  };
+  struct VectorRegisterWithLane {
+    unsigned Register;
+    unsigned Lane;
+    unsigned SizeInBits;
+  };
+  /// Held in ExtraFields when OpLLVMVectorRegisters.
+  struct VectorRegistersFields {
+    unsigned Register;
+    std::vector<VectorRegisterWithLane> VectorRegisters;
+  };
+  /// Held in ExtraFields when OpLLVMVectorOffset.
+  struct VectorOffsetFields {
+    unsigned Register;
+    unsigned RegisterSizeInBits;
+    int64_t Offset;
+    unsigned MaskRegister;
+    unsigned MaskRegisterSizeInBits;
+  };
+  /// Held in ExtraFields when OpLLVMVectorRegisterMask.
+  struct VectorRegisterMaskFields {
+    unsigned Register;
+    unsigned SpillRegister;
+    unsigned SpillRegisterLaneSizeInBits;
+    unsigned MaskRegister;
+    unsigned MaskRegisterSizeInBits;
   };
 
 private:
@@ -747,9 +782,15 @@ public:
   /// vector registers.
   static MCCFIInstruction
   createLLVMVectorRegisters(MCSymbol *L, unsigned Register,
+<<<<<<< HEAD
                             std::vector<VectorRegisterWithLane> VectorRegisters,
                             SMLoc Loc = {}) {
     VectorRegistersFields Extra{Register, std::move(VectorRegisters)};
+=======
+                            ArrayRef<VectorRegisterWithLane> VectorRegisters,
+                            SMLoc Loc = {}) {
+    VectorRegistersFields Extra{Register, VectorRegisters};
+>>>>>>> c46f4315db72
     return {OpLLVMVectorRegisters, L, std::move(Extra), Loc};
   }
 
