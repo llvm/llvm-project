@@ -11,8 +11,9 @@ define i32 @main(i32 %argc, ptr %argv) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@main
 ; CHECK-SAME: (i32 [[ARGC:%.*]], ptr readonly captures(none) [[ARGV:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[ARGC]], 2
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP0]], i32 0, i32 [[ARGC]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @compute(ptr poison, i32 [[ARGC]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[ARGC]], 2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
 entry:
@@ -36,7 +37,7 @@ done:
 
 define i32 @compute(ptr noundef nonnull %ptr, i32 %x) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@compute
-; CHECK-SAME: (ptr noundef nonnull readnone captures(none) [[PTR:%.*]], i32 returned [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr nonnull readnone captures(none) [[PTR:%.*]], i32 returned [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   ret i32 %x

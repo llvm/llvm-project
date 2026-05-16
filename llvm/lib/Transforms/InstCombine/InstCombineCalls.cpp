@@ -4854,7 +4854,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     if (I) return eraseInstFromFunction(*I);
   }
 
-  if (!Call.use_empty() && !Call.isMustTailCall())
+  if (!Call.use_empty() && !Call.isMustTailCall() && !Call.isNoInline())
     if (Value *ReturnedArg = Call.getReturnedArgOperand()) {
       Type *CallTy = Call.getType();
       Type *RetArgTy = ReturnedArg->getType();
