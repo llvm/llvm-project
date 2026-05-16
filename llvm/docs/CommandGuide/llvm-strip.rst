@@ -112,11 +112,7 @@ multiple file formats.
 
 .. option:: --verbose, -v
 
- Print a line for each file stripped. For regular objects, the output is:
- ``copy from `<input>' [<format>] to `<output>' [<format>]``.
- For archives, one line is printed per member in the same format using
- ``<archive>(<member>)`` as the file name. Multiple input files each produce
- one line (or one line per archive member).
+ Print the paths of files that are copied.
 
 .. option:: --version, -V
 

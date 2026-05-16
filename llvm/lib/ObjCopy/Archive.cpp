@@ -40,8 +40,8 @@ objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
       StringRef FormatName;
       if (auto *OF = dyn_cast<object::ObjectFile>(ChildOrErr->get()))
         FormatName = OF->getFileFormatName();
-      outs() << "copy from `" << Ar.getFileName() << "(" << *ChildNameOrErr
-             << ")' [" << FormatName << "] to `" << CC.OutputFilename << "("
+      outs() << "copy from '" << Ar.getFileName() << "(" << *ChildNameOrErr
+             << ")' [" << FormatName << "] to '" << CC.OutputFilename << "("
              << *ChildNameOrErr << ")' [" << FormatName << "]\n";
     }
 

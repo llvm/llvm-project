@@ -121,6 +121,22 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   llvm_unreachable("unsupported output format");
 }
 
+/// Returns the format identifier string for non-auto FileFormat values.
+/// Returns "" for Unspecified/ELF so callers can fall back to the input
+/// object's own format string (e.g. "elf64-x86-64").
+static StringRef fileFormatName(FileFormat Fmt) {
+  switch (Fmt) {
+  case FileFormat::Binary:
+    return "binary";
+  case FileFormat::IHex:
+    return "ihex";
+  case FileFormat::SREC:
+    return "srec";
+  default:
+    return "";
+  }
+}
+
 /// The function executeObjcopy does the higher level dispatch based on the type
 /// of input (raw binary, archive or single object file) and takes care of the
 /// format-agnostic modifications, i.e. preserving dates.
@@ -144,6 +160,15 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     if (!BufOrErr)
       return createFileError(Config.InputFilename, BufOrErr.getError());
     MemoryBufferHolder = std::move(*BufOrErr);
+
+    if (Config.Verbose) {
+      StringRef InFmt = fileFormatName(Config.InputFormat);
+      StringRef OutFmt = fileFormatName(Config.OutputFormat);
+      if (OutFmt.empty())
+        OutFmt = InFmt;
+      outs() << "copy from '" << Config.InputFilename << "' [" << InFmt
+             << "] to '" << Config.OutputFilename << "' [" << OutFmt << "]\n";
+    }
 
     if (Config.InputFormat == FileFormat::Binary)
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
@@ -170,12 +195,14 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
         return E;
     } else {
       if (Config.Verbose) {
-        StringRef FormatName;
+        StringRef InFmt;
         if (auto *OF = dyn_cast<object::ObjectFile>(BinaryHolder.getBinary()))
-          FormatName = OF->getFileFormatName();
-        outs() << "copy from `" << Config.InputFilename << "' [" << FormatName
-               << "] to `" << Config.OutputFilename << "' [" << FormatName
-               << "]\n";
+          InFmt = OF->getFileFormatName();
+        StringRef OutFmt = fileFormatName(Config.OutputFormat);
+        if (OutFmt.empty())
+          OutFmt = InFmt;
+        outs() << "copy from '" << Config.InputFilename << "' [" << InFmt
+               << "] to '" << Config.OutputFilename << "' [" << OutFmt << "]\n";
       }
       // Handle llvm::object::Binary.
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {

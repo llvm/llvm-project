@@ -123,7 +123,7 @@ def regex
       HelpText<"Permit regular expressions in name comparison">;
 
 def verbose : Flag<["--"], "verbose">,
-              HelpText<"Print information about each action taken.">;
+              HelpText<"Print the paths of files that are copied">;
 def v : Flag<["-"], "v">, Alias<verbose>,
         HelpText<"Alias for --verbose">;
 
