@@ -25,8 +25,7 @@ int main() {
 // DEBUG-NOT: omptarget --> Moving {{.*}} bytes (hst:0x{{.*}}) -> (tgt:0x{{.*}})
 #pragma omp target map(present, alloc : x)
     {
-      // NOTE: It's ok for this to be 111 under "unified_shared_memory"
-      printf("In tgt: %d\n", x[1]); // CHECK-NOT: In tgt: 111
+      printf("In tgt: %d\n", x[1]);
       x[1] = 222;
     }
 

@@ -455,6 +455,12 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         interimMapType &= ~mlir::omp::ClauseMapFlags::to;
         interimMapType &= ~mlir::omp::ClauseMapFlags::from;
         interimMapType &= ~mlir::omp::ClauseMapFlags::return_param;
+        // We do not want to carry over the separation of descriptor and pointer
+        // mapping of any intermediate components we emit maps for as this can
+        // result in very odd differing behaviour when either ref_ptr/ptee is
+        // specified.
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptee;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
@@ -597,13 +603,16 @@ void insertChildMapInfoIntoParent(
       mapOp.setMembersIndexAttr(firOpBuilder.create2DI64ArrayAttr(
           indices.second.memberPlacementIndices));
     } else {
-      // NOTE: We take the map type of the first child, this may not
-      // be the correct thing to do, however, we shall see. For the moment
-      // it allows this to work with enter and exit without causing MLIR
-      // verification issues. The more appropriate thing may be to take
-      // the "main" map type clause from the directive being used.
-      mlir::omp::ClauseMapFlags mapType =
-          indices.second.memberMap[0].getMapType();
+      // NOTE: We do not assign default mapped parents a map type, as
+      // selecting a child can result in the incorrect map type being
+      // applied to the parent and data being incorrectly moved to or
+      // from device. We make an exception currently for present.
+      mlir::omp::ClauseMapFlags mapType = mlir::omp::ClauseMapFlags::storage;
+
+      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+        if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::present) ==
+            mlir::omp::ClauseMapFlags::present)
+          mapType |= mlir::omp::ClauseMapFlags::present;
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());
@@ -702,9 +711,13 @@ pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
     //     <<DoConstruct>> -> 7
     if (nested.getIf<parser::NonLabelDoStmt>())
       continue;
-    assert(nested.getIf<parser::DoConstruct>() &&
-           "Unexpected construct in the nested evaluations");
-    return &nested;
+    if (nested.getIf<parser::DoConstruct>())
+      return &nested;
+    // Loop transformations can introduce nested OpenMP
+    // constructs between the directive and the actual do-loop nest.
+    if (nested.getIf<parser::OpenMPConstruct>())
+      return getNestedDoConstruct(nested);
+    assert(false && "Unexpected construct in the nested evaluations");
   }
   llvm_unreachable("Expected do loop to be in the nested evaluations");
 }

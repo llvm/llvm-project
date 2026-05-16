@@ -92,9 +92,9 @@ void copy_c(C &c1, C &c2) {
 // LLVM:   %[[THIS_LOAD:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVM:   %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ADDR]]
 // LLVM:   %{{.*}} = call {{.*}} ptr @_ZN1AaSERKS_(ptr {{.*}} %[[THIS_LOAD]], ptr {{.*}} %[[ARG_LOAD]])
-// LLVM:   %[[B1:.*]] = getelementptr %struct.C, ptr %[[THIS_LOAD]], i32 0, i32 1
+// LLVM:   %[[B1:.*]] = getelementptr inbounds nuw %struct.C, ptr %[[THIS_LOAD]], i32 0, i32 1
 // LLVM:   %[[ARG_LOAD2:.*]] = load ptr, ptr %[[ARG_ADDR]]
-// LLVM:   %[[B2:.*]] = getelementptr %struct.C, ptr %[[ARG_LOAD2]], i32 0, i32 1
+// LLVM:   %[[B2:.*]] = getelementptr inbounds nuw %struct.C, ptr %[[ARG_LOAD2]], i32 0, i32 1
 // LLVM:   %{{.*}} = call ptr @memcpy(ptr {{.*}} %[[B1]], ptr {{.*}} %[[B2]], i64 {{.*}} 64)
 
 // OGCG: define {{.*}} ptr @_ZN1CaSERKS_(ptr {{.*}} %[[THIS:.*]], ptr {{.*}} %[[ARG:.*]])

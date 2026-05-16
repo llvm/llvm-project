@@ -64,6 +64,23 @@ module acc_declare
 ! CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
 
+  subroutine acc_declare_present_host_and_comp(host, coeffs)
+    type :: dt_box
+      real :: buf(10, 2)
+    end type
+    type(dt_box), intent(in) :: host
+    real, intent(in) :: coeffs(10)
+    !$acc declare present(host, host%buf, coeffs)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_present_host_and_comp(
+! CHECK-SAME: %[[ARGHOST:.*]]: !fir.ref<!fir.type<_QMacc_declare{{.*}}Tdt_box{{.*}}>> {fir.bindc_name = "host"},
+! CHECK-SAME: %[[ARGCOEFF:.*]]: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "coeffs"})
+! CHECK-DAG: acc.present{{.*}}name = "host"
+! CHECK-DAG: acc.present{{.*}}name = "host%buf"
+! CHECK-DAG: acc.present{{.*}}name = "coeffs"
+! CHECK: acc.declare_enter dataOperands(%{{.*}}, %{{.*}}, %{{.*}} :
+
   subroutine acc_declare_copyin()
     integer :: a(100), b(10), i
     !$acc declare copyin(a) copyin(readonly: b)

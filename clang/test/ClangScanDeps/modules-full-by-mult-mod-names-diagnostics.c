@@ -16,7 +16,7 @@ module root2 { header "root2.h" }
 [{
   "file": "",
   "directory": "DIR",
-  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -I DIR -x c"
+  "command": "clang -nostdinc -fmodules -fmodules-cache-path=DIR/cache -I DIR -x c"
 }]
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json

@@ -4127,6 +4127,15 @@ def : Pat<(_.info128.VT (extract_subvector
                       (COPY_TO_REGCLASS MaskRC:$mask, VK1WM),
                       addr:$srcAddr)>;
 
+def : Pat<(_.info128.VT (extract_subvector
+                (_.info512.VT (masked_load addr:$srcAddr, Mask,
+                      (_.info512.VT (insert_subvector undef,
+                            (_.info128.VT (X86vzelts<_.info128.VT, _.info128.RC>:$src)),
+                            (iPTR 0))))),
+                (iPTR 0))),
+          (!cast<Instruction>(InstrStr#rmk) _.info128.RC:$src,
+                      (COPY_TO_REGCLASS MaskRC:$mask, VK1WM),
+                      addr:$srcAddr)>;
 }
 
 multiclass avx512_load_scalar_lowering_subreg<string InstrStr,

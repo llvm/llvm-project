@@ -75,6 +75,13 @@ DLWRAP(hsa_amd_profiling_set_profiler_enabled, 2)
 DLWRAP(hsa_code_object_reader_create_from_memory, 3)
 DLWRAP(hsa_code_object_reader_destroy, 1)
 DLWRAP(hsa_executable_load_agent_code_object, 5)
+DLWRAP(hsa_amd_vmem_address_reserve, 4)
+DLWRAP(hsa_amd_vmem_address_free, 2)
+DLWRAP(hsa_amd_vmem_handle_create, 5)
+DLWRAP(hsa_amd_vmem_handle_release, 1)
+DLWRAP(hsa_amd_vmem_map, 5)
+DLWRAP(hsa_amd_vmem_unmap, 2)
+DLWRAP(hsa_amd_vmem_set_access, 4)
 
 DLWRAP_FINALIZE()
 

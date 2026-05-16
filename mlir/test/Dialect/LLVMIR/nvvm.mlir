@@ -36,13 +36,6 @@ func.func @nvvm_rcp(%arg0: f32) -> f32 {
   llvm.return %0 : f32
 }
 
-// CHECK-LABEL: @llvm_nvvm_barrier0
-func.func @llvm_nvvm_barrier0() {
-  // CHECK: nvvm.barrier0
-  nvvm.barrier0
-  llvm.return
-}
-
 // CHECK-LABEL: @llvm_nvvm_barrier
 // CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
 llvm.func @llvm_nvvm_barrier(%barId : i32, %numberOfThreads : i32) {
@@ -131,6 +124,14 @@ func.func @nvvm_vote(%arg0 : i32, %arg1 : i1) -> i32 {
   // CHECK: nvvm.vote.sync uni %{{.*}}, %{{.*}} -> i1
   %3 = nvvm.vote.sync uni %arg0, %arg1 -> i1
   llvm.return %0 : i32
+}
+
+// CHECK-LABEL: @nvvm_movmatrix
+func.func @nvvm_movmatrix(%src : i32) -> i32 {
+  // CHECK: nvvm.movmatrix %{{.*}} {eltType = #nvvm.ld_st_matrix_elt_type<b16>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>} : i32
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+  llvm.return %dst : i32
 }
 
 // CHECK-LABEL: @llvm_nvvm_bar_warp_sync

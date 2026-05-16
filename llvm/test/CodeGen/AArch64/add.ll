@@ -174,8 +174,7 @@ define void @v4i8(ptr %p1, ptr %p2) {
 ; CHECK-GI-NEXT:    mov v1.h[3], w9
 ; CHECK-GI-NEXT:    add v0.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x0]
+; CHECK-GI-NEXT:    str s0, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = load <4 x i8>, ptr %p1

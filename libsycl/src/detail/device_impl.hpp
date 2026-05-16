@@ -121,7 +121,8 @@ public:
       static_assert(false && "Info descriptor is not properly supported");
   }
 
-  ol_device_handle_t getOLHandle() { return MOffloadDevice; }
+  /// \return the corresponding liboffload device handle.
+  ol_device_handle_t getOLHandle() const { return MOffloadDevice; }
 
 private:
   ol_device_handle_t MOffloadDevice = {};

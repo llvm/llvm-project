@@ -9,6 +9,7 @@
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -29,16 +30,17 @@ DependencyScanningWorker::DependencyScanningWorker(
 
   auto BaseFS = Service.getOpts().MakeVFS();
 
-  if (Service.getOpts().TraceVFS)
-    BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
+  if (Service.getOpts().TraceVFS) {
+    TracingFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
         std::move(BaseFS));
+    BaseFS = TracingFS;
+  }
 
   DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
       Service.getSharedCache(), std::move(BaseFS));
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;
-DependencyActionController::~DependencyActionController() = default;
 
 static bool createAndRunToolInvocation(
     ArrayRef<std::string> CommandLine, DependencyScanningAction &Action,
@@ -52,16 +54,6 @@ static bool createAndRunToolInvocation(
   return Action.runInvocation(CommandLine[0], std::move(Invocation),
                               std::move(FS), PCHContainerOps,
                               Diags.getClient());
-}
-
-bool DependencyScanningWorker::computeDependencies(
-    StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
-    DependencyConsumer &DepConsumer, DependencyActionController &Controller,
-    DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  return computeDependencies(WorkingDirectory,
-                             ArrayRef<ArrayRef<std::string>>(CommandLine),
-                             DepConsumer, Controller, DiagConsumer, OverlayFS);
 }
 
 bool DependencyScanningWorker::computeDependencies(
