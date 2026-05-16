@@ -376,36 +376,30 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     };
 
     SmallVector<bool> oddMask;
-    auto isIntegerValuedConstant = [&](Value v) -> bool {
-      Attribute attr;
-      if (!matchPattern(v, m_Constant(&attr)))
-        return false;
-      return TypeSwitch<Attribute, bool>(attr)
+    Attribute rhsAttr;
+    if (matchPattern(adaptor.getRhs(), m_Constant(&rhsAttr))) {
+      TypeSwitch<Attribute>(rhsAttr)
           .Case([&](FloatAttr a) {
-            if (!a.getValue().isInteger())
-              return false;
-            oddMask.push_back(isOdd(a.getValue()));
-            return true;
+            if (a.getValue().isInteger())
+              oddMask.push_back(isOdd(a.getValue()));
           })
           .Case([&](SplatElementsAttr a) {
             APFloat splat = a.getSplatValue<APFloat>();
-            if (!splat.isInteger())
-              return false;
-            oddMask.push_back(isOdd(splat));
-            return true;
+            if (splat.isInteger())
+              oddMask.push_back(isOdd(splat));
           })
           .Case([&](DenseElementsAttr a) {
+            SmallVector<bool> mask;
             for (const APFloat &elt : a.getValues<APFloat>()) {
               if (!elt.isInteger())
-                return false;
-              oddMask.push_back(isOdd(elt));
+                return;
+              mask.push_back(isOdd(elt));
             }
-            return true;
-          })
-          .Default(false);
-    };
+            oddMask = std::move(mask);
+          });
+    }
 
-    if (!isIntegerValuedConstant(adaptor.getRhs())) {
+    if (oddMask.empty()) {
       Value log = spirv::GLLogOp::create(rewriter, loc, adaptor.getLhs());
       Value mul = spirv::FMulOp::create(rewriter, loc, adaptor.getRhs(), log);
       rewriter.replaceOpWithNewOp<spirv::GLExpOp>(powfOp, mul);
