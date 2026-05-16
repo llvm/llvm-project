@@ -326,7 +326,7 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
 }
 
 bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
-  // This is special case for pattern of common compare + select if it can be
+  // This is special case for common pattern of compare + select if it can be
   // selected to SALU. The pattern will be directly selected to `s_cselect`, to
   // This is special case for the common pattern of compare + select if it can be
   // selected to SALU. The pattern will be directly selected to `s_cselect`, to
@@ -334,7 +334,8 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
   if (N->isDivergent())
     return false;
 
-  if (N->getValueType(0) != MVT::i32)
+  EVT ResType = N->getOperand(0).getValueType();
+  if (ResType != MVT::i32 && ResType != MVT::i64)
     return false;
 
   SDValue CondNode = N->getOperand(0);
@@ -343,8 +344,6 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
 
   // TODO: To support the operand type is int64 if s_cmp_i64 is supported on
   // some targets
-  if (CondNode->getOperand(0).getValueType() != MVT::i32 ||
-  if (CondNode->getOperand(0).getValueType() != MVT::i32)
   if (CondNode->getOperand(0).getValueType() != MVT::i32)
     return false;
 
@@ -357,8 +356,9 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
       CurDAG->getCopyToReg(Chain, DL, AMDGPU::SCC, CondNode, SDValue());
   SDValue Ops[4] = {TrueValue, FalseValue, CopyToSCC.getValue(1),
                     CopyToSCC.getValue(1)};
+  auto SelectCode = ResType == MVT::i32 ? AMDGPU::S_CSELECT_B32 : AMDGPU::S_CSELECT_B64;
   MachineSDNode *CSelectNode = CurDAG->getMachineNode(
-      AMDGPU::S_CSELECT_B32, DL, CurDAG->getVTList(MVT::i32), Ops);
+      SelectCode, DL, CurDAG->getVTList(MVT::i32), Ops);
   CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), SDValue(CSelectNode, 0));
 
   return true;
