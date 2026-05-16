@@ -23,10 +23,6 @@ add_llvm_library(LLVMMIREmbUtils STATIC
   intrinsics_gen
 
   LINK_COMPONENTS
-  Analysis
   CodeGen
-  Core   
-  MIRParser
-  Support
   Target
 )
