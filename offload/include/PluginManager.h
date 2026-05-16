@@ -50,7 +50,7 @@ struct PluginManager {
 
   PluginManager() {}
 
-  void init();
+  void initPlugins();
 
   void deinit();
 
@@ -96,18 +96,19 @@ struct PluginManager {
   // Work around for plugins that call dlopen on shared libraries that call
   // tgt_register_lib during their initialisation. Stash the pointers in a
   // vector until the plugins are all initialised and then register them.
-  bool delayRegisterLib(__tgt_bin_desc *Desc) {
+  bool delayRegisterLib(std::function<void(__tgt_bin_desc *)> RegisterFunc,
+                        __tgt_bin_desc *Desc) {
     if (RTLsLoaded)
       return false;
-    DelayedBinDesc.push_back(Desc);
+    DelayedBinDesc.push_back({RegisterFunc, Desc});
     return true;
   }
 
   void registerDelayedLibraries() {
     // Only called by libomptarget constructor
     RTLsLoaded = true;
-    for (auto *Desc : DelayedBinDesc)
-      __tgt_register_lib(Desc);
+    for (auto &[RegisterFunc, Desc] : DelayedBinDesc)
+      RegisterFunc(Desc);
     DelayedBinDesc.clear();
   }
 
@@ -152,7 +153,9 @@ struct PluginManager {
 
 private:
   bool RTLsLoaded = false;
-  llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
+  llvm::SmallVector<
+      std::pair<std::function<void(__tgt_bin_desc *)>, __tgt_bin_desc *>>
+      DelayedBinDesc;
 
   // List of all plugins, in use or not.
   llvm::SmallVector<std::unique_ptr<GenericPluginTy>> Plugins;
@@ -183,8 +186,8 @@ private:
   __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
 };
 
-/// Initialize the plugin manager and OpenMP runtime.
-void initRuntime();
+/// Initialize the plugin manager.
+void initRuntime(bool OffloadEnabled);
 
 /// Deinitialize the plugin and delete it.
 void deinitRuntime();

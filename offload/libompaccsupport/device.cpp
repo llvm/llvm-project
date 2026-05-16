@@ -19,7 +19,6 @@
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "omptarget.h"
-#include "private.h"
 #include "rtl.h"
 
 #include "Shared/EnvironmentVar.h"
@@ -39,6 +38,8 @@ using namespace llvm::omp::target::ompt;
 
 using namespace llvm::omp::target::plugin;
 using namespace llvm::omp::target::debug;
+
+// TODO disable OMPT if we call from OpenACC
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
@@ -123,7 +124,8 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
                                                     Image->EntriesEnd);
   llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
   for (const auto &Entry : Entries) {
-    if (Entry.Kind != llvm::object::OffloadKind::OFK_OpenMP ||
+    if ((Entry.Kind != llvm::object::OffloadKind::OFK_OpenMP &&
+         Entry.Kind != llvm::object::OffloadKind::OFK_OpenACC) ||
         Entry.Size == 0 ||
         (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
          !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE)))
@@ -280,6 +282,18 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                                 AsyncInfo);
 }
 
+int32_t
+DeviceTy::submitNonContigData(void *TgtPtrBegin, void *HstPtrBegin,
+                              const NonContigDescTy &CopyInfo,
+                              AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
+                              MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+  if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
+    MappingInfo.printNonContigCopyInfo(TgtPtrBegin, HstPtrBegin, CopyInfo,
+                                       /*H2D=*/true, Entry, HDTTMapPtr);
+  return RTL->data_non_contig_submit_async(RTLDeviceID, TgtPtrBegin,
+                                           HstPtrBegin, CopyInfo, AsyncInfo);
+}
+
 // Retrieve data from device
 int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                int64_t Size, AsyncInfoTy &AsyncInfo,
@@ -298,6 +312,17 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
 
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
                                   AsyncInfo);
+}
+
+int32_t DeviceTy::retrieveNonContigData(
+    void *HstPtrBegin, void *TgtPtrBegin, const NonContigDescTy &CopyInfo,
+    AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
+    MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+  if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
+    MappingInfo.printNonContigCopyInfo(TgtPtrBegin, HstPtrBegin, CopyInfo,
+                                       /*H2D=*/false, Entry, HDTTMapPtr);
+  return RTL->data_non_contig_retrieve_async(RTLDeviceID, HstPtrBegin,
+                                             TgtPtrBegin, CopyInfo, AsyncInfo);
 }
 
 // Copy data from current device to destination device directly
@@ -347,7 +372,6 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
   return OFFLOAD_SUCCESS;
 }
 
-// Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                                KernelExtraArgsTy *KernelExtraArgs,
@@ -356,7 +380,11 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                             &KernelArgs, KernelExtraArgs, AsyncInfo);
 }
 
-// Run region on device
+int32_t DeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
+                                  AsyncInfoTy &AsyncInfo) {
+  return RTL->enqueue_host_call(RTLDeviceID, Callback, UserData, AsyncInfo);
+}
+
 bool DeviceTy::printDeviceInfo() {
   RTL->print_device_info(RTLDeviceID);
   return true;
@@ -376,8 +404,16 @@ int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
   return RTL->synchronize(RTLDeviceID, AsyncInfo);
 }
 
+int32_t DeviceTy::synchronizeStatic(AsyncInfoTy &AsyncInfo) {
+  return RTL->synchronize_static(RTLDeviceID, AsyncInfo);
+}
+
 int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
   return RTL->query_async(RTLDeviceID, AsyncInfo);
+}
+
+int32_t DeviceTy::queryAsyncStatic(AsyncInfoTy &AsyncInfo) {
+  return RTL->query_async_static(RTLDeviceID, AsyncInfo);
 }
 
 int32_t DeviceTy::createEvent(void **Event) {
