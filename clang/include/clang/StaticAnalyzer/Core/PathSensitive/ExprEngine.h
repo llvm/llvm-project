@@ -461,14 +461,12 @@ public:
                        const InvalidatedSymbols *invalidated,
                        ArrayRef<const MemRegion *> ExplicitRegions,
                        ArrayRef<const MemRegion *> Regions,
-                       const LocationContext *LCtx,
-                       const CallEvent *Call);
+                       const StackFrame *SF, const CallEvent *Call);
 
-  inline ProgramStateRef
-  processRegionChange(ProgramStateRef state,
-                      const MemRegion* MR,
-                      const LocationContext *LCtx) {
-    return processRegionChanges(state, nullptr, MR, MR, LCtx, nullptr);
+  inline ProgramStateRef processRegionChange(ProgramStateRef state,
+                                             const MemRegion *MR,
+                                             const StackFrame *SF) {
+    return processRegionChanges(state, nullptr, MR, MR, SF, nullptr);
   }
 
   /// printJson - Called by ProgramStateManager to print checker-specific data.
@@ -711,8 +709,7 @@ public:
   /// Call PointerEscape callback when a value escapes as a result of bind.
   ProgramStateRef processPointerEscapedOnBind(
       ProgramStateRef State, ArrayRef<std::pair<SVal, SVal>> LocAndVals,
-      const LocationContext *LCtx, PointerEscapeKind Kind,
-      const CallEvent *Call);
+      const StackFrame *SF, PointerEscapeKind Kind, const CallEvent *Call);
 
   /// Call PointerEscape callback when a value escapes as a result of
   /// region invalidation.
@@ -731,10 +728,8 @@ private:
                 SVal location, SVal Val, bool AtDeclInit = false,
                 const ProgramPoint *PP = nullptr);
 
-  ProgramStateRef
-  processPointerEscapedOnBind(ProgramStateRef State,
-                              SVal Loc, SVal Val,
-                              const LocationContext *LCtx);
+  ProgramStateRef processPointerEscapedOnBind(ProgramStateRef State, SVal Loc,
+                                              SVal Val, const StackFrame *SF);
 
 public:
   /// A simple wrapper when you only need to notify checkers of pointer-escape
@@ -952,7 +947,7 @@ private:
   /// OutRegionWithAdjustments out-parameter if a new region was indeed needed,
   /// otherwise sets it to nullptr.
   ProgramStateRef createTemporaryRegionIfNeeded(
-      ProgramStateRef State, const LocationContext *LC,
+      ProgramStateRef State, const StackFrame *SF,
       const Expr *InitWithAdjustments, const Expr *Result = nullptr,
       const SubRegion **OutRegionWithAdjustments = nullptr);
 

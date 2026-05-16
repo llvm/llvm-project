@@ -109,9 +109,7 @@ ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
   return getPersistentState(NewState);
 }
 
-ProgramStateRef ProgramState::bindLoc(Loc LV,
-                                      SVal V,
-                                      const LocationContext *LCtx,
+ProgramStateRef ProgramState::bindLoc(Loc LV, SVal V, const StackFrame *SF,
                                       bool notifyChanges) const {
   ProgramStateManager &Mgr = getStateManager();
   ExprEngine &Eng = Mgr.getOwningEngine();
@@ -119,28 +117,27 @@ ProgramStateRef ProgramState::bindLoc(Loc LV,
   const MemRegion *MR = LV.getAsRegion();
 
   if (MR && notifyChanges)
-    return Eng.processRegionChange(State, MR, LCtx);
+    return Eng.processRegionChange(State, MR, SF);
 
   return State;
 }
 
-ProgramStateRef
-ProgramState::bindDefaultInitial(SVal loc, SVal V,
-                                 const LocationContext *LCtx) const {
+ProgramStateRef ProgramState::bindDefaultInitial(SVal loc, SVal V,
+                                                 const StackFrame *SF) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
   BindResult BindRes = Mgr.StoreMgr->BindDefaultInitial(getStore(), R, V);
   ProgramStateRef State = makeWithStore(BindRes);
-  return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
+  return Mgr.getOwningEngine().processRegionChange(State, R, SF);
 }
 
-ProgramStateRef
-ProgramState::bindDefaultZero(SVal loc, const LocationContext *LCtx) const {
+ProgramStateRef ProgramState::bindDefaultZero(SVal loc,
+                                              const StackFrame *SF) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
   BindResult BindRes = Mgr.StoreMgr->BindDefaultZero(getStore(), R);
   ProgramStateRef State = makeWithStore(BindRes);
-  return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
+  return Mgr.getOwningEngine().processRegionChange(State, R, SF);
 }
 
 typedef ArrayRef<const MemRegion *> RegionList;
@@ -148,22 +145,20 @@ typedef ArrayRef<SVal> ValueList;
 
 ProgramStateRef ProgramState::invalidateRegions(
     RegionList Regions, ConstCFGElementRef Elem, unsigned Count,
-    const LocationContext *LCtx, bool CausedByPointerEscape,
-    InvalidatedSymbols *IS, const CallEvent *Call,
-    RegionAndSymbolInvalidationTraits *ITraits) const {
+    const StackFrame *SF, bool CausedByPointerEscape, InvalidatedSymbols *IS,
+    const CallEvent *Call, RegionAndSymbolInvalidationTraits *ITraits) const {
   SmallVector<SVal, 8> Values;
   for (const MemRegion *Reg : Regions)
     Values.push_back(loc::MemRegionVal(Reg));
 
-  return invalidateRegions(Values, Elem, Count, LCtx, CausedByPointerEscape, IS,
+  return invalidateRegions(Values, Elem, Count, SF, CausedByPointerEscape, IS,
                            Call, ITraits);
 }
 
 ProgramStateRef ProgramState::invalidateRegions(
     ValueList Values, ConstCFGElementRef Elem, unsigned Count,
-    const LocationContext *LCtx, bool CausedByPointerEscape,
-    InvalidatedSymbols *IS, const CallEvent *Call,
-    RegionAndSymbolInvalidationTraits *ITraits) const {
+    const StackFrame *SF, bool CausedByPointerEscape, InvalidatedSymbols *IS,
+    const CallEvent *Call, RegionAndSymbolInvalidationTraits *ITraits) const {
 
   ProgramStateManager &Mgr = getStateManager();
   ExprEngine &Eng = Mgr.getOwningEngine();
@@ -179,7 +174,7 @@ ProgramStateRef ProgramState::invalidateRegions(
   StoreManager::InvalidatedRegions TopLevelInvalidated;
   StoreManager::InvalidatedRegions Invalidated;
   const StoreRef &NewStore = Mgr.StoreMgr->invalidateRegions(
-      getStore(), Values, Elem, Count, LCtx, Call, *IS, *ITraits,
+      getStore(), Values, Elem, Count, SF, Call, *IS, *ITraits,
       &TopLevelInvalidated, &Invalidated);
 
   ProgramStateRef NewState = makeWithStore(NewStore);
@@ -190,7 +185,7 @@ ProgramStateRef ProgramState::invalidateRegions(
   }
 
   return Eng.processRegionChanges(NewState, IS, TopLevelInvalidated,
-                                  Invalidated, LCtx, Call);
+                                  Invalidated, SF, Call);
 }
 
 ProgramStateRef ProgramState::killBinding(Loc LV) const {

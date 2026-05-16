@@ -321,7 +321,7 @@ ProgramStateRef ExprEngine::getInitialState(const StackFrame *InitSF) {
 }
 
 ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
-    ProgramStateRef State, const LocationContext *LC,
+    ProgramStateRef State, const StackFrame *SF,
     const Expr *InitWithAdjustments, const Expr *Result,
     const SubRegion **OutRegionWithAdjustments) {
   // FIXME: This function is a hack that works around the quirky AST
@@ -329,7 +329,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   // the actual execution order of statements properly in the CFG,
   // all the hassle with adjustments would not be necessary,
   // and perhaps the whole function would be removed.
-  SVal InitValWithAdjustments = State->getSVal(InitWithAdjustments, LC);
+  SVal InitValWithAdjustments = State->getSVal(InitWithAdjustments, SF);
   if (!Result) {
     // If we don't have an explicit result expression, we're in "if needed"
     // mode. Only create a region if the current value is a NonLoc.
@@ -385,9 +385,9 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   // into that region. This is not correct, but it is better than nothing.
   const TypedValueRegion *TR = nullptr;
   if (const auto *MT = dyn_cast<MaterializeTemporaryExpr>(Result)) {
-    if (std::optional<SVal> V = getObjectUnderConstruction(State, MT, LC)) {
-      State = finishObjectConstruction(State, MT, LC);
-      State = State->BindExpr(Result, LC, *V);
+    if (std::optional<SVal> V = getObjectUnderConstruction(State, MT, SF)) {
+      State = finishObjectConstruction(State, MT, SF);
+      State = State->BindExpr(Result, SF, *V);
       return State;
     } else if (const ValueDecl *VD = MT->getExtendingDecl()) {
       StorageDuration SD = MT->getStorageDuration();
@@ -397,14 +397,14 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
       if (SD == SD_Static || SD == SD_Thread) {
         TR = MRMgr.getCXXStaticLifetimeExtendedObjectRegion(Init, VD);
       } else {
-        TR = MRMgr.getCXXLifetimeExtendedObjectRegion(Init, VD, LC);
+        TR = MRMgr.getCXXLifetimeExtendedObjectRegion(Init, VD, SF);
       }
     } else {
       assert(MT->getStorageDuration() == SD_FullExpression);
-      TR = MRMgr.getCXXTempObjectRegion(Init, LC);
+      TR = MRMgr.getCXXTempObjectRegion(Init, SF);
     }
   } else {
-    TR = MRMgr.getCXXTempObjectRegion(Init, LC);
+    TR = MRMgr.getCXXTempObjectRegion(Init, SF);
   }
 
   SVal Reg = loc::MemRegionVal(TR);
@@ -422,7 +422,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
     case SubobjectAdjustment::MemberPointerAdjustment:
       // FIXME: Unimplemented.
       State = State->invalidateRegions(Reg, getCFGElementRef(),
-                                       getNumVisitedCurrent(), LC, true,
+                                       getNumVisitedCurrent(), SF, true,
                                        nullptr, nullptr, nullptr);
       return State;
     }
@@ -436,11 +436,11 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   // Still, what we can do is assign the value of expression Ex (which
   // corresponds to the sub-object) to the TR's sub-region Reg. At least,
   // values inside Reg would be correct.
-  SVal InitVal = State->getSVal(Init, LC);
+  SVal InitVal = State->getSVal(Init, SF);
   if (InitVal.isUnknown()) {
     InitVal = getSValBuilder().conjureSymbolVal(
-        getCFGElementRef(), LC, Init->getType(), getNumVisitedCurrent());
-    State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, LC, false);
+        getCFGElementRef(), SF, Init->getType(), getNumVisitedCurrent());
+    State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, SF, false);
 
     // Then we'd need to take the value that certainly exists and bind it
     // over.
@@ -448,26 +448,26 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
       // Try to recover some path sensitivity in case we couldn't
       // compute the value.
       InitValWithAdjustments = getSValBuilder().conjureSymbolVal(
-          getCFGElementRef(), LC, InitWithAdjustments->getType(),
+          getCFGElementRef(), SF, InitWithAdjustments->getType(),
           getNumVisitedCurrent());
     }
     State =
-        State->bindLoc(Reg.castAs<Loc>(), InitValWithAdjustments, LC, false);
+        State->bindLoc(Reg.castAs<Loc>(), InitValWithAdjustments, SF, false);
   } else {
-    State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, LC, false);
+    State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, SF, false);
   }
 
   // The result expression would now point to the correct sub-region of the
   // newly created temporary region. Do this last in order to getSVal of Init
   // correctly in case (Result == Init).
   if (Result->isGLValue()) {
-    State = State->BindExpr(Result, LC, Reg);
+    State = State->BindExpr(Result, SF, Reg);
   } else {
-    State = State->BindExpr(Result, LC, InitValWithAdjustments);
+    State = State->BindExpr(Result, SF, InitValWithAdjustments);
   }
 
   // Notify checkers once for two bindLoc()s.
-  State = processRegionChange(State, TR, LC);
+  State = processRegionChange(State, TR, SF);
 
   if (OutRegionWithAdjustments)
     *OutRegionWithAdjustments = cast<SubRegion>(Reg.getAsRegion());
@@ -671,16 +671,12 @@ ProgramStateRef ExprEngine::processAssume(ProgramStateRef state,
   return getCheckerManager().runCheckersForEvalAssume(state, cond, assumption);
 }
 
-ProgramStateRef
-ExprEngine::processRegionChanges(ProgramStateRef state,
-                                 const InvalidatedSymbols *invalidated,
-                                 ArrayRef<const MemRegion *> Explicits,
-                                 ArrayRef<const MemRegion *> Regions,
-                                 const LocationContext *LCtx,
-                                 const CallEvent *Call) {
-  return getCheckerManager().runCheckersForRegionChanges(state, invalidated,
-                                                         Explicits, Regions,
-                                                         LCtx, Call);
+ProgramStateRef ExprEngine::processRegionChanges(
+    ProgramStateRef state, const InvalidatedSymbols *invalidated,
+    ArrayRef<const MemRegion *> Explicits, ArrayRef<const MemRegion *> Regions,
+    const StackFrame *SF, const CallEvent *Call) {
+  return getCheckerManager().runCheckersForRegionChanges(
+      state, invalidated, Explicits, Regions, SF, Call);
 }
 
 static void
@@ -3610,8 +3606,7 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
 //     does not understand.
 ProgramStateRef ExprEngine::processPointerEscapedOnBind(
     ProgramStateRef State, ArrayRef<std::pair<SVal, SVal>> LocAndVals,
-    const LocationContext *LCtx, PointerEscapeKind Kind,
-    const CallEvent *Call) {
+    const StackFrame *SF, PointerEscapeKind Kind, const CallEvent *Call) {
   SmallVector<SVal, 8> Escaped;
   for (const std::pair<SVal, SVal> &LocAndVal : LocAndVals) {
     // Cases (1) and (2).
@@ -3640,7 +3635,7 @@ ProgramStateRef ExprEngine::processPointerEscapedOnBind(
     SVal StoredVal = State->getSVal(MR);
     if (StoredVal != LocAndVal.second)
       if (State ==
-          (State->bindLoc(loc::MemRegionVal(MR), LocAndVal.second, LCtx)))
+          (State->bindLoc(loc::MemRegionVal(MR), LocAndVal.second, SF)))
         Escaped.push_back(LocAndVal.second);
   }
 
@@ -3650,11 +3645,11 @@ ProgramStateRef ExprEngine::processPointerEscapedOnBind(
   return escapeValues(State, Escaped, Kind, Call);
 }
 
-ProgramStateRef
-ExprEngine::processPointerEscapedOnBind(ProgramStateRef State, SVal Loc,
-                                        SVal Val, const LocationContext *LCtx) {
+ProgramStateRef ExprEngine::processPointerEscapedOnBind(ProgramStateRef State,
+                                                        SVal Loc, SVal Val,
+                                                        const StackFrame *SF) {
   std::pair<SVal, SVal> LocAndVal(Loc, Val);
-  return processPointerEscapedOnBind(State, LocAndVal, LCtx, PSK_EscapeOnBind,
+  return processPointerEscapedOnBind(State, LocAndVal, SF, PSK_EscapeOnBind,
                                      nullptr);
 }
 

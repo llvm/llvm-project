@@ -285,11 +285,11 @@ public:
                                          bool Invalidate = true) const;
 
   [[nodiscard]] ProgramStateRef bindLoc(Loc location, SVal V,
-                                        const LocationContext *LCtx,
+                                        const StackFrame *SF,
                                         bool notifyChanges = true) const;
 
   [[nodiscard]] ProgramStateRef bindLoc(SVal location, SVal V,
-                                        const LocationContext *LCtx) const;
+                                        const StackFrame *SF) const;
 
   /// Initializes the region of memory represented by \p loc with an initial
   /// value. Once initialized, all values loaded from any sub-regions of that
@@ -297,13 +297,13 @@ public:
   /// This method should not be used on regions that are already initialized.
   /// If you need to indicate that memory contents have suddenly become unknown
   /// within a certain region of memory, consider invalidateRegions().
-  [[nodiscard]] ProgramStateRef
-  bindDefaultInitial(SVal loc, SVal V, const LocationContext *LCtx) const;
+  [[nodiscard]] ProgramStateRef bindDefaultInitial(SVal loc, SVal V,
+                                                   const StackFrame *SF) const;
 
   /// Performs C++ zero-initialization procedure on the region of memory
   /// represented by \p loc.
-  [[nodiscard]] ProgramStateRef
-  bindDefaultZero(SVal loc, const LocationContext *LCtx) const;
+  [[nodiscard]] ProgramStateRef bindDefaultZero(SVal loc,
+                                                const StackFrame *SF) const;
 
   [[nodiscard]] ProgramStateRef killBinding(Loc LV) const;
 
@@ -328,17 +328,15 @@ public:
   ///        the call and should be considered directly invalidated.
   /// \param ITraits information about special handling for particular regions
   ///        or symbols.
-  [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<const MemRegion *> Regions,
-                    ConstCFGElementRef Elem, unsigned BlockCount,
-                    const LocationContext *LCtx, bool CausesPointerEscape,
-                    InvalidatedSymbols *IS = nullptr,
-                    const CallEvent *Call = nullptr,
-                    RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
+  [[nodiscard]] ProgramStateRef invalidateRegions(
+      ArrayRef<const MemRegion *> Regions, ConstCFGElementRef Elem,
+      unsigned BlockCount, const StackFrame *SF, bool CausesPointerEscape,
+      InvalidatedSymbols *IS = nullptr, const CallEvent *Call = nullptr,
+      RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   [[nodiscard]] ProgramStateRef
   invalidateRegions(ArrayRef<SVal> Values, ConstCFGElementRef Elem,
-                    unsigned BlockCount, const LocationContext *LCtx,
+                    unsigned BlockCount, const StackFrame *SF,
                     bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
@@ -747,9 +745,10 @@ ProgramState::assumeInclusiveRange(DefinedOrUnknownSVal Val,
       this, Val.castAs<NonLoc>(), From, To);
 }
 
-inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V, const LocationContext *LCtx) const {
+inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V,
+                                             const StackFrame *SF) const {
   if (std::optional<Loc> L = LV.getAs<Loc>())
-    return bindLoc(*L, V, LCtx);
+    return bindLoc(*L, V, SF);
   return this;
 }
 

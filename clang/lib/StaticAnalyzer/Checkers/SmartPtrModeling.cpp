@@ -54,8 +54,8 @@ public:
   checkRegionChanges(ProgramStateRef State,
                      const InvalidatedSymbols *Invalidated,
                      ArrayRef<const MemRegion *> ExplicitRegions,
-                     ArrayRef<const MemRegion *> Regions,
-                     const LocationContext *LCtx, const CallEvent *Call) const;
+                     ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+                     const CallEvent *Call) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SR) const;
@@ -571,7 +571,7 @@ void SmartPtrModeling::printState(raw_ostream &Out, ProgramStateRef State,
 ProgramStateRef SmartPtrModeling::checkRegionChanges(
     ProgramStateRef State, const InvalidatedSymbols *Invalidated,
     ArrayRef<const MemRegion *> ExplicitRegions,
-    ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
+    ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
     const CallEvent *Call) const {
   TrackedRegionMapTy RegionMap = State->get<TrackedRegionMap>();
   TrackedRegionMapTy::Factory &RegionMapFactory =
