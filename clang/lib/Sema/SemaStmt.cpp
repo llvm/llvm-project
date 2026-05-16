@@ -1297,7 +1297,10 @@ static bool areSwitchCasesExhaustive(
     unsigned CondWidth, ArrayRef<std::pair<llvm::APSInt, CaseStmt *>> CaseVals,
     ArrayRef<std::pair<llvm::APSInt, CaseStmt *>> CaseRanges,
     ArrayRef<llvm::APSInt> HiVals) {
-  unsigned CheckWidth = std::max(CondWidthBeforePromotion, CondWidth) + 1;
+  // +2 bits: 1 bit to ensure unsigned max values are treated as positive
+  // signed integers, and 1 bit to prevent overflow when evaluating ++Current
+  // at the maximum value.
+  unsigned CheckWidth = std::max(CondWidthBeforePromotion, CondWidth) + 2;
   llvm::APSInt Min = llvm::APSInt::getMinValue(CondWidthBeforePromotion,
                                                !CondIsSignedBeforePromotion);
   llvm::APSInt Max = llvm::APSInt::getMaxValue(CondWidthBeforePromotion,
@@ -1312,19 +1315,17 @@ static bool areSwitchCasesExhaustive(
   auto RI = CaseRanges.begin(), RE = CaseRanges.end();
   auto HI = HiVals.begin();
 
-  while (true) {
+  while (VI != VE || RI != RE) {
     llvm::APSInt First, Last;
     if (VI != VE && (RI == RE || VI->first < RI->first)) {
       First = VI->first;
       Last = VI->first;
       ++VI;
-    } else if (RI != RE) {
+    } else {
       First = RI->first;
       Last = *HI;
       ++RI;
       ++HI;
-    } else {
-      break;
     }
 
     First = First.extOrTrunc(CheckWidth);
@@ -1336,8 +1337,6 @@ static bool areSwitchCasesExhaustive(
       break;
     if (Current <= Last) {
       Current = Last;
-      if (Current == Max)
-        return true;
       ++Current;
     }
   }

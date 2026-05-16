@@ -128,3 +128,11 @@ int test_template(T e) {
 
 template int test_template<E>(E); // strict-note {{in instantiation of function template specialization 'test_template<E>' requested here}}
 template int test_template<BoolEnum>(BoolEnum);
+
+enum class U32 : unsigned int { Min = 0, Max = 0xFFFFFFFF };
+
+int test_overflow(U32 e) {
+  switch (e) {
+    case U32::Min ... U32::Max: return 0;
+  }
+}
