@@ -1773,15 +1773,26 @@ void DWARFVerifier::verifyNameIndexEntries(
     // call to properly deal with it. It isn't clear that getNonSkeletonUnitDIE
     // will return the unit DIE of DU if we aren't able to get the .dwo file,
     // but that is what the function currently does.
+    // A DW_AT_(GNU_)dwo_id alone does not make a CU a skeleton: a regular
+    // DW_TAG_compile_unit is allowed to carry a DWO id (e.g. -gmodules emits
+    // one on each module CU). A CU is a skeleton CU only when DWARF 5+ tags
+    // it as DW_TAG_skeleton_unit, or when, in older DWARF, the CU has no
+    // children because the body lives in the .dwo.
+    DWARFDie UnitDie = DU->getUnitDIE();
+    auto IsSkeletonCU = [&]() {
+      if (DU->getVersion() >= 5)
+        return UnitDie.getTag() == dwarf::DW_TAG_skeleton_unit;
+      return !UnitDie.hasChildren();
+    };
+    bool IsSkeleton = DU->getDWOId() && IsSkeletonCU();
     DWARFUnit *NonSkeletonUnit = nullptr;
-    if (DU->getDWOId()) {
+    if (IsSkeleton) {
       auto Iter = CUOffsetsToDUMap.find(DU->getOffset());
       NonSkeletonUnit = Iter->second;
     } else {
       NonSkeletonUnit = DU;
     }
-    DWARFDie UnitDie = DU->getUnitDIE();
-    if (DU->getDWOId() && !NonSkeletonUnit->isDWOUnit()) {
+    if (IsSkeleton && !NonSkeletonUnit->isDWOUnit()) {
       ErrorCategory.Report("Unable to get load .dwo file", [&]() {
         error() << formatv(
             "Name Index @ {0:x}: Entry @ {1:x} unable to load "
