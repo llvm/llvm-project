@@ -299,6 +299,7 @@ add_subdirectory(docs)
 # Build target agnostic offloading library.
 add_subdirectory(libompaccsupport)
 add_subdirectory(libomptarget)
+add_subdirectory(libacctarget)
 add_subdirectory(liboffload)
 
 # Add tests.
