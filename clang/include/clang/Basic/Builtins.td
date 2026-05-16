@@ -998,7 +998,7 @@ def StdcMemReverse8: Builtin {
 
 def StdcMemReverse8Typed : LibBuiltin<"stdbit.h", "C2Y_LANG">, MemReverse8Template {
   let Spellings = ["stdc_memreverse8"];
-  let Attributes = [NoThrow, Const, Constexpr];
+  let Attributes = [NoThrow, Pure, Const, Constexpr];
   let Prototype = "T(T)";
 }
 
