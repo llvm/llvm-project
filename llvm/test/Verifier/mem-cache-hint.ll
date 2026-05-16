@@ -77,6 +77,12 @@ define void @key_not_string(ptr %p) {
   ret void
 }
 
+; CHECK: !mem.cache_hint value must be a string or integer
+define void @value_not_string_or_integer(ptr %p) {
+  %v = load i32, ptr %p, !mem.cache_hint !{i32 0, !{!"nvvm.l1_eviction", !{}}}
+  ret void
+}
+
 ; CHECK: !mem.cache_hint hint node contains duplicate key
 define void @duplicate_key(ptr %p) {
   %v = load i32, ptr %p, !mem.cache_hint !{i32 0, !{

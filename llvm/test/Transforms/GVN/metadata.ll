@@ -485,7 +485,7 @@ join:
   ret void
 }
 
-; Both loads have !mem.cache_hint, preserved after GVN deduplication.
+; Both loads have the same !mem.cache_hint node so we preserve it after GVN deduplication.
 define i64 @test_mem_cache_hint_both(ptr %p) {
 ; CHECK-LABEL: define i64 @test_mem_cache_hint_both
 ; CHECK-SAME: (ptr [[P:%.*]]) {
@@ -499,7 +499,35 @@ define i64 @test_mem_cache_hint_both(ptr %p) {
   ret i64 %c
 }
 
-; Only one load has !mem.cache_hint, dropped after GVN deduplication.
+; Both loads have distinct but structurally equivalent !mem.cache_hint nodes.
+define i64 @test_mem_cache_hint_same_distinct_nodes(ptr %p) {
+; CHECK-LABEL: define i64 @test_mem_cache_hint_same_distinct_nodes
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4, !mem.cache_hint [[META13:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %a = load i64, ptr %p, !mem.cache_hint !12
+  %b = load i64, ptr %p, !mem.cache_hint !16
+  %c = add i64 %a, %b
+  ret i64 %c
+}
+
+; Cache hint values can be integer constants.
+define i64 @test_mem_cache_hint_integer_value(ptr %p) {
+; CHECK-LABEL: define i64 @test_mem_cache_hint_integer_value
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4, !mem.cache_hint [[META15:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %a = load i64, ptr %p, !mem.cache_hint !20
+  %b = load i64, ptr %p, !mem.cache_hint !20
+  %c = add i64 %a, %b
+  ret i64 %c
+}
+
+; Only one load has !mem.cache_hint so we drop the metadata after GVN deduplication.
 define i64 @test_mem_cache_hint_one(ptr %p) {
 ; CHECK-LABEL: define i64 @test_mem_cache_hint_one
 ; CHECK-SAME: (ptr [[P:%.*]]) {
@@ -513,12 +541,12 @@ define i64 @test_mem_cache_hint_one(ptr %p) {
   ret i64 %c
 }
 
-; Both loads have !mem.cache_hint but with different payloads.
+; Both loads have !mem.cache_hint but with different payloads so we drop the metadata.
 ; TODO: delegate to TTI to let targets decide how to merge differing payloads.
 define i64 @test_mem_cache_hint_diff(ptr %p) {
 ; CHECK-LABEL: define i64 @test_mem_cache_hint_diff
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4, !mem.cache_hint [[META13:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
 ; CHECK-NEXT:    ret i64 [[C]]
 ;
@@ -544,6 +572,10 @@ define i64 @test_mem_cache_hint_diff(ptr %p) {
 !13 = !{ !"nvvm.l1_eviction", !"first" }
 !14 = !{ i32 0, !15 }
 !15 = !{ !"nvvm.l1_eviction", !"last" }
+!16 = distinct !{ i32 0, !17 }
+!17 = distinct !{ !"nvvm.l1_eviction", !"first" }
+!20 = !{ i32 0, !21 }
+!21 = !{ !"nvvm.prefetch_bytes", i32 128 }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { memory(none) }
 ;.
@@ -560,6 +592,8 @@ define i64 @test_mem_cache_hint_diff(ptr %p) {
 ; CHECK: [[RNG10]] = !{i64 10, i64 30}
 ; CHECK: [[META11]] = !{i32 0, [[META12:![0-9]+]]}
 ; CHECK: [[META12]] = !{!"nvvm.l1_eviction", !"first"}
-; CHECK: [[META13]] = !{i32 0, [[META14:![0-9]+]]}
-; CHECK: [[META14]] = !{!"nvvm.l1_eviction", !"last"}
+; CHECK: [[META13]] = distinct !{i32 0, [[META14:![0-9]+]]}
+; CHECK: [[META14]] = distinct !{!"nvvm.l1_eviction", !"first"}
+; CHECK: [[META15]] = !{i32 0, [[META16:![0-9]+]]}
+; CHECK: [[META16]] = !{!"nvvm.prefetch_bytes", i32 128}
 ;.

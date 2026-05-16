@@ -5704,10 +5704,10 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
   SmallDenseSet<unsigned, 4> SeenOperandNos;
 
   // Top-level metadata alternates: i32 operand_no, MDNode hint_node.
-  for (unsigned i = 0; i + 1 < MD->getNumOperands(); i += 2) {
-    auto *OpNoCI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(i));
+  for (unsigned J = 0; J + 1 < MD->getNumOperands(); J += 2) {
+    auto *OpNoCI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(J));
     Check(OpNoCI,
-          "!mem.cache_hint operand_no must be an integer constant in pair", MD);
+          "!mem.cache_hint hint node must consist of (operand_no, hint_node) pairs", MD);
 
     Check(OpNoCI->getValue().isNonNegative(),
           "!mem.cache_hint operand_no must be non-negative", MD);
@@ -5724,23 +5724,27 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
     Check(SeenOperandNos.insert(OperandNo).second,
           "!mem.cache_hint contains duplicate operand_no", MD);
 
-    const auto *Node = dyn_cast<MDNode>(MD->getOperand(i + 1));
-    Check(Node, "!mem.cache_hint hint node must be a metadata node", MD);
+    const auto *Node = dyn_cast<MDNode>(MD->getOperand(J + 1));
+    Check(Node, "!mem.cache_hint hint node must consist of (operand_no, hint_node) pairs", MD);
 
     Check(Node->getNumOperands() % 2 == 0,
           "!mem.cache_hint hint node must have even number of operands "
           "(key-value pairs)",
           Node);
 
-    SmallDenseSet<StringRef, 8> SeenKeys;
-    for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
-      const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
+    StringSet<> SeenKeys;
+    for (unsigned K = 0; K + 1 < Node->getNumOperands(); K += 2) {
+      const auto *Key = dyn_cast<MDString>(Node->getOperand(K));
       Check(Key, "!mem.cache_hint key must be a string", Node);
 
       StringRef KeyStr = Key->getString();
       Check(SeenKeys.insert(KeyStr).second,
             "!mem.cache_hint hint node contains duplicate key", Node);
-      // Values are target-specific and not validated here.
+
+      const Metadata *Value = Node->getOperand(K + 1).get();
+      Check(isa_and_nonnull<MDString>(Value) ||
+                mdconst::dyn_extract<ConstantInt>(Value),
+            "!mem.cache_hint value must be a string or integer", Node);
     }
   }
 }

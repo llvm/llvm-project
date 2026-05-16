@@ -7833,11 +7833,10 @@ memory operation. This metadata is a performance hint: dropping or ignoring it
 must not change the observable behavior of the program.
 
 The value of ``!mem.cache_hint`` is a single metadata node containing a flat
-list of ``(operand_no, hint_node)`` pairs. Each ``operand_no`` is an ``i32``
-constant that is the raw IR operand index (for regular instructions) or the
-argument index (for intrinsic calls) of a pointer-typed operand. Each
-``hint_node`` is a metadata node containing target-prefixed key/value string
-pairs.
+list of ``(operand_no, hint_node)`` pairs. For non-call instructions, ``operand_no``
+is the IR operand index. For intrinsic calls, ``operand_no`` is the call argument index.
+Each ``hint_node`` is a metadata node containing target-prefixed key/value pairs.
+Keys must be strings, and values must be either strings or integer constants.
 
 The ``!mem.cache_hint`` node must contain an even number of entries, alternating
 ``i32`` operand numbers and metadata nodes. Operand numbers must be unique within
@@ -7858,7 +7857,7 @@ ignored during code generation.
 The following examples use ``nvvm.`` prefixed keys for NVIDIA GPU targets.
 Other targets may define their own prefixed keys.
 
-Example: load with cache hints (NVIDIA GPU):
+Example: load with cache hints:
 
 .. code-block:: llvm
 
@@ -7869,7 +7868,7 @@ Example: load with cache hints (NVIDIA GPU):
             !"nvvm.l2_eviction", !"first",
             !"nvvm.l2_prefetch_size", !"128B" }
 
-Example: store with cache hints (NVIDIA GPU):
+Example: store with cache hints:
 
 .. code-block:: llvm
 
@@ -7879,7 +7878,7 @@ Example: store with cache hints (NVIDIA GPU):
     !1 = !{ !"nvvm.l1_eviction", !"last",
             !"nvvm.l2_eviction", !"last" }
 
-Example: memcpy with per-operand hints (NVIDIA GPU):
+Example: memcpy with per-operand hints:
 
 .. code-block:: llvm
 
