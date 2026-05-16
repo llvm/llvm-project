@@ -953,6 +953,15 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
   return queryAsyncImpl(*AsyncInfo, ReleaseQueue, IsQueueWorkCompleted);
 }
 
+Expected<QueueStatusTy>
+GenericDeviceTy::queryAsyncStatic(__tgt_async_info *AsyncInfo) {
+  if (!AsyncInfo || !AsyncInfo->Queue)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid async info queue");
+
+  return queryAsyncStaticImpl(*AsyncInfo);
+}
+
 Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
   return Plugin::error(ErrorCode::UNSUPPORTED,
                        "device does not support VA Management");
@@ -1102,6 +1111,71 @@ Error GenericDeviceTy::dataSubmit(void *TgtPtr, const void *HstPtr,
   return Err;
 }
 
+Error GenericDeviceTy::dataNonContigSubmit(void *TgtPtr, const void *HstPtr,
+                                           const NonContigDescTy &CopyInfo,
+                                           __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err =
+      dataNonContigSubmitImpl(TgtPtr, HstPtr, CopyInfo, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+static void dumpContigCopyInfo(const NonContigDescTy &CopyInfo) {
+  for (unsigned I = 0; I < CopyInfo.getRank(); I++)
+    ODBG(OLDT_Init) << "  Dim " << I << " : Offset " << CopyInfo.Dims[I].Offset
+        << " Count " << CopyInfo.Dims[I].Count << " Stride "
+        << CopyInfo.Dims[I].Stride << "\n";
+}
+
+template <auto CopyFunc, typename DstPtrTy, typename SrcPtrTy>
+static Error targetDataNonContiguous(GenericDeviceTy &Device, DstPtrTy DstPtr,
+                                     SrcPtrTy SrcPtr,
+                                     const NonContigDescTy &CopyInfo,
+                                     unsigned CurrentDim, uint64_t Offset,
+                                     AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  ODBG(OLDT_Init) << "Non Contig Copy of Dim " << CurrentDim;
+  if (CurrentDim == CopyInfo.getRank()) {
+    ODBG(OLDT_Init) << "Moving non-contiguous chunk with size "
+                    << CopyInfo.getLastDimCopySize() << ", " << (void *)SrcPtr
+                    << " -> " << (void *)DstPtr << ".\n";
+    return (Device.*CopyFunc)(DstPtr + Offset, SrcPtr + Offset,
+                              CopyInfo.getLastDimCopySize(), AsyncInfoWrapper);
+  }
+
+  for (unsigned int I = 0; I < CopyInfo.Dims[CurrentDim].Count; ++I) {
+    uint64_t CurOffset =
+        CopyInfo.Dims[CurrentDim].Offset + I * CopyInfo.Dims[CurrentDim].Stride;
+    // we only need to transfer the first element for the last dimension
+    // since we've already got a contiguous piece.
+    if (CurrentDim != CopyInfo.getRank() - 1 || I == 0) {
+      Error Ret = targetDataNonContiguous<CopyFunc>(
+          Device, DstPtr, SrcPtr, CopyInfo, CurrentDim + 1, Offset + CurOffset,
+          AsyncInfoWrapper);
+      if (Ret)
+        return Ret;
+    }
+  }
+
+  return Error::success();
+}
+
+Error GenericDeviceTy::dataNonContigSubmitImpl(
+    void *TgtPtr, const void *HstPtr, const NonContigDescTy &CopyInfo,
+    AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  ODBG(OLDT_Init) << "Non contig descriptor:\n";
+  dumpContigCopyInfo(CopyInfo);
+  NonContigDescTy MergedCopyInfo = CopyInfo;
+  MergedCopyInfo.mergeContiguousDims();
+  ODBG(OLDT_Init) << "Merged non contig descriptor:\n";
+  dumpContigCopyInfo(MergedCopyInfo);
+  return targetDataNonContiguous<&GenericDeviceTy::dataSubmitImpl>(
+      *this, reinterpret_cast<char *>(TgtPtr),
+      reinterpret_cast<const char *>(HstPtr), MergedCopyInfo, /*CurrentDim=*/0,
+      /*Offset=*/0, AsyncInfoWrapper);
+}
+
 Error GenericDeviceTy::dataRetrieve(void *HstPtr, const void *TgtPtr,
                                     int64_t Size, __tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
@@ -1109,6 +1183,32 @@ Error GenericDeviceTy::dataRetrieve(void *HstPtr, const void *TgtPtr,
   auto Err = dataRetrieveImpl(HstPtr, TgtPtr, Size, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
+}
+
+Error GenericDeviceTy::dataNonContigRetrieve(void *HstPtr, const void *TgtPtr,
+                                             const NonContigDescTy &CopyInfo,
+                                             __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err =
+      dataNonContigRetrieveImpl(HstPtr, TgtPtr, CopyInfo, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataNonContigRetrieveImpl(
+    void *HstPtr, const void *TgtPtr, const NonContigDescTy &CopyInfo,
+    AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  ODBG(OLDT_Init) << "Non contig descriptor:\n";
+  dumpContigCopyInfo(CopyInfo);
+  NonContigDescTy MergedCopyInfo = CopyInfo;
+  MergedCopyInfo.mergeContiguousDims();
+  ODBG(OLDT_Init) << "Merged non contig descriptor:\n";
+  dumpContigCopyInfo(MergedCopyInfo);
+  return targetDataNonContiguous<&GenericDeviceTy::dataRetrieveImpl>(
+      *this, reinterpret_cast<char *>(HstPtr),
+      reinterpret_cast<const char *>(TgtPtr), MergedCopyInfo, /*CurrentDim=*/0,
+      /*Offset=*/0, AsyncInfoWrapper);
 }
 
 Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
@@ -1628,6 +1728,22 @@ int32_t GenericPluginTy::data_submit_async(int32_t DeviceId, void *TgtPtr,
   return OFFLOAD_SUCCESS;
 }
 
+int32_t GenericPluginTy::data_non_contig_submit_async(
+    int32_t DeviceId, void *TgtPtr, void *HstPtr,
+    const NonContigDescTy &CopyInfo, __tgt_async_info *AsyncInfoPtr) {
+  auto Err = getDevice(DeviceId).dataNonContigSubmit(TgtPtr, HstPtr, CopyInfo,
+                                                     AsyncInfoPtr);
+  if (Err) {
+    REPORT() << "Failure to copy non-contiguous data from device to host."
+             << "Pointers: host "
+             << "= " << HstPtr << ", device = " << TgtPtr << ": "
+             << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
 int32_t GenericPluginTy::data_retrieve(int32_t DeviceId, void *HstPtr,
                                        void *TgtPtr, int64_t Size) {
   return data_retrieve_async(DeviceId, HstPtr, TgtPtr, Size,
@@ -1643,6 +1759,22 @@ int32_t GenericPluginTy::data_retrieve_async(int32_t DeviceId, void *HstPtr,
     REPORT() << "Failure to copy data from device to host. Pointers: host "
              << "= " << HstPtr << ", device = " << TgtPtr << ", size = " << Size
              << ": " << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t GenericPluginTy::data_non_contig_retrieve_async(
+    int32_t DeviceId, void *HstPtr, void *TgtPtr,
+    const NonContigDescTy &CopyInfo, __tgt_async_info *AsyncInfoPtr) {
+  auto Err = getDevice(DeviceId).dataNonContigRetrieve(HstPtr, TgtPtr, CopyInfo,
+                                                       AsyncInfoPtr);
+  if (Err) {
+    REPORT() << "Failure to copy non-contiguous data from device to host."
+             << "Pointers: host "
+             << "= " << HstPtr << ", device = " << TgtPtr << ": "
+             << toString(std::move(Err));
     return OFFLOAD_FAIL;
   }
 
@@ -1691,9 +1823,36 @@ int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
   return OFFLOAD_SUCCESS;
 }
 
+int32_t GenericPluginTy::enqueue_host_call(int32_t DeviceId,
+                                           void (*Callback)(void *),
+                                           void *UserData,
+                                           __tgt_async_info *AsyncInfoPtr) {
+  auto Err =
+      getDevice(DeviceId).enqueueHostCall(Callback, UserData, AsyncInfoPtr);
+  if (Err) {
+    REPORT() << "Failure to enqueue host call in device " << DeviceId << ": "
+             << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
 int32_t GenericPluginTy::synchronize(int32_t DeviceId,
                                      __tgt_async_info *AsyncInfoPtr) {
   auto Err = getDevice(DeviceId).synchronize(AsyncInfoPtr);
+  if (Err) {
+    REPORT() << "Failure to synchronize stream " << AsyncInfoPtr->Queue << ": "
+             << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t GenericPluginTy::synchronize_static(int32_t DeviceId,
+                                            __tgt_async_info *AsyncInfoPtr) {
+  auto Err = getDevice(DeviceId).synchronize(AsyncInfoPtr, false);
   if (Err) {
     REPORT() << "Failure to synchronize stream " << AsyncInfoPtr->Queue << ": "
              << toString(std::move(Err));
@@ -1723,6 +1882,18 @@ InfoTreeNode GenericPluginTy::obtain_device_info(int32_t DeviceId) {
     return InfoTreeNode{};
   }
   return std::move(*InfoOrErr);
+}
+
+int32_t GenericPluginTy::query_async_static(int32_t DeviceId,
+                                            __tgt_async_info *AsyncInfoPtr) {
+  auto Res = getDevice(DeviceId).queryAsyncStatic(AsyncInfoPtr);
+  if (!Res) {
+    REPORT() << "Failure to query stream " << AsyncInfoPtr->Queue << ": "
+             << toString(Res.takeError());
+    return OFFLOAD_FAIL;
+  }
+
+  return static_cast<int32_t>(*Res);
 }
 
 void GenericPluginTy::print_device_info(int32_t DeviceId) {

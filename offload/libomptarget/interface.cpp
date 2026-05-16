@@ -38,6 +38,47 @@ using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
 
+static std::mutex InitMutex;
+static uint32_t InitRefCount = 0;
+
+/// Check deleted and deprecated features, such as environment variables.
+static void checkRuntimeEnvironment() {
+  const char *ShmemEnvarName = "LIBOMPTARGET_SHARED_MEMORY_SIZE";
+  if (std::getenv(ShmemEnvarName))
+    MESSAGE("Warning: %s is no longer valid. Please use OpenMP clause "
+            "'dyn_groupprivate' instead.\n",
+            ShmemEnvarName);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// adds a target shared library to the target execution image
+EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
+  std::scoped_lock<decltype(InitMutex)> Lock(InitMutex);
+  checkRuntimeEnvironment();
+  initRuntime(!OffloadPolicy::isOffloadDisabled());
+  if (PM->delayRegisterLib(__tgt_register_lib, Desc))
+    return;
+
+  PM->registerLib(Desc);
+  InitRefCount++;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// unloads a target shared library
+EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
+  std::scoped_lock<decltype(InitMutex)> Lock(InitMutex);
+  PM->unregisterLib(Desc);
+
+  if (InitRefCount == 1) {
+    // Interop cleanup should be done before the plugins are deinitialized as
+    // the backend libraries may be already unloaded.
+    if (PM)
+      PM->InteropTbl.clear();
+  }
+  InitRefCount--;
+  deinitRuntime();
+}
+
 // If offload is enabled, ensure that device DeviceID has been initialized.
 //
 // The return bool indicates if the offload is to the host device
@@ -81,34 +122,6 @@ EXTERN void __tgt_register_requires(int64_t Flags) {
   MESSAGE("The %s function has been removed. Old OpenMP requirements will not "
           "be handled",
           __PRETTY_FUNCTION__);
-}
-
-EXTERN void __tgt_rtl_init() { initRuntime(); }
-EXTERN void __tgt_rtl_deinit() { deinitRuntime(); }
-
-////////////////////////////////////////////////////////////////////////////////
-/// adds a target shared library to the target execution image
-EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
-  initRuntime();
-  if (PM->delayRegisterLib(Desc))
-    return;
-
-  PM->registerLib(Desc);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Initialize all available devices without registering any image
-EXTERN void __tgt_init_all_rtls() {
-  assert(PM && "Runtime not initialized");
-  PM->initializeAllDevices();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// unloads a target shared library
-EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
-  PM->unregisterLib(Desc);
-
-  deinitRuntime();
 }
 
 template <typename TargetAsyncInfoTy>
@@ -187,7 +200,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
       Rc = processAttachEntries(*DeviceOrErr, *StateInfo, AsyncInfo);
 
     if (Rc == OFFLOAD_SUCCESS)
-      Rc = AsyncInfo.synchronize();
+      Rc = AsyncInfo.finalize();
   }
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
@@ -440,7 +453,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   { // required to show synchronization
     TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: synchronize", "", Loc);
     if (Rc == OFFLOAD_SUCCESS)
-      Rc = AsyncInfo.synchronize();
+      Rc = AsyncInfo.finalize();
 
     handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
     assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
@@ -552,7 +565,7 @@ EXTERN int __tgt_target_kernel_replay(
                     LoopTripCount, AsyncInfo, ReplayOutcome);
 
   if (Rc == OFFLOAD_SUCCESS)
-    Rc = AsyncInfo.synchronize();
+    Rc = AsyncInfo.finalize();
 
   if (Rc != OFFLOAD_SUCCESS) {
     ODBG(ODT_Interface) << "Kernel replay failed in device " << DeviceId;
@@ -626,7 +639,7 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   if (QueryCounter.isAboveThreshold())
     AsyncInfo->SyncType = AsyncInfoTy::SyncTy::BLOCKING;
 
-  if (AsyncInfo->synchronize())
+  if (AsyncInfo->finalize())
     FATAL_MESSAGE0(1, "Error while querying the async queue for completion.\n");
   // If there are device operations still pending, return immediately without
   // deallocating the handle and increase the current thread query count.
@@ -642,11 +655,4 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   // Delete the handle and unset it from the OpenMP task data.
   delete AsyncInfo;
   *AsyncHandle = nullptr;
-}
-
-EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
-                                                             unsigned)) {
-  for (auto &Plugin : PM->plugins())
-    if (Plugin.is_initialized())
-      Plugin.getRPCServer().registerCallback(Callback);
 }
