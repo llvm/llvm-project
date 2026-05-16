@@ -958,6 +958,19 @@ void MachineCopyPropagation::forwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 
     forwardUses(MI);
 
+    // It's possible that the previous transformation has resulted in a no-op
+    // register move (i.e. one where source and destination registers are the
+    // same and are not referring to a reserved register). If so, delete it.
+    CopyOperands = isCopyInstr(MI, *TII, UseCopyInstr);
+    if (CopyOperands &&
+        CopyOperands->Source->getReg() == CopyOperands->Destination->getReg() &&
+        !MRI->isReserved(CopyOperands->Source->getReg())) {
+      MI.eraseFromParent();
+      NumDeletes++;
+      Changed = true;
+      continue;
+    }
+
     // Attempt to canonicalize/optimize the instruction now its arguments have
     // been mutated.  This may convert MI from a non-copy to a copy instruction.
     if (TII->simplifyInstruction(MI)) {
