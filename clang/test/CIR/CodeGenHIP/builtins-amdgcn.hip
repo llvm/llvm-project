@@ -71,3 +71,19 @@ __device__ void test_div_fmas_f64(double* out, double a, double b, double c, int
 __device__ void test_ds_swizzle(int* out, int a) {
   *out = __builtin_amdgcn_ds_swizzle(a, 32);
 }
+
+// CIR-LABEL: @_Z19test_frexp_mant_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z19test_frexp_mant_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.frexp.mant.f32(float %{{.*}})
+__device__ void test_frexp_mant_f32(float* out, float a) {
+  *out = __builtin_amdgcn_frexp_mantf(a);
+}
+
+// CIR-LABEL: @_Z19test_frexp_mant_f64Pdd
+// CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.double) -> !cir.double
+// LLVM: define{{.*}} void @_Z19test_frexp_mant_f64Pdd
+// LLVM: call{{.*}} double @llvm.amdgcn.frexp.mant.f64(double %{{.*}})
+__device__ void test_frexp_mant_f64(double* out, double a) {
+  *out = __builtin_amdgcn_frexp_mant(a);
+}
