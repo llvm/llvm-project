@@ -106,6 +106,17 @@ def AddUIExtendedToAddI:
              [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
 
 //===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+// subui_extended(x, y) -> [subi(x, y), x], when the `borrow` result has no
+// uses. Since the 'borrow' result is unused, any replacement value will do.
+def SubUIExtendedToSubI:
+    Pattern<(Arith_SubUIExtendedOp:$res $x, $y),
+             [(Arith_SubIOp $x, $y, DefOverflow), (replaceWithValue $x)],
+             [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
+
+//===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 
@@ -431,6 +442,24 @@ def SIToFPOfExtUI :
 def UIToFPOfExtUI :
     Pat<(Arith_UIToFPOp (Arith_ExtUIOp $x, $nneg1), $nneg2),
         (Arith_UIToFPOp $x, $nneg1)>;
+
+//===----------------------------------------------------------------------===//
+// SubFOp
+//===----------------------------------------------------------------------===//
+
+// Match a constant (scalar or splat) -0.0 float.
+def IsNegZeroFloat :
+    Constraint<CPred<"m_NegZeroFloat().match($0)">,
+               "is negative-zero float constant">;
+
+// subf(-0, x) -> negf(x)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
+def SubFOfNegZero :
+    Pat<(Arith_SubFOp (ConstantLikeMatcher AnyAttr:$c), $x, $fmf, $rm),
+        (Arith_NegFOp $x, $fmf),
+        [(IsNegZeroFloat $c),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
 
 //===----------------------------------------------------------------------===//
 // MulFOp

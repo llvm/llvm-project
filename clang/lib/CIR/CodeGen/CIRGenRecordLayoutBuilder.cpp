@@ -685,13 +685,21 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   assert(ty->isIncomplete() && "recomputing record layout?");
   lowering.lower(/*nonVirtualBaseType=*/false);
 
-  // If we're in C++, compute the base subobject type.
+  // If we're in C++, compute the base subobject type. For C++ records the base
+  // subobject type is always set (matching classic CodeGen). For unions and
+  // final classes the base subobject and complete object types are identical
+  // (no tail padding can be reused), so baseTy points at the same record as
+  // ty. We must still populate baseTy in those cases because callers such as
+  // getStorageType(const CXXRecordDecl *) used to lay out potentially-
+  // overlapping ([[no_unique_address]]) fields read it unconditionally; a
+  // null baseTy would otherwise propagate as a null mlir::Type into the
+  // members vector and trip the !empty() assertion in fillOutputFields.
   cir::RecordType baseTy;
-  if (llvm::isa<CXXRecordDecl>(rd) && !rd->isUnion() &&
-      !rd->hasAttr<FinalAttr>()) {
+  if (llvm::isa<CXXRecordDecl>(rd)) {
     baseTy = *ty;
-    if (lowering.astRecordLayout.getNonVirtualSize() !=
-        lowering.astRecordLayout.getSize()) {
+    if (!rd->isUnion() && !rd->hasAttr<FinalAttr>() &&
+        lowering.astRecordLayout.getNonVirtualSize() !=
+            lowering.astRecordLayout.getSize()) {
       CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
       baseLowering.lower(/*NonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");

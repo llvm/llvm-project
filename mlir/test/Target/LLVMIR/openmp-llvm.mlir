@@ -1673,7 +1673,7 @@ llvm.func @omp_atomic_write() {
 //CHECK: %[[VAL_9:.*]] = insertvalue { float, float } undef, float %[[VAL_7]], 0
 //CHECK: %[[VAL_10:.*]] = insertvalue { float, float } %[[VAL_9]], float %[[VAL_8]], 1
 //CHECK: store { float, float } %[[VAL_10]], ptr %[[X_NEW_VAL]], align 4
-//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
+//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 0, i32 0)
 //CHECK: %[[VAL_12:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 4
 //CHECK: br i1 %[[VAL_11]], label %.atomic.exit, label %.atomic.cont
 
@@ -1725,7 +1725,7 @@ llvm.func @_QPomp_atomic_update_complex() {
 //CHECK: %[[VAL_9:.*]] = insertvalue { float, float } undef, float %[[VAL_7]], 0
 //CHECK: %[[VAL_10:.*]] = insertvalue { float, float } %[[VAL_9]], float %[[VAL_8]], 1
 //CHECK: store { float, float } %[[VAL_10]], ptr %[[X_NEW_VAL]], align 4 
-//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
+//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 0, i32 0)
 //CHECK: %[[VAL_12:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 4
 //CHECK: br i1 %[[VAL_11]], label %.atomic.exit, label %.atomic.cont
 //CHECK: .atomic.exit
@@ -1816,7 +1816,7 @@ llvm.func @omp_atomic_capture_complex_swap(%x_arg: !llvm.ptr, %v_arg: !llvm.ptr)
     // CHECK: call void @__atomic_load(i64 8, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
     // CHECK: %[[PHI:.*]] = phi { float, float }
     // CHECK: store { float, float } { float 1.000000e+00, float 1.000000e+00 }, ptr %[[X_NEW_VAL]], align 4
-    // CHECK: call i1 @__atomic_compare_exchange(i64 8, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
+   // CHECK: call i1 @__atomic_compare_exchange(i64 8, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 0, i32 0)
     // CHECK: store { float, float } %[[PHI]], ptr %{{.*}}, align 4
     %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
     %1 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
@@ -1838,7 +1838,7 @@ llvm.func @omp_atomic_capture_complex8_swap(%x_arg: !llvm.ptr, %v_arg: !llvm.ptr
     // CHECK: call void @__atomic_load(i64 16, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
     // CHECK: %[[PHI:.*]] = phi { double, double }
     // CHECK: store { double, double } { double 1.000000e+00, double 1.000000e+00 }, ptr %[[X_NEW_VAL]], align 8
-    // CHECK: call i1 @__atomic_compare_exchange(i64 16, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
+    // CHECK: call i1 @__atomic_compare_exchange(i64 16, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 0, i32 0)
     // CHECK: store { double, double } %[[PHI]], ptr %{{.*}}, align 8
     %0 = llvm.mlir.constant(1.000000e+00 : f64) : f64
     %1 = llvm.mlir.undef : !llvm.struct<(f64, f64)>
@@ -1847,6 +1847,26 @@ llvm.func @omp_atomic_capture_complex8_swap(%x_arg: !llvm.ptr, %v_arg: !llvm.ptr
     omp.atomic.capture {
       omp.atomic.read %v_arg = %x_arg : !llvm.ptr, !llvm.ptr, !llvm.struct<(f64, f64)>
       omp.atomic.write %x_arg = %3 : !llvm.ptr, !llvm.struct<(f64, f64)>
+    }
+    llvm.return
+}
+
+// -----
+
+// Test that seq_cst ordering is correctly converted to CABI constant (5)
+// in __atomic_compare_exchange, not the raw LLVM enum value (7).
+//
+// CHECK-LABEL: define void @omp_atomic_capture_complex_swap_seq_cst
+// CHECK: call void @__atomic_load(i64 8, ptr %{{.*}}, ptr %{{.*}}, i32 5)
+// CHECK: call i1 @__atomic_compare_exchange(i64 8, ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i32 5, i32 5)
+llvm.func @omp_atomic_capture_complex_swap_seq_cst(%x_arg: !llvm.ptr, %v_arg: !llvm.ptr) {
+    %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %1 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %2 = llvm.insertvalue %0, %1[0] : !llvm.struct<(f32, f32)>
+    %3 = llvm.insertvalue %0, %2[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.capture memory_order(seq_cst) {
+      omp.atomic.read %v_arg = %x_arg : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
+      omp.atomic.write %x_arg = %3 : !llvm.ptr, !llvm.struct<(f32, f32)>
     }
     llvm.return
 }
@@ -3710,3 +3730,66 @@ llvm.func @task_affinity_plain(%arr: !llvm.ptr {llvm.nocapture}) {
 // CHECK: [[FLAGGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 2
 // CHECK: store i32 0, ptr [[FLAGGEP]]
 // CHECK: call i32 @__kmpc_omp_reg_task_with_affinity{{.*}}i32 1, ptr [[AFFLIST]]
+
+// -----
+
+module attributes {omp.is_target_device = true, llvm.target_triple = "nvptx64-nvidia-cuda"} {
+llvm.mlir.global internal @any() : i32
+llvm.mlir.global internal @host() : i32
+llvm.mlir.global internal @nohost() : i32
+llvm.func @omp_groupprivate_device() attributes {
+    omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %2 = omp.groupprivate @any device_type(any) : !llvm.ptr
+  llvm.store %0, %2 : i32, !llvm.ptr
+
+  %4 = omp.groupprivate @host device_type(host) : !llvm.ptr
+  llvm.store %0, %4 : i32, !llvm.ptr
+
+  %6 = omp.groupprivate @nohost device_type(nohost) : !llvm.ptr
+  llvm.store %0, %6 : i32, !llvm.ptr
+  llvm.return
+}
+}
+
+// CHECK-DAG: @any = internal global i32 undef
+// CHECK-DAG: @host = internal global i32 undef
+// CHECK-DAG: @nohost = internal global i32 undef
+// CHECK-DAG: @[[SHARED_ANY:any.*]] = internal addrspace(3) global i32 poison
+// CHECK-DAG: @[[SHARED_NOHOST:nohost.*]] = internal addrspace(3) global i32 poison
+// CHECK: define void @omp_groupprivate_device()
+// CHECK: store i32 1, ptr addrspace(3) @[[SHARED_ANY]], align 4
+// CHECK: store i32 1, ptr @host, align 4
+// CHECK: store i32 1, ptr addrspace(3) @[[SHARED_NOHOST]], align 4
+// CHECK: ret void
+
+// -----
+
+module attributes {omp.is_target_device = false} {
+llvm.mlir.global internal @any1() : i32
+llvm.mlir.global internal @host1() : i32
+llvm.mlir.global internal @nohost1() : i32
+llvm.func @omp_groupprivate_host() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %2 = omp.groupprivate @any1 device_type(any) : !llvm.ptr
+  llvm.store %0, %2 : i32, !llvm.ptr
+
+  %4 = omp.groupprivate @host1 device_type(host) : !llvm.ptr
+  llvm.store %0, %4 : i32, !llvm.ptr
+
+  %6 = omp.groupprivate @nohost1 device_type(nohost) : !llvm.ptr
+  llvm.store %0, %6 : i32, !llvm.ptr
+  llvm.return
+}
+}
+
+// CHECK-DAG: @any1 = internal global i32 undef
+// CHECK-DAG: @host1 = internal global i32 undef
+// CHECK-DAG: @nohost1 = internal global i32 undef
+// CHECK-LABEL: define void @omp_groupprivate_host()
+// CHECK: store i32 1, ptr @any1, align 4
+// CHECK: store i32 1, ptr @host1, align 4
+// CHECK: store i32 1, ptr @nohost1, align 4
+// CHECK: ret void
+
+// -----

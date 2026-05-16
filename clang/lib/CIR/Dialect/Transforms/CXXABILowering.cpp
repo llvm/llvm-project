@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <deque>
-
 #include "PassDetail.h"
 #include "TargetLowering/LowerModule.h"
 
@@ -23,6 +21,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "llvm/ADT/ScopeExit.h"
@@ -55,7 +54,8 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
   // These attributes either don't contain a type, or don't contain a type that
   // can have a data member/method.
   if (isa<mlir::DenseArrayAttr, mlir::FloatAttr, mlir::UnitAttr,
-          mlir::StringAttr, mlir::IntegerAttr, mlir::SymbolRefAttr>(attr))
+          mlir::StringAttr, mlir::IntegerAttr, mlir::SymbolRefAttr,
+          cir::AnnotationAttr>(attr))
     return true;
 
   // Tablegen'ed always-legal attributes:
@@ -620,9 +620,7 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   mlir::Value loweredAddress = adaptor.getAddress();
 
   cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
-  bool cookieRequired = deleteParams.getSize();
-  assert((deleteParams.getSize() || !op.getElementDtorAttr()) &&
-         "Expected size parameter when dtor fn is provided!");
+  bool cookieRequired = deleteParams.getSize() || op.getElementDtorAttr();
 
   if (deleteParams.getTypeAwareDelete() || deleteParams.getDestroyingDelete() ||
       deleteParams.getAlignment())
@@ -631,56 +629,87 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
 
   const CIRCXXABI &cxxABI = lowerModule->getCXXABI();
   CIRBaseBuilderTy cirBuilder(rewriter);
+
+  // Read the array cookie (or compute the void* pointer for the
+  // non-cookie case) before creating the cleanup scope. The cookie read
+  // produces values that are needed by both the destruction loop in the
+  // body region (numElements for the array.dtor) and the operator
+  // delete[] call in the cleanup region (deletePtr / numElements for the
+  // total-size computation), so it must dominate both regions.
   mlir::Value deletePtr;
-  llvm::SmallVector<mlir::Value> callArgs;
+  mlir::Value numElements;
+  cir::PointerType ptrTy;
+  clang::CharUnits cookieSize;
+  mlir::DataLayout dl(op->getParentOfType<mlir::ModuleOp>());
+  unsigned ptrWidth =
+      lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
+  cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
 
   if (cookieRequired) {
-    mlir::Value numElements;
-    clang::CharUnits cookieSize;
-    auto ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
-    mlir::DataLayout dl(op->getParentOfType<mlir::ModuleOp>());
-
+    ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
     cxxABI.readArrayCookie(loc, loweredAddress, dl, cirBuilder, numElements,
                            deletePtr, cookieSize);
-
-    // If a dtor function is provided, create an array dtor operation.
-    // This will get expanded during LoweringPrepare.
-    mlir::FlatSymbolRefAttr dtorFn = op.getElementDtorAttr();
-    if (dtorFn) {
-      auto eltPtrTy = cir::PointerType::get(ptrTy.getPointee());
-      cir::ArrayDtor::create(
-          rewriter, loc, loweredAddress, numElements,
-          [&](mlir::OpBuilder &b, mlir::Location l) {
-            auto arg = b.getInsertionBlock()->addArgument(eltPtrTy, l);
-            cir::CallOp::create(b, l, dtorFn, cir::VoidType(),
-                                mlir::ValueRange{arg});
-            cir::YieldOp::create(b, l);
-          });
-    }
-
-    // Compute the total allocation size and add it to the call arguments.
-    callArgs.push_back(deletePtr);
-    uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
-    unsigned ptrWidth =
-        lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
-    cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
-
-    mlir::Value eltSizeVal = cir::ConstantOp::create(
-        rewriter, loc, cir::IntAttr::get(sizeTy, eltSizeBytes));
-    mlir::Value allocSize =
-        cir::MulOp::create(rewriter, loc, sizeTy, eltSizeVal, numElements);
-    mlir::Value cookieSizeVal = cir::ConstantOp::create(
-        rewriter, loc, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
-    allocSize =
-        cir::AddOp::create(rewriter, loc, sizeTy, allocSize, cookieSizeVal);
-    callArgs.push_back(allocSize);
   } else {
     deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
                                     cir::CastKind::bitcast, loweredAddress);
-    callArgs.push_back(deletePtr);
   }
 
-  cir::CallOp::create(rewriter, loc, deleteFn, cir::VoidType(), callArgs);
+  // Create a cleanup scope to wrap the ArrayDtor operation (if needed) and
+  // call the array delete operator from the cleanup region. If no exceptions
+  // are thrown during the array dtor, the normal control flow will call the
+  // delete operator. The ArrayDtor operation will get its own cleanup region
+  // when it is expanded during LoweringPrepare. If an exception is thrown, the
+  // exception handling flow will be connected to the cleanup region here to
+  // call the delete operator on the exception path.
+  mlir::FlatSymbolRefAttr dtorFn = op.getElementDtorAttr();
+  cir::CleanupKind cleanupKind =
+      op.getDtorMayThrow() ? cir::CleanupKind::All : cir::CleanupKind::Normal;
+  cir::CleanupScopeOp::create(
+      rewriter, loc, cleanupKind,
+      /*bodyBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        if (dtorFn) {
+          auto eltPtrTy = cir::PointerType::get(ptrTy.getPointee());
+          auto arrayDtor = cir::ArrayDtor::create(
+              b, l, loweredAddress, numElements,
+              [&](mlir::OpBuilder &bb, mlir::Location ll) {
+                mlir::Value arg =
+                    bb.getInsertionBlock()->addArgument(eltPtrTy, ll);
+                auto dtorCall = cir::CallOp::create(
+                    bb, ll, dtorFn, cir::VoidType(), mlir::ValueRange{arg});
+                if (!op.getDtorMayThrow())
+                  dtorCall.setNothrowAttr(bb.getUnitAttr());
+                cir::YieldOp::create(bb, ll);
+              });
+          if (op.getDtorMayThrow())
+            arrayDtor.setDtorMayThrow(true);
+        }
+        cir::YieldOp::create(b, l);
+      },
+      /*cleanupBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        llvm::SmallVector<mlir::Value> callArgs;
+        callArgs.push_back(deletePtr);
+        if (deleteParams.getSize()) {
+          uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
+          auto eltSizeVal = cir::ConstantOp::create(
+              b, l, cir::IntAttr::get(sizeTy, eltSizeBytes));
+          mlir::Value allocSize =
+              cir::MulOp::create(b, l, sizeTy, eltSizeVal, numElements);
+          auto cookieSizeVal = cir::ConstantOp::create(
+              b, l, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
+          allocSize =
+              cir::AddOp::create(b, l, sizeTy, allocSize, cookieSizeVal);
+          callArgs.push_back(allocSize);
+        }
+        auto deleteCall =
+            cir::CallOp::create(b, l, deleteFn, cir::VoidType(), callArgs);
+        // operator delete[] is implicitly nothrow per [basic.stc.dynamic],
+        // matching classic CodeGen's `nounwind` attribute on the call.
+        deleteCall.setNothrowAttr(b.getUnitAttr());
+        cir::YieldOp::create(b, l);
+      });
+
   rewriter.eraseOp(op);
   return mlir::success();
 }
@@ -976,69 +1005,6 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
 // The Pass
 //===----------------------------------------------------------------------===//
 
-// The applyPartialConversion function traverses blocks in the dominance order,
-// so it does not lower and operations that are not reachachable from the
-// operations passed in as arguments. Since we do need to lower such code in
-// order to avoid verification errors occur, we cannot just pass the module op
-// to applyPartialConversion. We must build a set of unreachable ops and
-// explicitly add them, along with the module, to the vector we pass to
-// applyPartialConversion.
-//
-// For instance, this CIR code:
-//
-//    cir.func @foo(%arg0: !s32i) -> !s32i {
-//      %4 = cir.cast int_to_bool %arg0 : !s32i -> !cir.bool
-//      cir.if %4 {
-//        %5 = cir.const #cir.int<1> : !s32i
-//        cir.return %5 : !s32i
-//      } else {
-//        %5 = cir.const #cir.int<0> : !s32i
-//       cir.return %5 : !s32i
-//      }
-//      cir.return %arg0 : !s32i
-//    }
-//
-// contains an unreachable return operation (the last one). After the CXXABI
-// pass it will be placed into the unreachable block.  This will error because
-// it will have not converted the types in the block, making the legalizer fail.
-//
-// In the future we may want to get rid of this function and use a DCE pass or
-// something similar. But for now we need to guarantee the absence of the
-// dialect verification errors. Note: We do the same in LowerToLLVM as well,
-// this is a striaght copy/paste including most of the comment. We might wi sh
-// to combine these if we don't want to do a DCE pass/etc.
-static void collectUnreachable(mlir::Operation *parent,
-                               llvm::SmallVector<mlir::Operation *> &ops) {
-
-  llvm::SmallVector<mlir::Block *> unreachableBlocks;
-  parent->walk([&](mlir::Block *blk) { // check
-    if (blk->hasNoPredecessors() && !blk->isEntryBlock())
-      unreachableBlocks.push_back(blk);
-  });
-
-  std::set<mlir::Block *> visited;
-  for (mlir::Block *root : unreachableBlocks) {
-    // We create a work list for each unreachable block.
-    // Thus we traverse operations in some order.
-    std::deque<mlir::Block *> workList;
-    workList.push_back(root);
-
-    while (!workList.empty()) {
-      mlir::Block *blk = workList.back();
-      workList.pop_back();
-      if (visited.count(blk))
-        continue;
-      visited.emplace(blk);
-
-      for (mlir::Operation &op : *blk)
-        ops.push_back(&op);
-
-      for (mlir::Block *succ : blk->getSuccessors())
-        workList.push_back(succ);
-    }
-  }
-}
-
 void CXXABILoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
   mlir::MLIRContext *ctx = mod.getContext();
@@ -1068,7 +1034,7 @@ void CXXABILoweringPass::runOnOperation() {
 
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(mod);
-  collectUnreachable(mod, ops);
+  cir::collectUnreachable(mod, ops);
 
   if (failed(mlir::applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();

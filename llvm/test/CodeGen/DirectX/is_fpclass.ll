@@ -38,7 +38,7 @@ define noundef i1 @isnan(float noundef %a) {
 ; CHECK-LABEL: define noundef i1 @isnan(
 ; CHECK-SAME: float noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 8, float [[A]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 8, float [[A]])
 ; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 entry:
@@ -50,7 +50,7 @@ define noundef i1 @isnanh(half noundef %a) {
 ; CHECK-LABEL: define noundef i1 @isnanh(
 ; CHECK-SAME: half noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; SM69CHECK-NEXT:  [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 8, half [[A]]) #[[ATTR0:[0-9]+]]
+; SM69CHECK-NEXT:  [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 8, half [[A]])
 ; SMOLDCHECK-NEXT: [[BITCAST:%.*]] = bitcast half [[A]] to i16
 ; SMOLDCHECK-NEXT: [[AND:%.*]] = and i16 [[BITCAST]], 31744
 ; SMOLDCHECK-NEXT: [[CMPHIGH:%.*]] = icmp eq i16 [[AND]], 31744
@@ -70,9 +70,9 @@ define noundef <2 x i1> @isnanv2(<2 x float> noundef %a) {
 ; CHECK-SAME: <2 x float> noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_I0:%.*]] = extractelement <2 x float> [[A]], i64 0
-; CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 8, float [[A_I0]]) #[[ATTR0]]
+; CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 8, float [[A_I0]])
 ; CHECK-NEXT:    [[A_I1:%.*]] = extractelement <2 x float> [[A]], i64 1
-; CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 8, float [[A_I1]]) #[[ATTR0]]
+; CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 8, float [[A_I1]])
 ; CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <2 x i1> poison, i1 [[DOTI02]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> [[DOTUPTO0]], i1 [[DOTI11]], i64 1
 ; CHECK-NEXT:    ret <2 x i1> [[TMP0]]
@@ -87,9 +87,9 @@ define noundef <2 x i1> @isnanhv2(<2 x half> noundef %a) {
 ; CHECK-SAME: <2 x half> noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_I0:%.*]] = extractelement <2 x half> [[A]], i64 0
-; SM69CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 8, half [[A_I0]]) #[[ATTR0:[0-9]+]]
+; SM69CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 8, half [[A_I0]])
 ; SM69CHECK-NEXT:    [[A_I1:%.*]] = extractelement <2 x half> [[A]], i64 1
-; SM69CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 8, half [[A_I1]]) #[[ATTR0]]
+; SM69CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 8, half [[A_I1]])
 ; SM69CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <2 x i1> poison, i1 [[DOTI02]], i64 0
 ; SM69CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> [[DOTUPTO0]], i1 [[DOTI11]], i64 1
 ; SM69CHECK-NEXT:    ret <2 x i1> [[TMP0]]
@@ -120,7 +120,7 @@ define noundef i1 @isinf(float noundef %a) {
 ; CHECK-LABEL: define noundef i1 @isinf(
 ; CHECK-SAME: float noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 9, float [[A]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 9, float [[A]])
 ; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 entry:
@@ -132,7 +132,7 @@ define noundef i1 @isinfh(half noundef %a) {
 ; CHECK-LABEL: define noundef i1 @isinfh(
 ; CHECK-SAME: half noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; SM69CHECK-NEXT:    [[ISINF:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 9, half [[A]]) #[[ATTR0]]
+; SM69CHECK-NEXT:    [[ISINF:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 9, half [[A]])
 ; SMOLDCHECK-NEXT: [[BITCAST:%.*]] = bitcast half [[A]] to i16
 ; SMOLDCHECK-NEXT: [[CMPHIGH:%.*]] = icmp eq i16 [[BITCAST]], 31744
 ; SMOLDCHECK-NEXT: [[CMPLOW:%.*]] = icmp eq i16 [[BITCAST]], -1024
@@ -150,9 +150,9 @@ define noundef <2 x i1> @isinfv2(<2 x float> noundef %a) {
 ; CHECK-SAME: <2 x float> noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_I0:%.*]] = extractelement <2 x float> [[A]], i64 0
-; CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 9, float [[A_I0]]) #[[ATTR0]]
+; CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 9, float [[A_I0]])
 ; CHECK-NEXT:    [[A_I1:%.*]] = extractelement <2 x float> [[A]], i64 1
-; CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 9, float [[A_I1]]) #[[ATTR0]]
+; CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 9, float [[A_I1]])
 ; CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <2 x i1> poison, i1 [[DOTI02]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> [[DOTUPTO0]], i1 [[DOTI11]], i64 1
 ; CHECK-NEXT:    ret <2 x i1> [[TMP0]]
@@ -166,7 +166,7 @@ define noundef i1 @isfinite(float noundef %a) {
 ; CHECK-LABEL: define noundef i1 @isfinite(
 ; CHECK-SAME: float noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 10, float [[A]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 10, float [[A]])
 ; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 entry:
@@ -178,7 +178,7 @@ define noundef i1 @isfiniteh(half noundef %a) {
 ; CHECK-LABEL: define noundef i1 @isfiniteh(
 ; CHECK-SAME: half noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; SM69CHECK-NEXT:  [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 10, half [[A]]) #[[ATTR0]]
+; SM69CHECK-NEXT:  [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 10, half [[A]])
 ; SMOLDCHECK-NEXT: [[BITCAST:%.*]] = bitcast half [[A]] to i16
 ; SMOLDCHECK-NEXT: [[AND:%.*]] = and i16 [[BITCAST]], 31744
 ; SMOLDCHECK-NEXT: [[CMPHIGH:%.*]] = icmp ne i16 [[AND]], 31744
@@ -195,9 +195,9 @@ define noundef <2 x i1> @isfinitev2(<2 x float> noundef %a) {
 ; CHECK-SAME: <2 x float> noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_I0:%.*]] = extractelement <2 x float> [[A]], i64 0
-; CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 10, float [[A_I0]]) #[[ATTR0]]
+; CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 10, float [[A_I0]])
 ; CHECK-NEXT:    [[A_I1:%.*]] = extractelement <2 x float> [[A]], i64 1
-; CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 10, float [[A_I1]]) #[[ATTR0]]
+; CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 10, float [[A_I1]])
 ; CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <2 x i1> poison, i1 [[DOTI02]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> [[DOTUPTO0]], i1 [[DOTI11]], i64 1
 ; CHECK-NEXT:    ret <2 x i1> [[TMP0]]
@@ -212,9 +212,9 @@ define noundef <2 x i1> @isfinitehv2(<2 x half> noundef %a) {
 ; CHECK-SAME: <2 x half> noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; SM69CHECK-NEXT:    [[A_I0:%.*]] = extractelement <2 x half> [[A]], i64 0
-; SM69CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 10, half [[A_I0]]) #[[ATTR0:[0-9]+]]
+; SM69CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 10, half [[A_I0]])
 ; SM69CHECK-NEXT:    [[A_I1:%.*]] = extractelement <2 x half> [[A]], i64 1
-; SM69CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 10, half [[A_I1]]) #[[ATTR0]]
+; SM69CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 10, half [[A_I1]])
 ; SM69CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <2 x i1> poison, i1 [[DOTI02]], i64 0
 ; SM69CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> [[DOTUPTO0]], i1 [[DOTI11]], i64 1
 ; SM69CHECK-NEXT:    ret <2 x i1> [[TMP0]]
@@ -240,7 +240,7 @@ define noundef i1 @isnormal(float noundef %a) {
 ; CHECK-LABEL: define noundef i1 @isnormal(
 ; CHECK-SAME: float noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 11, float [[A]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 11, float [[A]])
 ; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 entry:
@@ -252,7 +252,7 @@ define noundef i1 @isnormalh(half noundef %a) {
 ; CHECK-LABEL: define noundef i1 @isnormalh(
 ; CHECK-SAME: half noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; SM69CHECK-NEXT:  [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 11, half [[A]]) #[[ATTR0]]
+; SM69CHECK-NEXT:  [[TMP0:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 11, half [[A]])
 ; SMOLDCHECK-NEXT: [[BITCAST:%.*]] = bitcast half [[A]] to i16
 ; SMOLDCHECK-NEXT: [[AND:%.*]] = and i16 [[BITCAST]], 31744
 ; SMOLDCHECK-NEXT: [[CMPZERO:%.*]] = icmp ne i16 [[AND]], 0
@@ -271,9 +271,9 @@ define noundef <2 x i1> @isnormalv2(<2 x float> noundef %a) {
 ; CHECK-SAME: <2 x float> noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_I0:%.*]] = extractelement <2 x float> [[A]], i64 0
-; CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 11, float [[A_I0]]) #[[ATTR0]]
+; CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 11, float [[A_I0]])
 ; CHECK-NEXT:    [[A_I1:%.*]] = extractelement <2 x float> [[A]], i64 1
-; CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 11, float [[A_I1]]) #[[ATTR0]]
+; CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f32(i32 11, float [[A_I1]])
 ; CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <2 x i1> poison, i1 [[DOTI02]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> [[DOTUPTO0]], i1 [[DOTI11]], i64 1
 ; CHECK-NEXT:    ret <2 x i1> [[TMP0]]
@@ -288,9 +288,9 @@ define noundef <2 x i1> @isnormalhv2(<2 x half> noundef %a) {
 ; CHECK-SAME: <2 x half> noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_I0:%.*]] = extractelement <2 x half> [[A]], i64 0
-; SM69CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 11, half [[A_I0]]) #[[ATTR0:[0-9]+]]
+; SM69CHECK-NEXT:    [[DOTI02:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 11, half [[A_I0]])
 ; SM69CHECK-NEXT:    [[A_I1:%.*]] = extractelement <2 x half> [[A]], i64 1
-; SM69CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 11, half [[A_I1]]) #[[ATTR0]]
+; SM69CHECK-NEXT:    [[DOTI11:%.*]] = call i1 @dx.op.isSpecialFloat.f16(i32 11, half [[A_I1]])
 ; SM69CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <2 x i1> poison, i1 [[DOTI02]], i64 0
 ; SM69CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> [[DOTUPTO0]], i1 [[DOTI11]], i64 1
 ; SM69CHECK-NEXT:    ret <2 x i1> [[TMP0]]
@@ -314,6 +314,10 @@ entry:
   %0 = call <2 x i1> @llvm.is.fpclass.v2f16(<2 x half> %a, i32 264)
   ret <2 x i1> %0
 }
+
+; CHECK-DAG: declare i1 @dx.op.isSpecialFloat.f32(i32, float) #[[#ATTR0:]]
+; SM69CHECK-DAG: declare i1 @dx.op.isSpecialFloat.f16(i32, half) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
 declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32 immarg)

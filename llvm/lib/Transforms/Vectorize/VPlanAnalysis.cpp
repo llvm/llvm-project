@@ -24,23 +24,6 @@ using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
 
-VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
-    : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {
-  if (auto LoopRegion = Plan.getVectorLoopRegion()) {
-    CanonicalIVTy = LoopRegion->getCanonicalIVType();
-    return;
-  }
-
-  // If there's no loop region, retrieve the type from the trip count
-  // expression.
-  auto *TC = Plan.getTripCount();
-  if (auto *TCIRV = dyn_cast<VPIRValue>(TC)) {
-    CanonicalIVTy = TCIRV->getType();
-    return;
-  }
-  CanonicalIVTy = cast<VPExpandSCEVRecipe>(TC)->getSCEV()->getType();
-}
-
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
   Type *ResTy = inferScalarType(R->getIncomingValue(0));
   for (unsigned I = 1, E = R->getNumIncomingValues(); I != E; ++I) {
@@ -72,9 +55,17 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return SetResultTyFromOp();
 
   switch (Opcode) {
-  case Instruction::ExtractElement:
-  case Instruction::Freeze:
   case Instruction::PHI:
+    for (VPValue *Op : R->operands()) {
+      if (auto *VIR = dyn_cast<VPIRValue>(Op))
+        return VIR->getType();
+      if (auto *Ty = CachedTypes.lookup(Op))
+        return Ty;
+    }
+  LLVM_FALLTHROUGH;
+  case Instruction::ExtractElement:
+  case Instruction::InsertElement:
+  case Instruction::Freeze:
   case VPInstruction::Broadcast:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExitingIVValue:
@@ -210,7 +201,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
 }
 
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
-  assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R)) &&
+  assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R->getAsRecipe())) &&
          "Store recipes should not define any values");
   return cast<LoadInst>(&R->getIngredient())->getType();
 }
@@ -278,11 +269,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (auto *IRV = dyn_cast<VPIRValue>(V))
     return IRV->getType();
 
-  if (isa<VPSymbolicValue>(V)) {
-    // All VPValues without any underlying IR value (like the vector trip count
-    // or the backedge-taken count) have the same type as the canonical IV.
-    return CanonicalIVTy;
-  }
+  if (auto *SymbolicV = dyn_cast<VPSymbolicValue>(V))
+    return SymbolicV->getType();
 
   if (auto *RegionV = dyn_cast<VPRegionValue>(V))
     return RegionV->getType();
@@ -392,24 +380,26 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
   return Base::properlyDominates(ParentA, ParentB);
 }
 
-InstructionCost VPRegisterUsage::spillCost(VPCostContext &Ctx,
-                                           unsigned OverrideMaxNumRegs) const {
+InstructionCost
+VPRegisterUsage::spillCost(const TargetTransformInfo &TTI,
+                           TargetTransformInfo::TargetCostKind CostKind,
+                           unsigned OverrideMaxNumRegs) const {
   InstructionCost Cost;
   for (const auto &[RegClass, MaxUsers] : MaxLocalUsers) {
     unsigned AvailableRegs = OverrideMaxNumRegs > 0
                                  ? OverrideMaxNumRegs
-                                 : Ctx.TTI.getNumberOfRegisters(RegClass);
+                                 : TTI.getNumberOfRegisters(RegClass);
     if (MaxUsers > AvailableRegs) {
       // Assume that for each register used past what's available we get one
       // spill and reload.
       unsigned Spills = MaxUsers - AvailableRegs;
       InstructionCost SpillCost =
-          Ctx.TTI.getRegisterClassSpillCost(RegClass, Ctx.CostKind) +
-          Ctx.TTI.getRegisterClassReloadCost(RegClass, Ctx.CostKind);
+          TTI.getRegisterClassSpillCost(RegClass, CostKind) +
+          TTI.getRegisterClassReloadCost(RegClass, CostKind);
       InstructionCost TotalCost = Spills * SpillCost;
       LLVM_DEBUG(dbgs() << "LV(REG): Cost of " << TotalCost << " from "
                         << Spills << " spills of "
-                        << Ctx.TTI.getRegisterClassName(RegClass) << "\n");
+                        << TTI.getRegisterClassName(RegClass) << "\n");
       Cost += TotalCost;
     }
   }

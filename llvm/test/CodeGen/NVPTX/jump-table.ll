@@ -53,9 +53,8 @@ define void @foo(i32 %i) {
 ; PTX50-NEXT:    @%p4 bra $L__BB0_7;
 ; PTX50-NEXT:  // %bb.2: // %entry
 ; PTX50-NEXT:    setp.eq.b32 %p5, %r1, 1;
-; PTX50-NEXT:    @%p5 bra $L__BB0_3;
-; PTX50-NEXT:    bra.uni $L__BB0_9;
-; PTX50-NEXT:  $L__BB0_3: // %case1
+; PTX50-NEXT:    @!%p5 bra $L__BB0_9;
+; PTX50-NEXT:  // %bb.3: // %case1
 ; PTX50-NEXT:    st.global.b32 [out], 1;
 ; PTX50-NEXT:    bra.uni $L__BB0_9;
 ; PTX50-NEXT:  $L__BB0_4: // %entry
@@ -63,9 +62,8 @@ define void @foo(i32 %i) {
 ; PTX50-NEXT:    @%p2 bra $L__BB0_8;
 ; PTX50-NEXT:  // %bb.5: // %entry
 ; PTX50-NEXT:    setp.eq.b32 %p3, %r1, 3;
-; PTX50-NEXT:    @%p3 bra $L__BB0_6;
-; PTX50-NEXT:    bra.uni $L__BB0_9;
-; PTX50-NEXT:  $L__BB0_6: // %case3
+; PTX50-NEXT:    @!%p3 bra $L__BB0_9;
+; PTX50-NEXT:  // %bb.6: // %case3
 ; PTX50-NEXT:    st.global.b32 [out], 3;
 ; PTX50-NEXT:    bra.uni $L__BB0_9;
 ; PTX50-NEXT:  $L__BB0_7: // %case0
@@ -116,18 +114,18 @@ define i32 @test2(i32 %tmp158) {
 ; PTX60-NEXT:    @%p1 bra $L__BB1_4;
 ; PTX60-NEXT:  // %bb.1: // %entry
 ; PTX60-NEXT:    setp.lt.u32 %p4, %r1, 6;
-; PTX60-NEXT:    @%p4 bra $L__BB1_3;
+; PTX60-NEXT:    @%p4 bra $L__BB1_6;
 ; PTX60-NEXT:  // %bb.2: // %entry
 ; PTX60-NEXT:    setp.lt.s32 %p5, %r1, -2147483645;
-; PTX60-NEXT:    @%p5 bra $L__BB1_3;
-; PTX60-NEXT:    bra.uni $L__BB1_6;
+; PTX60-NEXT:    @%p5 bra $L__BB1_6;
+; PTX60-NEXT:    bra.uni $L__BB1_3;
 ; PTX60-NEXT:  $L__BB1_4: // %entry
 ; PTX60-NEXT:    add.s32 %r2, %r1, -120;
 ; PTX60-NEXT:    setp.gt.u32 %p2, %r2, 5;
 ; PTX60-NEXT:    @%p2 bra $L__BB1_5;
 ; PTX60-NEXT:  // %bb.12: // %entry
 ; PTX60-NEXT:    $L_brx_0: .branchtargets
-; PTX60-NEXT:     $L__BB1_3,
+; PTX60-NEXT:     $L__BB1_6,
 ; PTX60-NEXT:     $L__BB1_7,
 ; PTX60-NEXT:     $L__BB1_8,
 ; PTX60-NEXT:     $L__BB1_9,
@@ -139,15 +137,14 @@ define i32 @test2(i32 %tmp158) {
 ; PTX60-NEXT:    ret;
 ; PTX60-NEXT:  $L__BB1_5: // %entry
 ; PTX60-NEXT:    setp.eq.b32 %p3, %r1, 1024;
-; PTX60-NEXT:    @%p3 bra $L__BB1_3;
-; PTX60-NEXT:    bra.uni $L__BB1_6;
-; PTX60-NEXT:  $L__BB1_3: // %bb338
+; PTX60-NEXT:    @!%p3 bra $L__BB1_3;
+; PTX60-NEXT:  $L__BB1_6: // %bb338
 ; PTX60-NEXT:    st.param.b32 [func_retval0], 11;
 ; PTX60-NEXT:    ret;
 ; PTX60-NEXT:  $L__BB1_10: // %bb342
 ; PTX60-NEXT:    st.param.b32 [func_retval0], 15;
 ; PTX60-NEXT:    ret;
-; PTX60-NEXT:  $L__BB1_6: // %bb336
+; PTX60-NEXT:  $L__BB1_3: // %bb336
 ; PTX60-NEXT:    st.param.b32 [func_retval0], 10;
 ; PTX60-NEXT:    ret;
 ; PTX60-NEXT:  $L__BB1_8: // %bb340
@@ -171,16 +168,15 @@ define i32 @test2(i32 %tmp158) {
 ; PTX50-NEXT:    @%p1 bra $L__BB1_4;
 ; PTX50-NEXT:  // %bb.1: // %entry
 ; PTX50-NEXT:    setp.lt.u32 %p11, %r1, 6;
-; PTX50-NEXT:    @%p11 bra $L__BB1_3;
+; PTX50-NEXT:    @%p11 bra $L__BB1_15;
 ; PTX50-NEXT:  // %bb.2: // %entry
 ; PTX50-NEXT:    setp.lt.s32 %p12, %r1, -2147483645;
-; PTX50-NEXT:    @%p12 bra $L__BB1_3;
-; PTX50-NEXT:    bra.uni $L__BB1_15;
+; PTX50-NEXT:    @%p12 bra $L__BB1_15;
+; PTX50-NEXT:    bra.uni $L__BB1_3;
 ; PTX50-NEXT:  $L__BB1_4: // %entry
 ; PTX50-NEXT:    setp.gt.s32 %p2, %r1, 122;
-; PTX50-NEXT:    @%p2 bra $L__BB1_9;
-; PTX50-NEXT:    bra.uni $L__BB1_5;
-; PTX50-NEXT:  $L__BB1_9: // %entry
+; PTX50-NEXT:    @!%p2 bra $L__BB1_5;
+; PTX50-NEXT:  // %bb.9: // %entry
 ; PTX50-NEXT:    setp.gt.s32 %p3, %r1, 124;
 ; PTX50-NEXT:    @%p3 bra $L__BB1_13;
 ; PTX50-NEXT:  // %bb.10: // %entry
@@ -188,22 +184,20 @@ define i32 @test2(i32 %tmp158) {
 ; PTX50-NEXT:    @%p6 bra $L__BB1_17;
 ; PTX50-NEXT:  // %bb.11: // %entry
 ; PTX50-NEXT:    setp.eq.b32 %p7, %r1, 124;
-; PTX50-NEXT:    @%p7 bra $L__BB1_12;
-; PTX50-NEXT:    bra.uni $L__BB1_15;
-; PTX50-NEXT:  $L__BB1_12: // %bb342
+; PTX50-NEXT:    @!%p7 bra $L__BB1_3;
+; PTX50-NEXT:  // %bb.12: // %bb342
 ; PTX50-NEXT:    st.param.b32 [func_retval0], 15;
 ; PTX50-NEXT:    ret;
 ; PTX50-NEXT:  $L__BB1_5: // %entry
 ; PTX50-NEXT:    setp.eq.b32 %p8, %r1, 120;
-; PTX50-NEXT:    @%p8 bra $L__BB1_3;
+; PTX50-NEXT:    @%p8 bra $L__BB1_15;
 ; PTX50-NEXT:  // %bb.6: // %entry
 ; PTX50-NEXT:    setp.eq.b32 %p9, %r1, 121;
 ; PTX50-NEXT:    @%p9 bra $L__BB1_16;
 ; PTX50-NEXT:  // %bb.7: // %entry
 ; PTX50-NEXT:    setp.eq.b32 %p10, %r1, 122;
-; PTX50-NEXT:    @%p10 bra $L__BB1_8;
-; PTX50-NEXT:    bra.uni $L__BB1_15;
-; PTX50-NEXT:  $L__BB1_8: // %bb340
+; PTX50-NEXT:    @!%p10 bra $L__BB1_3;
+; PTX50-NEXT:  // %bb.8: // %bb340
 ; PTX50-NEXT:    st.param.b32 [func_retval0], 13;
 ; PTX50-NEXT:    ret;
 ; PTX50-NEXT:  $L__BB1_13: // %entry
@@ -211,9 +205,8 @@ define i32 @test2(i32 %tmp158) {
 ; PTX50-NEXT:    @%p4 bra $L__BB1_18;
 ; PTX50-NEXT:  // %bb.14: // %entry
 ; PTX50-NEXT:    setp.eq.b32 %p5, %r1, 1024;
-; PTX50-NEXT:    @%p5 bra $L__BB1_3;
-; PTX50-NEXT:    bra.uni $L__BB1_15;
-; PTX50-NEXT:  $L__BB1_3: // %bb338
+; PTX50-NEXT:    @!%p5 bra $L__BB1_3;
+; PTX50-NEXT:  $L__BB1_15: // %bb338
 ; PTX50-NEXT:    st.param.b32 [func_retval0], 11;
 ; PTX50-NEXT:    ret;
 ; PTX50-NEXT:  $L__BB1_17: // %bb341
@@ -222,7 +215,7 @@ define i32 @test2(i32 %tmp158) {
 ; PTX50-NEXT:  $L__BB1_18: // %bb343
 ; PTX50-NEXT:    st.param.b32 [func_retval0], 18;
 ; PTX50-NEXT:    ret;
-; PTX50-NEXT:  $L__BB1_15: // %bb336
+; PTX50-NEXT:  $L__BB1_3: // %bb336
 ; PTX50-NEXT:    st.param.b32 [func_retval0], 10;
 ; PTX50-NEXT:    ret;
 ; PTX50-NEXT:  $L__BB1_16: // %bb339

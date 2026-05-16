@@ -1183,14 +1183,10 @@ struct AAPointerInfoImpl
     auto HasKernelLifetime = [&](Value *V, Module &M) {
       if (!AA::isGPU(M))
         return false;
-      switch (AA::GPUAddressSpace(V->getType()->getPointerAddressSpace())) {
-      case AA::GPUAddressSpace::Shared:
-      case AA::GPUAddressSpace::Constant:
-      case AA::GPUAddressSpace::Local:
-        return true;
-      default:
-        return false;
-      };
+      unsigned VAS = V->getType()->getPointerAddressSpace();
+      return AA::isGPUSharedAddressSpace(M, VAS) ||
+             AA::isGPUConstantAddressSpace(M, VAS) ||
+             AA::isGPULocalAddressSpace(M, VAS);
     };
 
     // The IsLiveInCalleeCB will be used by the AA::isPotentiallyReachable query
@@ -2198,15 +2194,6 @@ bool AANoSync::isNonRelaxedAtomic(const Instruction *I) {
           Ordering != AtomicOrdering::Monotonic);
 }
 
-/// Return true if this intrinsic is nosync.  This is only used for intrinsics
-/// which would be nosync except that they have a volatile flag.  All other
-/// intrinsics are simply annotated with the nosync attribute in Intrinsics.td.
-bool AANoSync::isNoSyncIntrinsic(const Instruction *I) {
-  if (auto *MI = dyn_cast<MemIntrinsic>(I))
-    return !MI->isVolatile();
-  return false;
-}
-
 namespace {
 struct AANoSyncImpl : AANoSync {
   AANoSyncImpl(const IRPosition &IRP, Attributor &A) : AANoSync(IRP, A) {}
@@ -2370,8 +2357,11 @@ struct AANoFreeFloating : AANoFreeImpl {
         Follow = true;
         return true;
       }
-      if (isa<StoreInst>(UserI) || isa<LoadInst>(UserI))
+      if (isa<LoadInst>(UserI))
         return true;
+
+      if (isa<StoreInst>(UserI))
+        return U.getOperandNo() == StoreInst::getPointerOperandIndex();
 
       if (isa<ReturnInst>(UserI) && getIRPosition().isArgumentPosition())
         return true;
@@ -3347,6 +3337,17 @@ struct AAWillReturnImpl : public AAWillReturn {
     bool UsedAssumedInformation = false;
     if (!A.checkForAllCallLikeInstructions(CheckForWillReturn, *this,
                                            UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+
+    auto CheckForVolatile = [&](Instruction &I) {
+      // Volatile operations are not willreturn.
+      return !I.isVolatile();
+    };
+    if (!A.checkForAllInstructions(CheckForVolatile, *this,
+                                   {Instruction::Load, Instruction::Store,
+                                    Instruction::AtomicCmpXchg,
+                                    Instruction::AtomicRMW},
+                                   UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 
     return ChangeStatus::UNCHANGED;
@@ -8707,11 +8708,12 @@ void AAMemoryLocationImpl::categorizePtrValue(
 
     // Filter accesses to constant (GPU) memory if we have an AS at the access
     // site or the object is known to actually have the associated AS.
-    if ((AccessAS == (unsigned)AA::GPUAddressSpace::Constant ||
-         (ObjectAS == (unsigned)AA::GPUAddressSpace::Constant &&
-          isIdentifiedObject(&Obj))) &&
-        AA::isGPU(*I.getModule()))
-      return true;
+    if (AA::isGPU(A.getModule())) {
+      if (AA::isGPUConstantAddressSpace(A.getModule(), AccessAS) ||
+          (AA::isGPUConstantAddressSpace(A.getModule(), ObjectAS) &&
+           isIdentifiedObject(&Obj)))
+        return true;
+    }
 
     if (isa<UndefValue>(&Obj))
       return true;
@@ -12766,7 +12768,7 @@ private:
     case IRP_CALL_SITE_RETURNED: {
       const auto &CB = cast<CallBase>(getAnchorValue());
       return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-          &CB, /*MustPreserveNullness=*/false);
+          &CB, /*MustPreserveOffset=*/false);
     }
     case IRP_ARGUMENT: {
       const Function *F = getAssociatedFunction();
@@ -12901,7 +12903,7 @@ private:
 
     if (const auto *CB = dyn_cast<CallBase>(&getAnchorValue())) {
       if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-              CB, /*MustPreserveNullness=*/false)) {
+              CB, /*MustPreserveOffset=*/false)) {
         for (const Value *Arg : CB->args()) {
           if (!IsLocallyInvariantLoadIfPointer(*Arg))
             return indicatePessimisticFixpoint();
@@ -12947,7 +12949,7 @@ struct AAInvariantLoadPointerCallSiteReturned final
 
     const auto &CB = cast<CallBase>(getAnchorValue());
     if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-            &CB, /*MustPreserveNullness=*/false))
+            &CB, /*MustPreserveOffset=*/false))
       return AAInvariantLoadPointerImpl::initialize(A);
 
     if (F->onlyReadsMemory() && F->hasNoSync())

@@ -13,7 +13,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 TEST(LlvmLibcInetAton, ValidTest) {
-  in_addr a;
+  struct in_addr a;
 
   // a.b.c.d
   a.s_addr = 0;
