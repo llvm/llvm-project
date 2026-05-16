@@ -20056,6 +20056,11 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
       Divisor == APInt(Divisor.getBitWidth(), -2, /*isSigned*/ true))
     return SDValue();
 
+  unsigned Lg2 = Divisor.countr_zero();
+  APInt Pow2MinusOne = APInt::getLowBitsSet(VT.getScalarSizeInBits(), Lg2);
+  if (!isLegalAddImmediate(Pow2MinusOne.getSExtValue()))
+    return SDValue();
+
   return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
 }
 

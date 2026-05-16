@@ -125,10 +125,8 @@ define i64 @test6(i64 %x) {
 define i64 @test7(i64 %x) {
 ; ISEL-LABEL: test7:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #281474976710655 // =0xffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #16
 ; ISEL-NEXT:    asr x0, x8, #48
 ; ISEL-NEXT:    ret
 ;
