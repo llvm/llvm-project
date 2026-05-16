@@ -27,6 +27,9 @@
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "code": "-Wuninitialized",
+# CHECK-NEXT:        "data": {
+# CHECK-NEXT:          "clangdFixId": {{[0-9]+}}
+# CHECK-NEXT:        },
 # CHECK-NEXT:        "message": "Variable 'i' is uninitialized when used here (fix available)",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {

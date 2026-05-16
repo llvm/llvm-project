@@ -936,6 +936,7 @@ void ClangdLSPServer::onDocumentDidClose(
   {
     std::lock_guard<std::mutex> Lock(DiagRefMutex);
     DiagRefMap.erase(File);
+    DiagIdRefMap.erase(File);
   }
   {
     std::lock_guard<std::mutex> HLock(SemanticTokensMutex);
@@ -1770,6 +1771,22 @@ void ClangdLSPServer::profile(MemoryTree &MT) const {
 std::optional<ClangdServer::DiagRef>
 ClangdLSPServer::getDiagRef(StringRef File, const clangd::Diagnostic &D) {
   std::lock_guard<std::mutex> Lock(DiagRefMutex);
+
+  // Prefer the id-based lookup. Robust against clients that mutate the
+  // displayed message (e.g. stripping clangd's "(fix available)" suffix).
+  if (auto Id = diagFixIdFromData(D)) {
+    auto IdIter = DiagIdRefMap.find(File);
+    if (IdIter != DiagIdRefMap.end()) {
+      auto FixItsIter = IdIter->second.find(*Id);
+      if (FixItsIter != IdIter->second.end())
+        return FixItsIter->second;
+    }
+    // Fall through to legacy lookup — the id was missing from cache, which
+    // can happen if the file was reparsed between publish and codeAction.
+  }
+
+  // Fallback: (range, message) key. Used for clients that drop the data
+  // field on round-trip, and as a backup when the id is unknown.
   auto DiagToDiagRefIter = DiagRefMap.find(File);
   if (DiagToDiagRefIter == DiagRefMap.end())
     return std::nullopt;
@@ -1811,6 +1828,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
   Notification.version = decodeVersion(Version);
   Notification.uri = URIForFile::canonicalize(File, /*TUPath=*/File);
   DiagnosticToDiagRefMap LocalDiagMap; // Temporary storage
+  DiagIdToDiagRefMap LocalDiagIdMap;
   for (auto &Diag : Diagnostics) {
     toLSPDiags(Diag, Notification.uri, DiagOpts,
                [&](clangd::Diagnostic LSPDiag, llvm::ArrayRef<Fix> Fixes) {
@@ -1824,6 +1842,18 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
                    if (LSPDiag.codeActions->size() == 1)
                      LSPDiag.codeActions->front().isPreferred = true;
                  }
+                 // Stamp a unique id into Diagnostic.data only when there's
+                 // at least one Fix-It associated. We only need to look this
+                 // diagnostic up at codeAction time if it carries a fix, so
+                 // gating keeps the wire format unchanged for the common
+                 // non-fixable case and avoids churn in unrelated tests.
+                 // The id keys an alternate cache so codeAction lookup stays
+                 // robust even if the client mutates message text for display.
+                 if (!Fixes.empty()) {
+                   int64_t Id = NextDiagFixId.fetch_add(1);
+                   LSPDiag.data[DiagDataIdKey] = Id;
+                   LocalDiagIdMap[Id] = {Diag.Range, Diag.Message};
+                 }
                  LocalDiagMap[toDiagKey(LSPDiag)] = {Diag.Range, Diag.Message};
                  Notification.diagnostics.push_back(std::move(LSPDiag));
                });
@@ -1833,6 +1863,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
   {
     std::lock_guard<std::mutex> Lock(DiagRefMutex);
     DiagRefMap[File] = std::move(LocalDiagMap);
+    DiagIdRefMap[File] = std::move(LocalDiagIdMap);
   }
 
   // Send a notification to the LSP client.
