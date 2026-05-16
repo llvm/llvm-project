@@ -660,8 +660,15 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
                            const Block *B, AccessKinds AK) {
-  if (Extern && S.checkingPotentialConstantExpression())
-    return false;
+  if (S.checkingPotentialConstantExpression()) {
+    // Extern and static member declarations might be initialized later.
+    if (Extern)
+      return false;
+
+    if (const VarDecl *VD = B->getDescriptor()->asVarDecl();
+        VD && VD->isStaticDataMember())
+      return false;
+  }
 
   const Descriptor *Desc = B->getDescriptor();
 

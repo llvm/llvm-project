@@ -59,11 +59,11 @@ objects:
 # PARALLEL: DW_AT_name{{.*}}"__artificial_type_unit"
 # PARALLEL: DW_TAG_structure_type
 # PARALLEL: DW_AT_name{{.*}}"S"
-# PARALLEL: DW_TAG_member
-# PARALLEL: DW_AT_name{{.*}}"y"
 # PARALLEL: DW_TAG_variable
 # PARALLEL: DW_AT_name{{.*}}"x"
 # PARALLEL: DW_AT_declaration
+# PARALLEL: DW_TAG_member
+# PARALLEL: DW_AT_name{{.*}}"y"
 
 # PARALLEL: DW_TAG_compile_unit
 # PARALLEL: DW_AT_name{{.*}}"a.cpp"

@@ -3750,11 +3750,39 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
   modBuilder.setInsertionPointAfter(postDeallocOp);
 }
 
+static std::optional<Fortran::semantics::Symbol::Flag>
+getSingleAccDeclareMappingFlag(const Fortran::semantics::Symbol &ultimate,
+                               mlir::Location loc) {
+  std::optional<Fortran::semantics::Symbol::Flag> found;
+  for (Fortran::semantics::Symbol::Flag f : {
+           Fortran::semantics::Symbol::Flag::AccCreate,
+           Fortran::semantics::Symbol::Flag::AccCopyIn,
+           Fortran::semantics::Symbol::Flag::AccCopyInReadOnly,
+           Fortran::semantics::Symbol::Flag::AccCopy,
+           Fortran::semantics::Symbol::Flag::AccCopyOut,
+           Fortran::semantics::Symbol::Flag::AccDevicePtr,
+           Fortran::semantics::Symbol::Flag::AccDeviceResident,
+           Fortran::semantics::Symbol::Flag::AccLink,
+           Fortran::semantics::Symbol::Flag::AccPresent,
+       }) {
+    if (ultimate.test(f)) {
+      if (found.has_value()) {
+        fir::emitFatalError(
+            loc, "more than one ACC DECLARE data-mapping flag on a symbol");
+      }
+      found = f;
+    }
+  }
+  return found;
+}
+
 template <typename EntryOp, typename ExitOp>
-static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
-                           mlir::OpBuilder &modBuilder,
-                           const Fortran::parser::AccObjectList &accObjectList,
-                           mlir::acc::DataClause clause) {
+static void
+genGlobalCtors(Fortran::lower::AbstractConverter &converter,
+               mlir::OpBuilder &modBuilder,
+               const Fortran::parser::AccObjectList &accObjectList,
+               mlir::acc::DataClause clause,
+               Fortran::semantics::Symbol::Flag declareMappingFlag) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto genCtors = [&](const mlir::Location operandLocation,
                       const Fortran::semantics::Symbol &symbol) {
@@ -3824,23 +3852,76 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
               if (const auto *name =
                       Fortran::parser::GetDesignatorNameIfDataRef(designator)) {
                 genCtors(operandLocation, *name->symbol);
-              } else if (const auto *dr = std::get_if<Fortran::parser::DataRef>(
-                             &designator.u);
-                         dr &&
-                         std::holds_alternative<Fortran::common::Indirection<
-                             Fortran::parser::StructureComponent>>(dr->u)) {
+              } else if (const auto *structureComponent =
+                             Fortran::parser::Unwrap<
+                                 Fortran::parser::StructureComponent>(
+                                 designator)) {
                 const Fortran::semantics::Scope &scope =
                     converter.getCurrentScope();
-                if (scope.IsModule() || scope.IsSubmodule()) {
+                if (!scope.IsModule() && !scope.IsSubmodule()) {
                   TODO(operandLocation,
                        "OpenACC declare does not support a component reference "
-                       "in a module; `acc declare` the whole variable instead");
-                } else {
-                  TODO(operandLocation,
-                       "OpenACC declare does not support a component reference "
-                       "in this declaration context; `acc declare` the whole "
+                       "in this declaration context; ACC DECLARE the whole "
                        "variable instead");
                 }
+                const Fortran::parser::DataRef &baseRef =
+                    structureComponent->Base();
+                const auto *parentName{
+                    std::get_if<Fortran::parser::Name>(&baseRef.u)};
+                if (parentName && parentName->symbol &&
+                    structureComponent->Component().symbol) {
+                  const Fortran::semantics::Symbol &parentSym{
+                      *parentName->symbol};
+                  const Fortran::semantics::Symbol &compSym{
+                      *structureComponent->Component().symbol};
+                  if (parentSym.owner().kind() ==
+                          Fortran::semantics::Scope::Kind::Module &&
+                      parentSym.GetType()) {
+                    if (const Fortran::semantics::DerivedTypeSpec *derived{
+                            parentSym.GetType()->AsDerived()}) {
+                      if (Fortran::semantics::FindImmediateComponent(
+                              *derived,
+                              [&](const Fortran::semantics::Symbol &sym) {
+                                return sym == compSym ||
+                                       &sym.GetUltimate() ==
+                                           &compSym.GetUltimate();
+                              })) {
+                        const Fortran::semantics::Symbol &parentUlt{
+                            parentSym.GetUltimate()};
+                        if (!parentUlt.test(
+                                Fortran::semantics::Symbol::Flag::AccDeclare)) {
+                          TODO(operandLocation,
+                               "OpenACC declare: whole variable must appear in "
+                               "ACC DECLARE before a component reference; "
+                               "list the whole variable in this or an earlier "
+                               "clause");
+                        }
+                        std::optional<Fortran::semantics::Symbol::Flag>
+                            parentMapping{getSingleAccDeclareMappingFlag(
+                                parentUlt, operandLocation)};
+                        if (!parentMapping) {
+                          fir::emitFatalError(
+                              operandLocation,
+                              "parent of component reference has unexpected "
+                              "ACC DECLARE clause");
+                        }
+                        if (*parentMapping != declareMappingFlag) {
+                          TODO(operandLocation,
+                               "OpenACC declare: module structure component "
+                               "clause must match the whole variable's ACC "
+                               "DECLARE clause");
+                        }
+                        // Parent already has matching declare lowering; skip
+                        // duplicate ctor/dtor for %comp.
+                        return;
+                      }
+                    }
+                  }
+                }
+                TODO(
+                    operandLocation,
+                    "OpenACC declare does not support this component reference "
+                    "in a module; ACC DECLARE the whole variable instead");
               }
             },
             [&](const Fortran::parser::Name &name) {
@@ -3873,8 +3954,12 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
           listWithModifier.t);
   mlir::acc::DataClause dataClause =
       (modifier && (*modifier).v == mod) ? clauseWithModifier : clause;
+  Fortran::semantics::Symbol::Flag mappingFlag =
+      (modifier && (*modifier).v == mod)
+          ? Fortran::semantics::Symbol::Flag::AccCopyInReadOnly
+          : Fortran::semantics::Symbol::Flag::AccCopyIn;
   genGlobalCtors<EntryOp, ExitOp>(converter, modBuilder, accObjectList,
-                                  dataClause);
+                                  dataClause, mappingFlag);
 }
 
 template <typename EmitterFn>
@@ -4088,7 +4173,8 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
           std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
       genGlobalCtors<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
           converter, modBuilder, accObjectList,
-          mlir::acc::DataClause::acc_create);
+          mlir::acc::DataClause::acc_create,
+          Fortran::semantics::Symbol::Flag::AccCreate);
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
       genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,
@@ -4102,12 +4188,14 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       genGlobalCtors<mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeleteOp>(
           converter, modBuilder, deviceResidentClause->v,
-          mlir::acc::DataClause::acc_declare_device_resident);
+          mlir::acc::DataClause::acc_declare_device_resident,
+          Fortran::semantics::Symbol::Flag::AccDeviceResident);
     } else if (const auto *linkClause =
                    std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
       genGlobalCtors<mlir::acc::DeclareLinkOp, mlir::acc::DeclareLinkOp>(
           converter, modBuilder, linkClause->v,
-          mlir::acc::DataClause::acc_declare_link);
+          mlir::acc::DataClause::acc_declare_link,
+          Fortran::semantics::Symbol::Flag::AccLink);
     } else {
       llvm::report_fatal_error("unsupported clause on DECLARE directive");
     }

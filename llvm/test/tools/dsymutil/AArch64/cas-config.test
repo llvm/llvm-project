@@ -1,0 +1,36 @@
+# Verify that dsymutil collects .cas-config files in parent paths of
+# each debug map object and aggregates their contents into
+# Contents/Resources/CASConfigs.json inside the output dSYM bundle.
+
+# RUN: rm -rf %t.dir && mkdir -p %t.dir/sub
+# RUN: cp %p/../Inputs/DWARF5/1.o %t.dir/sub/1.o
+# RUN: echo '{"CASPath": "test-cas1"}' > %t.dir/sub/.cas-config
+# RUN: echo '{"CASPath": "test-cas2"}' > %t.dir/.cas-config
+
+# RUN: dsymutil --linker classic -y %p/dummy-debug-map-arm64.map \
+# RUN:   -oso-prepend-path=%t.dir/sub -o %t.dir/classic.dSYM
+# RUN: cat %t.dir/classic.dSYM/Contents/Resources/CASConfigs.json | FileCheck %s
+
+# RUN: rm -rf %t.dir/parallel.dSYM
+# RUN: dsymutil --linker parallel -y %p/dummy-debug-map-arm64.map \
+# RUN:   -oso-prepend-path=%t.dir/sub -o %t.dir/parallel.dSYM
+# RUN: cat %t.dir/parallel.dSYM/Contents/Resources/CASConfigs.json | FileCheck %s
+
+# CHECK: [
+# CHECK:   {"CASPath": "test-cas1"}
+# CHECK:   {"CASPath": "test-cas2"}
+# CHECK: ]
+
+# Without a .cas-config file present, no CASConfigs.json should be produced.
+
+# RUN: rm -rf %t.empty_classic && mkdir -p %t.empty_classic
+# RUN: cp %p/../Inputs/DWARF5/1.o %t.empty_classic/1.o
+# RUN: dsymutil --linker classic -y %p/dummy-debug-map-arm64.map \
+# RUN:   -oso-prepend-path=%t.empty_classic -o %t.empty_classic/out.dSYM
+# RUN: not ls %t.empty_classic/out.dSYM/Contents/Resources/CASConfigs.json
+
+# RUN: rm -rf %t.empty.parallel && mkdir -p %t.empty.parallel
+# RUN: cp %p/../Inputs/DWARF5/1.o %t.empty.parallel/1.o
+# RUN: dsymutil --linker classic -y %p/dummy-debug-map-arm64.map \
+# RUN:   -oso-prepend-path=%t.empty.parallel -o %t.empty.parallel/out.dSYM
+# RUN: not ls %t.empty.parallel/out.dSYM/Contents/Resources/CASConfigs.json

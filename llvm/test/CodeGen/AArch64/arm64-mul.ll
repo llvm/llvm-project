@@ -29,14 +29,12 @@ define i128 @t2(i64 %a, i64 %b) nounwind readnone ssp {
 ;
 ; CHECK-GI-LABEL: t2:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    umulh x8, x0, x1
 ; CHECK-GI-NEXT:    asr x9, x1, #63
-; CHECK-GI-NEXT:    asr x10, x0, #63
-; CHECK-GI-NEXT:    mul x8, x0, x1
-; CHECK-GI-NEXT:    mul x9, x0, x9
-; CHECK-GI-NEXT:    umulh x11, x0, x1
-; CHECK-GI-NEXT:    mov x0, x8
-; CHECK-GI-NEXT:    madd x9, x10, x1, x9
-; CHECK-GI-NEXT:    add x1, x9, x11
+; CHECK-GI-NEXT:    madd x8, x0, x9, x8
+; CHECK-GI-NEXT:    asr x9, x0, #63
+; CHECK-GI-NEXT:    mul x0, x0, x1
+; CHECK-GI-NEXT:    madd x1, x9, x1, x8
 ; CHECK-GI-NEXT:    ret
 entry:
   %tmp1 = sext i64 %a to i128

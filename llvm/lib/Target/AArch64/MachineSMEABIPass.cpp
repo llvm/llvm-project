@@ -475,6 +475,9 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
     auto FirstTerminatorInsertPt = MBB.getFirstTerminator();
     auto FirstNonPhiInsertPt = MBB.getFirstNonPHI();
     for (MachineInstr &MI : reverse(MBB)) {
+      if (MI.isDebugInstr())
+        continue;
+
       MachineBasicBlock::iterator MBBI(MI);
       LiveUnits.stepBackward(MI);
       LiveRegs PhysLiveRegs = getPhysLiveRegs(LiveUnits);

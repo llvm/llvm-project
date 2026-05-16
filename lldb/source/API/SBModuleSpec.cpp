@@ -117,7 +117,7 @@ const char *SBModuleSpec::GetTriple() {
   // Unique the string so we don't run into ownership issues since the const
   // strings put the string into the string pool once and the strings never
   // comes out
-  ConstString const_triple(triple.c_str());
+  ConstString const_triple(triple);
   return const_triple.GetCString();
 }
 

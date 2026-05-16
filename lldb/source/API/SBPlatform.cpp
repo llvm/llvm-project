@@ -103,7 +103,7 @@ const char *SBPlatformConnectOptions::GetURL() {
 
   if (m_opaque_ptr->m_url.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_url.c_str()).GetCString();
+  return ConstString(m_opaque_ptr->m_url).GetCString();
 }
 
 void SBPlatformConnectOptions::SetURL(const char *url) {
@@ -206,7 +206,7 @@ const char *SBPlatformShellCommand::GetShell() {
 
   if (m_opaque_ptr->m_shell.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_shell.c_str()).GetCString();
+  return ConstString(m_opaque_ptr->m_shell).GetCString();
 }
 
 void SBPlatformShellCommand::SetShell(const char *shell_interpreter) {
@@ -223,7 +223,7 @@ const char *SBPlatformShellCommand::GetCommand() {
 
   if (m_opaque_ptr->m_command.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_command.c_str()).GetCString();
+  return ConstString(m_opaque_ptr->m_command).GetCString();
 }
 
 void SBPlatformShellCommand::SetCommand(const char *shell_command) {
@@ -240,7 +240,7 @@ const char *SBPlatformShellCommand::GetWorkingDirectory() {
 
   if (m_opaque_ptr->m_working_dir.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_working_dir.c_str()).GetCString();
+  return ConstString(m_opaque_ptr->m_working_dir).GetCString();
 }
 
 void SBPlatformShellCommand::SetWorkingDirectory(const char *path) {
@@ -286,7 +286,7 @@ const char *SBPlatformShellCommand::GetOutput() {
 
   if (m_opaque_ptr->m_output.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_output.c_str()).GetCString();
+  return ConstString(m_opaque_ptr->m_output).GetCString();
 }
 
 // SBPlatform
@@ -422,7 +422,7 @@ const char *SBPlatform::GetTriple() {
     if (arch.IsValid()) {
       // Const-ify the string so we don't need to worry about the lifetime of
       // the string
-      return ConstString(arch.GetTriple().getTriple().c_str()).GetCString();
+      return ConstString(arch.GetTriple().getTriple()).GetCString();
     }
   }
   return nullptr;
@@ -452,7 +452,7 @@ const char *SBPlatform::GetOSDescription() {
     if (!s.empty()) {
       // Const-ify the string so we don't need to worry about the lifetime of
       // the string
-      return ConstString(s.c_str()).GetCString();
+      return ConstString(s).GetCString();
     }
   }
   return nullptr;

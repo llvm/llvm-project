@@ -54,7 +54,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "lib/Utils.h"
+#include "lib/IRUtils.h"
+#include "lib/MIRUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/CodeGen/CommandFlags.h"

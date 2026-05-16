@@ -453,7 +453,7 @@ protected:
         }
       }
 
-      ConstString lookup_type_name(type_str.c_str());
+      ConstString lookup_type_name(type_str);
       StackFrame *frame = m_exe_ctx.GetFramePtr();
       ModuleSP search_first;
       if (frame)

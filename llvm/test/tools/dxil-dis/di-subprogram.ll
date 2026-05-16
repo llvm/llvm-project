@@ -9,6 +9,8 @@ define float @fmaf(float %x, float %y, float %z) !dbg !4 {
 !llvm.module.flags = !{!12, !13}
 !llvm.used = !{!5}
 
+; CHECK: define float @fmaf(float %x, float %y, float %z) {
+
 ; CHECK: !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "Some Compiler", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "Some Compiler", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: !1 = !DIFile(filename: "some-source", directory: "some-path")

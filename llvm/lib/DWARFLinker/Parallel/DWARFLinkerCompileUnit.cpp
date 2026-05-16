@@ -1317,7 +1317,7 @@ std::pair<DIE *, TypeEntry *> CompileUnit::cloneDIE(
     const DWARFDebugInfoEntry *InputDieEntry, TypeEntry *ClonedParentTypeDIE,
     uint64_t OutOffset, std::optional<int64_t> FuncAddressAdjustment,
     std::optional<int64_t> VarAddressAdjustment, BumpPtrAllocator &Allocator,
-    TypeUnit *ArtificialTypeUnit) {
+    TypeUnit *ArtificialTypeUnit, uint32_t SiblingOrdinal) {
   uint32_t InputDieIdx = getDIEIndex(InputDieEntry);
   CompileUnit::DIEInfo &Info = getDIEInfo(InputDieIdx);
 
@@ -1344,7 +1344,7 @@ std::pair<DIE *, TypeEntry *> CompileUnit::cloneDIE(
 
     ClonedDIE.second = createTypeDIEandCloneAttributes(
         InputDieEntry, TypeDIEGenerator, ClonedParentTypeDIE,
-        ArtificialTypeUnit);
+        ArtificialTypeUnit, SiblingOrdinal);
   }
   TypeEntry *TypeParentForChild =
       ClonedDIE.second ? ClonedDIE.second : ClonedParentTypeDIE;
@@ -1359,13 +1359,14 @@ std::pair<DIE *, TypeEntry *> CompileUnit::cloneDIE(
 
   // Recursively clone children.
   if (HasPlainChildrenToClone || HasTypeChildrenToClone) {
+    uint32_t ChildOrdinal = 0;
     for (const DWARFDebugInfoEntry *CurChild =
              getFirstChildEntry(InputDieEntry);
          CurChild && CurChild->getAbbreviationDeclarationPtr();
-         CurChild = getSiblingEntry(CurChild)) {
+         CurChild = getSiblingEntry(CurChild), ++ChildOrdinal) {
       std::pair<DIE *, TypeEntry *> ClonedChild = cloneDIE(
           CurChild, TypeParentForChild, OutOffset, FuncAddressAdjustment,
-          VarAddressAdjustment, Allocator, ArtificialTypeUnit);
+          VarAddressAdjustment, Allocator, ArtificialTypeUnit, ChildOrdinal);
 
       if (ClonedChild.first) {
         OutOffset =
@@ -1502,7 +1503,8 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
 
 TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
     const DWARFDebugInfoEntry *InputDieEntry, DIEGenerator &TypeDIEGenerator,
-    TypeEntry *ClonedParentTypeDIE, TypeUnit *ArtificialTypeUnit) {
+    TypeEntry *ClonedParentTypeDIE, TypeUnit *ArtificialTypeUnit,
+    uint32_t SiblingOrdinal) {
   assert(ArtificialTypeUnit != nullptr);
   uint32_t InputDieIdx = getDIEIndex(InputDieEntry);
 
@@ -1513,6 +1515,25 @@ TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
       ArtificialTypeUnit->getTypePool().getOrCreateTypeEntryBody(
           Entry, ClonedParentTypeDIE);
   assert(EntryBody);
+
+  // Min-merge this child's ordinal in its parent's child list so children of
+  // record-like types (class/struct/union/interface) sort in source order.
+  // Min across CUs because Clang appends template instantiations lazily, so
+  // positions vary between CUs.
+  if (std::optional<uint32_t> ParentIdx = InputDieEntry->getParentIdx()) {
+    dwarf::Tag ParentTag = getDebugInfoEntry(*ParentIdx)->getTag();
+    if (ParentTag == dwarf::DW_TAG_structure_type ||
+        ParentTag == dwarf::DW_TAG_class_type ||
+        ParentTag == dwarf::DW_TAG_union_type ||
+        ParentTag == dwarf::DW_TAG_interface_type) {
+      uint32_t Prev = EntryBody->SortKey.load(std::memory_order_relaxed);
+      while (SiblingOrdinal < Prev &&
+             !EntryBody->SortKey.compare_exchange_weak(
+                 Prev, SiblingOrdinal, std::memory_order_relaxed,
+                 std::memory_order_relaxed))
+        ;
+    }
+  }
 
   bool IsDeclaration =
       dwarf::toUnsigned(find(InputDieEntry, dwarf::DW_AT_declaration), 0);

@@ -430,6 +430,9 @@ Changes in existing checks
   - Avoid false positives when moving object to a base type then accessing
     non-base members.
 
+  - Avoid false positives when moving object is reinitialized via the base
+    class's ``operator=``.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,

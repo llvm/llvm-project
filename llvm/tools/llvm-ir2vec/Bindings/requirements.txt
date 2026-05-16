@@ -1,0 +1,2 @@
+# BUILD dependencies
+nanobind>=2.9, <3.0

@@ -86,6 +86,89 @@ struct LogicalEquivalence {
   }
 };
 
+template <TypeCategory CAT1, int KIND1, TypeCategory CAT2>
+struct EqualityForTargetKind {
+  template <int KIND2> struct Functor {
+    RT_API_ATTRS void operator()(bool &result, const Descriptor &array,
+        const SubscriptValue at[], const Descriptor &target) const {
+      result = Equality<CAT1, KIND1, CAT2, KIND2>{}(array, at, target);
+    }
+  };
+};
+
+template <TypeCategory CAT, int KIND> class NumericFindlocAccumulator {
+public:
+  RT_API_ATTRS NumericFindlocAccumulator(const Descriptor &array,
+      const Descriptor &target, bool back, TypeCategory targetCat,
+      int targetKind, Terminator &terminator)
+      : array_{array}, target_{target}, back_{back}, targetCat_{targetCat},
+        targetKind_{targetKind}, terminator_{terminator} {}
+  RT_API_ATTRS void Reinitialize() { gotAnything_ = false; }
+  template <typename A>
+  RT_API_ATTRS void GetResult(A *p, int zeroBasedDim = -1) {
+    if (zeroBasedDim >= 0) {
+      *p = gotAnything_ ? location_[zeroBasedDim] -
+              array_.GetDimension(zeroBasedDim).LowerBound() + 1
+                        : 0;
+    } else if (gotAnything_) {
+      for (int j{0}; j < rank_; ++j) {
+        p[j] = location_[j] - array_.GetDimension(j).LowerBound() + 1;
+      }
+    } else {
+      for (int j{0}; j < rank_; ++j) {
+        p[j] = 0;
+      }
+    }
+  }
+  template <typename IGNORED>
+  RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
+    if (compareTarget(at)) {
+      gotAnything_ = true;
+      for (int j{0}; j < rank_; ++j) {
+        location_[j] = at[j];
+      }
+      return back_;
+    }
+    return true;
+  }
+
+private:
+  RT_API_ATTRS bool compareTarget(const SubscriptValue at[]) {
+    bool result{false};
+    switch (targetCat_) {
+    case TypeCategory::Integer:
+    case TypeCategory::Unsigned:
+      ApplyIntegerKind<EqualityForTargetKind<CAT, KIND,
+                           TypeCategory::Integer>::template Functor,
+          void>(targetKind_, terminator_, result, array_, at, target_);
+      break;
+    case TypeCategory::Real:
+      ApplyFloatingPointKind<EqualityForTargetKind<CAT, KIND,
+                                 TypeCategory::Real>::template Functor,
+          void>(targetKind_, terminator_, result, array_, at, target_);
+      break;
+    case TypeCategory::Complex:
+      ApplyFloatingPointKind<EqualityForTargetKind<CAT, KIND,
+                                 TypeCategory::Complex>::template Functor,
+          void>(targetKind_, terminator_, result, array_, at, target_);
+      break;
+    default:
+      break;
+    }
+    return result;
+  }
+
+  const Descriptor &array_;
+  const Descriptor &target_;
+  const bool back_{false};
+  const int rank_{array_.rank()};
+  bool gotAnything_{false};
+  SubscriptValue location_[maxRank];
+  const TypeCategory targetCat_;
+  const int targetKind_;
+  Terminator &terminator_;
+};
+
 template <typename EQUALITY> class LocationAccumulator {
 public:
   RT_API_ATTRS LocationAccumulator(
@@ -132,59 +215,18 @@ private:
   const EQUALITY equality_{};
 };
 
-template <TypeCategory XCAT, int XKIND, TypeCategory TARGET_CAT>
-struct TotalNumericFindlocHelper {
-  template <int TARGET_KIND> struct Functor {
-    RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
-        const Descriptor &target, int kind, int dim, const Descriptor *mask,
-        bool back, Terminator &terminator) const {
-      using Eq = Equality<XCAT, XKIND, TARGET_CAT, TARGET_KIND>;
-      using Accumulator = LocationAccumulator<Eq>;
-      Accumulator accumulator{x, target, back};
-      DoTotalReduction<void>(x, dim, mask, accumulator, "FINDLOC", terminator);
-      ApplyIntegerKind<LocationResultHelper<Accumulator>::template Functor,
-          void>(kind, terminator, accumulator, result);
-    }
-  };
-};
-
-template <TypeCategory CAT,
-    template <TypeCategory XCAT, int XKIND, TypeCategory TARGET_CAT>
-    class HELPER>
-struct NumericFindlocHelper {
+template <TypeCategory CAT> struct TotalNumericFindlocSource {
   template <int KIND> struct Functor {
-    // NVCC inlines more aggressively which causes too many specializations of
-    // this function to be inlined causing compiler timeouts. Set as
-    // noinline to allow compilation to complete.
     RT_API_ATTRS RT_DEVICE_NOINLINE void operator()(TypeCategory targetCat,
         int targetKind, Descriptor &result, const Descriptor &x,
         const Descriptor &target, int kind, int dim, const Descriptor *mask,
         bool back, Terminator &terminator) const {
-      switch (targetCat) {
-      case TypeCategory::Integer:
-      case TypeCategory::Unsigned:
-        ApplyIntegerKind<
-            HELPER<CAT, KIND, TypeCategory::Integer>::template Functor, void>(
-            targetKind, terminator, result, x, target, kind, dim, mask, back,
-            terminator);
-        break;
-      case TypeCategory::Real:
-        ApplyFloatingPointKind<
-            HELPER<CAT, KIND, TypeCategory::Real>::template Functor, void>(
-            targetKind, terminator, result, x, target, kind, dim, mask, back,
-            terminator);
-        break;
-      case TypeCategory::Complex:
-        ApplyFloatingPointKind<
-            HELPER<CAT, KIND, TypeCategory::Complex>::template Functor, void>(
-            targetKind, terminator, result, x, target, kind, dim, mask, back,
-            terminator);
-        break;
-      default:
-        terminator.Crash(
-            "FINDLOC: bad target category %d for array category %d",
-            static_cast<int>(targetCat), static_cast<int>(CAT));
-      }
+      using Accumulator = NumericFindlocAccumulator<CAT, KIND>;
+      Accumulator accumulator{
+          x, target, back, targetCat, targetKind, terminator};
+      DoTotalReduction<void>(x, dim, mask, accumulator, "FINDLOC", terminator);
+      ApplyIntegerKind<LocationResultHelper<Accumulator>::template Functor,
+          void>(kind, terminator, accumulator, result);
     }
   };
 };
@@ -234,20 +276,20 @@ void RTDEF(Findloc)(Descriptor &result, const Descriptor &x,
   switch (xType->first) {
   case TypeCategory::Integer:
   case TypeCategory::Unsigned:
-    ApplyIntegerKind<NumericFindlocHelper<TypeCategory::Integer,
-                         TotalNumericFindlocHelper>::template Functor,
+    ApplyIntegerKind<
+        TotalNumericFindlocSource<TypeCategory::Integer>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
         result, x, target, kind, 0, mask, back, terminator);
     break;
   case TypeCategory::Real:
-    ApplyFloatingPointKind<NumericFindlocHelper<TypeCategory::Real,
-                               TotalNumericFindlocHelper>::template Functor,
-        void>(xType->second, terminator, targetType->first, targetType->second,
+    ApplyFloatingPointKind<
+        TotalNumericFindlocSource<TypeCategory::Real>::template Functor, void>(
+        xType->second, terminator, targetType->first, targetType->second,
         result, x, target, kind, 0, mask, back, terminator);
     break;
   case TypeCategory::Complex:
-    ApplyFloatingPointKind<NumericFindlocHelper<TypeCategory::Complex,
-                               TotalNumericFindlocHelper>::template Functor,
+    ApplyFloatingPointKind<
+        TotalNumericFindlocSource<TypeCategory::Complex>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
         result, x, target, kind, 0, mask, back, terminator);
     break;
@@ -273,15 +315,15 @@ RT_EXT_API_GROUP_END
 
 // FINDLOC with DIM=
 
-template <TypeCategory XCAT, int XKIND, TypeCategory TARGET_CAT>
-struct PartialNumericFindlocHelper {
-  template <int TARGET_KIND> struct Functor {
-    RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
+template <TypeCategory CAT> struct PartialNumericFindlocSource {
+  template <int KIND> struct Functor {
+    RT_API_ATTRS RT_DEVICE_NOINLINE void operator()(TypeCategory targetCat,
+        int targetKind, Descriptor &result, const Descriptor &x,
         const Descriptor &target, int kind, int dim, const Descriptor *mask,
         bool back, Terminator &terminator) const {
-      using Eq = Equality<XCAT, XKIND, TARGET_CAT, TARGET_KIND>;
-      using Accumulator = LocationAccumulator<Eq>;
-      Accumulator accumulator{x, target, back};
+      using Accumulator = NumericFindlocAccumulator<CAT, KIND>;
+      Accumulator accumulator{
+          x, target, back, targetCat, targetKind, terminator};
       ApplyIntegerKind<PartialLocationHelper<Accumulator>::template Functor,
           void>(kind, terminator, result, x, dim, mask, terminator, "FINDLOC",
           accumulator);
@@ -325,20 +367,20 @@ void RTDEF(FindlocDim)(Descriptor &result, const Descriptor &x,
   switch (xType->first) {
   case TypeCategory::Integer:
   case TypeCategory::Unsigned:
-    ApplyIntegerKind<NumericFindlocHelper<TypeCategory::Integer,
-                         PartialNumericFindlocHelper>::template Functor,
+    ApplyIntegerKind<
+        PartialNumericFindlocSource<TypeCategory::Integer>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
         result, x, target, kind, dim, mask, back, terminator);
     break;
   case TypeCategory::Real:
-    ApplyFloatingPointKind<NumericFindlocHelper<TypeCategory::Real,
-                               PartialNumericFindlocHelper>::template Functor,
+    ApplyFloatingPointKind<
+        PartialNumericFindlocSource<TypeCategory::Real>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
         result, x, target, kind, dim, mask, back, terminator);
     break;
   case TypeCategory::Complex:
-    ApplyFloatingPointKind<NumericFindlocHelper<TypeCategory::Complex,
-                               PartialNumericFindlocHelper>::template Functor,
+    ApplyFloatingPointKind<
+        PartialNumericFindlocSource<TypeCategory::Complex>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
         result, x, target, kind, dim, mask, back, terminator);
     break;

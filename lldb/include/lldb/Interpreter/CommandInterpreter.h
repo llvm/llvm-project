@@ -478,7 +478,13 @@ public:
     return m_debugger.GetTargetList().GetSelectedTarget();
   }
 
-  ExecutionContext GetExecutionContext() const;
+  /// Returns the execution context the interpreter should run a command in.
+  /// If `adopt_dummy_target` is true and no real target is selected, the
+  /// dummy target is substituted in. Pass false from CommandObject paths
+  /// where the command hasn't opted into the dummy via
+  /// eCommandAllowsDummyTarget, so callers can't inadvertently end up
+  /// operating on the dummy.
+  ExecutionContext GetExecutionContext(bool adopt_dummy_target = true) const;
 
   lldb::PlatformSP GetPlatform(bool prefer_target_platform);
 

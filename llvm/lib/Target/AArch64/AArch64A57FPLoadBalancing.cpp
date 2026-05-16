@@ -521,7 +521,8 @@ int AArch64A57FPLoadBalancingImpl::scavengeRegister(Chain *G, Color C,
   MachineBasicBlock::iterator ChainEnd = G->end();
   while (I != ChainEnd) {
     --I;
-    Units.stepBackward(*I);
+    if (!I->isDebugInstr())
+      Units.stepBackward(*I);
   }
 
   // Check which register units are alive throughout the chain.

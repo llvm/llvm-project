@@ -61,11 +61,11 @@ body:             |
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[COPY]], [[C1]](i64)
     ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(i64) = G_ASHR [[COPY1]], [[C1]](i64)
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i64) = G_MUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(i64) = G_MUL [[ASHR]], [[COPY1]]
-    ; CHECK-NEXT: [[MUL2:%[0-9]+]]:_(i64) = G_MUL [[COPY]], [[ASHR1]]
     ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(i64) = G_UMULH [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(i64) = G_ADD [[MUL1]], [[MUL2]]
-    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(i64) = G_ADD [[ADD]], [[UMULH]]
+    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(i64) = G_MUL [[COPY]], [[ASHR1]]
+    ; CHECK-NEXT: [[MUL2:%[0-9]+]]:_(i64) = G_MUL [[ASHR]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(i64) = G_ADD [[UMULH]], [[MUL1]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(i64) = G_ADD [[ADD]], [[MUL2]]
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i64) = G_LSHR [[MUL]], [[C]](i64)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 49
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[ADD1]], [[C2]](i64)

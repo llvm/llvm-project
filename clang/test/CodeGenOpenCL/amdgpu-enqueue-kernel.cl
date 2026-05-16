@@ -129,7 +129,6 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    [[BLOCK_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK]] to ptr
 // NOCPU-NEXT:    [[BLOCK3_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK3]] to ptr
 // NOCPU-NEXT:    [[BLOCK12_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK12]] to ptr
-// NOCPU-NEXT:    [[BLOCK_SIZES_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK_SIZES]] to ptr
 // NOCPU-NEXT:    [[BLOCK21_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK21]] to ptr
 // NOCPU-NEXT:    store ptr addrspace(1) [[A]], ptr addrspace(5) [[A_ADDR]], align 8
 // NOCPU-NEXT:    store i8 [[B]], ptr addrspace(5) [[B_ADDR]], align 1
@@ -480,7 +479,6 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:    [[BLOCK_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK]] to ptr
 // GFX900-NEXT:    [[BLOCK3_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK3]] to ptr
 // GFX900-NEXT:    [[BLOCK12_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK12]] to ptr
-// GFX900-NEXT:    [[BLOCK_SIZES_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK_SIZES]] to ptr
 // GFX900-NEXT:    [[BLOCK21_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK21]] to ptr
 // GFX900-NEXT:    store ptr addrspace(1) [[A]], ptr addrspace(5) [[A_ADDR]], align 8, !tbaa [[CHARPTR_TBAA15]]
 // GFX900-NEXT:    store i8 [[B]], ptr addrspace(5) [[B_ADDR]], align 1, !tbaa [[CHAR_TBAA17]]

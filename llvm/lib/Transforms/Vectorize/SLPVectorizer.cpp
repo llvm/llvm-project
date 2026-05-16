@@ -18778,6 +18778,18 @@ static T *performExtractsShuffleAction(
 
 InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     ArrayRef<Value *> VectorizedVals) {
+  // FIXME: support buildvector of the gather nodes with struct types.
+  if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return TE->isGather() && TE->hasState() &&
+               TE->getOpcode() == Instruction::Call &&
+               isa<StructType>(TE->getMainOp()->getType());
+      })) {
+    LLVM_DEBUG(
+        dbgs() << "SLP: rejecting tree with buildvector struct values of size "
+               << VectorizableTree.size() << ".\n");
+    return InstructionCost::getInvalid();
+  }
+
   SmallDenseMap<const TreeEntry *, InstructionCost> NodesCosts;
   SmallPtrSet<Value *, 4> CheckedExtracts;
   SmallSetVector<TreeEntry *, 4> GatheredLoadsNodes;
@@ -19139,11 +19151,21 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
         IsEqualCostAltShuffleToTrim()) {
       PreferTrimmedTree |= TotalSubtreeCost == GatherCost;
       // If the remaining tree is just a buildvector - exit, it will cause
-      // endless attempts to vectorize.
+      // endless attempts to vectorize. When the tree is already profitable,
+      // skip trimming this node and let the post-loop logic (including
+      // gathered loads processing) decide.
       if (VectorizableTree.front()->hasState() &&
           VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
-          TE->Idx == 1)
+          TE->Idx == 1) {
+        if (Cost < -SLPCostThreshold) {
+          LLVM_DEBUG(dbgs() << "SLP: Skipping trim of node " << TE->Idx
+                            << " - tree already profitable with cost " << Cost
+                            << ".\n");
+          Worklist.pop();
+          continue;
+        }
         return InstructionCost::getInvalid();
+      }
 
       LLVM_DEBUG(dbgs() << "SLP: Trimming unprofitable subtree at node "
                         << TE->Idx << " with cost "

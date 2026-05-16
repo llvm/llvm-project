@@ -11,6 +11,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DJB.h"
@@ -98,14 +99,15 @@ public:
       // Since the entry is read only, and we derive the entry entirely from
       // the pointer, we don't need the lock.
       const StringPoolEntryType &entry = GetStringMapEntryFromKeyData(ccstr);
-      return entry.getKey().size();
+      return entry.getKeyLength();
     }
     return 0;
   }
 
-  StringPoolValueType GetMangledCounterpart(const char *ccstr) {
+  StringPoolValueType GetMangledCounterpart(llvm::StringRef str) {
+    const char *const ccstr = str.data();
     if (ccstr != nullptr) {
-      const PoolEntry &pool = selectPool(llvm::StringRef(ccstr));
+      const PoolEntry &pool = selectPool(str);
       std::shared_lock<PoolMutex> lock(pool.m_mutex);
       return GetStringMapEntryFromKeyData(ccstr).getValue();
     }
@@ -146,10 +148,10 @@ public:
     return nullptr;
   }
 
-  const char *
-  GetConstCStringAndSetMangledCounterPart(llvm::StringRef demangled,
-                                          const char *mangled_ccstr) {
+  const char *GetConstCStringAndSetMangledCounterPart(llvm::StringRef demangled,
+                                                      llvm::StringRef mangled) {
     const char *demangled_ccstr = nullptr;
+    const char *const mangled_ccstr = mangled.data();
 
     {
       const uint32_t demangled_hash = StringPool::hash(demangled);
@@ -170,7 +172,7 @@ public:
     {
       // Now assign the demangled const string as the counterpart of the
       // mangled const string...
-      PoolEntry &pool = selectPool(llvm::StringRef(mangled_ccstr));
+      PoolEntry &pool = selectPool(mangled);
       std::lock_guard<PoolMutex> lock(pool.m_mutex);
       GetStringMapEntryFromKeyData(mangled_ccstr).setValue(demangled_ccstr);
     }
@@ -341,11 +343,11 @@ void ConstString::SetString(llvm::StringRef s) {
 void ConstString::SetStringWithMangledCounterpart(llvm::StringRef demangled,
                                                   ConstString mangled) {
   m_string = StringPool().GetConstCStringAndSetMangledCounterPart(
-      demangled, mangled.m_string);
+      demangled, mangled.GetStringRef());
 }
 
 bool ConstString::GetMangledCounterpart(ConstString &counterpart) const {
-  counterpart.m_string = StringPool().GetMangledCounterpart(m_string);
+  counterpart.m_string = StringPool().GetMangledCounterpart(GetStringRef());
   return (bool)counterpart;
 }
 

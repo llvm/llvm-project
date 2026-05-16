@@ -919,7 +919,7 @@ static Address castToBase(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
   BaseTy = BaseTy.getNonReferenceType();
   while ((BaseTy->isPointerType() || BaseTy->isReferenceType()) &&
          !CGF.getContext().hasSameType(BaseTy, ElTy)) {
-    Tmp = CGF.CreateMemTemp(BaseTy);
+    Tmp = CGF.CreateMemTempWithoutCast(BaseTy);
     if (TopTmp.isValid())
       CGF.Builder.CreateStore(Tmp.getPointer(), TopTmp);
     else
@@ -2059,7 +2059,8 @@ Address CGOpenMPRuntime::emitThreadIDAddress(CodeGenFunction &CGF,
   llvm::Value *ThreadID = getThreadID(CGF, Loc);
   QualType Int32Ty =
       CGF.getContext().getIntTypeForBitwidth(/*DestWidth*/ 32, /*Signed*/ true);
-  Address ThreadIDTemp = CGF.CreateMemTemp(Int32Ty, /*Name*/ ".threadid_temp.");
+  Address ThreadIDTemp =
+      CGF.CreateMemTempWithoutCast(Int32Ty, /*Name*/ ".threadid_temp.");
   CGF.EmitStoreOfScalar(ThreadID,
                         CGF.MakeAddrLValue(ThreadIDTemp, Int32Ty));
 
@@ -2338,7 +2339,7 @@ void CGOpenMPRuntime::emitSingleRegion(CodeGenFunction &CGF,
     // int32 did_it = 0;
     QualType KmpInt32Ty =
         C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1);
-    DidIt = CGF.CreateMemTemp(KmpInt32Ty, ".omp.copyprivate.did_it");
+    DidIt = CGF.CreateMemTempWithoutCast(KmpInt32Ty, ".omp.copyprivate.did_it");
     CGF.Builder.CreateStore(CGF.Builder.getInt32(0), DidIt);
   }
   // Prepare arguments and build a call to __kmpc_single
@@ -2365,8 +2366,8 @@ void CGOpenMPRuntime::emitSingleRegion(CodeGenFunction &CGF,
         C.VoidPtrTy, ArraySize, nullptr, ArraySizeModifier::Normal,
         /*IndexTypeQuals=*/0);
     // Create a list of all private variables for copyprivate.
-    Address CopyprivateList =
-        CGF.CreateMemTemp(CopyprivateArrayTy, ".omp.copyprivate.cpr_list");
+    Address CopyprivateList = CGF.CreateMemTempWithoutCast(
+        CopyprivateArrayTy, ".omp.copyprivate.cpr_list");
     for (unsigned I = 0, E = CopyprivateVars.size(); I < E; ++I) {
       Address Elem = CGF.Builder.CreateConstArrayGEP(CopyprivateList, I);
       CGF.Builder.CreateStore(
@@ -3993,8 +3994,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
           KmpTaskAffinityInfoTy,
           llvm::APInt(C.getTypeSize(C.getSizeType()), NumAffinities), nullptr,
           ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
-      AffinitiesArray =
-          CGF.CreateMemTemp(KmpTaskAffinityInfoArrayTy, ".affs.arr.addr");
+      AffinitiesArray = CGF.CreateMemTempWithoutCast(KmpTaskAffinityInfoArrayTy,
+                                                     ".affs.arr.addr");
       AffinitiesArray = CGF.Builder.CreateConstArrayGEP(AffinitiesArray, 0);
       NumOfElements = llvm::ConstantInt::get(CGM.Int32Ty, NumAffinities,
                                              /*isSigned=*/false);
@@ -4031,7 +4032,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     LValue PosLVal;
     if (HasIterator) {
       PosLVal = CGF.MakeAddrLValue(
-          CGF.CreateMemTemp(C.getSizeType(), "affs.counter.addr"),
+          CGF.CreateMemTempWithoutCast(C.getSizeType(), "affs.counter.addr"),
           C.getSizeType());
       CGF.EmitStoreOfScalar(llvm::ConstantInt::get(CGF.SizeTy, Pos), PosLVal);
     }
@@ -4309,7 +4310,7 @@ SmallVector<llvm::Value *, 4> CGOpenMPRuntime::emitDepobjElementsSizes(
       std::tie(NumDeps, Base) =
           getDepobjElements(CGF, DepobjLVal, E->getExprLoc());
       LValue NumLVal = CGF.MakeAddrLValue(
-          CGF.CreateMemTemp(C.getUIntPtrType(), "depobj.size.addr"),
+          CGF.CreateMemTempWithoutCast(C.getUIntPtrType(), "depobj.size.addr"),
           C.getUIntPtrType());
       CGF.Builder.CreateStore(llvm::ConstantInt::get(CGF.IntPtrTy, 0),
                               NumLVal.getAddress());
@@ -4454,7 +4455,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
         KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies), nullptr,
         ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
     DependenciesArray =
-        CGF.CreateMemTemp(KmpDependInfoArrayTy, ".dep.arr.addr");
+        CGF.CreateMemTempWithoutCast(KmpDependInfoArrayTy, ".dep.arr.addr");
     DependenciesArray = CGF.Builder.CreateConstArrayGEP(DependenciesArray, 0);
     NumOfElements = llvm::ConstantInt::get(CGM.Int32Ty, NumDependencies,
                                            /*isSigned=*/false);
@@ -4467,7 +4468,8 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
   }
   // Copy regular dependencies with iterators.
   LValue PosLVal = CGF.MakeAddrLValue(
-      CGF.CreateMemTemp(C.getSizeType(), "dep.counter.addr"), C.getSizeType());
+      CGF.CreateMemTempWithoutCast(C.getSizeType(), "dep.counter.addr"),
+      C.getSizeType());
   CGF.EmitStoreOfScalar(llvm::ConstantInt::get(CGF.SizeTy, Pos), PosLVal);
   for (const OMPTaskDataTy::DependData &Dep : Dependencies) {
     if (Dep.DepKind == OMPC_DEPEND_depobj || !Dep.IteratorExpr)
@@ -4558,7 +4560,7 @@ Address CGOpenMPRuntime::emitDepobjDependClause(
   LValue PosLVal;
   if (Dependencies.IteratorExpr) {
     PosLVal = CGF.MakeAddrLValue(
-        CGF.CreateMemTemp(C.getSizeType(), "iterator.counter.addr"),
+        CGF.CreateMemTempWithoutCast(C.getSizeType(), "iterator.counter.addr"),
         C.getSizeType());
     CGF.EmitStoreOfScalar(llvm::ConstantInt::get(CGF.SizeTy, Idx), PosLVal,
                           /*IsInit=*/true);

@@ -132,7 +132,8 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                  // operator, test for built-in assignment as well, since
                  // template functions may be instantiated to use std::move() on
                  // built-in types.
-                 binaryOperation(hasOperatorName("="), hasLHS(DeclRefMatcher)),
+                 binaryOperation(hasOperatorName("="),
+                                 hasLHS(ignoringParenImpCasts(DeclRefMatcher))),
                  // Declaration. We treat this as a type of reinitialization
                  // too, so we don't need to treat it separately.
                  declStmt(hasDescendant(equalsNode(MovedVariable))),

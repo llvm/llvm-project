@@ -1258,6 +1258,13 @@ bool TargetLowering::SimplifyDemandedBits(
     Known = KnownScl.trunc(BitWidth);
     break;
   }
+  case ISD::FREEZE: {
+    SDValue N0 = Op.getOperand(0);
+    if (TLO.DAG.isGuaranteedNotToBeUndefOrPoison(
+            N0, DemandedElts, UndefPoisonKind::UndefOrPoison, Depth + 1))
+      return TLO.CombineTo(Op, N0);
+    break;
+  }
   case ISD::LOAD: {
     auto *LD = cast<LoadSDNode>(Op);
     if (getTargetConstantFromLoad(LD)) {

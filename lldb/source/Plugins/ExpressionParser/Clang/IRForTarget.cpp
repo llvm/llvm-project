@@ -891,8 +891,7 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
       m_decl_map->GetTypeSystem()->GetType(decl->getType()));
 
   StringRef decl_name(decl->getName());
-  lldb_private::ConstString persistent_variable_name(decl_name.data(),
-                                                     decl_name.size());
+  lldb_private::ConstString persistent_variable_name(decl_name);
   if (!m_decl_map->AddPersistentVariable(decl, persistent_variable_name,
                                          result_decl_type, false, false))
     return false;
@@ -1074,7 +1073,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
 bool IRForTarget::HandleSymbol(Value *symbol) {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
-  lldb_private::ConstString name(symbol->getName().str().c_str());
+  lldb_private::ConstString name(symbol->getName());
 
   lldb::addr_t symbol_addr =
       m_decl_map->GetSymbolAddress(name, lldb::eSymbolTypeAny);
@@ -1138,7 +1137,7 @@ bool IRForTarget::HandleObjCClass(Value *classlist_reference) {
     return false;
 
   StringRef name(initializer->getName());
-  lldb_private::ConstString name_cstr(name.str().c_str());
+  lldb_private::ConstString name_cstr(name);
   lldb::addr_t class_ptr =
       m_decl_map->GetSymbolAddress(name_cstr, lldb::eSymbolTypeObjCClass);
 

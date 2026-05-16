@@ -2923,7 +2923,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
             new lldb_private::DataBufferHeap(&addr, sizeof(lldb::addr_t)));
         m_addr_of_valobj_sp = ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            compiler_type.GetPointerType(), ConstString(name.c_str()), buffer,
+            compiler_type.GetPointerType(), ConstString(name), buffer,
             endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize(),
             LLDB_INVALID_ADDRESS, this->GetManager());
       }
