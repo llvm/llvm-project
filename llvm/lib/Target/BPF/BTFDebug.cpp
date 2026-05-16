@@ -19,11 +19,14 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LineIterator.h"
@@ -32,6 +35,11 @@
 #include <optional>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "btf-debug"
+
+#define GET_CC_REGISTER_LISTS
+#include "BPFGenCallingConv.inc"
 
 static const char *BTFKindStr[] = {
 #define HANDLE_BTF_KIND(ID, NAME) "BTF_KIND_" #NAME,
@@ -45,6 +53,145 @@ static const DIType *tryRemoveAtomicType(const DIType *Ty) {
   if (DerivedTy && DerivedTy->getTag() == dwarf::DW_TAG_atomic_type)
     return DerivedTy->getBaseType();
   return Ty;
+}
+
+static const DIType *stripDITypeAttributes(const DIType *Ty) {
+  while (const auto *DTy = dyn_cast_or_null<DIDerivedType>(Ty)) {
+    switch (DTy->getTag()) {
+    case dwarf::DW_TAG_atomic_type:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_volatile_type:
+      Ty = DTy->getBaseType();
+      break;
+    default:
+      return Ty;
+    }
+  }
+  return Ty;
+}
+
+static bool sourceArgMatchesIRType(const DIType *SourceTy, Type *IRTy) {
+  SourceTy = stripDITypeAttributes(SourceTy);
+
+  // All pointers are opaque in LLVM IR, so any source-level pointer matches any
+  // IR pointer regardless of pointee type.
+  if (const auto *DTy = dyn_cast<DIDerivedType>(SourceTy))
+    return DTy->getTag() == dwarf::DW_TAG_pointer_type && IRTy->isPointerTy();
+
+  if (const auto *BTy = dyn_cast<DIBasicType>(SourceTy)) {
+    uint64_t SizeInBits = BTy->getSizeInBits();
+    if (BTy->getEncoding() == dwarf::DW_ATE_float)
+      return IRTy->isFloatingPointTy() &&
+             IRTy->getPrimitiveSizeInBits() == SizeInBits;
+    // _Bool is 8 bits in DWARF/source but lowered to i1 in LLVM IR.
+    if (BTy->getEncoding() == dwarf::DW_ATE_boolean && IRTy->isIntegerTy(1))
+      return true;
+    return IRTy->isIntegerTy(SizeInBits);
+  }
+
+  const auto *CTy = dyn_cast<DICompositeType>(SourceTy);
+  if (!CTy)
+    return false;
+
+  switch (CTy->getTag()) {
+  case dwarf::DW_TAG_enumeration_type:
+    return IRTy->isIntegerTy(CTy->getSizeInBits());
+  default:
+    return false;
+  }
+}
+
+/// Collect the physical register each source argument lives in by scanning
+/// DBG_VALUE instructions in the entry block.  A DBG_VALUE is only recorded
+/// when its register either (a) has not been redefined by any preceding
+/// non-debug instruction (i.e. it still holds the caller-passed value), or
+/// (b) was most recently loaded from the stack via $r11 (a stack-passed
+/// argument beyond the first five register args).
+static SmallDenseMap<uint32_t, Register>
+collectNocallEntryArgRegs(const MachineFunction &MF) {
+  SmallDenseMap<uint32_t, Register> EntryRegMap;
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  SmallDenseSet<Register> DefinedRegs, StackLoadRegs;
+
+  for (const MachineInstr &MI : MF.front()) {
+    if (MI.isDebugValue()) {
+      // Skip indirect DBG_VALUEs — the register is a base address for a
+      // memory location, not the argument value itself.
+      if (MI.isIndirectDebugValue())
+        continue;
+
+      const DILocalVariable *DV = MI.getDebugVariable();
+      if (!DV || !DV->getArg() || DV->getScope()->getSubprogram() != SP)
+        continue;
+
+      uint32_t Arg = DV->getArg();
+      const MachineOperand &MO = MI.getDebugOperand(0);
+      if (!MO.isReg() || !MO.getReg().isPhysical())
+        continue;
+
+      if (!DefinedRegs.contains(MO.getReg()) ||
+          StackLoadRegs.contains(MO.getReg()))
+        EntryRegMap[Arg] = MO.getReg();
+      continue;
+    }
+
+    for (const MachineOperand &MO : MI.operands())
+      if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical()) {
+        DefinedRegs.insert(MO.getReg());
+        StackLoadRegs.erase(MO.getReg());
+      }
+
+    // Detect stack argument loads: $rX = LDD $r11, offset.
+    if (MI.getOpcode() == BPF::LDD && MI.getOperand(1).getReg() == BPF::R11)
+      StackLoadRegs.insert(MI.getOperand(0).getReg());
+  }
+  return EntryRegMap;
+}
+
+/// Check whether the optimized IR signature matches the surviving source
+/// arguments precisely enough to emit a filtered BTF prototype.
+/// Requires exact IR/source arg count match, matching types, and correct
+/// BPF register order (R1..R5) for register args.
+static bool canUseNocallOptimizedSignature(
+    const MachineFunction &MF, DITypeArray Elements,
+    ArrayRef<uint32_t> SortedAlive,
+    const SmallDenseMap<uint32_t, Register> &EntryRegMap,
+    const TargetRegisterInfo &TRI) {
+  if (MF.getFunction().arg_size() != SortedAlive.size()) {
+    LLVM_DEBUG(dbgs() << "BTF skip " << MF.getName() << ": IR arg count ("
+                      << MF.getFunction().arg_size() << ") != alive arg count ("
+                      << SortedAlive.size() << ")\n");
+    return false;
+  }
+
+  auto ArgIt = MF.getFunction().arg_begin();
+  for (unsigned I = 0, N = SortedAlive.size(); I < N; ++I, ++ArgIt) {
+    uint32_t ArgNo = SortedAlive[I];
+    if (!sourceArgMatchesIRType(Elements[ArgNo], ArgIt->getType())) {
+      LLVM_DEBUG(dbgs() << "BTF skip " << MF.getName()
+                        << ": type mismatch for source arg " << ArgNo
+                        << " at IR position " << I << "\n");
+      return false;
+    }
+
+    if (I >= std::size(CC_BPF64_ArgRegs))
+      continue;
+
+    auto It = EntryRegMap.find(ArgNo);
+    assert(It != EntryRegMap.end() &&
+           "register arg must have entry-block DBG_VALUE");
+    int DwarfReg = TRI.getDwarfRegNum(It->second, false);
+    if (DwarfReg != static_cast<int>(I + 1)) {
+      LLVM_DEBUG(dbgs() << "BTF skip " << MF.getName() << ": arg " << ArgNo
+                        << " in DWARF reg " << DwarfReg << ", expected "
+                        << (I + 1) << "\n");
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /// Emit a BTF common type.
@@ -398,8 +545,12 @@ std::string BTFTypeStruct::getName() { return std::string(STy->getName()); }
 /// for subprogram.
 BTFTypeFuncProto::BTFTypeFuncProto(
     const DISubroutineType *STy, uint32_t VLen,
-    const std::unordered_map<uint32_t, StringRef> &FuncArgNames)
-    : STy(STy), FuncArgNames(FuncArgNames) {
+    const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
+    bool UseFilteredParams, ArrayRef<uint32_t> AliveParamIndices,
+    bool ChangedToVoid)
+    : STy(STy), FuncArgNames(FuncArgNames),
+      AliveParamIndices(AliveParamIndices),
+      UseFilteredParams(UseFilteredParams), ChangedToVoid(ChangedToVoid) {
   Kind = BTF::BTF_KIND_FUNC_PROTO;
   BTFType.Info = (Kind << 24) | VLen;
 }
@@ -410,24 +561,37 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
 
   DITypeArray Elements = STy->getTypeArray();
-  auto RetType = tryRemoveAtomicType(Elements[0]);
-  BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
+  if (ChangedToVoid) {
+    BTFType.Type = 0;
+  } else {
+    auto RetType = tryRemoveAtomicType(Elements[0]);
+    BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
+  }
   BTFType.NameOff = 0;
 
-  // For null parameter which is typically the last one
-  // to represent the vararg, encode the NameOff/Type to be 0.
-  for (unsigned I = 1, N = Elements.size(); I < N; ++I) {
+  auto EmitParam = [&](uint32_t I) {
     struct BTF::BTFParam Param;
     auto Element = tryRemoveAtomicType(Elements[I]);
     if (Element) {
-      Param.NameOff = BDebug.addString(FuncArgNames[I]);
+      auto It = FuncArgNames.find(I);
+      Param.NameOff =
+          It != FuncArgNames.end() ? BDebug.addString(It->second) : 0;
       Param.Type = BDebug.getTypeId(Element);
     } else {
       Param.NameOff = 0;
       Param.Type = 0;
     }
     Parameters.push_back(Param);
+  };
+
+  if (UseFilteredParams) {
+    for (uint32_t I : AliveParamIndices)
+      EmitParam(I);
+    return;
   }
+
+  for (unsigned I = 1, N = Elements.size(); I < N; ++I)
+    EmitParam(I);
 }
 
 void BTFTypeFuncProto::emitType(MCStreamer &OS) {
@@ -626,8 +790,8 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
 /// Handle subprogram or subroutine types.
 void BTFDebug::visitSubroutineType(
     const DISubroutineType *STy, bool ForSubprog,
-    const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
-    uint32_t &TypeId) {
+    const SmallDenseMap<uint32_t, StringRef> &FuncArgNames, uint32_t &TypeId,
+    bool ChangedToVoid) {
   DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
   if (VLen > BTF::MAX_VLEN)
@@ -637,15 +801,20 @@ void BTFDebug::visitSubroutineType(
   // a function pointer has an empty name. The subprogram type will
   // not be added to DIToIdMap as it should not be referenced by
   // any other types.
-  auto TypeEntry = std::make_unique<BTFTypeFuncProto>(STy, VLen, FuncArgNames);
+  auto TypeEntry = std::make_unique<BTFTypeFuncProto>(
+      STy, VLen, FuncArgNames, false, ArrayRef<uint32_t>(), ChangedToVoid);
   if (ForSubprog)
     TypeId = addType(std::move(TypeEntry)); // For subprogram
   else
     TypeId = addType(std::move(TypeEntry), STy); // For func ptr
 
   // Visit return type and func arg types.
-  for (const auto Element : Elements) {
-    visitTypeEntry(Element);
+  if (!ChangedToVoid) {
+    for (const auto Element : Elements)
+      visitTypeEntry(Element);
+  } else {
+    for (unsigned I = 1, N = Elements.size(); I < N; ++I)
+      visitTypeEntry(Elements[I]);
   }
 }
 
@@ -668,8 +837,9 @@ void BTFDebug::processDeclAnnotations(DINodeArray Annotations,
   }
 }
 
-uint32_t BTFDebug::processDISubprogram(const DISubprogram *SP,
-                                       uint32_t ProtoTypeId, uint8_t Scope) {
+uint32_t BTFDebug::processDISubprogram(
+    const DISubprogram *SP, uint32_t ProtoTypeId, uint8_t Scope,
+    const SmallDenseMap<uint32_t, uint32_t> *ArgIndexMap) {
   auto FuncTypeEntry =
       std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
   uint32_t FuncId = addType(std::move(FuncTypeEntry));
@@ -678,8 +848,15 @@ uint32_t BTFDebug::processDISubprogram(const DISubprogram *SP,
   for (const DINode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       uint32_t Arg = DV->getArg();
-      if (Arg)
-        processDeclAnnotations(DV->getAnnotations(), FuncId, Arg - 1);
+      if (Arg) {
+        if (ArgIndexMap) {
+          auto It = ArgIndexMap->find(Arg);
+          if (It != ArgIndexMap->end())
+            processDeclAnnotations(DV->getAnnotations(), FuncId, It->second);
+        } else {
+          processDeclAnnotations(DV->getAnnotations(), FuncId, Arg - 1);
+        }
+      }
     }
   }
   processDeclAnnotations(SP->getAnnotations(), FuncId, -1);
@@ -1036,7 +1213,7 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
   if (const auto *BTy = dyn_cast<DIBasicType>(Ty))
     visitBasicType(BTy, TypeId);
   else if (const auto *STy = dyn_cast<DISubroutineType>(Ty))
-    visitSubroutineType(STy, false, std::unordered_map<uint32_t, StringRef>(),
+    visitSubroutineType(STy, false, SmallDenseMap<uint32_t, StringRef>(),
                         TypeId);
   else if (const auto *CTy = dyn_cast<DICompositeType>(Ty))
     visitCompositeType(CTy, TypeId);
@@ -1331,7 +1508,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   // Collect all types locally referenced in this function.
   // Use RetainedNodes so we can collect all argument names
   // even if the argument is not used.
-  std::unordered_map<uint32_t, StringRef> FuncArgNames;
+  SmallDenseMap<uint32_t, StringRef> FuncArgNames;
   for (const DINode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       // Collect function arguments for subprogram func type.
@@ -1344,12 +1521,59 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   }
 
   // Construct subprogram func proto type.
-  uint32_t ProtoTypeId;
-  visitSubroutineType(SP->getType(), true, FuncArgNames, ProtoTypeId);
-
-  // Construct subprogram func type
+  uint32_t ProtoTypeId, FuncTypeId;
   uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
-  uint32_t FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope);
+  bool IsNocall = SP->getType()->getCC() == dwarf::DW_CC_nocall;
+  bool UseFilteredParams = false;
+  bool ChangedToVoid = false;
+
+  if (IsNocall) {
+    // For DW_CC_nocall functions, try to build a FUNC_PROTO reflecting
+    // the true ABI: only parameters that survived optimization and whose
+    // first 5 arguments map to the correct BPF registers (R1-R5).
+    const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+    DITypeArray Elements = SP->getType()->getTypeArray();
+
+    // Check if DeadArgumentElimination changed the return type to void.
+    ChangedToVoid =
+        MF->getFunction().getReturnType()->isVoidTy() && Elements[0] != nullptr;
+
+    SmallDenseMap<uint32_t, Register> EntryRegMap =
+        collectNocallEntryArgRegs(*MF);
+
+    SmallVector<uint32_t, 8> SortedAlive;
+    for (const auto &[ArgNo, Reg] : EntryRegMap)
+      SortedAlive.push_back(ArgNo);
+    llvm::sort(SortedAlive);
+
+    UseFilteredParams = canUseNocallOptimizedSignature(
+        *MF, Elements, SortedAlive, EntryRegMap, *TRI);
+
+    if (UseFilteredParams) {
+      SmallDenseMap<uint32_t, uint32_t> ArgIndexMap;
+      for (uint32_t I = 0; I < SortedAlive.size(); ++I)
+        ArgIndexMap[SortedAlive[I]] = I;
+
+      if (!ChangedToVoid)
+        visitTypeEntry(Elements[0]);
+      for (uint32_t ArgNo : SortedAlive)
+        visitTypeEntry(Elements[ArgNo]);
+
+      auto TypeEntry = std::make_unique<BTFTypeFuncProto>(
+          SP->getType(), SortedAlive.size(), FuncArgNames, true, SortedAlive,
+          ChangedToVoid);
+      ProtoTypeId = addType(std::move(TypeEntry));
+      FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope, &ArgIndexMap);
+    }
+  }
+
+  if (!UseFilteredParams) {
+    // Fall back to the full source prototype, still voiding the return
+    // type if compiler removed it.
+    visitSubroutineType(SP->getType(), true, FuncArgNames, ProtoTypeId,
+                        ChangedToVoid);
+    FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope);
+  }
 
   for (const auto &TypeEntry : TypeEntries)
     TypeEntry->completeType(*this);
@@ -1713,7 +1937,7 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
     return;
 
   uint32_t ProtoTypeId;
-  const std::unordered_map<uint32_t, StringRef> FuncArgNames;
+  const SmallDenseMap<uint32_t, StringRef> FuncArgNames;
   visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
   uint32_t FuncId = processDISubprogram(SP, ProtoTypeId, BTF::FUNC_EXTERN);
 
