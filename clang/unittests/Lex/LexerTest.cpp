@@ -878,8 +878,8 @@ TEST_F(LexerTest, FindEndOfIdentifierContinuation) {
 
   // UTF-8 identifier characters.
   LangOpts.CPlusPlus = true;
-  EXPECT_EQ(Measure("ab🙂cd", 2), 6u); // '🙂' (4 bytes) + "cd".
-  EXPECT_EQ(Measure("🙂cd", 0), 6u);   // Starts with '🙂'.
+  EXPECT_EQ(Measure("naïve", 2), 4u); // 'ï' (2 bytes) + "ve".
+  EXPECT_EQ(Measure("æon", 0), 4u);   // Starts with 'æ' (2 bytes).
 
   // Dollar sign (requires DollarIdents).
   LangOpts.DollarIdents = true;

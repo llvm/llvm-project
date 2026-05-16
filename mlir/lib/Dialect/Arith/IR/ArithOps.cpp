@@ -492,6 +492,80 @@ void arith::AddUIExtendedOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>>
+arith::SubUIExtendedOp::getShapeForUnroll() {
+  if (auto vt = dyn_cast<VectorType>(getType(0)))
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
+// Returns the borrow bit, assuming `lhs` and `rhs` are operands of an unsigned
+// subtraction whose mathematical result underflows iff `lhs < rhs`.
+static APInt calculateUnsignedBorrow(const APInt &lhs, const APInt &rhs) {
+  return lhs.ult(rhs) ? APInt::getAllOnes(1) : APInt::getZero(1);
+}
+
+LogicalResult
+arith::SubUIExtendedOp::fold(FoldAdaptor adaptor,
+                             SmallVectorImpl<OpFoldResult> &results) {
+  Type borrowTy = getBorrow().getType();
+  // subui_extended(x, 0) -> x, false
+  if (matchPattern(getRhs(), m_Zero())) {
+    Builder builder(getContext());
+    auto falseValue = builder.getZeroAttr(borrowTy);
+
+    results.push_back(getLhs());
+    results.push_back(falseValue);
+    return success();
+  }
+
+  // subui_extended(x, x) -> 0, false
+  if (getLhs() == getRhs()) {
+    Builder builder(getContext());
+    auto zeroDiff = builder.getZeroAttr(getDiff().getType());
+    auto falseValue = builder.getZeroAttr(borrowTy);
+    if (!zeroDiff)
+      return failure();
+
+    results.push_back(zeroDiff);
+    results.push_back(falseValue);
+    return success();
+  }
+
+  // subui_extended(constant_a, constant_b) -> constant_diff, constant_borrow
+  if (Attribute diffAttr = constFoldBinaryOp<IntegerAttr>(
+          adaptor.getOperands(),
+          [](APInt a, const APInt &b) { return std::move(a) - b; })) {
+    // If any operand is poison, propagate poison to both results.
+    if (matchPattern(diffAttr, ub::m_Poison())) {
+      results.push_back(diffAttr);
+      results.push_back(diffAttr);
+      return success();
+    }
+    Attribute borrowAttr = constFoldBinaryOp<IntegerAttr>(
+        adaptor.getOperands(),
+        getI1SameShape(llvm::cast<TypedAttr>(diffAttr).getType()),
+        calculateUnsignedBorrow);
+    if (!borrowAttr)
+      return failure();
+
+    results.push_back(diffAttr);
+    results.push_back(borrowAttr);
+    return success();
+  }
+
+  return failure();
+}
+
+void arith::SubUIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<SubUIExtendedToSubI>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 

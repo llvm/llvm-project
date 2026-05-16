@@ -2073,7 +2073,7 @@ protected:
     BreakpointIDList valid_bp_ids;
 
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, m_exe_ctx, result, &valid_bp_ids,
+        command, &target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::disablePerm);
 
     if (result.Succeeded()) {
@@ -2406,7 +2406,7 @@ protected:
       // Particular breakpoints selected; show info about that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, m_exe_ctx, result, &valid_bp_ids,
+          command, &target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (result.Succeeded()) {
@@ -2529,7 +2529,7 @@ protected:
     switch (break_type) {
     case eClearTypeFileAndLine: // Breakpoint by source position
     {
-      const ConstString filename(m_options.m_filename.c_str());
+      const ConstString filename(m_options.m_filename);
       BreakpointLocationCollection loc_coll;
 
       for (size_t i = 0; i < num_breakpoints; ++i) {
@@ -2685,7 +2685,7 @@ protected:
 
       if (!command.empty()) {
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            command, m_exe_ctx, result, &excluded_bp_ids,
+            command, &target, result, &excluded_bp_ids,
             BreakpointName::Permissions::PermissionKinds::deletePerm);
         if (!result.Succeeded())
           return;
@@ -3016,7 +3016,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, m_exe_ctx, result, &valid_bp_ids,
+        command, &target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -3090,7 +3090,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, m_exe_ctx, result, &valid_bp_ids,
+        command, &target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::deletePerm);
 
     if (result.Succeeded()) {
@@ -3147,8 +3147,7 @@ protected:
     if (name_list.empty()) {
       result.AppendMessage("No breakpoint names found.");
     } else {
-      for (const std::string &name_str : name_list) {
-        const char *name = name_str.c_str();
+      for (const std::string &name : name_list) {
         // First print out the options for the name:
         Status error;
         BreakpointName *bp_name =
@@ -3166,7 +3165,7 @@ protected:
           BreakpointList &breakpoints = target.GetBreakpointList();
           bool any_set = false;
           for (BreakpointSP bp_sp : breakpoints.Breakpoints()) {
-            if (bp_sp->MatchesName(name)) {
+            if (bp_sp->MatchesName(name.c_str())) {
               StreamString s;
               any_set = true;
               bp_sp->GetDescription(&s, eDescriptionLevelBrief);
@@ -3892,7 +3891,7 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
 CommandObjectMultiwordBreakpoint::~CommandObjectMultiwordBreakpoint() = default;
 
 void CommandObjectMultiwordBreakpoint::VerifyIDs(
-    Args &args, ExecutionContext &exe_ctx, bool allow_locations,
+    Args &args, const ExecutionContext &exe_ctx, bool allow_locations,
     CommandReturnObject &result, BreakpointIDList *valid_ids,
     BreakpointName::Permissions ::PermissionKinds purpose) {
   // args can be strings representing 1). integers (for breakpoint ids)

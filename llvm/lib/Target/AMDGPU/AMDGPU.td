@@ -495,6 +495,10 @@ defm VMovB64Inst : AMDGPUSubtargetFeature<"v-mov-b64-inst",
   "Has v_mov_b64 instruction"
 >;
 
+defm VMulU64Inst : AMDGPUSubtargetFeature<"v-mul-u64-inst",
+  "Has v_mul_u64 instruction."
+>;
+
 defm GFX950Insts : AMDGPUSubtargetFeature<"gfx950-insts",
   "Additional instructions for GFX950+",
   /*GenPredicate=*/1,
@@ -2140,6 +2144,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
    FeatureVMovB64Inst,
+   FeatureVMulU64Inst,
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
