@@ -104,7 +104,6 @@ void registerTestComposeSubView();
 void registerTestMultiBuffering();
 void registerTestIRVisitorsPass();
 void registerTestGenericIRVisitorsPass();
-void registerTestIntegerDivisibilityAnalysisPass();
 void registerTestInterfaces();
 void registerTestIRVisitorsPass();
 void registerTestLastModifiedPass();
@@ -254,7 +253,6 @@ static void registerTestPasses() {
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();
-  mlir::test::registerTestIntegerDivisibilityAnalysisPass();
   mlir::test::registerTestInterfaces();
   mlir::test::registerTestIrdlTestDialectConversionPass();
   mlir::test::registerTestIRVisitorsPass();

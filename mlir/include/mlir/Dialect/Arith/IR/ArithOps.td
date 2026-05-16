@@ -13,7 +13,6 @@ include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/InferIntDivisibilityOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -224,7 +223,6 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
     [ConstantLike, Pure,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
      AllTypesMatch<["value", "result"]>,
-     DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "integer or floating point constant";
   let description = [{
@@ -272,8 +270,7 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
 // AddIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_AddIOp : Arith_IntBinaryOpWithOverflowFlags<"addi",
-    [Commutative, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
+def Arith_AddIOp : Arith_IntBinaryOpWithOverflowFlags<"addi", [Commutative]> {
   let summary = "integer addition operation";
   let description = [{
     Performs N-bit addition on the operands. The operands are interpreted as
@@ -419,8 +416,7 @@ def Arith_SubUIExtendedOp : Arith_Op<"subui_extended", [Pure,
 // SubIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_SubIOp : Arith_IntBinaryOpWithOverflowFlags<"subi",
-    [DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
+def Arith_SubIOp : Arith_IntBinaryOpWithOverflowFlags<"subi"> {
   let summary = [{
     Integer subtraction operation.
   }];
@@ -465,9 +461,7 @@ def Arith_SubIOp : Arith_IntBinaryOpWithOverflowFlags<"subi",
 //===----------------------------------------------------------------------===//
 
 def Arith_MulIOp : Arith_IntBinaryOpWithOverflowFlags<"muli",
-  [Commutative,
-   DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
-   DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]
+  [Commutative, DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]
 > {
   let summary = [{
     Integer multiplication operation.
@@ -599,8 +593,7 @@ def Arith_MulUIExtendedOp : Arith_Op<"mului_extended", [Pure, Commutative,
 //===----------------------------------------------------------------------===//
 
 def Arith_DivUIOp : Arith_IntBinaryOpWithExactFlag<"divui",
-    [ConditionallySpeculatable,
-     DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
+                                                   [ConditionallySpeculatable]> {
   let summary = "unsigned integer division operation";
   let description = [{
     Unsigned integer division. Rounds towards zero. Treats the leading bit as
@@ -1198,8 +1191,7 @@ def Arith_MaxNumFOp : Arith_FloatBinaryOp<"maxnumf", [Commutative]> {
 // MaxSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MaxSIOp : Arith_TotalIntBinaryOp<"maxsi",
-    [Commutative, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
+def Arith_MaxSIOp : Arith_TotalIntBinaryOp<"maxsi", [Commutative]> {
   let summary = "signed integer maximum operation";
   let hasFolder = 1;
 }
@@ -1208,8 +1200,7 @@ def Arith_MaxSIOp : Arith_TotalIntBinaryOp<"maxsi",
 // MaxUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MaxUIOp : Arith_TotalIntBinaryOp<"maxui",
-    [Commutative, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
+def Arith_MaxUIOp : Arith_TotalIntBinaryOp<"maxui", [Commutative]> {
   let summary = "unsigned integer maximum operation";
   let hasFolder = 1;
 }
@@ -1259,8 +1250,7 @@ def Arith_MinNumFOp : Arith_FloatBinaryOp<"minnumf", [Commutative]> {
 // MinSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MinSIOp : Arith_TotalIntBinaryOp<"minsi",
-    [Commutative, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
+def Arith_MinSIOp : Arith_TotalIntBinaryOp<"minsi", [Commutative]> {
   let summary = "signed integer minimum operation";
   let hasFolder = 1;
 }
@@ -1269,8 +1259,7 @@ def Arith_MinSIOp : Arith_TotalIntBinaryOp<"minsi",
 // MinUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MinUIOp : Arith_TotalIntBinaryOp<"minui",
-    [Commutative, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
+def Arith_MinUIOp : Arith_TotalIntBinaryOp<"minui", [Commutative]> {
   let summary = "unsigned integer minimum operation";
   let hasFolder = 1;
 }
@@ -2015,7 +2004,6 @@ class BooleanConditionOrMatchingShape<string condition, string result> :
 def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
     BooleanConditionOrMatchingShape<"condition", "result">,
-    DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
     DeclareOpInterfaceMethods<SelectLikeOpInterface>]> {
   let summary = "select operation";

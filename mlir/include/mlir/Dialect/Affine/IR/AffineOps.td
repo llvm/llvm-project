@@ -16,7 +16,6 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/InferIntDivisibilityOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
@@ -44,9 +43,7 @@ def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineYieldOp">;
 
 def AffineApplyOp : Affine_Op<"apply",
-    [Pure,
-     DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
-     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+    [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "affine apply operation";
   let description = [{
     The `affine.apply` operation applies an [affine mapping](#affine-maps)
@@ -573,8 +570,7 @@ class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
   let hasVerifier = 1;
 }
 
-def AffineMinOp : AffineMinMaxOpBase<"min",
-    [Pure, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
+def AffineMinOp : AffineMinMaxOpBase<"min", [Pure]> {
   let summary = "min operation";
   let description = [{
     Syntax:
@@ -598,8 +594,7 @@ def AffineMinOp : AffineMinMaxOpBase<"min",
   }];
 }
 
-def AffineMaxOp : AffineMinMaxOpBase<"max",
-    [Pure, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
+def AffineMaxOp : AffineMinMaxOpBase<"max", [Pure]> {
   let summary = "max operation";
   let description = [{
     The `affine.max` operation computes the maximum value result from a multi-result
@@ -1076,7 +1071,6 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 
 def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
     [Pure, Elementwise,
-     DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
      // Infer linear_index type from the first result type during parsing.
      TypesMatchWith<"linear_index type must match result types",
                     "multi_index", "linear_index", "$_self[0]">
