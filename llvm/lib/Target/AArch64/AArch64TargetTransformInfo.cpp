@@ -4413,18 +4413,17 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     (pow-of-2/non-pow-of-2). Other cases are not important since they either
     result in some form of (ldr + adrp), corresponding to constant vectors, or
     scalarization of the division operation.
-    2. Constant divisors, either negative in whole or partially, don't result in
-    significantly different codegen as compared to positive constant divisors.
-    So, we don't consider negative divisors separately.
+    2. Scalar SDIV by +/- pow2 lowers via DAGCombiner shift expansion (see
+    AArch64TargetLowering::BuildSDIVPow2 deferring on scalars).
     3. If the codegen is significantly different with SVE, it has been indicated
     using comments at appropriate places.
 
-    sdiv specific cases:
+    sdiv specific cases (scalar: DAGCombiner shift lowering):
     -----------------------------------------------------------------------
     codegen                       | pow-of-2               | Type
     -----------------------------------------------------------------------
-    add + cmp + csel + asr        | Y                      | i64
-    add + cmp + csel + asr        | Y                      | i32
+    asr + lsr + add + asr (+ neg)| Y (+ if neg divisor)   | i64
+    asr + lsr + add + asr (+ neg)| Y (+ if neg divisor)   | i32
     -----------------------------------------------------------------------
 
     srem specific cases:
@@ -4458,14 +4457,20 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       InstructionCost MulCost =
           getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
                                  Op1Info.getNoProps(), Op2Info.getNoProps());
-      // add/cmp/csel/csneg should have similar cost while asr/negs/and should
-      // have similar cost.
       auto VT = TLI->getValueType(DL, Ty);
       if (VT.isScalarInteger() && VT.getSizeInBits() <= 64) {
         if (Op2Info.isPowerOf2() || Op2Info.isNegatedPowerOf2()) {
-          // Neg can be folded into the asr instruction.
-          return ISD == ISD::SDIV ? (3 * AddCost + AsrCost)
-                                  : (3 * AsrCost + AddCost);
+          InstructionCost LshrCost =
+              getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
+                                     Op1Info.getNoProps(), Op2Info.getNoProps());
+          if (ISD == ISD::SDIV) {
+            InstructionCost Cost =
+                AddCost + AsrCost + LshrCost + AsrCost;
+            if (Op2Info.isNegatedPowerOf2())
+              Cost += AddCost;
+            return Cost;
+          }
+          return 3 * AsrCost + AddCost;
         } else {
           return MulCost + AsrCost + 2 * AddCost;
         }

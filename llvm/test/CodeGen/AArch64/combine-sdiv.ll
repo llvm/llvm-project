@@ -1405,77 +1405,45 @@ define i16 @combine_i16_sdiv_negpow2(i16 %x) {
 }
 
 define i32 @combine_i32_sdiv_pow2(i32 %x) {
-; CHECK-SD-LABEL: combine_i32_sdiv_pow2:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    add w8, w0, #15
-; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    csel w8, w8, w0, mi
-; CHECK-SD-NEXT:    asr w0, w8, #4
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_i32_sdiv_pow2:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    asr w8, w0, #31
-; CHECK-GI-NEXT:    add w8, w0, w8, lsr #28
-; CHECK-GI-NEXT:    asr w0, w8, #4
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_i32_sdiv_pow2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr w8, w0, #31
+; CHECK-NEXT:    add w8, w0, w8, lsr #28
+; CHECK-NEXT:    asr w0, w8, #4
+; CHECK-NEXT:    ret
   %1 = sdiv i32 %x, 16
   ret i32 %1
 }
 
 define i32 @combine_i32_sdiv_negpow2(i32 %x) {
-; CHECK-SD-LABEL: combine_i32_sdiv_negpow2:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    add w8, w0, #255
-; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    csel w8, w8, w0, mi
-; CHECK-SD-NEXT:    neg w0, w8, asr #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_i32_sdiv_negpow2:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    asr w8, w0, #31
-; CHECK-GI-NEXT:    add w8, w0, w8, lsr #24
-; CHECK-GI-NEXT:    neg w0, w8, asr #8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_i32_sdiv_negpow2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr w8, w0, #31
+; CHECK-NEXT:    add w8, w0, w8, lsr #24
+; CHECK-NEXT:    neg w0, w8, asr #8
+; CHECK-NEXT:    ret
   %1 = sdiv i32 %x, -256
   ret i32 %1
 }
 
 define i64 @combine_i64_sdiv_pow2(i64 %x) {
-; CHECK-SD-LABEL: combine_i64_sdiv_pow2:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    add x8, x0, #15
-; CHECK-SD-NEXT:    cmp x0, #0
-; CHECK-SD-NEXT:    csel x8, x8, x0, mi
-; CHECK-SD-NEXT:    asr x0, x8, #4
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_i64_sdiv_pow2:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    asr x8, x0, #63
-; CHECK-GI-NEXT:    add x8, x0, x8, lsr #60
-; CHECK-GI-NEXT:    asr x0, x8, #4
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_i64_sdiv_pow2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr x8, x0, #63
+; CHECK-NEXT:    add x8, x0, x8, lsr #60
+; CHECK-NEXT:    asr x0, x8, #4
+; CHECK-NEXT:    ret
   %1 = sdiv i64 %x, 16
   ret i64 %1
 }
 
 define i64 @combine_i64_sdiv_negpow2(i64 %x) {
-; CHECK-SD-LABEL: combine_i64_sdiv_negpow2:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    add x8, x0, #255
-; CHECK-SD-NEXT:    cmp x0, #0
-; CHECK-SD-NEXT:    csel x8, x8, x0, mi
-; CHECK-SD-NEXT:    neg x0, x8, asr #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_i64_sdiv_negpow2:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    asr x8, x0, #63
-; CHECK-GI-NEXT:    add x8, x0, x8, lsr #56
-; CHECK-GI-NEXT:    neg x0, x8, asr #8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_i64_sdiv_negpow2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr x8, x0, #63
+; CHECK-NEXT:    add x8, x0, x8, lsr #56
+; CHECK-NEXT:    neg x0, x8, asr #8
+; CHECK-NEXT:    ret
   %1 = sdiv i64 %x, -256
   ret i64 %1
 }

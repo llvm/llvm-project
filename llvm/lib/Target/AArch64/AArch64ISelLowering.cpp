@@ -20045,7 +20045,11 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   if (VT.isVector() && Subtarget->isSVEorStreamingSVEAvailable())
     return SDValue(N, 0);
 
-  // Fold to shifts by default.
+  // Scalar signed division by pow2: defer to DAGCombiner's shift lowering only.
+  // Target-specific SELECT/csel sequences here interact badly with some masked
+  // intrinsics and are hard to tune without profile data.
+  (void)Divisor;
+  (void)Created;
   return SDValue();
 }
 
