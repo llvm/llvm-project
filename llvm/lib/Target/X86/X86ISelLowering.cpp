@@ -29675,7 +29675,7 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
 
 // Generic x86 vector reduction expansion.
 static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
-                              SelectionDAG &DAG) {
+                              SelectionDAG &DAG, bool AllowScalarization) {
   ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
   assert(DAG.getTargetLoweringInfo().isBinOp(BinOp) &&
          "Only binops expected to be used by reductions");
@@ -29703,7 +29703,7 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
   unsigned NumSrcElts = SrcVT.getVectorNumElements();
   for (unsigned NumElts = NumSrcElts; NumElts != 1; NumElts /= 2) {
     // Scalarize the last 2 elements if the vector binop isn't legal.
-    if (NumElts == 2 && !Subtarget.hasAVX512() &&
+    if (NumElts == 2 && AllowScalarization &&
         !TLI.isOperationLegal(BinOp, SrcVT) && TLI.isTypeLegal(ExtractVT)) {
       return DAG.getNode(BinOp, DL, ExtractVT,
                          DAG.getExtractVectorElt(DL, ExtractVT, Src, 0),
@@ -29912,13 +29912,13 @@ static SDValue LowerMINMAX_REDUCE(SDValue Op, const X86Subtarget &Subtarget,
                                   SelectionDAG &DAG) {
   EVT ExtractVT = Op.getValueType();
   if (!Subtarget.hasSSE41() || (ExtractVT != MVT::i16 && ExtractVT != MVT::i8))
-    return LowerVECREDUCE(Op, Subtarget, DAG);
+    return LowerVECREDUCE(Op, Subtarget, DAG, !Subtarget.hasAVX512());
 
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
   if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
-    return LowerVECREDUCE(Op, Subtarget, DAG);
+    return LowerVECREDUCE(Op, Subtarget, DAG, !Subtarget.hasAVX512());
 
   SDLoc DL(Op);
   SDValue MinPos = Src;
@@ -34544,7 +34544,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_UMIN:     return LowerMINMAX_REDUCE(Op, Subtarget, DAG);
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:
-  case ISD::VECREDUCE_XOR:      return LowerVECREDUCE(Op, Subtarget, DAG);
+  case ISD::VECREDUCE_XOR:      return LowerVECREDUCE(Op, Subtarget, DAG, true);
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUMNUM:
