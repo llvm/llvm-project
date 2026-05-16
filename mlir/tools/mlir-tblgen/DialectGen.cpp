@@ -18,6 +18,7 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Operator.h"
+#include "mlir/TableGen/PrivateName.h"
 #include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
@@ -250,7 +251,9 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
     tblgen::emitSummaryAndDescComments(os, dialect.getSummary(),
                                        dialect.getDescription(),
                                        /*terminateCmment=*/false);
-    os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
+    StringRef emittedDialectName =
+        maybeObfuscate(dialect.getName(), dialect.isPrivate());
+    os << llvm::formatv(dialectDeclBeginStr, cppName, emittedDialectName,
                         superClassName);
 
     // If the dialect requested the default attribute printer and parser, emit
@@ -289,7 +292,7 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
           attrPair.first, /*capitalizeFirst=*/false);
       os << llvm::formatv(discardableAttrHelperDecl, camelNameUpper,
                           attrPair.first, attrPair.second, camelName,
-                          dialect.getName());
+                          emittedDialectName);
     }
 
     if (std::optional<StringRef> extraDecl = dialect.getExtraClassDeclaration())

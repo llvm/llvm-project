@@ -13,6 +13,7 @@
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
+#include "mlir/TableGen/PrivateName.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -328,15 +329,20 @@ void DefGen::emitName() {
     auto *typeDef = cast<TypeDef>(&def);
     name = typeDef->getTypeName();
   }
+  // The full name is "dialect.mnemonic"; obfuscate dialect and mnemonic
+  // halves independently so that runtime parsing of the dialect prefix still
+  // works.
   std::string nameDecl =
-      strfmt("static constexpr ::llvm::StringLiteral name = \"{0}\";\n", name);
+      strfmt("static constexpr ::llvm::StringLiteral name = \"{0}\";\n",
+             tblgen::maybeObfuscateDotted(name, def.isPrivate()));
   defCls.declare<ExtraClassDeclaration>(std::move(nameDecl));
 }
 
 void DefGen::emitDialectName() {
   std::string decl =
       strfmt("static constexpr ::llvm::StringLiteral dialectName = \"{0}\";\n",
-             def.getDialect().getName());
+             tblgen::maybeObfuscate(def.getDialect().getName(),
+                                    def.getDialect().isPrivate()));
   defCls.declare<ExtraClassDeclaration>(std::move(decl));
 }
 
@@ -448,7 +454,9 @@ void DefGen::emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier) {
 void DefGen::emitParserPrinter() {
   auto *mnemonic = defCls.addStaticMethod<Method::Constexpr>(
       "::llvm::StringLiteral", "getMnemonic");
-  mnemonic->body().indent() << strfmt("return {\"{0}\"};", *def.getMnemonic());
+  mnemonic->body().indent()
+      << strfmt("return {\"{0}\"};",
+                tblgen::maybeObfuscate(*def.getMnemonic(), def.isPrivate()));
 
   // Declare the parser and printer, if needed.
   bool hasAssemblyFormat = def.getAssemblyFormat().has_value();
@@ -705,7 +713,9 @@ void DefGen::emitMnemonicAliasMethod() {
   SmallVector<MethodParameter> params{{"::llvm::raw_ostream &", "os"}};
   Method *m = defCls.addMethod<Method::Const>("::mlir::OpAsmAliasResult",
                                               "getAlias", std::move(params));
-  m->body().indent() << strfmt("os << \"{0}\";\n", *def.getMnemonic())
+  m->body().indent() << strfmt("os << \"{0}\";\n",
+                               tblgen::maybeObfuscate(*def.getMnemonic(),
+                                                      def.isPrivate()))
                      << "return ::mlir::OpAsmAliasResult::OverridableAlias;\n";
 }
 

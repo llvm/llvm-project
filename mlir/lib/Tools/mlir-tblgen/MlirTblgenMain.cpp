@@ -151,6 +151,8 @@ int mlir::MlirTblgenMain(int argc, char **argv) {
   llvm::cl::opt<const mlir::GenInfo *, true, mlir::GenNameParser> generator(
       "", llvm::cl::desc("Generator to run"), cl::location(::generator));
 
+  // Private-name obfuscation and pass-metadata stripping are configured via
+  // `cl::opt`s registered in `PrivateName.cpp`.
   cl::ParseCommandLineOptions(argc, argv);
 
   return TableGenMain(

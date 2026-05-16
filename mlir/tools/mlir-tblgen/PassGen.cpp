@@ -13,6 +13,7 @@
 
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Pass.h"
+#include "mlir/TableGen/PrivateName.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -186,11 +187,14 @@ static void emitRegistrations(llvm::ArrayRef<Pass> passes, raw_ostream &os) {
 
 /// The code snippet used to generate the start of a pass base class.
 ///
-/// {0}: The def name of the pass record.
+/// {0}: The def name of the pass record (used as the C++ class identifier).
 /// {1}: The base class for the pass.
-/// {2): The command line argument for the pass.
-/// {3}: The summary for the pass.
+/// {2}: The command line argument for the pass (possibly obfuscated).
+/// {3}: The summary for the pass (possibly emptied for private passes).
 /// {4}: The dependent dialects registration.
+/// {5}: The display name returned by `getName()` / `getPassName()` (possibly
+///      obfuscated). Distinct from {0} so the C++ class identifier remains
+///      stable when the displayed name is obfuscated.
 const char *const baseClassBegin = R"(
 template <typename DerivedT>
 class {0}Base : public {1} {
@@ -214,9 +218,9 @@ public:
 
   /// Returns the derived pass name.
   static constexpr ::llvm::StringLiteral getPassName() {
-    return ::llvm::StringLiteral("{0}");
+    return ::llvm::StringLiteral("{5}");
   }
-  ::llvm::StringRef getName() const override { return "{0}"; }
+  ::llvm::StringRef getName() const override { return "{5}"; }
 
   /// Support isa/dyn_cast functionality for the derived pass class.
   static bool classof(const ::mlir::Pass *pass) {{
@@ -282,13 +286,16 @@ std::unique_ptr<::mlir::Pass> create{0}({0}Options options) {{
 
 /// Emit the declarations for each of the pass options.
 static void emitPassOptionDecls(const Pass &pass, raw_ostream &os) {
+  bool stripDescriptions =
+      tblgen::arePassesPrivate() && tblgen::obfuscatePrivateNamesEnabled();
   for (const PassOption &opt : pass.getOptions()) {
     os.indent(2) << "::mlir::Pass::"
                  << (opt.isListOption() ? "ListOption" : "Option");
 
+    StringRef desc = stripDescriptions ? StringRef("") : opt.getDescription();
     os << formatv(R"(<{0}> {1}{{*this, "{2}", ::llvm::cl::desc(R"PO({3})PO"))",
                   opt.getType(), opt.getCppVariableName(), opt.getArgument(),
-                  opt.getDescription().trim());
+                  desc.trim());
     if (std::optional<StringRef> defaultVal = opt.getDefaultValue())
       os << ", ::llvm::cl::init(" << defaultVal << ")";
     if (std::optional<StringRef> additionalFlags = opt.getAdditionalFlags())
@@ -299,11 +306,13 @@ static void emitPassOptionDecls(const Pass &pass, raw_ostream &os) {
 
 /// Emit the declarations for each of the pass statistics.
 static void emitPassStatisticDecls(const Pass &pass, raw_ostream &os) {
+  bool stripDescriptions =
+      tblgen::arePassesPrivate() && tblgen::obfuscatePrivateNamesEnabled();
   for (const PassStatistic &stat : pass.getStatistics()) {
+    StringRef desc = stripDescriptions ? StringRef("") : stat.getDescription();
     os << formatv(
         "  ::mlir::Pass::Statistic {0}{{this, \"{1}\", R\"PS({2})PS\"};\n",
-        stat.getCppVariableName(), stat.getName(),
-        stat.getDescription().trim());
+        stat.getCppVariableName(), stat.getName(), desc.trim());
   }
 }
 
@@ -334,10 +343,25 @@ static void emitPassDefs(const Pass &pass, raw_ostream &os) {
         "\n    ");
   }
 
+  // Privacy-aware substitutions for the base class template. When the
+  // build sets `--mlir-private-passes` and `--mlir-private-name-obfuscator`,
+  // the display name returned by `getName()` / `getPassName()` and the CLI
+  // argument returned by `getArgument()` are obfuscated, and the summary
+  // returned by `getDescription()` is emitted as the empty string. The
+  // per-pass C++ class name and the generated `register*Pass()` /
+  // `mlirCreate*` / `mlirRegister*` helpers are unaffected.
+  bool passesArePrivate = tblgen::arePassesPrivate();
+  std::string displayName =
+      tblgen::maybeObfuscate(passName, passesArePrivate).str();
+  std::string argument =
+      tblgen::maybeObfuscate(pass.getArgument(), passesArePrivate).str();
+  std::string summary = pass.getSummary().trim().str();
+  if (passesArePrivate && tblgen::obfuscatePrivateNamesEnabled())
+    summary.clear();
+
   os << "namespace impl {\n";
-  os << formatv(baseClassBegin, passName, pass.getBaseClass(),
-                pass.getArgument(), pass.getSummary().trim(),
-                dependentDialectRegistrations);
+  os << formatv(baseClassBegin, passName, pass.getBaseClass(), argument,
+                summary, dependentDialectRegistrations, displayName);
 
   if (ArrayRef<PassOption> options = pass.getOptions(); !options.empty()) {
     os.indent(2) << formatv("{0}Base({0}Options options) : {0}Base() {{\n",

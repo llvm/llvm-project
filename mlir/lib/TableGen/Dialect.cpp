@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Dialect.h"
+#include "mlir/TableGen/PrivateName.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -101,6 +103,27 @@ bool Dialect::useDefaultTypePrinterParser() const {
 bool Dialect::isExtensible() const {
   return def->getValueAsBit("isExtensible");
 }
+
+namespace {
+/// Process-wide set of dialect namespaces marked private via
+/// `--mlir-private-dialects` on the mlir-tblgen command line. Function-local
+/// static to avoid global constructors (MLIRTableGen is built with
+/// `-Werror=global-constructors`).
+llvm::StringSet<> &privateDialectStorage() {
+  static llvm::StringSet<> set;
+  return set;
+}
+} // namespace
+
+void mlir::tblgen::addPrivateDialect(StringRef dialectName) {
+  privateDialectStorage().insert(dialectName);
+}
+
+bool mlir::tblgen::isDialectPrivate(StringRef dialectName) {
+  return privateDialectStorage().contains(dialectName);
+}
+
+bool Dialect::isPrivate() const { return tblgen::isDialectPrivate(getName()); }
 
 const llvm::DagInit *Dialect::getDiscardableAttributes() const {
   return def->getValueAsDag("discardableAttrs");

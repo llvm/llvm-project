@@ -220,6 +220,11 @@ public:
   /// using the mnemonic.
   bool genMnemonicAlias() const;
 
+  /// Returns true if this attribute or type belongs to a dialect marked
+  /// `isPrivate`. Private def names are eligible for obfuscation when
+  /// private-name obfuscation is enabled in mlir-tblgen.
+  bool isPrivate() const;
+
   /// Get the code location (for error printing).
   ArrayRef<SMLoc> getLoc() const;
 
