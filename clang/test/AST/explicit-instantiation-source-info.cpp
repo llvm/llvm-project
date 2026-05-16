@@ -3,6 +3,8 @@
 struct Plain {};
 enum Color { Red };
 template <typename T> struct Wrap {};
+template <typename T = int> struct Defaulted {};
+template <typename T = int> T defaulted_var = T{};
 
 namespace ns {
   template <typename T> void foo(T x) {}
@@ -253,6 +255,35 @@ namespace ns {
   // CHECK-NEXT: TemplateArgument <col:21> type 'short'
   // CHECK-NEXT:   BuiltinType {{.*}} 'short'
 }
+
+// empty <> (args deduced)
+template void ns::foo<>(double);
+// CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:31> col:1 explicit_instantiation_definition 'foo'
+// CHECK-NEXT: NestedNameSpecifier Namespace {{.*}} 'ns'
+// CHECK-NEXT: Function {{.*}} 'foo' 'void (double)'
+// CHECK-NEXT: FunctionProtoTypeLoc <col:10, col:31> 'void (double)' cdecl
+// CHECK-NEXT:   ParmVarDecl {{.*}} <col:25> col:31 'double'
+// CHECK-NEXT:     BuiltinTypeLoc <col:25> 'double'
+// CHECK-NEXT:   BuiltinTypeLoc <col:10> 'void'
+
+template void ns::S<long>::tmpl<>(float);
+// CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:40> col:1 explicit_instantiation_definition 'tmpl'
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'ns::S<long>'
+// CHECK-NEXT: CXXMethod {{.*}} 'tmpl' 'void (float)'
+// CHECK-NEXT: FunctionProtoTypeLoc <col:10, col:40> 'void (float)' cdecl
+// CHECK-NEXT:   ParmVarDecl {{.*}} <col:35> col:40 'float'
+// CHECK-NEXT:     BuiltinTypeLoc <col:35> 'float'
+// CHECK-NEXT:   BuiltinTypeLoc <col:10> 'void'
+
+// empty <> (default template arguments)
+template struct Defaulted<>;
+// CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:27> col:1 explicit_instantiation_definition 'Defaulted'
+// CHECK-NEXT: ClassTemplateSpecialization {{.*}} 'Defaulted'
+
+template int defaulted_var<>;
+// CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:28> col:1 explicit_instantiation_definition 'defaulted_var'
+// CHECK-NEXT: VarTemplateSpecialization {{.*}} 'defaulted_var' 'int'
+// CHECK-NEXT: BuiltinTypeLoc <col:10> 'int'
 
 extern template Plain ns::bar<Plain>;
 // CHECK: ExplicitInstantiationDecl {{.*}} <line:[[@LINE-1]]:1, col:36> col:8 explicit_instantiation_declaration extern 'bar'

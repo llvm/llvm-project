@@ -20,6 +20,10 @@ template <typename T> void bar(T) {}
 // CHECK: template void bar(int);
 template void bar(int);
 
+// empty <> (args deduced)
+// CHECK: template void ns::foo(double);
+template void ns::foo<>(double);
+
 // CHECK: template int ns::var<int>;
 template int ns::var<int>;
 // CHECK: extern template float ns::var<float>;
@@ -110,3 +114,12 @@ extern template ns::S<int> var2<ns::S<int>>;
 // CHECK: extern template ns::S<float> var2<ns::S<float>>;
 extern template ns::S<float> var2<ns::S<float>>;
 } // namespace GH197797
+
+// empty <> (default template arguments)
+template <typename T = int> struct Defaulted {};
+// CHECK: template struct Defaulted;
+template struct Defaulted<>;
+
+template <typename T = int> T defaulted_var = T{};
+// CHECK: template int defaulted_var;
+template int defaulted_var<>;
