@@ -628,12 +628,14 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
       mlir::cast<cir::PointerType>(paramAddr.getType());
 
   if (op.getKind() == cir::InitCatchKind::Reference) {
-    assert(!MissingFeatures::winSizeOfUnwindException());
+    assert(!MissingFeatures::sizeOfUnwindException());
     constexpr unsigned headerSize = 32;
 
     builder.setInsertionPoint(op);
     auto index = cir::ConstantOp::create(
         builder, loc, cir::IntAttr::get(u32Type, headerSize));
+    assert((exnPtr.getType() == voidPtrType || exnPtr.getType() == u8PtrType) &&
+           "lowerConstructCatchParam exn ptr not void* or i8*");
     auto exnObj =
         cir::PtrStrideOp::create(builder, loc, exnPtr.getType(), exnPtr, index);
     mlir::Value casted =
