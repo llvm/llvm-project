@@ -608,8 +608,8 @@ func.func @andOfAndConstantIndex(%arg0: index) -> index {
 // -----
 
 // CHECK-LABEL: @andOfAndConstantMultiUse
-//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
 //       CHECK:   %[[C8:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
 //       CHECK:   %[[A1:.+]] = arith.andi %arg0, %[[C12]] : i32
 //       CHECK:   %[[A2:.+]] = arith.andi %arg0, %[[C8]] : i32
 //       CHECK:   return %[[A1]], %[[A2]]
@@ -624,9 +624,9 @@ func.func @andOfAndConstantMultiUse(%arg0: i32) -> (i32, i32) {
 // -----
 
 // CHECK-LABEL: @andOfAndConstantChain
-//       CHECK:   %[[C14:.+]] = arith.constant 14 : i32
-//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
 //       CHECK:   %[[C8:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[C14:.+]] = arith.constant 14 : i32
 //       CHECK:   %[[A1:.+]] = arith.andi %arg0, %[[C14]] : i32
 //       CHECK:   %[[A2:.+]] = arith.andi %arg0, %[[C12]] : i32
 //       CHECK:   %[[A3:.+]] = arith.andi %arg0, %[[C8]] : i32
@@ -672,8 +672,8 @@ func.func @orOfOrConstantIndex(%arg0: index) -> index {
 // -----
 
 // CHECK-LABEL: @orOfOrConstantMultiUse
-//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
 //       CHECK:   %[[C14:.+]] = arith.constant 14 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
 //       CHECK:   %[[O1:.+]] = arith.ori %arg0, %[[C12]] : i32
 //       CHECK:   %[[O2:.+]] = arith.ori %arg0, %[[C14]] : i32
 //       CHECK:   return %[[O1]], %[[O2]]
@@ -2416,8 +2416,8 @@ func.func @xorOfXorConstantIndex(%arg0: index) -> index {
 // -----
 
 // CHECK-LABEL: @xorOfXorConstantMultiUse
-//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
 //       CHECK:   %[[C6:.+]] = arith.constant 6 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
 //       CHECK:   %[[X1:.+]] = arith.xori %arg0, %[[C12]] : i32
 //       CHECK:   %[[X2:.+]] = arith.xori %arg0, %[[C6]] : i32
 //       CHECK:   return %[[X1]], %[[X2]]
