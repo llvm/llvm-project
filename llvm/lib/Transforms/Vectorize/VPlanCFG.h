@@ -268,7 +268,7 @@ vp_plain_cfg_loop_body(VPBasicBlock *Header) {
   SmallVector<VPBasicBlock *> Result;
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksAs<VPBasicBlock>(RPOT)) {
     if (VPBB == Middle)
       break;
     if (!isa<VPIRBasicBlock>(VPBB))
