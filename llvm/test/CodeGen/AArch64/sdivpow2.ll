@@ -5,9 +5,8 @@
 define i32 @test1(i32 %x) {
 ; ISEL-LABEL: test1:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #7
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #29
 ; ISEL-NEXT:    asr w0, w8, #3
 ; ISEL-NEXT:    ret
 ;
@@ -25,9 +24,8 @@ define i32 @test1(i32 %x) {
 define i32 @test2(i32 %x) {
 ; ISEL-LABEL: test2:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #7
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #29
 ; ISEL-NEXT:    neg w0, w8, asr #3
 ; ISEL-NEXT:    ret
 ;
@@ -45,9 +43,8 @@ define i32 @test2(i32 %x) {
 define i32 @test3(i32 %x) {
 ; ISEL-LABEL: test3:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #31
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #27
 ; ISEL-NEXT:    asr w0, w8, #5
 ; ISEL-NEXT:    ret
 ;
@@ -65,9 +62,8 @@ define i32 @test3(i32 %x) {
 define i64 @test4(i64 %x) {
 ; ISEL-LABEL: test4:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #7
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #61
 ; ISEL-NEXT:    asr x0, x8, #3
 ; ISEL-NEXT:    ret
 ;
@@ -85,9 +81,8 @@ define i64 @test4(i64 %x) {
 define i64 @test5(i64 %x) {
 ; ISEL-LABEL: test5:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #7
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #61
 ; ISEL-NEXT:    neg x0, x8, asr #3
 ; ISEL-NEXT:    ret
 ;
@@ -105,9 +100,8 @@ define i64 @test5(i64 %x) {
 define i64 @test6(i64 %x) {
 ; ISEL-LABEL: test6:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #63
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #58
 ; ISEL-NEXT:    asr x0, x8, #6
 ; ISEL-NEXT:    ret
 ;

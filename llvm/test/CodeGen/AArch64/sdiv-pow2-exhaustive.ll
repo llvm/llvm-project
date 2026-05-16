@@ -41,9 +41,8 @@ define i32 @sdiv_i32_u1(i32 %x) {
 define i32 @sdiv_i32_u2(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u2:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #3
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #30
 ; ISEL-NEXT:    asr w0, w8, #2
 ; ISEL-NEXT:    ret
 ;
@@ -61,9 +60,8 @@ define i32 @sdiv_i32_u2(i32 %x) {
 define i32 @sdiv_i32_u3(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u3:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #7
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #29
 ; ISEL-NEXT:    asr w0, w8, #3
 ; ISEL-NEXT:    ret
 ;
@@ -81,9 +79,8 @@ define i32 @sdiv_i32_u3(i32 %x) {
 define i32 @sdiv_i32_u4(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u4:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #15
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #28
 ; ISEL-NEXT:    asr w0, w8, #4
 ; ISEL-NEXT:    ret
 ;
@@ -101,9 +98,8 @@ define i32 @sdiv_i32_u4(i32 %x) {
 define i32 @sdiv_i32_u5(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u5:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #31
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #27
 ; ISEL-NEXT:    asr w0, w8, #5
 ; ISEL-NEXT:    ret
 ;
@@ -121,9 +117,8 @@ define i32 @sdiv_i32_u5(i32 %x) {
 define i32 @sdiv_i32_u6(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u6:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #63
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #26
 ; ISEL-NEXT:    asr w0, w8, #6
 ; ISEL-NEXT:    ret
 ;
@@ -141,9 +136,8 @@ define i32 @sdiv_i32_u6(i32 %x) {
 define i32 @sdiv_i32_u7(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u7:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #127
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #25
 ; ISEL-NEXT:    asr w0, w8, #7
 ; ISEL-NEXT:    ret
 ;
@@ -161,9 +155,8 @@ define i32 @sdiv_i32_u7(i32 %x) {
 define i32 @sdiv_i32_u8(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u8:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #255
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #24
 ; ISEL-NEXT:    asr w0, w8, #8
 ; ISEL-NEXT:    ret
 ;
@@ -181,9 +174,8 @@ define i32 @sdiv_i32_u8(i32 %x) {
 define i32 @sdiv_i32_u9(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u9:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #511
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #23
 ; ISEL-NEXT:    asr w0, w8, #9
 ; ISEL-NEXT:    ret
 ;
@@ -201,9 +193,8 @@ define i32 @sdiv_i32_u9(i32 %x) {
 define i32 @sdiv_i32_u10(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u10:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #1023
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #22
 ; ISEL-NEXT:    asr w0, w8, #10
 ; ISEL-NEXT:    ret
 ;
@@ -221,9 +212,8 @@ define i32 @sdiv_i32_u10(i32 %x) {
 define i32 @sdiv_i32_u11(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u11:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #2047
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #21
 ; ISEL-NEXT:    asr w0, w8, #11
 ; ISEL-NEXT:    ret
 ;
@@ -241,9 +231,8 @@ define i32 @sdiv_i32_u11(i32 %x) {
 define i32 @sdiv_i32_u12(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u12:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #4095
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #20
 ; ISEL-NEXT:    asr w0, w8, #12
 ; ISEL-NEXT:    ret
 ;
@@ -261,10 +250,8 @@ define i32 @sdiv_i32_u12(i32 %x) {
 define i32 @sdiv_i32_u13(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u13:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #8191 // =0x1fff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #19
 ; ISEL-NEXT:    asr w0, w8, #13
 ; ISEL-NEXT:    ret
 ;
@@ -283,10 +270,8 @@ define i32 @sdiv_i32_u13(i32 %x) {
 define i32 @sdiv_i32_u14(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u14:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #16383 // =0x3fff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #18
 ; ISEL-NEXT:    asr w0, w8, #14
 ; ISEL-NEXT:    ret
 ;
@@ -305,10 +290,8 @@ define i32 @sdiv_i32_u14(i32 %x) {
 define i32 @sdiv_i32_u15(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u15:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #32767 // =0x7fff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #17
 ; ISEL-NEXT:    asr w0, w8, #15
 ; ISEL-NEXT:    ret
 ;
@@ -327,10 +310,8 @@ define i32 @sdiv_i32_u15(i32 %x) {
 define i32 @sdiv_i32_u16(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u16:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #65535 // =0xffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #16
 ; ISEL-NEXT:    asr w0, w8, #16
 ; ISEL-NEXT:    ret
 ;
@@ -349,10 +330,8 @@ define i32 @sdiv_i32_u16(i32 %x) {
 define i32 @sdiv_i32_u17(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u17:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #131071 // =0x1ffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #15
 ; ISEL-NEXT:    asr w0, w8, #17
 ; ISEL-NEXT:    ret
 ;
@@ -371,10 +350,8 @@ define i32 @sdiv_i32_u17(i32 %x) {
 define i32 @sdiv_i32_u18(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u18:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #262143 // =0x3ffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #14
 ; ISEL-NEXT:    asr w0, w8, #18
 ; ISEL-NEXT:    ret
 ;
@@ -393,10 +370,8 @@ define i32 @sdiv_i32_u18(i32 %x) {
 define i32 @sdiv_i32_u19(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u19:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #524287 // =0x7ffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #13
 ; ISEL-NEXT:    asr w0, w8, #19
 ; ISEL-NEXT:    ret
 ;
@@ -415,10 +390,8 @@ define i32 @sdiv_i32_u19(i32 %x) {
 define i32 @sdiv_i32_u20(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u20:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #1048575 // =0xfffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #12
 ; ISEL-NEXT:    asr w0, w8, #20
 ; ISEL-NEXT:    ret
 ;
@@ -437,10 +410,8 @@ define i32 @sdiv_i32_u20(i32 %x) {
 define i32 @sdiv_i32_u21(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u21:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #2097151 // =0x1fffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #11
 ; ISEL-NEXT:    asr w0, w8, #21
 ; ISEL-NEXT:    ret
 ;
@@ -459,10 +430,8 @@ define i32 @sdiv_i32_u21(i32 %x) {
 define i32 @sdiv_i32_u22(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u22:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #4194303 // =0x3fffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #10
 ; ISEL-NEXT:    asr w0, w8, #22
 ; ISEL-NEXT:    ret
 ;
@@ -481,10 +450,8 @@ define i32 @sdiv_i32_u22(i32 %x) {
 define i32 @sdiv_i32_u23(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u23:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #8388607 // =0x7fffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #9
 ; ISEL-NEXT:    asr w0, w8, #23
 ; ISEL-NEXT:    ret
 ;
@@ -503,10 +470,8 @@ define i32 @sdiv_i32_u23(i32 %x) {
 define i32 @sdiv_i32_u24(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u24:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #16777215 // =0xffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #8
 ; ISEL-NEXT:    asr w0, w8, #24
 ; ISEL-NEXT:    ret
 ;
@@ -525,10 +490,8 @@ define i32 @sdiv_i32_u24(i32 %x) {
 define i32 @sdiv_i32_u25(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u25:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #33554431 // =0x1ffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #7
 ; ISEL-NEXT:    asr w0, w8, #25
 ; ISEL-NEXT:    ret
 ;
@@ -547,10 +510,8 @@ define i32 @sdiv_i32_u25(i32 %x) {
 define i32 @sdiv_i32_u26(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u26:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #67108863 // =0x3ffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #6
 ; ISEL-NEXT:    asr w0, w8, #26
 ; ISEL-NEXT:    ret
 ;
@@ -569,10 +530,8 @@ define i32 @sdiv_i32_u26(i32 %x) {
 define i32 @sdiv_i32_u27(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u27:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #134217727 // =0x7ffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #5
 ; ISEL-NEXT:    asr w0, w8, #27
 ; ISEL-NEXT:    ret
 ;
@@ -591,10 +550,8 @@ define i32 @sdiv_i32_u27(i32 %x) {
 define i32 @sdiv_i32_u28(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u28:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #268435455 // =0xfffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #4
 ; ISEL-NEXT:    asr w0, w8, #28
 ; ISEL-NEXT:    ret
 ;
@@ -613,10 +570,8 @@ define i32 @sdiv_i32_u28(i32 %x) {
 define i32 @sdiv_i32_u29(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u29:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #536870911 // =0x1fffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #3
 ; ISEL-NEXT:    asr w0, w8, #29
 ; ISEL-NEXT:    ret
 ;
@@ -635,10 +590,8 @@ define i32 @sdiv_i32_u29(i32 %x) {
 define i32 @sdiv_i32_u30(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_u30:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #1073741823 // =0x3fffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #2
 ; ISEL-NEXT:    asr w0, w8, #30
 ; ISEL-NEXT:    ret
 ;
@@ -692,9 +645,8 @@ define i32 @sdiv_i32_n1(i32 %x) {
 define i32 @sdiv_i32_n2(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n2:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #3
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #30
 ; ISEL-NEXT:    neg w0, w8, asr #2
 ; ISEL-NEXT:    ret
 ;
@@ -712,9 +664,8 @@ define i32 @sdiv_i32_n2(i32 %x) {
 define i32 @sdiv_i32_n3(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n3:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #7
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #29
 ; ISEL-NEXT:    neg w0, w8, asr #3
 ; ISEL-NEXT:    ret
 ;
@@ -732,9 +683,8 @@ define i32 @sdiv_i32_n3(i32 %x) {
 define i32 @sdiv_i32_n4(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n4:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #15
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #28
 ; ISEL-NEXT:    neg w0, w8, asr #4
 ; ISEL-NEXT:    ret
 ;
@@ -752,9 +702,8 @@ define i32 @sdiv_i32_n4(i32 %x) {
 define i32 @sdiv_i32_n5(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n5:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #31
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #27
 ; ISEL-NEXT:    neg w0, w8, asr #5
 ; ISEL-NEXT:    ret
 ;
@@ -772,9 +721,8 @@ define i32 @sdiv_i32_n5(i32 %x) {
 define i32 @sdiv_i32_n6(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n6:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #63
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #26
 ; ISEL-NEXT:    neg w0, w8, asr #6
 ; ISEL-NEXT:    ret
 ;
@@ -792,9 +740,8 @@ define i32 @sdiv_i32_n6(i32 %x) {
 define i32 @sdiv_i32_n7(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n7:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #127
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #25
 ; ISEL-NEXT:    neg w0, w8, asr #7
 ; ISEL-NEXT:    ret
 ;
@@ -812,9 +759,8 @@ define i32 @sdiv_i32_n7(i32 %x) {
 define i32 @sdiv_i32_n8(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n8:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #255
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #24
 ; ISEL-NEXT:    neg w0, w8, asr #8
 ; ISEL-NEXT:    ret
 ;
@@ -832,9 +778,8 @@ define i32 @sdiv_i32_n8(i32 %x) {
 define i32 @sdiv_i32_n9(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n9:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #511
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #23
 ; ISEL-NEXT:    neg w0, w8, asr #9
 ; ISEL-NEXT:    ret
 ;
@@ -852,9 +797,8 @@ define i32 @sdiv_i32_n9(i32 %x) {
 define i32 @sdiv_i32_n10(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n10:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #1023
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #22
 ; ISEL-NEXT:    neg w0, w8, asr #10
 ; ISEL-NEXT:    ret
 ;
@@ -872,9 +816,8 @@ define i32 @sdiv_i32_n10(i32 %x) {
 define i32 @sdiv_i32_n11(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n11:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #2047
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #21
 ; ISEL-NEXT:    neg w0, w8, asr #11
 ; ISEL-NEXT:    ret
 ;
@@ -892,9 +835,8 @@ define i32 @sdiv_i32_n11(i32 %x) {
 define i32 @sdiv_i32_n12(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n12:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add w8, w0, #4095
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #20
 ; ISEL-NEXT:    neg w0, w8, asr #12
 ; ISEL-NEXT:    ret
 ;
@@ -912,10 +854,8 @@ define i32 @sdiv_i32_n12(i32 %x) {
 define i32 @sdiv_i32_n13(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n13:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #8191 // =0x1fff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #19
 ; ISEL-NEXT:    neg w0, w8, asr #13
 ; ISEL-NEXT:    ret
 ;
@@ -934,10 +874,8 @@ define i32 @sdiv_i32_n13(i32 %x) {
 define i32 @sdiv_i32_n14(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n14:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #16383 // =0x3fff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #18
 ; ISEL-NEXT:    neg w0, w8, asr #14
 ; ISEL-NEXT:    ret
 ;
@@ -956,10 +894,8 @@ define i32 @sdiv_i32_n14(i32 %x) {
 define i32 @sdiv_i32_n15(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n15:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #32767 // =0x7fff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #17
 ; ISEL-NEXT:    neg w0, w8, asr #15
 ; ISEL-NEXT:    ret
 ;
@@ -978,10 +914,8 @@ define i32 @sdiv_i32_n15(i32 %x) {
 define i32 @sdiv_i32_n16(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n16:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #65535 // =0xffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #16
 ; ISEL-NEXT:    neg w0, w8, asr #16
 ; ISEL-NEXT:    ret
 ;
@@ -1000,10 +934,8 @@ define i32 @sdiv_i32_n16(i32 %x) {
 define i32 @sdiv_i32_n17(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n17:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #131071 // =0x1ffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #15
 ; ISEL-NEXT:    neg w0, w8, asr #17
 ; ISEL-NEXT:    ret
 ;
@@ -1022,10 +954,8 @@ define i32 @sdiv_i32_n17(i32 %x) {
 define i32 @sdiv_i32_n18(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n18:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #262143 // =0x3ffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #14
 ; ISEL-NEXT:    neg w0, w8, asr #18
 ; ISEL-NEXT:    ret
 ;
@@ -1044,10 +974,8 @@ define i32 @sdiv_i32_n18(i32 %x) {
 define i32 @sdiv_i32_n19(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n19:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #524287 // =0x7ffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #13
 ; ISEL-NEXT:    neg w0, w8, asr #19
 ; ISEL-NEXT:    ret
 ;
@@ -1066,10 +994,8 @@ define i32 @sdiv_i32_n19(i32 %x) {
 define i32 @sdiv_i32_n20(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n20:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #1048575 // =0xfffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #12
 ; ISEL-NEXT:    neg w0, w8, asr #20
 ; ISEL-NEXT:    ret
 ;
@@ -1088,10 +1014,8 @@ define i32 @sdiv_i32_n20(i32 %x) {
 define i32 @sdiv_i32_n21(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n21:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #2097151 // =0x1fffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #11
 ; ISEL-NEXT:    neg w0, w8, asr #21
 ; ISEL-NEXT:    ret
 ;
@@ -1110,10 +1034,8 @@ define i32 @sdiv_i32_n21(i32 %x) {
 define i32 @sdiv_i32_n22(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n22:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #4194303 // =0x3fffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #10
 ; ISEL-NEXT:    neg w0, w8, asr #22
 ; ISEL-NEXT:    ret
 ;
@@ -1132,10 +1054,8 @@ define i32 @sdiv_i32_n22(i32 %x) {
 define i32 @sdiv_i32_n23(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n23:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #8388607 // =0x7fffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #9
 ; ISEL-NEXT:    neg w0, w8, asr #23
 ; ISEL-NEXT:    ret
 ;
@@ -1154,10 +1074,8 @@ define i32 @sdiv_i32_n23(i32 %x) {
 define i32 @sdiv_i32_n24(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n24:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #16777215 // =0xffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #8
 ; ISEL-NEXT:    neg w0, w8, asr #24
 ; ISEL-NEXT:    ret
 ;
@@ -1176,10 +1094,8 @@ define i32 @sdiv_i32_n24(i32 %x) {
 define i32 @sdiv_i32_n25(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n25:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #33554431 // =0x1ffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #7
 ; ISEL-NEXT:    neg w0, w8, asr #25
 ; ISEL-NEXT:    ret
 ;
@@ -1198,10 +1114,8 @@ define i32 @sdiv_i32_n25(i32 %x) {
 define i32 @sdiv_i32_n26(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n26:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #67108863 // =0x3ffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #6
 ; ISEL-NEXT:    neg w0, w8, asr #26
 ; ISEL-NEXT:    ret
 ;
@@ -1220,10 +1134,8 @@ define i32 @sdiv_i32_n26(i32 %x) {
 define i32 @sdiv_i32_n27(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n27:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #134217727 // =0x7ffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #5
 ; ISEL-NEXT:    neg w0, w8, asr #27
 ; ISEL-NEXT:    ret
 ;
@@ -1242,10 +1154,8 @@ define i32 @sdiv_i32_n27(i32 %x) {
 define i32 @sdiv_i32_n28(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n28:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #268435455 // =0xfffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #4
 ; ISEL-NEXT:    neg w0, w8, asr #28
 ; ISEL-NEXT:    ret
 ;
@@ -1264,10 +1174,8 @@ define i32 @sdiv_i32_n28(i32 %x) {
 define i32 @sdiv_i32_n29(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n29:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #536870911 // =0x1fffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #3
 ; ISEL-NEXT:    neg w0, w8, asr #29
 ; ISEL-NEXT:    ret
 ;
@@ -1286,10 +1194,8 @@ define i32 @sdiv_i32_n29(i32 %x) {
 define i32 @sdiv_i32_n30(i32 %x) {
 ; ISEL-LABEL: sdiv_i32_n30:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #1073741823 // =0x3fffffff
-; ISEL-NEXT:    cmp w0, #0
-; ISEL-NEXT:    add w8, w0, w8
-; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w8, w0, #31
+; ISEL-NEXT:    add w8, w0, w8, lsr #2
 ; ISEL-NEXT:    neg w0, w8, asr #30
 ; ISEL-NEXT:    ret
 ;
@@ -1361,9 +1267,8 @@ define i64 @sdiv_i64_u1(i64 %x) {
 define i64 @sdiv_i64_u2(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u2:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #3
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #62
 ; ISEL-NEXT:    asr x0, x8, #2
 ; ISEL-NEXT:    ret
 ;
@@ -1381,9 +1286,8 @@ define i64 @sdiv_i64_u2(i64 %x) {
 define i64 @sdiv_i64_u3(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u3:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #7
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #61
 ; ISEL-NEXT:    asr x0, x8, #3
 ; ISEL-NEXT:    ret
 ;
@@ -1401,9 +1305,8 @@ define i64 @sdiv_i64_u3(i64 %x) {
 define i64 @sdiv_i64_u4(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u4:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #15
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #60
 ; ISEL-NEXT:    asr x0, x8, #4
 ; ISEL-NEXT:    ret
 ;
@@ -1421,9 +1324,8 @@ define i64 @sdiv_i64_u4(i64 %x) {
 define i64 @sdiv_i64_u5(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u5:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #31
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #59
 ; ISEL-NEXT:    asr x0, x8, #5
 ; ISEL-NEXT:    ret
 ;
@@ -1441,9 +1343,8 @@ define i64 @sdiv_i64_u5(i64 %x) {
 define i64 @sdiv_i64_u6(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u6:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #63
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #58
 ; ISEL-NEXT:    asr x0, x8, #6
 ; ISEL-NEXT:    ret
 ;
@@ -1461,9 +1362,8 @@ define i64 @sdiv_i64_u6(i64 %x) {
 define i64 @sdiv_i64_u7(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u7:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #127
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #57
 ; ISEL-NEXT:    asr x0, x8, #7
 ; ISEL-NEXT:    ret
 ;
@@ -1481,9 +1381,8 @@ define i64 @sdiv_i64_u7(i64 %x) {
 define i64 @sdiv_i64_u8(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u8:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #255
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #56
 ; ISEL-NEXT:    asr x0, x8, #8
 ; ISEL-NEXT:    ret
 ;
@@ -1501,9 +1400,8 @@ define i64 @sdiv_i64_u8(i64 %x) {
 define i64 @sdiv_i64_u9(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u9:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #511
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #55
 ; ISEL-NEXT:    asr x0, x8, #9
 ; ISEL-NEXT:    ret
 ;
@@ -1521,9 +1419,8 @@ define i64 @sdiv_i64_u9(i64 %x) {
 define i64 @sdiv_i64_u10(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u10:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #1023
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #54
 ; ISEL-NEXT:    asr x0, x8, #10
 ; ISEL-NEXT:    ret
 ;
@@ -1541,9 +1438,8 @@ define i64 @sdiv_i64_u10(i64 %x) {
 define i64 @sdiv_i64_u11(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u11:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #2047
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #53
 ; ISEL-NEXT:    asr x0, x8, #11
 ; ISEL-NEXT:    ret
 ;
@@ -1561,9 +1457,8 @@ define i64 @sdiv_i64_u11(i64 %x) {
 define i64 @sdiv_i64_u12(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u12:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #4095
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #52
 ; ISEL-NEXT:    asr x0, x8, #12
 ; ISEL-NEXT:    ret
 ;
@@ -1581,10 +1476,8 @@ define i64 @sdiv_i64_u12(i64 %x) {
 define i64 @sdiv_i64_u13(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u13:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #8191 // =0x1fff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #51
 ; ISEL-NEXT:    asr x0, x8, #13
 ; ISEL-NEXT:    ret
 ;
@@ -1603,10 +1496,8 @@ define i64 @sdiv_i64_u13(i64 %x) {
 define i64 @sdiv_i64_u14(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u14:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #16383 // =0x3fff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #50
 ; ISEL-NEXT:    asr x0, x8, #14
 ; ISEL-NEXT:    ret
 ;
@@ -1625,10 +1516,8 @@ define i64 @sdiv_i64_u14(i64 %x) {
 define i64 @sdiv_i64_u15(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u15:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #32767 // =0x7fff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #49
 ; ISEL-NEXT:    asr x0, x8, #15
 ; ISEL-NEXT:    ret
 ;
@@ -1647,10 +1536,8 @@ define i64 @sdiv_i64_u15(i64 %x) {
 define i64 @sdiv_i64_u16(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u16:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #65535 // =0xffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #48
 ; ISEL-NEXT:    asr x0, x8, #16
 ; ISEL-NEXT:    ret
 ;
@@ -1669,10 +1556,8 @@ define i64 @sdiv_i64_u16(i64 %x) {
 define i64 @sdiv_i64_u17(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u17:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #131071 // =0x1ffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #47
 ; ISEL-NEXT:    asr x0, x8, #17
 ; ISEL-NEXT:    ret
 ;
@@ -1691,10 +1576,8 @@ define i64 @sdiv_i64_u17(i64 %x) {
 define i64 @sdiv_i64_u18(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u18:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #262143 // =0x3ffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #46
 ; ISEL-NEXT:    asr x0, x8, #18
 ; ISEL-NEXT:    ret
 ;
@@ -1713,10 +1596,8 @@ define i64 @sdiv_i64_u18(i64 %x) {
 define i64 @sdiv_i64_u19(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u19:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #524287 // =0x7ffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #45
 ; ISEL-NEXT:    asr x0, x8, #19
 ; ISEL-NEXT:    ret
 ;
@@ -1735,10 +1616,8 @@ define i64 @sdiv_i64_u19(i64 %x) {
 define i64 @sdiv_i64_u20(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u20:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #1048575 // =0xfffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #44
 ; ISEL-NEXT:    asr x0, x8, #20
 ; ISEL-NEXT:    ret
 ;
@@ -1757,10 +1636,8 @@ define i64 @sdiv_i64_u20(i64 %x) {
 define i64 @sdiv_i64_u21(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u21:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #2097151 // =0x1fffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #43
 ; ISEL-NEXT:    asr x0, x8, #21
 ; ISEL-NEXT:    ret
 ;
@@ -1779,10 +1656,8 @@ define i64 @sdiv_i64_u21(i64 %x) {
 define i64 @sdiv_i64_u22(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u22:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #4194303 // =0x3fffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #42
 ; ISEL-NEXT:    asr x0, x8, #22
 ; ISEL-NEXT:    ret
 ;
@@ -1801,10 +1676,8 @@ define i64 @sdiv_i64_u22(i64 %x) {
 define i64 @sdiv_i64_u23(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u23:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #8388607 // =0x7fffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #41
 ; ISEL-NEXT:    asr x0, x8, #23
 ; ISEL-NEXT:    ret
 ;
@@ -1823,10 +1696,8 @@ define i64 @sdiv_i64_u23(i64 %x) {
 define i64 @sdiv_i64_u24(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u24:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #16777215 // =0xffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #40
 ; ISEL-NEXT:    asr x0, x8, #24
 ; ISEL-NEXT:    ret
 ;
@@ -1845,10 +1716,8 @@ define i64 @sdiv_i64_u24(i64 %x) {
 define i64 @sdiv_i64_u25(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u25:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #33554431 // =0x1ffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #39
 ; ISEL-NEXT:    asr x0, x8, #25
 ; ISEL-NEXT:    ret
 ;
@@ -1867,10 +1736,8 @@ define i64 @sdiv_i64_u25(i64 %x) {
 define i64 @sdiv_i64_u26(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u26:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #67108863 // =0x3ffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #38
 ; ISEL-NEXT:    asr x0, x8, #26
 ; ISEL-NEXT:    ret
 ;
@@ -1889,10 +1756,8 @@ define i64 @sdiv_i64_u26(i64 %x) {
 define i64 @sdiv_i64_u27(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u27:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #134217727 // =0x7ffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #37
 ; ISEL-NEXT:    asr x0, x8, #27
 ; ISEL-NEXT:    ret
 ;
@@ -1911,10 +1776,8 @@ define i64 @sdiv_i64_u27(i64 %x) {
 define i64 @sdiv_i64_u28(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u28:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #268435455 // =0xfffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #36
 ; ISEL-NEXT:    asr x0, x8, #28
 ; ISEL-NEXT:    ret
 ;
@@ -1933,10 +1796,8 @@ define i64 @sdiv_i64_u28(i64 %x) {
 define i64 @sdiv_i64_u29(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u29:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #536870911 // =0x1fffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #35
 ; ISEL-NEXT:    asr x0, x8, #29
 ; ISEL-NEXT:    ret
 ;
@@ -1955,10 +1816,8 @@ define i64 @sdiv_i64_u29(i64 %x) {
 define i64 @sdiv_i64_u30(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u30:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #1073741823 // =0x3fffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #34
 ; ISEL-NEXT:    asr x0, x8, #30
 ; ISEL-NEXT:    ret
 ;
@@ -1977,10 +1836,8 @@ define i64 @sdiv_i64_u30(i64 %x) {
 define i64 @sdiv_i64_u31(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u31:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #2147483647 // =0x7fffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #33
 ; ISEL-NEXT:    asr x0, x8, #31
 ; ISEL-NEXT:    ret
 ;
@@ -1999,10 +1856,8 @@ define i64 @sdiv_i64_u31(i64 %x) {
 define i64 @sdiv_i64_u32(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u32:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #-1 // =0xffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #32
 ; ISEL-NEXT:    asr x0, x8, #32
 ; ISEL-NEXT:    ret
 ;
@@ -2021,10 +1876,8 @@ define i64 @sdiv_i64_u32(i64 %x) {
 define i64 @sdiv_i64_u33(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u33:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #8589934591 // =0x1ffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #31
 ; ISEL-NEXT:    asr x0, x8, #33
 ; ISEL-NEXT:    ret
 ;
@@ -2043,10 +1896,8 @@ define i64 @sdiv_i64_u33(i64 %x) {
 define i64 @sdiv_i64_u34(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u34:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #17179869183 // =0x3ffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #30
 ; ISEL-NEXT:    asr x0, x8, #34
 ; ISEL-NEXT:    ret
 ;
@@ -2065,10 +1916,8 @@ define i64 @sdiv_i64_u34(i64 %x) {
 define i64 @sdiv_i64_u35(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u35:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #34359738367 // =0x7ffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #29
 ; ISEL-NEXT:    asr x0, x8, #35
 ; ISEL-NEXT:    ret
 ;
@@ -2087,10 +1936,8 @@ define i64 @sdiv_i64_u35(i64 %x) {
 define i64 @sdiv_i64_u36(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u36:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #68719476735 // =0xfffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #28
 ; ISEL-NEXT:    asr x0, x8, #36
 ; ISEL-NEXT:    ret
 ;
@@ -2109,10 +1956,8 @@ define i64 @sdiv_i64_u36(i64 %x) {
 define i64 @sdiv_i64_u37(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u37:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #137438953471 // =0x1fffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #27
 ; ISEL-NEXT:    asr x0, x8, #37
 ; ISEL-NEXT:    ret
 ;
@@ -2131,10 +1976,8 @@ define i64 @sdiv_i64_u37(i64 %x) {
 define i64 @sdiv_i64_u38(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u38:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #274877906943 // =0x3fffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #26
 ; ISEL-NEXT:    asr x0, x8, #38
 ; ISEL-NEXT:    ret
 ;
@@ -2153,10 +1996,8 @@ define i64 @sdiv_i64_u38(i64 %x) {
 define i64 @sdiv_i64_u39(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u39:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #549755813887 // =0x7fffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #25
 ; ISEL-NEXT:    asr x0, x8, #39
 ; ISEL-NEXT:    ret
 ;
@@ -2175,10 +2016,8 @@ define i64 @sdiv_i64_u39(i64 %x) {
 define i64 @sdiv_i64_u40(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u40:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #1099511627775 // =0xffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #24
 ; ISEL-NEXT:    asr x0, x8, #40
 ; ISEL-NEXT:    ret
 ;
@@ -2197,10 +2036,8 @@ define i64 @sdiv_i64_u40(i64 %x) {
 define i64 @sdiv_i64_u41(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u41:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #2199023255551 // =0x1ffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #23
 ; ISEL-NEXT:    asr x0, x8, #41
 ; ISEL-NEXT:    ret
 ;
@@ -2219,10 +2056,8 @@ define i64 @sdiv_i64_u41(i64 %x) {
 define i64 @sdiv_i64_u42(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u42:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #4398046511103 // =0x3ffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #22
 ; ISEL-NEXT:    asr x0, x8, #42
 ; ISEL-NEXT:    ret
 ;
@@ -2241,10 +2076,8 @@ define i64 @sdiv_i64_u42(i64 %x) {
 define i64 @sdiv_i64_u43(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u43:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #8796093022207 // =0x7ffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #21
 ; ISEL-NEXT:    asr x0, x8, #43
 ; ISEL-NEXT:    ret
 ;
@@ -2263,10 +2096,8 @@ define i64 @sdiv_i64_u43(i64 %x) {
 define i64 @sdiv_i64_u44(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u44:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #17592186044415 // =0xfffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #20
 ; ISEL-NEXT:    asr x0, x8, #44
 ; ISEL-NEXT:    ret
 ;
@@ -2285,10 +2116,8 @@ define i64 @sdiv_i64_u44(i64 %x) {
 define i64 @sdiv_i64_u45(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u45:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #35184372088831 // =0x1fffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #19
 ; ISEL-NEXT:    asr x0, x8, #45
 ; ISEL-NEXT:    ret
 ;
@@ -2307,10 +2136,8 @@ define i64 @sdiv_i64_u45(i64 %x) {
 define i64 @sdiv_i64_u46(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u46:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #70368744177663 // =0x3fffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #18
 ; ISEL-NEXT:    asr x0, x8, #46
 ; ISEL-NEXT:    ret
 ;
@@ -2329,10 +2156,8 @@ define i64 @sdiv_i64_u46(i64 %x) {
 define i64 @sdiv_i64_u47(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u47:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #140737488355327 // =0x7fffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #17
 ; ISEL-NEXT:    asr x0, x8, #47
 ; ISEL-NEXT:    ret
 ;
@@ -2351,10 +2176,8 @@ define i64 @sdiv_i64_u47(i64 %x) {
 define i64 @sdiv_i64_u48(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u48:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #281474976710655 // =0xffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #16
 ; ISEL-NEXT:    asr x0, x8, #48
 ; ISEL-NEXT:    ret
 ;
@@ -2373,10 +2196,8 @@ define i64 @sdiv_i64_u48(i64 %x) {
 define i64 @sdiv_i64_u49(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u49:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #562949953421311 // =0x1ffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #15
 ; ISEL-NEXT:    asr x0, x8, #49
 ; ISEL-NEXT:    ret
 ;
@@ -2395,10 +2216,8 @@ define i64 @sdiv_i64_u49(i64 %x) {
 define i64 @sdiv_i64_u50(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u50:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #1125899906842623 // =0x3ffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #14
 ; ISEL-NEXT:    asr x0, x8, #50
 ; ISEL-NEXT:    ret
 ;
@@ -2417,10 +2236,8 @@ define i64 @sdiv_i64_u50(i64 %x) {
 define i64 @sdiv_i64_u51(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u51:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #2251799813685247 // =0x7ffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #13
 ; ISEL-NEXT:    asr x0, x8, #51
 ; ISEL-NEXT:    ret
 ;
@@ -2439,10 +2256,8 @@ define i64 @sdiv_i64_u51(i64 %x) {
 define i64 @sdiv_i64_u52(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u52:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #4503599627370495 // =0xfffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #12
 ; ISEL-NEXT:    asr x0, x8, #52
 ; ISEL-NEXT:    ret
 ;
@@ -2461,10 +2276,8 @@ define i64 @sdiv_i64_u52(i64 %x) {
 define i64 @sdiv_i64_u53(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u53:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #9007199254740991 // =0x1fffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #11
 ; ISEL-NEXT:    asr x0, x8, #53
 ; ISEL-NEXT:    ret
 ;
@@ -2483,10 +2296,8 @@ define i64 @sdiv_i64_u53(i64 %x) {
 define i64 @sdiv_i64_u54(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u54:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #18014398509481983 // =0x3fffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #10
 ; ISEL-NEXT:    asr x0, x8, #54
 ; ISEL-NEXT:    ret
 ;
@@ -2505,10 +2316,8 @@ define i64 @sdiv_i64_u54(i64 %x) {
 define i64 @sdiv_i64_u55(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u55:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #36028797018963967 // =0x7fffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #9
 ; ISEL-NEXT:    asr x0, x8, #55
 ; ISEL-NEXT:    ret
 ;
@@ -2527,10 +2336,8 @@ define i64 @sdiv_i64_u55(i64 %x) {
 define i64 @sdiv_i64_u56(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u56:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #72057594037927935 // =0xffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #8
 ; ISEL-NEXT:    asr x0, x8, #56
 ; ISEL-NEXT:    ret
 ;
@@ -2549,10 +2356,8 @@ define i64 @sdiv_i64_u56(i64 %x) {
 define i64 @sdiv_i64_u57(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u57:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #144115188075855871 // =0x1ffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #7
 ; ISEL-NEXT:    asr x0, x8, #57
 ; ISEL-NEXT:    ret
 ;
@@ -2571,10 +2376,8 @@ define i64 @sdiv_i64_u57(i64 %x) {
 define i64 @sdiv_i64_u58(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u58:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #288230376151711743 // =0x3ffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #6
 ; ISEL-NEXT:    asr x0, x8, #58
 ; ISEL-NEXT:    ret
 ;
@@ -2593,10 +2396,8 @@ define i64 @sdiv_i64_u58(i64 %x) {
 define i64 @sdiv_i64_u59(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u59:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #576460752303423487 // =0x7ffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #5
 ; ISEL-NEXT:    asr x0, x8, #59
 ; ISEL-NEXT:    ret
 ;
@@ -2615,10 +2416,8 @@ define i64 @sdiv_i64_u59(i64 %x) {
 define i64 @sdiv_i64_u60(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u60:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #1152921504606846975 // =0xfffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #4
 ; ISEL-NEXT:    asr x0, x8, #60
 ; ISEL-NEXT:    ret
 ;
@@ -2637,10 +2436,8 @@ define i64 @sdiv_i64_u60(i64 %x) {
 define i64 @sdiv_i64_u61(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u61:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #2305843009213693951 // =0x1fffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #3
 ; ISEL-NEXT:    asr x0, x8, #61
 ; ISEL-NEXT:    ret
 ;
@@ -2659,10 +2456,8 @@ define i64 @sdiv_i64_u61(i64 %x) {
 define i64 @sdiv_i64_u62(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_u62:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #4611686018427387903 // =0x3fffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #2
 ; ISEL-NEXT:    asr x0, x8, #62
 ; ISEL-NEXT:    ret
 ;
@@ -2716,9 +2511,8 @@ define i64 @sdiv_i64_n1(i64 %x) {
 define i64 @sdiv_i64_n2(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n2:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #3
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #62
 ; ISEL-NEXT:    neg x0, x8, asr #2
 ; ISEL-NEXT:    ret
 ;
@@ -2736,9 +2530,8 @@ define i64 @sdiv_i64_n2(i64 %x) {
 define i64 @sdiv_i64_n3(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n3:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #7
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #61
 ; ISEL-NEXT:    neg x0, x8, asr #3
 ; ISEL-NEXT:    ret
 ;
@@ -2756,9 +2549,8 @@ define i64 @sdiv_i64_n3(i64 %x) {
 define i64 @sdiv_i64_n4(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n4:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #15
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #60
 ; ISEL-NEXT:    neg x0, x8, asr #4
 ; ISEL-NEXT:    ret
 ;
@@ -2776,9 +2568,8 @@ define i64 @sdiv_i64_n4(i64 %x) {
 define i64 @sdiv_i64_n5(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n5:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #31
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #59
 ; ISEL-NEXT:    neg x0, x8, asr #5
 ; ISEL-NEXT:    ret
 ;
@@ -2796,9 +2587,8 @@ define i64 @sdiv_i64_n5(i64 %x) {
 define i64 @sdiv_i64_n6(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n6:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #63
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #58
 ; ISEL-NEXT:    neg x0, x8, asr #6
 ; ISEL-NEXT:    ret
 ;
@@ -2816,9 +2606,8 @@ define i64 @sdiv_i64_n6(i64 %x) {
 define i64 @sdiv_i64_n7(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n7:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #127
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #57
 ; ISEL-NEXT:    neg x0, x8, asr #7
 ; ISEL-NEXT:    ret
 ;
@@ -2836,9 +2625,8 @@ define i64 @sdiv_i64_n7(i64 %x) {
 define i64 @sdiv_i64_n8(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n8:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #255
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #56
 ; ISEL-NEXT:    neg x0, x8, asr #8
 ; ISEL-NEXT:    ret
 ;
@@ -2856,9 +2644,8 @@ define i64 @sdiv_i64_n8(i64 %x) {
 define i64 @sdiv_i64_n9(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n9:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #511
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #55
 ; ISEL-NEXT:    neg x0, x8, asr #9
 ; ISEL-NEXT:    ret
 ;
@@ -2876,9 +2663,8 @@ define i64 @sdiv_i64_n9(i64 %x) {
 define i64 @sdiv_i64_n10(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n10:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #1023
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #54
 ; ISEL-NEXT:    neg x0, x8, asr #10
 ; ISEL-NEXT:    ret
 ;
@@ -2896,9 +2682,8 @@ define i64 @sdiv_i64_n10(i64 %x) {
 define i64 @sdiv_i64_n11(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n11:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #2047
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #53
 ; ISEL-NEXT:    neg x0, x8, asr #11
 ; ISEL-NEXT:    ret
 ;
@@ -2916,9 +2701,8 @@ define i64 @sdiv_i64_n11(i64 %x) {
 define i64 @sdiv_i64_n12(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n12:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    add x8, x0, #4095
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #52
 ; ISEL-NEXT:    neg x0, x8, asr #12
 ; ISEL-NEXT:    ret
 ;
@@ -2936,10 +2720,8 @@ define i64 @sdiv_i64_n12(i64 %x) {
 define i64 @sdiv_i64_n13(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n13:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #8191 // =0x1fff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #51
 ; ISEL-NEXT:    neg x0, x8, asr #13
 ; ISEL-NEXT:    ret
 ;
@@ -2958,10 +2740,8 @@ define i64 @sdiv_i64_n13(i64 %x) {
 define i64 @sdiv_i64_n14(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n14:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #16383 // =0x3fff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #50
 ; ISEL-NEXT:    neg x0, x8, asr #14
 ; ISEL-NEXT:    ret
 ;
@@ -2980,10 +2760,8 @@ define i64 @sdiv_i64_n14(i64 %x) {
 define i64 @sdiv_i64_n15(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n15:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #32767 // =0x7fff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #49
 ; ISEL-NEXT:    neg x0, x8, asr #15
 ; ISEL-NEXT:    ret
 ;
@@ -3002,10 +2780,8 @@ define i64 @sdiv_i64_n15(i64 %x) {
 define i64 @sdiv_i64_n16(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n16:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #65535 // =0xffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #48
 ; ISEL-NEXT:    neg x0, x8, asr #16
 ; ISEL-NEXT:    ret
 ;
@@ -3024,10 +2800,8 @@ define i64 @sdiv_i64_n16(i64 %x) {
 define i64 @sdiv_i64_n17(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n17:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #131071 // =0x1ffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #47
 ; ISEL-NEXT:    neg x0, x8, asr #17
 ; ISEL-NEXT:    ret
 ;
@@ -3046,10 +2820,8 @@ define i64 @sdiv_i64_n17(i64 %x) {
 define i64 @sdiv_i64_n18(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n18:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #262143 // =0x3ffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #46
 ; ISEL-NEXT:    neg x0, x8, asr #18
 ; ISEL-NEXT:    ret
 ;
@@ -3068,10 +2840,8 @@ define i64 @sdiv_i64_n18(i64 %x) {
 define i64 @sdiv_i64_n19(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n19:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #524287 // =0x7ffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #45
 ; ISEL-NEXT:    neg x0, x8, asr #19
 ; ISEL-NEXT:    ret
 ;
@@ -3090,10 +2860,8 @@ define i64 @sdiv_i64_n19(i64 %x) {
 define i64 @sdiv_i64_n20(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n20:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #1048575 // =0xfffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #44
 ; ISEL-NEXT:    neg x0, x8, asr #20
 ; ISEL-NEXT:    ret
 ;
@@ -3112,10 +2880,8 @@ define i64 @sdiv_i64_n20(i64 %x) {
 define i64 @sdiv_i64_n21(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n21:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #2097151 // =0x1fffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #43
 ; ISEL-NEXT:    neg x0, x8, asr #21
 ; ISEL-NEXT:    ret
 ;
@@ -3134,10 +2900,8 @@ define i64 @sdiv_i64_n21(i64 %x) {
 define i64 @sdiv_i64_n22(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n22:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #4194303 // =0x3fffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #42
 ; ISEL-NEXT:    neg x0, x8, asr #22
 ; ISEL-NEXT:    ret
 ;
@@ -3156,10 +2920,8 @@ define i64 @sdiv_i64_n22(i64 %x) {
 define i64 @sdiv_i64_n23(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n23:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #8388607 // =0x7fffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #41
 ; ISEL-NEXT:    neg x0, x8, asr #23
 ; ISEL-NEXT:    ret
 ;
@@ -3178,10 +2940,8 @@ define i64 @sdiv_i64_n23(i64 %x) {
 define i64 @sdiv_i64_n24(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n24:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #16777215 // =0xffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #40
 ; ISEL-NEXT:    neg x0, x8, asr #24
 ; ISEL-NEXT:    ret
 ;
@@ -3200,10 +2960,8 @@ define i64 @sdiv_i64_n24(i64 %x) {
 define i64 @sdiv_i64_n25(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n25:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #33554431 // =0x1ffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #39
 ; ISEL-NEXT:    neg x0, x8, asr #25
 ; ISEL-NEXT:    ret
 ;
@@ -3222,10 +2980,8 @@ define i64 @sdiv_i64_n25(i64 %x) {
 define i64 @sdiv_i64_n26(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n26:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #67108863 // =0x3ffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #38
 ; ISEL-NEXT:    neg x0, x8, asr #26
 ; ISEL-NEXT:    ret
 ;
@@ -3244,10 +3000,8 @@ define i64 @sdiv_i64_n26(i64 %x) {
 define i64 @sdiv_i64_n27(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n27:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #134217727 // =0x7ffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #37
 ; ISEL-NEXT:    neg x0, x8, asr #27
 ; ISEL-NEXT:    ret
 ;
@@ -3266,10 +3020,8 @@ define i64 @sdiv_i64_n27(i64 %x) {
 define i64 @sdiv_i64_n28(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n28:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #268435455 // =0xfffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #36
 ; ISEL-NEXT:    neg x0, x8, asr #28
 ; ISEL-NEXT:    ret
 ;
@@ -3288,10 +3040,8 @@ define i64 @sdiv_i64_n28(i64 %x) {
 define i64 @sdiv_i64_n29(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n29:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #536870911 // =0x1fffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #35
 ; ISEL-NEXT:    neg x0, x8, asr #29
 ; ISEL-NEXT:    ret
 ;
@@ -3310,10 +3060,8 @@ define i64 @sdiv_i64_n29(i64 %x) {
 define i64 @sdiv_i64_n30(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n30:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #1073741823 // =0x3fffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #34
 ; ISEL-NEXT:    neg x0, x8, asr #30
 ; ISEL-NEXT:    ret
 ;
@@ -3332,10 +3080,8 @@ define i64 @sdiv_i64_n30(i64 %x) {
 define i64 @sdiv_i64_n31(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n31:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #2147483647 // =0x7fffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #33
 ; ISEL-NEXT:    neg x0, x8, asr #31
 ; ISEL-NEXT:    ret
 ;
@@ -3354,10 +3100,8 @@ define i64 @sdiv_i64_n31(i64 %x) {
 define i64 @sdiv_i64_n32(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n32:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov w8, #-1 // =0xffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #32
 ; ISEL-NEXT:    neg x0, x8, asr #32
 ; ISEL-NEXT:    ret
 ;
@@ -3376,10 +3120,8 @@ define i64 @sdiv_i64_n32(i64 %x) {
 define i64 @sdiv_i64_n33(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n33:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #8589934591 // =0x1ffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #31
 ; ISEL-NEXT:    neg x0, x8, asr #33
 ; ISEL-NEXT:    ret
 ;
@@ -3398,10 +3140,8 @@ define i64 @sdiv_i64_n33(i64 %x) {
 define i64 @sdiv_i64_n34(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n34:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #17179869183 // =0x3ffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #30
 ; ISEL-NEXT:    neg x0, x8, asr #34
 ; ISEL-NEXT:    ret
 ;
@@ -3420,10 +3160,8 @@ define i64 @sdiv_i64_n34(i64 %x) {
 define i64 @sdiv_i64_n35(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n35:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #34359738367 // =0x7ffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #29
 ; ISEL-NEXT:    neg x0, x8, asr #35
 ; ISEL-NEXT:    ret
 ;
@@ -3442,10 +3180,8 @@ define i64 @sdiv_i64_n35(i64 %x) {
 define i64 @sdiv_i64_n36(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n36:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #68719476735 // =0xfffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #28
 ; ISEL-NEXT:    neg x0, x8, asr #36
 ; ISEL-NEXT:    ret
 ;
@@ -3464,10 +3200,8 @@ define i64 @sdiv_i64_n36(i64 %x) {
 define i64 @sdiv_i64_n37(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n37:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #137438953471 // =0x1fffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #27
 ; ISEL-NEXT:    neg x0, x8, asr #37
 ; ISEL-NEXT:    ret
 ;
@@ -3486,10 +3220,8 @@ define i64 @sdiv_i64_n37(i64 %x) {
 define i64 @sdiv_i64_n38(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n38:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #274877906943 // =0x3fffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #26
 ; ISEL-NEXT:    neg x0, x8, asr #38
 ; ISEL-NEXT:    ret
 ;
@@ -3508,10 +3240,8 @@ define i64 @sdiv_i64_n38(i64 %x) {
 define i64 @sdiv_i64_n39(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n39:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #549755813887 // =0x7fffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #25
 ; ISEL-NEXT:    neg x0, x8, asr #39
 ; ISEL-NEXT:    ret
 ;
@@ -3530,10 +3260,8 @@ define i64 @sdiv_i64_n39(i64 %x) {
 define i64 @sdiv_i64_n40(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n40:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #1099511627775 // =0xffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #24
 ; ISEL-NEXT:    neg x0, x8, asr #40
 ; ISEL-NEXT:    ret
 ;
@@ -3552,10 +3280,8 @@ define i64 @sdiv_i64_n40(i64 %x) {
 define i64 @sdiv_i64_n41(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n41:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #2199023255551 // =0x1ffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #23
 ; ISEL-NEXT:    neg x0, x8, asr #41
 ; ISEL-NEXT:    ret
 ;
@@ -3574,10 +3300,8 @@ define i64 @sdiv_i64_n41(i64 %x) {
 define i64 @sdiv_i64_n42(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n42:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #4398046511103 // =0x3ffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #22
 ; ISEL-NEXT:    neg x0, x8, asr #42
 ; ISEL-NEXT:    ret
 ;
@@ -3596,10 +3320,8 @@ define i64 @sdiv_i64_n42(i64 %x) {
 define i64 @sdiv_i64_n43(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n43:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #8796093022207 // =0x7ffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #21
 ; ISEL-NEXT:    neg x0, x8, asr #43
 ; ISEL-NEXT:    ret
 ;
@@ -3618,10 +3340,8 @@ define i64 @sdiv_i64_n43(i64 %x) {
 define i64 @sdiv_i64_n44(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n44:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #17592186044415 // =0xfffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #20
 ; ISEL-NEXT:    neg x0, x8, asr #44
 ; ISEL-NEXT:    ret
 ;
@@ -3640,10 +3360,8 @@ define i64 @sdiv_i64_n44(i64 %x) {
 define i64 @sdiv_i64_n45(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n45:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #35184372088831 // =0x1fffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #19
 ; ISEL-NEXT:    neg x0, x8, asr #45
 ; ISEL-NEXT:    ret
 ;
@@ -3662,10 +3380,8 @@ define i64 @sdiv_i64_n45(i64 %x) {
 define i64 @sdiv_i64_n46(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n46:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #70368744177663 // =0x3fffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #18
 ; ISEL-NEXT:    neg x0, x8, asr #46
 ; ISEL-NEXT:    ret
 ;
@@ -3684,10 +3400,8 @@ define i64 @sdiv_i64_n46(i64 %x) {
 define i64 @sdiv_i64_n47(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n47:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #140737488355327 // =0x7fffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #17
 ; ISEL-NEXT:    neg x0, x8, asr #47
 ; ISEL-NEXT:    ret
 ;
@@ -3706,10 +3420,8 @@ define i64 @sdiv_i64_n47(i64 %x) {
 define i64 @sdiv_i64_n48(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n48:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #281474976710655 // =0xffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #16
 ; ISEL-NEXT:    neg x0, x8, asr #48
 ; ISEL-NEXT:    ret
 ;
@@ -3728,10 +3440,8 @@ define i64 @sdiv_i64_n48(i64 %x) {
 define i64 @sdiv_i64_n49(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n49:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #562949953421311 // =0x1ffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #15
 ; ISEL-NEXT:    neg x0, x8, asr #49
 ; ISEL-NEXT:    ret
 ;
@@ -3750,10 +3460,8 @@ define i64 @sdiv_i64_n49(i64 %x) {
 define i64 @sdiv_i64_n50(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n50:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #1125899906842623 // =0x3ffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #14
 ; ISEL-NEXT:    neg x0, x8, asr #50
 ; ISEL-NEXT:    ret
 ;
@@ -3772,10 +3480,8 @@ define i64 @sdiv_i64_n50(i64 %x) {
 define i64 @sdiv_i64_n51(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n51:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #2251799813685247 // =0x7ffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #13
 ; ISEL-NEXT:    neg x0, x8, asr #51
 ; ISEL-NEXT:    ret
 ;
@@ -3794,10 +3500,8 @@ define i64 @sdiv_i64_n51(i64 %x) {
 define i64 @sdiv_i64_n52(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n52:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #4503599627370495 // =0xfffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #12
 ; ISEL-NEXT:    neg x0, x8, asr #52
 ; ISEL-NEXT:    ret
 ;
@@ -3816,10 +3520,8 @@ define i64 @sdiv_i64_n52(i64 %x) {
 define i64 @sdiv_i64_n53(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n53:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #9007199254740991 // =0x1fffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #11
 ; ISEL-NEXT:    neg x0, x8, asr #53
 ; ISEL-NEXT:    ret
 ;
@@ -3838,10 +3540,8 @@ define i64 @sdiv_i64_n53(i64 %x) {
 define i64 @sdiv_i64_n54(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n54:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #18014398509481983 // =0x3fffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #10
 ; ISEL-NEXT:    neg x0, x8, asr #54
 ; ISEL-NEXT:    ret
 ;
@@ -3860,10 +3560,8 @@ define i64 @sdiv_i64_n54(i64 %x) {
 define i64 @sdiv_i64_n55(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n55:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #36028797018963967 // =0x7fffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #9
 ; ISEL-NEXT:    neg x0, x8, asr #55
 ; ISEL-NEXT:    ret
 ;
@@ -3882,10 +3580,8 @@ define i64 @sdiv_i64_n55(i64 %x) {
 define i64 @sdiv_i64_n56(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n56:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #72057594037927935 // =0xffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #8
 ; ISEL-NEXT:    neg x0, x8, asr #56
 ; ISEL-NEXT:    ret
 ;
@@ -3904,10 +3600,8 @@ define i64 @sdiv_i64_n56(i64 %x) {
 define i64 @sdiv_i64_n57(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n57:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #144115188075855871 // =0x1ffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #7
 ; ISEL-NEXT:    neg x0, x8, asr #57
 ; ISEL-NEXT:    ret
 ;
@@ -3926,10 +3620,8 @@ define i64 @sdiv_i64_n57(i64 %x) {
 define i64 @sdiv_i64_n58(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n58:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #288230376151711743 // =0x3ffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #6
 ; ISEL-NEXT:    neg x0, x8, asr #58
 ; ISEL-NEXT:    ret
 ;
@@ -3948,10 +3640,8 @@ define i64 @sdiv_i64_n58(i64 %x) {
 define i64 @sdiv_i64_n59(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n59:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #576460752303423487 // =0x7ffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #5
 ; ISEL-NEXT:    neg x0, x8, asr #59
 ; ISEL-NEXT:    ret
 ;
@@ -3970,10 +3660,8 @@ define i64 @sdiv_i64_n59(i64 %x) {
 define i64 @sdiv_i64_n60(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n60:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #1152921504606846975 // =0xfffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #4
 ; ISEL-NEXT:    neg x0, x8, asr #60
 ; ISEL-NEXT:    ret
 ;
@@ -3992,10 +3680,8 @@ define i64 @sdiv_i64_n60(i64 %x) {
 define i64 @sdiv_i64_n61(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n61:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #2305843009213693951 // =0x1fffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #3
 ; ISEL-NEXT:    neg x0, x8, asr #61
 ; ISEL-NEXT:    ret
 ;
@@ -4014,10 +3700,8 @@ define i64 @sdiv_i64_n61(i64 %x) {
 define i64 @sdiv_i64_n62(i64 %x) {
 ; ISEL-LABEL: sdiv_i64_n62:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    mov x8, #4611686018427387903 // =0x3fffffffffffffff
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    add x8, x0, x8
-; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x8, x0, #63
+; ISEL-NEXT:    add x8, x0, x8, lsr #2
 ; ISEL-NEXT:    neg x0, x8, asr #62
 ; ISEL-NEXT:    ret
 ;

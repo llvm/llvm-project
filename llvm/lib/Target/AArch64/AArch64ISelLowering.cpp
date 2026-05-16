@@ -20045,23 +20045,8 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   if (VT.isVector() && Subtarget->isSVEorStreamingSVEAvailable())
     return SDValue(N, 0);
 
-  // fold (sdiv X, pow2)
-  if ((VT != MVT::i32 && VT != MVT::i64) ||
-      !(Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()))
-    return SDValue();
-
-  // If the divisor is 2 or -2, the default expansion is better. It will add
-  // (N->getValueType(0) >> (BitWidth - 1)) to it before shifting right.
-  if (Divisor == 2 ||
-      Divisor == APInt(Divisor.getBitWidth(), -2, /*isSigned*/ true))
-    return SDValue();
-
-  unsigned Lg2 = Divisor.countr_zero();
-  APInt Pow2MinusOne = APInt::getLowBitsSet(VT.getScalarSizeInBits(), Lg2);
-  if (!isLegalAddImmediate(Pow2MinusOne.getSExtValue()))
-    return SDValue();
-
-  return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
+  // Fold to shifts by default.
+  return SDValue();
 }
 
 SDValue
