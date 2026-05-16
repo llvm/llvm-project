@@ -560,9 +560,9 @@ int8x8x2_t test_vzip_s8(int8x8_t a, int8x8_t b) {
 // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// LLVM: insertvalue %struct.int8x8x2_t poison, <8 x i8> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.int8x8x2_t {{.*}}, <8 x i8> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.int8x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i8> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i8> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzip_s8(a, b);
 }
 
@@ -579,9 +579,9 @@ int16x4x2_t test_vzip_s16(int16x4_t a, int16x4_t b) {
 // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// LLVM: insertvalue %struct.int16x4x2_t poison, <4 x i16> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.int16x4x2_t {{.*}}, <4 x i16> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.int16x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x i16> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x i16> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzip_s16(a, b);
 }
 
@@ -598,9 +598,9 @@ uint8x8x2_t test_vzip_u8(uint8x8_t a, uint8x8_t b) {
 // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// LLVM: insertvalue %struct.uint8x8x2_t poison, <8 x i8> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint8x8x2_t {{.*}}, <8 x i8> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.uint8x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i8> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i8> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzip_u8(a, b);
 }
 
@@ -617,9 +617,9 @@ uint16x4x2_t test_vzip_u16(uint16x4_t a, uint16x4_t b) {
 // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// LLVM: insertvalue %struct.uint16x4x2_t poison, <4 x i16> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint16x4x2_t {{.*}}, <4 x i16> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.uint16x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x i16> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x i16> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzip_u16(a, b);
 }
 
@@ -634,9 +634,9 @@ poly8x8x2_t test_vzip_p8(poly8x8_t a, poly8x8_t b) {
 // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// LLVM: insertvalue %struct.poly8x8x2_t poison, <8 x i8> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.poly8x8x2_t {{.*}}, <8 x i8> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.poly8x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i8> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i8> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzip_p8(a, b);
 }
 
@@ -653,9 +653,9 @@ poly16x4x2_t test_vzip_p16(poly16x4_t a, poly16x4_t b) {
 // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// LLVM: insertvalue %struct.poly16x4x2_t poison, <4 x i16> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.poly16x4x2_t {{.*}}, <4 x i16> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.poly16x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x i16> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x i16> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzip_p16(a, b);
 }
 
@@ -672,9 +672,9 @@ mfloat8x8x2_t test_vzip_mf8(mfloat8x8_t a, mfloat8x8_t b) {
 // LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// LLVM: insertvalue %struct.mfloat8x8x2_t poison, <8 x i8> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.mfloat8x8x2_t {{.*}}, <8 x i8> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.mfloat8x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i8> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i8> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzip_mf8(a, b);
 }
 
@@ -691,9 +691,9 @@ int32x2x2_t test_vzip_s32(int32x2_t a, int32x2_t b) {
 // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[B]], <2 x i32> <i32 0, i32 2>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[B]], <2 x i32> <i32 1, i32 3>
-// LLVM: insertvalue %struct.int32x2x2_t poison, <2 x i32> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.int32x2x2_t {{.*}}, <2 x i32> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.int32x2x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <2 x i32> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <2 x i32> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzip_s32(a, b);
 }
 
@@ -710,9 +710,9 @@ float32x2x2_t test_vzip_f32(float32x2_t a, float32x2_t b) {
 // LLVM-SAME: <2 x float> {{.*}} [[A:%.*]], <2 x float> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <2 x float> [[A]], <2 x float> [[B]], <2 x i32> <i32 0, i32 2>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <2 x float> [[A]], <2 x float> [[B]], <2 x i32> <i32 1, i32 3>
-// LLVM: insertvalue %struct.float32x2x2_t poison, <2 x float> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.float32x2x2_t {{.*}}, <2 x float> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.float32x2x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <2 x float> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <2 x float> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzip_f32(a, b);
 }
 
@@ -729,9 +729,9 @@ uint32x2x2_t test_vzip_u32(uint32x2_t a, uint32x2_t b) {
 // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[B]], <2 x i32> <i32 0, i32 2>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[B]], <2 x i32> <i32 1, i32 3>
-// LLVM: insertvalue %struct.uint32x2x2_t poison, <2 x i32> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint32x2x2_t {{.*}}, <2 x i32> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.uint32x2x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <2 x i32> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <2 x i32> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzip_u32(a, b);
 }
 
@@ -746,9 +746,9 @@ int8x16x2_t test_vzipq_s8(int8x16_t a, int8x16_t b) {
 // LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
-// LLVM: insertvalue %struct.int8x16x2_t poison, <16 x i8> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.int8x16x2_t {{.*}}, <16 x i8> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.int8x16x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <16 x i8> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <16 x i8> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzipq_s8(a, b);
 }
 
@@ -765,9 +765,9 @@ int16x8x2_t test_vzipq_s16(int16x8_t a, int16x8_t b) {
 // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// LLVM: insertvalue %struct.int16x8x2_t poison, <8 x i16> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.int16x8x2_t {{.*}}, <8 x i16> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.int16x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i16> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i16> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzipq_s16(a, b);
 }
 
@@ -784,9 +784,9 @@ int32x4x2_t test_vzipq_s32(int32x4_t a, int32x4_t b) {
 // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// LLVM: insertvalue %struct.int32x4x2_t poison, <4 x i32> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.int32x4x2_t {{.*}}, <4 x i32> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.int32x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x i32> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x i32> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzipq_s32(a, b);
 }
 
@@ -803,9 +803,9 @@ float32x4x2_t test_vzipq_f32(float32x4_t a, float32x4_t b) {
 // LLVM-SAME: <4 x float> {{.*}} [[A:%.*]], <4 x float> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// LLVM: insertvalue %struct.float32x4x2_t poison, <4 x float> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.float32x4x2_t {{.*}}, <4 x float> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.float32x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x float> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x float> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzipq_f32(a, b);
 }
 
@@ -822,9 +822,9 @@ uint8x16x2_t test_vzipq_u8(uint8x16_t a, uint8x16_t b) {
 // LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
-// LLVM: insertvalue %struct.uint8x16x2_t poison, <16 x i8> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint8x16x2_t {{.*}}, <16 x i8> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.uint8x16x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <16 x i8> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <16 x i8> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzipq_u8(a, b);
 }
 
@@ -841,9 +841,9 @@ uint16x8x2_t test_vzipq_u16(uint16x8_t a, uint16x8_t b) {
 // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// LLVM: insertvalue %struct.uint16x8x2_t poison, <8 x i16> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint16x8x2_t {{.*}}, <8 x i16> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.uint16x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i16> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i16> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzipq_u16(a, b);
 }
 
@@ -860,9 +860,9 @@ uint32x4x2_t test_vzipq_u32(uint32x4_t a, uint32x4_t b) {
 // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// LLVM: insertvalue %struct.uint32x4x2_t poison, <4 x i32> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint32x4x2_t {{.*}}, <4 x i32> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.uint32x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x i32> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x i32> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzipq_u32(a, b);
 }
 
@@ -877,9 +877,9 @@ poly8x16x2_t test_vzipq_p8(poly8x16_t a, poly8x16_t b) {
 // LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
-// LLVM: insertvalue %struct.poly8x16x2_t poison, <16 x i8> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.poly8x16x2_t {{.*}}, <16 x i8> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.poly8x16x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <16 x i8> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <16 x i8> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzipq_p8(a, b);
 }
 
@@ -896,9 +896,9 @@ poly16x8x2_t test_vzipq_p16(poly16x8_t a, poly16x8_t b) {
 // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// LLVM: insertvalue %struct.poly16x8x2_t poison, <8 x i16> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.poly16x8x2_t {{.*}}, <8 x i16> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.poly16x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i16> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i16> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzipq_p16(a, b);
 }
 
@@ -915,9 +915,9 @@ mfloat8x16x2_t test_vzipq_mf8(mfloat8x16_t a, mfloat8x16_t b) {
 // LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]]) {{.*}} {
 // LLVM: [[VZIP_LO:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
 // LLVM: [[VZIP_HI:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
-// LLVM: insertvalue %struct.mfloat8x16x2_t poison, <16 x i8> [[VZIP_LO]], 0, 0
-// LLVM: insertvalue %struct.mfloat8x16x2_t {{.*}}, <16 x i8> [[VZIP_HI]], 0, 1
-// LLVM: ret %struct.mfloat8x16x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <16 x i8> [[VZIP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <16 x i8> [[VZIP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vzipq_mf8(a, b);
 }
 
@@ -937,9 +937,9 @@ int8x8x2_t test_vuzp_s8(int8x8_t a, int8x8_t b) {
 // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// LLVM: insertvalue %struct.int8x8x2_t poison, <8 x i8> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.int8x8x2_t {{.*}}, <8 x i8> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.int8x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i8> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i8> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzp_s8(a, b);
 }
 
@@ -956,9 +956,9 @@ int16x4x2_t test_vuzp_s16(int16x4_t a, int16x4_t b) {
 // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// LLVM: insertvalue %struct.int16x4x2_t poison, <4 x i16> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.int16x4x2_t {{.*}}, <4 x i16> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.int16x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x i16> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x i16> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzp_s16(a, b);
 }
 
@@ -975,9 +975,9 @@ uint8x8x2_t test_vuzp_u8(uint8x8_t a, uint8x8_t b) {
 // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// LLVM: insertvalue %struct.uint8x8x2_t poison, <8 x i8> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint8x8x2_t {{.*}}, <8 x i8> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.uint8x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i8> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i8> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzp_u8(a, b);
 }
 
@@ -994,9 +994,9 @@ uint16x4x2_t test_vuzp_u16(uint16x4_t a, uint16x4_t b) {
 // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// LLVM: insertvalue %struct.uint16x4x2_t poison, <4 x i16> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint16x4x2_t {{.*}}, <4 x i16> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.uint16x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x i16> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x i16> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzp_u16(a, b);
 }
 
@@ -1011,9 +1011,9 @@ poly8x8x2_t test_vuzp_p8(poly8x8_t a, poly8x8_t b) {
 // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// LLVM: insertvalue %struct.poly8x8x2_t poison, <8 x i8> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.poly8x8x2_t {{.*}}, <8 x i8> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.poly8x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i8> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i8> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzp_p8(a, b);
 }
 
@@ -1030,9 +1030,9 @@ poly16x4x2_t test_vuzp_p16(poly16x4_t a, poly16x4_t b) {
 // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// LLVM: insertvalue %struct.poly16x4x2_t poison, <4 x i16> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.poly16x4x2_t {{.*}}, <4 x i16> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.poly16x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x i16> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x i16> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzp_p16(a, b);
 }
 
@@ -1049,9 +1049,9 @@ mfloat8x8x2_t test_vuzp_mf8(mfloat8x8_t a, mfloat8x8_t b) {
 // LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[B]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// LLVM: insertvalue %struct.mfloat8x8x2_t poison, <8 x i8> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.mfloat8x8x2_t {{.*}}, <8 x i8> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.mfloat8x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i8> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i8> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzp_mf8(a, b);
 }
 
@@ -1068,9 +1068,9 @@ int32x2x2_t test_vuzp_s32(int32x2_t a, int32x2_t b) {
 // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[B]], <2 x i32> <i32 0, i32 2>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[B]], <2 x i32> <i32 1, i32 3>
-// LLVM: insertvalue %struct.int32x2x2_t poison, <2 x i32> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.int32x2x2_t {{.*}}, <2 x i32> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.int32x2x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <2 x i32> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <2 x i32> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzp_s32(a, b);
 }
 
@@ -1087,9 +1087,9 @@ float32x2x2_t test_vuzp_f32(float32x2_t a, float32x2_t b) {
 // LLVM-SAME: <2 x float> {{.*}} [[A:%.*]], <2 x float> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <2 x float> [[A]], <2 x float> [[B]], <2 x i32> <i32 0, i32 2>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <2 x float> [[A]], <2 x float> [[B]], <2 x i32> <i32 1, i32 3>
-// LLVM: insertvalue %struct.float32x2x2_t poison, <2 x float> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.float32x2x2_t {{.*}}, <2 x float> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.float32x2x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <2 x float> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <2 x float> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzp_f32(a, b);
 }
 
@@ -1106,9 +1106,9 @@ uint32x2x2_t test_vuzp_u32(uint32x2_t a, uint32x2_t b) {
 // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[B]], <2 x i32> <i32 0, i32 2>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[B]], <2 x i32> <i32 1, i32 3>
-// LLVM: insertvalue %struct.uint32x2x2_t poison, <2 x i32> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint32x2x2_t {{.*}}, <2 x i32> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.uint32x2x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <2 x i32> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <2 x i32> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzp_u32(a, b);
 }
 
@@ -1123,9 +1123,9 @@ int8x16x2_t test_vuzpq_s8(int8x16_t a, int8x16_t b) {
 // LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
-// LLVM: insertvalue %struct.int8x16x2_t poison, <16 x i8> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.int8x16x2_t {{.*}}, <16 x i8> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.int8x16x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <16 x i8> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <16 x i8> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzpq_s8(a, b);
 }
 
@@ -1142,9 +1142,9 @@ int16x8x2_t test_vuzpq_s16(int16x8_t a, int16x8_t b) {
 // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// LLVM: insertvalue %struct.int16x8x2_t poison, <8 x i16> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.int16x8x2_t {{.*}}, <8 x i16> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.int16x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i16> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i16> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzpq_s16(a, b);
 }
 
@@ -1161,9 +1161,9 @@ int32x4x2_t test_vuzpq_s32(int32x4_t a, int32x4_t b) {
 // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// LLVM: insertvalue %struct.int32x4x2_t poison, <4 x i32> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.int32x4x2_t {{.*}}, <4 x i32> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.int32x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x i32> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x i32> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzpq_s32(a, b);
 }
 
@@ -1180,9 +1180,9 @@ float32x4x2_t test_vuzpq_f32(float32x4_t a, float32x4_t b) {
 // LLVM-SAME: <4 x float> {{.*}} [[A:%.*]], <4 x float> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// LLVM: insertvalue %struct.float32x4x2_t poison, <4 x float> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.float32x4x2_t {{.*}}, <4 x float> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.float32x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x float> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x float> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzpq_f32(a, b);
 }
 
@@ -1199,9 +1199,9 @@ uint8x16x2_t test_vuzpq_u8(uint8x16_t a, uint8x16_t b) {
 // LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
-// LLVM: insertvalue %struct.uint8x16x2_t poison, <16 x i8> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint8x16x2_t {{.*}}, <16 x i8> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.uint8x16x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <16 x i8> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <16 x i8> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzpq_u8(a, b);
 }
 
@@ -1218,9 +1218,9 @@ uint32x4x2_t test_vuzpq_u32(uint32x4_t a, uint32x4_t b) {
 // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// LLVM: insertvalue %struct.uint32x4x2_t poison, <4 x i32> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint32x4x2_t {{.*}}, <4 x i32> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.uint32x4x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <4 x i32> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <4 x i32> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzpq_u32(a, b);
 }
 
@@ -1235,9 +1235,9 @@ poly8x16x2_t test_vuzpq_p8(poly8x16_t a, poly8x16_t b) {
 // LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
-// LLVM: insertvalue %struct.poly8x16x2_t poison, <16 x i8> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.poly8x16x2_t {{.*}}, <16 x i8> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.poly8x16x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <16 x i8> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <16 x i8> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzpq_p8(a, b);
 }
 
@@ -1254,9 +1254,9 @@ poly16x8x2_t test_vuzpq_p16(poly16x8_t a, poly16x8_t b) {
 // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// LLVM: insertvalue %struct.poly16x8x2_t poison, <8 x i16> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.poly16x8x2_t {{.*}}, <8 x i16> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.poly16x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i16> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i16> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzpq_p16(a, b);
 }
 
@@ -1273,9 +1273,9 @@ mfloat8x16x2_t test_vuzpq_mf8(mfloat8x16_t a, mfloat8x16_t b) {
 // LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[B]], <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
-// LLVM: insertvalue %struct.mfloat8x16x2_t poison, <16 x i8> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.mfloat8x16x2_t {{.*}}, <16 x i8> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.mfloat8x16x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <16 x i8> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <16 x i8> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzpq_mf8(a, b);
 }
 
@@ -1825,8 +1825,8 @@ uint16x8x2_t test_vuzpq_u16(uint16x8_t a, uint16x8_t b) {
 // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]]) {{.*}} {
 // LLVM: [[VUZP_LO:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 // LLVM: [[VUZP_HI:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[B]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// LLVM: insertvalue %struct.uint16x8x2_t poison, <8 x i16> [[VUZP_LO]], 0, 0
-// LLVM: insertvalue %struct.uint16x8x2_t {{.*}}, <8 x i16> [[VUZP_HI]], 0, 1
-// LLVM: ret %struct.uint16x8x2_t
+// LLVM: [[RES0:%.*]] = insertvalue [[RTY:%.*]] poison, <8 x i16> [[VUZP_LO]], 0, 0
+// LLVM: [[RES1:%.*]] = insertvalue [[RTY]] [[RES0]], <8 x i16> [[VUZP_HI]], 0, 1
+// LLVM: ret [[RTY]] [[RES1]]
 return vuzpq_u16(a, b);
 }
