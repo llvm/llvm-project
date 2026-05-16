@@ -38,6 +38,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRAffineDialect
   MLIRAffineAnalysis
   MLIRAffineUtils
+  MLIRAnalysis
   MLIRArithDialect
   MLIRDialectUtils
   MLIRGPUDialect

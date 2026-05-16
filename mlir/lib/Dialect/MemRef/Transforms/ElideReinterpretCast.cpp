@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -453,6 +455,114 @@ public:
   }
 };
 
+/// Returns true when `rc` is a pure offset-shift reinterpret_cast: source and
+/// result have the same rank, the same element type, the same memory space,
+/// and identical per-rank strides; only the offset (and possibly sizes) differ.
+/// In that form, `load %rc[%idx]` is equivalent to a load on the source at an
+/// adjusted index that absorbs the offset difference.
+///
+/// Restricted to rank-1 sources for now to keep the index transformation
+/// straightforward (innermost stride must equal one). Multi-rank cases can be
+/// added later by linearizing the offset shift across dimensions.
+static bool isPureOffsetShiftRC(memref::ReinterpretCastOp rc) {
+  auto inputTy = dyn_cast<MemRefType>(rc.getSource().getType());
+  auto outputTy = dyn_cast<MemRefType>(rc.getType());
+  if (!inputTy || !outputTy)
+    return false;
+
+  if (inputTy.getRank() != 1 || outputTy.getRank() != 1)
+    return false;
+  if (inputTy.getElementType() != outputTy.getElementType())
+    return false;
+  if (inputTy.getMemorySpace() != outputTy.getMemorySpace())
+    return false;
+
+  int64_t inputOffset, outputOffset;
+  SmallVector<int64_t> inputStrides, outputStrides;
+  if (failed(inputTy.getStridesAndOffset(inputStrides, inputOffset)))
+    return false;
+  if (failed(outputTy.getStridesAndOffset(outputStrides, outputOffset)))
+    return false;
+  if (inputStrides != outputStrides)
+    return false;
+  // Only innermost stride == 1 is supported; otherwise the offset shift
+  // cannot be absorbed into a single index addition.
+  if (inputStrides.back() != 1)
+    return false;
+
+  return true;
+}
+
+/// Rewrites `memref.load` through an offset-shift `reinterpret_cast` by
+/// folding the offset difference into the load index on the source memref.
+///
+/// Shape restriction gated by isPureOffsetShiftRC(): rank-1 source and result,
+/// matching element type / memory space / strides, innermost stride == 1.
+/// Sizes and offsets may differ.
+///
+/// BEFORE
+///   %view = memref.reinterpret_cast %src to offset: [%off], sizes: [N],
+///     strides: [1] : memref<?xi8> to memref<Nxi8, strided<[1], offset: ?>>
+///   %v = memref.load %view[%i] : memref<Nxi8, strided<[1], offset: ?>>
+///
+/// AFTER
+///   %adj = arith.addi %off, %i : index   // (or affine.apply for folding)
+///   %v = memref.load %src[%adj] : memref<?xi8>
+struct RewriteLoadFromOffsetShiftReinterpretCast
+    : public OpRewritePattern<memref::LoadOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::LoadOp op,
+                                PatternRewriter &rewriter) const override {
+    auto rc = op.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
+    if (!rc)
+      return rewriter.notifyMatchFailure(
+          op, "load source is not a memref.reinterpret_cast");
+    if (!isPureOffsetShiftRC(rc))
+      return rewriter.notifyMatchFailure(
+          op, "reinterpret_cast is not a pure offset shift");
+
+    Location loc = op.getLoc();
+    Value src = rc.getSource();
+    auto inputTy = cast<MemRefType>(src.getType());
+
+    // Pull the source memref's offset from its strided layout. If it's
+    // dynamic, materialize it via memref.extract_strided_metadata.
+    int64_t srcStaticOffset;
+    SmallVector<int64_t> srcStaticStrides;
+    [[maybe_unused]] LogicalResult status =
+        inputTy.getStridesAndOffset(srcStaticStrides, srcStaticOffset);
+    assert(succeeded(status) &&
+           "isPureOffsetShiftRC ensured a strided layout");
+
+    OpFoldResult srcOffsetFR;
+    if (ShapedType::isDynamic(srcStaticOffset)) {
+      auto md = memref::ExtractStridedMetadataOp::create(rewriter, loc, src);
+      srcOffsetFR = md.getOffset();
+    } else {
+      srcOffsetFR = rewriter.getIndexAttr(srcStaticOffset);
+    }
+
+    // shift = rcOffset - srcOffset; newIdx = oldIdx + shift. Use
+    // affine.apply for automatic constant folding.
+    OpFoldResult rcOffsetFR = rc.getMixedOffsets().front();
+    OpFoldResult oldIdxFR = getAsOpFoldResult(op.getIndices().front());
+
+    AffineExpr s0, s1, s2;
+    bindSymbols(rewriter.getContext(), s0, s1, s2);
+    OpFoldResult newIdxFR = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, s0 + s1 - s2, {oldIdxFR, rcOffsetFR, srcOffsetFR});
+    Value newIdx = getValueOrCreateConstantIndexOp(rewriter, loc, newIdxFR);
+
+    // If the reinterpret_cast was only used by this load, drop it.
+    if (rc.getResult().hasOneUse())
+      rewriter.eraseOp(rc);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, src, ValueRange{newIdx});
+    return success();
+  }
+};
+
 struct ElideReinterpretCastPass
     : public memref::impl::ElideReinterpretCastPassBase<
           ElideReinterpretCastPass> {
@@ -472,9 +582,11 @@ struct ElideReinterpretCastPass
       auto rc = op.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
       if (!rc)
         return true;
-      return !isPureRankExpansionOrCollapsingRC(rc);
+      return !isPureRankExpansionOrCollapsingRC(rc) &&
+             !isPureOffsetShiftRC(rc);
     });
-    target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect>();
+    target.addLegalDialect<affine::AffineDialect, arith::ArithDialect,
+                           memref::MemRefDialect>();
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -485,6 +597,7 @@ struct ElideReinterpretCastPass
 
 void mlir::memref::populateElideReinterpretCastPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<CopyToScalarLoadAndStore, RewriteLoadFromReinterpretCast>(
+  patterns.add<CopyToScalarLoadAndStore, RewriteLoadFromReinterpretCast,
+               RewriteLoadFromOffsetShiftReinterpretCast>(
       patterns.getContext());
 }

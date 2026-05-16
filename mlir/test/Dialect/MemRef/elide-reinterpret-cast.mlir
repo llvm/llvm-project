@@ -534,3 +534,164 @@ func.func private @negative_diff_non_unit_size(
   %0 = memref.load %reinterpret_cast[%c0, %c98] : memref<1x99xf32>
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Positive tests for offset-shift reinterpret_cast
+//
+// `RewriteLoadFromOffsetShiftReinterpretCast` folds a load through a
+// reinterpret_cast that differs from its source only by offset (rank-1, same
+// element type / memory space / strides, innermost stride == 1). The cast
+// offset is absorbed into the consumer load index:
+//   load %rc[%idx]  ->  load %src[%idx + rcOff - srcOff]
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @offset_shift_static_offsets(
+// CHECK-SAME:    %[[SRC:.*]]: memref<16xi8>) -> i8
+func.func @offset_shift_static_offsets(%src: memref<16xi8>) -> i8 {
+  // CHECK-NOT:   memref.reinterpret_cast
+  %rc = memref.reinterpret_cast %src to offset: [4], sizes: [8], strides: [1]
+    : memref<16xi8> to memref<8xi8, strided<[1], offset: 4>>
+  %c2 = arith.constant 2 : index
+  // %adj = 2 + 4 - 0 = 6
+  // CHECK:       %[[C6:.*]] = arith.constant 6 : index
+  // CHECK:       %[[V:.*]] = memref.load %[[SRC]][%[[C6]]] : memref<16xi8>
+  %v = memref.load %rc[%c2] : memref<8xi8, strided<[1], offset: 4>>
+  // CHECK:       return %[[V]]
+  return %v : i8
+}
+
+// -----
+
+// CHECK-LABEL: func.func @offset_shift_dynamic_rc_offset(
+// CHECK-SAME:    %[[OFF:.*]]: index
+// CHECK-SAME:    %[[SRC:.*]]: memref<?xi8>) -> i8
+func.func @offset_shift_dynamic_rc_offset(%off: index, %src: memref<?xi8>)
+    -> i8 {
+  // CHECK-NOT:   memref.reinterpret_cast
+  %rc = memref.reinterpret_cast %src to offset: [%off], sizes: [8], strides: [1]
+    : memref<?xi8> to memref<8xi8, strided<[1], offset: ?>>
+  %c0 = arith.constant 0 : index
+  // %adj = 0 + %off - 0 = %off
+  // CHECK:       %[[V:.*]] = memref.load %[[SRC]][%[[OFF]]] : memref<?xi8>
+  %v = memref.load %rc[%c0] : memref<8xi8, strided<[1], offset: ?>>
+  // CHECK:       return %[[V]]
+  return %v : i8
+}
+
+// -----
+
+// CHECK-LABEL: func.func @offset_shift_dynamic_load_index(
+// CHECK-SAME:    %[[I:.*]]: index
+// CHECK-SAME:    %[[SRC:.*]]: memref<16xi8>) -> i8
+func.func @offset_shift_dynamic_load_index(%i: index, %src: memref<16xi8>)
+    -> i8 {
+  // CHECK-NOT:   memref.reinterpret_cast
+  %rc = memref.reinterpret_cast %src to offset: [3], sizes: [8], strides: [1]
+    : memref<16xi8> to memref<8xi8, strided<[1], offset: 3>>
+  // %adj = %i + 3 - 0 = %i + 3
+  // CHECK:       %[[ADJ:.*]] = affine.apply {{.*}}[%[[I]]]
+  // CHECK:       %[[V:.*]] = memref.load %[[SRC]][%[[ADJ]]] : memref<16xi8>
+  %v = memref.load %rc[%i] : memref<8xi8, strided<[1], offset: 3>>
+  // CHECK:       return %[[V]]
+  return %v : i8
+}
+
+// -----
+
+// Dynamic source offset: must materialize the source offset via
+// memref.extract_strided_metadata before computing the adjusted index.
+//
+// CHECK-LABEL: func.func @offset_shift_dynamic_src_offset(
+// CHECK-SAME:    %[[OFF:.*]]: index
+// CHECK-SAME:    %[[SRC:.*]]: memref<?xi8, strided<[1], offset: ?>>) -> i8
+func.func @offset_shift_dynamic_src_offset(%off: index,
+    %src: memref<?xi8, strided<[1], offset: ?>>) -> i8 {
+  // CHECK:       %{{.*}}, %[[SRCOFF:[a-zA-Z0-9_]+]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %[[SRC]]
+  // CHECK-NOT:   memref.reinterpret_cast
+  %rc = memref.reinterpret_cast %src to offset: [%off], sizes: [8], strides: [1]
+    : memref<?xi8, strided<[1], offset: ?>>
+      to memref<8xi8, strided<[1], offset: ?>>
+  %c1 = arith.constant 1 : index
+  // %adj = 1 + %off - %srcOff
+  // CHECK:       %[[ADJ:.*]] = affine.apply {{.*}}[%[[OFF]], %[[SRCOFF]]]
+  // CHECK:       %[[V:.*]] = memref.load %[[SRC]][%[[ADJ]]]
+  %v = memref.load %rc[%c1] : memref<8xi8, strided<[1], offset: ?>>
+  // CHECK:       return %[[V]]
+  return %v : i8
+}
+
+// -----
+
+// Same-offset cast (rc offset equals src offset). The shift folds to 0,
+// so the rewritten load index equals the original index.
+//
+// CHECK-LABEL: func.func @offset_shift_same_offset(
+// CHECK-SAME:    %[[I:.*]]: index
+// CHECK-SAME:    %[[SRC:.*]]: memref<16xi8>) -> i8
+func.func @offset_shift_same_offset(%i: index, %src: memref<16xi8>) -> i8 {
+  // CHECK-NOT:   memref.reinterpret_cast
+  %rc = memref.reinterpret_cast %src to offset: [0], sizes: [8], strides: [1]
+    : memref<16xi8> to memref<8xi8, strided<[1]>>
+  // CHECK:       %[[V:.*]] = memref.load %[[SRC]][%[[I]]] : memref<16xi8>
+  %v = memref.load %rc[%i] : memref<8xi8, strided<[1]>>
+  // CHECK:       return %[[V]]
+  return %v : i8
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Negative tests for offset-shift reinterpret_cast (must NOT rewrite)
+//===----------------------------------------------------------------------===//
+
+// Rank-2 source/result: pattern is restricted to rank-1.
+//
+// CHECK-LABEL: func.func @negative_offset_shift_rank2(
+func.func @negative_offset_shift_rank2(%src: memref<4x4xi8>) -> i8 {
+  // CHECK:       %[[RC:.*]] = memref.reinterpret_cast
+  %rc = memref.reinterpret_cast %src to offset: [4], sizes: [2, 2], strides: [4, 1]
+    : memref<4x4xi8> to memref<2x2xi8, strided<[4, 1], offset: 4>>
+  %c0 = arith.constant 0 : index
+  // CHECK:       memref.load %[[RC]]
+  %v = memref.load %rc[%c0, %c0] : memref<2x2xi8, strided<[4, 1], offset: 4>>
+  return %v : i8
+}
+
+// -----
+
+// Element type mismatch is invalid IR for reinterpret_cast in general; the
+// allowed case the pattern must reject is a *stride* mismatch.
+//
+// CHECK-LABEL: func.func @negative_offset_shift_diff_stride(
+func.func @negative_offset_shift_diff_stride(
+    %src: memref<16xi8, strided<[1]>>) -> i8 {
+  // CHECK:       %[[RC:.*]] = memref.reinterpret_cast
+  %rc = memref.reinterpret_cast %src to offset: [4], sizes: [4], strides: [2]
+    : memref<16xi8, strided<[1]>>
+      to memref<4xi8, strided<[2], offset: 4>>
+  %c0 = arith.constant 0 : index
+  // CHECK:       memref.load %[[RC]]
+  %v = memref.load %rc[%c0] : memref<4xi8, strided<[2], offset: 4>>
+  return %v : i8
+}
+
+// -----
+
+// Innermost stride != 1: offset shift cannot be absorbed into a single index
+// addition without scaling.
+//
+// CHECK-LABEL: func.func @negative_offset_shift_inner_stride_ne_one(
+func.func @negative_offset_shift_inner_stride_ne_one(
+    %src: memref<16xi8, strided<[2]>>) -> i8 {
+  // CHECK:       %[[RC:.*]] = memref.reinterpret_cast
+  %rc = memref.reinterpret_cast %src to offset: [4], sizes: [4], strides: [2]
+    : memref<16xi8, strided<[2]>>
+      to memref<4xi8, strided<[2], offset: 4>>
+  %c0 = arith.constant 0 : index
+  // CHECK:       memref.load %[[RC]]
+  %v = memref.load %rc[%c0] : memref<4xi8, strided<[2], offset: 4>>
+  return %v : i8
+}
+

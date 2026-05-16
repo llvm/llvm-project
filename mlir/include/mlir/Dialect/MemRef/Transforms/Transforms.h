@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace mlir {
+class DataFlowSolver;
 class OpBuilder;
 class RewritePatternSet;
 class RewriterBase;
@@ -89,15 +90,20 @@ void populateMemRefWideIntEmulationConversions(
 /// over wider types.
 /// When `disableAtomicRMW` is true, the store patterns generate non-atomic
 /// read-modify-write sequences instead of atomic operations.
-/// When `assumeAligned` is true, `memref.subview` and
-/// `memref.reinterpret_cast` patterns accept dynamic offsets under the
-/// alignment contract that the caller guarantees those offsets are a multiple
-/// of `dstBits / srcBits`. When false (the default), dynamic offsets are
-/// rejected to preserve soundness for callers that cannot prove divisibility.
+/// When `solver` is non-null, `memref.subview` and `memref.reinterpret_cast`
+/// patterns consult the `IntegerDivisibilityLattice` for each dynamic offset:
+///   - If the analysis proves the offset is a multiple of `dstBits / srcBits`,
+///     the pattern proceeds.
+///   - If the analysis proves the offset is *not* such a multiple, the pattern
+///     rejects the op via `notifyMatchFailure`.
+///   - If the lattice is uninitialized/opaque, the pattern proceeds (the same
+///     behavior as the legacy `assumeAligned=true` path).
+/// When `solver` is null, the patterns behave as if every dynamic offset were
+/// opaque, i.e. they proceed under the alignment contract.
 void populateMemRefNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns, bool disableAtomicRMW = false,
-    bool assumeAligned = false);
+    DataFlowSolver *solver = nullptr);
 
 /// Appends type conversions for emulating memref operations over narrow types
 /// with ops over wider types.
