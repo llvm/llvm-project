@@ -2192,10 +2192,10 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
     bool hasAttributeNoBuiltin = false;
     assert(!cir::MissingFeatures::attributeNoBuiltin());
 
-    // When directing calling an inline builtin, call it through it's mangled
+    // When directly calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
     if (auto fn = dyn_cast<cir::FuncOp>(curFn);
-        fn && fn.getName() != fdInlineName &&
+        (!fn || fn.getName() != fdInlineName) &&
         onlyHasInlineBuiltinDeclaration(fd)) {
       cir::FuncOp clone =
           mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
