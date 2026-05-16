@@ -54,6 +54,7 @@ add_mlir_library(MLIRAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
+  MLIRDialectUtils
   MLIRFunctionInterfaces
   MLIRInferIntDivisibilityOpInterface
   MLIRInferIntRangeInterface
