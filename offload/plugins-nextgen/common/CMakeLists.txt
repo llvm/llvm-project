@@ -41,7 +41,7 @@ add_library(PluginCommon OBJECT
   src/GenericProfiler.cpp
   ${emissary_sources}
 )
-add_dependencies(PluginCommon intrinsics_gen PluginErrcodes)
+add_dependencies(PluginCommon intrinsics_gen PluginErrcodes OffloadAPI)
 
 # Only enable JIT for those targets that LLVM can support.
 set(supported_jit_targets AMDGPU NVPTX)
