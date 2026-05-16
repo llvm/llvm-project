@@ -598,7 +598,7 @@ void ModuleDepCollector::handleImport(const Module *Imported) {
   }
 }
 
-void ModuleDepCollector::run() {
+void ModuleDepCollector::run(DependencyConsumer &Consumer) {
   auto &MDC = *this;
 
   FileID MainFileID = MDC.ScanInstance.getSourceManager().getMainFileID();
@@ -649,32 +649,32 @@ void ModuleDepCollector::run() {
   for (serialization::ModuleFile *MF : MDC.DirectModularDeps)
     handleTopLevelModule(MF);
 
-  MDC.Consumer.handleContextHash(
+  Consumer.handleContextHash(
       MDC.ScanInstance.getInvocation().computeContextHash());
 
-  MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
+  Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
-  MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
-      MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
+  Consumer.handleProvidedAndRequiredStdCXXModules(MDC.ProvidedStdCXXModule,
+                                                  MDC.RequiredStdCXXModules);
 
   for (auto &&I : MDC.ModularDeps)
-    MDC.Consumer.handleModuleDependency(*I.second);
+    Consumer.handleModuleDependency(*I.second);
 
   for (serialization::ModuleFile *MF : MDC.DirectModularDeps) {
     auto It = MDC.ModularDeps.find(MF);
     // Only report direct dependencies that were successfully handled.
     if (It != MDC.ModularDeps.end())
-      MDC.Consumer.handleDirectModuleDependency(It->second->ID);
+      Consumer.handleDirectModuleDependency(It->second->ID);
   }
 
   for (auto &&I : MDC.VisibleModules)
-    MDC.Consumer.handleVisibleModule(std::string(I.getKey()));
+    Consumer.handleVisibleModule(std::string(I.getKey()));
 
   for (auto &&I : MDC.FileDeps)
-    MDC.Consumer.handleFileDependency(I);
+    Consumer.handleFileDependency(I);
 
   for (auto &&I : MDC.DirectPrebuiltModularDeps)
-    MDC.Consumer.handlePrebuiltModuleDependency(I.second);
+    Consumer.handlePrebuiltModuleDependency(I.second);
 }
 
 static StringRef makeAbsoluteAndCanonicalize(CompilerInstance &CI,
@@ -847,12 +847,11 @@ void ModuleDepCollector::addAllModuleDeps(serialization::ModuleFile &MF,
 ModuleDepCollector::ModuleDepCollector(
     DependencyScanningService &Service,
     std::unique_ptr<DependencyOutputOptions> Opts,
-    CompilerInstance &ScanInstance, DependencyConsumer &C,
-    DependencyActionController &Controller, CompilerInvocation OriginalCI,
+    CompilerInstance &ScanInstance, DependencyActionController &Controller,
+    CompilerInvocation OriginalCI,
     const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
     const ArrayRef<StringRef> StableDirs)
-    : Service(Service), ScanInstance(ScanInstance), Consumer(C),
-      Controller(Controller),
+    : Service(Service), ScanInstance(ScanInstance), Controller(Controller),
       PrebuiltModulesASTMap(std::move(PrebuiltModulesASTMap)),
       StableDirs(StableDirs), Opts(std::move(Opts)),
       CommonInvocation(

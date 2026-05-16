@@ -183,7 +183,7 @@ const char *SBProcessInfo::GetTriple() {
   if (!arch.IsValid())
     return nullptr;
 
-  return ConstString(arch.GetTriple().getTriple().c_str()).GetCString();
+  return ConstString(arch.GetTriple().getTriple()).GetCString();
 }
 
 uint32_t SBProcessInfo::GetNumArguments() const {

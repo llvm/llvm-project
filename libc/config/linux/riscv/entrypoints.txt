@@ -1389,16 +1389,16 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.link.dl_iterate_phdr
 
     # wchar.h entrypoints
-    # libc.src.wchar.fgetwc
+    libc.src.wchar.fgetwc
     # libc.src.wchar.fgetws
     # libc.src.wchar.fputwc
     # libc.src.wchar.fputws
     libc.src.wchar.fwide
-    # libc.src.wchar.getwc
+    libc.src.wchar.getwc
     # libc.src.wchar.getwchar
     # libc.src.wchar.putwc
-    # libc.src.wchar.putwchar
-    # libc.src.wchar.ungetwc
+    libc.src.wchar.putwchar
+    libc.src.wchar.ungetwc
   )
 endif()
 

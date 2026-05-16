@@ -18381,6 +18381,26 @@ InstructionCost BoUpSLP::getSpillCost() {
   // the same block paths multiple times.
   SmallDenseMap<std::pair<const BasicBlock *, const BasicBlock *>, bool>
       ParentOpParentToPreds;
+  // Memoize whether a basic block contains a non-terminator no-return call.
+  // Such blocks are dead-end paths in normal control flow (execution does not
+  // exit them past the no-return call), so the block is excluded from the
+  // spill cost analysis. Terminator no-return calls (invoke/callbr) are not
+  // block-killing because they still have live CFG successors (e.g. the
+  // unwind destination of an invoke).
+  SmallDenseMap<const BasicBlock *, bool> BlockHasNoReturnCallCache;
+  auto BlockHasNoReturnCall = [&](const BasicBlock *BB) {
+    auto [It, Inserted] = BlockHasNoReturnCallCache.try_emplace(BB, false);
+    if (!Inserted)
+      return It->second;
+    for (const Instruction &I : *BB) {
+      const auto *CB = dyn_cast<CallBase>(&I);
+      if (CB && CB->doesNotReturn() && !CB->isTerminator()) {
+        It->second = true;
+        return true;
+      }
+    }
+    return false;
+  };
   // Memoize whether a loop's body (all blocks of the loop, including
   // sub-loops) contains any non-vec call.
   SmallDenseMap<const Loop *, bool> LoopBodyHasNonVecCall;
@@ -18390,6 +18410,11 @@ InstructionCost BoUpSLP::getSpillCost() {
       return It->second;
     for (BasicBlock *BB : L->blocks()) {
       if (isa<CatchSwitchInst>(BB->getTerminator()))
+        continue;
+      // Blocks containing a no-return call are dead-end paths and never
+      // actually flow back through the loop's back-edge, so their calls do
+      // not keep loop-invariant vector values live across calls.
+      if (BlockHasNoReturnCall(BB))
         continue;
       for (const Instruction &I : *BB) {
         const auto *CB = dyn_cast<CallBase>(&I);
@@ -18461,6 +18486,12 @@ InstructionCost BoUpSLP::getSpillCost() {
       // forward execution (via loop back-edges); skip them and their
       // dominated predecessors.
       if (DT->properlyDominates(Root, BB))
+        continue;
+      // A block containing a no-return call cannot reach Root via the
+      // forward edge being analyzed: execution does not continue past the
+      // no-return call, so the BB -> ... -> Root path is dead. Drop the
+      // block from the analysis without following its predecessors.
+      if (BlockHasNoReturnCall(BB))
         continue;
       auto Pair = std::make_pair(BB, OpParent);
       if (auto It = ParentOpParentToPreds.find(Pair);
@@ -18747,6 +18778,18 @@ static T *performExtractsShuffleAction(
 
 InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     ArrayRef<Value *> VectorizedVals) {
+  // FIXME: support buildvector of the gather nodes with struct types.
+  if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return TE->isGather() && TE->hasState() &&
+               TE->getOpcode() == Instruction::Call &&
+               isa<StructType>(TE->getMainOp()->getType());
+      })) {
+    LLVM_DEBUG(
+        dbgs() << "SLP: rejecting tree with buildvector struct values of size "
+               << VectorizableTree.size() << ".\n");
+    return InstructionCost::getInvalid();
+  }
+
   SmallDenseMap<const TreeEntry *, InstructionCost> NodesCosts;
   SmallPtrSet<Value *, 4> CheckedExtracts;
   SmallSetVector<TreeEntry *, 4> GatheredLoadsNodes;
@@ -19108,11 +19151,21 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
         IsEqualCostAltShuffleToTrim()) {
       PreferTrimmedTree |= TotalSubtreeCost == GatherCost;
       // If the remaining tree is just a buildvector - exit, it will cause
-      // endless attempts to vectorize.
+      // endless attempts to vectorize. When the tree is already profitable,
+      // skip trimming this node and let the post-loop logic (including
+      // gathered loads processing) decide.
       if (VectorizableTree.front()->hasState() &&
           VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
-          TE->Idx == 1)
+          TE->Idx == 1) {
+        if (Cost < -SLPCostThreshold) {
+          LLVM_DEBUG(dbgs() << "SLP: Skipping trim of node " << TE->Idx
+                            << " - tree already profitable with cost " << Cost
+                            << ".\n");
+          Worklist.pop();
+          continue;
+        }
         return InstructionCost::getInvalid();
+      }
 
       LLVM_DEBUG(dbgs() << "SLP: Trimming unprofitable subtree at node "
                         << TE->Idx << " with cost "
@@ -30585,7 +30638,7 @@ static bool tryToVectorizeSequence(
     // Look for the next elements with the same type, parent and operand
     // kinds.
     auto *I = dyn_cast<Instruction>(*IncIt);
-    if (!I || R.isDeleted(I) || isa<ScalableVectorType>(I->getType())) {
+    if (!I || R.isDeleted(I) || !isValidElementType(getValueType(I))) {
       ++IncIt;
       continue;
     }

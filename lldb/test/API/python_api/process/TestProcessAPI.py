@@ -372,8 +372,6 @@ class ProcessAPITestCase(TestBase):
         launch_flags = launch_info.GetLaunchFlags()
         launch_flags |= lldb.eLaunchFlagStopAtEntry
         launch_info.SetLaunchFlags(launch_flags)
-        expected_arguments = ["10", "qu'o'tes\"", "hello", "מזל טוב"]
-        launch_info.SetArguments(expected_arguments, False)
         error = lldb.SBError()
         process = target.Launch(launch_info, error)
 
@@ -447,6 +445,31 @@ class ProcessAPITestCase(TestBase):
 
         process_info.GetParentProcessID()
 
+    @skipUnlessPlatform(["linux"])
+    def test_get_process_info_arguments(self):
+        """Test SBProcessInfo Arguments returns the correct values."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Launch the process and stop at the entry point.
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        launch_flags = launch_info.GetLaunchFlags()
+        launch_flags |= lldb.eLaunchFlagStopAtEntry
+        launch_info.SetLaunchFlags(launch_flags)
+        expected_arguments = ["10", "qu'o'tes\"", "hello", "מזל טוב"]
+        launch_info.SetArguments(expected_arguments, False)
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+
+        if not error.Success():
+            self.fail("Failed to launch process")
+
+        process_info: lldb.SBProcessInfo = process.GetProcessInfo()
         self.assertListEqual(process_info.arguments, expected_arguments)
         self.assertEqual(process_info.GetNumArguments(), 4)
         self.assertEqual(process_info.GetArgumentAtIndex(0), "10")
