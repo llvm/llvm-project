@@ -356,7 +356,8 @@ bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
       CurDAG->getCopyToReg(Chain, DL, AMDGPU::SCC, CondNode, SDValue());
   SDValue Ops[4] = {TrueValue, FalseValue, CopyToSCC.getValue(1),
                     CopyToSCC.getValue(1)};
-  auto SelectCode = ResType == MVT::i32 ? AMDGPU::S_CSELECT_B32 : AMDGPU::S_CSELECT_B64;
+  unsigned SelectCode =
+      ResType == MVT::i32 ? AMDGPU::S_CSELECT_B32 : AMDGPU::S_CSELECT_B64;
   MachineSDNode *CSelectNode = CurDAG->getMachineNode(
       SelectCode, DL, CurDAG->getVTList(MVT::i32), Ops);
   CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), SDValue(CSelectNode, 0));
