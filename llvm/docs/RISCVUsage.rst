@@ -363,8 +363,11 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvzip``
   LLVM implements the `0.1 draft specification <https://github.com/ved-rivos/riscv-isa-manual/blob/zvzip/src/zvzip.adoc>`__.
 
+``experimental-zvvfmm``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-fa55752-2026-05-04>`__.
+
 ``experimental-zvvmm``
-  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/blob/d2e64b4922f5c2c416761f3c7c997d4f0cf814d9/src/integrated-matrix.adoc>`__.
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-fa55752-2026-05-04>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 

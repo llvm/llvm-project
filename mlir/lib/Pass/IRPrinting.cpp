@@ -48,6 +48,11 @@ private:
 
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
                     OpPrintingFlags flags) {
+  // Check to see if we are not printing at module scope.
+  if (!printModuleScope)
+    return op->print(out, op->getBlock() ? flags.useLocalScope() : flags);
+
+  // Otherwise, we are printing at module scope.
   // Find the top-level operation.
   auto *topLevelOp = op;
   while (auto *parentOp = topLevelOp->getParentOp())
