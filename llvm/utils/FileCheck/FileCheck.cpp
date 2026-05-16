@@ -474,21 +474,12 @@ public:
   }
 };
 
-/// A range representation with inclusive start and end bounds specifying where
-/// annotation markers are physically drawn in the input dump.
-///
-/// This class encapsulates the conversion of an \c SMRange to lines and columns
-/// for input annotation markers indicating the same range:
-/// - It handles adjustments to line numbers when a range boundary appears at a
-///   line boundary.
-/// - It avoids related mistakes in determining whether the range is contained
-///   within a single line.
-/// - It avoids the mistake of producing no marker in an input annotation for an
-///   empty range.
-///
-/// All lines and columns have index-origin one.
+/// A range specifying where annotation markers are physically \a drawn in the
+/// input dump.
 struct MarkerRange {
 public:
+  /// An inclusive \c MarkerRange boundary.  Both line and column use a 1-based
+  /// index origin.
   struct Loc {
     unsigned Line;
     unsigned Col;
@@ -500,44 +491,29 @@ public:
   };
 
 private:
-  /// Points to the first character included in the marker range.
+  /// Location of the first marked character.
   Loc First;
-  /// Points to the last character included in the marker range.
+  /// Location of the last marked character.
   Loc Last;
   MarkerRange(Loc First, Loc Last) : First(First), Last(Last) {}
 
 public:
   /// Make an invalid range to be overwritten before being used.
   MarkerRange() = default;
-  /// Convert \p Range to a \c MarkerRange.
+  /// \p Range specifies the \a logical input range to be depicted by annotation
+  /// markers \a drawn at the resulting \c MarkerRange.
   ///
-  /// \p Range's start must be inclusive, and its end must be exclusive.  It
-  /// specifies the \a logical input range to be depicted by annotation markers.
-  ///
-  /// The resulting \c MarkerRange's first and last locations are always both
-  /// inclusive.  It specifies exactly where markers should be physically
-  /// \a drawn in an input dump.  If \p Range is an empty range, then the
-  /// resulting \c MarkerRange is expanded to a single character.  This avoids a
-  /// missing marker for an empty range, but it means the markers for a
-  /// single-character range are indistinguishable from markers for an empty
-  /// range.
-  ///
-  /// Given an \c SMRange representing the range of text "range of text", the
-  /// following example compares how the \c SMRange and a \c MarkerRange
-  /// constructed from it encode their start (s) and end (e) bounds:
-  ///
-  ///     foo range of text bar
-  ///         s            e    SMRange
-  ///         s           e     MarkerRange
-  ///
+  /// If \p Range is an empty range, then the resulting \c MarkerRange is
+  /// expanded to a single character.  This avoids a missing marker for an empty
+  /// range, but it means the markers for a single-character range are
+  /// indistinguishable from markers for an empty range.
   MarkerRange(const SourceMgr &SM, SMRange Range) {
+    // Range has an inclusive start as MarkerRange requires.
     First = SM.getLineAndColumn(Range.Start);
-    // The SMRange has an exclusive end, but we want an inclusive end.
+    // Range has an exclusive end, but MarkerRange requires an inclusive end.
     if (Range.Start == Range.End) {
-      // Convert the empty range to a one-character range so we do not end up
-      // with a missing marker.
-      Last.Line = First.Line;
-      Last.Col = First.Col;
+      // Convert the empty range to a one-character range.
+      Last = First;
     } else {
       // We cannot simply subtract one from the end column number because that
       // might result in column 0, which does not exist and is thus incorrect
@@ -546,13 +522,13 @@ public:
       Last = SM.getLineAndColumn(EndLoc);
     }
   }
-  /// Return true if the marker range is contained on a single line.
+  /// Is the marker range contained on a single line?
   bool isSingleLine() const { return First.Line == Last.Line; }
-  /// Get the first location included in the marker range.
+  /// Get the location of the first marked character.
   Loc getFirstLoc() const { return First; }
-  /// Get the last location included in the marker range.
+  /// Get the location of the last marked character.
   Loc getLastLoc() const { return Last; }
-  /// Return a one-character range with the same start.
+  /// Return a range marking only the first character.
   MarkerRange truncate() const { return {First, First}; }
 };
 } // namespace
