@@ -38,7 +38,7 @@
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
 // RUN:            -target-cpu tonga -fcuda-is-device -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix= --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
 // RUN:            -target-cpu gfx900 -fcuda-is-device -emit-llvm %s -o %t.ll
