@@ -82,4 +82,26 @@ def AmdgpuFoldMemRefOpsPass : Pass<"amdgpu-fold-memrefs-ops"> {
     "memref::MemRefDialect"
   ];
 }
+
+def AmdgpuVectorReductionToDotPass : Pass<"amdgpu-vector-reduction-to-dot"> {
+  let summary = "Lower vector multiply reductions to AMDGPU dot operations";
+  let description = [{
+    Rewrites vector reductions over elementwise multiply operations into chains
+    of `amdgpu.dot` operations when the reduction exactly tiles to a supported
+    AMDGPU dot input shape for the selected chipset.
+
+    The pass rewrites `arith.mulf` or `arith.muli` feeding
+    `vector.reduction <add>`, including extension patterns that expose narrow
+    dot input types. It only rewrites cases where the existing reduction result
+    type is already a legal `amdgpu.dot` accumulator type.
+  }];
+  let dependentDialects = [
+    "amdgpu::AMDGPUDialect",
+    "arith::ArithDialect",
+    "vector::VectorDialect"
+  ];
+  let options = [Option<"chipset", "chipset", "std::string",
+                        /*default=*/"\"gfx000\"",
+                        "Chipset that these operations will run on">];
+}
 #endif // MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_TD_

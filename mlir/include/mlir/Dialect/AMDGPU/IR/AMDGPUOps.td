@@ -1146,6 +1146,15 @@ def AMDGPU_DotOp :
     $sourceA `*` $sourceB `+` $destC attr-dict
       `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
+  let extraClassDeclaration = [{
+    /// Returns whether the types satisfy `amdgpu.dot` structural type rules.
+    static bool isCompatibleTypeCombination(VectorType sourceAType,
+                                            VectorType sourceBType,
+                                            Type destType,
+                                            bool unsignedA,
+                                            bool unsignedB,
+                                            bool clamp);
+  }];
   let hasVerifier = 1;
 }
 
