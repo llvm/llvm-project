@@ -277,7 +277,7 @@ protected:
         patterns.push_back(command[i].ref());
 
     Debugger &requesting_debugger = GetDebugger();
-    TargetSP selected_target = requesting_debugger.GetSelectedTarget();
+    TargetSP selected_target = GetCommandInterpreter().GetSelectedTarget();
     if (m_options.m_json_format)
       OutputJsonFormat(patterns, result, requesting_debugger, selected_target,
                        m_options.m_domain);
@@ -443,10 +443,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Debugger &debugger = GetDebugger();
-    auto selected_target = debugger.GetSelectedTarget();
-    DoPluginEnableDisable(command, result, /*enable=*/true, debugger,
-                          selected_target, m_options.m_domain);
+    DoPluginEnableDisable(command, result, /*enable=*/true, GetDebugger(),
+                          GetCommandInterpreter().GetSelectedTarget(),
+                          m_options.m_domain);
   }
 
   PluginDomainOptions m_options;
@@ -475,10 +474,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Debugger &debugger = GetDebugger();
-    auto selected_target = debugger.GetSelectedTarget();
-    DoPluginEnableDisable(command, result, /*enable=*/false, debugger,
-                          selected_target, m_options.m_domain);
+    DoPluginEnableDisable(command, result, /*enable=*/false, GetDebugger(),
+                          GetCommandInterpreter().GetSelectedTarget(),
+                          m_options.m_domain);
   }
 
   PluginDomainOptions m_options;
