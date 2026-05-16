@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -49,7 +50,8 @@ void CompilerGeneratedNamesConversionPass::runOnOperation() {
         mlir::SymbolTable::getSymbolAttrName());
     auto deconstructedName = fir::NameUniquer::deconstruct(symName);
     if (deconstructedName.first != fir::NameUniquer::NameKind::NOT_UNIQUED &&
-        !fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
+        !fir::NameUniquer::isExternalFacingUniquedName(deconstructedName) &&
+        !op.hasAttr(cuf::getManagedPtrAttrName())) {
       std::string newName =
           fir::NameUniquer::replaceSpecialSymbols(symName.getValue().str());
       if (newName != symName) {
