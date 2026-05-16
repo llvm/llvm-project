@@ -1373,9 +1373,9 @@ void annotateValueSite(Module &M, Instruction &Inst,
   uint64_t ZeroCount = 0;
   DenseSet<uint64_t> VisitedValues;
   for (const auto &VD : VDs) {
-    if (VD.Value != 0 && VisitedValues.contains(VD.Value))
+    auto [_, ValueInserted] = VisitedValues.insert(VD.Value);
+    if (VD.Value != 0 && !ValueInserted)
       continue;
-    VisitedValues.insert(VD.Value);
     if (VD.Value == 0) {
       ZeroCount += VD.Count;
     } else {

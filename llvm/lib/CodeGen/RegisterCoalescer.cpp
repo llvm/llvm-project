@@ -1884,19 +1884,27 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
   bool DstIsPhys = DstReg.isPhysical();
   LiveInterval *DstInt = DstIsPhys ? nullptr : &LIS->getInterval(DstReg);
 
-  if (DstInt && DstInt->hasSubRanges() && DstReg != SrcReg) {
-    for (MachineOperand &MO : MRI->reg_operands(DstReg)) {
+  if (DstInt && DstReg != SrcReg) {
+    bool HasSubRanges = DstInt->hasSubRanges();
+    for (MachineOperand &MO : MRI->reg_nodbg_operands(DstReg)) {
       if (MO.isUndef())
         continue;
       unsigned SubReg = MO.getSubReg();
       if (SubReg == 0 && MO.isDef())
         continue;
 
-      MachineInstr &MI = *MO.getParent();
-      if (MI.isDebugInstr())
-        continue;
-      SlotIndex UseIdx = LIS->getInstructionIndex(MI).getRegSlot(true);
-      addUndefFlag(*DstInt, UseIdx, MO, SubReg);
+      SlotIndex UseIdx =
+          LIS->getInstructionIndex(*MO.getParent()).getRegSlot(true);
+      if (HasSubRanges) {
+        addUndefFlag(*DstInt, UseIdx, MO, SubReg);
+      } else if (MO.isUse() && SubReg == 0 && !DstInt->liveAt(UseIdx)) {
+        // A full-register use already referencing DstReg (not renamed from
+        // SrcReg) may have no reaching def after the join if its feeding COPY
+        // and erasable IMPLICIT_DEF were removed. Mark such uses undef; the
+        // SrcReg rename loop below only visits SrcReg operands and will miss
+        // these.
+        MO.setIsUndef(true);
+      }
     }
   }
 
@@ -3328,7 +3336,12 @@ void JoinVals::pruneValues(JoinVals &Other,
         // We can no longer trust the value mapping computed by
         // computeAssignment(), the value that was originally copied could have
         // been replaced.
-        LIS->pruneValue(LR, Def, &EndPoints);
+        Val &OtherV = Other.Vals[Vals[i].OtherVNI->id];
+        bool EraseImpDef =
+            OtherV.ErasableImplicitDef && OtherV.Resolution == CR_Keep;
+        // If the source is an erasable IMPLICIT_DEF, the pruned endpoint is
+        // the next def boundary, not a real use — discard it.
+        LIS->pruneValue(LR, Def, EraseImpDef ? nullptr : &EndPoints);
         LLVM_DEBUG(dbgs() << "\t\tpruned all of " << printReg(Reg) << " at "
                           << Def << ": " << LR << '\n');
       }

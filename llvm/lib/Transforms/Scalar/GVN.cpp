@@ -105,7 +105,8 @@ STATISTIC(MaxBBSpeculationCutoffReachedTimes,
           "Number of times we we reached gvn-max-block-speculations cut-off "
           "preventing further exploration");
 
-static cl::opt<bool> GVNEnablePRE("enable-pre", cl::init(true), cl::Hidden);
+static cl::opt<bool> GVNEnableScalarPRE("enable-scalar-pre", cl::init(true),
+                                        cl::Hidden);
 static cl::opt<bool> GVNEnableLoadPRE("enable-load-pre", cl::init(true));
 static cl::opt<bool> GVNEnableLoadInLoopPRE("enable-load-in-loop-pre",
                                             cl::init(true));
@@ -648,7 +649,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(MemoryAccess *MA) {
 /// lookupOrAdd - Returns the value number for the specified value, assigning
 /// it a new number if it did not have one before.
 uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
-  DenseMap<Value *, uint32_t>::iterator VI = ValueNumbering.find(V);
+  auto VI = ValueNumbering.find(V);
   if (VI != ValueNumbering.end())
     return VI->second;
 
@@ -733,7 +734,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
 /// Returns the value number of the specified value. Fails if
 /// the value has not yet been numbered.
 uint32_t GVNPass::ValueTable::lookup(Value *V, bool Verify) const {
-  DenseMap<Value *, uint32_t>::const_iterator VI = ValueNumbering.find(V);
+  auto VI = ValueNumbering.find(V);
   if (Verify) {
     assert(VI != ValueNumbering.end() && "Value not numbered?");
     return VI->second;
@@ -843,8 +844,8 @@ void GVNPass::LeaderMap::erase(uint32_t N, Instruction *I,
 //                                GVN Pass
 //===----------------------------------------------------------------------===//
 
-bool GVNPass::isPREEnabled() const {
-  return Options.AllowPRE.value_or(GVNEnablePRE);
+bool GVNPass::isScalarPREEnabled() const {
+  return Options.AllowScalarPRE.value_or(GVNEnableScalarPRE);
 }
 
 bool GVNPass::isLoadPREEnabled() const {
@@ -906,8 +907,8 @@ void GVNPass::printPipeline(
       OS, MapClassName2PassName);
 
   OS << '<';
-  if (Options.AllowPRE != std::nullopt)
-    OS << (*Options.AllowPRE ? "" : "no-") << "pre;";
+  if (Options.AllowScalarPRE != std::nullopt)
+    OS << (*Options.AllowScalarPRE ? "" : "no-") << "scalar-pre;";
   if (Options.AllowLoadPRE != std::nullopt)
     OS << (*Options.AllowLoadPRE ? "" : "no-") << "load-pre;";
   if (Options.AllowLoadPRESplitBackedge != std::nullopt)
@@ -2022,12 +2023,15 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   }
 
   bool Changed = false;
-  // If this load follows a GEP, see if we can PRE the indices before analyzing.
-  if (GetElementPtrInst *GEP =
-          dyn_cast<GetElementPtrInst>(Load->getOperand(0))) {
-    for (Use &U : GEP->indices())
-      if (Instruction *I = dyn_cast<Instruction>(U.get()))
-        Changed |= performScalarPRE(I);
+  // This is a limited form of scalar PRE for load indices. If this load follows
+  // a GEP, see if we can PRE the indices before analyzing.
+  if (isScalarPREEnabled()) {
+    if (GetElementPtrInst *GEP =
+            dyn_cast<GetElementPtrInst>(Load->getOperand(0))) {
+      for (Use &U : GEP->indices())
+        if (Instruction *I = dyn_cast<Instruction>(U.get()))
+          Changed |= performScalarPRE(I);
+    }
   }
 
   // Step 2: Analyze the availability of the load.
@@ -2071,7 +2075,7 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   }
 
   // Step 4: Eliminate partial redundancy.
-  if (!isPREEnabled() || !isLoadPREEnabled())
+  if (!isLoadPREEnabled())
     return Changed;
   if (!isLoadInLoopPREEnabled() && LI->getLoopFor(Load->getParent()))
     return Changed;
@@ -2838,7 +2842,7 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
     ++Iteration;
   }
 
-  if (isPREEnabled()) {
+  if (isScalarPREEnabled()) {
     // Fabricate val-num for dead-code in order to suppress assertion in
     // performPRE().
     assignValNumForDeadCode();
@@ -3334,10 +3338,12 @@ public:
   static char ID; // Pass identification, replacement for typeid.
 
   explicit GVNLegacyPass(bool MemDepAnalysis = GVNEnableMemDep,
-                         bool MemSSAAnalysis = GVNEnableMemorySSA)
+                         bool MemSSAAnalysis = GVNEnableMemorySSA,
+                         bool ScalarPRE = true)
       : FunctionPass(ID), Impl(GVNOptions()
                                    .setMemDep(MemDepAnalysis)
-                                   .setMemorySSA(MemSSAAnalysis)) {
+                                   .setMemorySSA(MemSSAAnalysis)
+                                   .setScalarPRE(ScalarPRE)) {
     initializeGVNLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -3399,3 +3405,6 @@ INITIALIZE_PASS_END(GVNLegacyPass, "gvn", "Global Value Numbering", false, false
 
 // The public interface to this file...
 FunctionPass *llvm::createGVNPass() { return new GVNLegacyPass(); }
+FunctionPass *llvm::createGVNPass(bool ScalarPRE) {
+  return new GVNLegacyPass(GVNEnableMemDep, GVNEnableMemorySSA, ScalarPRE);
+}
