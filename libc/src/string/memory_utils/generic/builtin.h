@@ -18,8 +18,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 #if !__has_builtin(__builtin_memcpy) || !__has_builtin(__builtin_memset) ||    \
-    !__has_builtin(__builtin_memmove)
-#error "Builtin not defined");
+    !__has_builtin(__builtin_memmove) || !__has_builtin(__builtin_memcmp) ||   \
+    !__has_builtin(__builtin_bcmp)
+#error "Builtin not defined"
 #endif
 
 [[maybe_unused]] LIBC_INLINE void
@@ -35,6 +36,17 @@ inline_memcpy_builtin(Ptr dst, CPtr src, size_t count, size_t offset = 0) {
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_builtin(Ptr dst, uint8_t value, size_t count, size_t offset = 0) {
   __builtin_memset(dst + offset, value, count);
+}
+
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
+inline_memcmp_builtin(CPtr p1, CPtr p2, size_t count) {
+  return static_cast<int32_t>(__builtin_memcmp(p1, p2, count));
+}
+
+[[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_builtin(CPtr p1,
+                                                                CPtr p2,
+                                                                size_t count) {
+  return static_cast<uint32_t>(__builtin_bcmp(p1, p2, count));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
