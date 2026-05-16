@@ -10,7 +10,7 @@ entry:
   %this.addr = alloca i64
   store i64 %this_arg, ptr %this.addr
   %this = load i64, ptr %this.addr
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f_copy, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @myAlloc(i64 %this, i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -50,15 +50,15 @@ declare void @free(ptr)
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    store i64 [[THIS_ARG]], ptr [[THIS_ADDR]], align 4
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f_copy.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f_copy, ptr @f_copy.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @myAlloc(i64 [[THIS_ARG]], i32 32)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f_copy.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_COPY_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f_copy.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[THIS_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_COPY_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[THIS_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store i64 [[THIS_ARG]], ptr [[THIS_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[F_COPY_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
@@ -66,17 +66,19 @@ declare void @free(ptr)
 ; CHECK-LABEL: define internal fastcc void @f_copy.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
-; CHECK-NEXT:    [[THIS_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_COPY_FRAME:%.*]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[THIS_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    [[THIS_RELOAD:%.*]] = load i64, ptr [[THIS_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    call void @print2(i64 [[THIS_RELOAD]])
-; CHECK-NEXT:    call void @free(ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define internal fastcc void @f_copy.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
-; CHECK-NEXT:    call void @free(ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;
 ;

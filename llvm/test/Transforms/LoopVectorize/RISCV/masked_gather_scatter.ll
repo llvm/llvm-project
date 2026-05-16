@@ -13,7 +13,7 @@
 ;  }
 ;}
 
-define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
+define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) #0 {
 ; RV32-LABEL: @foo4(
 ; RV32-NEXT:  entry:
 ; RV32-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
@@ -73,10 +73,9 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32:       middle.block:
 ; RV32-NEXT:    br label [[FOR_END:%.*]]
 ; RV32:       scalar.ph:
-; RV32-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[VECTOR_MEMCHECK1]] ]
 ; RV32-NEXT:    br label [[FOR_BODY:%.*]]
 ; RV32:       for.body:
-; RV32-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; RV32-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; RV32-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[INDVARS_IV]]
 ; RV32-NEXT:    [[TMP21:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; RV32-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP21]], 100
@@ -167,14 +166,14 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i32, ptr %trigger, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, 100
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %1 = shl nuw nsw i64 %indvars.iv, 1
   %arrayidx3 = getelementptr inbounds double, ptr %B, i64 %1
   %2 = load double, ptr %arrayidx3, align 8
@@ -184,11 +183,11 @@ if.then:                                          ; preds = %for.body
   store double %add, ptr %arrayidx7, align 8
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 16
   %cmp = icmp ult i64 %indvars.iv.next, 10000
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.inc
+for.end:
   ret void
 }

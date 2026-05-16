@@ -29,6 +29,7 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -45,6 +46,7 @@
 
 using namespace clang::tooling;
 using namespace clang;
+using clang::doc::OutputFormatTy;
 
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
@@ -111,20 +113,19 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
-enum OutputFormatTy { md, yaml, html, json };
-
-static llvm::cl::opt<OutputFormatTy>
-    FormatEnum("format", llvm::cl::desc("Format for outputted docs."),
-               llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
-                                           "Documentation in YAML format."),
-                                clEnumValN(OutputFormatTy::md, "md",
-                                           "Documentation in MD format."),
-                                clEnumValN(OutputFormatTy::html, "html",
-                                           "Documentation in HTML format."),
-                                clEnumValN(OutputFormatTy::json, "json",
-                                           "Documentation in JSON format")),
-               llvm::cl::init(OutputFormatTy::yaml),
-               llvm::cl::cat(ClangDocCategory));
+static llvm::cl::opt<OutputFormatTy> FormatEnum(
+    "format", llvm::cl::desc("Format for outputted docs."),
+    llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
+                                "Documentation in YAML format."),
+                     clEnumValN(OutputFormatTy::md, "md",
+                                "Documentation in MD format."),
+                     clEnumValN(OutputFormatTy::html, "html",
+                                "Documentation in HTML format."),
+                     clEnumValN(OutputFormatTy::json, "json",
+                                "Documentation in JSON format"),
+                     clEnumValN(OutputFormatTy::md_mustache, "md_mustache",
+                                "Documentation in MD format.")),
+    llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
 
 static llvm::ExitOnError ExitOnErr;
 
@@ -138,6 +139,8 @@ static llvm::StringRef getFormatString() {
     return "html";
   case OutputFormatTy::json:
     return "json";
+  case OutputFormatTy::md_mustache:
+    return "md_mustache";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -179,8 +182,10 @@ static llvm::Error getHtmlFiles(const char *Argv0,
     llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
                  << " falling back to default\n";
   if (IsDir) {
-    if (auto Err = getAssetFiles(CDCtx))
-      return Err;
+    if (FormatEnum == OutputFormatTy::html) {
+      if (auto Err = getAssetFiles(CDCtx))
+        return Err;
+    }
   }
   void *MainAddr = (void *)(intptr_t)getExecutablePath;
   std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
@@ -196,18 +201,39 @@ static llvm::Error getHtmlFiles(const char *Argv0,
   return llvm::Error::success();
 }
 
+static llvm::Error getMdFiles(const char *Argv0,
+                              clang::doc::ClangDocContext &CDCtx) {
+  bool IsDir = llvm::sys::fs::is_directory(UserAssetPath);
+  if (!UserAssetPath.empty() && !IsDir)
+    llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
+                 << " falling back to default\n";
+
+  void *MainAddr = (void *)(intptr_t)getExecutablePath;
+  std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
+  llvm::SmallString<128> NativeClangDocPath;
+  llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
+
+  llvm::SmallString<128> AssetsPath;
+  AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
+  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc", "md");
+
+  getMdFiles(AssetsPath, CDCtx);
+
+  return llvm::Error::success();
+}
+
 /// Make the output of clang-doc deterministic by sorting the children of
 /// namespaces and records.
 static void
-sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
+sortUsrToInfo(llvm::StringMap<doc::OwnedPtr<doc::Info>> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
     if (Info->IT == doc::InfoType::IT_namespace) {
-      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(Info.get());
+      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(getPtr(Info));
       Namespace->Children.sort();
     }
     if (Info->IT == doc::InfoType::IT_record) {
-      auto *Record = static_cast<clang::doc::RecordInfo *>(Info.get());
+      auto *Record = static_cast<clang::doc::RecordInfo *>(getPtr(Info));
       Record->Children.sort();
     }
   }
@@ -283,10 +309,13 @@ Example usage for a project using a compile commands database:
     clang::doc::ClangDocContext CDCtx(
         Executor->getExecutionContext(), ProjectName, PublicOnly, OutDirectory,
         SourceRoot, RepositoryUrl, RepositoryCodeLinePrefix, BaseDirectory,
-        {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FTimeTrace);
+        {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FormatEnum,
+        FTimeTrace);
 
     if (Format == "html")
       ExitOnErr(getHtmlFiles(argv[0], CDCtx));
+    else if (Format == "md_mustache")
+      ExitOnErr(getMdFiles(argv[0], CDCtx));
 
     llvm::timeTraceProfilerBegin("Executor Launch", "total runtime");
     // Mapping phase
@@ -311,7 +340,7 @@ Example usage for a project using a compile commands database:
     // Collects all Infos according to their unique USR value. This map is added
     // to from the thread pool below and is protected by the USRToInfoMutex.
     llvm::sys::Mutex USRToInfoMutex;
-    llvm::StringMap<std::unique_ptr<doc::Info>> USRToInfo;
+    llvm::StringMap<doc::OwnedPtr<doc::Info>> USRToInfo;
 
     // First reducing phase (reduce all decls into one info per decl).
     llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
@@ -323,20 +352,29 @@ Example usage for a project using a compile commands database:
         DiagnosticsEngine::Error, "error reading bitcode: %0");
     unsigned DiagIDBitcodeMerging = Diags.getCustomDiagID(
         DiagnosticsEngine::Error, "error merging bitcode: %0");
-    // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
+    // Note: we use per-thread arenas, so Pool must outlive the last use of this
+    // memory in the generators.
     llvm::DefaultThreadPool Pool(
+        // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
         llvm::hardware_concurrency(ExecutorConcurrency));
     {
       llvm::TimeTraceScope TS("Reduce");
-      for (auto &Group : USRToBitcode) {
-        Pool.async([&, &Diags = Diags]() { // time trace decoding bitcode
-          if (FTimeTrace)
+      for (const auto &Group : USRToBitcode) {
+        StringRef Key = Group.getKey();
+        std::vector<StringRef> Bitcodes = Group.getValue();
+        Pool.async([Key, Bitcodes, &CDCtx, &Diags, &USRToInfo, &USRToInfoMutex,
+                    &IndexMutex, &DiagMutex, &Error, DiagIDBitcodeReading,
+                    DiagIDBitcodeMerging]() {
+          if (CDCtx.FTimeTrace)
             llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-          std::vector<std::unique_ptr<doc::Info>> Infos;
+          doc::OwnedPtr<doc::Info> Reduced = nullptr;
           {
-            llvm::TimeTraceScope Red("decoding bitcode");
-            for (auto &Bitcode : Group.getValue()) {
+            llvm::TimeTraceScope Red("decoding and merging bitcode");
+            for (const auto &Bitcode : Bitcodes) {
+
+              llvm::scope_exit ArenaGuard(
+                  [] { clang::doc::TransientArena.Reset(); });
               llvm::BitstreamCursor Stream(Bitcode);
               doc::ClangDocBitcodeReader Reader(Stream, Diags);
               auto ReadInfos = Reader.readBitcode();
@@ -348,37 +386,29 @@ Example usage for a project using a compile commands database:
                 Error = true;
                 return;
               }
-              std::move(ReadInfos->begin(), ReadInfos->end(),
-                        std::back_inserter(Infos));
+              for (auto &I : *ReadInfos) {
+                if (auto Err = doc::mergeSingleInfo(
+                        Reduced, std::move(I), clang::doc::PersistentArena)) {
+                  std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
+                  Diags.Report(DiagIDBitcodeMerging)
+                      << toString(std::move(Err));
+                  return;
+                }
+              }
             }
-          } // time trace decoding bitcode
-
-          std::unique_ptr<doc::Info> Reduced;
-
-          {
-            llvm::TimeTraceScope Merge("merging bitcode");
-            auto ExpReduced = doc::mergeInfos(Infos);
-
-            if (!ExpReduced) {
-              std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
-              Diags.Report(DiagIDBitcodeMerging)
-                  << toString(ExpReduced.takeError());
-              return;
-            }
-            Reduced = std::move(*ExpReduced);
-          } // time trace merging bitcode
+          } // time trace decoding and merging bitcode
 
           // Add a reference to this Info in the Index
           {
             llvm::TimeTraceScope Merge("addInfoToIndex");
             std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
-            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get());
+            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, getPtr(Reduced));
           }
           // Save in the result map (needs a lock due to threaded access).
           {
             llvm::TimeTraceScope Merge("USRToInfo");
             std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
-            USRToInfo[Group.getKey()] = std::move(Reduced);
+            USRToInfo[Key] = std::move(Reduced);
           }
 
           if (CDCtx.FTimeTrace)

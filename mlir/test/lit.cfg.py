@@ -354,6 +354,9 @@ if config.enable_assertions:
 else:
     config.available_features.add("noasserts")
 
+if config.enable_python_stable_abi:
+    config.available_features.add("python-stable-abi")
+
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
 

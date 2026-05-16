@@ -71,6 +71,7 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
@@ -273,10 +274,11 @@ bool CodeGenAction::beginSourceFileAction() {
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    setOffloadModuleInterfaceAttributes(lb.getModule(),
-                                        ci.getInvocation().getLangOpts());
-    setOpenMPVersionAttribute(lb.getModule(),
-                              ci.getInvocation().getLangOpts().OpenMPVersion);
+    mlir::omp::setOffloadModuleInterfaceAttributes(
+        lb.getModule(),
+        makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
+    mlir::omp::setOpenMPVersionAttribute(
+        lb.getModule(), ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
@@ -326,13 +328,6 @@ bool CodeGenAction::beginSourceFileAction() {
         "`do concurrent` loops will be serialized.");
     ci.getDiagnostics().Report(diagID);
     opts.doConcurrentMappingKind = DoConcurrentMappingKind::DCMK_None;
-  }
-
-  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None) {
-    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Warning,
-        "Mapping `do concurrent` to OpenMP is still experimental.");
-    ci.getDiagnostics().Report(diagID);
   }
 
   if (isOpenMPEnabled) {
@@ -635,8 +630,11 @@ void CodeGenAction::lowerHLFIRToFIR() {
     enableOpenMP = fir::EnableOpenMP::Full;
   if (ci.getInvocation().getLangOpts().OpenMPSimd)
     enableOpenMP = fir::EnableOpenMP::Simd;
+  MLIRToLLVMPassPipelineConfig config(level);
+  config.fpMaxminBehavior =
+      ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   // Create the pass pipeline
-  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, level);
+  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
 
   mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
@@ -748,6 +746,7 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
+  config.fpMaxminBehavior = invoc.getLoweringOpts().getFPMaxminBehavior();
   llvm::Triple pipelineTriple(invoc.getTargetOpts().triple);
   config.SkipConvertComplexPow = pipelineTriple.isAMDGCN();
   fir::registerDefaultInlinerPass(config);
@@ -964,14 +963,14 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (opts.hasProfileIRInstr()) {
     // -fprofile-generate.
-    pgoOpt = llvm::PGOOptions(opts.InstrProfileOutput.empty()
-                                  ? llvm::driver::getDefaultProfileGenName()
-                                  : opts.InstrProfileOutput,
-                              "", "", opts.MemoryProfileUsePath,
-                              llvm::PGOOptions::IRInstr,
-                              llvm::PGOOptions::NoCSAction,
-                              llvm::PGOOptions::ColdFuncOpt::Default, false,
-                              /*PseudoProbeForProfiling=*/false, false);
+    pgoOpt = llvm::PGOOptions(
+        opts.InstrProfileOutput.empty()
+            ? llvm::driver::getDefaultProfileGenName()
+            : opts.InstrProfileOutput,
+        "", "", opts.MemoryProfileUsePath, llvm::PGOOptions::IRInstr,
+        llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
+        opts.DebugInfoForProfiling,
+        /*PseudoProbeForProfiling=*/false, false);
   } else if (opts.hasProfileIRUse()) {
     // -fprofile-use.
     auto CSAction = opts.hasProfileCSIRUse() ? llvm::PGOOptions::CSIRUse
@@ -979,7 +978,19 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     pgoOpt = llvm::PGOOptions(
         opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, llvm::PGOOptions::IRUse, CSAction,
-        llvm::PGOOptions::ColdFuncOpt::Default, false);
+        llvm::PGOOptions::ColdFuncOpt::Default, opts.DebugInfoForProfiling);
+  } else if (opts.DebugInfoForProfiling) {
+    // -fdebug-info-for-profiling
+    pgoOpt = llvm::PGOOptions("", "", "", /*MemoryProfile=*/"",
+                              llvm::PGOOptions::NoAction,
+                              llvm::PGOOptions::NoCSAction,
+                              llvm::PGOOptions::ColdFuncOpt::Default, true);
+  } else if (!opts.SampleProfileFile.empty()) {
+    pgoOpt = llvm::PGOOptions(
+        opts.SampleProfileFile, "", opts.ProfileRemappingFile,
+        opts.MemoryProfileUsePath, llvm::PGOOptions::SampleUse,
+        llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
+        opts.DebugInfoForProfiling, /*PseudoProbeForProfiling=*/false);
   }
 
   llvm::StandardInstrumentations si(llvmModule->getContext(),
@@ -1029,8 +1040,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::ModulePassManager mpm;
   // The module summary should be emitted by default for regular LTO
   // except for ld64 targets.
-  bool emitSummary =
-      opts.PrepareForFullLTO && (triple.getVendor() != llvm::Triple::Apple);
+  bool emitSummary = (opts.PrepareForFullLTO || opts.PrepareForThinLTO) &&
+                     (triple.getVendor() != llvm::Triple::Apple);
   if (opts.PrepareForFatLTO)
     mpm = pb.buildFatLTODefaultPipeline(level, opts.PrepareForThinLTO,
                                         emitSummary);
@@ -1043,22 +1054,23 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC ||
       action == BackendActionTy::Backend_EmitLL || opts.PrepareForFatLTO) {
-    if (opts.PrepareForThinLTO) {
-      // TODO: ThinLTO module summary support is yet to be enabled.
-      if (action == BackendActionTy::Backend_EmitBC)
-        mpm.addPass(llvm::BitcodeWriterPass(os));
-      else if (action == BackendActionTy::Backend_EmitLL)
-        mpm.addPass(llvm::PrintModulePass(os));
-    } else {
-      if (emitSummary && !llvmModule->getModuleFlag("ThinLTO"))
-        llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
-      if (action == BackendActionTy::Backend_EmitBC)
+    // If it is not ThinLTO, emits the module flag and sets it to be off.
+    if (!opts.PrepareForThinLTO && emitSummary &&
+        !llvmModule->getModuleFlag("ThinLTO")) {
+      llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+    }
+
+    if (action == BackendActionTy::Backend_EmitBC) {
+      if (opts.PrepareForThinLTO) {
+        mpm.addPass(llvm::ThinLTOBitcodeWriterPass(os, nullptr));
+      } else {
         mpm.addPass(llvm::BitcodeWriterPass(
             os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
-      else if (action == BackendActionTy::Backend_EmitLL)
-        mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
-                                          /*ShouldPreserveUseListOrder=*/false,
-                                          emitSummary));
+      }
+    } else if (action == BackendActionTy::Backend_EmitLL) {
+      mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
+                                        /*ShouldPreserveUseListOrder=*/false,
+                                        emitSummary));
     }
   }
 
@@ -1328,8 +1340,6 @@ void CodeGenAction::executeAction() {
   clang::DiagnosticsEngine &diags = ci.getDiagnostics();
   const CodeGenOptions &codeGenOpts = ci.getInvocation().getCodeGenOpts();
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
-  Fortran::lower::LoweringOptions &loweringOpts =
-      ci.getInvocation().getLoweringOpts();
   mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
   mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
@@ -1358,16 +1368,12 @@ void CodeGenAction::executeAction() {
   }
 
   if (action == BackendActionTy::Backend_EmitFIR) {
-    if (loweringOpts.getLowerToHighLevelFIR()) {
-      lowerHLFIRToFIR();
-    }
+    lowerHLFIRToFIR();
     mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }
 
   if (action == BackendActionTy::Backend_EmitHLFIR) {
-    assert(loweringOpts.getLowerToHighLevelFIR() &&
-           "Lowering must have been configured to emit HLFIR");
     mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }

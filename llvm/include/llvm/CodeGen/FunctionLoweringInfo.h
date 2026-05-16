@@ -162,9 +162,9 @@ public:
   struct LiveOutInfo {
     unsigned NumSignBits : 31;
     unsigned IsValid : 1;
-    KnownBits Known = 1;
+    KnownBits Known;
 
-    LiveOutInfo() : NumSignBits(0), IsValid(true) {}
+    LiveOutInfo() : NumSignBits(0), IsValid(true), Known(1) {}
   };
 
   /// Record the preferred extend type (ISD::SIGN_EXTEND or ISD::ZERO_EXTEND)
@@ -265,7 +265,7 @@ public:
   /// called when a block is visited before all of its predecessors.
   void InvalidatePHILiveOutRegInfo(const PHINode *PN) {
     // PHIs with no uses have no ValueMap entry.
-    DenseMap<const Value*, Register>::const_iterator It = ValueMap.find(PN);
+    auto It = ValueMap.find(PN);
     if (It == ValueMap.end())
       return;
 

@@ -94,18 +94,40 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}
   template <
       class _Sseq,
-      __enable_if_t<__is_seed_sequence<_Sseq, independent_bits_engine>::value && !is_convertible<_Sseq, _Engine>::value,
+      __enable_if_t<__is_seed_sequence_v<_Sseq, independent_bits_engine> && !is_convertible<_Sseq, _Engine>::value,
                     int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(_Sseq& __q) : __e_(__q) {}
   _LIBCPP_HIDE_FROM_ABI void seed() { __e_.seed(); }
   _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd) { __e_.seed(__sd); }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, independent_bits_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, independent_bits_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
     __e_.seed(__q);
   }
 
   // generating functions
-  _LIBCPP_HIDE_FROM_ABI result_type operator()() { return __eval(integral_constant<bool, _Rp != 0>()); }
+  _LIBCPP_HIDE_FROM_ABI result_type operator()() {
+    if _LIBCPP_CONSTEXPR (_Rp != 0) {
+      result_type __sp = 0;
+      for (size_t __k = 0; __k < __n0; ++__k) {
+        _Engine_result_type __u;
+        do {
+          __u = __e_() - _Engine::min();
+        } while (__u >= __y0);
+        __sp = static_cast<result_type>(__lshift<__w0>(__sp) + (__u & __mask0));
+      }
+      for (size_t __k = __n0; __k < __n; ++__k) {
+        _Engine_result_type __u;
+        do {
+          __u = __e_() - _Engine::min();
+        } while (__u >= __y1);
+        __sp = static_cast<result_type>(__lshift<__w0 + 1>(__sp) + (__u & __mask1));
+      }
+      return __sp;
+    } else {
+      return static_cast<result_type>(__e_() & __mask0);
+    }
+  }
+
   _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
     for (; __z; --__z)
       operator()();
@@ -131,9 +153,6 @@ public:
   operator>>(basic_istream<_CharT, _Traits>& __is, independent_bits_engine<_Eng, _Wp, _UInt>& __x);
 
 private:
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(false_type);
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(true_type);
-
   template <size_t __count,
             __enable_if_t<__count< _Dt, int> = 0> _LIBCPP_HIDE_FROM_ABI static result_type __lshift(result_type __x) {
     return __x << __count;
@@ -144,31 +163,6 @@ private:
     return result_type(0);
   }
 };
-
-template <class _Engine, size_t __w, class _UIntType>
-inline _UIntType independent_bits_engine<_Engine, __w, _UIntType>::__eval(false_type) {
-  return static_cast<result_type>(__e_() & __mask0);
-}
-
-template <class _Engine, size_t __w, class _UIntType>
-_UIntType independent_bits_engine<_Engine, __w, _UIntType>::__eval(true_type) {
-  result_type __sp = 0;
-  for (size_t __k = 0; __k < __n0; ++__k) {
-    _Engine_result_type __u;
-    do {
-      __u = __e_() - _Engine::min();
-    } while (__u >= __y0);
-    __sp = static_cast<result_type>(__lshift<__w0>(__sp) + (__u & __mask0));
-  }
-  for (size_t __k = __n0; __k < __n; ++__k) {
-    _Engine_result_type __u;
-    do {
-      __u = __e_() - _Engine::min();
-    } while (__u >= __y1);
-    __sp = static_cast<result_type>(__lshift<__w0 + 1>(__sp) + (__u & __mask1));
-  }
-  return __sp;
-}
 
 template <class _Eng, size_t _Wp, class _UInt>
 inline _LIBCPP_HIDE_FROM_ABI bool

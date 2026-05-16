@@ -15,7 +15,9 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
@@ -154,10 +156,10 @@ protected:
   // Do we need to create a local symbol for .size?
   bool NeedsLocalForSize = false;
 
-  /// This prefix is used for globals like constant pool entries that are
-  /// completely private to the .s file and should not have names in the .o
-  /// file.  Defaults to "L"
-  StringRef PrivateGlobalPrefix = "L";
+  /// For internal use by compiler and assembler, not meant to be visible
+  /// externally. They are usually not emitted to the symbol table in the
+  /// object file.
+  StringRef InternalSymbolPrefix = "L";
 
   /// This prefix is used for labels for basic blocks. Defaults to "L"
   StringRef PrivateLabelPrefix = "L";
@@ -433,13 +435,21 @@ protected:
   llvm::StringMap<uint32_t> NameToAtSpecifier;
   void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
+  // Lowercase identifiers (e.g. register names, dialect keywords) that must be
+  // quoted when used as a symbol name.
+  llvm::DenseSet<llvm::CachedHashStringRef> ReservedIdentifiers;
+
+  const MCTargetOptions &TargetOptions;
+
 public:
-  explicit MCAsmInfo();
+  explicit MCAsmInfo(const MCTargetOptions &Options);
   virtual ~MCAsmInfo();
 
   // Explicitly non-copyable.
   MCAsmInfo(MCAsmInfo const &) = delete;
   MCAsmInfo &operator=(MCAsmInfo const &) = delete;
+
+  const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
@@ -487,6 +497,14 @@ public:
   /// Return true if the identifier \p Name does not need quotes to be
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
+
+  llvm::DenseSet<llvm::CachedHashStringRef> &getReservedIdentifiers() {
+    return ReservedIdentifiers;
+  }
+  const llvm::DenseSet<llvm::CachedHashStringRef> &
+  getReservedIdentifiers() const {
+    return ReservedIdentifiers;
+  }
 
   virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
                                     const Triple &, raw_ostream &) const {}
@@ -544,7 +562,7 @@ public:
   bool usesSetToEquateSymbol() const { return UsesSetToEquateSymbol; }
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
-  StringRef getPrivateGlobalPrefix() const { return PrivateGlobalPrefix; }
+  StringRef getInternalSymbolPrefix() const { return InternalSymbolPrefix; }
   StringRef getPrivateLabelPrefix() const { return PrivateLabelPrefix; }
 
   bool hasLinkerPrivateGlobalPrefix() const {
@@ -554,12 +572,17 @@ public:
   StringRef getLinkerPrivateGlobalPrefix() const {
     if (hasLinkerPrivateGlobalPrefix())
       return LinkerPrivateGlobalPrefix;
-    return getPrivateGlobalPrefix();
+    return getInternalSymbolPrefix();
   }
 
   const char *getInlineAsmStart() const { return InlineAsmStart; }
   const char *getInlineAsmEnd() const { return InlineAsmEnd; }
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
+  // Return the assembler dialect that output printing should use. Used by
+  // createMCInstPrinter.
+  unsigned getOutputAssemblerDialect() const {
+    return TargetOptions.OutputAsmVariant.value_or(AssemblerDialect);
+  }
   bool doesAllowAtInName() const { return AllowAtInName; }
   void setAllowAtInName(bool V) { AllowAtInName = V; }
   bool doesAllowQuestionAtStartOfIdentifier() const {

@@ -1,6 +1,9 @@
 header: sys/mman.h
-header_template: mman.h.def
-macros: []
+standards:
+  - posix
+macros:
+  - macro_name: MAP_FAILED
+    macro_header: sys-mman-macros.h
 types:
   - type_name: mode_t
   - type_name: size_t
@@ -16,6 +19,13 @@ functions:
       - type: void *
       - type: size_t
       - type: int
+  - name: memfd_create
+    standards:
+      - Linux
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: unsigned int
   - name: mincore
     standards:
       - Linux

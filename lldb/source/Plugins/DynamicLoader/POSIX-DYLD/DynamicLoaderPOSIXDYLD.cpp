@@ -9,6 +9,7 @@
 // Main header include
 #include "DynamicLoaderPOSIXDYLD.h"
 
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
@@ -27,6 +28,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <memory>
@@ -42,7 +44,9 @@ void DynamicLoaderPOSIXDYLD::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
-void DynamicLoaderPOSIXDYLD::Terminate() {}
+void DynamicLoaderPOSIXDYLD::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef DynamicLoaderPOSIXDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "
@@ -623,7 +627,7 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
   MemoryRegionInfo info;
   Target &target = m_process->GetTarget();
   Status status = m_process->GetMemoryRegionInfo(m_interpreter_base, info);
-  if (status.Fail() || info.GetMapped() != MemoryRegionInfo::eYes ||
+  if (status.Fail() || info.GetMapped() != eLazyBoolYes ||
       info.GetName().IsEmpty()) {
     Log *log = GetLog(LLDBLog::DynamicLoader);
     LLDB_LOG(log, "Failed to get interpreter region info: {0}", status);
@@ -812,6 +816,26 @@ addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
   return m_entry_point;
 }
 
+static lldb::addr_t GetPTTLSVAddr(const lldb::ModuleSP &module_sp) {
+  if (!module_sp)
+    return LLDB_INVALID_ADDRESS;
+
+  ObjectFile *objfile = module_sp->GetObjectFile();
+  if (!objfile)
+    return LLDB_INVALID_ADDRESS;
+
+  auto *elf_obj = llvm::dyn_cast<ObjectFileELF>(objfile);
+  if (!elf_obj)
+    return LLDB_INVALID_ADDRESS;
+
+  for (const auto &phdr : elf_obj->ProgramHeaders()) {
+    if (phdr.p_type == llvm::ELF::PT_TLS)
+      return phdr.p_vaddr;
+  }
+
+  return LLDB_INVALID_ADDRESS;
+}
+
 lldb::addr_t
 DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
                                            const lldb::ThreadSP thread,
@@ -819,9 +843,10 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   Log *log = GetLog(LLDBLog::DynamicLoader);
   std::optional<addr_t> link_map_addr_opt = GetLoadedModuleLinkAddr(module_sp);
   if (!link_map_addr_opt.has_value()) {
-    LLDB_LOGF(
-        log, "GetThreadLocalData error: module(%s) not found in loaded modules",
-        module_sp->GetObjectName().AsCString());
+    LLDB_LOG(
+        log,
+        "GetThreadLocalData error: module({0}) not found in loaded modules",
+        module_sp->GetObjectName());
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -843,10 +868,11 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   LLDB_LOGF(log,
             "GetThreadLocalData info: link_map=0x%" PRIx64
             ", thread info metadata: "
-            "modid_offset=0x%" PRIx32 ", dtv_offset=0x%" PRIx32
-            ", tls_offset=0x%" PRIx32 ", dtv_slot_size=%" PRIx32 "\n",
-            link_map, metadata.modid_offset, metadata.dtv_offset,
-            metadata.tls_offset, metadata.dtv_slot_size);
+            "modid_offset=0x%" PRIx32 ", pthread_size=0x%" PRIx32
+            ", dtv_offset=0x%" PRIx32 ", tls_offset=0x%" PRIx32
+            ", dtv_slot_size=%" PRIx32 "\n",
+            link_map, metadata.modid_offset, metadata.pthread_size,
+            metadata.dtv_offset, metadata.tls_offset, metadata.dtv_slot_size);
 
   // Get the thread pointer.
   addr_t tp = thread->GetThreadPointer();
@@ -865,8 +891,45 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   }
 
   // Lookup the DTV structure for this thread.
-  addr_t dtv_ptr = tp + metadata.dtv_offset;
-  addr_t dtv = ReadPointer(dtv_ptr);
+  addr_t dtv_ptr = LLDB_INVALID_ADDRESS;
+  if (metadata.dtv_offset < metadata.pthread_size) {
+    // The DTV pointer field lies within `pthread`. This indicates that `libc`
+    // placed `tcbhead_t header`, which contains the `dtv` field, inside
+    // `pthread`, so, for this architecture, `TLS_TCB_AT_TP` is set to `1` and
+    // `TLS_DTV_AT_TP` is `0`. This corresponds to the "Variant II" memory
+    // layout described in Ulrich Drepper's ELF TLS document
+    // (https://akkadia.org/drepper/tls.pdf). The thread pointer points to the
+    // start of `pthread`, and the address of the `dtv` field can be calculated
+    // by adding its offset.
+    dtv_ptr = tp + metadata.dtv_offset;
+  } else if (metadata.dtv_offset == metadata.pthread_size) {
+    // The DTV pointer field is located right after `pthread`. This means that,
+    // for this architecture, `TLS_DTV_AT_TP` is set to `1` in `libc`, which may
+    // correspond to the "Variant I" memory layout, in which the thread pointer
+    // points directly to the `dtv` field. However, for different architectures,
+    // the position of the `dtv` field relative to the thread pointer may vary,
+    // so the following calculations must be adjusted for each platform.
+    //
+    // On AArch64 and ARM, `tp` is known to point directly to `dtv`.
+    const llvm::Triple &triple = module_sp->GetArchitecture().GetTriple();
+    if (triple.isAArch64() || triple.isARM()) {
+      dtv_ptr = tp;
+    }
+  }
+  const llvm::Triple &triple = module_sp->GetArchitecture().GetTriple();
+
+  // On RISC-V with glibc the TLS layout uses Variant I (TLS_DTV_AT_TP).
+  // The thread pointer (tp) points just past a tcbhead_t header which
+  // contains two pointers: { dtv, private }. This means the DTV pointer
+  // itself is located two pointer-sized slots before tp, so dtv_ptr must
+  // be computed as tp - 2 * sizeof(void*). See MaskRay, “All about
+  // thread-local storage” (RISC-V/glibc section) and glibc's RISC-V
+  // TLS port (__tls_get_addr / THREAD_DTV).
+  if (triple.isRISCV())
+    dtv_ptr = tp - 2 * triple.getArchPointerBitWidth() / 8;
+
+  addr_t dtv = (dtv_ptr != LLDB_INVALID_ADDRESS) ? ReadPointer(dtv_ptr)
+                                                 : LLDB_INVALID_ADDRESS;
   if (dtv == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read dtv");
     return LLDB_INVALID_ADDRESS;
@@ -886,8 +949,26 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   if (tls_block == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read tls_block");
     return LLDB_INVALID_ADDRESS;
-  } else
-    return tls_block + tls_file_addr;
+  }
+
+  // DW_OP_GNU_push_tls_address gives us a value in tls_file_addr that can be
+  // either:
+  //   - a pure offset inside the TLS block (e.g. x86_64/glibc), or
+  //   - a virtual address inside the PT_TLS segment (e.g. RISC-V/glibc),
+  //     roughly PT_TLS.p_vaddr + TPOFF(sym).
+  // To handle both cases, we try to normalize it to a plain offset (tpoff)
+  // by subtracting PT_TLS.p_vaddr when available.
+  addr_t pt_tls_vaddr = GetPTTLSVAddr(module_sp);
+  addr_t tpoff = tls_file_addr;
+
+  // If the module has a PT_TLS segment and the DWARF value lies at or above
+  // its p_vaddr, treat tls_file_addr as a VMA within PT_TLS and convert it
+  // to an offset. Otherwise, keep the original value (it is already an offset
+  // on targets like x86_64).
+  if (pt_tls_vaddr != LLDB_INVALID_ADDRESS && tls_file_addr >= pt_tls_vaddr)
+    tpoff = tls_file_addr - pt_tls_vaddr;
+
+  return tls_block + tpoff;
 }
 
 void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(

@@ -180,6 +180,18 @@ violation reports in the specified source files or functions. Like
 with other methods of ignoring instrumentation, this can result in false 
 positives/ false-negatives.
 
+Runtime Options
+---------------
+
+Similar to other sanitizers, you can modify TypeSanitizers runtime behaviour by 
+using an environment variable. These flags should be provided as a colon separated 
+list. For example, ``TYSAN_OPTIONS=print_stacktrace=1:halt_on_error=1``
+
+* ``print_stacktrace`` when true will tell the sanitizer to emit more lengthy 
+  and detailed stack traces on error.
+* ``halt_on_error`` when true will make the instrumented program abort after 
+  the first type violation detected.
+
 Limitations
 -----------
 

@@ -19,3 +19,22 @@ scf.parallel (%iv) = (%c0_2) to (%c4_2) step (%c1_2) {
   scf.reduce
 // expected-error@+1 {{expected one of ::mlir::gpu::Processor enum names}}
 } {acc.par_dims = #acc<par_dims[gang]>}
+
+// -----
+
+%c32 = arith.constant 32 : index
+// expected-error@+1 {{'acc.compute_region' op launch arguments must be results of acc.par_width operations}}
+acc.compute_region launch(%arg0 = %c32) {
+  acc.yield
+} {origin = "acc.parallel"}
+
+// -----
+
+// Use generic form to introduce an extra block argument.
+%c64 = arith.constant 64 : index
+%w = acc.par_width %c64 {par_dim = #acc.par_dim<thread_x>}
+// expected-error@+1 {{'acc.compute_region' op expected 1 block arguments (launch + input), got 2}}
+"acc.compute_region"(%w) <{operandSegmentSizes = array<i32: 1, 0, 0>}> ({
+^bb0(%arg0: index, %extra: index):
+  "acc.yield"() : () -> ()
+}) {origin = "acc.parallel"} : (index) -> ()

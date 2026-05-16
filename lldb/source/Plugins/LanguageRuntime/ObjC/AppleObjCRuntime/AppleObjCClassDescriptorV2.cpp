@@ -457,8 +457,7 @@ bool ClassDescriptorV2::relative_list_list_t::Read(Process *process,
   // FIXME: Propagate this error up
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
   if (error.Fail()) {
-    LLDB_LOG(log, "Failed to read relative_list_list_t at address 0x" PRIx64,
-             addr);
+    LLDB_LOG(log, "Failed to read relative_list_list_t at address {:x+}", addr);
     return false;
   }
 
@@ -482,8 +481,8 @@ ClassDescriptorV2::GetMethodList(Process *process,
   const size_t method_size = method_t::GetSize(process, method_list.m_is_small);
   if (method_list.m_entsize != method_size) {
     LLDB_LOG(log,
-             "method_list_t at address 0x" PRIx64 " has an entsize of " PRIu16
-             " but method size should be " PRIu64,
+             "method_list_t at address {:x+} has an entsize of {:x+} but "
+             "method size should be {:x+}",
              method_list_ptr, method_list.m_entsize, method_size);
     return std::nullopt;
   }
@@ -662,7 +661,7 @@ ConstString ClassDescriptorV2::GetClassName() {
       if (!Read_class_row(process, *objc_class, class_ro, class_rw))
         return m_name;
 
-      m_name = ConstString(class_ro->m_name.c_str());
+      m_name = ConstString(class_ro->m_name);
     }
   }
   return m_name;
@@ -747,7 +746,7 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
     return;
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   Log *log = GetLog(LLDBLog::Types);
-  LLDB_LOGV(log, "class_name = {0}", descriptor.GetClassName());
+  LLDB_LOG_VERBOSE(log, "class_name = {0}", descriptor.GetClassName());
   m_filled = true;
   ObjCLanguageRuntime::EncodingToTypeSP encoding_to_type_sp(
       runtime.GetEncodingToType());
@@ -762,16 +761,18 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
                                                        uint64_t size) -> bool {
     const bool for_expression = false;
     const bool stop_loop = false;
-    LLDB_LOGV(log, "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = {3}",
-              name, type, offset_ptr, size);
+    LLDB_LOG_VERBOSE(
+        log, "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = {3}", name,
+        type, offset_ptr, size);
     CompilerType ivar_type =
         encoding_to_type_sp->RealizeType(type, for_expression);
     if (ivar_type) {
-      LLDB_LOGV(log,
-                "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = "
-                "{3}, type_size = {4}",
-                name, type, offset_ptr, size,
-                expectedToOptional(ivar_type.GetByteSize(nullptr)).value_or(0));
+      LLDB_LOG_VERBOSE(
+          log,
+          "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = "
+          "{3}, type_size = {4}",
+          name, type, offset_ptr, size,
+          expectedToOptional(ivar_type.GetByteSize(nullptr)).value_or(0));
       Scalar offset_scalar;
       Status error;
       const int offset_ptr_size = 4;
@@ -779,13 +780,13 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
       size_t read = process->ReadScalarIntegerFromMemory(
           offset_ptr, offset_ptr_size, is_signed, offset_scalar, error);
       if (error.Success() && 4 == read) {
-        LLDB_LOGV(log, "offset_ptr = {0:x} --> {1}", offset_ptr,
-                  offset_scalar.SInt());
+        LLDB_LOG_VERBOSE(log, "offset_ptr = {0:x} --> {1}", offset_ptr,
+                         offset_scalar.SInt());
         m_ivars.push_back(
             {ConstString(name), ivar_type, size, offset_scalar.SInt()});
       } else
-        LLDB_LOGV(log, "offset_ptr = {0:x} --> read fail, read = %{1}",
-                  offset_ptr, read);
+        LLDB_LOG_VERBOSE(log, "offset_ptr = {0:x} --> read fail, read = %{1}",
+                         offset_ptr, read);
     }
     return stop_loop;
   });

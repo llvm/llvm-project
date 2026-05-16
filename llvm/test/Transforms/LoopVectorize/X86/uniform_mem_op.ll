@@ -198,9 +198,6 @@ define void @uniform_store_varying_value(ptr align(4) %addr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 12
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP0]], 13
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP0]], 14
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP0]], 15
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -533,7 +530,7 @@ define i32 @uniform_load_constexpr() {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %accum = phi i32 [ %accum.next, %for.body ], [ 0, %entry ]
   %load = load i32, ptr getelementptr (i32, ptr @GAddr, i64 5), align 4
@@ -542,6 +539,6 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %iv, 4096
   br i1 %exitcond, label %loopexit, label %for.body
 
-loopexit:                                         ; preds = %for.body
+loopexit:
   ret i32 %accum.next
 }

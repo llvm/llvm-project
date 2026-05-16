@@ -234,7 +234,7 @@ MCRegister Xtensa::getUserRegister(unsigned Code, const MCRegisterInfo &MRI) {
 static MCAsmInfo *createXtensaMCAsmInfo(const MCRegisterInfo &MRI,
                                         const Triple &TT,
                                         const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new XtensaMCAsmInfo(TT);
+  MCAsmInfo *MAI = new XtensaMCAsmInfo(TT, Options);
   return MAI;
 }
 

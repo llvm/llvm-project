@@ -797,9 +797,9 @@ MachineInstr *MachineInstr::removeFromBundle() {
   return getParent()->remove_instr(this);
 }
 
-void MachineInstr::eraseFromParent() {
+MachineBasicBlock::iterator MachineInstr::eraseFromParent() {
   assert(getParent() && "Not embedded in a basic block!");
-  getParent()->erase(this);
+  return getParent()->erase(this);
 }
 
 void MachineInstr::eraseFromBundle() {
@@ -927,7 +927,7 @@ bool MachineInstr::isStackAligningInlineAsm() const {
 InlineAsm::AsmDialect MachineInstr::getInlineAsmDialect() const {
   assert(isInlineAsm() && "getInlineAsmDialect() only works for inline asms!");
   unsigned ExtraInfo = getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
-  return InlineAsm::AsmDialect((ExtraInfo & InlineAsm::Extra_AsmDialect) != 0);
+  return InlineAsm::getDialect(ExtraInfo);
 }
 
 int MachineInstr::findInlineAsmFlagIdx(unsigned OpIdx,
@@ -1356,8 +1356,7 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
   // Treat volatile loads as stores. This is not strictly necessary for
   // volatiles, but it is required for atomic loads. It is not allowed to move
   // a load across an atomic load with Ordering > Monotonic.
-  if (mayStore() || isCall() || isPHI() ||
-      (mayLoad() && hasOrderedMemoryRef())) {
+  if (mayStore() || isCall() || isPHI() || hasOrderedMemoryRef()) {
     SawStore = true;
     return false;
   }
@@ -2614,6 +2613,9 @@ MachineInstr::getSpillSize(const TargetInstrInfo *TII) const {
 
 std::optional<LocationSize>
 MachineInstr::getFoldedSpillSize(const TargetInstrInfo *TII) const {
+  if (!mayStore())
+    return std::nullopt;
+
   MMOList Accesses;
   if (TII->hasStoreToStackSlot(*this, Accesses))
     return getSpillSlotSize(Accesses, getMF()->getFrameInfo());

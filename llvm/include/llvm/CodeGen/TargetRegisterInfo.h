@@ -477,6 +477,11 @@ public:
     return false;
   }
 
+  /// Returns true if the two subregisters are equal or overlap.
+  /// The registers may be virtual registers.
+  bool checkSubRegInterference(Register RegA, unsigned SubA, Register RegB,
+                               unsigned SubB) const;
+
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
     return llvm::is_contained(regunits(Reg), RegUnit);
@@ -821,6 +826,13 @@ public:
   /// register.
   /// Will be nullptr if the register is not in any base register class.
   virtual const TargetRegisterClass *getPhysRegBaseClass(MCRegister Reg) const {
+    return nullptr;
+  }
+
+  /// Returns the target-defined minimal register class for an untyped physical
+  /// register query or nullptr if the register is not in any register class.
+  virtual const TargetRegisterClass *
+  getDefaultMinimalPhysRegClass(MCRegister Reg) const {
     return nullptr;
   }
 

@@ -230,7 +230,7 @@ Value *MVEGatherScatterLowering::decomposePtr(Value *Ptr, Value *&Offsets,
   if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
     if (Value *V = decomposeGEP(Offsets, Ty, GEP, Builder)) {
       Scale =
-          computeScale(GEP->getSourceElementType()->getPrimitiveSizeInBits(),
+          computeScale(DL->getTypeAllocSizeInBits(GEP->getSourceElementType()),
                        MemoryTy->getScalarSizeInBits());
       return Scale == -1 ? nullptr : V;
     }
@@ -752,7 +752,7 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingGatScat(
   // The gep was in charge of making sure the offsets are scaled correctly
   // - calculate that factor so it can be applied by hand
   int TypeScale =
-      computeScale(DL->getTypeSizeInBits(GEP->getSourceElementType()),
+      computeScale(DL->getTypeAllocSizeInBits(GEP->getSourceElementType()),
                    DL->getTypeSizeInBits(GEP->getType()) /
                        cast<FixedVectorType>(GEP->getType())->getNumElements());
   if (TypeScale == -1)

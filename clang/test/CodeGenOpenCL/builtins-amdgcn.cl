@@ -314,6 +314,13 @@ void test_readlane(global int* out, int a, int b)
   *out = __builtin_amdgcn_readlane(a, b);
 }
 
+// CHECK-LABEL: @test_wave_shuffle
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.shuffle.i32(i32 %a, i32 %b)
+void test_wave_shuffle(global int* out, int a, int b)
+{
+  *out = __builtin_amdgcn_wave_shuffle(a, b);
+}
+
 // CHECK-LABEL: @test_fcmp_f32
 // CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 5)
 void test_fcmp_f32(global ulong* out, float a, float b)
@@ -1051,7 +1058,7 @@ void test_read_exec_hi(global uint* out) {
 }
 
 // CHECK-LABEL: @test_dispatch_ptr
-// CHECK: {{.*}}call align 4 dereferenceable(64){{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// CHECK: {{.*}}call{{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 #if !defined(__SPIRV__)
 void test_dispatch_ptr(__constant unsigned char ** out)
 #else
@@ -1137,26 +1144,8 @@ void test_get_local_id(int d, global int *out)
 // CHECK: declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y()
 // CHECK: declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.z()
 
-// CHECK-LABEL: @test_get_workgroup_size(
-// CHECK: {{.*}}call align 8 dereferenceable(256){{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-// CHECK: getelementptr inbounds nuw i8, ptr addrspace(4) %{{.*}}, i64 12
-// CHECK: load i16, ptr addrspace(4) %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// CHECK: getelementptr inbounds nuw i8, ptr addrspace(4) %{{.*}}, i64 14
-// CHECK: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// CHECK: getelementptr inbounds nuw i8, ptr addrspace(4) %{{.*}}, i64 16
-// CHECK: load i16, ptr addrspace(4) %{{.*}}, align 8, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-void test_get_workgroup_size(int d, global int *out)
-{
-	switch (d) {
-	case 0: *out = __builtin_amdgcn_workgroup_size_x() + 1; break;
-	case 1: *out = __builtin_amdgcn_workgroup_size_y(); break;
-	case 2: *out = __builtin_amdgcn_workgroup_size_z(); break;
-	default: *out = 0;
-	}
-}
-
 // CHECK-LABEL: @test_get_grid_size(
-// CHECK: {{.*}}call align 4 dereferenceable(64){{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// CHECK: {{.*}}call{{.*}}ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // CHECK: getelementptr inbounds nuw i8, ptr addrspace(4) %{{.*}}, i64 %{{.+}}
 // CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !range [[$GRID_RANGE:![0-9]+]], !invariant.load
 void test_get_grid_size(int d, global int *out)
@@ -1207,31 +1196,36 @@ kernel void test_ds_consume_lds(__attribute__((address_space(1))) int* out, __at
 // CHECK-LABEL: @test_gws_init(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.init(i32 %value, i32 %id)
 kernel void test_gws_init(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_init(value, id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_init))
+    __builtin_amdgcn_ds_gws_init(value, id);
 }
 
 // CHECK-LABEL: @test_gws_barrier(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.barrier(i32 %value, i32 %id)
 kernel void test_gws_barrier(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_barrier(value, id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_barrier))
+    __builtin_amdgcn_ds_gws_barrier(value, id);
 }
 
 // CHECK-LABEL: @test_gws_sema_v(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.sema.v(i32 %id)
 kernel void test_gws_sema_v(uint id) {
-  __builtin_amdgcn_ds_gws_sema_v(id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_sema_v))
+    __builtin_amdgcn_ds_gws_sema_v(id);
 }
 
 // CHECK-LABEL: @test_gws_sema_br(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.sema.br(i32 %value, i32 %id)
 kernel void test_gws_sema_br(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_sema_br(value, id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_sema_br))
+    __builtin_amdgcn_ds_gws_sema_br(value, id);
 }
 
 // CHECK-LABEL: @test_gws_sema_p(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.sema.p(i32 %id)
 kernel void test_gws_sema_p(uint id) {
-  __builtin_amdgcn_ds_gws_sema_p(id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_sema_p))
+    __builtin_amdgcn_ds_gws_sema_p(id);
 }
 
 // CHECK-LABEL: @test_mbcnt_lo(
@@ -1382,5 +1376,4 @@ void test_set_fpenv(unsigned long env) {
 }
 
 // CHECK-DAG: [[$GRID_RANGE]] = !{i32 1, i32 0}
-// CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY_NOPOISON]] = { convergent mustprogress nocallback nocreateundeforpoison nofree nounwind willreturn memory(none) }

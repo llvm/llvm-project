@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Unique fixed ID assigned to basic blocks upon their creation.
+// This file contains a structure that uniquely identifies a basic block within
+// a function.
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +15,7 @@
 #define LLVM_SUPPORT_UNIQUEBBID_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 
@@ -24,21 +26,39 @@ struct UniqueBBID {
   unsigned CloneID;
 };
 
+// The prefetch symbol is emitted immediately after the call of the given index,
+// in block `BBID` (First call has an index of 1). Zero callsite index means the
+// start of the block.
+struct CallsiteID {
+  UniqueBBID BBID;
+  unsigned CallsiteIndex;
+};
+
+// This represents a prefetch hint to be injected at site `SiteID`, targeting
+// `TargetID` in function `TargetFunction`.
+struct PrefetchHint {
+  CallsiteID SiteID;
+  StringRef TargetFunction;
+  CallsiteID TargetID;
+};
+
 // Provides DenseMapInfo for UniqueBBID.
 template <> struct DenseMapInfo<UniqueBBID> {
   static inline UniqueBBID getEmptyKey() {
     unsigned EmptyKey = DenseMapInfo<unsigned>::getEmptyKey();
     return UniqueBBID{EmptyKey, EmptyKey};
   }
+
   static inline UniqueBBID getTombstoneKey() {
     unsigned TombstoneKey = DenseMapInfo<unsigned>::getTombstoneKey();
     return UniqueBBID{TombstoneKey, TombstoneKey};
   }
+
   static unsigned getHashValue(const UniqueBBID &Val) {
-    std::pair<unsigned, unsigned> PairVal =
-        std::make_pair(Val.BaseID, Val.CloneID);
-    return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
+    return DenseMapInfo<unsigned>::getHashValue(Val.BaseID) ^
+           DenseMapInfo<unsigned>::getHashValue(Val.CloneID);
   }
+
   static bool isEqual(const UniqueBBID &LHS, const UniqueBBID &RHS) {
     return DenseMapInfo<unsigned>::isEqual(LHS.BaseID, RHS.BaseID) &&
            DenseMapInfo<unsigned>::isEqual(LHS.CloneID, RHS.CloneID);

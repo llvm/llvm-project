@@ -75,61 +75,8 @@ include(ExtendPath)
 # Build Mode Introspection #
 ############################
 
-# Determine whether we are in the runtimes/runtimes-bins directory of a
-# bootstrap build.
-set(LLVM_TREE_AVAILABLE OFF)
-if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
-  set(LLVM_TREE_AVAILABLE ON)
-endif()
-
 # Path to LLVM development tools (FileCheck, llvm-lit, not, ...)
 set(LLVM_TOOLS_DIR "${LLVM_BINARY_DIR}/bin")
-
-# Determine build and install paths.
-# The build path is absolute, but the install dir is relative, CMake's install
-# command has to apply CMAKE_INSTALL_PREFIX itself.
-get_toolchain_library_subdir(toolchain_lib_subdir)
-if (LLVM_TREE_AVAILABLE)
-  # In a bootstrap build emit the libraries into a default search path in the
-  # build directory of the just-built compiler. This allows using the
-  # just-built compiler without specifying paths to runtime libraries.
-  #
-  # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
-  # being added to the build. Flang uses the same resource dir as clang.
-  include(GetClangResourceDir)
-  get_clang_resource_dir(FLANG_RT_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
-  get_clang_resource_dir(FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT)
-
-  extend_path(FLANG_RT_OUTPUT_RESOURCE_LIB_DIR "${FLANG_RT_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
-else ()
-  # In a standalone runtimes build, do not write into LLVM_BINARY_DIR. It may be
-  # read-only and/or shared by multiple runtimes with different build
-  # configurations (e.g. Debug/Release). Use the runtime's own lib dir like any
-  # non-toolchain library.
-  # For the install prefix, still use the resource dir assuming that Flang will
-  # be installed there using the same prefix. This is to not have a difference
-  # between bootstrap and standalone runtimes builds.
-  set(FLANG_RT_OUTPUT_RESOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-  set(FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
-
-  extend_path(FLANG_RT_OUTPUT_RESOURCE_LIB_DIR "${FLANG_RT_OUTPUT_RESOURCE_DIR}" "lib${LLVM_LIBDIR_SUFFIX}")
-endif ()
-set(FLANG_RT_INSTALL_RESOURCE_PATH "${FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT}"
-    CACHE PATH "Path to install runtime libraries to (default: clang resource dir)")
-extend_path(FLANG_RT_INSTALL_RESOURCE_LIB_PATH "${FLANG_RT_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
-cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_RESOURCE_DIR)
-cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_PATH)
-# FIXME: For the libflang_rt.so, the toolchain resource lib dir is not a good
-#        destination because it is not a ld.so default search path.
-#        The machine where the executable is eventually executed may not be the
-#        machine where the Flang compiler and its resource dir is installed, so
-#        setting RPath by the driver is not an solution. It should belong into
-#        /usr/lib/<triple>/libflang_rt.so, like e.g. libgcc_s.so.
-#        But the linker as invoked by the Flang driver also requires
-#        libflang_rt.so to be found when linking and the resource lib dir is
-#        the only reliable location.
-cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_RESOURCE_LIB_DIR)
-cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 
 
 #################
@@ -138,13 +85,6 @@ cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 
 # Important: flang-rt user options must be prefixed with "FLANG_RT_". Variables
 # with this prefix will be forwarded in bootstrap builds.
-
-# TODO: Support tests for the GPU target.
-set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
-  set(FLANG_RT_INCLUDE_TESTS_default OFF)
-endif()
-option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
 
 # Provide an interface to link against the LLVM libc/libc++ projects directly.
 set(FLANG_RT_SUPPORTED_PROVIDERS system llvm)
@@ -171,19 +111,29 @@ else ()
   #       breaking change unless the driver is changed.
   option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." OFF)
 endif ()
-if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
-  message(FATAL_ERROR "
-      Must build at least one type of library
-      (FLANG_RT_ENABLE_STATIC=ON, FLANG_RT_ENABLE_SHARED=ON, or both)
-    ")
+
+
+# TODO: Support tests for the GPU target.
+set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
+elseif (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
+endif()
+option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
+if (FLANG_RT_INCLUDE_TESTS AND NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  message(WARNING "FLANG_RT_INCLUDE_TESTS=${FLANG_RT_INCLUDE_TESTS} requires a "
+                  "library to be built (FLANG_RT_ENABLE_STATIC=ON or "
+                  "FLANG_RT_ENABLE_SHARED=ON).\n"
+                  "Tests are disabled: check-flang-rt does nothing")
+  set(FLANG_RT_INCLUDE_TESTS OFF)
 endif ()
 
 
-set(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT "" CACHE STRING "Compile Flang-RT with GPU support (CUDA or OpenMP)")
+set(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT "" CACHE STRING "Compile Flang-RT with GPU support (CUDA)")
 set_property(CACHE FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT PROPERTY STRINGS
     ""
     CUDA
-    OpenMP
   )
 if (NOT FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT)
   # Support for GPUs disabled
@@ -191,30 +141,8 @@ elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   # Support for CUDA
   set(FLANG_RT_LIBCUDACXX_PATH "" CACHE PATH "Path to libcu++ package installation")
   option(FLANG_RT_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS "Do not compile global variables' definitions when producing PTX library" OFF)
-elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
-  # Support for OpenMP offloading
-  set(FLANG_RT_DEVICE_ARCHITECTURES "all" CACHE STRING
-      "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')"
-    )
-
-  if (FLANG_RT_DEVICE_ARCHITECTURES STREQUAL "all")
-    # TODO: support auto detection on the build system.
-    set(all_amdgpu_architectures
-      "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
-      "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
-      "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
-      "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151"
-      "gfx1152;gfx1153;gfx1170")
-    set(all_nvptx_architectures
-      "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
-      "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
-    set(all_gpu_architectures
-      "${all_amdgpu_architectures};${all_nvptx_architectures}")
-      set(FLANG_RT_DEVICE_ARCHITECTURES ${all_gpu_architectures})
-  endif()
-  list(REMOVE_DUPLICATES FLANG_RT_DEVICE_ARCHITECTURES)
 else ()
-  message(FATAL_ERROR "Invalid value '${FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty, 'CUDA', or 'OpenMP'")
+  message(FATAL_ERROR "Invalid value '${FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty or 'CUDA'")
 endif ()
 
 
@@ -283,10 +211,14 @@ endif()
 find_package(Threads)
 
 # function checks
-find_package(Backtrace)
+# FIXME: The NVPTX target will erroneously report it has backtrace support. This
+#        is caused by using "-c -flto" in the required flags to suppress CUDA
+#        tools from being required for the CMake flag checks to succeed.
+if (NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
+  find_package(Backtrace)
+endif()
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
-
 
 #####################
 # Build Preparation #

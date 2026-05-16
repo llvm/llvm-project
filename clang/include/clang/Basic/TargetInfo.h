@@ -138,6 +138,7 @@ struct TransferrableTargetInfo {
   unsigned short NewAlign;
   unsigned MaxVectorAlign;
   unsigned MaxTLSAlign;
+  bool VectorsAreElementAligned;
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
       *DoubleFormat, *LongDoubleFormat, *Float128Format, *Ibm128Format;
@@ -869,6 +870,9 @@ public:
             llvm::isPowerOf2_64(AtomicSizeInBits / getCharWidth()));
   }
 
+  /// True if vectors are element-aligned for this target.
+  bool vectorsAreElementAligned() const { return VectorsAreElementAligned; }
+
   /// Return the maximum vector alignment supported for the given target.
   unsigned getMaxVectorAlign() const { return MaxVectorAlign; }
 
@@ -1567,7 +1571,7 @@ public:
   /// which requires support for cpu_supports and cpu_is functionality.
   bool supportsMultiVersioning() const {
     return getTriple().isX86() || getTriple().isAArch64() ||
-           getTriple().isRISCV();
+           getTriple().isRISCV() || getTriple().isOSAIX();
   }
 
   /// Identify whether this target supports IFuncs.
@@ -1963,6 +1967,8 @@ private:
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;
 };
+
+unsigned Microsoft64BitMinGlobalAlign(uint64_t TypeSize);
 
 namespace targets {
 std::unique_ptr<clang::TargetInfo>

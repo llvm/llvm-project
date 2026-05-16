@@ -3,7 +3,9 @@ add_subdirectory(TargetLowering)
 add_clang_library(MLIRCIRTransforms
   CIRCanonicalize.cpp
   CIRSimplify.cpp
+  CIRTransformUtils.cpp
   CXXABILowering.cpp
+  EHABILowering.cpp
   TargetLowering.cpp
   FlattenCFG.cpp
   HoistAllocas.cpp
@@ -26,4 +28,6 @@ add_clang_library(MLIRCIRTransforms
   MLIRCIR
   MLIRCIRInterfaces
   MLIRCIRTargetLowering
+  MLIROpenACCDialect
+  MLIROpenMPDialect
 )

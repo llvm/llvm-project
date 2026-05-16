@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdValarrayDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self):
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp", False)

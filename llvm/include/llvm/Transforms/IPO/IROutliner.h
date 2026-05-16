@@ -370,7 +370,8 @@ private:
   struct InstructionAllowed : public InstVisitor<InstructionAllowed, bool> {
     InstructionAllowed() = default;
 
-    bool visitBranchInst(BranchInst &BI) { return EnableBranches; }
+    bool visitUncondBrInst(UncondBrInst &BI) { return EnableBranches; }
+    bool visitCondBrInst(CondBrInst &BI) { return EnableBranches; }
     bool visitPHINode(PHINode &PN) { return EnableBranches; }
     // TODO: Handle allocas.
     bool visitAllocaInst(AllocaInst &AI) { return false; }
@@ -464,7 +465,7 @@ private:
 };
 
 /// Pass to outline similar regions.
-class IROutlinerPass : public PassInfoMixin<IROutlinerPass> {
+class IROutlinerPass : public OptionalPassInfoMixin<IROutlinerPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

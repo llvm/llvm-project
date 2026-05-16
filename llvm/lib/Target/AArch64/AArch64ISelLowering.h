@@ -144,6 +144,8 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  bool isFPImmLegalAsFMov(const APFloat &Imm, EVT VT) const;
+
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 
@@ -182,18 +184,6 @@ public:
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
-
-  // Note: The following group of functions are only used as part of the old SME
-  // ABI lowering. They will be removed once -aarch64-new-sme-abi=true is the
-  // default.
-  MachineBasicBlock *EmitInitTPIDR2Object(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitAllocateZABuffer(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitAllocateSMESaveBuffer(MachineInstr &MI,
-                                               MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
-                                        MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitEntryPStateSM(MachineInstr &MI,
                                        MachineBasicBlock *BB) const;
 
@@ -242,7 +232,8 @@ public:
                              const APInt &GapMask) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI) const override;
+                                        IntrinsicInst *DI,
+                                        const APInt &GapMask) const override;
 
   bool lowerInterleaveIntrinsicToStore(
       Instruction *Store, Value *Mask,
@@ -362,6 +353,7 @@ public:
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   TargetLoweringBase::AtomicExpansionKind
@@ -369,6 +361,10 @@ public:
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
+
+  bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+    return false;
+  }
 
   bool useLoadStackGuardNode(const Module &M) const override;
   TargetLoweringBase::LegalizeTypeAction
@@ -784,7 +780,7 @@ private:
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMSTORE(SDValue Op, SelectionDAG &DAG) const;
-
+  SDValue LowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
 
   SDValue LowerFixedLengthVectorIntDivideToSVE(SDValue Op,
@@ -911,11 +907,9 @@ private:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
-  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
-                                           const APInt &DemandedElts,
-                                           const SelectionDAG &DAG,
-                                           bool PoisonOnly, bool ConsiderFlags,
-                                           unsigned Depth) const override;
+  bool canCreateUndefOrPoisonForTargetNode(
+      SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+      UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const override;
 
   bool isTargetCanonicalConstantNode(SDValue Op) const override;
 

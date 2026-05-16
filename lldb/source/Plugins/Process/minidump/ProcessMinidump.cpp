@@ -34,7 +34,6 @@
 #include "lldb/Utility/State.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Threading.h"
 
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
@@ -173,13 +172,9 @@ ProcessMinidump::~ProcessMinidump() {
 }
 
 void ProcessMinidump::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  ProcessMinidump::CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(),
+                                ProcessMinidump::CreateInstance);
 }
 
 void ProcessMinidump::Terminate() {
@@ -213,17 +208,23 @@ Status ProcessMinidump::DoLoadCore() {
 
   m_thread_list = m_minidump_parser->GetThreads();
   auto exception_stream_it = m_minidump_parser->GetExceptionStreams();
-  for (auto exception_stream : exception_stream_it) {
+  for (auto exception_stream_or_err : exception_stream_it) {
     // If we can't read an exception stream skip it
     // We should probably serve a warning
-    if (!exception_stream)
+    if (!exception_stream_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Process),
+                     exception_stream_or_err.takeError(),
+                     "failed to read exception stream: {0}");
       continue;
+    }
+    const llvm::minidump::ExceptionStream &exception_stream =
+        *exception_stream_or_err;
 
     if (!m_exceptions_by_tid
-             .try_emplace(exception_stream->ThreadId, exception_stream.get())
+             .try_emplace(exception_stream.ThreadId, exception_stream)
              .second) {
       return Status::FromErrorStringWithFormatv(
-          "Duplicate exception stream for tid {0}", exception_stream->ThreadId);
+          "Duplicate exception stream for tid {0}", exception_stream.ThreadId);
     }
   }
 
@@ -399,13 +400,13 @@ void ProcessMinidump::BuildMemoryRegions() {
                                                 section_sp->GetByteSize());
       MemoryRegionInfo region =
           MinidumpParser::GetMemoryRegionInfo(*m_memory_regions, load_addr);
-      if (region.GetMapped() != MemoryRegionInfo::eYes &&
+      if (region.GetMapped() != eLazyBoolYes &&
           region.GetRange().GetRangeBase() <= section_range.GetRangeBase() &&
           section_range.GetRangeEnd() <= region.GetRange().GetRangeEnd()) {
         to_add.emplace_back();
         to_add.back().GetRange() = section_range;
         to_add.back().SetLLDBPermissions(section_sp->GetPermissions());
-        to_add.back().SetMapped(MemoryRegionInfo::eYes);
+        to_add.back().SetMapped(eLazyBoolYes);
         to_add.back().SetName(module_sp->GetFileSpec().GetPath().c_str());
       }
     }

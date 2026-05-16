@@ -66,6 +66,9 @@ protected:
   int LDSBankCount = 0;
   unsigned MaxPrivateElementSize = 0;
 
+  // Instruction cache line size in bytes; set from TableGen subtarget features.
+  unsigned InstCacheLineSize = 0;
+
   // Dynamically set bits that enable features.
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
@@ -84,6 +87,15 @@ private:
   SIInstrInfo InstrInfo;
   SITargetLowering TLInfo;
   SIFrameLowering FrameLowering;
+
+  /// Get the register that represents the actual dependency between the
+  /// definition and the use. The definition might only affect a subregister
+  /// that is not actually used. Works for both virtual and physical registers.
+  /// Note: Currently supports VOP3P instructions (without WMMA an SWMMAC).
+  /// Returns the definition register if there is a real dependency and no
+  /// better match is found.
+  Register getRealSchedDependency(const MachineInstr &DefI, int DefOpIdx,
+                                  const MachineInstr &UseI, int UseOpIdx) const;
 
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
@@ -170,6 +182,9 @@ public:
 
   int getLDSBankCount() const { return LDSBankCount; }
 
+  /// Instruction cache line size in bytes (64 for pre-GFX11, 128 for GFX11+).
+  unsigned getInstCacheLineSize() const { return InstCacheLineSize; }
+
   unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
     return (ForBufferRSrc || !hasFlatScratchEnabled()) ? MaxPrivateElementSize
                                                        : 16;
@@ -219,6 +234,8 @@ public:
   bool hasScalarMulHiInsts() const { return HasGFX9Insts; }
 
   bool hasScalarSubwordLoads() const { return getGeneration() >= GFX12; }
+
+  bool hasAsyncMark() const { return hasVMemToLDSLoad() || HasAsynccnt; }
 
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
@@ -342,10 +359,6 @@ public:
 
   bool hasAtomicCSub() const { return HasGFX10_BEncoding; }
 
-  bool hasMTBUFInsts() const { return !hasGFX1250Insts(); }
-
-  bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
-
   bool hasExportInsts() const {
     return !hasGFX940Insts() && !hasGFX1250Insts();
   }
@@ -394,10 +407,6 @@ public:
   // Covers VS/PS/CS graphics shaders
   bool isMesaGfxShader(const Function &F) const {
     return isMesa3DOS() && AMDGPU::isShader(F.getCallingConv());
-  }
-
-  bool isGFX1170() const {
-    return getGeneration() == GFX11 && hasWMMA128bInsts();
   }
 
   bool hasMad64_32() const { return getGeneration() >= SEA_ISLANDS; }
@@ -493,8 +502,6 @@ public:
   }
 
   bool hasMadF16() const;
-
-  bool hasMovB64() const { return HasGFX940Insts || HasGFX1250Insts; }
 
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return HasGFX1250Insts; }
@@ -620,12 +627,6 @@ public:
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
   bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
 
-  /// \returns true if inline constants are not supported for F16 pseudo
-  /// scalar transcendentals.
-  bool hasNoF16PseudoScalarTransInlineConstants() const {
-    return getGeneration() == GFX12;
-  }
-
   /// \returns true if the target has packed f32 instructions that only read 32
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to
   /// both channels.
@@ -683,12 +684,6 @@ public:
   // \returns true if the target has split barriers feature
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
-  // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
-  bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
-
-  // \returns true if the target has IEEE kernel descriptor mode bit
-  bool hasIEEEMode() const { return getGeneration() < GFX12; }
-
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
 
@@ -699,13 +694,6 @@ public:
   bool hasINVWBL2WaitCntRequirement() const { return HasGFX1250Insts; }
 
   bool hasVOPD3() const { return HasGFX1250Insts; }
-
-  // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
-  bool hasVectorMulU64() const { return HasGFX1250Insts; }
-
-  // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
-  // instructions.
-  bool hasMadU64U32NoCarry() const { return HasGFX1250Insts; }
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
   bool hasIntMinMax64() const { return HasGFX1250Insts; }
@@ -913,7 +901,7 @@ public:
 
   /// \returns Maximum flat work group size supported by the subtarget.
   unsigned getMaxFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize(this);
+    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
   }
 
   /// \returns Number of waves per execution unit required to support the given

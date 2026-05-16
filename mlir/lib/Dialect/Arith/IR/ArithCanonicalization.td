@@ -106,6 +106,17 @@ def AddUIExtendedToAddI:
              [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
 
 //===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+// subui_extended(x, y) -> [subi(x, y), x], when the `borrow` result has no
+// uses. Since the 'borrow' result is unused, any replacement value will do.
+def SubUIExtendedToSubI:
+    Pattern<(Arith_SubUIExtendedOp:$res $x, $y),
+             [(Arith_SubIOp $x, $y, DefOverflow), (replaceWithValue $x)],
+             [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
+
+//===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 
@@ -288,38 +299,19 @@ def SelectI1ToNot :
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-// index_cast(index_cast(x, exact)) -> x, if dstType == srcType.
-// The inner exact guarantees the iN -> index conversion is lossless,
-// so the roundtrip through index preserves the value.
-def IndexCastOfIndexCast :
-    Pat<(Arith_IndexCastOp:$res (Arith_IndexCastOp $x, $exact1), $exact2),
-        (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x),
-         (Constraint<CPred<"(bool)$0">> $exact1)]>;
-
 // index_cast(extsi(x)) -> index_cast(x)
 def IndexCastOfExtSI :
-    Pat<(Arith_IndexCastOp (Arith_ExtSIOp $x), $exact),
-        (Arith_IndexCastOp $x, $exact)>;
+    Pat<(Arith_IndexCastOp (Arith_ExtSIOp $x)), (Arith_IndexCastOp $x)>;
 
 //===----------------------------------------------------------------------===//
 // IndexCastUIOp
 //===----------------------------------------------------------------------===//
 
-// index_castui(index_castui(x, exact)) -> x, if dstType == srcType.
-// The inner exact guarantees the iN -> index conversion is lossless,
-// so the roundtrip through index preserves the value.
-def IndexCastUIOfIndexCastUI :
-    Pat<(Arith_IndexCastUIOp:$res
-          (Arith_IndexCastUIOp $x, $nneg1, $exact1), $nneg2, $exact2),
-        (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x),
-         (Constraint<CPred<"static_cast<bool>($0)">> $exact1)]>;
-
 // index_castui(extui(x)) -> index_castui(x)
 def IndexCastUIOfExtUI :
-    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x, $nneg1), $nneg2, $exact),
-        (Arith_IndexCastUIOp $x, $nneg1, $exact)>;
+    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x, $nneg1), $nneg2),
+        (Arith_IndexCastUIOp $x, $nneg1)>;
+
 
 //===----------------------------------------------------------------------===//
 // BitcastOp
@@ -429,25 +421,70 @@ def TruncFUIToFPToUIToFP :
         [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
 
 //===----------------------------------------------------------------------===//
+// SIToFPOp
+//===----------------------------------------------------------------------===//
+
+// sitofp(extsi(x)) -> sitofp(x)
+def SIToFPOfExtSI :
+    Pat<(Arith_SIToFPOp (Arith_ExtSIOp $x)),
+        (Arith_SIToFPOp $x)>;
+
+// sitofp(extui(x)) -> uitofp(x)
+def SIToFPOfExtUI :
+    Pat<(Arith_SIToFPOp (Arith_ExtUIOp $x, $nneg)),
+        (Arith_UIToFPOp $x, $nneg)>;
+
+//===----------------------------------------------------------------------===//
+// UIToFPOp
+//===----------------------------------------------------------------------===//
+
+// uitofp(extui(x)) -> uitofp(x)
+def UIToFPOfExtUI :
+    Pat<(Arith_UIToFPOp (Arith_ExtUIOp $x, $nneg1), $nneg2),
+        (Arith_UIToFPOp $x, $nneg1)>;
+
+//===----------------------------------------------------------------------===//
+// SubFOp
+//===----------------------------------------------------------------------===//
+
+// Match a constant (scalar or splat) -0.0 float.
+def IsNegZeroFloat :
+    Constraint<CPred<"m_NegZeroFloat().match($0)">,
+               "is negative-zero float constant">;
+
+// subf(-0, x) -> negf(x)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
+def SubFOfNegZero :
+    Pat<(Arith_SubFOp (ConstantLikeMatcher AnyAttr:$c), $x, $fmf, $rm),
+        (Arith_NegFOp $x, $fmf),
+        [(IsNegZeroFloat $c),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
+
+//===----------------------------------------------------------------------===//
 // MulFOp
 //===----------------------------------------------------------------------===//
 
 // mulf(negf(x), negf(y)) -> mulf(x,y)
-// (retain fastmath flags of original mulf)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
 def MulFOfNegF :
-    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf),
-        (Arith_MulFOp $x, $y, $fmf),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_MulFOp $x, $y, $fmf, $rm),
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
 
 //===----------------------------------------------------------------------===//
 // DivFOp
 //===----------------------------------------------------------------------===//
 
 // divf(negf(x), negf(y)) -> divf(x,y)
-// (retain fastmath flags of original divf)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
 def DivFOfNegF :
-    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf),
-        (Arith_DivFOp $x, $y, $fmf),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_DivFOp $x, $y, $fmf, $rm),
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
 
 #endif // ARITH_PATTERNS

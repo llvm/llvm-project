@@ -215,6 +215,13 @@ struct InitializeParams {
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   std::optional<TraceLevel> trace;
+
+  /// The root URI of the workspace. Is null if no folder is open.
+  std::optional<std::string> rootUri;
+
+  /// The root path of the workspace. Is null if no folder is open.
+  /// This is deprecated, use rootUri instead, but kept for more compatibility.
+  std::optional<std::string> rootPath;
 };
 
 /// Add support for JSON serialization.

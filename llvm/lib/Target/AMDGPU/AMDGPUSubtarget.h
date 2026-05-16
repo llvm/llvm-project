@@ -46,7 +46,7 @@ public:
   };
 
 private:
-  Triple TargetTriple;
+  const Triple &TargetTriple;
 
 protected:
   bool HasMulI24 = true;
@@ -59,9 +59,10 @@ protected:
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
   char WavefrontSizeLog2 = 0;
+  unsigned FlatOffsetBitWidth = 0;
 
 public:
-  AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
+  AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -78,6 +79,10 @@ public:
   /// \returns Subtarget's default values if explicitly requested values cannot
   /// be converted to integer, or violate subtarget's specifications.
   std::pair<unsigned, unsigned> getFlatWorkGroupSizes(const Function &F) const;
+
+  /// \returns true if the maximum flat work-group size for \p F is at most the
+  /// wavefront size, so a work-group may fit in a single wavefront.
+  bool isSingleWavefrontWorkgroup(const Function &F) const;
 
   /// \returns The required size of workgroups that will be used to execute \p F
   /// in the \p Dim dimension, if it is known (from `!reqd_work_group_size`
