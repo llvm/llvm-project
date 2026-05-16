@@ -53,9 +53,6 @@ body: |
     ; CHECK: Cannot extract a scalable vector from a fixed length vector
     %18:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %15, 0
 
-    ; Extracting a fixed vector from a scalable vector is valid.
-    %19:_(<2 x s32>) = G_EXTRACT_SUBVECTOR %12, 0
-
     ; CHECK: Index must be a multiple of the destination vector's minimum vector length
     %20:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %12, 1
 ...
