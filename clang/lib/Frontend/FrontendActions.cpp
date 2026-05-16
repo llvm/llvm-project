@@ -450,8 +450,6 @@ private:
       return "ConstraintsCheck";
     case CodeSynthesisContext::ConstraintSubstitution:
       return "ConstraintSubstitution";
-    case CodeSynthesisContext::ConstraintNormalization:
-      return "ConstraintNormalization";
     case CodeSynthesisContext::RequirementParameterInstantiation:
       return "RequirementParameterInstantiation";
     case CodeSynthesisContext::ParameterMappingSubstitution:

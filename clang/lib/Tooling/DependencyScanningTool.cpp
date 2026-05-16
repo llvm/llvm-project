@@ -357,14 +357,14 @@ llvm::Expected<TranslationUnitDeps>
 DependencyScanningTool::getModuleDependencies(
     StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput) {
+    DependencyActionController &Controller) {
   auto MaybeCIWithContext = CompilerInstanceWithContext::initializeOrError(
-      *this, CWD, CommandLine, LookupModuleOutput);
+      *this, CWD, CommandLine, Controller);
   if (auto Error = MaybeCIWithContext.takeError())
     return Error;
 
   return MaybeCIWithContext->computeDependenciesByNameOrError(
-      ModuleName, AlreadySeen, LookupModuleOutput);
+      ModuleName, AlreadySeen, Controller);
 }
 
 static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
@@ -431,12 +431,7 @@ CompilerInstanceWithContext::initializeFromCommandline(
 llvm::Expected<CompilerInstanceWithContext>
 CompilerInstanceWithContext::initializeOrError(
     DependencyScanningTool &Tool, StringRef CWD,
-    ArrayRef<std::string> CommandLine,
-    LookupModuleOutputCallback LookupModuleOutput) {
-  // It might seem wasteful to create fresh controller just for initializing the
-  // compiler instance, but repeated calls to computeDependenciesByNameOrError()
-  // do that as well, so this gets amortized.
-  CallbackActionController Controller(LookupModuleOutput);
+    ArrayRef<std::string> CommandLine, DependencyActionController &Controller) {
   auto DiagPrinterWithOS =
       std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
 
@@ -452,9 +447,8 @@ CompilerInstanceWithContext::initializeOrError(
 llvm::Expected<TranslationUnitDeps>
 CompilerInstanceWithContext::computeDependenciesByNameOrError(
     StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput) {
+    DependencyActionController &Controller) {
   FullDependencyConsumer Consumer(AlreadySeen);
-  CallbackActionController Controller(LookupModuleOutput);
   // We need to clear the DiagnosticOutput so that each by-name lookup
   // has a clean diagnostics buffer.
   DiagPrinterWithOS->DiagnosticOutput.clear();
@@ -550,7 +544,7 @@ bool CompilerInstanceWithContext::computeDependencies(
   });
 
   auto MDC = initializeScanInstanceDependencyCollector(
-      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), Consumer,
+      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts),
       Worker.Service,
       /* The MDC's constructor makes a copy of the OriginalInvocation, so
       we can pass it in without worrying that it might be changed across
@@ -609,10 +603,6 @@ bool CompilerInstanceWithContext::computeDependencies(
 
   assert(CB && "Must have PPCallbacks after module loading");
   CB->moduleImport(SourceLocation(), Path, ModResult);
-  // Note that we are calling the CB's EndOfMainFile function, which
-  // forwards the results to the dependency consumer.
-  // It does not indicate the end of processing the fake file.
-  CB->EndOfMainFile();
 
   if (!ModResult)
     return false;
@@ -620,6 +610,7 @@ bool CompilerInstanceWithContext::computeDependencies(
   if (CI.getDiagnostics().hasErrorOccurred())
     return false;
 
+  MDC->run(Consumer);
   MDC->applyDiscoveredDependencies(ModuleInvocation);
 
   if (!Controller.finalize(CI, ModuleInvocation))

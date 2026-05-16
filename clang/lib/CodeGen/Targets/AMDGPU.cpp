@@ -439,11 +439,6 @@ public:
                                  llvm::PointerType *T,
                                  QualType QT) const override;
 
-  LangAS getASTAllocaAddressSpace() const override {
-    return getLangASFromTargetAS(
-        getABIInfo().getDataLayout().getAllocaAddrSpace());
-  }
-
   LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
 
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
@@ -612,7 +607,8 @@ AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
   // default AS so the sret pointer matches the "this" convention.
   if (RD && !RD->canPassInRegisters())
     return LangAS::Default;
-  return getASTAllocaAddressSpace();
+  return getLangASFromTargetAS(
+      getABIInfo().getDataLayout().getAllocaAddrSpace());
 }
 
 LangAS

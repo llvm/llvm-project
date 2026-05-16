@@ -177,6 +177,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.ioctl.ioctl
 
     # sys/mman.h entrypoints
+    libc.src.sys.mman.memfd_create
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
 

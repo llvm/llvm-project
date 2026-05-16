@@ -528,6 +528,10 @@ class SIInsertWaitcnts {
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
     bool Dirty = true;
+    BlockInfo() = default;
+    BlockInfo(BlockInfo &&) = default;
+    BlockInfo &operator=(BlockInfo &&) = default;
+    ~BlockInfo();
   };
 
   MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
@@ -1050,6 +1054,8 @@ private:
   // mark yet. Initialized to all zeros.
   CounterValueArray AsyncScore{};
 };
+
+SIInsertWaitcnts::BlockInfo::~BlockInfo() = default;
 
 class SIInsertWaitcntsLegacy : public MachineFunctionPass {
 public:
