@@ -23,7 +23,7 @@ program map_dump_example
     A(i)=0
   enddo
 ! clang-format off
-! CHECK: omptarget device 0 info: OpenMP Host-Device pointer mappings after block
+! CHECK: device 0 info: OpenMP Host-Device pointer mappings after block
 ! CHECK-NEXT: omptarget device 0 info: Host Ptr Target Ptr Size (B) DynRefCount HoldRefCount Declaration
 ! CHECK-NEXT: omptarget device 0 info: {{(0x[0-9a-f]{16})}} {{(0x[0-9a-f]{16})}}  20000000 1 0 a(:n) at {{.*}}:[[@LINE-8]]:11
 ! clang-format on
