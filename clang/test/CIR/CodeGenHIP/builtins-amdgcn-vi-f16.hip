@@ -63,3 +63,11 @@
 __device__ void test_div_fixup_f16(_Float16* out, _Float16 a, _Float16 b, _Float16 c) {
   *out = __builtin_amdgcn_div_fixuph(a, b, c);
 }
+
+// CIR-LABEL: @_Z19test_frexp_mant_f16PDF16_DF16_
+// CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.f16) -> !cir.f16
+// LLVM: define{{.*}} void @_Z19test_frexp_mant_f16PDF16_DF16_
+// LLVM: call{{.*}} half @llvm.amdgcn.frexp.mant.f16(half %{{.*}})
+__device__ void test_frexp_mant_f16(_Float16* out, _Float16 a) {
+  *out = __builtin_amdgcn_frexp_manth(a);
+}
