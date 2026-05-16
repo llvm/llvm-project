@@ -622,10 +622,38 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndentInitializers) {
                "        \"zzzzzzzzzzzzz\",\n"
                "};");
   verifyFormat("SomeStruct //\n"
-               "    s = SomeStruct{\n"
+               "    s = SomeStruct::SomeStruct{\n"
                "        \"xxxxxxxxxxxxx\",\n"
                "        \"yyyyyyyyyyyyy\",\n"
                "        \"zzzzzzzzzzzzz\",\n"
+               "};");
+  verifyFormat("void x() {\n"
+               "  SomeStruct //\n"
+               "      s = SomeStruct{\n"
+               "          \"xxxxxxxxxxxxx\",\n"
+               "          \"yyyyyyyyyyyyy\",\n"
+               "          \"zzzzzzzzzzzzz\",\n"
+               "  };\n"
+               "}");
+  verifyFormat("void x() {\n"
+               "  SomeStruct //\n"
+               "      s{\n"
+               "          \"xxxxxxxxxxxxx\",\n"
+               "          \"yyyyyyyyyyyyy\",\n"
+               "          \"zzzzzzzzzzzzz\",\n"
+               "  };\n"
+               "}");
+  verifyFormat("SomeArrayT //\n"
+               "    a[3] = {\n"
+               "        {\n"
+               "            foo,\n"
+               "            bar,\n"
+               "        },\n"
+               "        {\n"
+               "            foo,\n"
+               "            bar,\n"
+               "        },\n"
+               "        SomeArrayT{},\n"
                "};");
 }
 
