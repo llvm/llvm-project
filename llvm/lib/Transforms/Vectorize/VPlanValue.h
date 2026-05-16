@@ -82,8 +82,8 @@ public:
   enum {
     VPVIRValueSC,        /// A live-in VPValue wrapping an IR Value.
     VPVSymbolicSC,       /// A symbolic live-in VPValue without IR backing.
-    VPVMultiDefValueSC,  /// A VPValue defined by a multi-def recipe.
     VPVSingleDefValueSC, /// A VPValue defined by a VPSingleDefRecipe.
+    VPVMultiDefValueSC,  /// A VPValue defined by a multi-def recipe.
     VPRegionValueSC,     /// A VPValue sub-class that is defined by a
                          /// region, like a loop region canonical IV.
   };
@@ -314,7 +314,7 @@ class VPRecipeValue : public VPValue {
 
 #if !defined(NDEBUG)
   /// Returns true if this VPRecipeValue is defined by \p D.
-  /// NOTE: Only used by VPDef to assert that VPRecipeValues removed from
+  /// NOTE: Only used by VPDef to assert that VPRecipeValues added/removed from
   /// /p D are associated with its VPRecipeBase.
   bool isDefinedBy(const VPDef *D) const;
 #endif

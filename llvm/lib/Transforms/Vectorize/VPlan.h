@@ -599,7 +599,7 @@ protected:
     return R->getVPRecipeID() == VPRecipeID;                                   \
   }
 
-/// VPSingleDefRecipe is a base class for recipes for modeling a sequence of one
+/// VPSingleDefRecipe is a base class for recipes that model a sequence of one
 /// or more output IR that define a single result VPValue. Note that
 /// VPSingleDefRecipe must inherit from VPRecipeBase before VPSingleDefValue.
 class VPSingleDefRecipe : public VPRecipeBase, public VPSingleDefValue {
