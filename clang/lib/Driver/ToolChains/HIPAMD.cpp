@@ -163,9 +163,12 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
   const char *LinkedBCFilePath = HIP::getTempFile(C, LinkedBCFilePrefix, "bc");
   InputInfo LinkedBCFile(&JA, LinkedBCFilePath, Output.getBaseInput());
 
-  bool UseSPIRVBackend =
-      Args.hasFlag(options::OPT_use_spirv_backend,
-                   options::OPT_no_use_spirv_backend, /*Default=*/false);
+  const llvm::Triple &TT = getToolChain().getEffectiveTriple();
+  bool DefaultUseSPIRVBackend =
+      TT.isSPIRV() && TT.getVendor() == llvm::Triple::AMD;
+  bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
+                                      options::OPT_no_use_spirv_backend,
+                                      /*Default=*/DefaultUseSPIRVBackend);
 
   constructLLVMLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
