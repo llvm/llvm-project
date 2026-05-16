@@ -212,3 +212,37 @@ define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_wrong_and_using_select(<4 x i32
   %select = select <4 x i1> %cmp, <4 x i32> %shuffle, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %select
 }
+
+; NEGATIVE - POSSIBLY POISONED INPUT
+define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_possibly_poisoned_input_using_select(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_possibly_poisoned_input_using_select(
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[SELECT:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[SHUFFLE]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[SELECT]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %shuffle = shufflevector <4 x i32> %sext, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %select = select <4 x i1> %cmp, <4 x i32> %shuffle, <4 x i32> zeroinitializer
+  ret <4 x i32> %select
+}
+
+; POSITIVE - POSSIBLY POISONED INPUT USING AND
+define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_possibly_poisoned_input_using_and(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: define <4 x i32> @icmp_eq_v2i64_using_v4i32_with_possibly_poisoned_input_using_and(
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[AND:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[SHUFFLE]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[AND]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %shuffle = shufflevector <4 x i32> %sext, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %and = and <4 x i32> %sext, %shuffle
+  ret <4 x i32> %and
+}
