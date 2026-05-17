@@ -433,16 +433,16 @@ Changes in existing checks
   - Avoid false positives when moving object is reinitialized via the base
     class's ``operator=``.
 
-- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
-  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>`
-  check by adding the `IgnoreMacros` option. When enabled, non-const global
-  variables defined in macros are ignored.
-
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,
   lambda coroutines using C++23 deducing ``this`` (explicit object parameter)
   are not flagged.
+
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>`
+  check by adding the `IgnoreMacros` option. When enabled, non-const global
+  variables defined in macros are ignored.
 
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
