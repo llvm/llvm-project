@@ -221,21 +221,20 @@ static unsigned getElementCountOfArrayBeingDestructed(
 }
 
 ProgramStateRef ExprEngine::removeStateTraitsUsedForArrayEvaluation(
-    ProgramStateRef State, const CXXConstructExpr *E,
-    const LocationContext *LCtx) {
+    ProgramStateRef State, const CXXConstructExpr *E, const StackFrame *SF) {
 
-  assert(LCtx && "Location context must be provided!");
+  assert(SF && "Stack frame must be provided!");
 
   if (E) {
-    if (getPendingInitLoop(State, E, LCtx))
-      State = removePendingInitLoop(State, E, LCtx);
+    if (getPendingInitLoop(State, E, SF))
+      State = removePendingInitLoop(State, E, SF);
 
-    if (getIndexOfElementToConstruct(State, E, LCtx))
-      State = removeIndexOfElementToConstruct(State, E, LCtx);
+    if (getIndexOfElementToConstruct(State, E, SF))
+      State = removeIndexOfElementToConstruct(State, E, SF);
   }
 
-  if (getPendingArrayDestruction(State, LCtx))
-    State = removePendingArrayDestruction(State, LCtx);
+  if (getPendingArrayDestruction(State, SF))
+    State = removePendingArrayDestruction(State, SF);
 
   return State;
 }
@@ -372,7 +371,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   }
 
   // The second half of this process happens in the caller context. This is an
-  // exception to the general rule that the current LocationContext and Block
+  // exception to the general rule that the current StackFrame and Block
   // stay the same within a single call to dispatchWorkItem.
   resetCurrStackFrameAndBlock();
   setCurrStackFrameAndBlock(CallerSF, CalleeSF->getCallSiteBlock());
@@ -1133,7 +1132,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
 
 bool ExprEngine::shouldInlineArrayConstruction(const ProgramStateRef State,
                                                const CXXConstructExpr *CE,
-                                               const LocationContext *LCtx) {
+                                               const StackFrame *SF) {
   if (!CE)
     return false;
 
@@ -1153,7 +1152,7 @@ bool ExprEngine::shouldInlineArrayConstruction(const ProgramStateRef State,
   }
 
   // Check if we're inside an ArrayInitLoopExpr, and it's sufficiently small.
-  if (auto Size = getPendingInitLoop(State, CE, LCtx))
+  if (auto Size = getPendingInitLoop(State, CE, SF))
     return shouldInlineArrayDestruction(*Size);
 
   return false;
@@ -1169,7 +1168,7 @@ bool ExprEngine::shouldInlineArrayDestruction(uint64_t Size) {
 
 bool ExprEngine::shouldRepeatCtorCall(ProgramStateRef State,
                                       const CXXConstructExpr *E,
-                                      const LocationContext *LCtx) {
+                                      const StackFrame *SF) {
 
   if (!E)
     return false;
@@ -1179,11 +1178,11 @@ bool ExprEngine::shouldRepeatCtorCall(ProgramStateRef State,
   // FIXME: Handle non constant array types
   if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty)) {
     unsigned Size = getContext().getConstantArrayElementCount(CAT);
-    return Size > getIndexOfElementToConstruct(State, E, LCtx);
+    return Size > getIndexOfElementToConstruct(State, E, SF);
   }
 
-  if (auto Size = getPendingInitLoop(State, E, LCtx))
-    return Size > getIndexOfElementToConstruct(State, E, LCtx);
+  if (auto Size = getPendingInitLoop(State, E, SF))
+    return Size > getIndexOfElementToConstruct(State, E, SF);
 
   return false;
 }

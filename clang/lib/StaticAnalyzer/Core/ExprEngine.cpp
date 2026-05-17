@@ -511,12 +511,9 @@ ProgramStateRef ExprEngine::setPendingInitLoop(ProgramStateRef State,
   return State->set<PendingInitLoop>(Key, Size);
 }
 
-std::optional<unsigned>
-ExprEngine::getIndexOfElementToConstruct(ProgramStateRef State,
-                                         const CXXConstructExpr *E,
-                                         const LocationContext *LCtx) {
-  const unsigned *V =
-      State->get<IndexOfElementToConstruct>({E, LCtx->getStackFrame()});
+std::optional<unsigned> ExprEngine::getIndexOfElementToConstruct(
+    ProgramStateRef State, const CXXConstructExpr *E, const StackFrame *SF) {
+  const unsigned *V = State->get<IndexOfElementToConstruct>({E, SF});
   return V ? std::make_optional(*V) : std::nullopt;
 }
 

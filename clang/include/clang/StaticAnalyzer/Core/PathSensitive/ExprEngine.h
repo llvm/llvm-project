@@ -685,7 +685,7 @@ public:
   /// Retrieves which element is being constructed in a non-POD type array.
   static std::optional<unsigned>
   getIndexOfElementToConstruct(ProgramStateRef State, const CXXConstructExpr *E,
-                               const LocationContext *LCtx);
+                               const StackFrame *SF);
 
   /// Retrieves which element is being destructed in a non-POD type array.
   static std::optional<unsigned>
@@ -880,7 +880,7 @@ private:
   /// construction.
   bool shouldInlineArrayConstruction(const ProgramStateRef State,
                                      const CXXConstructExpr *CE,
-                                     const LocationContext *LCtx);
+                                     const StackFrame *SF);
 
   /// Checks whether our policies allow us to inline a non-POD type array
   /// destruction.
@@ -906,7 +906,7 @@ private:
   /// Checks whether we construct an array of non-POD type, and decides if the
   /// constructor should be invoked once again.
   bool shouldRepeatCtorCall(ProgramStateRef State, const CXXConstructExpr *E,
-                            const LocationContext *LCtx);
+                            const StackFrame *SF);
 
   void inlineCall(WorkList *WList, const CallEvent &Call, const Decl *D,
                   NodeBuilder &Bldr, ExplodedNode *Pred, ProgramStateRef State);
@@ -1015,10 +1015,8 @@ private:
                                                const CXXConstructExpr *E,
                                                const LocationContext *LCtx);
 
-  static ProgramStateRef
-  removeStateTraitsUsedForArrayEvaluation(ProgramStateRef State,
-                                          const CXXConstructExpr *E,
-                                          const LocationContext *LCtx);
+  static ProgramStateRef removeStateTraitsUsedForArrayEvaluation(
+      ProgramStateRef State, const CXXConstructExpr *E, const StackFrame *SF);
 
   /// Store the location of a C++ object corresponding to a statement
   /// until the statement is actually encountered. For example, if a DeclStmt
