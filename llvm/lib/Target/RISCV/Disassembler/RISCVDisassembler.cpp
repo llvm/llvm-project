@@ -133,33 +133,25 @@ static DecodeStatus DecodeGPRX5RegisterClass(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGPRNoX0RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  if (RegNo == 0)
-    return MCDisassembler::Fail;
-
-  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
-}
-
-static DecodeStatus DecodeGPRNoX2RegisterClass(MCInst &Inst, uint64_t RegNo,
-                                               uint32_t Address,
-                                               const MCDisassembler *Decoder) {
-  if (RegNo == 2)
-    return MCDisassembler::Fail;
-
-  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
-}
-
-static DecodeStatus DecodeGPRNoX31RegisterClass(MCInst &Inst, uint32_t RegNo,
+template <auto DecodeFn, auto PredicateFn>
+static DecodeStatus DecodeFilteredRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                 uint64_t Address,
                                                 const MCDisassembler *Decoder) {
-  if (RegNo == 31) {
+  if (!PredicateFn(RegNo))
     return MCDisassembler::Fail;
-  }
-
-  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+  return DecodeFn(Inst, RegNo, Address, Decoder);
 }
+
+constexpr bool PredNoX0(uint32_t RegNo) { return RegNo != 0; }
+constexpr bool PredNoX2(uint32_t RegNo) { return RegNo != 2; }
+constexpr bool PredNoX31(uint32_t RegNo) { return RegNo != 31; }
+
+constexpr auto DecodeGPRNoX0RegisterClass =
+    DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX0>;
+constexpr auto DecodeGPRNoX2RegisterClass =
+    DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX2>;
+constexpr auto DecodeGPRNoX31RegisterClass =
+    DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX31>;
 
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
@@ -177,14 +169,8 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus
-DecodeGPRPairNoX0RegisterClass(MCInst &Inst, uint32_t RegNo, uint64_t Address,
-                               const MCDisassembler *Decoder) {
-  if (RegNo == 0)
-    return MCDisassembler::Fail;
-
-  return DecodeGPRPairRegisterClass(Inst, RegNo, Address, Decoder);
-}
+constexpr auto DecodeGPRPairNoX0RegisterClass =
+    DecodeFilteredRegisterClass<DecodeGPRPairRegisterClass, PredNoX0>;
 
 static DecodeStatus DecodeGPRPairCRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                 uint64_t Address,
