@@ -123,19 +123,19 @@ namespace {
 /// AST nodes.
 class ConstructedObjectKey {
   using ConstructedObjectKeyImpl =
-      std::pair<ConstructionContextItem, const LocationContext *>;
+      std::pair<ConstructionContextItem, const StackFrame *>;
   const ConstructedObjectKeyImpl Impl;
 
 public:
   explicit ConstructedObjectKey(const ConstructionContextItem &Item,
-                       const LocationContext *LC)
-      : Impl(Item, LC) {}
+                                const StackFrame *SF)
+      : Impl(Item, SF) {}
 
   const ConstructionContextItem &getItem() const { return Impl.first; }
-  const LocationContext *getLocationContext() const { return Impl.second; }
+  const StackFrame *getStackFrame() const { return Impl.second; }
 
   ASTContext &getASTContext() const {
-    return getLocationContext()->getDecl()->getASTContext();
+    return getStackFrame()->getDecl()->getASTContext();
   }
 
   void printJson(llvm::raw_ostream &Out, PrinterHelper *Helper,
@@ -202,14 +202,14 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(IndexOfElementToConstruct,
                                  IndexOfElementToConstructMap)
 
 // This trait is responsible for holding our pending ArrayInitLoopExprs.
-// It pairs the LocationContext and the initializer CXXConstructExpr with
+// It pairs the StackFrame and the initializer CXXConstructExpr with
 // the size of the array that's being copy initialized.
 typedef llvm::ImmutableMap<
-    std::pair<const CXXConstructExpr *, const LocationContext *>, unsigned>
+    std::pair<const CXXConstructExpr *, const StackFrame *>, unsigned>
     PendingInitLoopMap;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(PendingInitLoop, PendingInitLoopMap)
 
-typedef llvm::ImmutableMap<const LocationContext *, unsigned>
+typedef llvm::ImmutableMap<const StackFrame *, unsigned>
     PendingArrayDestructionMap;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(PendingArrayDestruction,
                                  PendingArrayDestructionMap)
@@ -641,7 +641,7 @@ bool ExprEngine::areAllObjectsFullyConstructed(ProgramStateRef State,
   while (SF != ToSF) {
     assert(SF && "ToSF must be a parent of FromSF!");
     for (auto I : State->get<ObjectsUnderConstruction>())
-      if (I.first.getLocationContext() == SF)
+      if (I.first.getStackFrame() == SF)
         return false;
 
     SF = SF->getParent();
@@ -682,7 +682,7 @@ printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
   const ConstructedObjectKey *LastKey = nullptr;
   for (const auto &I : State->get<ObjectsUnderConstruction>()) {
     const ConstructedObjectKey &Key = I.first;
-    if (Key.getLocationContext() != SF)
+    if (Key.getStackFrame() != SF)
       continue;
 
     if (!HasItem) {
@@ -696,7 +696,7 @@ printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
   for (const auto &I : State->get<ObjectsUnderConstruction>()) {
     const ConstructedObjectKey &Key = I.first;
     SVal Value = I.second;
-    if (Key.getLocationContext() != SF)
+    if (Key.getStackFrame() != SF)
       continue;
 
     Indent(Out, Space, IsDot) << "{ ";
@@ -709,7 +709,7 @@ printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
   }
 
   if (HasItem)
-    Indent(Out, --Space, IsDot) << ']'; // End of "location_context".
+    Indent(Out, --Space, IsDot) << ']'; // End of "stack_frame".
   else {
     Out << "null ";
   }
@@ -771,7 +771,7 @@ static void printIndicesOfElementsToConstructJson(
   }
 
   if (HasItem)
-    Indent(Out, --Space, IsDot) << ']'; // End of "location_context".
+    Indent(Out, --Space, IsDot) << ']'; // End of "stack_frame".
   else {
     Out << "null ";
   }
@@ -781,7 +781,7 @@ static void printPendingInitLoopJson(raw_ostream &Out, ProgramStateRef State,
                                      const char *NL, const StackFrame *SF,
                                      unsigned int Space = 0,
                                      bool IsDot = false) {
-  using KeyT = std::pair<const CXXConstructExpr *, const LocationContext *>;
+  using KeyT = std::pair<const CXXConstructExpr *, const StackFrame *>;
 
   const auto &Context = SF->getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP = Context.getPrintingPolicy();
@@ -840,7 +840,7 @@ static void
 printPendingArrayDestructionsJson(raw_ostream &Out, ProgramStateRef State,
                                   const char *NL, const StackFrame *SF,
                                   unsigned int Space = 0, bool IsDot = false) {
-  using KeyT = const LocationContext *;
+  using KeyT = const StackFrame *;
 
   ++Space;
   bool HasItem = false;
@@ -2706,7 +2706,7 @@ static const Stmt *ResolveCondition(const Stmt *Condition,
 }
 
 using ObjCForLctxPair =
-    std::pair<const ObjCForCollectionStmt *, const LocationContext *>;
+    std::pair<const ObjCForCollectionStmt *, const StackFrame *>;
 
 REGISTER_MAP_WITH_PROGRAMSTATE(ObjCForHasMoreIterations, ObjCForLctxPair, bool)
 
@@ -3003,7 +3003,7 @@ void ExprEngine::processEndOfFunction(ExplodedNode *Pred,
     while (SF != ToSF) {
       assert(SF && "ToSF must be a parent of FromSF!");
       for (auto I : State->get<ObjectsUnderConstruction>())
-        if (I.first.getLocationContext() == SF) {
+        if (I.first.getStackFrame() == SF) {
           // The comment above only pardons us for not cleaning up a
           // temporary destructor. If any other statements are found here,
           // it must be a separate problem.
