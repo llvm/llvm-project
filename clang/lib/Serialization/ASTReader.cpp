@@ -5755,6 +5755,42 @@ void ASTReader::InitializeContext() {
         }
       }
     }
+
+    if (TypeID Fexcept_t = SpecialTypes[SPECIAL_TYPE_FEXCEPT_T]) {
+      QualType Fexcept_tType = GetType(Fexcept_t);
+      if (Fexcept_tType.isNull()) {
+        Error("fexcept_t type is NULL");
+        return;
+      }
+
+      if (!Context.fexcept_tDecl) {
+        if (const TypedefType *Typedef = Fexcept_tType->getAs<TypedefType>())
+          Context.setfexcept_tDecl(Typedef->getDecl());
+        else {
+          const TagType *Tag = Fexcept_tType->getAs<TagType>();
+          assert(Tag && "Invalid fexcept_t type in AST file");
+          Context.setfexcept_tDecl(Tag->getDecl());
+        }
+      }
+    }
+
+    if (TypeID Fenv_t = SpecialTypes[SPECIAL_TYPE_FENV_T]) {
+      QualType Fenv_tType = GetType(Fenv_t);
+      if (Fenv_tType.isNull()) {
+        Error("fenv_t type is NULL");
+        return;
+      }
+
+      if (!Context.fenv_tDecl) {
+        if (const TypedefType *Typedef = Fenv_tType->getAs<TypedefType>())
+          Context.setfenv_tDecl(Typedef->getDecl());
+        else {
+          const TagType *Tag = Fenv_tType->getAs<TagType>();
+          assert(Tag && "Invalid fenv_t type in AST file");
+          Context.setfenv_tDecl(Tag->getDecl());
+        }
+      }
+    }
   }
 
   ReadPragmaDiagnosticMappings(Context.getDiagnostics());

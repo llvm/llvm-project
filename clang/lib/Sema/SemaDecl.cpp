@@ -2398,6 +2398,8 @@ static StringRef getHeaderName(Builtin::Context &BuiltinInfo, unsigned ID,
     return "setjmp.h";
   case ASTContext::GE_Missing_ucontext:
     return "ucontext.h";
+  case ASTContext::GE_Missing_fenv:
+    return "fenv.h";
   }
   llvm_unreachable("unhandled error kind");
 }
@@ -7019,6 +7021,12 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
         break;
       case tok::NotableIdentifierKind::ucontext_t:
         Context.setucontext_tDecl(NewTD);
+        break;
+      case tok::NotableIdentifierKind::fexcept_t:
+        Context.setfexcept_tDecl(NewTD);
+        break;
+      case tok::NotableIdentifierKind::fenv_t:
+        Context.setfenv_tDecl(NewTD);
         break;
       case tok::NotableIdentifierKind::float_t:
       case tok::NotableIdentifierKind::double_t:

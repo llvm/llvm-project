@@ -12921,6 +12921,25 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   case 'm':
     Type = Context.MFloat8Ty;
     break;
+  case 'T':
+    switch (*Str++) {
+    case 'x': {
+      Type = Context.getfexcept_tType();
+      break;
+    }
+    case 'e': {
+      Type = Context.getfenv_tType();
+      break;
+    }
+    default: {
+      llvm_unreachable("Unexpected target builtin type");
+    }
+    }
+    if (Type.isNull()) {
+      Error = ASTContext::GE_Missing_fenv;
+      return {};
+    }
+    break;
   }
 
   // If there are modifiers and if we're allowed to parse them, go for it.
