@@ -208,7 +208,7 @@ Error LVReaderHandler::handleBuffer(LVReaders &Readers, StringRef Filename,
   LLVMContext Context;
   Expected<std::unique_ptr<Binary>> BinOrErr = createBinary(Buffer, &Context);
   if (errorToErrorCode(BinOrErr.takeError())) {
-    // Assume it is LLVM IR textual representation.
+    // Assume it is LLVM IR.
     return handleObject(Readers, Filename, Buffer);
   }
   return handleObject(Readers, Filename, *BinOrErr.get());
@@ -296,12 +296,8 @@ Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
 
 Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
                                     MemoryBufferRef Buffer) {
-  if (InputHandle Input = dyn_cast<MemoryBufferRef>(&Buffer))
-    return createReader(Filename, Readers, Input, IRFileFormatName);
-
-  return createStringError(errc::not_supported,
-                           "Binary object format in '%s' is not supported.",
-                           Filename.str().c_str());
+  InputHandle Input = dyn_cast<MemoryBufferRef>(&Buffer);
+  return createReader(Filename, Readers, Input, IRFileFormatName);
 }
 
 Error LVReaderHandler::createReaders() {

@@ -41,8 +41,7 @@ class LVType;
 struct LVSourceLanguage;
 
 class LVIRReader final : public LVReader {
-  object::IRObjectFile *BitCodeIR = nullptr;
-  MemoryBufferRef *TextualIR = nullptr;
+  PointerUnion<object::IRObjectFile *, MemoryBufferRef *> InputFile;
 
   // Used by the metadata 'dump' functions, so the metadata nodes will be
   // numbered canonically; otherwise, pointer addresses are substituted.
@@ -59,23 +58,11 @@ class LVIRReader final : public LVReader {
   // Location index for global variables.
   uint64_t PoolAddressIndex = 0;
 
-  // Whether to emit all linkage names, or just abstract subprograms.
-  bool UseAllLinkageNames = true;
-
-  // Looking at IR generated with the '-gdwarf -gsplit-dwarf=split' the only
-  // difference is setting the 'DICompileUnit::splitDebugFilename' to the
-  // name of the split filename: "xxx.dwo".
-  bool includeMinimalInlineScopes() const;
-  bool useAllLinkageNames() const { return UseAllLinkageNames; }
-
   // Default lower bound for arrays.
   int64_t DefaultLowerBound = 0;
-  int64_t getDefaultLowerBound() const { return DefaultLowerBound; }
-  void setDefaultLowerBound(LVSourceLanguage *SL);
 
-  // We assume a constant instruction-size increase between instructions.
-  const unsigned OffsetIncrease = 4;
-  void updateLineOffset() { CurrentOffset += OffsetIncrease; }
+  // Whether to emit all linkage names, or just abstract subprograms.
+  bool UseAllLinkageNames = true;
 
   SSAValueNameMap ValueNameMap;
   DenseMap<void *, uint64_t> InstrLineAddrMap;
@@ -83,39 +70,50 @@ class LVIRReader final : public LVReader {
 
   // Record the last assigned file index for each compile unit.
   // This data structure is to aid mapping DIFiles onto a DWARF-like file table.
-  using LVIndexFiles = std::map<LVScopeCompileUnit *, size_t>;
+  using LVIndexFiles = std::unordered_map<LVScopeCompileUnit *, size_t>;
   LVIndexFiles IndexFiles;
 
+  // Store a FileID number for each DIFile seen.
+  using LVCompileUnitFiles = std::unordered_map<const DIFile *, size_t>;
+  LVCompileUnitFiles CompileUnitFiles;
+
+  // Associate the metadata objects to logical elements.
+  using LVMDObjects = std::unordered_map<const MDNode *, LVElement *>;
+  LVMDObjects MDObjects;
+
+  // An anonymous type for index type.
+  LVType *NodeIndexType = nullptr;
+
+  // Looking at IR generated with the '-gdwarf -gsplit-dwarf=split' the only
+  // difference is setting the 'DICompileUnit::splitDebugFilename' to the
+  // name of the split filename: "xxx.dwo".
+  bool includeMinimalInlineScopes() const;
+  bool useAllLinkageNames() const { return UseAllLinkageNames; }
+
+  int64_t getDefaultLowerBound() const { return DefaultLowerBound; }
+  void setDefaultLowerBound(LVSourceLanguage *SL);
+
+  // We assume a constant instruction-size increase between instructions.
+  static constexpr unsigned OFFSET_INCREASE = 4;
+  void updateLineOffset() { CurrentOffset += OFFSET_INCREASE; }
+
   void updateFileIndex(LVScopeCompileUnit *CompileUnit, size_t FileIndex) {
-    LVIndexFiles::iterator Iter = IndexFiles.find(CompileUnit);
-    if (Iter == IndexFiles.end())
-      IndexFiles.emplace(CompileUnit, FileIndex);
-    else
+    auto [Iter, Inserted] = IndexFiles.try_emplace(CompileUnit, FileIndex);
+    if (!Inserted)
       Iter->second = FileIndex;
   }
 
   // Get the current assigned index file for the given compile unit.
   size_t getFileIndex(LVScopeCompileUnit *CompileUnit) {
-    size_t FileIndex = 0;
     LVIndexFiles::iterator Iter = IndexFiles.find(CompileUnit);
-    if (Iter != IndexFiles.end())
-      FileIndex = Iter->second;
-    return FileIndex;
+    return Iter != IndexFiles.end() ? Iter->second: 0;
   }
-
-  // Store a FileID number for each DIFile seen.
-  using LVCompileUnitFiles = std::map<const DIFile *, size_t>;
-  LVCompileUnitFiles CompileUnitFiles;
 
   // For the given 'DIFile', generate a 1-based index to indicate the
   // source file where the logical element is declared.
   // The IR reader expects the indexes to be 1-based.
   // Each compile unit, keeps track of the last assigned index.
   size_t getOrCreateSourceID(const DIFile *File);
-
-  // Associate the metadata objects to logical elements.
-  using LVMDObjects = std::map<const MDNode *, LVElement *>;
-  LVMDObjects MDObjects;
 
   void addMD(const MDNode *MD, LVElement *Element) {
     MDObjects.try_emplace(MD, Element);
@@ -133,16 +131,14 @@ class LVIRReader final : public LVReader {
   LVType *getTypeForSeenMD(const MDNode *MD) const {
     return static_cast<LVType *>(getElementForSeenMD(MD));
   }
-  LVType *getLineForSeenMD(const MDNode *MD) const {
-    return static_cast<LVType *>(getElementForSeenMD(MD));
+  LVLine *getLineForSeenMD(const MDNode *MD) const {
+    return static_cast<LVLine *>(getElementForSeenMD(MD));
   }
 
   const DIFile *getMDFile(const MDNode *MD) const;
   StringRef getMDName(const DINode *DN) const;
   const DIScope *getMDScope(const DINode *DN) const;
 
-  // An anonymous type for index type.
-  LVType *NodeIndexType = nullptr;
   LVType *getIndexType();
 
   // Get current metadata DICompileUnit object.
@@ -169,6 +165,7 @@ class LVIRReader final : public LVReader {
 
   // Add a constant value to a logical element.
   void addConstantValue(LVElement *Element, const DIExpression *DIExpr);
+  void addConstantValue(LVElement *Element, const ConstantFP *CFP);
   void addConstantValue(LVElement *Element, const ConstantInt *CI,
                         const DIType *Ty);
   void addConstantValue(LVElement *Element, const APInt &Value,
@@ -234,7 +231,10 @@ class LVIRReader final : public LVReader {
   void constructTemplateValueParameter(LVElement *Element,
                                        const DITemplateValueParameter *TVP);
 
-  LVElement *getOrCreateType(const DIType *Ty, LVScope *Scope = nullptr);
+  LVElement *getOrCreateType(const DIType *Ty) {
+    return getOrCreateType(/*Scope=*/nullptr, Ty);
+  }
+  LVElement *getOrCreateType(LVScope *Scope, const DIType *Ty);
   void constructType(LVScope *Scope, const DICompositeType *CTy);
   void constructType(LVElement *Element, const DIDerivedType *DT);
   void constructType(LVScope *Function, const DISubroutineType *SPTy);
@@ -268,11 +268,11 @@ public:
   LVIRReader(StringRef Filename, StringRef FileFormatName,
              object::IRObjectFile *Obj, ScopedPrinter &W)
       : LVReader(Filename, FileFormatName, W, LVBinaryType::ELF),
-        BitCodeIR(Obj), DbgValueRanges(new DbgValueRangeTable()) {}
+        InputFile(Obj), DbgValueRanges(new DbgValueRangeTable()) {}
   LVIRReader(StringRef Filename, StringRef FileFormatName, MemoryBufferRef *Obj,
              ScopedPrinter &W)
       : LVReader(Filename, FileFormatName, W, LVBinaryType::ELF),
-        TextualIR(Obj), DbgValueRanges(new DbgValueRangeTable()) {}
+        InputFile(Obj), DbgValueRanges(new DbgValueRangeTable()) {}
   LVIRReader(const LVIRReader &) = delete;
   LVIRReader &operator=(const LVIRReader &) = delete;
   ~LVIRReader() = default;
@@ -288,7 +288,7 @@ public:
 #ifdef LLVM_DEBUG
   void printAllInstructions(BasicBlock *BB);
 #else
-#define printAllInstructions(...) (void *)0
+  void printAllInstructions(BasicBlock *BB) {};
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

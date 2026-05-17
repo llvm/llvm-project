@@ -1,4 +1,4 @@
-source_filename = "unit-1.cpp"
+source_filename = "compile-unit-1.cpp"
 target triple = "x86_64-unknown-linux"
 
 @Var_1 = dso_local global i32 1, align 4, !dbg !0
@@ -31,7 +31,7 @@ entry:
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "Var_1", scope: !2, file: !3, line: 1, type: !5, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !3, producer: "clang version 23.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
-!3 = !DIFile(filename: "unit-1.cpp", directory: "", checksumkind: CSK_MD5, checksum: "13624fbfa5a73fa5a878920cde9f37b6")
+!3 = !DIFile(filename: "compile-unit-1.cpp", directory: "", checksumkind: CSK_MD5, checksum: "13624fbfa5a73fa5a878920cde9f37b6")
 !4 = !{!0}
 !5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !6 = !{i32 7, !"Dwarf Version", i32 5}

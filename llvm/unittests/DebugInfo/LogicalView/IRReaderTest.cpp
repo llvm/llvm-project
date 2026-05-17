@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/COM.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
@@ -339,8 +338,6 @@ TEST(LogicalViewTest, IRReader) {
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   InitializeAllDisassemblers();
-
-  llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
 
   // This test requires a x86-registered-target.
   Triple TT;

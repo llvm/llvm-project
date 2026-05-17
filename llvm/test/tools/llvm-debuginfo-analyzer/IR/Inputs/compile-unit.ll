@@ -1,4 +1,4 @@
-source_filename = "unit.cpp"
+source_filename = "compile-unit.cpp"
 target triple = "x86_64-unknown-linux"
 
 define dso_local void @_Z3foov() !dbg !10 {
@@ -20,7 +20,7 @@ declare void @_Z2f3v()
 !llvm.ident = !{!9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 23.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "unit.cpp", directory: "", checksumkind: CSK_MD5, checksum: "d340f597b69d89b7c542f22ce3d36231")
+!1 = !DIFile(filename: "compile-unit.cpp", directory: "", checksumkind: CSK_MD5, checksum: "d340f597b69d89b7c542f22ce3d36231")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}

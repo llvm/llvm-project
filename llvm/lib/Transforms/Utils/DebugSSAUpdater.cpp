@@ -292,8 +292,6 @@ void DbgValueRangeTable::addVariable(Function *F, DebugVariableAggregate DVA) {
     }
     // FIXME: This should be changed for fragments!
     LLVM_DEBUG(dbgs() << "Single location found for variable!\n");
-    assert(NumRecordsFound == 1 &&
-           "Found multiple records for a #dbg_declare variable!");
     OrigSingleLocVariableValueTable[DVA] = DbgValueDef(LastRecordFound);
     return;
   }

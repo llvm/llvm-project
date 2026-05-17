@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/Readers/LVIRReader.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
@@ -40,7 +41,9 @@ namespace {
 // When creating inlined scopes, there is no direct information to find
 // the correct lexical scope.
 using LVScopeEntry = std::pair<const DILocalScope *, const DILocation *>;
-using LVInlinedScopes = std::map<LVScopeEntry, LVScope *>;
+using LVInlinedScopes =
+    std::unordered_map<LVScopeEntry, LVScope *,
+                       pair_hash<const DILocalScope *, const DILocation *>>;
 LVInlinedScopes InlinedScopes;
 
 void addInlinedScope(const DILocalScope *OriginContext,
@@ -58,13 +61,13 @@ LVScope *getInlinedScope(const DILocalScope *OriginContext,
 // Used to find the correct location for the inlined lexical blocks that
 // are allocated at their enclosing function level.
 // Keep a link between the inlined scope and its associated origin scope.
-using LVInlinedToOrigin = std::map<LVScope *, LVScope *>;
+using LVInlinedToOrigin = std::unordered_map<LVScope *, LVScope *>;
 LVInlinedToOrigin InlinedToOrigin;
 
 // Keep a list of inlined scopes created from the same origin scope.
 // The original scope can be inlined multiple times.
 using LVList = llvm::SmallVector<LVScope *, 2>;
-using LVInlinedList = std::map<LVScope *, LVList>;
+using LVInlinedList = std::unordered_map<LVScope *, LVList>;
 LVInlinedList InlinedList;
 
 void addInlinedInfo(LVScope *Origin, LVScope *Inlined) {
@@ -72,27 +75,21 @@ void addInlinedInfo(LVScope *Origin, LVScope *Inlined) {
   InlinedToOrigin.try_emplace(Inlined, Origin);
 
   // For the given origin scope, add the inlined scope to its inlined list.
-  auto It = InlinedList.find(Origin);
-  if (It == InlinedList.end()) {
-    LVList List;
-    List.push_back(Inlined);
-    InlinedList.try_emplace(Origin, std::move(List));
-  } else {
-    LVList &List = It->second;
-    List.push_back(Inlined);
-  }
+  auto [It, _] = InlinedList.try_emplace(Origin, LVList{});
+  LVList &List = It->second;
+  List.push_back(Inlined);
 }
 
 LVList &getInlinedList(LVScope *Origin) {
-  static LVList List;
+  static LVList EmptyList;
   auto It = InlinedList.find(Origin);
-  return (It == InlinedList.end()) ? List : It->second;
+  return (It == InlinedList.end()) ? EmptyList : It->second;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void dumpInlinedInfo(const char *Text, bool Full = false) {
   // Use 17 as the field length; it corresponds to '{InlinedFunction}'
-  const unsigned LEN = 17;
+  constexpr unsigned LEN = 17;
 
   auto PrintEntry = [&](auto Text, LVScope *Scope) {
     std::stringstream SS;
@@ -316,6 +313,10 @@ void LVIRReader::addConstantValue(LVElement *Element,
   Element->setValue(Stream.str());
 }
 
+void LVIRReader::addConstantValue(LVElement *Element, const ConstantFP *CFP) {
+  addConstantValue(Element, CFP->getValueAPF().bitcastToAPInt(), true);
+}
+
 void LVIRReader::addConstantValue(LVElement *Element, const ConstantInt *CI,
                                   const DIType *Ty) {
   addConstantValue(Element, CI->getValue(), Ty);
@@ -359,10 +360,10 @@ void LVIRReader::processScopes() {
   // - Resolve any line pattern match.
   // At this stage the compile unit and the root scopes they have the
   // same offset, which is incorrect. Update the compile unit offset.
-  LVOffset Offset = OffsetIncrease;
+  LVOffset Offset = OFFSET_INCREASE;
   auto SetOffset = [&](LVElement *Element) {
     Element->setOffset(Offset);
-    Offset += OffsetIncrease;
+    Offset += OFFSET_INCREASE;
   };
 
   std::function<void(LVScope *)> TraverseScope = [&](LVScope *Current) {
@@ -501,6 +502,7 @@ LVScope *LVIRReader::traverseParentScope(const DIScope *Context) {
 //   DW_AT_byte_size	(0x08)
 //   DW_AT_encoding	(DW_ATE_unsigned)
 LVType *LVIRReader::getIndexType() {
+  // This function is not meant to be called from multiple threads.
   if (NodeIndexType)
     return NodeIndexType;
 
@@ -628,9 +630,6 @@ StringRef LVIRReader::getMDName(const DINode *DN) const {
   if (auto *T = dyn_cast<DIEnumerator>(DN))
     return T->getName();
 
-  if (isa<DISubrange>(DN))
-    return StringRef();
-
   if (auto *T = dyn_cast<DIVariable>(DN))
     return T->getName();
 
@@ -649,7 +648,8 @@ StringRef LVIRReader::getMDName(const DINode *DN) const {
   if (auto *T = dyn_cast<DIMacro>(DN))
     return T->getName();
 
-  assert((isa<DIFile>(DN) || isa<DICompileUnit>(DN)) && "Unhandled DINode.");
+  assert((isa<DIFile>(DN) || isa<DICompileUnit>(DN) || isa<DISubrange>(DN)) &&
+         "Unhandled DINode.");
   return StringRef();
 }
 
@@ -891,7 +891,7 @@ void LVIRReader::constructAggregate(LVScopeAggregate *Aggregate,
         else
           getOrCreateMember(Aggregate, DT);
       } else {
-        getOrCreateType(DT, Aggregate);
+        getOrCreateType(Aggregate, DT);
       }
     }
   }
@@ -1268,7 +1268,7 @@ LVSymbol *LVIRReader::getOrCreateMember(LVScope *Aggregate,
   }
 
   if (!Member)
-    Member = static_cast<LVSymbol *>(getOrCreateType(DT, Aggregate));
+    Member = static_cast<LVSymbol *>(getOrCreateType(Aggregate, DT));
   if (Member) {
     Member->setIsFinalized();
     addSourceLine(Member, DT);
@@ -1376,7 +1376,7 @@ LVSymbol *LVIRReader::getOrCreateStaticMember(LVScope *Aggregate,
   }
 
   if (!Member)
-    Member = static_cast<LVSymbol *>(getOrCreateType(DT, Aggregate));
+    Member = static_cast<LVSymbol *>(getOrCreateType(Aggregate, DT));
   if (Member) {
     Member->setIsFinalized();
     addSourceLine(Member, DT);
@@ -1522,7 +1522,7 @@ void LVIRReader::constructSubrange(LVScopeArray *Array, const DISubrange *SR,
     Array->addElement(Subrange);
     Subrange->setType(IndexType);
 
-    int64_t Count = -1;
+    int64_t Count = 0;
     // If Subrange has a Count field, use it.
     // Otherwise, if it has an upperboud, use (upperbound - lowerbound + 1),
     // where lowerbound is from the LowerBound field of the Subrange,
@@ -1609,11 +1609,12 @@ void LVIRReader::constructTemplateValueParameter(
     if (Metadata *Value = TVP->getValue()) {
       if (ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Value))
         addConstantValue(Parameter, CI, TVP->getType());
-      else if (GlobalValue *GV = mdconst::dyn_extract<GlobalValue>(Value)) {
+      else if (ConstantFP *CF = mdconst::dyn_extract<ConstantFP>(Value))
+        addConstantValue(Parameter, CF);
+      else if (mdconst::dyn_extract<GlobalValue>(Value)) {
         // We cannot describe the location of dllimport'd entities: the
         // computation of their address requires loads from the IAT.
-        if (!GV->hasDLLImportStorageClass()) {
-        }
+        Parameter->setValue("Unable to describe global value");
       } else if (TVP->getTag() == dwarf::DW_TAG_GNU_template_template_param) {
         assert(isa<MDString>(Value));
         // Add the value for dwarf::DW_AT_GNU_template_name.
@@ -1789,7 +1790,7 @@ LVScope *LVIRReader::getOrCreateScope(const DIScope *Context) {
 // DICompositeType
 // DIDerivedType
 // DISubroutineType
-LVElement *LVIRReader::getOrCreateType(const DIType *Ty, LVScope *Scope) {
+LVElement *LVIRReader::getOrCreateType(LVScope *Scope, const DIType *Ty) {
   if (!Ty)
     return nullptr;
 
@@ -2100,9 +2101,9 @@ void LVIRReader::processBasicBlocks(Function &F) {
     if (!Symbol)
       continue;
 
-    DIType *Ty = LV->getType();
-    uint64_t Size = Ty ? Ty->getSizeInBits() / CHAR_BIT : 1;
     LLVM_DEBUG({
+      DIType *Ty = LV->getType();
+      uint64_t Size = Ty ? Ty->getSizeInBits() / CHAR_BIT : 1;
       LV->dump(TheModule);
       Ty->dump(TheModule);
       dbgs() << "Type size: " << Size << "\n";
@@ -2177,8 +2178,11 @@ Error LVIRReader::createScopes() {
 
   LLVMContext Context;
   SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseIR(
-      BitCodeIR ? BitCodeIR->getMemoryBufferRef() : *TextualIR, Err, Context);
+  std::unique_ptr<Module> M =
+      parseIR(isa<IRObjectFile *>(InputFile)
+                  ? cast<IRObjectFile *>(InputFile)->getMemoryBufferRef()
+                  : *(cast<MemoryBufferRef *>(InputFile)),
+              Err, Context);
   if (!M) {
     // Print explanatory error message.
     if (options().getWarningAll())
@@ -2316,7 +2320,7 @@ void LVIRReader::constructRange(LVScope *Scope) {
   });
 
   auto NextRange = [&](LVAddress Offset) -> LVAddress {
-    return Offset + OffsetIncrease - 1;
+    return Offset + OFFSET_INCREASE - 1;
   };
 
   // Get any logical lines.
@@ -2364,7 +2368,7 @@ void LVIRReader::constructRange(LVScope *Scope) {
   constructRange(Scope, Lower, Upper);
 }
 
-// At this point, all scopes for the compile unit has been created.
+// At this point, all scopes for the compile unit have been created.
 // The following aditional steps need to be performed on them:
 // - If the lexical block doesn't have non-scope children, skip its
 //   emission and put its children directly to the parent scope.
@@ -2423,7 +2427,7 @@ void LVIRReader::removeEmptyScopes() {
     }
   };
 
-  // Traverse the scopes tree and collect those lexical blocks that does not
+  // Traverse the scopes tree and collect those lexical blocks that do not
   // have non-scope children. Do not include the lines as they are included
   // in the logical view as a way to show their associated logical scope.
   std::function<void(LVScope *)> TraverseScope = [&](LVScope *Current) {
@@ -2442,6 +2446,11 @@ void LVIRReader::removeEmptyScopes() {
 
   // Preserve current setting for '--internal=id'.
   bool InternalID = options().getInternalID();
+  llvm::scope_exit ResetSetting([&] {
+    // Restore setting for '--internal=id'.
+    if (!InternalID)
+      options().resetInternalID();
+  });
   options().setInternalID();
 
   LLVM_DEBUG({
@@ -2456,10 +2465,6 @@ void LVIRReader::removeEmptyScopes() {
     dbgs() << "\nAfter - RemoveEmptyScopes\n";
     printCollectedElements(Root);
   });
-
-  // Restore setting for '--internal=id'.
-  if (!InternalID)
-    options().resetInternalID();
 }
 
 // The IR generated by Clang, allocates the inlined lexical scopes
@@ -2468,7 +2473,7 @@ void LVIRReader::resolveInlinedLexicalScopes() {
   LLVM_DEBUG({ dbgs() << "\n[resolveInlinedLexicalScopes]\n"; });
   LLVM_DEBUG({ dumpInlinedInfo("Before", /*Full=*/false); });
 
-  std::function<void(LVScope * Scope)> TraverseChildren = [&](LVScope *Parent) {
+  std::function<void(LVScope *Scope)> TraverseChildren = [&](LVScope *Parent) {
     LLVM_DEBUG({
       dbgs() << "\nParent Scope: ";
       Parent->dumpCommon();
@@ -2600,7 +2605,7 @@ void LVIRReader::checkScopes(LVScope *Scope) {
     });
   };
 
-  std::function<void(LVScope * Parent)> Traverse = [&](LVScope *Current) {
+  std::function<void(LVScope *Parent)> Traverse = [&](LVScope *Current) {
     auto Check = [&](auto *Entry) {
       if (Entry)
         if (!Entry->getIsFinalized())

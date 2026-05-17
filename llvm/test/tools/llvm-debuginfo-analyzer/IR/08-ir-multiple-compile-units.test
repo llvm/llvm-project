@@ -4,7 +4,7 @@
 
 ; Using the following input files:
 
-; unit-1.cpp
+; compile-unit-1.cpp
 ; 1 int Var_1 = 1;
 ; 2 int foo_1(int P1) {
 ; 3   int V1 = P1;
@@ -15,7 +15,7 @@
 ; 8   foo_1(111);
 ; 9 }
 
-; unit-2.cpp
+; compile-unit-2.cpp
 ; 1 int Var_2 = 1;
 ; 2 int foo_2(int P2) {
 ; 3   int V2 = P2;
@@ -26,7 +26,7 @@
 ; 8   foo_2(222);
 ; 9 }
 
-; unit-3.cpp
+; compile-unit-3.cpp
 ; 1 int Var_3 = 1;
 ; 2 int foo_3(int P3) {
 ; 3   int V3 = P3;
@@ -37,7 +37,7 @@
 ; 8   foo_3(333);
 ; 9 }
 
-; unit.cpp
+; compile-unit.cpp
 ; 1 void f1();
 ; 2 void f2();
 ; 3 void f3();
@@ -54,25 +54,28 @@
 ; level and debug info format.
 
 ; Generate individual bitcode files
-; RUN: llvm-as %p/Inputs/unit-1.ll -o %t.unit-1.bc
-; RUN: llvm-as %p/Inputs/unit-2.ll -o %t.unit-2.bc
-; RUN: llvm-as %p/Inputs/unit-3.ll -o %t.unit-3.bc
-; RUN: llvm-as %p/Inputs/unit.ll   -o %t.unit.bc
+; RUN: llvm-as %p/Inputs/compile-unit-1.ll -o %t.compile-unit-1.bc
+; RUN: llvm-as %p/Inputs/compile-unit-2.ll -o %t.compile-unit-2.bc
+; RUN: llvm-as %p/Inputs/compile-unit-3.ll -o %t.compile-unit-3.bc
+; RUN: llvm-as %p/Inputs/compile-unit.ll   -o %t.compile-unit.bc
 
 ; Combine the individual bitcode files
-; RUN: llvm-link %t.unit-1.bc %t.unit-2.bc %t.unit-3.bc %t.unit.bc -o %t.unit-combined.bc
+; RUN: llvm-link %t.compile-unit-1.bc %t.compile-unit-2.bc  \
+; RUN:           %t.compile-unit-3.bc %t.compile-unit.bc    \
+; RUN:           -o %t.compile-unit-combined.bc
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format \
 ; RUN:                         --output-sort=offset \
 ; RUN:                         --print=scopes,symbols,types,lines,instructions \
-; RUN:                         %t.unit-combined.bc 2>&1 > %t.unit-combined.view
+; RUN:                         %t.compile-unit-combined.bc \
+; RUN:                         2>&1 > %t.compile-unit-combined.view
 
-; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s < %t.unit-combined.view
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s < %t.compile-unit-combined.view
 
 ; ONE:      Logical View:
-; ONE-NEXT: [000]           {File} '{{.*}}unit-combined.bc' -> Bitcode IR
+; ONE-NEXT: [000]           {File} '{{.*}}compile-unit-combined.bc' -> Bitcode IR
 ; ONE-EMPTY:
-; ONE-NEXT: [001]             {CompileUnit} 'unit-1.cpp'
+; ONE-NEXT: [001]             {CompileUnit} 'compile-unit-1.cpp'
 ; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo_1' -> 'int'
 ; ONE-NEXT: [003]     2           {Parameter} 'P1' -> 'int'
 ; ONE-NEXT: [003]     3           {Variable} 'V1' -> 'int'
@@ -99,7 +102,7 @@
 ; ONE-NEXT: [003]                 {Code} 'ret void, !dbg !{{.*}}'
 ; ONE-NEXT: [002]     1         {Variable} extern 'Var_1' -> 'int'
 ; ONE-EMPTY:
-; ONE-NEXT: [001]             {CompileUnit} 'unit-2.cpp'
+; ONE-NEXT: [001]             {CompileUnit} 'compile-unit-2.cpp'
 ; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo_2' -> 'int'
 ; ONE-NEXT: [003]     2           {Parameter} 'P2' -> 'int'
 ; ONE-NEXT: [003]     3           {Variable} 'V2' -> 'int'
@@ -126,7 +129,7 @@
 ; ONE-NEXT: [003]                 {Code} 'ret void, !dbg !{{.*}}'
 ; ONE-NEXT: [002]     1         {Variable} extern 'Var_2' -> 'int'
 ; ONE-EMPTY:
-; ONE-NEXT: [001]             {CompileUnit} 'unit-3.cpp'
+; ONE-NEXT: [001]             {CompileUnit} 'compile-unit-3.cpp'
 ; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo_3' -> 'int'
 ; ONE-NEXT: [003]     2           {Parameter} 'P3' -> 'int'
 ; ONE-NEXT: [003]     3           {Variable} 'V3' -> 'int'
@@ -153,7 +156,7 @@
 ; ONE-NEXT: [003]                 {Code} 'ret void, !dbg !{{.*}}'
 ; ONE-NEXT: [002]     1         {Variable} extern 'Var_3' -> 'int'
 ; ONE-EMPTY:
-; ONE-NEXT: [001]             {CompileUnit} 'unit.cpp'
+; ONE-NEXT: [001]             {CompileUnit} 'compile-unit.cpp'
 ; ONE-NEXT: [002]     5         {Function} extern not_inlined 'foo' -> 'void'
 ; ONE-NEXT: [003]     6           {Line}
 ; ONE-NEXT: [003]                 {Code} 'call void @_Z2f1v(), !dbg !{{.*}}'
