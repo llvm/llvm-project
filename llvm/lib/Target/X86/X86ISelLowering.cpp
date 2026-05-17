@@ -20961,7 +20961,7 @@ std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
 /// Horizontal vector math instructions may be slower than normal math with
 /// shuffles. Limit horizontal op codegen based on size/speed trade-offs, uarch
 /// implementation, and likely shuffle complexity of the alternate sequence.
-static bool shouldUseHorizontalOp(bool IsSingleSource, SelectionDAG &DAG,
+static bool shouldUseHorizontalOp(bool IsSingleSource, const SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
   bool IsOptimizingSize = DAG.shouldOptForSize();
   bool HasFastHOps = Subtarget.hasFastHorizontalOps();
