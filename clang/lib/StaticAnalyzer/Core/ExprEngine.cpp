@@ -474,10 +474,11 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   return State;
 }
 
-ProgramStateRef ExprEngine::setIndexOfElementToConstruct(
-    ProgramStateRef State, const CXXConstructExpr *E,
-    const LocationContext *LCtx, unsigned Idx) {
-  auto Key = std::make_pair(E, LCtx->getStackFrame());
+ProgramStateRef
+ExprEngine::setIndexOfElementToConstruct(ProgramStateRef State,
+                                         const CXXConstructExpr *E,
+                                         const StackFrame *SF, unsigned Idx) {
+  auto Key = std::make_pair(E, SF);
 
   assert(!State->contains<IndexOfElementToConstruct>(Key) || Idx > 0);
 
@@ -486,15 +487,15 @@ ProgramStateRef ExprEngine::setIndexOfElementToConstruct(
 
 std::optional<unsigned>
 ExprEngine::getPendingInitLoop(ProgramStateRef State, const CXXConstructExpr *E,
-                               const LocationContext *LCtx) {
-  const unsigned *V = State->get<PendingInitLoop>({E, LCtx->getStackFrame()});
+                               const StackFrame *SF) {
+  const unsigned *V = State->get<PendingInitLoop>({E, SF});
   return V ? std::make_optional(*V) : std::nullopt;
 }
 
 ProgramStateRef ExprEngine::removePendingInitLoop(ProgramStateRef State,
                                                   const CXXConstructExpr *E,
-                                                  const LocationContext *LCtx) {
-  auto Key = std::make_pair(E, LCtx->getStackFrame());
+                                                  const StackFrame *SF) {
+  auto Key = std::make_pair(E, SF);
 
   assert(E && State->contains<PendingInitLoop>(Key));
   return State->remove<PendingInitLoop>(Key);
@@ -502,9 +503,9 @@ ProgramStateRef ExprEngine::removePendingInitLoop(ProgramStateRef State,
 
 ProgramStateRef ExprEngine::setPendingInitLoop(ProgramStateRef State,
                                                const CXXConstructExpr *E,
-                                               const LocationContext *LCtx,
+                                               const StackFrame *SF,
                                                unsigned Size) {
-  auto Key = std::make_pair(E, LCtx->getStackFrame());
+  auto Key = std::make_pair(E, SF);
 
   assert(!State->contains<PendingInitLoop>(Key) && Size > 0);
 
@@ -517,11 +518,9 @@ std::optional<unsigned> ExprEngine::getIndexOfElementToConstruct(
   return V ? std::make_optional(*V) : std::nullopt;
 }
 
-ProgramStateRef
-ExprEngine::removeIndexOfElementToConstruct(ProgramStateRef State,
-                                            const CXXConstructExpr *E,
-                                            const LocationContext *LCtx) {
-  auto Key = std::make_pair(E, LCtx->getStackFrame());
+ProgramStateRef ExprEngine::removeIndexOfElementToConstruct(
+    ProgramStateRef State, const CXXConstructExpr *E, const StackFrame *SF) {
+  auto Key = std::make_pair(E, SF);
 
   assert(E && State->contains<IndexOfElementToConstruct>(Key));
   return State->remove<IndexOfElementToConstruct>(Key);
@@ -529,39 +528,33 @@ ExprEngine::removeIndexOfElementToConstruct(ProgramStateRef State,
 
 std::optional<unsigned>
 ExprEngine::getPendingArrayDestruction(ProgramStateRef State,
-                                       const LocationContext *LCtx) {
-  assert(LCtx && "LocationContext shouldn't be null!");
+                                       const StackFrame *SF) {
+  assert(SF && "StackFrame shouldn't be null!");
 
-  const unsigned *V =
-      State->get<PendingArrayDestruction>(LCtx->getStackFrame());
+  const unsigned *V = State->get<PendingArrayDestruction>(SF);
   return V ? std::make_optional(*V) : std::nullopt;
 }
 
-ProgramStateRef ExprEngine::setPendingArrayDestruction(
-    ProgramStateRef State, const LocationContext *LCtx, unsigned Idx) {
-  assert(LCtx && "LocationContext shouldn't be null!");
-
-  auto Key = LCtx->getStackFrame();
-
-  return State->set<PendingArrayDestruction>(Key, Idx);
+ProgramStateRef ExprEngine::setPendingArrayDestruction(ProgramStateRef State,
+                                                       const StackFrame *SF,
+                                                       unsigned Idx) {
+  assert(SF && "StackFrame shouldn't be null!");
+  return State->set<PendingArrayDestruction>(SF, Idx);
 }
 
 ProgramStateRef
 ExprEngine::removePendingArrayDestruction(ProgramStateRef State,
-                                          const LocationContext *LCtx) {
-  assert(LCtx && "LocationContext shouldn't be null!");
-
-  auto Key = LCtx->getStackFrame();
-
-  assert(LCtx && State->contains<PendingArrayDestruction>(Key));
-  return State->remove<PendingArrayDestruction>(Key);
+                                          const StackFrame *SF) {
+  assert(SF && "StackFrame shouldn't be null!");
+  assert(State->contains<PendingArrayDestruction>(SF));
+  return State->remove<PendingArrayDestruction>(SF);
 }
 
 ProgramStateRef
 ExprEngine::addObjectUnderConstruction(ProgramStateRef State,
                                        const ConstructionContextItem &Item,
-                                       const LocationContext *LC, SVal V) {
-  ConstructedObjectKey Key(Item, LC->getStackFrame());
+                                       const StackFrame *SF, SVal V) {
+  ConstructedObjectKey Key(Item, SF);
 
   const Expr *Init = nullptr;
 
@@ -592,7 +585,7 @@ ExprEngine::addObjectUnderConstruction(ProgramStateRef State,
           Key.getItem().getKind() ==
               ConstructionContextItem::TemporaryDestructorKind ||
           State->contains<IndexOfElementToConstruct>(
-              {dyn_cast_or_null<CXXConstructExpr>(Init), LC})) &&
+              {dyn_cast_or_null<CXXConstructExpr>(Init), SF})) &&
          "The object is already marked as `UnderConstruction`, when it's not "
          "supposed to!");
   return State->set<ObjectsUnderConstruction>(Key, V);
@@ -601,8 +594,8 @@ ExprEngine::addObjectUnderConstruction(ProgramStateRef State,
 std::optional<SVal>
 ExprEngine::getObjectUnderConstruction(ProgramStateRef State,
                                        const ConstructionContextItem &Item,
-                                       const LocationContext *LC) {
-  ConstructedObjectKey Key(Item, LC->getStackFrame());
+                                       const StackFrame *SF) {
+  ConstructedObjectKey Key(Item, SF);
   const SVal *V = State->get<ObjectsUnderConstruction>(Key);
   return V ? std::make_optional(*V) : std::nullopt;
 }
@@ -610,16 +603,16 @@ ExprEngine::getObjectUnderConstruction(ProgramStateRef State,
 ProgramStateRef
 ExprEngine::finishObjectConstruction(ProgramStateRef State,
                                      const ConstructionContextItem &Item,
-                                     const LocationContext *LC) {
-  ConstructedObjectKey Key(Item, LC->getStackFrame());
+                                     const StackFrame *SF) {
+  ConstructedObjectKey Key(Item, SF);
   assert(State->contains<ObjectsUnderConstruction>(Key));
   return State->remove<ObjectsUnderConstruction>(Key);
 }
 
 ProgramStateRef ExprEngine::elideDestructor(ProgramStateRef State,
                                             const CXXBindTemporaryExpr *BTE,
-                                            const LocationContext *LC) {
-  ConstructedObjectKey Key({BTE, /*IsElided=*/true}, LC);
+                                            const StackFrame *SF) {
+  ConstructedObjectKey Key({BTE, /*IsElided=*/true}, SF);
   // FIXME: Currently the state might already contain the marker due to
   // incorrect handling of temporaries bound to default parameters.
   return State->set<ObjectsUnderConstruction>(Key, UnknownVal());
@@ -628,34 +621,33 @@ ProgramStateRef ExprEngine::elideDestructor(ProgramStateRef State,
 ProgramStateRef
 ExprEngine::cleanupElidedDestructor(ProgramStateRef State,
                                     const CXXBindTemporaryExpr *BTE,
-                                    const LocationContext *LC) {
-  ConstructedObjectKey Key({BTE, /*IsElided=*/true}, LC);
+                                    const StackFrame *SF) {
+  ConstructedObjectKey Key({BTE, /*IsElided=*/true}, SF);
   assert(State->contains<ObjectsUnderConstruction>(Key));
   return State->remove<ObjectsUnderConstruction>(Key);
 }
 
 bool ExprEngine::isDestructorElided(ProgramStateRef State,
                                     const CXXBindTemporaryExpr *BTE,
-                                    const LocationContext *LC) {
-  ConstructedObjectKey Key({BTE, /*IsElided=*/true}, LC);
+                                    const StackFrame *SF) {
+  ConstructedObjectKey Key({BTE, /*IsElided=*/true}, SF);
   return State->contains<ObjectsUnderConstruction>(Key);
 }
 
 bool ExprEngine::areAllObjectsFullyConstructed(ProgramStateRef State,
-                                               const LocationContext *FromLC,
-                                               const LocationContext *ToLC) {
-  const LocationContext *LC = FromLC;
-  while (LC != ToLC) {
-    assert(LC && "ToLC must be a parent of FromLC!");
+                                               const StackFrame *FromSF,
+                                               const StackFrame *ToSF) {
+  const LocationContext *SF = FromSF;
+  while (SF != ToSF) {
+    assert(SF && "ToSF must be a parent of FromSF!");
     for (auto I : State->get<ObjectsUnderConstruction>())
-      if (I.first.getLocationContext() == LC)
+      if (I.first.getLocationContext() == SF)
         return false;
 
-    LC = LC->getParent();
+    SF = SF->getParent();
   }
   return true;
 }
-
 
 //===----------------------------------------------------------------------===//
 // Top-level transfer function logic (Dispatcher).
@@ -1020,15 +1012,13 @@ static bool shouldRemoveDeadBindings(AnalysisManager &AMgr, const Stmt *S,
 }
 
 void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
-                            const Stmt *ReferenceStmt,
-                            const LocationContext *LC,
-                            const Stmt *DiagnosticStmt,
-                            ProgramPoint::Kind K) {
+                            const Stmt *ReferenceStmt, const StackFrame *SF,
+                            const Stmt *DiagnosticStmt, ProgramPoint::Kind K) {
   llvm::TimeTraceScope TimeScope("ExprEngine::removeDead");
   assert((K == ProgramPoint::PreStmtPurgeDeadSymbolsKind ||
           ReferenceStmt == nullptr || isa<ReturnStmt>(ReferenceStmt))
           && "PostStmt is not generally supported by the SymbolReaper yet");
-  assert(LC && "Must pass the current (or expiring) LocationContext");
+  assert(SF && "Must pass the current (or expiring) StackFrame");
 
   if (!DiagnosticStmt) {
     DiagnosticStmt = ReferenceStmt;
@@ -1038,16 +1028,15 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   NumRemoveDeadBindings++;
   ProgramStateRef CleanedState = Pred->getState();
 
-  // LC is the location context being destroyed, but SymbolReaper wants a
-  // location context that is still live. (If this is the top-level stack
+  // SF is the stack frame being destroyed, but SymbolReaper wants a
+  // stack frame that is still live. (If this is the top-level stack
   // frame, this will be null.)
   if (!ReferenceStmt) {
     assert(K == ProgramPoint::PostStmtPurgeDeadSymbolsKind &&
            "Use PostStmtPurgeDeadSymbolsKind for clearing a LocationContext");
-    LC = LC->getParent();
+    SF = SF->getParent();
   }
 
-  const StackFrame *SF = LC ? LC->getStackFrame() : nullptr;
   SymbolReaper SymReaper(SF, ReferenceStmt, SymMgr, getStoreManager());
 
   for (auto I : CleanedState->get<ObjectsUnderConstruction>()) {
@@ -1245,7 +1234,7 @@ std::pair<ProgramStateRef, uint64_t>
 ExprEngine::prepareStateForArrayDestruction(const ProgramStateRef State,
                                             const MemRegion *Region,
                                             const QualType &ElementTy,
-                                            const LocationContext *LCtx,
+                                            const StackFrame *SF,
                                             SVal *ElementCountVal) {
   assert(Region != nullptr && "Not-null region expected");
 
@@ -1260,7 +1249,7 @@ ExprEngine::prepareStateForArrayDestruction(const ProgramStateRef State,
 
   // Note: the destructors are called in reverse order.
   unsigned Idx = 0;
-  if (auto OptionalIdx = getPendingArrayDestruction(State, LCtx)) {
+  if (auto OptionalIdx = getPendingArrayDestruction(State, SF)) {
     Idx = *OptionalIdx;
   } else {
     // The element count is either unknown, or an SVal that's not an integer.
@@ -1275,7 +1264,7 @@ ExprEngine::prepareStateForArrayDestruction(const ProgramStateRef State,
 
   --Idx;
 
-  return {setPendingArrayDestruction(State, LCtx, Idx), Idx};
+  return {setPendingArrayDestruction(State, SF, Idx), Idx};
 }
 
 void ExprEngine::ProcessImplicitDtor(const CFGImplicitDtor D,
@@ -2448,9 +2437,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 }
 
 bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
-                                       const LocationContext *CalleeLC) {
-  const StackFrame *CalleeSF = CalleeLC->getStackFrame();
-  const StackFrame *CallerSF = CalleeSF->getParent()->getStackFrame();
+                                       const StackFrame *CalleeSF) {
+  const StackFrame *CallerSF = CalleeSF->getParent();
   assert(CalleeSF && CallerSF);
   ExplodedNode *BeforeProcessingCall = nullptr;
   const Expr *CE = CalleeSF->getCallSite();
@@ -2724,25 +2712,24 @@ using ObjCForLctxPair =
 REGISTER_MAP_WITH_PROGRAMSTATE(ObjCForHasMoreIterations, ObjCForLctxPair, bool)
 
 ProgramStateRef ExprEngine::setWhetherHasMoreIteration(
-    ProgramStateRef State, const ObjCForCollectionStmt *O,
-    const LocationContext *LC, bool HasMoreIteraton) {
-  assert(!State->contains<ObjCForHasMoreIterations>({O, LC}));
-  return State->set<ObjCForHasMoreIterations>({O, LC}, HasMoreIteraton);
+    ProgramStateRef State, const ObjCForCollectionStmt *O, const StackFrame *SF,
+    bool HasMoreIteraton) {
+  assert(!State->contains<ObjCForHasMoreIterations>({O, SF}));
+  return State->set<ObjCForHasMoreIterations>({O, SF}, HasMoreIteraton);
 }
 
-ProgramStateRef
-ExprEngine::removeIterationState(ProgramStateRef State,
-                                 const ObjCForCollectionStmt *O,
-                                 const LocationContext *LC) {
-  assert(State->contains<ObjCForHasMoreIterations>({O, LC}));
-  return State->remove<ObjCForHasMoreIterations>({O, LC});
+ProgramStateRef ExprEngine::removeIterationState(ProgramStateRef State,
+                                                 const ObjCForCollectionStmt *O,
+                                                 const StackFrame *SF) {
+  assert(State->contains<ObjCForHasMoreIterations>({O, SF}));
+  return State->remove<ObjCForHasMoreIterations>({O, SF});
 }
 
 bool ExprEngine::hasMoreIteration(ProgramStateRef State,
                                   const ObjCForCollectionStmt *O,
-                                  const LocationContext *LC) {
-  assert(State->contains<ObjCForHasMoreIterations>({O, LC}));
-  return *State->get<ObjCForHasMoreIterations>({O, LC});
+                                  const StackFrame *SF) {
+  assert(State->contains<ObjCForHasMoreIterations>({O, SF}));
+  return *State->get<ObjCForHasMoreIterations>({O, SF});
 }
 
 /// Split the state on whether there are any more iterations left for this loop.

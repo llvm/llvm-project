@@ -162,22 +162,22 @@ private:
   /// which has three independent roles:
   /// - It holds a pointer to the CFGBlock that is currently under analysis.
   ///   (This is the primary way to get the current block.)
-  /// - It holds a pointer to the current LocationContext. (This is rarely
-  ///   used, the location context is usually queried from a recent
+  /// - It holds a pointer to the current StackFrame. (This is rarely
+  ///   used, the stack frame is usually queried from a recent
   ///   ExplodedNode. Unfortunately it seems that these two sources of truth
   ///   are not always consistent.)
   /// - It can be used for constructing `NodeBuilder`s. Practically all
   ///   `NodeBuilder` objects are useless complications in the code, so I
   ///   intend to replace them with direct use of `CoreEngine::makeNode`.
   /// TODO: Eventually `currBldrCtx` should be replaced by two separate fields:
-  /// `const CFGBlock *CurrBlock` & `const LocationContext *CurrLocationContext`
+  /// `const CFGBlock *CurrBlock` & `const StackFrame *CurrStackFrame`
   /// that are kept up-to-date and are almost always non-null during the
   /// analysis. I will switch to this more natural representation when
   /// `NodeBuilder`s are eliminated from the code.
   const NodeBuilderContext *currBldrCtx = nullptr;
   /// Historically `currBldrCtx` pointed to a local variable in some stack
   /// frame. This field is introduced as a temporary measure to allow a gradual
-  /// transition. Only use this in {re,}setLocationContextAndBlock!
+  /// transition. Only use this in {re,}setStackFrameAndBlock!
   /// TODO: Remove this temporary hack.
   std::optional<NodeBuilderContext> OwnedCurrBldrCtx;
 
@@ -337,24 +337,25 @@ public:
   /// \param Out The returned set of output nodes.
   /// \param ReferenceStmt The statement which is about to be processed.
   ///        Everything needed for this statement should be considered live.
-  ///        A null statement means that everything in child LocationContexts
+  ///        A null statement means that everything in child StackFrames
   ///        is dead.
-  /// \param LC The location context of the \p ReferenceStmt. A null location
-  ///        context means that we have reached the end of analysis and that
+  /// \param SF The stack frame of the \p ReferenceStmt. A null stack frame
+  ///        means that we have reached the end of analysis and that
   ///        all statements and local variables should be considered dead.
   /// \param DiagnosticStmt Used as a location for any warnings that should
   ///        occur while removing the dead (e.g. leaks). By default, the
   ///        \p ReferenceStmt is used.
   /// \param K Denotes whether this is a pre- or post-statement purge. This
   ///        must only be ProgramPoint::PostStmtPurgeDeadSymbolsKind if an
-  ///        entire location context is being cleared, in which case the
+  ///        entire stack frame is being cleared, in which case the
   ///        \p ReferenceStmt must either be a ReturnStmt or \c NULL. Otherwise,
   ///        it must be ProgramPoint::PreStmtPurgeDeadSymbolsKind (the default)
   ///        and \p ReferenceStmt must be valid (non-null).
-  void removeDead(ExplodedNode *Node, ExplodedNodeSet &Out,
-            const Stmt *ReferenceStmt, const LocationContext *LC,
-            const Stmt *DiagnosticStmt = nullptr,
-            ProgramPoint::Kind K = ProgramPoint::PreStmtPurgeDeadSymbolsKind);
+  void
+  removeDead(ExplodedNode *Node, ExplodedNodeSet &Out,
+             const Stmt *ReferenceStmt, const StackFrame *SF,
+             const Stmt *DiagnosticStmt = nullptr,
+             ProgramPoint::Kind K = ProgramPoint::PreStmtPurgeDeadSymbolsKind);
 
   /// A tag to track convenience transitions, which can be removed at cleanup.
   /// This tag applies to a node created after removeDead.
@@ -689,13 +690,12 @@ public:
 
   /// Retrieves which element is being destructed in a non-POD type array.
   static std::optional<unsigned>
-  getPendingArrayDestruction(ProgramStateRef State,
-                             const LocationContext *LCtx);
+  getPendingArrayDestruction(ProgramStateRef State, const StackFrame *SF);
 
   /// Retrieves the size of the array in the pending ArrayInitLoopExpr.
-  static std::optional<unsigned>
-  getPendingInitLoop(ProgramStateRef State, const CXXConstructExpr *E,
-                     const LocationContext *LCtx);
+  static std::optional<unsigned> getPendingInitLoop(ProgramStateRef State,
+                                                    const CXXConstructExpr *E,
+                                                    const StackFrame *SF);
 
   /// By looking at a certain item that may be potentially part of an object's
   /// ConstructionContext, retrieve such object's location. A particular
@@ -703,7 +703,7 @@ public:
   static std::optional<SVal>
   getObjectUnderConstruction(ProgramStateRef State,
                              const ConstructionContextItem &Item,
-                             const LocationContext *LC);
+                             const StackFrame *SF);
 
   /// Call PointerEscape callback when a value escapes as a result of bind.
   ProgramStateRef processPointerEscapedOnBind(
@@ -737,7 +737,7 @@ public:
                                PointerEscapeKind K,
                                const CallEvent *Call = nullptr) const;
 
-  // FIXME: 'tag' should be removed, and a LocationContext should be used
+  // FIXME: 'tag' should be removed, and a StackFrame should be used
   // instead.
   // FIXME: Comment on the meaning of the arguments, when 'St' may not
   // be the same as Pred->state, and when 'location' may not be the
@@ -752,7 +752,7 @@ public:
                 const ProgramPointTag *tag = nullptr,
                 QualType LoadTy = QualType());
 
-  // FIXME: 'tag' should be removed, and a LocationContext should be used
+  // FIXME: 'tag' should be removed, and a StackFrame should be used
   // instead.
   void evalStore(ExplodedNodeSet &Dst, const Expr *AssignE, const Expr *StoreE,
                  ExplodedNode *Pred, ProgramStateRef St, SVal TargetLV, SVal Val,
@@ -894,13 +894,13 @@ private:
   /// original state along with an index of 0. The actual element count of the
   /// array can be accessed by the optional 'ElementCountVal' parameter. \param
   /// State The program state. \param Region The memory region where the array
-  /// is stored. \param ElementTy The type an element in the array. \param LCty
-  /// The location context. \param ElementCountVal A pointer to an optional
-  /// SVal. If specified, the size of the array will be returned in it. It can
+  /// is stored. \param ElementTy The type an element in the array. \param SF
+  /// The stack frame. \param ElementCountVal A pointer to an optional SVal.
+  /// If specified, the size of the array will be returned in it. It can
   /// be Unknown.
   std::pair<ProgramStateRef, uint64_t> prepareStateForArrayDestruction(
       const ProgramStateRef State, const MemRegion *Region,
-      const QualType &ElementTy, const LocationContext *LCtx,
+      const QualType &ElementTy, const StackFrame *SF,
       SVal *ElementCountVal = nullptr);
 
   /// Checks whether we construct an array of non-POD type, and decides if the
@@ -928,7 +928,7 @@ private:
                      const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
                      ExplodedNode *Pred);
 
-  bool replayWithoutInlining(ExplodedNode *P, const LocationContext *CalleeLC);
+  bool replayWithoutInlining(ExplodedNode *P, const StackFrame *CalleeSF);
 
   /// Models a trivial copy or move constructor or trivial assignment operator
   /// call with a simple bind.
@@ -973,47 +973,44 @@ public:
   [[nodiscard]] static ProgramStateRef
   setWhetherHasMoreIteration(ProgramStateRef State,
                              const ObjCForCollectionStmt *O,
-                             const LocationContext *LC, bool HasMoreIteraton);
+                             const StackFrame *SF, bool HasMoreIteraton);
 
   [[nodiscard]] static ProgramStateRef
   removeIterationState(ProgramStateRef State, const ObjCForCollectionStmt *O,
-                       const LocationContext *LC);
+                       const StackFrame *SF);
 
   [[nodiscard]] static bool hasMoreIteration(ProgramStateRef State,
                                              const ObjCForCollectionStmt *O,
-                                             const LocationContext *LC);
+                                             const StackFrame *SF);
 
 private:
   /// Assuming we construct an array of non-POD types, this method allows us
   /// to store which element is to be constructed next.
-  static ProgramStateRef
-  setIndexOfElementToConstruct(ProgramStateRef State, const CXXConstructExpr *E,
-                               const LocationContext *LCtx, unsigned Idx);
+  static ProgramStateRef setIndexOfElementToConstruct(ProgramStateRef State,
+                                                      const CXXConstructExpr *E,
+                                                      const StackFrame *SF,
+                                                      unsigned Idx);
 
-  static ProgramStateRef
-  removeIndexOfElementToConstruct(ProgramStateRef State,
-                                  const CXXConstructExpr *E,
-                                  const LocationContext *LCtx);
+  static ProgramStateRef removeIndexOfElementToConstruct(
+      ProgramStateRef State, const CXXConstructExpr *E, const StackFrame *SF);
 
   /// Assuming we destruct an array of non-POD types, this method allows us
   /// to store which element is to be destructed next.
   static ProgramStateRef setPendingArrayDestruction(ProgramStateRef State,
-                                                    const LocationContext *LCtx,
+                                                    const StackFrame *SF,
                                                     unsigned Idx);
 
-  static ProgramStateRef
-  removePendingArrayDestruction(ProgramStateRef State,
-                                const LocationContext *LCtx);
+  static ProgramStateRef removePendingArrayDestruction(ProgramStateRef State,
+                                                       const StackFrame *SF);
 
   /// Sets the size of the array in a pending ArrayInitLoopExpr.
   static ProgramStateRef setPendingInitLoop(ProgramStateRef State,
                                             const CXXConstructExpr *E,
-                                            const LocationContext *LCtx,
-                                            unsigned Idx);
+                                            const StackFrame *SF, unsigned Idx);
 
   static ProgramStateRef removePendingInitLoop(ProgramStateRef State,
                                                const CXXConstructExpr *E,
-                                               const LocationContext *LCtx);
+                                               const StackFrame *SF);
 
   static ProgramStateRef removeStateTraitsUsedForArrayEvaluation(
       ProgramStateRef State, const CXXConstructExpr *E, const StackFrame *SF);
@@ -1028,42 +1025,42 @@ private:
   static ProgramStateRef
   addObjectUnderConstruction(ProgramStateRef State,
                              const ConstructionContextItem &Item,
-                             const LocationContext *LC, SVal V);
+                             const StackFrame *SF, SVal V);
 
   /// Mark the object as fully constructed, cleaning up the state trait
   /// that tracks objects under construction.
   static ProgramStateRef
   finishObjectConstruction(ProgramStateRef State,
                            const ConstructionContextItem &Item,
-                           const LocationContext *LC);
+                           const StackFrame *SF);
 
   /// If the given expression corresponds to a temporary that was used for
   /// passing into an elidable copy/move constructor and that constructor
   /// was actually elided, track that we also need to elide the destructor.
   static ProgramStateRef elideDestructor(ProgramStateRef State,
                                          const CXXBindTemporaryExpr *BTE,
-                                         const LocationContext *LC);
+                                         const StackFrame *SF);
 
   /// Stop tracking the destructor that corresponds to an elided constructor.
   static ProgramStateRef
   cleanupElidedDestructor(ProgramStateRef State,
                           const CXXBindTemporaryExpr *BTE,
-                          const LocationContext *LC);
+                          const StackFrame *SF);
 
   /// Returns true if the given expression corresponds to a temporary that
   /// was constructed for passing into an elidable copy/move constructor
   /// and that constructor was actually elided.
   static bool isDestructorElided(ProgramStateRef State,
                                  const CXXBindTemporaryExpr *BTE,
-                                 const LocationContext *LC);
+                                 const StackFrame *SF);
 
   /// Check if all objects under construction have been fully constructed
-  /// for the given context range (including FromLC, not including ToLC).
+  /// for the given context range (including FromSF, not including ToSF).
   /// This is useful for assertions. Also checks if elided destructors
   /// were cleaned up.
   static bool areAllObjectsFullyConstructed(ProgramStateRef State,
-                                            const LocationContext *FromLC,
-                                            const LocationContext *ToLC);
+                                            const StackFrame *FromSF,
+                                            const StackFrame *ToSF);
 };
 
 /// Traits for storing the call processing policy inside GDM.
