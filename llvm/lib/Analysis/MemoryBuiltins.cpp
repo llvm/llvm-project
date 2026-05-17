@@ -101,14 +101,23 @@ static StringRef mangledNameForMallocFamily(const MallocFamily &Family) {
 }
 
 struct AllocFnsTy {
+  AllocFnsTy() {}
+  AllocFnsTy(AllocType AllocTy, unsigned NumParams, int FstParam, int SndParam,
+             int AlignParam, MallocFamily Family)
+      : AllocTy(AllocTy), NumParams(NumParams), FstParam(FstParam),
+        SndParam(SndParam), AlignParam(AlignParam),
+        Family(mangledNameForMallocFamily(Family)) {}
+
+  // TODO: Replace AllocTy with the familiy (String or enum). Right now these
+  // encode overlapping information and use different sources.
   AllocType AllocTy;
-  unsigned NumParams;
+  unsigned NumParams = -1;
   // First and Second size parameters (or -1 if unused)
-  int FstParam, SndParam;
+  int FstParam, SndParam = -1;
   // Alignment parameter for aligned_alloc and aligned new
-  int AlignParam;
+  int AlignParam = -1;
   // Name of default allocator function to group malloc/free calls by family
-  MallocFamily Family;
+  std::optional<StringRef> Family;
 };
 
 // clang-format off
@@ -253,6 +262,7 @@ getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
   Result.SndParam = Args.second.value_or(-1);
   // AllocAlign defines the alignment parameter.
   Result.AlignParam = CB->getArgOperandNoWithAttribute(Attribute::AllocAlign);
+  Result.Family = getAllocationFamily(CB, TLI);
   return Result;
 }
 
@@ -447,7 +457,7 @@ llvm::getAllocationCallInfo(const CallBase *CB, const TargetLibraryInfo *TLI,
     return std::nullopt;
 
   AllocationCallInfo ACI{};
-  ACI.Family = getAllocationFamily(CB, TLI);
+  ACI.Family = FnData->Family;
   ACI.AlignmentArgNo = FnData->AlignParam;
   ACI.SizeLHSArgNo = FnData->FstParam;
   ACI.SizeRHSArgNo = FnData->SndParam;
@@ -456,13 +466,19 @@ llvm::getAllocationCallInfo(const CallBase *CB, const TargetLibraryInfo *TLI,
 }
 
 struct FreeFnsTy {
-  unsigned NumParams;
+  FreeFnsTy() {}
+  FreeFnsTy(unsigned NumParams, int SizeParam, int AlignParam,
+            MallocFamily Family)
+      : NumParams(NumParams), SizeParam(SizeParam), AlignParam(AlignParam),
+        Family(mangledNameForMallocFamily(Family)) {}
+
+  unsigned NumParams = -1;
   // Size parameter, or -1 if not available.
-  int SizeParam;
+  int SizeParam = -1;
   // Alignment parameter for aligned_alloc and aligned new
-  int AlignParam;
+  int AlignParam = -1;
   // Name of default allocator function to group malloc/free calls by family
-  MallocFamily Family;
+  std::optional<StringRef> Family;
 };
 
 // clang-format off
@@ -518,10 +534,10 @@ llvm::getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI) {
       const auto AllocData =
           getAllocationDataForFunction(Callee, AnyAlloc, TLI);
       if (AllocData)
-        return mangledNameForMallocFamily(AllocData->Family);
+        return AllocData->Family;
       const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
       if (FreeData)
-        return mangledNameForMallocFamily(FreeData->Family);
+        return FreeData->Family;
     }
   }
 
@@ -593,7 +609,7 @@ llvm::getDeallocationCallInfo(const CallBase *CB,
     std::optional<FreeFnsTy> FnData =
         getFreeFunctionDataForFunction(Callee, TLIFn);
     if (FnData) {
-      DCI.Family = mangledNameForMallocFamily(FnData->Family);
+      DCI.Family = FnData->Family;
       DCI.FreedOperandArgNo = 0;
       DCI.SizeArgNo = FnData->SizeParam;
       DCI.AlignmentArgNo = FnData->AlignParam;
