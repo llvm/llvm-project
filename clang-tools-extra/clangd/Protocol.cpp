@@ -202,6 +202,14 @@ llvm::json::Value toJSON(const TextEdit &P) {
   return Result;
 }
 
+llvm::json::Value toJSON(const InsertReplaceEdit &P) {
+  return llvm::json::Object{
+      {"newText", P.newText},
+      {"insert", P.insert},
+      {"replace", P.replace},
+  };
+}
+
 bool fromJSON(const llvm::json::Value &Params, ChangeAnnotation &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
@@ -414,6 +422,8 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
               break;
           }
         }
+        if (auto IRSupport = Item->getBoolean("insertReplaceSupport"))
+          R.InsertReplace = *IRSupport;
       }
       if (auto *ItemKind = Completion->getObject("completionItemKind")) {
         if (auto *ValueSet = ItemKind->get("valueSet")) {
@@ -1184,7 +1194,8 @@ llvm::json::Value toJSON(const CompletionItem &CI) {
   if (CI.insertTextFormat != InsertTextFormat::Missing)
     Result["insertTextFormat"] = static_cast<int>(CI.insertTextFormat);
   if (CI.textEdit)
-    Result["textEdit"] = *CI.textEdit;
+    Result["textEdit"] = std::visit(
+        [](const auto &V) { return llvm::json::Value(V); }, *CI.textEdit);
   if (!CI.additionalTextEdits.empty())
     Result["additionalTextEdits"] = llvm::json::Array(CI.additionalTextEdits);
   if (CI.deprecated)

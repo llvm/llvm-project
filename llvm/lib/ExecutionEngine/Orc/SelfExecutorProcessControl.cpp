@@ -27,7 +27,7 @@ public:
   InProcessDylibManager(char GlobalManglingPrefix);
   Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
   void
-  lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+  lookupSymbolsAsync(tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
                      DylibManager::SymbolLookupCompleteFn Complete) override;
 
 private:
@@ -165,25 +165,21 @@ SelfExecutorProcessControl::InProcessDylibManager::loadDylib(
 }
 
 void SelfExecutorProcessControl::InProcessDylibManager::lookupSymbolsAsync(
-    ArrayRef<LookupRequest> Request,
+    tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
     DylibManager::SymbolLookupCompleteFn Complete) {
-  std::vector<tpctypes::LookupResult> R;
+  tpctypes::LookupResult R;
 
-  for (auto &Elem : Request) {
-    sys::DynamicLibrary Dylib(Elem.Handle.toPtr<void *>());
-    R.push_back(tpctypes::LookupResult());
-    for (auto &KV : Elem.Symbols) {
-      auto &Sym = KV.first;
-      std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
-                      (*Sym).size() - !!GlobalManglingPrefix);
-      void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str());
-      if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
-        R.back().emplace_back();
-      else
-        // FIXME: determine accurate JITSymbolFlags.
-        R.back().emplace_back(ExecutorSymbolDef(ExecutorAddr::fromPtr(Addr),
-                                                JITSymbolFlags::Exported));
-    }
+  sys::DynamicLibrary Dylib(H.toPtr<void *>());
+  for (auto &KV : Symbols) {
+    auto &Sym = KV.first;
+    std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
+                    (*Sym).size() - !!GlobalManglingPrefix);
+    void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str());
+    if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
+      R.emplace_back();
+    else
+      R.emplace_back(ExecutorSymbolDef(ExecutorAddr::fromPtr(Addr),
+                                       JITSymbolFlags::Exported));
   }
   Complete(std::move(R));
 }
