@@ -45,6 +45,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -1302,7 +1303,9 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
   auto *CalleeTy = FunctionType::get(Type::getVoidTy(Context),
                                      {PtrTy, PtrTy, Int64Ty}, false);
   FunctionCallee IncrFn =
-      M.getOrInsertFunction(getInstrProfInstrumentGPUFuncName(), CalleeTy);
+      M.getOrInsertFunction(RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+                                RTLIB::impl___llvm_profile_instrument_gpu),
+                            CalleeTy);
   Builder.CreateCall(IncrFn, {CastAddr, UniformAddrArg, StepI64});
 
   Inc->eraseFromParent();
