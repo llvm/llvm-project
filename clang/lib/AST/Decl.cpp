@@ -678,7 +678,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //   If the declaration of an identifier for an object has file
   //   scope and no storage-class specifier, its linkage is
   //   external.
-
   LinkageInfo LV = getExternalLinkageFor(D);
   if (const auto *ND = dyn_cast<NamespaceDecl>(
           D->getDeclContext()->getEnclosingNamespaceContext())) {
