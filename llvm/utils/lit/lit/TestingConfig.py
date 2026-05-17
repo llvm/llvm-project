@@ -250,6 +250,7 @@ class TestingConfig(object):
             and getattr(self, "test_retry_attempts", None) is None
         ):
             self.test_retry_attempts = litConfig.maxRetriesPerTest
+        # Global config is from LIT_OPTS and must override site-specific settings.
         if litConfig.maxIndividualTestTime is not None:
             suite_timeout = self.maxIndividualTestTime
             if suite_timeout > 0 and suite_timeout != litConfig.maxIndividualTestTime:
