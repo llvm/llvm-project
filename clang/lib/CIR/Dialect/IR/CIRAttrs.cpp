@@ -465,7 +465,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   if (parser.parseKeyword(&kindStr))
     return {};
 
-  auto kind = symbolizeCUDADeviceVarKind(kindStr);
+  std::optional<CUDADeviceVarKind> kind = symbolizeCUDADeviceVarKind(kindStr);
   if (!kind) {
     parser.emitError(parser.getCurrentLocation(),
                      "unknown device variable kind: ")
