@@ -14,6 +14,7 @@
 //
 // RUN: echo 'Content of device file 1' > %t.dev1
 // RUN: echo 'Content of device file 2' > %t.dev2
+// RUN: echo 'Content of device file 3' > %t.dev3
 
 //
 // Produce two compressed fat binary blobs with distinct GPU targets so that
@@ -30,6 +31,12 @@
 // RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx1030,hip-amdgcn-amd-amdhsa--gfx1100 \
 // RUN:   -input=%t.dev1 -input=%t.dev2 \
 // RUN:   -output=%t.bundle2.ccob
+
+// Bundle 3: gfx942 + gfx1201
+// RUN: clang-offload-bundler -compress -type=bc \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx942,hip-amdgcn-amd-amdhsa--gfx1201 \
+// RUN:   -input=%t.dev1 -input=%t.dev3 \
+// RUN:   -output=%t.bundle3.ccob
 
 //
 // Baseline: --list on each individual compressed bundle must work.
@@ -72,6 +79,31 @@
 // MULTI-DAG: hip-amdgcn-amd-amdhsa--gfx1100
 
 //
+// Concatenate three CCOB blobs to verify that the loop correctly processes
+// 3+ blobs without premature termination.
+//
+// RUN: cat %t.bundle1.ccob %t.bundle2.ccob %t.bundle3.ccob > %t.triple.fatbin
+
+// --list on three concatenated CCOB blobs must enumerate all bundle IDs.
+// RUN: clang-offload-bundler -type=o -list -input=%t.triple.fatbin \
+// RUN:   | FileCheck %s --check-prefix=TRIPLE
+// TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx906
+// TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx908
+// TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx1030
+// TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx1100
+// TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx942
+// TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx1201
+
+// --unbundle must extract targets spanning all three CCOB blobs.
+// RUN: clang-offload-bundler -type=o -unbundle \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx1030,hip-amdgcn-amd-amdhsa--gfx942 \
+// RUN:   -output=%t.tri.res.gfx906 -output=%t.tri.res.gfx1030 -output=%t.tri.res.gfx942 \
+// RUN:   -input=%t.triple.fatbin
+// RUN: diff %t.dev1 %t.tri.res.gfx906
+// RUN: diff %t.dev1 %t.tri.res.gfx1030
+// RUN: diff %t.dev1 %t.tri.res.gfx942
+
+//
 // ===--- Uncompressed multi-bundle tests ---===
 //
 // Repeat the same --list and --unbundle tests using uncompressed fat binary
@@ -89,6 +121,12 @@
 // RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx1030,hip-amdgcn-amd-amdhsa--gfx1100 \
 // RUN:   -input=%t.dev1 -input=%t.dev2 \
 // RUN:   -output=%t.unc.bundle2.bc
+
+// Bundle 3 (uncompressed): gfx942 + gfx1201
+// RUN: clang-offload-bundler -type=bc \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx942,hip-amdgcn-amd-amdhsa--gfx1201 \
+// RUN:   -input=%t.dev1 -input=%t.dev3 \
+// RUN:   -output=%t.unc.bundle3.bc
 
 // Concatenate the two uncompressed blobs.
 // RUN: cat %t.unc.bundle1.bc %t.unc.bundle2.bc > %t.unc.multi.fatbin
@@ -108,6 +146,28 @@
 // RUN:   -input=%t.unc.multi.fatbin
 // RUN: diff %t.dev1 %t.unc.res.gfx906
 // RUN: diff %t.dev2 %t.unc.res.gfx1100
+
+// Concatenate three uncompressed blobs.
+// RUN: cat %t.unc.bundle1.bc %t.unc.bundle2.bc %t.unc.bundle3.bc > %t.unc.triple.fatbin
+
+// --list on three concatenated uncompressed blobs must enumerate all bundle IDs.
+// RUN: clang-offload-bundler -type=o -list -input=%t.unc.triple.fatbin \
+// RUN:   | FileCheck %s --check-prefix=UNC-TRIPLE
+// UNC-TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx906
+// UNC-TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx908
+// UNC-TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx1030
+// UNC-TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx1100
+// UNC-TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx942
+// UNC-TRIPLE-DAG: hip-amdgcn-amd-amdhsa--gfx1201
+
+// --unbundle must extract targets spanning all three uncompressed blobs.
+// RUN: clang-offload-bundler -type=o -unbundle \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx1030,hip-amdgcn-amd-amdhsa--gfx942 \
+// RUN:   -output=%t.unc.tri.res.gfx906 -output=%t.unc.tri.res.gfx1030 -output=%t.unc.tri.res.gfx942 \
+// RUN:   -input=%t.unc.triple.fatbin
+// RUN: diff %t.dev1 %t.unc.tri.res.gfx906
+// RUN: diff %t.dev1 %t.unc.tri.res.gfx1030
+// RUN: diff %t.dev1 %t.unc.tri.res.gfx942
 
 //
 // --unbundle on the same concatenated CCOB file must correctly extract targets

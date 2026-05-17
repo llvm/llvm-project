@@ -228,10 +228,8 @@ public:
   /// List bundle IDs in \a Input.
   virtual Error listBundleIDs(MemoryBuffer &Input) {
     size_t NextBundleStart = 0;
-    size_t Offset = 0;
     StringRef BufferString = Input.getBuffer();
-    while ((NextBundleStart != StringRef::npos) &&
-           (Offset < BufferString.size())) {
+    while (NextBundleStart != StringRef::npos) {
 
       // Drop the data that has already been processed/read.
       BufferString = BufferString.drop_front(NextBundleStart);
@@ -255,9 +253,6 @@ public:
       // Find the beginning of the next Bundle, if it exists.
       NextBundleStart = BufferString.find(StringRef(OFFLOAD_BUNDLER_MAGIC_STR),
                                           sizeof(OFFLOAD_BUNDLER_MAGIC_STR));
-
-      if (NextBundleStart != StringRef::npos)
-        Offset += NextBundleStart;
     }
     return Error::success();
   }
