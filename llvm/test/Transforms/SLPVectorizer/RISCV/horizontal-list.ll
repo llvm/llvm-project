@@ -8,54 +8,16 @@
 ; YAML-NEXT: Function:        test
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-35'
+; YAML-NEXT:   - Cost:            '-72'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '1'
 ; YAML-NEXT: ...
-; YAML-NEXT: --- !Passed
-; YAML-NEXT: Pass:            slp-vectorizer
-; YAML-NEXT: Name:            VectorizedHorizontalReduction
-; YAML-NEXT: Function:        test
-; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-15'
-; YAML-NEXT:   - String:          ' and with tree size '
-; YAML-NEXT:   - TreeSize:        '1'
-; YAML-NEXT: ...
-; YAML-NEXT: --- !Passed
-; YAML-NEXT: Pass:            slp-vectorizer
-; YAML-NEXT: Name:            VectorizedHorizontalReduction
-; YAML-NEXT: Function:        test
-; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-6'
-; YAML-NEXT:   - String:          ' and with tree size '
-; YAML-NEXT:   - TreeSize:        '1'
-; YAML-NEXT:...
 define float @test(ptr %x) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_16:%.*]] = getelementptr inbounds float, ptr [[X]], i64 17
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[ARRAYIDX_16]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_24:%.*]] = getelementptr inbounds float, ptr [[X]], i64 25
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX_24]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_28:%.*]] = getelementptr inbounds float, ptr [[X]], i64 29
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX_28]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_29:%.*]] = getelementptr inbounds float, ptr [[X]], i64 30
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[ARRAYIDX_29]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[RDX_OP:%.*]] = fadd fast <8 x float> [[TMP5]], [[TMP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[RDX_OP]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> [[TMP6]], <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[RDX_OP4:%.*]] = shufflevector <16 x float> [[TMP7]], <16 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RDX_OP5:%.*]] = fadd fast <4 x float> [[RDX_OP4]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[RDX_OP5]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x float> [[TMP7]], <16 x float> [[TMP9]], <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> [[TMP8]])
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], [[TMP3]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = fadd fast float [[OP_RDX2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <30 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = call fast float @llvm.vector.reduce.fadd.v30f32(float 0.000000e+00, <30 x float> [[TMP0]])
 ; CHECK-NEXT:    ret float [[OP_RDX3]]
 ;
   entry:

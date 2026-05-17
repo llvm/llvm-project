@@ -467,7 +467,10 @@ module std [system] {
       export std.iterator.aliasing_iterator
     }
     module move_backward                          { header "__algorithm/move_backward.h" }
-    module move                                   { header "__algorithm/move.h" }
+    module move                                   {
+      header "__algorithm/move.h"
+      export std.algorithm.in_out_result
+    }
     module next_permutation                       { header "__algorithm/next_permutation.h" }
     module none_of                                { header "__algorithm/none_of.h" }
     module nth_element                            { header "__algorithm/nth_element.h" }
@@ -845,7 +848,10 @@ module std [system] {
     module unique_copy                            { header "__algorithm/unique_copy.h" }
     module unique                                 { header "__algorithm/unique.h" }
     module unwrap_iter                            { header "__algorithm/unwrap_iter.h" }
-    module unwrap_range                           { header "__algorithm/unwrap_range.h" }
+    module unwrap_range                           {
+      header "__algorithm/unwrap_range.h"
+      export std.utility.pair
+    }
     module upper_bound                            { header "__algorithm/upper_bound.h" }
 
     header "algorithm"
