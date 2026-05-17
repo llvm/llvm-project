@@ -369,19 +369,1108 @@ entry:
   ret <2 x double> %2
 }
 
-
-declare void @llvm.masked.store.v16f32.p0(<16 x float>, ptr, i32, <16 x i1>) #3
-
-declare void @llvm.masked.store.v8f64.p0(<8 x double>, ptr, i32, <8 x i1>) #3
-
-declare <16 x float> @llvm.masked.load.v16f32.p0(ptr, i32, <16 x i1>, <16 x float>) #4
-
-declare <8 x double> @llvm.masked.load.v8f64.p0(ptr, i32, <8 x i1>, <8 x double>) #4
-
-declare void @llvm.masked.store.v4f32.p0(<4 x float>, ptr, i32, <4 x i1>)
-
-declare void @llvm.masked.store.v2f64.p0(<2 x double>, ptr, i32, <2 x i1>)
-
-declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32, <4 x i1>, <4 x float>)
-
-declare <2 x double> @llvm.masked.load.v2f64.p0(ptr, i32, <2 x i1>, <2 x double>)
+; PR198165
+define <80 x i32> @test_maskz_load_v80i32(ptr %p, <80 x i1> %mask) nounwind {
+; CHECK64-LABEL: test_maskz_load_v80i32:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movq %rdi, %rax
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    andl $1, %edi
+; CHECK64-NEXT:    kmovw %edi, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $14, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-5, %di
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kandw %k1, %k0, %k0
+; CHECK64-NEXT:    kmovw %k1, %k7
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $13, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-9, %di
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    kandw %k1, %k0, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $12, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-17, %di
+; CHECK64-NEXT:    kmovw %edi, %k4
+; CHECK64-NEXT:    kandw %k4, %k0, %k0
+; CHECK64-NEXT:    kmovw %k4, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $11, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-33, %di
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    kandw %k1, %k0, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $10, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-65, %di
+; CHECK64-NEXT:    kmovw %edi, %k3
+; CHECK64-NEXT:    kandw %k3, %k0, %k0
+; CHECK64-NEXT:    kmovw %k3, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $9, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-129, %di
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kandw %k1, %k0, %k0
+; CHECK64-NEXT:    kmovw %k1, %k2
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $8, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-257, %di # imm = 0xFEFF
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    kandw %k1, %k0, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $7, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-513, %di # imm = 0xFDFF
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    kandw %k1, %k0, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $6, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-1025, %di # imm = 0xFBFF
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    kandw %k1, %k0, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $5, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-2049, %di # imm = 0xF7FF
+; CHECK64-NEXT:    kmovw %edi, %k5
+; CHECK64-NEXT:    kandw %k5, %k0, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $4, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-4097, %di # imm = 0xEFFF
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    kandw %k1, %k0, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $3, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k0
+; CHECK64-NEXT:    movw $-8193, %di # imm = 0xDFFF
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    kandw %k1, %k0, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $2, %k1, %k1
+; CHECK64-NEXT:    korw %k1, %k0, %k1
+; CHECK64-NEXT:    movw $-16385, %di # imm = 0xBFFF
+; CHECK64-NEXT:    kmovw %edi, %k0
+; CHECK64-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    kandw %k0, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $14, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kshiftlw $1, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $1, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    andl $1, %edi
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
+; CHECK64-NEXT:    kmovw %r10d, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $14, %k1, %k1
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    korw %k1, %k6, %k1
+; CHECK64-NEXT:    kandw %k7, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $13, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k7, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $12, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k4, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $11, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k0, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $10, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k3, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $9, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k2, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $8, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k3, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $7, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k4 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k4, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $6, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k2, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $5, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw %k5, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    kandw %k5, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $4, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $3, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $2, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $14, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kshiftlw $1, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $1, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    andl $1, %edi
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
+; CHECK64-NEXT:    kmovw %r10d, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $14, %k1, %k1
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    korw %k1, %k6, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $13, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k7, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $12, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k7, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $11, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k0, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $10, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k0, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $9, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $8, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k3, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $7, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k4, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $6, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k2, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $5, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k5, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $4, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k5, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $3, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k2, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $2, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k3, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $14, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kshiftlw $1, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $1, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    andl $1, %edi
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
+; CHECK64-NEXT:    kmovw %r10d, %k1
+; CHECK64-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $14, %k1, %k1
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    korw %k1, %k6, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k4 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k4, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $13, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $12, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k7, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $11, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $10, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k0, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $9, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k0, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $8, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $7, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $6, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $5, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k6, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $4, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k5, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $3, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k2, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $2, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kandw %k3, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $14, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    kshiftlw $1, %k1, %k1
+; CHECK64-NEXT:    kshiftrw $1, %k1, %k1
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; CHECK64-NEXT:    kmovw %edi, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k1, %k1
+; CHECK64-NEXT:    andl $1, %edx
+; CHECK64-NEXT:    kmovw %ecx, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $14, %k6, %k6
+; CHECK64-NEXT:    kmovw %edx, %k7
+; CHECK64-NEXT:    korw %k6, %k7, %k6
+; CHECK64-NEXT:    kandw %k4, %k6, %k6
+; CHECK64-NEXT:    kmovw %r8d, %k7
+; CHECK64-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK64-NEXT:    kshiftrw $13, %k7, %k7
+; CHECK64-NEXT:    korw %k7, %k6, %k6
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k3, %k6, %k6
+; CHECK64-NEXT:    kmovw %r9d, %k7
+; CHECK64-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK64-NEXT:    kshiftrw $12, %k7, %k7
+; CHECK64-NEXT:    korw %k7, %k6, %k6
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k3, %k6, %k6
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k7
+; CHECK64-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK64-NEXT:    kshiftrw $11, %k7, %k7
+; CHECK64-NEXT:    korw %k7, %k6, %k6
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k3, %k6, %k6
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k7
+; CHECK64-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK64-NEXT:    kshiftrw $10, %k7, %k7
+; CHECK64-NEXT:    korw %k7, %k6, %k6
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k3, %k6, %k6
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k7
+; CHECK64-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK64-NEXT:    kshiftrw $9, %k7, %k7
+; CHECK64-NEXT:    korw %k7, %k6, %k6
+; CHECK64-NEXT:    kandw %k0, %k6, %k6
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k7
+; CHECK64-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK64-NEXT:    kshiftrw $8, %k7, %k7
+; CHECK64-NEXT:    korw %k7, %k6, %k6
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k0, %k6, %k6
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k7
+; CHECK64-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK64-NEXT:    kshiftrw $7, %k7, %k7
+; CHECK64-NEXT:    korw %k7, %k6, %k6
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k0, %k6, %k6
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k7
+; CHECK64-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK64-NEXT:    kshiftrw $6, %k7, %k7
+; CHECK64-NEXT:    korw %k7, %k6, %k6
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k0, %k6, %k5
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k6
+; CHECK64-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK64-NEXT:    kshiftrw $5, %k6, %k6
+; CHECK64-NEXT:    korw %k6, %k5, %k5
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k0, %k5, %k4
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k5
+; CHECK64-NEXT:    kshiftlw $15, %k5, %k5
+; CHECK64-NEXT:    kshiftrw $4, %k5, %k5
+; CHECK64-NEXT:    korw %k5, %k4, %k4
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k0, %k4, %k3
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k4
+; CHECK64-NEXT:    kshiftlw $15, %k4, %k4
+; CHECK64-NEXT:    kshiftrw $3, %k4, %k4
+; CHECK64-NEXT:    korw %k4, %k3, %k3
+; CHECK64-NEXT:    kandw %k2, %k3, %k2
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k3
+; CHECK64-NEXT:    kshiftlw $15, %k3, %k3
+; CHECK64-NEXT:    kshiftrw $2, %k3, %k3
+; CHECK64-NEXT:    korw %k3, %k2, %k2
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK64-NEXT:    kandw %k0, %k2, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k2
+; CHECK64-NEXT:    kshiftlw $14, %k2, %k2
+; CHECK64-NEXT:    korw %k2, %k0, %k0
+; CHECK64-NEXT:    kshiftlw $1, %k0, %k0
+; CHECK64-NEXT:    kshiftrw $1, %k0, %k0
+; CHECK64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; CHECK64-NEXT:    kmovw %ecx, %k2
+; CHECK64-NEXT:    kshiftlw $15, %k2, %k2
+; CHECK64-NEXT:    korw %k2, %k0, %k2
+; CHECK64-NEXT:    vmovdqu32 (%rsi), %zmm0 {%k2} {z}
+; CHECK64-NEXT:    vmovdqu32 64(%rsi), %zmm1 {%k1} {z}
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
+; CHECK64-NEXT:    vmovdqu32 128(%rsi), %zmm2 {%k1} {z}
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
+; CHECK64-NEXT:    vmovdqu32 192(%rsi), %zmm3 {%k1} {z}
+; CHECK64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
+; CHECK64-NEXT:    vmovdqu32 256(%rsi), %zmm4 {%k1} {z}
+; CHECK64-NEXT:    vmovdqa64 %zmm4, 256(%rax)
+; CHECK64-NEXT:    vmovdqa64 %zmm3, 192(%rax)
+; CHECK64-NEXT:    vmovdqa64 %zmm2, 128(%rax)
+; CHECK64-NEXT:    vmovdqa64 %zmm1, 64(%rax)
+; CHECK64-NEXT:    vmovdqa64 %zmm0, (%rax)
+; CHECK64-NEXT:    vzeroupper
+; CHECK64-NEXT:    retq
+;
+; CHECK32-LABEL: test_maskz_load_v80i32:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    subl $32, %esp
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    andl $1, %eax
+; CHECK32-NEXT:    kmovw %eax, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $14, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-5, %ax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kandw %k1, %k0, %k0
+; CHECK32-NEXT:    kmovw %k1, %k7
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $13, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-9, %ax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    kandw %k1, %k0, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $12, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-17, %ax
+; CHECK32-NEXT:    kmovw %eax, %k4
+; CHECK32-NEXT:    kandw %k4, %k0, %k0
+; CHECK32-NEXT:    kmovw %k4, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $11, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-33, %ax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    kandw %k1, %k0, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $10, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-65, %ax
+; CHECK32-NEXT:    kmovw %eax, %k3
+; CHECK32-NEXT:    kandw %k3, %k0, %k0
+; CHECK32-NEXT:    kmovw %k3, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $9, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-129, %ax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kandw %k1, %k0, %k0
+; CHECK32-NEXT:    kmovw %k1, %k2
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $8, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-257, %ax # imm = 0xFEFF
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    kandw %k1, %k0, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $7, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-513, %ax # imm = 0xFDFF
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    kandw %k1, %k0, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $6, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-1025, %ax # imm = 0xFBFF
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    kandw %k1, %k0, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $5, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-2049, %ax # imm = 0xF7FF
+; CHECK32-NEXT:    kmovw %eax, %k5
+; CHECK32-NEXT:    kandw %k5, %k0, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $4, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-4097, %ax # imm = 0xEFFF
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    kandw %k1, %k0, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $3, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k0
+; CHECK32-NEXT:    movw $-8193, %ax # imm = 0xDFFF
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    kandw %k1, %k0, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $2, %k1, %k1
+; CHECK32-NEXT:    korw %k1, %k0, %k1
+; CHECK32-NEXT:    movw $-16385, %ax # imm = 0xBFFF
+; CHECK32-NEXT:    kmovw %eax, %k0
+; CHECK32-NEXT:    kmovw %k0, (%esp) # 2-byte Spill
+; CHECK32-NEXT:    kandw %k0, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $14, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kshiftlw $1, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $1, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    andl $1, %eax
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    kmovw %ecx, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $14, %k1, %k1
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    korw %k1, %k6, %k1
+; CHECK32-NEXT:    kandw %k7, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $13, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k7 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k7, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $12, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k4, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $11, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k0, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $10, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k3, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $9, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k2, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $8, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k3, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $7, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k4 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k4, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $6, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k2 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k2, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $5, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw %k5, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    kandw %k5, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $4, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $3, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $2, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw (%esp), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $14, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kshiftlw $1, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $1, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    andl $1, %eax
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    kmovw %ecx, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $14, %k1, %k1
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    korw %k1, %k6, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $13, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k7, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $12, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k7 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k7, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $11, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k0, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $10, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k0, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $9, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $8, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k3, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $7, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k4, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $6, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k2, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $5, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k5, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $4, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k5 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k5, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $3, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k2 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k2, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $2, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw (%esp), %k3 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k3, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $14, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kshiftlw $1, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $1, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    andl $1, %eax
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    kmovw %ecx, %k1
+; CHECK32-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $14, %k1, %k1
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    korw %k1, %k6, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k4 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k4, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $13, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $12, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k7, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $11, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $10, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k0, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $9, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k0, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $8, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $7, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $6, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $5, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k6 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $4, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k5, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $3, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k2, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $2, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kandw %k3, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $14, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    kshiftlw $1, %k1, %k1
+; CHECK32-NEXT:    kshiftrw $1, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k1, %k1
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    andl $1, %eax
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    kmovw %ecx, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $14, %k6, %k6
+; CHECK32-NEXT:    kmovw %eax, %k7
+; CHECK32-NEXT:    korw %k6, %k7, %k6
+; CHECK32-NEXT:    kandw %k4, %k6, %k6
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k7
+; CHECK32-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK32-NEXT:    kshiftrw $13, %k7, %k7
+; CHECK32-NEXT:    korw %k7, %k6, %k6
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k3, %k6, %k6
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k7
+; CHECK32-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK32-NEXT:    kshiftrw $12, %k7, %k7
+; CHECK32-NEXT:    korw %k7, %k6, %k6
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k3, %k6, %k6
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k7
+; CHECK32-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK32-NEXT:    kshiftrw $11, %k7, %k7
+; CHECK32-NEXT:    korw %k7, %k6, %k6
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k3, %k6, %k6
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k7
+; CHECK32-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK32-NEXT:    kshiftrw $10, %k7, %k7
+; CHECK32-NEXT:    korw %k7, %k6, %k6
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k3 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k3, %k6, %k6
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k7
+; CHECK32-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK32-NEXT:    kshiftrw $9, %k7, %k7
+; CHECK32-NEXT:    korw %k7, %k6, %k6
+; CHECK32-NEXT:    kandw %k0, %k6, %k6
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k7
+; CHECK32-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK32-NEXT:    kshiftrw $8, %k7, %k7
+; CHECK32-NEXT:    korw %k7, %k6, %k6
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k0, %k6, %k6
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k7
+; CHECK32-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK32-NEXT:    kshiftrw $7, %k7, %k7
+; CHECK32-NEXT:    korw %k7, %k6, %k6
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k0, %k6, %k6
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k7
+; CHECK32-NEXT:    kshiftlw $15, %k7, %k7
+; CHECK32-NEXT:    kshiftrw $6, %k7, %k7
+; CHECK32-NEXT:    korw %k7, %k6, %k6
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k0, %k6, %k5
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k6
+; CHECK32-NEXT:    kshiftlw $15, %k6, %k6
+; CHECK32-NEXT:    kshiftrw $5, %k6, %k6
+; CHECK32-NEXT:    korw %k6, %k5, %k5
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k0, %k5, %k4
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k5
+; CHECK32-NEXT:    kshiftlw $15, %k5, %k5
+; CHECK32-NEXT:    kshiftrw $4, %k5, %k5
+; CHECK32-NEXT:    korw %k5, %k4, %k4
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k0, %k4, %k3
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k4
+; CHECK32-NEXT:    kshiftlw $15, %k4, %k4
+; CHECK32-NEXT:    kshiftrw $3, %k4, %k4
+; CHECK32-NEXT:    korw %k4, %k3, %k3
+; CHECK32-NEXT:    kandw %k2, %k3, %k2
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k3
+; CHECK32-NEXT:    kshiftlw $15, %k3, %k3
+; CHECK32-NEXT:    kshiftrw $2, %k3, %k3
+; CHECK32-NEXT:    korw %k3, %k2, %k2
+; CHECK32-NEXT:    kmovw (%esp), %k0 # 2-byte Reload
+; CHECK32-NEXT:    kandw %k0, %k2, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k2
+; CHECK32-NEXT:    kshiftlw $14, %k2, %k2
+; CHECK32-NEXT:    korw %k2, %k0, %k0
+; CHECK32-NEXT:    kshiftlw $1, %k0, %k0
+; CHECK32-NEXT:    kshiftrw $1, %k0, %k0
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    kmovw %eax, %k2
+; CHECK32-NEXT:    kshiftlw $15, %k2, %k2
+; CHECK32-NEXT:    korw %k2, %k0, %k2
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    vmovdqu32 (%eax), %zmm0 {%k2} {z}
+; CHECK32-NEXT:    vmovdqu32 64(%eax), %zmm1 {%k1} {z}
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
+; CHECK32-NEXT:    vmovdqu32 128(%eax), %zmm2 {%k1} {z}
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
+; CHECK32-NEXT:    vmovdqu32 192(%eax), %zmm3 {%k1} {z}
+; CHECK32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
+; CHECK32-NEXT:    vmovdqu32 256(%eax), %zmm4 {%k1} {z}
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    vmovdqa64 %zmm4, 256(%eax)
+; CHECK32-NEXT:    vmovdqa64 %zmm3, 192(%eax)
+; CHECK32-NEXT:    vmovdqa64 %zmm2, 128(%eax)
+; CHECK32-NEXT:    vmovdqa64 %zmm1, 64(%eax)
+; CHECK32-NEXT:    vmovdqa64 %zmm0, (%eax)
+; CHECK32-NEXT:    addl $32, %esp
+; CHECK32-NEXT:    vzeroupper
+; CHECK32-NEXT:    retl $4
+  %r = call <80 x i32> @llvm.masked.load.v80i32.p0(ptr %p, <80 x i1> %mask, <80 x i32> zeroinitializer)
+  ret <80 x i32> %r
+}
