@@ -4276,24 +4276,28 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
 void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObject &object,
     llvm::StringRef clause) {
-  bool report{false};
-  if (auto *symbol{GetObjectSymbol(object)}) {
+  if (const Symbol *symbol{GetObjectSymbol(object)}) {
     if (IsTypeParamInquiry(*symbol)) {
       return;
     }
-    report = IsStructureComponent(*symbol);
-  }
+    llvm::StringRef kind{};
+    if (IsStructureComponent(*symbol)) {
+      kind = "A structure component";
+    } else if (IsSubstring(object, &context_)) {
+      kind = "A substrincg";
+    } else if (IsArrayElement(object, &context_)) {
+      kind = "An array element";
+    }
 
-  if (report || parser::Unwrap<parser::ArrayElement>(object)) {
-    if (clause.empty() &&
-        llvm::omp::nonPartialVarSet.test(GetContext().directive)) {
-      context_.Say(source,
-          "A variable that is part of another variable (as an array or structure element) cannot appear on the %s directive"_err_en_US,
-          ContextDirectiveAsFortran());
-    } else {
-      context_.Say(source,
-          "A variable that is part of another variable (as an array or structure element) cannot appear in a %s clause"_err_en_US,
-          clause.str());
+    if (!kind.empty()) {
+      if (clause.empty() &&
+          llvm::omp::nonPartialVarSet.test(GetContext().directive)) {
+        context_.Say(source, "%s cannot appear on the %s directive"_err_en_US,
+            kind.str(), ContextDirectiveAsFortran());
+      } else {
+        context_.Say(source, "%s cannot appear in a %s clause"_err_en_US,
+            kind.str(), clause.str());
+      }
     }
   }
 }

@@ -2856,14 +2856,6 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
 
   const auto *name{parser::GetDesignatorNameIfDataRef(designator)};
   if (!name) {
-    // Array sections to be changed to substrings as needed
-    if (AnalyzeExpr(context_, designator)) {
-      if (std::holds_alternative<parser::Substring>(designator.u)) {
-        context_.Say(designator.source,
-            "Substrings are not allowed on OpenMP directives or clauses"_err_en_US);
-      }
-    }
-    // other checks, more TBD
     return;
   }
 

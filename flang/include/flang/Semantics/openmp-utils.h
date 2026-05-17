@@ -109,6 +109,9 @@ bool IsLocatorListItem(
 bool IsVariableListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx);
 
+bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
+
 const Symbol *GetHostSymbol(const Symbol &sym);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);

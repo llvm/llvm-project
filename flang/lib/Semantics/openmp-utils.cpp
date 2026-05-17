@@ -258,6 +258,26 @@ bool IsVariableListItem(
   return false;
 }
 
+bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
+    evaluate::ExpressionAnalyzer ea(*semaCtx);
+    auto restorer{ea.GetContextualMessages().DiscardMessages()};
+    if (MaybeExpr expr{ea.Analyze(*desg)}) {
+      return ExtractSubstring(*expr).has_value();
+    }
+  }
+  return false;
+}
+
+bool IsArrayElement(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+    return !IsTypeParamInquiry(*sym) &&
+        parser::Unwrap<parser::ArrayElement>(object);
+  }
+  return false;
+}
+
 const Symbol *GetHostSymbol(const Symbol &sym) {
   if (auto *details{sym.detailsIf<HostAssocDetails>()}) {
     return &details->symbol();

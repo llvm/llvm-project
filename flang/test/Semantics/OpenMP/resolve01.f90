@@ -8,7 +8,7 @@
 
   b = "HIFROMPGI"
   c = b(2:7)
-  !ERROR: Substrings are not allowed on OpenMP directives or clauses
+  !ERROR: A substrincg cannot appear in a PRIVATE clause
   !$omp parallel private(c(1:3))
   a = c(1:1)
   !$omp end parallel
