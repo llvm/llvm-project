@@ -157,7 +157,11 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   } else if (const TargetRegisterClass *CommonSubClass =
                  TRI->getCommonSubClass(UseRC, RegClassForVT)) {
     UseRC = CommonSubClass;
-  }
+  if (!UseRC || !UseRC->isAllocatable())
+    UseRC = RegClassForVT;
+  else if (const TargetRegisterClass *CommonSubClass =
+                 TRI->getCommonSubClass(UseRC, RegClassForVT))
+    UseRC = CommonSubClass;
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
   SrcRC = TRI->getMinimalPhysRegClass(SrcReg, VT);
