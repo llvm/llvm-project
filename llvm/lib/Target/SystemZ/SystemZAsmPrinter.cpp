@@ -959,8 +959,8 @@ void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
   // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
   // of instructions change.
   bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector) &&
-      !TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureSoftFloat);
+      TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureVector) &&
+      !TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureSoftFloat);
   MCSymbol *FuncEntry = OutContext.getOrCreateSymbol(
       HasVectorFeature ? "__xray_FunctionEntryVec" : "__xray_FunctionEntry");
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
@@ -1004,8 +1004,8 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
   // of instructions change.
   bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector) &&
-      !TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureSoftFloat);
+      TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureVector) &&
+      !TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureSoftFloat);
   MCSymbol *FuncExit = OutContext.getOrCreateSymbol(
       HasVectorFeature ? "__xray_FunctionExitVec" : "__xray_FunctionExit");
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
@@ -1029,7 +1029,7 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
 void SystemZAsmPrinter::emitAttributes(Module &M) {
   if (M.getModuleFlag("s390x-visible-vector-ABI")) {
     bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector);
+        TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureVector);
     OutStreamer->emitGNUAttribute(8, HasVectorFeature ? 2 : 1);
   }
 }
@@ -1177,7 +1177,7 @@ static void printAddress(const MCAsmInfo *MAI, unsigned Base,
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
-  const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
+  const MCRegisterInfo &MRI = TM.getMCRegisterInfo();
   const MachineOperand &MO = MI->getOperand(OpNo);
   MCOperand MCOp;
   if (ExtraCode) {
@@ -1445,10 +1445,7 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
     Flags4 |= PPA1Flag4::ProcedureNamePresent; // Add optional name block.
 
   OutStreamer->AddComment("PPA1 Flags 1");
-  if ((Flags1 & PPA1Flag1::DSA64Bit) == PPA1Flag1::DSA64Bit)
-    OutStreamer->AddComment("  Bit 0: 1 = 64-bit DSA");
-  else
-    OutStreamer->AddComment("  Bit 0: 0 = 32-bit DSA");
+  OutStreamer->AddComment("  Bit 0: 1 = 64-bit DSA");
   if ((Flags1 & PPA1Flag1::VarArg) == PPA1Flag1::VarArg)
     OutStreamer->AddComment("  Bit 7: 1 = Vararg function");
   OutStreamer->emitInt8(static_cast<uint8_t>(Flags1)); // Flags 1.

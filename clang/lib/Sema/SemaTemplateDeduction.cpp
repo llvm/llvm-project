@@ -2511,11 +2511,13 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         if (!NTTP)
           return TemplateDeductionResult::Success;
 
-        llvm::APSInt ArgSize(S.Context.getTypeSize(S.Context.IntTy), false);
+        // Deduce the size parameter of _BitInt as std::size_t
+        QualType T = S.Context.getSizeType();
+        llvm::APSInt ArgSize(S.Context.getTypeSize(T), /*IsUnsigned=*/true);
         ArgSize = IA->getNumBits();
 
         return DeduceNonTypeTemplateArgument(
-            S, TemplateParams, NTTP, ArgSize, S.Context.IntTy, true, Info,
+            S, TemplateParams, NTTP, ArgSize, T, true, Info,
             POK != PartialOrderingKind::None, Deduced, HasDeducedAnyParam);
       }
 
@@ -3003,7 +3005,9 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,
                                          TTP, CTAI.SugaredConverted,
                                          Template->getSourceRange());
-        if (Inst.isInvalid() || !S.SubstDecl(TTP, S.CurContext, Args))
+        if (Inst.isInvalid() ||
+            !S.SubstTemplateParams(TTP->getTemplateParameters(), S.CurContext,
+                                   Args))
           return true;
       }
       // For type parameters, no substitution is ever required.
@@ -5157,20 +5161,6 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     return true;
   MultiLevelTemplateArgumentList MLTAL(Concept, CTAI.SugaredConverted,
                                        /*Final=*/true);
-  // Build up an EvaluationContext with an ImplicitConceptSpecializationDecl so
-  // that the template arguments of the constraint can be preserved. For
-  // example:
-  //
-  //  template <class T>
-  //  concept C = []<D U = void>() { return true; }();
-  //
-  // We need the argument for T while evaluating type constraint D in
-  // building the CallExpr to the lambda.
-  EnterExpressionEvaluationContext EECtx(
-      S, Sema::ExpressionEvaluationContext::Unevaluated,
-      ImplicitConceptSpecializationDecl::Create(
-          S.getASTContext(), Concept->getDeclContext(), Concept->getLocation(),
-          CTAI.SugaredConverted));
   if (S.CheckConstraintSatisfaction(
           Concept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
           TypeLoc.getLocalSourceRange(), Satisfaction))

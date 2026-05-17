@@ -38,6 +38,7 @@ struct MissingFeatures {
   static bool opGlobalPragmaClangSection() { return false; }
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalCtorPriority() { return false; }
+  static bool emitNVVMMetadata() { return false; }
   static bool setDSOLocal() { return false; }
 
   static bool supportIFuncAttr() { return false; }
@@ -88,6 +89,7 @@ struct MissingFeatures {
   static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
   static bool opFuncNoReturn() { return false; }
+  static bool handleCUDALaunchBoundsAttr() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
 
   // CallOp handling
@@ -97,7 +99,6 @@ struct MissingFeatures {
   static bool opCallABIIndirectArg() { return false; }
   static bool opCallWidenArg() { return false; }
   static bool opCallBitcastArg() { return false; }
-  static bool opCallImplicitObjectSizeArgs() { return false; }
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
@@ -144,6 +145,8 @@ struct MissingFeatures {
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
+  static bool checkAliases() { return false; }
+  static bool shouldSkipAliasEmission() { return false; }
   static bool deferredFuncDecls() { return false; }
 
   // CXXABI
@@ -248,7 +251,6 @@ struct MissingFeatures {
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
   static bool devirtualizeDestructor() { return false; }
-  static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehScopeFilter() { return false; }
@@ -370,6 +372,7 @@ struct MissingFeatures {
 
   // Maybe only needed for Windows exception handling
   static bool currentFuncletPad() { return false; }
+  static bool sizeOfUnwindException() { return false; }
 };
 
 } // namespace cir

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/Support/Error.h"
@@ -53,9 +54,11 @@ dumpDXContainer(MemoryBufferRef Source) {
     DXContainerYAML::Part &NewPart = Obj->Parts.back();
     dxbc::PartType PT = dxbc::parsePartType(P.Part.getName());
     switch (PT) {
-    case dxbc::PartType::DXIL: {
-      std::optional<DXContainer::DXILData> DXIL = Container.getDXIL();
-      assert(DXIL && "Since we are iterating and found a DXIL part, "
+    case dxbc::PartType::DXIL:
+    case dxbc::PartType::ILDB: {
+      std::optional<DXContainer::DXILData> DXIL =
+          Container.getDXIL(dxbc::isDebugProgramPart(PT));
+      assert(DXIL && "Since we are iterating and found a DXIL/ILDB part, "
                      "this should never not have a value");
       NewPart.Program = DXContainerYAML::DXILProgram{
           DXIL->first.getMajorVersion(),
@@ -68,6 +71,15 @@ dumpDXContainer(MemoryBufferRef Source) {
           DXIL->first.Bitcode.Size,
           std::vector<llvm::yaml::Hex8>(
               DXIL->second, DXIL->second + DXIL->first.Bitcode.Size)};
+      break;
+    }
+    case dxbc::PartType::ILDN: {
+      std::optional<mcdxbc::DebugName> DebugName = Container.getDebugName();
+      assert(DebugName && "Since we are iterating and found a ILDN part, this "
+                          "should never not have a value");
+      NewPart.DebugName = DXContainerYAML::DebugName{
+          DebugName->Parameters.Flags, DebugName->Parameters.NameLength,
+          DebugName->Filename.str()};
       break;
     }
     case dxbc::PartType::SFI0: {
@@ -89,10 +101,10 @@ dumpDXContainer(MemoryBufferRef Source) {
         break;
       if (const auto *P =
               std::get_if<dxbc::PSV::v0::RuntimeInfo>(&PSVInfo->getInfo())) {
-        if (!Container.getDXIL())
+        std::optional<uint16_t> ShaderKind = Container.getShaderKind();
+        if (!ShaderKind)
           break;
-        NewPart.Info =
-            DXContainerYAML::PSVInfo(P, Container.getDXIL()->first.ShaderKind);
+        NewPart.Info = DXContainerYAML::PSVInfo(P, *ShaderKind);
       } else if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(
                      &PSVInfo->getInfo()))
         NewPart.Info = DXContainerYAML::PSVInfo(P);
@@ -103,6 +115,20 @@ dumpDXContainer(MemoryBufferRef Source) {
                    std::get_if<dxbc::PSV::v3::RuntimeInfo>(&PSVInfo->getInfo()))
         NewPart.Info = DXContainerYAML::PSVInfo(P, PSVInfo->getStringTable());
       NewPart.Info->ResourceStride = PSVInfo->getResourceStride();
+      NewPart.Info->RuntimeInfoSize = PSVInfo->getSize();
+      if (PSVInfo->getVersion() > 0) {
+        StringRef ST = PSVInfo->getStringTable();
+        size_t Pos = 0;
+        while (Pos < ST.size()) {
+          size_t End = ST.find('\0', Pos);
+          if (End == StringRef::npos)
+            End = ST.size();
+          if (End > Pos)
+            NewPart.Info->StringTable.push_back(
+                {ST.slice(Pos, End), static_cast<uint32_t>(Pos)});
+          Pos = End + 1;
+        }
+      }
       for (auto Res : PSVInfo->getResources())
         NewPart.Info->Resources.push_back(Res);
 

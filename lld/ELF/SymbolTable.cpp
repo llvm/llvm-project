@@ -85,8 +85,8 @@ Symbol *SymbolTable::insert(StringRef name) {
   Symbol *sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
   symVector.push_back(sym);
 
-  // *sym was not initialized by a constructor. Initialize all Symbol fields.
-  memset(static_cast<void *>(sym), 0, sizeof(Symbol));
+  // make<SymbolUnion>() value-initializes the storage, so the Symbol fields
+  // are zero. Set the ones that need a non-zero value.
   sym->setName(name);
   sym->partition = 1;
   sym->versionId = VER_NDX_GLOBAL;

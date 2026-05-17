@@ -55,11 +55,11 @@ class BoUpSLP;
 
 } // end namespace slpvectorizer
 
-struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
+struct SLPVectorizerPass : public OptionalPassInfoMixin<SLPVectorizerPass> {
   using StoreList = SmallVector<StoreInst *, 8>;
-  using StoreListMap = MapVector<Value *, StoreList>;
+  using StoreListMap = SmallMapVector<Value *, StoreList, 8>;
   using GEPList = SmallVector<GetElementPtrInst *, 8>;
-  using GEPListMap = MapVector<Value *, GEPList>;
+  using GEPListMap = SmallMapVector<Value *, GEPList, 8>;
   using InstSetVector = SmallSetVector<Instruction *, 8>;
 
   ScalarEvolution *SE = nullptr;
@@ -142,6 +142,12 @@ private:
   template <typename ItT>
   bool vectorizeCmpInsts(iterator_range<ItT> CmpInsts, BasicBlock *BB,
                          slpvectorizer::BoUpSLP &R);
+
+  /// Tries to vectorize the operand chains of the non-vectorizable
+  /// instructions in \p Insts.
+  template <typename ItT>
+  bool vectorizeNonVectorizableInsts(iterator_range<ItT> Insts, BasicBlock *BB,
+                                     slpvectorizer::BoUpSLP &R);
 
   /// Tries to vectorize constructs started from InsertValueInst or
   /// InsertElementInst instructions.
