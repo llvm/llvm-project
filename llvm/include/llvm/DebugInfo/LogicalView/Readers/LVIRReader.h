@@ -106,7 +106,7 @@ class LVIRReader final : public LVReader {
   // Get the current assigned index file for the given compile unit.
   size_t getFileIndex(LVScopeCompileUnit *CompileUnit) {
     LVIndexFiles::iterator Iter = IndexFiles.find(CompileUnit);
-    return Iter != IndexFiles.end() ? Iter->second: 0;
+    return Iter != IndexFiles.end() ? Iter->second : 0;
   }
 
   // For the given 'DIFile', generate a 1-based index to indicate the

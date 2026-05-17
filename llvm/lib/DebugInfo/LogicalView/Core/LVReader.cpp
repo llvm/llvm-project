@@ -24,7 +24,7 @@ using namespace llvm::logicalview;
 
 // Traverse all the logical elements and print their basic information.
 void LVReader::printCollectedElements(LVScope *Root) {
-  std::function<void(LVScope *Parent)> TraverseScope = [&](LVScope *Parent) {
+  std::function<void(LVScope * Parent)> TraverseScope = [&](LVScope *Parent) {
     // Print the elements.
     auto Print = [&](const auto &Set) {
       if (Set)

@@ -2473,7 +2473,7 @@ void LVIRReader::resolveInlinedLexicalScopes() {
   LLVM_DEBUG({ dbgs() << "\n[resolveInlinedLexicalScopes]\n"; });
   LLVM_DEBUG({ dumpInlinedInfo("Before", /*Full=*/false); });
 
-  std::function<void(LVScope *Scope)> TraverseChildren = [&](LVScope *Parent) {
+  std::function<void(LVScope * Scope)> TraverseChildren = [&](LVScope *Parent) {
     LLVM_DEBUG({
       dbgs() << "\nParent Scope: ";
       Parent->dumpCommon();
@@ -2605,7 +2605,7 @@ void LVIRReader::checkScopes(LVScope *Scope) {
     });
   };
 
-  std::function<void(LVScope *Parent)> Traverse = [&](LVScope *Current) {
+  std::function<void(LVScope * Parent)> Traverse = [&](LVScope *Current) {
     auto Check = [&](auto *Entry) {
       if (Entry)
         if (!Entry->getIsFinalized())
