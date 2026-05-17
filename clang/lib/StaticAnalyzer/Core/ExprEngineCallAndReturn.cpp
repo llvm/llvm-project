@@ -266,7 +266,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   const CFGBlock *PrePurgeBlock =
       isa_and_nonnull<ReturnStmt>(LastSt) ? Blk : &CEBNode->getCFG().getExit();
   // The first half of this process happens in the callee context:
-  setCurrLocationContextAndBlock(CalleeSF, PrePurgeBlock);
+  setCurrStackFrameAndBlock(CalleeSF, PrePurgeBlock);
 
   // Generate a CallEvent /before/ cleaning the State, so that we can get the
   // correct value for 'this' (if necessary).
@@ -374,8 +374,8 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // The second half of this process happens in the caller context. This is an
   // exception to the general rule that the current LocationContext and Block
   // stay the same within a single call to dispatchWorkItem.
-  resetCurrLocationContextAndBlock();
-  setCurrLocationContextAndBlock(CallerSF, CalleeSF->getCallSiteBlock());
+  resetCurrStackFrameAndBlock();
+  setCurrStackFrameAndBlock(CallerSF, CalleeSF->getCallSiteBlock());
   SaveAndRestore CBISave(currStmtIdx, CalleeSF->getIndex());
 
   for (ExplodedNode *N : CleanedNodes) {

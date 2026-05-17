@@ -119,7 +119,7 @@ bool CoreEngine::ExecuteWorkList(const StackFrame *L, unsigned MaxSteps,
     assert(IsNew);
     G.designateAsRoot(Node);
 
-    ExprEng.setCurrLocationContextAndBlock(Node->getStackFrame(), Succ);
+    ExprEng.setCurrStackFrameAndBlock(Node->getStackFrame(), Succ);
 
     ExplodedNodeSet DstBegin;
     ExprEng.processBeginOfFunction(Node, DstBegin, StartLoc);
@@ -219,11 +219,11 @@ void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
   PrettyStackTraceStackFrame CrashInfo(Pred->getStackFrame());
 
   // This work item is not necessarily related to the previous one, so
-  // the old current LocationContext and Block is no longer relevant.
-  // The new current LocationContext and Block should be set soon, but this
+  // the old current StackFrame and Block is no longer relevant.
+  // The new current StackFrame and Block should be set soon, but this
   // guarantees that buggy access before that will trigger loud crashes instead
   // of silently using stale data.
-  ExprEng.resetCurrLocationContextAndBlock();
+  ExprEng.resetCurrStackFrameAndBlock();
 
   // Dispatch on the location type.
   switch (Loc.getKind()) {
@@ -268,7 +268,7 @@ void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
 
 void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   const CFGBlock *Blk = L.getDst();
-  ExprEng.setCurrLocationContextAndBlock(Pred->getStackFrame(), Blk);
+  ExprEng.setCurrStackFrameAndBlock(Pred->getStackFrame(), Blk);
 
   // Mark this block as visited.
   const LocationContext *LC = Pred->getStackFrame();
@@ -356,7 +356,7 @@ void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,
 
   // Process the entrance of the block.
   if (std::optional<CFGElement> E = L.getFirstElement()) {
-    ExprEng.setCurrLocationContextAndBlock(Pred->getStackFrame(), L.getBlock());
+    ExprEng.setCurrStackFrameAndBlock(Pred->getStackFrame(), L.getBlock());
     ExprEng.processCFGElement(*E, Pred, 0);
   } else
     HandleBlockExit(L.getBlock(), Pred);
@@ -364,7 +364,7 @@ void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,
 
 void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
   if (const Stmt *Term = B->getTerminatorStmt()) {
-    ExprEng.setCurrLocationContextAndBlock(Pred->getStackFrame(), B);
+    ExprEng.setCurrStackFrameAndBlock(Pred->getStackFrame(), B);
 
     switch (Term->getStmtClass()) {
       default:
@@ -489,7 +489,7 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
 }
 
 void CoreEngine::HandleCallEnter(const CallEnter &CE, ExplodedNode *Pred) {
-  ExprEng.setCurrLocationContextAndBlock(Pred->getStackFrame(), CE.getEntry());
+  ExprEng.setCurrStackFrameAndBlock(Pred->getStackFrame(), CE.getEntry());
   ExprEng.processCallEnter(CE, Pred);
 }
 
@@ -539,7 +539,7 @@ void CoreEngine::HandlePostStmt(const CFGBlock *B, unsigned StmtIdx,
   if (StmtIdx == B->size())
     HandleBlockExit(B, Pred);
   else {
-    ExprEng.setCurrLocationContextAndBlock(Pred->getStackFrame(), B);
+    ExprEng.setCurrStackFrameAndBlock(Pred->getStackFrame(), B);
     ExprEng.processCFGElement((*B)[StmtIdx], Pred, StmtIdx);
   }
 }

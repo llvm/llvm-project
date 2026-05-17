@@ -237,26 +237,26 @@ public:
   }
 
   // FIXME: Ideally the body of this method should look like
-  //   CurrLocationContext = LC;
+  //   CurrStackFrame = SF;
   //   CurrBlock = B;
-  // where CurrLocationContext and CurrBlock are new member variables that
+  // where CurrStackFrame and CurrBlock are new member variables that
   // fulfill the roles of `currBldrCtx` in a more natural way.
   // This implementation is a temporary measure to allow a gradual transition.
-  void setCurrLocationContextAndBlock(const StackFrame *LC, const CFGBlock *B) {
-    // The current LocationContext and Block is reset at the beginning of
+  void setCurrStackFrameAndBlock(const StackFrame *SF, const CFGBlock *B) {
+    // The current StackFrame and Block is reset at the beginning of
     // dispatchWorkItem. Ideally, this method should be called only once per
     // dispatchWorkItem call (= elementary analysis step); so the following
     // assertion is there to catch accidental repeated calls. If the current
-    // LocationContext and Block needs to change in the middle of a single step
+    // StackFrame and Block needs to change in the middle of a single step
     // (which currently happens only once, in processCallExit), use an explicit
-    // call to resetCurrLocationContextAndBlock.
+    // call to resetCurrStackFrameAndBlock.
     assert(!currBldrCtx && !OwnedCurrBldrCtx &&
-           "The current LocationContext and Block is already set");
-    OwnedCurrBldrCtx.emplace(Engine, B, LC);
+           "The current StackFrame and Block is already set");
+    OwnedCurrBldrCtx.emplace(Engine, B, SF);
     currBldrCtx = &*OwnedCurrBldrCtx;
   }
 
-  void resetCurrLocationContextAndBlock() {
+  void resetCurrStackFrameAndBlock() {
     currBldrCtx = nullptr;
     OwnedCurrBldrCtx = std::nullopt;
   }
