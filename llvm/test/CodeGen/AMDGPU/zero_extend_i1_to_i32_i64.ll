@@ -2026,3 +2026,27 @@ entry:
   store i64 %tmp2, ptr addrspace(1) %out
   ret void
 }
+
+define amdgpu_ps i32 @zext_i1_to_i32_uniform_amdgpu_ps_abi(i32 inreg %a, i32 inreg %b) #0 {
+; GFX950-LABEL: zext_i1_to_i32_uniform_amdgpu_ps_abi:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    s_cmp_eq_u32 s0, s1
+; GFX950-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX950-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX950-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: zext_i1_to_i32_uniform_amdgpu_ps_abi:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_cmp_eq_u32 s0, s1
+; GFX1250-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX1250-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX1250-NEXT:    ; return to shader part epilog
+entry:
+  %cmp = icmp eq i32 %a, %b
+  %tmp2 = zext i1 %cmp to i32
+  ret i32 %tmp2
+}
