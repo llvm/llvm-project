@@ -535,7 +535,6 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
   ctx.arg.emitRelocs = args.hasArg(OPT_emit_relocs);
-  ctx.arg.experimentalPic = args.hasArg(OPT_experimental_pic);
   ctx.arg.entry = getEntry(args);
   ctx.arg.exportAll = args.hasArg(OPT_export_all);
   ctx.arg.exportTable = args.hasArg(OPT_export_table);
@@ -793,28 +792,6 @@ static void checkOptions(opt::InputArgList &args) {
       error("-r and --shared-memory may not be used together");
     if (ctx.arg.globalBase)
       error("-r and --global-base may not by used together");
-  }
-
-  // To begin to prepare for Module Linking-style shared libraries, start
-  // warning about uses of `-shared` and related flags outside of Experimental
-  // mode, to give anyone using them a heads-up that they will be changing.
-  //
-  // Also, warn about flags which request explicit exports.
-  if (!ctx.arg.experimentalPic) {
-    // -shared will change meaning when Module Linking is implemented.
-    if (ctx.arg.shared) {
-      warn("creating shared libraries, with -shared, is not yet stable");
-    }
-
-    // -pie will change meaning when Module Linking is implemented.
-    if (ctx.arg.pie) {
-      warn("creating PIEs, with -pie, is not yet stable");
-    }
-
-    if (ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
-      warn("dynamic imports are not yet stable "
-           "(--unresolved-symbols=import-dynamic)");
-    }
   }
 
   if (ctx.arg.bsymbolic && !ctx.arg.shared) {

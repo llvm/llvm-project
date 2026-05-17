@@ -2019,7 +2019,15 @@ bool LoopInterchangeTransform::transform(
   // instructions outside the loop nest.
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
+
   if (InnerLoopPreHeader != OuterLoopHeader) {
+    // Eliminate PHIs in the inner-loop preheader.
+    for (PHINode &P : make_early_inc_range(InnerLoopPreHeader->phis())) {
+      assert(P.getNumIncomingValues() == 1 &&
+             "Expected single-incoming PHIs in inner loop preheader");
+      P.replaceAllUsesWith(P.getIncomingValue(0));
+      P.eraseFromParent();
+    }
     for (Instruction &I :
          make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
                                          std::prev(InnerLoopPreHeader->end()))))

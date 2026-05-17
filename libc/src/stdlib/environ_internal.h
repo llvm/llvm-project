@@ -88,13 +88,20 @@ class EnvironmentManager {
   // success, false on allocation failure.
   bool ensure_capacity(size_t needed);
 
+  // Result of a successful environment storage allocation.
+  struct AllocResult {
+    char **storage;
+    EnvStringOwnership *ownership;
+  };
+
   // Helper: allocate new storage and ownership arrays of the given capacity,
   // copy the first `copy_count` entries from old_storage/old_ownership, and
   // initialize the remaining ownership slots to default (not-owned).
-  // Returns false on allocation failure.
-  bool alloc_and_copy(size_t new_capacity, char **old_storage,
-                      EnvStringOwnership *old_ownership, size_t copy_count,
-                      char **&out_storage, EnvStringOwnership *&out_ownership);
+  // Returns nullopt on allocation failure; the old arrays are untouched.
+  cpp::optional<AllocResult> alloc_and_copy(size_t new_capacity,
+                                            char **old_storage,
+                                            EnvStringOwnership *old_ownership,
+                                            size_t copy_count);
 
 public:
   // Get the singleton instance of the environment manager.
@@ -115,6 +122,13 @@ public:
   // Look up a variable by name. Returns a pointer to the value string
   // (after the '='), or nullptr if not found.
   char *get(cpp::string_view name);
+
+  // Set or update an environment variable. Builds a "name=value" string,
+  // manages ownership, and updates the environ array. If `overwrite` is
+  // false and the variable already exists, does nothing and returns 0.
+  // Returns 0 on success, -1 on allocation failure (caller should set
+  // errno to ENOMEM).
+  int set(cpp::string_view name, cpp::string_view value, bool overwrite);
 };
 
 } // namespace internal

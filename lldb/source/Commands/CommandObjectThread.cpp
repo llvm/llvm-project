@@ -782,6 +782,7 @@ protected:
 
       if (!error.Success()) {
         result.AppendMessage(error.AsCString());
+        result.SetStatus(eReturnStatusFailed);
         return;
       }
 
@@ -1067,7 +1068,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = &GetTarget();
+    Target *target = GetTarget();
 
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {

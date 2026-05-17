@@ -1333,7 +1333,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     // VIMAGE insts other than BVH never use vaddr4.
     IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
             Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA ||
-            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12;
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12 ||
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx13;
     if (!IsNSA) {
       if (!IsVSample && AddrSize > 12)
         AddrSize = 16;
@@ -1681,7 +1682,9 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-    Val <<= 32;
+    UseLit = AMDGPU::isInlinableLiteral64(Val << 32, HasInv2Pi);
+    if (!UseLit)
+      Val <<= 32;
     break;
   case AMDGPU::OPERAND_REG_IMM_I64:
   case AMDGPU::OPERAND_REG_IMM_U64:
@@ -1714,6 +1717,10 @@ MCOperand AMDGPUDisassembler::decodeLiteral64Constant() const {
   }
 
   bool UseLit64 = Hi_32(Literal) == 0;
+
+  UseLit64 |= AMDGPU::isInlinableLiteral64(
+      Literal, STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm));
+
   return UseLit64 ? MCOperand::createExpr(AMDGPUMCExpr::createLit(
                         LitModifier::Lit64, Literal, getContext()))
                   : MCOperand::createImm(Literal);
@@ -2683,7 +2690,7 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   StringRef Indent = "\t";
 
   assert(Bytes.size() == 64);
-  DataExtractor DE(Bytes, /*IsLittleEndian=*/true, /*AddressSize=*/8);
+  DataExtractor DE(Bytes, /*IsLittleEndian=*/true);
 
   switch (Cursor.tell()) {
   case amdhsa::GROUP_SEGMENT_FIXED_SIZE_OFFSET:

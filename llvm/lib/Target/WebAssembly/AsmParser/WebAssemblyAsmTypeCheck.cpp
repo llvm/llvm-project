@@ -629,6 +629,28 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     return Error;
   }
 
+  if (Name == "select") {
+    // Typed select pops an i32 condition and two values of each declared
+    // type, then pushes the declared types back. The result type list lives
+    // in the MCInst operands as a count followed by that many valtype bytes.
+    bool Error = popType(ErrorLoc, wasm::ValType::I32);
+    if (Inst.getNumOperands() == 0)
+      return typeError(ErrorLoc, "select missing type-list operand");
+    uint64_t Count = uint64_t(Inst.getOperand(0).getImm());
+    if (Count > uint64_t(Inst.getNumOperands() - 1))
+      return typeError(ErrorLoc,
+                       "select type-list count exceeds operand count");
+    SmallVector<wasm::ValType, 1> Types;
+    Types.reserve(Count);
+    for (uint64_t I = 0; I < Count; ++I)
+      Types.push_back(
+          static_cast<wasm::ValType>(Inst.getOperand(1 + I).getImm()));
+    Error |= popTypes(ErrorLoc, Types);
+    Error |= popTypes(ErrorLoc, Types);
+    pushTypes(Types);
+    return Error;
+  }
+
   if (Name == "call" || Name == "return_call") {
     bool Error = false;
     const wasm::WasmSignature *Sig = nullptr;

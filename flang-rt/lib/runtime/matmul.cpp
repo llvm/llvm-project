@@ -235,11 +235,10 @@ inline RT_API_ATTRS void VectorTimesMatrixHelper(
 }
 
 // Implements an instance of MATMUL for given argument types.
-template <bool IS_ALLOCATING, TypeCategory RCAT, int RKIND, typename XT,
-    typename YT>
-static inline RT_API_ATTRS void DoMatmul(
-    std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor> &result,
-    const Descriptor &x, const Descriptor &y, Terminator &terminator) {
+template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
+static inline RT_API_ATTRS void DoMatmul(Descriptor &result,
+    const Descriptor &x, const Descriptor &y, Terminator &terminator,
+    bool isAllocating) {
   int xRank{x.rank()};
   int yRank{y.rank()};
   int resRank{xRank + yRank - 2};
@@ -249,7 +248,7 @@ static inline RT_API_ATTRS void DoMatmul(
   SubscriptValue extent[2]{
       xRank == 2 ? x.GetDimension(0).Extent() : y.GetDimension(1).Extent(),
       resRank == 2 ? y.GetDimension(1).Extent() : 0};
-  if constexpr (IS_ALLOCATING) {
+  if (isAllocating) {
     result.Establish(
         RCAT, RKIND, nullptr, resRank, extent, CFI_attribute_allocatable);
     for (int j{0}; j < resRank; ++j) {
@@ -294,7 +293,7 @@ static inline RT_API_ATTRS void DoMatmul(
           RKIND>;
   if constexpr (RCAT != TypeCategory::Logical) {
     if (x.IsContiguous(1) && y.IsContiguous(1) &&
-        (IS_ALLOCATING || result.IsContiguous())) {
+        (isAllocating || result.IsContiguous())) {
       // Contiguous numeric matrices (maybe with columns
       // separated by a stride).
       Fortran::common::optional<std::size_t> xColumnByteStride;
@@ -421,14 +420,12 @@ static inline RT_API_ATTRS void DoMatmul(
   }
 }
 
-template <bool IS_ALLOCATING, TypeCategory XCAT, int XKIND, TypeCategory YCAT,
-    int YKIND>
+template <TypeCategory XCAT, int XKIND, TypeCategory YCAT, int YKIND>
 struct MatmulHelper {
   using ResultTy = Fortran::common::optional<std::pair<TypeCategory, int>>;
-  using ResultDescriptor =
-      std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor>;
-  RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
-      const Descriptor &y, const char *sourceFile, int line) const {
+  RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
+      const Descriptor &y, const char *sourceFile, int line,
+      bool isAllocating) const {
     Terminator terminator{sourceFile, line};
     auto xCatKind{x.type().GetCategoryAndKind()};
     auto yCatKind{y.type().GetCategoryAndKind()};
@@ -442,9 +439,9 @@ struct MatmulHelper {
                         yCatKind->first == TypeCategory::Unsigned))));
     if constexpr (constexpr ResultTy resultType{
                       GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
-      return DoMatmul<IS_ALLOCATING, resultType->first, resultType->second,
+      return DoMatmul<resultType->first, resultType->second,
           CppTypeFor<XCAT, XKIND>, CppTypeFor<YCAT, YKIND>>(
-          result, x, y, terminator);
+          result, x, y, terminator, isAllocating);
     }
     terminator.Crash("MATMUL: bad operand types (%d(%d), %d(%d))",
         static_cast<int>(XCAT), XKIND, static_cast<int>(YCAT), YKIND);
@@ -460,16 +457,16 @@ RT_EXT_API_GROUP_BEGIN
   void RTDEF(Matmul##XCAT##XKIND##YCAT##YKIND)(Descriptor & result, \
       const Descriptor &x, const Descriptor &y, const char *sourceFile, \
       int line) { \
-    MatmulHelper<true, TypeCategory::XCAT, XKIND, TypeCategory::YCAT, \
-        YKIND>{}(result, x, y, sourceFile, line); \
+    MatmulHelper<TypeCategory::XCAT, XKIND, TypeCategory::YCAT, YKIND>{}( \
+        result, x, y, sourceFile, line, true); \
   }
 
 #define MATMUL_DIRECT_INSTANCE(XCAT, XKIND, YCAT, YKIND) \
   void RTDEF(MatmulDirect##XCAT##XKIND##YCAT##YKIND)(Descriptor & result, \
       const Descriptor &x, const Descriptor &y, const char *sourceFile, \
       int line) { \
-    MatmulHelper<false, TypeCategory::XCAT, XKIND, TypeCategory::YCAT, \
-        YKIND>{}(result, x, y, sourceFile, line); \
+    MatmulHelper<TypeCategory::XCAT, XKIND, TypeCategory::YCAT, YKIND>{}( \
+        result, x, y, sourceFile, line, false); \
   }
 
 #define MATMUL_FORCE_ALL_TYPES 0
