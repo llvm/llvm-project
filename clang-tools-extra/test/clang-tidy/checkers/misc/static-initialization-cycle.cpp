@@ -120,6 +120,14 @@ int f1() {
 int S::A = f1();
 }
 
+namespace catch_all_handler {
+void f() {
+  try {
+  } catch (...) {
+  }
+}
+} // catch_all_handler
+
 namespace recursive_calls {
 int f2();
 int f1() {

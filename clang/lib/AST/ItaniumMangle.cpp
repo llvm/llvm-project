@@ -243,42 +243,34 @@ class CXXNameMangler {
   unsigned SeqID = 0;
 
   class FunctionTypeDepthState {
-    unsigned Bits = 0;
-
-    enum { InResultTypeMask = 1 };
+    unsigned Depth : 31;
+    unsigned InFunctionDeclSuffix : 1;
 
   public:
-    FunctionTypeDepthState() = default;
+    FunctionTypeDepthState() : Depth(0), InFunctionDeclSuffix(0) {}
 
-    /// The number of function types we're inside.
-    unsigned getDepth() const {
-      return Bits >> 1;
-    }
-
-    /// True if we're in the return type of the innermost function type.
-    bool isInResultType() const {
-      return Bits & InResultTypeMask;
+    unsigned getNestingDepth(unsigned ParmDepth) const {
+      // ParmDepth does not include the declaring function prototype.
+      // FunctionTypeDepth does account for that.
+      assert(ParmDepth < Depth &&
+             "ParmVarDecl is not visible in current parameter environment");
+      return Depth - ParmDepth - InFunctionDeclSuffix;
     }
 
     FunctionTypeDepthState push() {
-      FunctionTypeDepthState tmp = *this;
-      Bits = (Bits & ~InResultTypeMask) + 2;
-      return tmp;
+      FunctionTypeDepthState Saved = *this;
+      ++Depth;
+      InFunctionDeclSuffix = 0;
+      return Saved;
     }
 
-    void enterResultType() {
-      Bits |= InResultTypeMask;
+    void pop(FunctionTypeDepthState Saved) {
+      assert(Depth == Saved.Depth + 1 && "unbalanced function type depth pop");
+      *this = Saved;
     }
 
-    void leaveResultType() {
-      Bits &= ~InResultTypeMask;
-    }
-
-    void pop(FunctionTypeDepthState saved) {
-      assert(getDepth() == saved.getDepth() + 1);
-      Bits = saved.Bits;
-    }
-
+    void enterFunctionDeclSuffix() { InFunctionDeclSuffix = 1; }
+    void leaveFunctionDeclSuffix() { InFunctionDeclSuffix = 0; }
   } FunctionTypeDepth;
 
   // abi_tag is a gcc attribute, taking one or more strings called "tags".
@@ -593,6 +585,7 @@ private:
   void mangleInitListElements(const InitListExpr *InitList);
   void mangleRequirement(SourceLocation RequiresExprLoc,
                          const concepts::Requirement *Req);
+  void mangleReferenceToPack(const NamedDecl *ND);
   void mangleExpression(const Expr *E, unsigned Arity = UnknownArity,
                         bool AsTemplateArg = false);
   void mangleCXXCtorType(CXXCtorType T, const CXXRecordDecl *InheritedFrom);
@@ -3754,9 +3747,9 @@ void CXXNameMangler::mangleType(const FunctionNoProtoType *T) {
 
   FunctionTypeDepthState saved = FunctionTypeDepth.push();
 
-  FunctionTypeDepth.enterResultType();
+  FunctionTypeDepth.enterFunctionDeclSuffix();
   mangleType(T->getReturnType());
-  FunctionTypeDepth.leaveResultType();
+  FunctionTypeDepth.leaveFunctionDeclSuffix();
 
   FunctionTypeDepth.pop(saved);
   Out << 'E';
@@ -3771,7 +3764,7 @@ void CXXNameMangler::mangleBareFunctionType(const FunctionProtoType *Proto,
 
   // <bare-function-type> ::= <signature type>+
   if (MangleReturnType) {
-    FunctionTypeDepth.enterResultType();
+    FunctionTypeDepth.enterFunctionDeclSuffix();
 
     // Mangle ns_returns_retained as an order-sensitive qualifier here.
     if (Proto->getExtInfo().getProducesResult() && FD == nullptr)
@@ -3786,7 +3779,7 @@ void CXXNameMangler::mangleBareFunctionType(const FunctionProtoType *Proto,
     }
     mangleType(ReturnTy);
 
-    FunctionTypeDepth.leaveResultType();
+    FunctionTypeDepth.leaveFunctionDeclSuffix();
   }
 
   if (Proto->getNumParams() == 0 && !Proto->isVariadic()) {
@@ -3823,7 +3816,7 @@ void CXXNameMangler::mangleBareFunctionType(const FunctionProtoType *Proto,
   }
 
   if (FD) {
-    FunctionTypeDepth.enterResultType();
+    FunctionTypeDepth.enterFunctionDeclSuffix();
     mangleRequiresClause(FD->getTrailingRequiresClause().ConstraintExpr);
   }
 
@@ -4430,10 +4423,10 @@ void CXXNameMangler::mangleType(const PackExpansionType *T) {
 }
 
 void CXXNameMangler::mangleType(const PackIndexingType *T) {
-  if (!T->hasSelectedType())
-    mangleType(T->getPattern());
-  else
-    mangleType(T->getSelectedType());
+  // <type>  ::= Dy <type> <expression>  # pack indexing type (C++23)
+  Out << "Dy";
+  mangleType(T->getPattern());
+  mangleExpression(T->getIndexExpr());
 }
 
 void CXXNameMangler::mangleType(const ObjCInterfaceType *T) {
@@ -4899,6 +4892,7 @@ void CXXNameMangler::mangleRequirement(SourceLocation RequiresExprLoc,
 
 void CXXNameMangler::mangleExpression(const Expr *E, unsigned Arity,
                                       bool AsTemplateArg) {
+  // clang-format off
   // <expression> ::= <unary operator-name> <expression>
   //              ::= <binary operator-name> <expression> <expression>
   //              ::= <trinary operator-name> <expression> <expression> <expression>
@@ -4918,6 +4912,8 @@ void CXXNameMangler::mangleExpression(const Expr *E, unsigned Arity,
   //              ::= ds <expression> <expression>                   # expr.*expr
   //              ::= sZ <template-param>                            # size of a parameter pack
   //              ::= sZ <function-param>    # size of a function parameter pack
+  //              ::= sy <template-param> <expression>               # pack indexing expression
+  //              ::= sy <function-param> <expression>               # pack indexing expression
   //              ::= u <source-name> <template-arg>* E # vendor extended expression
   //              ::= <expr-primary>
   // <expr-primary> ::= L <type> <value number> E    # integer literal
@@ -4927,6 +4923,7 @@ void CXXNameMangler::mangleExpression(const Expr *E, unsigned Arity,
   //                ::= L <pointer type> 0 E         # null pointer template argument
   //                ::= L <type> <real-part float> _ <imag-part float> E    # complex floating point literal (C99); not used by clang
   //                ::= L <mangled-name> E           # external name
+  // clang-format on
   QualType ImplicitlyConvertedToType;
 
   // A top-level expression that's not <expr-primary> needs to be wrapped in
@@ -4997,7 +4994,6 @@ recurse:
   case Expr::OMPIteratorExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
   case Expr::CXXParenListInitExprClass:
-  case Expr::PackIndexingExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:
@@ -5718,7 +5714,7 @@ recurse:
       Out << '_';
 
       // The rest of the mangling is in the immediate scope of the parameters.
-      FunctionTypeDepth.enterResultType();
+      FunctionTypeDepth.enterFunctionDeclSuffix();
       for (const concepts::Requirement *Req : RE->getRequirements())
         mangleRequirement(RE->getExprLoc(), Req);
       FunctionTypeDepth.pop(saved);
@@ -5891,17 +5887,7 @@ recurse:
     }
 
     Out << "sZ";
-    const NamedDecl *Pack = SPE->getPack();
-    if (const TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(Pack))
-      mangleTemplateParameter(TTP->getDepth(), TTP->getIndex());
-    else if (const NonTypeTemplateParmDecl *NTTP
-                = dyn_cast<NonTypeTemplateParmDecl>(Pack))
-      mangleTemplateParameter(NTTP->getDepth(), NTTP->getIndex());
-    else if (const TemplateTemplateParmDecl *TempTP
-                                    = dyn_cast<TemplateTemplateParmDecl>(Pack))
-      mangleTemplateParameter(TempTP->getDepth(), TempTP->getIndex());
-    else
-      mangleFunctionParam(cast<ParmVarDecl>(Pack));
+    mangleReferenceToPack(SPE->getPack());
     break;
   }
 
@@ -5928,6 +5914,15 @@ recurse:
       mangleExpression(FE->getLHS());
     if (FE->getRHS())
       mangleExpression(FE->getRHS());
+    break;
+  }
+
+  case Expr::PackIndexingExprClass: {
+    auto *PE = cast<PackIndexingExpr>(E);
+    NotPrimaryExpr();
+    Out << "sy";
+    mangleReferenceToPack(PE->getPackDecl());
+    mangleExpression(PE->getIndexExpr());
     break;
   }
 
@@ -6015,14 +6010,8 @@ void CXXNameMangler::mangleFunctionParam(const ParmVarDecl *parm) {
   unsigned parmIndex = parm->getFunctionScopeIndex();
 
   // Compute 'L'.
-  // parmDepth does not include the declaring function prototype.
-  // FunctionTypeDepth does account for that.
-  assert(parmDepth < FunctionTypeDepth.getDepth());
-  unsigned nestingDepth = FunctionTypeDepth.getDepth() - parmDepth;
-  if (FunctionTypeDepth.isInResultType())
-    nestingDepth--;
-
-  if (nestingDepth == 0) {
+  if (unsigned nestingDepth = FunctionTypeDepth.getNestingDepth(parmDepth);
+      nestingDepth == 0) {
     Out << "fp";
   } else {
     Out << "fL" << (nestingDepth - 1) << 'p';
@@ -6110,6 +6099,17 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   case Dtor_VectorDeleting:
     llvm_unreachable("Itanium ABI does not use vector deleting dtors");
   }
+}
+
+void CXXNameMangler::mangleReferenceToPack(const NamedDecl *Pack) {
+  if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Pack))
+    mangleTemplateParameter(TTP->getDepth(), TTP->getIndex());
+  else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Pack))
+    mangleTemplateParameter(NTTP->getDepth(), NTTP->getIndex());
+  else if (const auto *TempTP = dyn_cast<TemplateTemplateParmDecl>(Pack))
+    mangleTemplateParameter(TempTP->getDepth(), TempTP->getIndex());
+  else
+    mangleFunctionParam(cast<ParmVarDecl>(Pack));
 }
 
 // Helper to provide ancillary information on a template used to mangle its
@@ -7256,9 +7256,9 @@ CXXNameMangler::makeFunctionReturnTypeTags(const FunctionDecl *FD) {
   const FunctionProtoType *Proto =
       cast<FunctionProtoType>(FD->getType()->getAs<FunctionType>());
   FunctionTypeDepthState saved = TrackReturnTypeTags.FunctionTypeDepth.push();
-  TrackReturnTypeTags.FunctionTypeDepth.enterResultType();
+  TrackReturnTypeTags.FunctionTypeDepth.enterFunctionDeclSuffix();
   TrackReturnTypeTags.mangleType(Proto->getReturnType());
-  TrackReturnTypeTags.FunctionTypeDepth.leaveResultType();
+  TrackReturnTypeTags.FunctionTypeDepth.leaveFunctionDeclSuffix();
   TrackReturnTypeTags.FunctionTypeDepth.pop(saved);
 
   return TrackReturnTypeTags.AbiTagsRoot.getSortedUniqueUsedAbiTags();
