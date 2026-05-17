@@ -160,6 +160,26 @@ define void @store_atomic_f64_flat(double %val, ptr %ptr) {
   ret void
 }
 
+define void @store_v2f32_global_align4_agent(<2 x float> %val, ptr addrspace(1) %ptr) {
+; CHECK-LABEL: define void @store_v2f32_global_align4_agent(
+; CHECK-SAME: <2 x float> [[VAL:%.*]], ptr addrspace(1) [[PTR:%.*]]) {
+; CHECK-NEXT:    store atomic <2 x float> [[VAL]], ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic <2 x float> %val, ptr addrspace(1) %ptr syncscope("agent") monotonic, align 4
+  ret void
+}
+
+define void @store_v2f32_flat_align4_agent(<2 x float> %val, ptr addrspace(0) %ptr) {
+; CHECK-LABEL: define void @store_v2f32_flat_align4_agent(
+; CHECK-SAME: <2 x float> [[VAL:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    store atomic <2 x float> [[VAL]], ptr [[PTR]] syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic <2 x float> %val, ptr addrspace(0) %ptr syncscope("agent") monotonic, align 4
+  ret void
+}
+
 !0 = !{}
 ;.
 ; CHECK: [[META0]] = !{}

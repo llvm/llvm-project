@@ -580,6 +580,8 @@ public:
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  bool supportsUnalignedAtomicLoadInIR(const LoadInst *LI) const override;
+  bool supportsUnalignedAtomicStoreInIR(const StoreInst *SI) const override;
   AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 

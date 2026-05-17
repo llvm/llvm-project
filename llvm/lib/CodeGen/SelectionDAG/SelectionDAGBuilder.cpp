@@ -5321,7 +5321,8 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   EVT MemVT = TLI.getMemValueType(DAG.getDataLayout(), I.getType());
 
   if (!TLI.supportsUnalignedAtomics() &&
-      I.getAlign().value() < MemVT.getSizeInBits() / 8)
+      I.getAlign().value() < MemVT.getSizeInBits() / 8 &&
+      !TLI.supportsUnalignedAtomicLoadInIR(&I))
     report_fatal_error("Cannot generate unaligned atomic load");
 
   auto Flags = TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
@@ -5358,7 +5359,8 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
       TLI.getMemValueType(DAG.getDataLayout(), I.getValueOperand()->getType());
 
   if (!TLI.supportsUnalignedAtomics() &&
-      I.getAlign().value() < MemVT.getSizeInBits() / 8)
+      I.getAlign().value() < MemVT.getSizeInBits() / 8 &&
+      !TLI.supportsUnalignedAtomicStoreInIR(&I))
     report_fatal_error("Cannot generate unaligned atomic store");
 
   auto Flags = TLI.getStoreMemOperandFlags(I, DAG.getDataLayout());
