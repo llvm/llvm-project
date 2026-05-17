@@ -276,10 +276,11 @@ static uint32_t getLit64Encoding(const MCInstrDesc &Desc, uint64_t Val,
 
   // For integer operands, determine if we need 64-bit literal encoding based
   // on whether the value fits in a sign-extended or zero-extended 32-bit
-  // literal.
+  // literal. Short-circuit if 64-bit literals are not available.
   bool Needs64BitLiteral =
-      IsSigned ? !isInt<32>(static_cast<int64_t>(Val)) : !isUInt<32>(Val);
-  return CanUse64BitLiterals && Needs64BitLiteral ? 254 : 255;
+      CanUse64BitLiterals &&
+      (IsSigned ? !isInt<32>(static_cast<int64_t>(Val)) : !isUInt<32>(Val));
+  return Needs64BitLiteral ? 254 : 255;
 }
 
 std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
@@ -295,7 +296,8 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
           OpInfo.OperandType == AMDGPU::OPERAND_KIMM64)
         return Imm;
       if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-          AMDGPU::getOperandSize(OpInfo) == 8)
+          AMDGPU::getOperandSize(OpInfo) == 8 &&
+          AMDGPU::getExprKind(MO.getExpr()) != AMDGPUMCExpr::AGVK_Lit)
         return 254;
       return 255;
     }
