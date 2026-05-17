@@ -325,16 +325,34 @@ void HipBinBase::readEnvVariables() {
 
 // constructs the HIP path
 void HipBinBase::constructHipPath() {
-  // we need to use --hip-path option
+  // The --hip-path argument option takes precedence over all other settings.
   string hip_path_name = gethip_pathOption();
   if (!hip_path_name.empty()) {
     variables_.hipPathEnv_ = hip_path_name;
-  } else if (envVariables_.hipPathEnv_.empty()) {
-    fs::path full_path(hipcc::utils::getSelfPath());
-    variables_.hipPathEnv_ = (full_path.parent_path()).string();
-  } else {
-    variables_.hipPathEnv_ = envVariables_.hipPathEnv_;
+    return;
   }
+
+  fs::path full_path(hipcc::utils::getSelfPath());
+  fs::path parent_path = full_path.parent_path();
+
+  // Next, check for `../lib/llvm/bin/`, the standard ROCm install structure.
+  fs::path llvm_path = parent_path / "lib" / "llvm" / "bin";
+  if (fs::exists(llvm_path)) {
+    variables_.hipPathEnv_ = parent_path.string();
+    return;
+  }
+
+  // Otherwise, check the HIP_PATH environment variable from the HIP SDK.
+  // Normally an environment variable setting could take precedence over an
+  // implicit path, but this environment variable is set by system-wide installs
+  // and self-contained builds/installs should not be reading that global state.
+  if (!envVariables_.hipPathEnv_.empty()) {
+    variables_.hipPathEnv_ = envVariables_.hipPathEnv_;
+    return;
+  }
+
+  // Finally, fallback to the parent path (the standard ROCm install structure).
+  variables_.hipPathEnv_ = parent_path.string();
 }
 
 
