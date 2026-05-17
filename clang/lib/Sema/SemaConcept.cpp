@@ -2007,16 +2007,18 @@ void Sema::DiagnoseUnsatisfiedConstraint(
 }
 
 void Sema::DiagnoseUnsatisfiedConstraint(
-    const ConceptSpecializationExpr *ConstraintExpr, bool First) {
-
-  const ASTConstraintSatisfaction &Satisfaction =
-      ConstraintExpr->getSatisfaction();
+    const ASTConstraintSatisfaction &Satisfaction, SourceLocation Loc,
+    bool First) {
 
   assert(!Satisfaction.IsSatisfied &&
          "Attempted to diagnose a satisfied constraint");
+  ::DiagnoseUnsatisfiedConstraint(*this, Satisfaction.records(), Loc, First);
+}
 
-  ::DiagnoseUnsatisfiedConstraint(*this, Satisfaction.records(),
-                                  ConstraintExpr->getBeginLoc(), First);
+void Sema::DiagnoseUnsatisfiedConstraint(
+    const ConceptSpecializationExpr *ConstraintExpr, bool First) {
+  DiagnoseUnsatisfiedConstraint(ConstraintExpr->getSatisfaction(),
+                                ConstraintExpr->getBeginLoc(), First);
 }
 
 namespace {

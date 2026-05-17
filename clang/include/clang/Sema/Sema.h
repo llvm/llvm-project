@@ -15075,6 +15075,9 @@ public:
   void DiagnoseUnsatisfiedConstraint(const ConstraintSatisfaction &Satisfaction,
                                      SourceLocation Loc = {},
                                      bool First = true);
+  void
+  DiagnoseUnsatisfiedConstraint(const ASTConstraintSatisfaction &Satisfaction,
+                                SourceLocation Loc = {}, bool First = true);
 
   /// \brief Emit diagnostics explaining why a constraint expression was deemed
   /// unsatisfied.

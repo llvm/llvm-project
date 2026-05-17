@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CheckExprLifetime.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
@@ -741,7 +742,7 @@ namespace {
   // unsatisfied constraints.
   struct CNSInfo {
     TemplateArgumentList *TemplateArgs;
-    ConstraintSatisfaction Satisfaction;
+    const ASTConstraintSatisfaction *Satisfaction;
   };
 }
 
@@ -822,9 +823,10 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
 
   case TemplateDeductionResult::ConstraintsNotSatisfied: {
-    CNSInfo *Saved = new (Context) CNSInfo;
-    Saved->TemplateArgs = Info.takeSugared();
-    Saved->Satisfaction = std::move(Info.AssociatedConstraintsSatisfaction);
+    auto *Saved = new (Context)
+        CNSInfo{Info.takeSugared(),
+                ASTConstraintSatisfaction::Create(
+                    Context, Info.AssociatedConstraintsSatisfaction)};
     Result.Data = Saved;
     break;
   }
@@ -872,7 +874,8 @@ void DeductionFailureInfo::Destroy() {
 
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     // FIXME: Destroy the template argument list?
-    static_cast<CNSInfo *>(Data)->Satisfaction.~ConstraintSatisfaction();
+    // CNSInfo and ASTConstraintSatisfaction are ASTContext-allocated and do
+    // not own non-arena resources.
     Data = nullptr;
     if (PartialDiagnosticAt *Diag = getSFINAEDiagnostic()) {
       Diag->~PartialDiagnosticAt();
@@ -11386,7 +11389,7 @@ bool OverloadCandidate::NotValidBecauseConstraintExprHasError() const {
          static_cast<TemplateDeductionResult>(DeductionFailure.Result) ==
              TemplateDeductionResult::ConstraintsNotSatisfied &&
          static_cast<CNSInfo *>(DeductionFailure.Data)
-             ->Satisfaction.ContainsErrors;
+             ->Satisfaction->ContainsErrors;
 }
 
 void OverloadCandidateSet::AddDeferredTemplateCandidate(
@@ -12523,7 +12526,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
         << TemplateArgString;
 
     S.DiagnoseUnsatisfiedConstraint(
-        static_cast<CNSInfo*>(DeductionFailure.Data)->Satisfaction);
+        *static_cast<CNSInfo *>(DeductionFailure.Data)->Satisfaction);
     return;
   }
   case TemplateDeductionResult::TooManyArguments:
