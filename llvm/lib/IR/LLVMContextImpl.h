@@ -1760,12 +1760,6 @@ public:
   DenseMap<unsigned, PointerType *> PointerTypes;
   DenseMap<std::pair<Type *, unsigned>, TypedPointerType *> ASTypedPointerTypes;
 
-  /// ValueHandles - This map keeps track of all of the value handles that are
-  /// watching a Value*.  The Value::HasValueHandle bit is used to know
-  /// whether or not a value has an entry in this map.
-  using ValueHandlesTy = DenseMap<Value *, ValueHandleBase *>;
-  ValueHandlesTy ValueHandles;
-
   /// CustomMDKindNames - Map to hold the metadata string to ID mapping.
   StringMap<unsigned> CustomMDKindNames;
 
