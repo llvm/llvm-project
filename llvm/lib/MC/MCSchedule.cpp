@@ -23,8 +23,11 @@
 
 using namespace llvm;
 
+static constexpr float DefaultReservationStationScaleFactor = 1.0f;
+
 static cl::opt<float> ReservationStationScaleFactor(
-    "sched-model-reservation-station-scale-factor", cl::Hidden, cl::init(1.0f),
+    "sched-model-reservation-station-scale-factor", cl::Hidden,
+    cl::init(DefaultReservationStationScaleFactor),
     cl::desc("Scale the buffer size of all reservation stations by a positive "
              "factor. Buffer sizes of -1/0/1 (unlimited/unbuffered/in-order) "
              "are preserved. Likewise, if the scaled result is <= 1, the "
@@ -224,12 +227,17 @@ unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
   return 0;
 }
 
+/// Return the buffer size of the resource. If a positive scale factor
+/// is provided and the original buffer size is > 1, the size is scaled
+/// accordingly.
 int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
   int BufferSize = getProcResource(ProcResourceIdx)->BufferSize;
-  APFloat Scale(ReservationStationScaleFactor);
 
-  // Skip scaling when factor is 1 (the default)
-  if (Scale.isExactlyValue(1.0))
+  // Skip scaling when factor is 1 (the default).
+  // Use native float comparison to avoid compile-time overhead on the hot fast
+  // path, as 1.0f is exactly representable
+  if (LLVM_LIKELY(ReservationStationScaleFactor ==
+                  DefaultReservationStationScaleFactor))
     return BufferSize;
 
   // Skip scaling for special buffer sizes (-1,0,1)
@@ -237,6 +245,7 @@ int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
     return BufferSize;
 
   // Skip invalid (non-positive) scale factors
+  APFloat Scale(ReservationStationScaleFactor);
   if (Scale.isNegative() || Scale.isZero())
     return BufferSize;
 
