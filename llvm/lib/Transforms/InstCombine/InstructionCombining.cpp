@@ -1820,7 +1820,24 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
     NewTV = foldOperationIntoSelectOperand(Op, SI, TV, *this);
   if (!NewFV)
     NewFV = foldOperationIntoSelectOperand(Op, SI, FV, *this);
-  return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
+
+  SelectInst *NewSel = SelectInst::Create(SI->getCondition(), NewTV, NewFV);
+
+  // Preserve metadata that remains valid for the transformed select.
+  if (MDNode *Prof = SI->getMetadata(LLVMContext::MD_prof))
+    NewSel->setMetadata(LLVMContext::MD_prof, Prof);
+  if (MDNode *Unpred = SI->getMetadata(LLVMContext::MD_unpredictable))
+    NewSel->setMetadata(LLVMContext::MD_unpredictable, Unpred);
+
+  // Preserve !fpmath only for FP-typed selects.
+  if (isa<FPMathOperator>(NewSel))
+    if (MDNode *FPMath = SI->getMetadata(LLVMContext::MD_fpmath))
+      NewSel->setMetadata(LLVMContext::MD_fpmath, FPMath);
+
+  // Preserve source location information.
+  NewSel->setDebugLoc(SI->getDebugLoc());
+
+  return NewSel;
 }
 
 static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
