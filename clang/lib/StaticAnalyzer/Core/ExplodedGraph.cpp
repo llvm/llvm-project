@@ -73,7 +73,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   // (4) There is no 'tag' for the ProgramPoint.
   // (5) The 'store' is the same as the predecessor.
   // (6) The 'GDM' is the same as the predecessor.
-  // (7) The LocationContext is the same as the predecessor.
+  // (7) The StackFrame is the same as the predecessor.
   // (8) Expressions that are *not* lvalue expressions.
   // (9) The PostStmt isn't for a non-consumed Stmt or Expr.
   // (10) The successor is neither a CallExpr StmtPoint nor a CallEnter or
@@ -298,27 +298,27 @@ const CFGBlock *ExplodedNode::getCFGBlock() const {
   return nullptr;
 }
 
-static const LocationContext *
-findTopAutosynthesizedParentContext(const LocationContext *LC) {
-  assert(LC->getAnalysisDeclContext()->isBodyAutosynthesized());
-  const LocationContext *ParentLC = LC->getParent();
-  assert(ParentLC && "We don't start analysis from autosynthesized code");
-  while (ParentLC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
-    LC = ParentLC;
-    ParentLC = LC->getParent();
-    assert(ParentLC && "We don't start analysis from autosynthesized code");
+static const StackFrame *
+findTopAutosynthesizedParentContext(const StackFrame *SF) {
+  assert(SF->getAnalysisDeclContext()->isBodyAutosynthesized());
+  const StackFrame *ParentSF = SF->getParent();
+  assert(ParentSF && "We don't start analysis from autosynthesized code");
+  while (ParentSF->getAnalysisDeclContext()->isBodyAutosynthesized()) {
+    SF = ParentSF;
+    ParentSF = SF->getParent();
+    assert(ParentSF && "We don't start analysis from autosynthesized code");
   }
-  return LC;
+  return SF;
 }
 
 const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   // We cannot place diagnostics on autosynthesized code.
   // Put them onto the call site through which we jumped into autosynthesized
   // code for the first time.
-  const LocationContext *LC = getStackFrame();
-  if (LC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
+  const StackFrame *SF = getStackFrame();
+  if (SF->getAnalysisDeclContext()->isBodyAutosynthesized()) {
     // It must be a stack frame because we only autosynthesize functions.
-    return cast<StackFrame>(findTopAutosynthesizedParentContext(LC))
+    return cast<StackFrame>(findTopAutosynthesizedParentContext(SF))
         ->getCallSite();
   }
   // Otherwise, see if the node's program point directly points to a statement.
