@@ -125,6 +125,7 @@ class TestingConfig(object):
             available_features=available_features,
             pipefail=True,
             standalone_tests=False,
+            maxIndividualTestTime=litConfig.maxIndividualTestTime,
         )
 
     def load_from_path(self, path, litConfig):
@@ -185,6 +186,7 @@ class TestingConfig(object):
         is_early=False,
         parallelism_group=None,
         standalone_tests=False,
+        maxIndividualTestTime=0,
     ):
         self.parent = parent
         self.name = str(name)
@@ -199,6 +201,7 @@ class TestingConfig(object):
         self.available_features = set(available_features)
         self.pipefail = pipefail
         self.standalone_tests = standalone_tests
+        self.maxIndividualTestTime = maxIndividualTestTime or 0
         # This list is used by TestRunner.py to restrict running only tests that
         # require one of the features in this list if this list is non-empty.
         # Configurations can set this list to restrict the set of tests to run.
@@ -226,6 +229,7 @@ class TestingConfig(object):
             )
         self._recursiveExpansionLimit = value
 
+
     def finish(self, litConfig):
         """finish() - Finish this config object, after loading is complete."""
 
@@ -247,6 +251,22 @@ class TestingConfig(object):
             and getattr(self, "test_retry_attempts", None) is None
         ):
             self.test_retry_attempts = litConfig.maxRetriesPerTest
+        if litConfig.maxIndividualTestTime is not None:
+            suite_timeout = self.maxIndividualTestTime
+            if (
+                suite_timeout > 0
+                and suite_timeout != litConfig.maxIndividualTestTime
+            ):
+                litConfig.note(
+                    (
+                        "The test suite {0!r} configuration requested an individual"
+                        " test timeout of {1} seconds but a timeout of {2} seconds was"
+                        " requested on the command line. Forcing timeout to be {2}"
+                        " seconds."
+                    ).format(self.name, suite_timeout, litConfig.maxIndividualTestTime)
+                )
+            self.maxIndividualTestTime = litConfig.maxIndividualTestTime
+
 
     @property
     def root(self):
