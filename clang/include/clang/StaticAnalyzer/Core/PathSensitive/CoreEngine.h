@@ -232,7 +232,7 @@ public:
   /// Return the CFGBlock associated with this builder.
   const CFGBlock *getBlock() const { return Block; }
 
-  /// Return the location context associated with this builder.
+  /// Return the stack frame associated with this builder.
   const StackFrame *getStackFrame() const { return SF; }
 
   /// Returns the number of times the current basic block has been

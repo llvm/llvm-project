@@ -271,10 +271,9 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   ExprEng.setCurrStackFrameAndBlock(Pred->getStackFrame(), Blk);
 
   // Mark this block as visited.
-  const LocationContext *LC = Pred->getStackFrame();
-  FunctionSummaries->markVisitedBasicBlock(Blk->getBlockID(),
-                                           LC->getDecl(),
-                                           LC->getCFG()->getNumBlockIDs());
+  const StackFrame *SF = Pred->getStackFrame();
+  FunctionSummaries->markVisitedBasicBlock(Blk->getBlockID(), SF->getDecl(),
+                                           SF->getCFG()->getNumBlockIDs());
 
   // Display a prunable path note to the user if it's a virtual bases branch
   // and we're taking the path that skips virtual base constructors.
@@ -347,11 +346,10 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
 void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,
                                        ExplodedNode *Pred) {
   // Increment the block counter.
-  const LocationContext *LC = Pred->getStackFrame();
+  const StackFrame *SF = Pred->getStackFrame();
   unsigned BlockId = L.getBlock()->getBlockID();
   BlockCounter Counter = WList->getBlockCounter();
-  Counter = BCounterFactory.IncrementCount(Counter, LC->getStackFrame(),
-                                           BlockId);
+  Counter = BCounterFactory.IncrementCount(Counter, SF, BlockId);
   setBlockCounter(Counter);
 
   // Process the entrance of the block.
@@ -630,10 +628,9 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
 std::optional<unsigned>
 CoreEngine::getCompletedIterationCount(const CFGBlock *B,
                                        ExplodedNode *Pred) const {
-  const LocationContext *LC = Pred->getStackFrame();
+  const StackFrame *SF = Pred->getStackFrame();
   BlockCounter Counter = WList->getBlockCounter();
-  unsigned BlockCount =
-      Counter.getNumVisited(LC->getStackFrame(), B->getBlockID());
+  unsigned BlockCount = Counter.getNumVisited(SF, B->getBlockID());
 
   const Stmt *Term = B->getTerminatorStmt();
   if (isa<ForStmt, WhileStmt, CXXForRangeStmt>(Term)) {
@@ -664,12 +661,12 @@ void CoreEngine::enqueueStmtNodes(ExplodedNodeSet &Set, const CFGBlock *Block,
 
 void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS) {
   for (ExplodedNode *Node : Set) {
-    const LocationContext *LocCtx = Node->getStackFrame();
+    const StackFrame *SF = Node->getStackFrame();
 
     // If we are in an inlined call, generate CallExitBegin node.
-    if (LocCtx->getParent()) {
-      // Use the callee location context.
-      CallExitBegin Loc(cast<StackFrame>(LocCtx), RS);
+    if (SF->getParent()) {
+      // Use the callee stack frame.
+      CallExitBegin Loc(SF, RS);
       if (ExplodedNode *Succ = makeNode(Loc, Node->getState(), Node))
         WList->enqueue(Succ);
     } else {
