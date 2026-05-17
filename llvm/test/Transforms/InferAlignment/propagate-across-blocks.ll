@@ -11,7 +11,7 @@ define void @propagate_across_blocks(ptr %a, i1 %cond) {
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, ptr [[A]], align 16
 ; CHECK-NEXT:    br label %[[IF_ELSE]]
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[LOAD3:%.*]] = load i64, ptr [[A]], align 1
+; CHECK-NEXT:    [[LOAD3:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
