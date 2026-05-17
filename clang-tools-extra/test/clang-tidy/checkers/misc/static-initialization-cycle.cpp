@@ -126,7 +126,7 @@ void f() {
   } catch (...) {
   }
 }
-}
+} // catch_all_handler
 
 namespace recursive_calls {
 int f2();
