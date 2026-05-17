@@ -218,7 +218,6 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
     KnownBits ValKnown = KnownOf(LHSReg);
     if (MI->getOpcode() == TargetOpcode::G_ASHR && ValKnown.isNegative())
       return true;
-    // If max shift cnt of known ones is non-zero, result is non-zero.
     APInt MaxCnt = KnownOf(MI->getOperand(2).getReg()).getMaxValue();
     if (MaxCnt.ult(ValKnown.getBitWidth()) &&
         !ValKnown.One.lshr(MaxCnt).isZero())
