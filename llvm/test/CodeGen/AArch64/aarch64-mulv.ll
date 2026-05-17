@@ -514,23 +514,13 @@ entry:
 }
 
 define i128 @mulv_v2i128(<2 x i128> %a) {
-; CHECK-SD-LABEL: mulv_v2i128:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umulh x8, x0, x2
-; CHECK-SD-NEXT:    madd x8, x0, x3, x8
-; CHECK-SD-NEXT:    mul x0, x0, x2
-; CHECK-SD-NEXT:    madd x1, x1, x2, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: mulv_v2i128:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mul x9, x0, x3
-; CHECK-GI-NEXT:    mul x8, x0, x2
-; CHECK-GI-NEXT:    umulh x10, x0, x2
-; CHECK-GI-NEXT:    madd x9, x1, x2, x9
-; CHECK-GI-NEXT:    mov x0, x8
-; CHECK-GI-NEXT:    add x1, x9, x10
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: mulv_v2i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umulh x8, x0, x2
+; CHECK-NEXT:    madd x8, x0, x3, x8
+; CHECK-NEXT:    mul x0, x0, x2
+; CHECK-NEXT:    madd x1, x1, x2, x8
+; CHECK-NEXT:    ret
 entry:
   %arg1 = call i128 @llvm.vector.reduce.mul.v2i128(<2 x i128> %a)
   ret i128 %arg1
