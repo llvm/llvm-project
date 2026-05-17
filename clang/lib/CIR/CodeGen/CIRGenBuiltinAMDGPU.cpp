@@ -91,6 +91,59 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
   return res;
 }
 
+static mlir::Value
+emitAMDGCNImageOverloadedReturnType(CIRGenFunction &cgf, const CallExpr *e,
+                                    llvm::StringRef intrinsicName,
+                                    bool isImageStore) {
+  auto &builder = cgf.getBuilder();
+
+  auto findTextureDescIndex = [&cgf](const CallExpr *e) -> unsigned {
+    QualType texQT = cgf.getContext().AMDGPUTextureTy;
+    for (unsigned i = 0, n = e->getNumArgs(); i < n; ++i) {
+      QualType argTy = e->getArg(i)->getType();
+      if (argTy == texQT ||
+          argTy.getCanonicalType() == texQT.getCanonicalType()) {
+        return i;
+      }
+    }
+    return ~0U;
+  };
+
+  unsigned rsrcIndex = findTextureDescIndex(e);
+  if (rsrcIndex == ~0U) {
+    llvm::report_fatal_error("Invalid argument count for image builtin");
+  }
+
+  cir::VectorType vec8I32Ty = cir::VectorType::get(builder.getSInt32Ty(), 8);
+
+  llvm::SmallVector<mlir::Value, 10> args;
+  for (unsigned i = 0, n = e->getNumArgs(); i < n; ++i) {
+    mlir::Value v = cgf.emitScalarExpr(e->getArg(i));
+
+    if (i == rsrcIndex) {
+      mlir::Type vTy = v.getType();
+      if (mlir::isa<cir::PointerType>(vTy)) {
+        v = builder.createAlignedLoad(cgf.getLoc(e->getExprLoc()), vec8I32Ty, v,
+                                      CharUnits::fromQuantity(32));
+      }
+    }
+    args.push_back(v);
+  }
+
+  mlir::Type retTy;
+  if (isImageStore) {
+    retTy = cir::VoidType::get(builder.getContext());
+  } else {
+    retTy = cgf.convertType(e->getType());
+  }
+
+  auto callOp = cir::LLVMIntrinsicCallOp::create(
+      builder, cgf.getLoc(e->getExprLoc()),
+      builder.getStringAttr(intrinsicName), retTy, args);
+
+  return callOp.getResult();
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                                       const CallExpr *expr) {
@@ -523,67 +576,108 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(*this, expr,
+                                               "amdgcn.image.load.1d", false);
   case AMDGPU::BI__builtin_amdgcn_image_load_1darray_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_1darray_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.load.1darray", false);
   case AMDGPU::BI__builtin_amdgcn_image_load_2d_f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_2d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_2d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(*this, expr,
+                                               "amdgcn.image.load.2d", false);
   case AMDGPU::BI__builtin_amdgcn_image_load_2darray_f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_2darray_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_2darray_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.load.2darray", false);
   case AMDGPU::BI__builtin_amdgcn_image_load_3d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_3d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(*this, expr,
+                                               "amdgcn.image.load.3d", false);
   case AMDGPU::BI__builtin_amdgcn_image_load_cube_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_cube_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(*this, expr,
+                                               "amdgcn.image.load.cube", false);
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_1d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_1d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.load.mip.1d", false);
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_1darray_v4f32_i32:
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_1darray_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.load.mip.1darray", false);
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2d_f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_2d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_2d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.load.mip.2d", false);
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_2darray_f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_2darray_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_2darray_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.load.mip.2darray", false);
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_3d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_3d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.load.mip.3d", false);
   case AMDGPU::BI__builtin_amdgcn_image_load_mip_cube_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_cube_v4f16_i32: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_image_load_mip_cube_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.load.mip.cube", false);
   case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(*this, expr,
+                                               "amdgcn.image.store.1d", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.store.1darray", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_2d_f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_2d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_2d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(*this, expr,
+                                               "amdgcn.image.store.2d", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_2darray_f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_2darray_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_2darray_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.store.2darray", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(*this, expr,
+                                               "amdgcn.image.store.3d", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(*this, expr,
+                                               "amdgcn.image.store.cube", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.store.mip.1d", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.store.mip.1darray", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.store.mip.2d", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.store.mip.2darray", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.store.mip.3d", true);
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32:
+    return emitAMDGCNImageOverloadedReturnType(
+        *this, expr, "amdgcn.image.store.mip.cube", true);
   case AMDGPU::BI__builtin_amdgcn_image_sample_1d_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_1d_v4f16_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_1darray_v4f32_f32:
