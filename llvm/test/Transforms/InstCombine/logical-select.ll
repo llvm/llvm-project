@@ -1641,7 +1641,7 @@ define <2 x i1> @test_logical_and_icmp_samesign_vec_with_poison_tv(<2 x i8> %x) 
 define i1 @test_logical_and_trunc_nuw(i1 %c, i8 noundef range(i8 0,2) %x) {
 ; CHECK-LABEL: @test_logical_and_trunc_nuw(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C:%.*]], i1 [[TRUNC]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C:%.*]], [[TRUNC]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %trunc = trunc nuw i8 %x to i1
@@ -1652,7 +1652,7 @@ define i1 @test_logical_and_trunc_nuw(i1 %c, i8 noundef range(i8 0,2) %x) {
 define i1 @test_logical_or_trunc_nuw(i1 %c, i8 noundef range(i8 0,2) %x) {
 ; CHECK-LABEL: @test_logical_or_trunc_nuw(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[TRUNC]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C:%.*]], [[TRUNC]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %trunc = trunc nuw i8 %x to i1
@@ -1663,7 +1663,7 @@ define i1 @test_logical_or_trunc_nuw(i1 %c, i8 noundef range(i8 0,2) %x) {
 define <2 x i1> @test_logical_and_trunc_nuw_vec(<2 x i1> %c, <2 x i8> noundef range(i8 0,2) %x) {
 ; CHECK-LABEL: @test_logical_and_trunc_nuw_vec(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw <2 x i8> [[X:%.*]] to <2 x i1>
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[TRUNC]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[C:%.*]], [[TRUNC]]
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %trunc = trunc nuw <2 x i8> %x to <2 x i1>
