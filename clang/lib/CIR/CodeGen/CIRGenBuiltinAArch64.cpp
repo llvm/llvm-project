@@ -2553,8 +2553,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vrecpsd_f64:
   case NEON::BI__builtin_neon_vrecpsh_f16:
   case NEON::BI__builtin_neon_vqshrun_n_v:
-  case NEON::BI__builtin_neon_vqrshrun_n_v:
-  case NEON::BI__builtin_neon_vqshrn_n_v:
   case NEON::BI__builtin_neon_vrshrn_n_v:
   case NEON::BI__builtin_neon_vqrshrn_n_v:
   case NEON::BI__builtin_neon_vrndah_f16:
@@ -2597,6 +2595,20 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+  case NEON::BI__builtin_neon_vqrshrun_n_v: {
+    cir::VectorType argTy =
+        builder.getExtendedOrTruncatedElementVectorType(ty, true, true);
+    return emitNeonCall(cgm, builder, {argTy, sInt32Ty}, ops,
+                        "aarch64.neon.sqrshrun", ty, loc);
+  }
+  case NEON::BI__builtin_neon_vqshrn_n_v: {
+    cir::VectorType argTy =
+        builder.getExtendedOrTruncatedElementVectorType(ty, true, !usgn);
+    llvm::StringRef intrName =
+        usgn ? "aarch64.neon.uqrshrn" : "aarch64.neon.sqrshrn";
+    return emitNeonCall(cgm, builder, {argTy, sInt32Ty}, ops, intrName, ty,
+                        loc);
+  }
   case NEON::BI__builtin_neon_vcvt_f64_v:
   case NEON::BI__builtin_neon_vcvtq_f64_v:
     ops[0] = builder.createBitcast(ops[0], ty);
