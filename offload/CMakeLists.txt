@@ -319,3 +319,17 @@ endif()
 if(TARGET LLVMOffload)
   add_dependencies(offload LLVMOffload)
 endif()
+
+add_custom_target(install-offload
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload)
+add_custom_target(install-offload-stripped
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload --strip)
+
+if(TARGET omptarget)
+  add_dependencies(install-offload omptarget)
+  add_dependencies(install-offload-stripped omptarget)
+endif()
+if(TARGET LLVMOffload)
+  add_dependencies(install-offload LLVMOffload)
+  add_dependencies(install-offload-stripped LLVMOffload)
+endif()
