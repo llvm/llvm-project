@@ -25,6 +25,9 @@ int h0 = __builtin_types_compatible_p(int,float);
 int h3 = __builtin_bswap16(0x1234) == 0x3412 ? 1 : f();
 int h4 = __builtin_bswap32(0x1234) == 0x34120000 ? 1 : f();
 int h5 = __builtin_bswap64(0x1234) == 0x3412000000000000 ? 1 : f();
+#ifdef __SIZEOF_INT128__
+int h5b = __builtin_bswap128(0x1234) == (((__int128)0x3412) << 112) ? 1 : f();
+#endif
 int h5a = __builtin_bswapg((_Bool)1) == (_Bool)1 ? 1 : f();
 int h6 = __builtin_bswapg((char)0x12) == (char)0x12 ? 1 : f();
 int h7 = __builtin_bswapg((short)(0x1234)) == (short)(0x3412) ? 1 : f();

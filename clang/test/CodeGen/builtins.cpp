@@ -20,6 +20,10 @@ extern uint32_t bswap32;
 decltype(__builtin_bswap32(0)) bswap32 = 42;
 extern uint64_t bswap64;
 decltype(__builtin_bswap64(0)) bswap64 = 42;
+#ifdef __SIZEOF_INT128__
+extern __uint128_t bswap128;
+decltype(__builtin_bswap128(0)) bswap128 = 42;
+#endif
 
 #ifdef __clang__
 extern uint8_t bitrev8;
