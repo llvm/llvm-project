@@ -92,6 +92,12 @@ public:
   /// predicate to simplify operations downstream.
   bool signBitIsZero(Register Op);
 
+  /// Return true if the value defined by \p R is provably never zero. This is
+  /// the GlobalISel analog of \c SelectionDAG::isKnownNeverZero.
+  bool isKnownNeverZero(Register R, unsigned Depth = 0);
+  bool isKnownNeverZero(Register R, const APInt &DemandedElts,
+                        unsigned Depth = 0);
+
   static void computeKnownBitsForAlignment(KnownBits &Known, Align Alignment) {
     // The low bits are known zero if the pointer is aligned.
     Known.Zero.setLowBits(Log2(Alignment));
