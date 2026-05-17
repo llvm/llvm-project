@@ -1048,7 +1048,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
   // division.
   MaxDivRemBitWidthSupported = 128;
 
-  MaxLargeFPConvertBitWidthSupported = 128;
+  MaxLargeFPConvertBitWidthSupported =
+      TM.getTargetTriple().isArch64Bit() ? 128 : 64;
 
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;

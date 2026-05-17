@@ -174,8 +174,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
 
-  setMaxLargeFPConvertBitWidthSupported(128);
-
   // Set up the register classes.
   addRegisterClass(MVT::i8, &X86::GR8RegClass);
   addRegisterClass(MVT::i16, &X86::GR16RegClass);

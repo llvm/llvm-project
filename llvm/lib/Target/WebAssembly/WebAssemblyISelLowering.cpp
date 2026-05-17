@@ -430,6 +430,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   setMaxAtomicSizeInBitsSupported(64);
 
+  // Unlike most other targets, __int128 is supported even on wasm32.
+  setMaxLargeFPConvertBitWidthSupported(128);
+
   // Always convert switches to br_tables unless there is only one case, which
   // is equivalent to a simple branch. This reduces code size for wasm, and we
   // defer possible jump table optimizations to the VM.
