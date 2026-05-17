@@ -3682,11 +3682,9 @@ static bool impliesPoisonOrCond(const Value *ValAssumedPoison, const Value *V,
   if (match(ValAssumedPoison, m_NUWTrunc(m_Value(A))) &&
       isGuaranteedNotToBePoison(A)) {
     assert(ValAssumedPoison->getType()->isIntOrIntVectorTy(1));
-    unsigned BitWidth = A->getType()->getScalarSizeInBits();
-    return ConstantRange(APInt::getZero(BitWidth), APInt(BitWidth, 2))
-        .contains(computeConstantRangeIncludingKnownBits(
-            A, false,
-            SQ.getWithInstruction(cast<Instruction>(ValAssumedPoison))));
+    return computeKnownBits(
+               A, SQ.getWithInstruction(cast<Instruction>(ValAssumedPoison)))
+               .getMaxValue() == 1;
   }
 
   return false;
