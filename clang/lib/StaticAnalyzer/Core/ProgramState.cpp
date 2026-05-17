@@ -230,11 +230,11 @@ ProgramState::enterStackFrame(const CallEvent &Call,
       getStateManager().StoreMgr->enterStackFrame(getStore(), Call, CalleeCtx));
 }
 
-SVal ProgramState::getSelfSVal(const LocationContext *LCtx) const {
-  const ImplicitParamDecl *SelfDecl = LCtx->getSelfDecl();
+SVal ProgramState::getSelfSVal(const StackFrame *SF) const {
+  const ImplicitParamDecl *SelfDecl = SF->getSelfDecl();
   if (!SelfDecl)
     return SVal();
-  return getSVal(getRegion(SelfDecl, LCtx));
+  return getSVal(getRegion(SelfDecl, SF));
 }
 
 SVal ProgramState::getSValAsScalarOrLoc(const MemRegion *R) const {
@@ -383,11 +383,10 @@ ConditionTruthVal ProgramState::isNull(SVal V) const {
   return getStateManager().ConstraintMgr->isNull(this, Sym);
 }
 
-ProgramStateRef ProgramStateManager::getInitialState(const LocationContext *InitLoc) {
-  ProgramState State(this,
-                EnvMgr.getInitialEnvironment(),
-                StoreMgr->getInitialStore(InitLoc),
-                GDMFactory.getEmptyMap());
+ProgramStateRef ProgramStateManager::getInitialState(const StackFrame *InitSF) {
+  ProgramState State(this, EnvMgr.getInitialEnvironment(),
+                     StoreMgr->getInitialStore(InitSF),
+                     GDMFactory.getEmptyMap());
 
   return getPersistentState(State);
 }

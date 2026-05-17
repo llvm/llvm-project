@@ -272,7 +272,7 @@ public:
 
   /// Utility method for getting regions.
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const VarRegion* getRegion(const VarDecl *D, const LocationContext *LC) const;
+  const VarRegion *getRegion(const VarDecl *D, const StackFrame *SF) const;
 
   //==---------------------------------------------------------------------==//
   // Binding and retrieving values to/from the environment and symbolic store.
@@ -346,7 +346,7 @@ public:
   enterStackFrame(const CallEvent &Call, const StackFrame *CalleeSF) const;
 
   /// Return the value of 'self' if available in the given context.
-  SVal getSelfSVal(const LocationContext *LC) const;
+  SVal getSelfSVal(const StackFrame *SF) const;
 
   /// Get the lvalue for a base class object reference.
   Loc getLValue(const CXXBaseSpecifier &BaseSpec, const SubRegion *Super) const;
@@ -356,10 +356,9 @@ public:
                 bool IsVirtual) const;
 
   /// Get the lvalue for a variable reference.
-  Loc getLValue(const VarDecl *D, const LocationContext *LC) const;
+  Loc getLValue(const VarDecl *D, const StackFrame *SF) const;
 
-  Loc getLValue(const CompoundLiteralExpr *literal,
-                const LocationContext *LC) const;
+  Loc getLValue(const CompoundLiteralExpr *literal, const StackFrame *SF) const;
 
   /// Get the lvalue for an ivar reference.
   SVal getLValue(const ObjCIvarDecl *decl, SVal base) const;
@@ -537,7 +536,7 @@ public:
 
   ~ProgramStateManager();
 
-  ProgramStateRef getInitialState(const LocationContext *InitLoc);
+  ProgramStateRef getInitialState(const StackFrame *InitSF);
 
   ASTContext &getContext() { return svalBuilder->getContext(); }
   const ASTContext &getContext() const { return svalBuilder->getContext(); }
@@ -695,10 +694,9 @@ inline ConstraintManager &ProgramState::getConstraintManager() const {
   return stateMgr->getConstraintManager();
 }
 
-inline const VarRegion* ProgramState::getRegion(const VarDecl *D,
-                                                const LocationContext *LC) const
-{
-  return getStateManager().getRegionManager().getVarRegion(D, LC);
+inline const VarRegion *ProgramState::getRegion(const VarDecl *D,
+                                                const StackFrame *SF) const {
+  return getStateManager().getRegionManager().getVarRegion(D, SF);
 }
 
 inline ProgramStateRef ProgramState::assume(DefinedOrUnknownSVal Cond,
@@ -768,13 +766,13 @@ inline Loc ProgramState::getLValue(const CXXRecordDecl *BaseClass,
 }
 
 inline Loc ProgramState::getLValue(const VarDecl *VD,
-                               const LocationContext *LC) const {
-  return getStateManager().StoreMgr->getLValueVar(VD, LC);
+                                   const StackFrame *SF) const {
+  return getStateManager().StoreMgr->getLValueVar(VD, SF);
 }
 
 inline Loc ProgramState::getLValue(const CompoundLiteralExpr *literal,
-                               const LocationContext *LC) const {
-  return getStateManager().StoreMgr->getLValueCompoundLiteral(literal, LC);
+                                   const StackFrame *SF) const {
+  return getStateManager().StoreMgr->getLValueCompoundLiteral(literal, SF);
 }
 
 inline SVal ProgramState::getLValue(const ObjCIvarDecl *D, SVal Base) const {
