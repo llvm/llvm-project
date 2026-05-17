@@ -2475,7 +2475,7 @@ PathSensitiveBugReport::getLocation() const {
     }
     if (!S)
       S = ErrorNode->getNextStmtForDiagnostics();
-  }
+    }
 
   if (S) {
     // Attributed statements usually have corrupted begin locations,
