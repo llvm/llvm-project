@@ -34,13 +34,12 @@ BundleAttr llvm::getBundleAttrFromString(StringRef Str) {
 AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
   assert(OBU.getTagName() == "align" && OBU.Inputs.size() >= 2 &&
          OBU.Inputs.size() <= 3);
-  AssumeAlignInfo Ret{};
-  Ret.Ptr = OBU.Inputs[0];
+  AssumeAlignInfo Ret{OBU.Inputs[0], OBU.Inputs[1], std::nullopt, std::nullopt};
   if (auto *Align = dyn_cast<ConstantInt>(OBU.Inputs[1]))
-    Ret.Alignment = Align->getZExtValue();
+    Ret.AlignmentVal = Align->getZExtValue();
   if (OBU.Inputs.size() == 3) {
     if (auto *Offset = dyn_cast<ConstantInt>(OBU.Inputs[2]))
-      Ret.Offset = Offset->getZExtValue();
+      Ret.OffsetVal = Offset->getZExtValue();
   }
   return Ret;
 }
@@ -48,7 +47,7 @@ AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
 AssumeSeparateStorageInfo
 llvm::getAssumeSeparateStorageInfo(OperandBundleUse OBU) {
   assert(OBU.getTagName() == "separate_storage" && OBU.Inputs.size() == 2);
-  return {&OBU.Inputs[0], &OBU.Inputs[1]};
+  return {OBU.Inputs[0], OBU.Inputs[1]};
 }
 
 AssumeNonNullInfo llvm::getAssumeNonNullInfo(OperandBundleUse OBU) {

@@ -3628,7 +3628,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         llvm_unreachable("Unexpected Attribute");
       case BundleAttr::Align: {
         // Try to remove redundant alignment assumptions.
-        auto [Ptr, Alignment, Offset] = getAssumeAlignInfo(OBU);
+        auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
 
         if (Offset || !Alignment || !isPowerOf2_64(*Alignment))
           break;
@@ -3687,8 +3687,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           if (Hint != UnderlyingObject)
             replaceUse(const_cast<Use &>(U), UnderlyingObject);
         };
-        MaybeSimplifyHint(*Ptr1);
-        MaybeSimplifyHint(*Ptr2);
+        MaybeSimplifyHint(Ptr1);
+        MaybeSimplifyHint(Ptr2);
       } break;
 
       // TODO: Drop these assumes when they are redundant

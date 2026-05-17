@@ -28,20 +28,21 @@ inline BundleAttr getBundleAttrFromOBU(OperandBundleUse OBU) {
 }
 
 struct AssumeAlignInfo {
-  Value *Ptr;
-  std::optional<uint64_t> Alignment;
-  std::optional<uint64_t> Offset;
+  const Use &Ptr;
+  const Use &Alignment;
+  std::optional<uint64_t> AlignmentVal;
+  std::optional<uint64_t> OffsetVal;
 };
 
 LLVM_ABI AssumeAlignInfo getAssumeAlignInfo(OperandBundleUse);
 
-struct AssumeSeparateStorageInfo {
-  const Use *Ptr1;
-  const Use *Ptr2;
+struct AssumeDereferenceableInfo {
+  const Use &Ptr;
+  const Use &Count;
 };
 
 LLVM_ABI
-AssumeSeparateStorageInfo getAssumeSeparateStorageInfo(OperandBundleUse);
+AssumeDereferenceableInfo getAssumeDereferenceableInfo(OperandBundleUse);
 
 struct AssumeNonNullInfo {
   Value *Ptr;
@@ -49,13 +50,13 @@ struct AssumeNonNullInfo {
 
 LLVM_ABI AssumeNonNullInfo getAssumeNonNullInfo(OperandBundleUse);
 
-struct AssumeDereferenceableInfo {
-  Value *Ptr;
-  Value *Count;
+struct AssumeSeparateStorageInfo {
+  const Use &Ptr1;
+  const Use &Ptr2;
 };
 
 LLVM_ABI
-AssumeDereferenceableInfo getAssumeDereferenceableInfo(OperandBundleUse);
+AssumeSeparateStorageInfo getAssumeSeparateStorageInfo(OperandBundleUse);
 
 } // namespace llvm
 
