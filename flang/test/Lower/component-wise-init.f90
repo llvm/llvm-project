@@ -4,8 +4,8 @@
 ! generating large, fully-initialized global templates.
 
 module my_types
-  ! Clean internal type: contains only allocatable and pointer components, 
-  ! without any explicit initialization.
+  ! Clean internal type: contains only allocatable and pointer components,
+  ! without any default initialization.
   type :: InnerClean
     real, pointer :: p
     real, allocatable :: arr(:)
@@ -13,7 +13,7 @@ module my_types
 
   ! ============================================================================
   ! Test Case 1: Type meeting all criteria for component-wise init (Target)
-  ! No arrays of derived types, no explicit initialization.
+  ! No arrays of derived types, no default initialization.
   ! ============================================================================
   type :: TargetType
     real, pointer :: q
@@ -29,15 +29,15 @@ module my_types
   end type FallbackArrayType
 
   ! ============================================================================
-  ! Test Case 3: Type triggering fallback B (contains explicit initialization)
+  ! Test Case 3: Type triggering fallback B (contains default initialization)
   ! ============================================================================
-  type :: FallbackExplicitType
+  type :: FallbackDefaultInitType
     real, pointer :: p
     integer :: flag = 999
-  end type FallbackExplicitType
+  end type FallbackDefaultInitType
 
   ! ============================================================================
-  ! Test Case 4: Type triggering fallback C (contains explicit initialization)
+  ! Test Case 4: Type triggering fallback C (contains default initialization)
   ! ============================================================================
   type :: ProcPointerType
     real, pointer :: p
@@ -94,25 +94,25 @@ end subroutine test_fallback_array
 
 
 ! ------------------------------------------------------------------------------
-! Test 3: Fallback mechanism for explicit initialization
+! Test 3: Fallback mechanism for default initialization
 ! ------------------------------------------------------------------------------
-subroutine test_fallback_explicit()
+subroutine test_fallback_default_init()
   use my_types
-  type(FallbackExplicitType) :: var_explicit
-  call do_something_explicit(var_explicit)
-end subroutine test_fallback_explicit
+  type(FallbackDefaultInitType) :: var_default_init
+  call do_something_default_init(var_default_init)
+end subroutine test_fallback_default_init
 
-! CHECK-LABEL: func.func @_QPtest_fallback_explicit()
-! CHECK: %[[ALLOCA_EXP:.*]] = fir.alloca !fir.type<_QMmy_typesTfallbackexplicittype{{.*}}>
-! CHECK: %[[VAR_EXPLICIT:.*]] = fir.declare %[[ALLOCA_EXP]]
-! CHECK: %[[GLOBAL_INIT_EXP:.*]] = fir.address_of(@_QQ_QMmy_typesTfallbackexplicittype.DerivedInit)
-! CHECK: fir.copy %[[GLOBAL_INIT_EXP]] to %[[VAR_EXPLICIT]]
+! CHECK-LABEL: func.func @_QPtest_fallback_default_init()
+! CHECK: %[[ALLOCA_DEFAULT:.*]] = fir.alloca !fir.type<_QMmy_typesTfallbackdefaultinittype{{.*}}>
+! CHECK: %[[VAR_DEFAULT:.*]] = fir.declare %[[ALLOCA_DEFAULT]]
+! CHECK: %[[GLOBAL_INIT_DEFAULT:.*]] = fir.address_of(@_QQ_QMmy_typesTfallbackdefaultinittype.DerivedInit)
+! CHECK: fir.copy %[[GLOBAL_INIT_DEFAULT]] to %[[VAR_DEFAULT]]
 
 
 ! ------------------------------------------------------------------------------
 ! Test 4: Procedure pointers
-! Procedure pointers default initialized with '=> null()' trigger the explicit 
-! initialization fallback safely.
+! Procedure pointers default initialized with '=> null()' trigger the
+! default-initialization fallback safely.
 ! ------------------------------------------------------------------------------
 subroutine test_proc_pointer()
   use my_types
@@ -129,7 +129,7 @@ end subroutine test_proc_pointer
 
 ! ------------------------------------------------------------------------------
 ! Test 5: Procedure pointers
-! Procedure pointers without explicit initialization should be initialized
+! Procedure pointers without default initialization should be initialized
 ! component-wise, without falling back to template copy initialization.
 ! ------------------------------------------------------------------------------
 subroutine test_proc_pointer_no_init()

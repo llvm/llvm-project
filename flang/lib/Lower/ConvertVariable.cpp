@@ -966,8 +966,8 @@ genInlinedInitWithMemcpy(Fortran::lower::AbstractConverter &converter,
 
 /// Checks if a derived type is eligible for component-wise initialization.
 /// This is preferred over a bulk memcpy when the type contains at least
-/// one pointer/allocatable component, but no components with explicit
-/// default initializers.
+/// one pointer/allocatable component, but no components with default
+/// initializers.
 static bool isEligibleForComponentWiseInit(
     const Fortran::semantics::DerivedTypeSpec &derivedSpec) {
   bool hasPtrOrAlloc = false;
@@ -986,7 +986,7 @@ static bool isEligibleForComponentWiseInit(
       assert(scopeIter != scope->cend() &&
              "component name must exist in its scope");
       const Fortran::semantics::Symbol &comp = scopeIter->second.get();
-      // Return false if any component has an explicit default initializer.
+      // Return false if any component has a default initializer.
       const auto *objDetails =
           comp.detailsIf<Fortran::semantics::ObjectEntityDetails>();
       const auto *procDetails =
