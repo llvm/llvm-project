@@ -1772,36 +1772,32 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // We have an 'EQ' comparison, so the select's false value will propagate.
   // Example:
   // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
-  auto Simpilfies = [&](Value *FalseValue) -> bool {
-    SmallVector<Instruction *> DropFlags;
-    if ((CanReplaceCmpLHSWithRHS &&
-         simplifyWithOpReplaced(FalseValue, CmpLHS, CmpRHS, SQ,
-                                /* AllowRefinement */ false,
-                                &DropFlags) == TrueVal) ||
-        (CanReplaceCmpRHSWithLHS &&
-         simplifyWithOpReplaced(FalseValue, CmpRHS, CmpLHS, SQ,
-                                /* AllowRefinement */ false,
-                                &DropFlags) == TrueVal)) {
-      for (Instruction *I : DropFlags) {
-        I->dropPoisonGeneratingAnnotations();
-        Worklist.add(I);
-      }
-      return true;
+  SmallVector<Instruction *> DropFlags;
+  if ((CanReplaceCmpLHSWithRHS &&
+       simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
+                              /* AllowRefinement */ false,
+                              &DropFlags) == TrueVal) ||
+      (CanReplaceCmpRHSWithLHS &&
+       simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
+                              /* AllowRefinement */ false,
+                              &DropFlags) == TrueVal)) {
+    for (Instruction *I : DropFlags) {
+      I->dropPoisonGeneratingAnnotations();
+      Worklist.add(I);
     }
-    return false;
-  };
 
-  Value *A;
+    return replaceInstUsesWith(Sel, FalseVal);
+  }
+
+  Constant *CmpC;
   if (FalseVal->getType()->isIntOrIntVectorTy(1) &&
-      match(FalseVal, m_NUWTrunc(m_Value(A)))) {
-    auto *NewICmp = new ICmpInst(CmpInst::Predicate::ICMP_NE, A,
-                                 ConstantInt::getNullValue(A->getType()));
-    if (Simpilfies(NewICmp)) {
-      return NewICmp;
-    }
-    delete NewICmp;
-  } else if (Simpilfies(FalseInst)) {
-    return replaceInstUsesWith(Sel, FalseInst);
+      match(FalseVal, m_NUWTrunc(m_Specific(CmpLHS))) &&
+      match(CmpRHS, m_ImmConstant(CmpC)) &&
+      ConstantFoldCompareInstOperands(
+          ICmpInst::Predicate::ICMP_NE, CmpC,
+          ConstantInt::getNullValue(CmpLHS->getType()), DL) == TrueVal) {
+    return new ICmpInst(CmpInst::Predicate::ICMP_NE, CmpLHS,
+                        ConstantInt::getNullValue(CmpLHS->getType()));
   }
 
   return nullptr;
