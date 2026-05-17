@@ -29,7 +29,6 @@ namespace clang {
 class AnalyzerOptions;
 class CallExpr;
 class Decl;
-class LocationContext;
 class Stmt;
 class TranslationUnitDecl;
 
