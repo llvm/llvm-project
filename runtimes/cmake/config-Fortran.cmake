@@ -88,15 +88,20 @@ if (CMAKE_Fortran_COMPILER)
   # cannot use CMAKE_Fortran_COMPILER_ID.
   cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
   if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+    # Force the compiler ID so CMake does not try to run the compiler for
+    # identification. In a bootstrapping build the Flang binary may not be
+    # built yet at configure time (only CMAKE_Fortran_COMPILER_WORKS is set).
+    set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
+    set(CMAKE_Fortran_COMPILER_ID_RUN TRUE)
+    set(CMAKE_Fortran_COMPILER_FORCED TRUE)
+    set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
+    if (CMAKE_C_SIMULATE_ID)
+      set(CMAKE_Fortran_SIMULATE_ID "${CMAKE_C_SIMULATE_ID}")
+    endif ()
+
     # CMake 3.24 is the first version of CMake that directly recognizes Flang.
     # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
     if (CMAKE_VERSION VERSION_LESS "3.24")
-      include(CMakeForceCompiler)
-      CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
-
-      set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
-      set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-
       set(CMAKE_Fortran_SUBMODULE_SEP "-")
       set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
 
@@ -147,6 +152,15 @@ else ()
   return ()
 endif ()
 
+# In a bootstrapping build the Fortran compiler may not have been built yet.
+# Create a placeholder so CMake's enable_language() existence check passes.
+# The build-order dependency in add_flang_mod_deps ensures the real binary is
+# built before anything tries to invoke this placeholder.
+if (CMAKE_Fortran_COMPILER_FORCED AND NOT EXISTS "${CMAKE_Fortran_COMPILER}")
+  get_filename_component(_compiler_dir "${CMAKE_Fortran_COMPILER}" DIRECTORY)
+  file(MAKE_DIRECTORY "${_compiler_dir}")
+  file(WRITE "${CMAKE_Fortran_COMPILER}" "")
+endif ()
 
 include(CheckLanguage)
 check_language(Fortran)
