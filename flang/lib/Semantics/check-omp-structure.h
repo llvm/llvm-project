@@ -289,7 +289,7 @@ private:
   // check-omp-structure.cpp
   bool IsAllowedClause(llvm::omp::Clause clauseId);
   bool CheckAllowedClause(llvm::omp::Clause clause);
-  void CheckVariableListItem(const SymbolSourceMap &symbols);
+  void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
   void CheckDirectiveDeprecation(const parser::OpenMPConstruct &x);
