@@ -334,8 +334,12 @@ private:
   void CheckDoacross(const parser::OmpDoacross &doa);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
+  void CheckTypeParamInquiry(const parser::CharBlock &source,
+      const parser::OmpObject &object);
+  void CheckTypeParamInquiry(const parser::CharBlock &source,
+      const parser::OmpObjectList &objects);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
-      const parser::OmpObject &obj, llvm::StringRef clause = "");
+      const parser::OmpObject &object, llvm::StringRef clause = "");
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
   void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
