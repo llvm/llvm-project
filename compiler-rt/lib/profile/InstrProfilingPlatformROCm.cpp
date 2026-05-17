@@ -20,6 +20,46 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
+
+/* Sync primitives used to serialize first-time HIP runtime resolution
+ * (ensureHipLoaded) and concurrent mutations of the DynamicModules array.
+ *
+ * pthread_once / pthread_mutex on POSIX, INIT_ONCE / CRITICAL_SECTION on
+ * Windows. Kept inline in this TU to avoid a sanitizer_common dependency
+ * in the profile runtime. */
+#ifdef _WIN32
+static INIT_ONCE HipLoadedOnce = INIT_ONCE_STATIC_INIT;
+static CRITICAL_SECTION DynamicModulesLock;
+static INIT_ONCE DynamicModulesLockInit = INIT_ONCE_STATIC_INIT;
+static BOOL CALLBACK initDynamicModulesLockCb(PINIT_ONCE, PVOID, PVOID *) {
+  InitializeCriticalSection(&DynamicModulesLock);
+  return TRUE;
+}
+static void lockDynamicModules(void) {
+  InitOnceExecuteOnce(&DynamicModulesLockInit, initDynamicModulesLockCb, NULL,
+                      NULL);
+  EnterCriticalSection(&DynamicModulesLock);
+}
+static void unlockDynamicModules(void) {
+  LeaveCriticalSection(&DynamicModulesLock);
+}
+#else
+static pthread_once_t HipLoadedOnce = PTHREAD_ONCE_INIT;
+static pthread_mutex_t DynamicModulesLock = PTHREAD_MUTEX_INITIALIZER;
+static void lockDynamicModules(void) {
+  pthread_mutex_lock(&DynamicModulesLock);
+}
+static void unlockDynamicModules(void) {
+  pthread_mutex_unlock(&DynamicModulesLock);
+}
+#endif
+
 static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
                                    const char *Target);
 
@@ -68,12 +108,7 @@ static char DeviceArchNames[MAX_DEVICES][256];
 /*  Keep HIP-only to avoid an HSA dependency.                                 */
 /* -------------------------------------------------------------------------- */
 
-static void ensureHipLoaded(void) {
-  static int Initialized = 0;
-  if (Initialized)
-    return;
-  Initialized = 1;
-
+static void doEnsureHipLoaded(void) {
   if (!__interception::DynamicLoaderAvailable()) {
     if (isVerboseMode())
       PROF_NOTE("%s", "Dynamic library loading not available - "
@@ -129,6 +164,21 @@ static void ensureHipLoaded(void) {
       NumDevices = Count;
     }
   }
+}
+
+#ifdef _WIN32
+static BOOL CALLBACK ensureHipLoadedCb(PINIT_ONCE, PVOID, PVOID *) {
+  doEnsureHipLoaded();
+  return TRUE;
+}
+#endif
+
+static void ensureHipLoaded(void) {
+#ifdef _WIN32
+  InitOnceExecuteOnce(&HipLoadedOnce, ensureHipLoadedCb, NULL, NULL);
+#else
+  pthread_once(&HipLoadedOnce, doEnsureHipLoaded);
+#endif
 }
 
 /* -------------------------------------------------------------------------- */
@@ -358,19 +408,23 @@ static int registerPrfSymbol(const char *Name, void *UserData) {
 extern "C" void
 __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
                                                const void *Image) {
+  if (ModuleLoadRc)
+    return;
+
+  lockDynamicModules();
+
   if (isVerboseMode())
     PROF_NOTE("Registering loaded module %d: rc=%d, module=%p, image=%p\n",
               NumDynamicModules, ModuleLoadRc, *Ptr, Image);
-
-  if (ModuleLoadRc)
-    return;
 
   if (NumDynamicModules >= CapDynamicModules) {
     int NewCap = CapDynamicModules ? CapDynamicModules * 2 : 64;
     OffloadDynamicModuleInfo *New = (OffloadDynamicModuleInfo *)realloc(
         DynamicModules, NewCap * sizeof(OffloadDynamicModuleInfo));
-    if (!New)
+    if (!New) {
+      unlockDynamicModules();
       return;
+    }
     DynamicModules = New;
     CapDynamicModules = NewCap;
   }
@@ -402,9 +456,12 @@ __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
   } else if (isVerboseMode()) {
     PROF_NOTE("Module %p: registered %d TU(s)\n", *Ptr, MI->NumTUs);
   }
+
+  unlockDynamicModules();
 }
 
 extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
+  lockDynamicModules();
   for (int i = 0; i < NumDynamicModules; ++i) {
     OffloadDynamicModuleInfo *MI = &DynamicModules[i];
 
@@ -436,11 +493,13 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
                     t);
       }
     }
+    unlockDynamicModules();
     return;
   }
 
   if (isVerboseMode())
     PROF_WARN("unregister called for unknown module %p\n", Ptr);
+  unlockDynamicModules();
 }
 
 /* Grow a void* array, doubling capacity (or starting at InitCap). */
@@ -806,6 +865,7 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
   }
 
   /* Dynamically-loaded modules — warn about any unprocessed TUs */
+  lockDynamicModules();
   for (int i = 0; i < NumDynamicModules; ++i) {
     OffloadDynamicModuleInfo *MI = &DynamicModules[i];
     for (int t = 0; t < MI->NumTUs; ++t) {
@@ -816,6 +876,7 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
       }
     }
   }
+  unlockDynamicModules();
 
   return Ret;
 }
