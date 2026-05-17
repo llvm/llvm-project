@@ -39,7 +39,7 @@ class BlockDecl;
 class CFGReverseBlockReachabilityAnalysis;
 class ImplicitParamDecl;
 class LocationContext;
-class LocationContextManager;
+class StackFrameManager;
 class ParentMap;
 class StackFrame;
 class Stmt;
@@ -176,7 +176,7 @@ public:
   /// AnalysisDeclContext wraps an ObjCMethodDecl or nullptr otherwise.
   const ImplicitParamDecl *getSelfDecl() const;
 
-  /// \copydoc LocationContextManager::getStackFrame()
+  /// \copydoc StackFrameManager::getStackFrame()
   const StackFrame *getStackFrame(const StackFrame *ParentSF, const void *Data,
                                   const Expr *E, const CFGBlock *Blk,
                                   unsigned BlockCount, unsigned Index);
@@ -199,7 +199,7 @@ public:
 private:
   std::unique_ptr<ManagedAnalysis> &getAnalysisImpl(const void *tag);
 
-  LocationContextManager &getLocationContextManager();
+  StackFrameManager &getStackFrameManager();
 };
 
 class LocationContext : public llvm::FoldingSetNode {
@@ -263,7 +263,7 @@ public:
 
 /// It represents a stack frame of the call stack (based on CallEvent).
 class StackFrame : public LocationContext {
-  friend class LocationContextManager;
+  friend class StackFrameManager;
 
   // Extra data for BlockInvocations
   const void *Data;
@@ -345,19 +345,19 @@ public:
   }
 };
 
-class LocationContextManager {
+class StackFrameManager {
   llvm::FoldingSet<StackFrame> Contexts;
 
   // ID used for generating a new location context.
   int64_t NewID = 0;
 
 public:
-  ~LocationContextManager();
+  ~StackFrameManager();
 
   /// Obtain a context of the call stack using its parent context.
   ///
   /// \param ADC        The AnalysisDeclContext.
-  /// \param ParentLC   The parent context of this newly created
+  /// \param ParentSF   The parent context of this newly created
   ///                   context.
   /// \param Data       Extra data in case this StackFrame is
   ///                   created for a BlockInvocation.
@@ -368,7 +368,7 @@ public:
   ///                   statements of the CFGBlock \p Block.
   /// \returns The stack frame context corresponding to the call.
   const StackFrame *getStackFrame(AnalysisDeclContext *ADC,
-                                  const StackFrame *ParentLC, const void *Data,
+                                  const StackFrame *ParentSF, const void *Data,
                                   const Expr *E, const CFGBlock *Block,
                                   unsigned BlockCount, unsigned StmtIdx);
 
@@ -381,7 +381,7 @@ class AnalysisDeclContextManager {
       llvm::DenseMap<const Decl *, std::unique_ptr<AnalysisDeclContext>>;
 
   ContextMap Contexts;
-  LocationContextManager LocCtxMgr;
+  StackFrameManager SFMgr;
   CFG::BuildOptions cfgBuildOptions;
 
   // Pointer to an interface that can provide function bodies for
@@ -422,8 +422,8 @@ public:
   ///
   /// \returns The top level stack frame for \p D.
   const StackFrame *getStackFrame(const Decl *D) {
-    return LocCtxMgr.getStackFrame(getContext(D), nullptr, nullptr, nullptr,
-                                   nullptr, 0, 0);
+    return SFMgr.getStackFrame(getContext(D), nullptr, nullptr, nullptr,
+                               nullptr, 0, 0);
   }
 
   BodyFarm &getBodyFarm();
@@ -434,7 +434,7 @@ public:
 private:
   friend class AnalysisDeclContext;
 
-  LocationContextManager &getLocationContextManager() { return LocCtxMgr; }
+  StackFrameManager &getStackFrameManager() { return SFMgr; }
 };
 
 } // namespace clang

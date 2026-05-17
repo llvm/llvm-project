@@ -314,8 +314,8 @@ const StackFrame *
 AnalysisDeclContext::getStackFrame(const StackFrame *ParentSF, const void *Data,
                                    const Expr *E, const CFGBlock *Blk,
                                    unsigned BlockCount, unsigned Index) {
-  return getLocationContextManager().getStackFrame(this, ParentSF, Data, E, Blk,
-                                                   BlockCount, Index);
+  return getStackFrameManager().getStackFrame(this, ParentSF, Data, E, Blk,
+                                              BlockCount, Index);
 }
 
 bool AnalysisDeclContext::isInStdNamespace(const Decl *D) {
@@ -386,11 +386,11 @@ std::string AnalysisDeclContext::getFunctionName(const Decl *D) {
   return Str;
 }
 
-LocationContextManager &AnalysisDeclContext::getLocationContextManager() {
+StackFrameManager &AnalysisDeclContext::getStackFrameManager() {
   assert(
       ADCMgr &&
       "Cannot create LocationContexts without an AnalysisDeclContextManager!");
-  return ADCMgr->getLocationContextManager();
+  return ADCMgr->getStackFrameManager();
 }
 
 //===----------------------------------------------------------------------===//
@@ -417,7 +417,7 @@ void StackFrame::Profile(llvm::FoldingSetNodeID &ID) {
 // LocationContext creation.
 //===----------------------------------------------------------------------===//
 
-const StackFrame *LocationContextManager::getStackFrame(
+const StackFrame *StackFrameManager::getStackFrame(
     AnalysisDeclContext *Ctx, const StackFrame *Parent, const void *Data,
     const Expr *E, const CFGBlock *Blk, unsigned BlockCount, unsigned StmtIdx) {
   llvm::FoldingSetNodeID ID;
@@ -651,11 +651,9 @@ AnalysisDeclContext::~AnalysisDeclContext() {
 
 LocationContext::~LocationContext() = default;
 
-LocationContextManager::~LocationContextManager() {
-  clear();
-}
+StackFrameManager::~StackFrameManager() { clear(); }
 
-void LocationContextManager::clear() {
+void StackFrameManager::clear() {
   for (llvm::FoldingSet<StackFrame>::iterator I = Contexts.begin(),
                                               E = Contexts.end();
        I != E;) {
