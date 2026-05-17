@@ -802,7 +802,7 @@ def err_pp_illegal_floating_literal : Error<
   "floating point literal in preprocessor expression">;
 def err_pp_line_requires_integer : Error<
   "#line directive requires a positive integer argument">;
-def warn_pp_line_zero : ExtWarn<
+def ext_pp_line_zero : Extension<
   "#line directive with zero argument is a GNU extension">,
   InGroup<GNUZeroLineDirective>;
 def err_pp_line_invalid_filename : Error<
@@ -819,9 +819,8 @@ def err_pp_linemarker_invalid_flag : Error<
   "invalid flag line marker directive">;
 def err_pp_linemarker_invalid_pop : Error<
   "invalid line marker flag '2': cannot pop empty include stack">;
-def warn_pp_line_too_big : ExtWarn<
-  "C requires #line number to be less than %0, allowed as extension">,
-  InGroup<GNUZeroLineDirective>;
+def ext_pp_line_too_big : Extension<
+  "C requires #line number to be less than %0, allowed as extension">;
 def warn_cxx98_compat_pp_line_too_big : Warning<
   "#line number greater than 32767 is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;

@@ -156,7 +156,7 @@ C++2c Feature Support
   undefined. Clang now diagnoses a macro expansion producing ``defined`` in a
   conditional expression, an embedded directive within macro arguments, macro
   names reserved for keywords, special identifiers, or standard attribute
-  tokens, and nonconforming ``#line`` directive line numbers by default.
+  tokens by default.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

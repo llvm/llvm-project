@@ -1643,7 +1643,7 @@ void Preprocessor::HandleLineDirective() {
     return;
 
   if (LineNo == 0)
-    Diag(DigitTok, diag::warn_pp_line_zero);
+    Diag(DigitTok, diag::ext_pp_line_zero);
 
   // Enforce C99 6.10.4p3: "The digit sequence shall not specify ... a
   // number greater than 2147483647".  C90 requires that the line # be <= 32767.
@@ -1651,7 +1651,7 @@ void Preprocessor::HandleLineDirective() {
   if (LangOpts.C99 || LangOpts.CPlusPlus11)
     LineLimit = 2147483648U;
   if (LineNo >= LineLimit)
-    Diag(DigitTok, diag::warn_pp_line_too_big) << LineLimit;
+    Diag(DigitTok, diag::ext_pp_line_too_big) << LineLimit;
   else if (LangOpts.CPlusPlus11 && LineNo >= 32768U)
     Diag(DigitTok, diag::warn_cxx98_compat_pp_line_too_big);
 

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=line0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,line0 %s -DALL -Wgnu
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,line0 %s -DALL \
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DNONE
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wgnu
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DALL \
 // RUN:   -Wgnu-zero-variadic-macro-arguments \
 // RUN:   -Wgnu-zero-line-directive
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DNONE -Wgnu \
@@ -8,6 +8,7 @@
 // RUN:   -Wno-gnu-zero-line-directive
 // Additional disabled tests:
 // %clang_cc1 -fsyntax-only -verify %s -DZEROARGS -Wgnu-zero-variadic-macro-arguments
+// %clang_cc1 -fsyntax-only -verify %s -DLINE0 -Wgnu-zero-line-directive
 
 #if NONE
 // expected-no-diagnostics
@@ -28,6 +29,12 @@ void foo( const char* c )
 }
 
 
-#line 0 // line0-warning {{#line directive with zero argument is a GNU extension}}
+// This case is handled differently because lit has a bug whereby #line 0 is reported to be on line 4294967295
+// http://llvm.org/bugs/show_bug.cgi?id=16952
+#if ALL || LINE0
+#line 0 // expected-warning {{#line directive with zero argument is a GNU extension}}
+#else
+#line 0
+#endif
 
-// WARNING: Do not add more tests after the #line 0 line!  Add them before it.
+// WARNING: Do not add more tests after the #line 0 line!  Add them before the LINE0 test
