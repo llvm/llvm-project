@@ -229,7 +229,6 @@ class TestingConfig(object):
             )
         self._recursiveExpansionLimit = value
 
-
     def finish(self, litConfig):
         """finish() - Finish this config object, after loading is complete."""
 
@@ -253,10 +252,7 @@ class TestingConfig(object):
             self.test_retry_attempts = litConfig.maxRetriesPerTest
         if litConfig.maxIndividualTestTime is not None:
             suite_timeout = self.maxIndividualTestTime
-            if (
-                suite_timeout > 0
-                and suite_timeout != litConfig.maxIndividualTestTime
-            ):
+            if suite_timeout > 0 and suite_timeout != litConfig.maxIndividualTestTime:
                 litConfig.note(
                     (
                         "The test suite {0!r} configuration requested an individual"
@@ -266,7 +262,6 @@ class TestingConfig(object):
                     ).format(self.name, suite_timeout, litConfig.maxIndividualTestTime)
                 )
             self.maxIndividualTestTime = litConfig.maxIndividualTestTime
-
 
     @property
     def root(self):
