@@ -201,16 +201,11 @@ void HipBinAmd::constructCompilerPath() {
   const EnvVariables& envVariables = getEnvVariables();
   if (envVariables.hipClangPathEnv_.empty()) {
     fs::path hipClangPath;
-    if (isWindows()) {
-      compilerPath = getHipPath();
-      hipClangPath = compilerPath;
-      hipClangPath /= "bin";
-    } else {
-      compilerPath = getRoccmPath();
-      hipClangPath = compilerPath;
-      hipClangPath /= "lib/llvm/bin";
-    }
-
+    compilerPath = getRoccmPath();
+    hipClangPath = compilerPath;
+    hipClangPath /= "lib";
+    hipClangPath /= "llvm";
+    hipClangPath /= "bin";
     compilerPath = hipClangPath.string();
   } else {
     compilerPath = envVariables.hipClangPathEnv_;
@@ -226,32 +221,17 @@ const string& HipBinAmd::getCompilerPath() const {
 void HipBinAmd::printCompilerInfo() const {
   const string& hipClangPath = getCompilerPath();
   const string& hipPath = getHipPath();
-  if (isWindows()) {
-    string cmd = hipClangPath + "/clang++ --version";
-    system(cmd.c_str());  // hipclang version
-    cout << "llc-version :" << endl;
-    cmd = hipClangPath + "/llc --version";
-    system(cmd.c_str());  // llc version
-    cout << "hip-clang-cxxflags :" << endl;
-    cmd = hipPath + "/bin/hipcc  --cxxflags";
-    system(cmd.c_str());  // cxx flags
-    cout << endl << "hip-clang-ldflags :" << endl;
-    cmd = hipPath + "/bin/hipcc --ldflags";
-    system(cmd.c_str());  // ld flags
-    cout << endl;
-  } else {
-    string cmd = hipClangPath + "/clang++ --version";
-    system(cmd.c_str());  // hipclang version
-    cmd = hipClangPath + "/llc --version";
-    system(cmd.c_str());  // llc version
-    cout << "hip-clang-cxxflags :" << endl;
-    cmd = hipPath + "/bin/hipcc --cxxflags";
-    system(cmd.c_str());  // cxx flags
-    cout << endl << "hip-clang-ldflags :" << endl;
-    cmd = hipPath + "/bin/hipcc --ldflags";
-    system(cmd.c_str());  // ldflags version
-    cout << endl;
-  }
+  string cmd = hipClangPath + "/clang++ --version";
+  system(cmd.c_str());  // hipclang version
+  cmd = hipClangPath + "/llc --version";
+  system(cmd.c_str());  // llc version
+  cout << "hip-clang-cxxflags :" << endl;
+  cmd = hipPath + "/bin/hipcc --cxxflags";
+  system(cmd.c_str());  // cxx flags
+  cout << endl << "hip-clang-ldflags :" << endl;
+  cmd = hipPath + "/bin/hipcc --ldflags";
+  system(cmd.c_str());  // ldflags version
+  cout << endl;
 }
 
 string HipBinAmd::getCompilerVersion() {
@@ -293,17 +273,19 @@ string HipBinAmd::getCppConfig() {
   hipPathInclude = hipPath;
   hipPathInclude /= "include";
   if (isWindows()) {
+    // -I{hipPathInclude}/
     cppConfig += " -I" + hipPathInclude.string();
     cppConfigFs = cppConfig;
     cppConfigFs /= "/";
   } else {
+    // -I{hipPathInclude} -I{hsaPath}/include
     const string& hsaPath = getHsaPath();
     cppConfig += " -I" + hipPathInclude.string() +
                  " -I" + hsaPath;
     cppConfigFs = cppConfig;
     cppConfigFs /= "include";
-    cppConfig = cppConfigFs.string();
   }
+  cppConfig = cppConfigFs.string();
   return cppConfig;
 }
 
@@ -864,7 +846,9 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
 
   // to avoid using dk linker or MSVC linker
   if (isWindows()) {
-    HIPLDFLAGS += " -fuse-ld=lld --ld-path=\"" + hipClangPath + "/lld-link.exe\"";
+    fs::path ldPath = hipClangPath;
+    ldPath /= "lld-link.exe";
+    HIPLDFLAGS += " -fuse-ld=lld --ld-path=\"" + ldPath.string() + "\"";
   }
 
   if (!compileOnly) {
