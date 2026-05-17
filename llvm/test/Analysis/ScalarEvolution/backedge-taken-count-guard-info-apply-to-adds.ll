@@ -33,9 +33,9 @@ declare void @clobber()
 define void @test_add_sub_1_guard(ptr %src, i32 %n) {
 ; CHECK-LABEL: 'test_add_sub_1_guard'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_add_sub_1_guard
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i32 (-1 + (%n /u 2))<nsw> to i64)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967295
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 (-1 + (%n /u 2))<nsw> to i64)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i64 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
