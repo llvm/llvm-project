@@ -2887,11 +2887,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
 
   bool hasUsedSRet = false;
-  SmallVector<llvm::AttributeSet, 4> ArgAttrs(IRFunctionArgs.totalIRArgs());
+  SmallVector<llvm::AttrBuilder, 4> ArgAttrs;
+  for (unsigned I = 0; I < IRFunctionArgs.totalIRArgs(); ++I)
+    ArgAttrs.emplace_back(getLLVMContext());
 
   // Attach attributes to sret.
   if (IRFunctionArgs.hasSRetArg()) {
-    llvm::AttrBuilder SRETAttrs(getLLVMContext());
+    llvm::AttrBuilder &SRETAttrs = ArgAttrs[IRFunctionArgs.getSRetArgNo()];
     SRETAttrs.addStructRetAttr(getTypes().ConvertTypeForMem(RetTy));
     SRETAttrs.addAttribute(llvm::Attribute::Writable);
     SRETAttrs.addAttribute(llvm::Attribute::DeadOnUnwind);
@@ -2899,16 +2901,12 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (RetAI.getInReg())
       SRETAttrs.addAttribute(llvm::Attribute::InReg);
     SRETAttrs.addAlignmentAttr(RetAI.getIndirectAlign().getQuantity());
-    ArgAttrs[IRFunctionArgs.getSRetArgNo()] =
-        llvm::AttributeSet::get(getLLVMContext(), SRETAttrs);
   }
 
   // Attach attributes to inalloca argument.
   if (IRFunctionArgs.hasInallocaArg()) {
-    llvm::AttrBuilder Attrs(getLLVMContext());
-    Attrs.addInAllocaAttr(FI.getArgStruct());
-    ArgAttrs[IRFunctionArgs.getInallocaArgNo()] =
-        llvm::AttributeSet::get(getLLVMContext(), Attrs);
+    ArgAttrs[IRFunctionArgs.getInallocaArgNo()].addInAllocaAttr(
+        FI.getArgStruct());
   }
 
   // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,
@@ -2921,7 +2919,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     assert(IRArgs.second == 1 && "Expected only a single `this` pointer.");
 
-    llvm::AttrBuilder Attrs(getLLVMContext());
+    llvm::AttrBuilder &Attrs = ArgAttrs[IRArgs.first];
 
     QualType ThisTy = FI.arg_begin()->type.getTypePtr()->getPointeeType();
 
@@ -2969,8 +2967,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo(
             Context.getASTRecordLayout(ClassDecl).getDataSize().getQuantity()));
     }
-
-    ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
 
   unsigned ArgNo = 0;
@@ -2983,10 +2979,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // Add attribute for padding argument, if necessary.
     if (IRFunctionArgs.hasPaddingArg(ArgNo)) {
       if (AI.getPaddingInReg()) {
-        ArgAttrs[IRFunctionArgs.getPaddingArgNo(ArgNo)] =
-            llvm::AttributeSet::get(getLLVMContext(),
-                                    llvm::AttrBuilder(getLLVMContext())
-                                        .addAttribute(llvm::Attribute::InReg));
+        ArgAttrs[IRFunctionArgs.getPaddingArgNo(ArgNo)].addAttribute(
+            llvm::Attribute::InReg);
       }
     }
 
@@ -3175,8 +3169,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       unsigned FirstIRArg, NumIRArgs;
       std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
       for (unsigned i = 0; i < NumIRArgs; i++)
-        ArgAttrs[FirstIRArg + i] = ArgAttrs[FirstIRArg + i].addAttributes(
-            getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), Attrs));
+        ArgAttrs[FirstIRArg + i].merge(Attrs);
     }
   }
   assert(ArgNo == FI.arg_size());
@@ -3205,17 +3198,20 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
           // in a way that can be called from here.
           if (i < FunctionType->getNumParams() &&
               FunctionType->getParamType(i)->isPointerTy()) {
-            ArgAttrs[i] =
-                ArgAttrs[i].addAttribute(getLLVMContext(), *MemAttrForPtrArgs);
+            ArgAttrs[i].addAttribute(*MemAttrForPtrArgs);
           }
         }
       }
     }
   }
 
+  SmallVector<llvm::AttributeSet, 4> ArgAttrSets;
+  for (const llvm::AttrBuilder &Attrs : ArgAttrs)
+    ArgAttrSets.push_back(llvm::AttributeSet::get(getLLVMContext(), Attrs));
+
   AttrList = llvm::AttributeList::get(
       getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), FuncAttrs),
-      llvm::AttributeSet::get(getLLVMContext(), RetAttrs), ArgAttrs);
+      llvm::AttributeSet::get(getLLVMContext(), RetAttrs), ArgAttrSets);
 }
 
 /// An argument came in as a promoted argument; demote it back to its

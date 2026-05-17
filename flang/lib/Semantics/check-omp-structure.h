@@ -107,10 +107,10 @@ public:
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
 
-  void Enter(const parser::OpenMPAssumeConstruct &);
-  void Leave(const parser::OpenMPAssumeConstruct &);
-  void Enter(const parser::OpenMPDeclarativeAssumes &);
-  void Leave(const parser::OpenMPDeclarativeAssumes &);
+  void Enter(const parser::OmpAssumeDirective &);
+  void Leave(const parser::OmpAssumeDirective &);
+  void Enter(const parser::OmpAssumesDirective &);
+  void Leave(const parser::OmpAssumesDirective &);
   void Enter(const parser::OpenMPInteropConstruct &);
   void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OmpBlockConstruct &);

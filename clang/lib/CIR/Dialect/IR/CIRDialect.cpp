@@ -4294,11 +4294,14 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
     SymbolTableCollection &symbolTable) {
+  auto copyFnAttr = getCopyFnAttr();
+  if (!copyFnAttr)
+    return success();
   auto fn =
       symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, getCopyFnAttr());
   if (!fn)
     return emitOpError("'")
-           << getCopyFn() << "' does not reference a valid cir.func";
+           << *getCopyFn() << "' does not reference a valid cir.func";
 
   if (!fn->hasAttr(cir::CIRDialect::getCatchCopyThunkAttrName()))
     return emitOpError("catch-init copy_fn must be tagged with the ")
