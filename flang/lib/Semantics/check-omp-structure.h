@@ -82,6 +82,8 @@ public:
   bool Enter(const parser::EndSubroutineStmt &);
   bool Enter(const parser::FunctionStmt &);
   bool Enter(const parser::EndFunctionStmt &);
+  bool Enter(const parser::MpSubprogramStmt &);
+  bool Enter(const parser::EndMpSubprogramStmt &);
   bool Enter(const parser::BlockConstruct &);
   void Leave(const parser::BlockConstruct &);
   void Enter(const parser::InternalSubprogram &);
@@ -105,10 +107,10 @@ public:
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
 
-  void Enter(const parser::OpenMPAssumeConstruct &);
-  void Leave(const parser::OpenMPAssumeConstruct &);
-  void Enter(const parser::OpenMPDeclarativeAssumes &);
-  void Leave(const parser::OpenMPDeclarativeAssumes &);
+  void Enter(const parser::OmpAssumeDirective &);
+  void Leave(const parser::OmpAssumeDirective &);
+  void Enter(const parser::OmpAssumesDirective &);
+  void Leave(const parser::OmpAssumesDirective &);
   void Enter(const parser::OpenMPInteropConstruct &);
   void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OmpBlockConstruct &);

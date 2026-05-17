@@ -308,6 +308,17 @@ public:
     });
   }
 
+  /// Return an iterator range over \p Range with each block cast to \p
+  /// BlockTy. Unlike blocksOnly, all blocks in \p Range must be of type
+  /// \p BlockTy.
+  template <typename BlockTy, typename T> static auto blocksAs(T &&Range) {
+    // Create BaseTy with correct const-ness based on BlockTy.
+    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
+                                      const VPBlockBase, VPBlockBase>;
+    return map_range(
+        Range, [](BaseTy *Block) -> BlockTy * { return cast<BlockTy>(Block); });
+  }
+
   /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
   /// to LastBB forms a single-sucessor chain.
   static SmallVector<VPBasicBlock *>

@@ -6725,10 +6725,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
 
   // Create initial base VPlan0, to serve as common starting point for all
   // candidates built later for specific VF ranges.
-  auto VPlan0 = VPlanTransforms::buildVPlan0(
-      OrigLoop, *LI, Legal->getWidestInductionType(),
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE,
-      LVer ? &*LVer : nullptr);
+  auto VPlan0 = VPlanTransforms::buildVPlan0(OrigLoop, *LI,
+                                             Legal->getWidestInductionType(),
+                                             PSE, LVer ? &*LVer : nullptr);
 
   // Create recipes for header phis. For outer loops, reductions, recurrences
   // and in-loop reductions are empty since legality doesn't detect them.
@@ -6741,6 +6740,8 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
 
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::addCanonicalIVRecipes, *VPlan0,
+                 getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both

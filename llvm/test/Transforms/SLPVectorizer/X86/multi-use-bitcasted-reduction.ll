@@ -15,7 +15,7 @@ define i32 @test(i32 %arg, i32 %arg1, i1 %arg4, i1 %arg5) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> <i32 1, i32 2, i32 4, i32 8>, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br i1 [[ARG4]], label %[[BB13:.*]], label %[[BB16:.*]]
 ; CHECK:       [[COMMON_RET:.*]]:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, %[[BB20:.*]] ], [ [[OR19:%.*]], %[[BB17:.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, %[[BB20:.*]] ], [ [[TMP10:%.*]], %[[BB17:.*]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       [[BB13]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP7]])
@@ -23,11 +23,8 @@ define i32 @test(i32 %arg, i32 %arg1, i1 %arg4, i1 %arg5) {
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    br i1 [[ARG5]], label %[[BB17]], label %[[BB20]]
 ; CHECK:       [[BB17]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP7]], i32 1
-; CHECK-NEXT:    [[OR18:%.*]] = or i32 [[TMP10]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP7]], i32 2
-; CHECK-NEXT:    [[OR19]] = or i32 [[OR18]], [[TMP11]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP10]] = call i32 @llvm.vector.reduce.or.v3i32(<3 x i32> [[TMP9]])
 ; CHECK-NEXT:    br label %[[COMMON_RET]]
 ; CHECK:       [[BB20]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP7]], i32 3

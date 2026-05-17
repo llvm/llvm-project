@@ -5,6 +5,7 @@
 ; RUN: not opt -passes=verify %t/invalid-kind.ll --disable-output 2>&1 | FileCheck %s --check-prefix=INVALID-KIND
 ; RUN: not opt -passes=verify %t/invalid-count.ll --disable-output 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT
 ; RUN: not opt -passes=verify %t/invalid-place.ll --disable-output 2>&1 | FileCheck %s --check-prefix=INVALID-PLACE
+; RUN: not opt -passes=verify %t/invalid-duplicate-values.ll -disable-output 2>&1 | FileCheck %s --check-prefix=INVALID-DUPLICATE-VALUES
 
 ;--- valid.ll
 define void @test(ptr %0) {
@@ -36,3 +37,11 @@ define i32 @test(i32 %0) {
 }
 !0 = !{!"VP", i32 1, i32 20, i64 1234, i64 10, i64 5678, i64 5}
 ; INVALID-PLACE: VP !prof indirect call or memop size expected to be applied to CallBase instructions only
+
+;--- invalid-duplicate-values.ll
+define void @test(ptr %0) {
+  call void %0(), !prof !0
+  ret void
+}
+!0 = !{!"VP", i32 0, i64 1234, i64 72657670687977694852, i64 1, i64 72657670687977694852, i64 2}
+; INVALID-DUPLICATE-VALUES: VP !prof should not have duplicate profile values

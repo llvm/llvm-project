@@ -437,6 +437,14 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
   Value *Callee = IRB.CreateLoad(PtrTy, CalleePtr);
   auto &DL = M->getDataLayout();
   SmallVector<Value *> Args;
+  FunctionType *DispatcherCallTy = X64Ty;
+  // If we have a vararg function, the SelectionDAG lowering will need to
+  // recognize this so it can copy the arguments described by x4 (pointer) and
+  // x5 (length) to set up the x86-64 context correctly.
+  if (FT->isVarArg())
+    DispatcherCallTy =
+        FunctionType::get(X64Ty->getReturnType(), X64Ty->params(),
+                          /*isVarArg=*/true);
 
   // Pass the called function in x9.
   auto X64TyOffset = 1;
@@ -488,7 +496,7 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
   }
   // FIXME: Transfer necessary attributes? sret? anything else?
 
-  CallInst *Call = IRB.CreateCall(X64Ty, Callee, Args);
+  CallInst *Call = IRB.CreateCall(DispatcherCallTy, Callee, Args);
   Call->setCallingConv(CallingConv::ARM64EC_Thunk_X64);
 
   Value *RetVal = Call;

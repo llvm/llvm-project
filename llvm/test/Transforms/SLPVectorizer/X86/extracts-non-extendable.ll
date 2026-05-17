@@ -20,8 +20,7 @@ define void @test(i64 %v) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[DOTSROA_1278_10_EXTRACT_SHIFT83_I1622_1:%.*]] = xor i64 0, [[TMP21]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor <2 x i64> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP23:%.*]] = or <2 x i64> [[TMP22]], zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = or <2 x i64> splat (i64 1), [[TMP23]]
+; CHECK-NEXT:    [[TMP24:%.*]] = or <2 x i64> splat (i64 1), [[TMP22]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = and <2 x i64> [[TMP24]], zeroinitializer
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq <2 x i64> [[TMP25]], zeroinitializer
 ; CHECK-NEXT:    ret void

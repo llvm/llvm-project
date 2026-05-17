@@ -356,7 +356,7 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
   // file can interpose other ELF file's symbols at runtime.
   for (Symbol *sym : ctx.symtab->getSymbols())
     if (sym->isExported && sym->partition == partition)
-      markSymbol(sym, "externally visible symbol; may interpose");
+      markSymbol(sym, "externally visible symbol");
 
   // If this isn't the main partition, that's all that we need to preserve.
   if (partition != 1) {

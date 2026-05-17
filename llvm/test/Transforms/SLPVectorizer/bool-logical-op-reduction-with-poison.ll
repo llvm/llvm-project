@@ -16,28 +16,21 @@ define i1 @test(i32 %0, i32 %1, i32 %p) {
 ; X86-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
 ; X86-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; X86-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP7]], i1 true, i1 [[CMP6]]
-; X86-NEXT:    [[OP_RDX1:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP1]]
 ; X86-NEXT:    [[TMP8:%.*]] = freeze i1 [[OP_RDX]]
-; X86-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TMP8]], i1 true, i1 [[OP_RDX1]]
+; X86-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TMP8]], i1 true, i1 [[CMP1]]
 ; X86-NEXT:    ret i1 [[OP_RDX2]]
 ;
 ; AARCH64-LABEL: define i1 @test(
 ; AARCH64-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[P:%.*]]) {
 ; AARCH64-NEXT:  entry:
-; AARCH64-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
-; AARCH64-NEXT:    [[SHL4:%.*]] = shl i32 0, [[TMP1]]
-; AARCH64-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[SHL4]], 0
-; AARCH64-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, i32 [[TMP1]], i32 1
-; AARCH64-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
-; AARCH64-NEXT:    [[TMP4:%.*]] = shl <4 x i32> zeroinitializer, [[TMP3]]
-; AARCH64-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[P]], i32 0
-; AARCH64-NEXT:    [[TMP6:%.*]] = icmp slt <4 x i32> [[TMP4]], [[TMP5]]
-; AARCH64-NEXT:    [[TMP7:%.*]] = freeze <4 x i1> [[TMP6]]
-; AARCH64-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP7]])
-; AARCH64-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP8]], i1 true, i1 [[CMP5]]
-; AARCH64-NEXT:    [[OP_RDX1:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP1]]
-; AARCH64-NEXT:    [[TMP9:%.*]] = freeze i1 [[OP_RDX]]
-; AARCH64-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TMP9]], i1 true, i1 [[OP_RDX1]]
+; AARCH64-NEXT:    [[TMP2:%.*]] = insertelement <6 x i32> <i32 0, i32 poison, i32 0, i32 poison, i32 poison, i32 poison>, i32 [[TMP1]], i32 1
+; AARCH64-NEXT:    [[TMP3:%.*]] = shufflevector <6 x i32> [[TMP2]], <6 x i32> poison, <6 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 2>
+; AARCH64-NEXT:    [[TMP4:%.*]] = shl <6 x i32> zeroinitializer, [[TMP3]]
+; AARCH64-NEXT:    [[TMP5:%.*]] = insertelement <6 x i32> <i32 poison, i32 0, i32 0, i32 0, i32 0, i32 poison>, i32 [[P]], i32 0
+; AARCH64-NEXT:    [[TMP6:%.*]] = insertelement <6 x i32> [[TMP5]], i32 [[TMP0]], i32 5
+; AARCH64-NEXT:    [[TMP7:%.*]] = icmp slt <6 x i32> [[TMP4]], [[TMP6]]
+; AARCH64-NEXT:    [[TMP8:%.*]] = freeze <6 x i1> [[TMP7]]
+; AARCH64-NEXT:    [[OP_RDX2:%.*]] = call i1 @llvm.vector.reduce.or.v6i1(<6 x i1> [[TMP8]])
 ; AARCH64-NEXT:    ret i1 [[OP_RDX2]]
 ;
 entry:

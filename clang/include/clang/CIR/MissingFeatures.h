@@ -372,6 +372,7 @@ struct MissingFeatures {
 
   // Maybe only needed for Windows exception handling
   static bool currentFuncletPad() { return false; }
+  static bool sizeOfUnwindException() { return false; }
 };
 
 } // namespace cir

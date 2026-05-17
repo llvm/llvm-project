@@ -148,6 +148,11 @@ Makes programs 10x faster by doing Special New Thing.
   disabled by default to maintain compatibility with Binutils and LLVM older
   toolchains that do not define the `R_AARCH64_TLS_DTPREL64` static relocation
   type for TLS offsets.
+* A bug was fixed that caused LLVM IR inline assembly clobbers of the x29 and
+  x30 registers to be ignored when they were written using their xN names
+  instead of the ABI names FP and LR. Note that LLVM IR produced by Clang
+  always uses the ABI names, but other frontends may not.
+  ([#167783](https://github.com/llvm/llvm-project/pull/167783))
 
 ### Changes to the AMDGPU Backend
 

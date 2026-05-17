@@ -164,12 +164,10 @@ define i32 @merge_anyof_v4i32_wrong_middle(<4 x i32> %x) {
 
 define i32 @merge_anyof_v4i32_wrong_middle_better_rdx(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @merge_anyof_v4i32_wrong_middle_better_rdx(
-; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 3
-; CHECK-NEXT:    [[Y3:%.*]] = extractelement <4 x i32> [[Y:%.*]], i32 3
-; CHECK-NEXT:    [[CMP3WRONG:%.*]] = icmp slt i32 [[X3]], [[Y3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP2]], [[CMP3WRONG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <5 x i32> <i32 0, i32 3, i32 2, i32 1, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[X]], <5 x i32> <i32 0, i32 3, i32 2, i32 1, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <5 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v5i1(<5 x i1> [[TMP3]])
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OP_RDX]], i32 -1, i32 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

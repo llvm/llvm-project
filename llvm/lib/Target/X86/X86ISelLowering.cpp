@@ -3563,8 +3563,9 @@ bool X86TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   // Mask vectors support all subregister combinations and operations that
   // extract half of vector.
   if (ResVT.getVectorElementType() == MVT::i1)
-    return Index == 0 || ((ResVT.getSizeInBits() == SrcVT.getSizeInBits()*2) &&
-                          (Index == ResVT.getVectorNumElements()));
+    return Index == 0 ||
+           ((ResVT.getSizeInBits() * 2 == SrcVT.getSizeInBits()) &&
+            (Index == ResVT.getVectorNumElements()));
 
   return (Index % ResVT.getVectorNumElements()) == 0;
 }
@@ -8486,7 +8487,7 @@ static SDValue LowerBUILD_VECTORvXbf16(SDValue Op, SelectionDAG &DAG,
   return DAG.getBitcast(VT, Res);
 }
 
-// Lower BUILD_VECTOR operation for v8i1 and v16i1 types.
+// Lower BUILD_VECTOR operation for vXi1 types.
 static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
                                      SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
@@ -8547,6 +8548,25 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
       Select = DAG.getBitcast(VecVT, Select);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, Select,
                          DAG.getVectorIdxConstant(0, dl));
+    }
+  }
+
+  // See if we can cheaply generate a vXi8 vector and convert to vXi1.
+  // TODO: Add handling for sub-128bit vXi8 vectors.
+  MVT OpVT = Op.getOperand(0).getSimpleValueType();
+  if (NonConstIdx.size() > 1 && OpVT == MVT::i8) {
+    // On pre-BWI targets, we must extend to vXi32 instead.
+    MVT ByteVT = VT.changeVectorElementType(MVT::i8);
+    MVT WideVT =
+        Subtarget.hasBWI() ? ByteVT : VT.changeVectorElementType(MVT::i32);
+    if (DAG.getTargetLoweringInfo().isTypeLegal(ByteVT) &&
+        DAG.getTargetLoweringInfo().isTypeLegal(WideVT)) {
+      SDValue ByteBV = DAG.getBuildVector(ByteVT, dl, Op->ops());
+      SDValue WideBV = DAG.getNode(ISD::ANY_EXTEND, dl, WideVT, ByteBV);
+      WideBV = DAG.getNode(ISD::AND, dl, WideVT, WideBV,
+                           DAG.getConstant(1, dl, WideVT));
+      return DAG.getSetCC(dl, VT, WideBV, DAG.getConstant(0, dl, WideVT),
+                          ISD::SETNE);
     }
   }
 
@@ -20941,7 +20961,7 @@ std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
 /// Horizontal vector math instructions may be slower than normal math with
 /// shuffles. Limit horizontal op codegen based on size/speed trade-offs, uarch
 /// implementation, and likely shuffle complexity of the alternate sequence.
-static bool shouldUseHorizontalOp(bool IsSingleSource, SelectionDAG &DAG,
+static bool shouldUseHorizontalOp(bool IsSingleSource, const SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
   bool IsOptimizingSize = DAG.shouldOptForSize();
   bool HasFastHOps = Subtarget.hasFastHorizontalOps();
