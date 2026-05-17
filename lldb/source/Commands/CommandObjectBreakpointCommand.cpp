@@ -37,7 +37,7 @@ public:
                             "commands previously added to it."
                             "  If no breakpoint is specified, adds the "
                             "commands to the last created breakpoint.",
-                            nullptr),
+                            nullptr, eCommandAllowsDummyTarget),
         IOHandlerDelegateMultiline("DONE",
                                    IOHandlerDelegate::Completion::LLDBCommand),
         m_func_options("breakpoint command", false, 'F') {
@@ -109,7 +109,7 @@ Note that the global variable 'lldb.frame' will NOT be updated when \
 this function is called, so be sure to use the 'frame' argument. The 'frame' argument \
 can get you to the thread via frame.GetThread(), the thread can get you to the \
 process via thread.GetProcess(), and the process can get you back to the target \
-via process.GetTarget()."
+via process.GetTarget()->"
         R"(
 
 )"
@@ -324,9 +324,9 @@ are no syntax errors may indicate that a function was declared but never called.
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
+    Target *target = m_options.m_use_dummy ? &GetDummyTarget() : GetTarget();
 
-    const BreakpointList &breakpoints = target.GetBreakpointList();
+    const BreakpointList &breakpoints = target->GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
 
     if (num_breakpoints == 0) {
@@ -344,7 +344,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     m_bp_options_vec.clear();
@@ -356,7 +356,7 @@ protected:
         BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
         if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
           Breakpoint *bp =
-              target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+              target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
           if (cur_bp_id.GetLocationID() == LLDB_INVALID_BREAK_ID) {
             // This breakpoint does not have an associated location.
             m_bp_options_vec.push_back(bp->GetOptions());
@@ -446,7 +446,7 @@ public:
   CommandObjectBreakpointCommandDelete(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "delete",
                             "Delete the set of commands from a breakpoint.",
-                            nullptr) {
+                            nullptr, eCommandAllowsDummyTarget) {
     AddSimpleArgumentList(eArgTypeBreakpointID);
   }
 
@@ -491,9 +491,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
+    Target *target = m_options.m_use_dummy ? &GetDummyTarget() : GetTarget();
 
-    const BreakpointList &breakpoints = target.GetBreakpointList();
+    const BreakpointList &breakpoints = target->GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
 
     if (num_breakpoints == 0) {
@@ -509,7 +509,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -518,7 +518,7 @@ protected:
         BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
         if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
           Breakpoint *bp =
-              target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+              target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
           if (cur_bp_id.GetLocationID() != LLDB_INVALID_BREAK_ID) {
             BreakpointLocationSP bp_loc_sp(
                 bp->FindLocationByID(cur_bp_id.GetLocationID()));
@@ -558,9 +558,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-
-    const BreakpointList &breakpoints = target.GetBreakpointList();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    const BreakpointList &breakpoints = target->GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
 
     if (num_breakpoints == 0) {
@@ -585,7 +585,7 @@ protected:
         BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
         if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
           Breakpoint *bp =
-              target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+              target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
 
           if (bp) {
             BreakpointLocationSP bp_loc_sp;

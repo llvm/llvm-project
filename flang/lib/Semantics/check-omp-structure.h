@@ -82,6 +82,8 @@ public:
   bool Enter(const parser::EndSubroutineStmt &);
   bool Enter(const parser::FunctionStmt &);
   bool Enter(const parser::EndFunctionStmt &);
+  bool Enter(const parser::MpSubprogramStmt &);
+  bool Enter(const parser::EndMpSubprogramStmt &);
   bool Enter(const parser::BlockConstruct &);
   void Leave(const parser::BlockConstruct &);
   void Enter(const parser::InternalSubprogram &);
