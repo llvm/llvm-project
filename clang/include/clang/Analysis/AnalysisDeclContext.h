@@ -38,7 +38,6 @@ class ASTContext;
 class BlockDecl;
 class CFGReverseBlockReachabilityAnalysis;
 class ImplicitParamDecl;
-class LocationContext;
 class StackFrameManager;
 class ParentMap;
 class StackFrame;
@@ -202,68 +201,19 @@ private:
   StackFrameManager &getStackFrameManager();
 };
 
-class LocationContext : public llvm::FoldingSetNode {
-public:
-  enum ContextKind { StackFrameKind };
-
-private:
-  ContextKind Kind;
+/// It represents a stack frame of the call stack (based on CallEvent).
+class StackFrame : public llvm::FoldingSetNode {
+  friend class StackFrameManager;
 
   // AnalysisDeclContext can't be const since some methods may modify its
   // member.
   AnalysisDeclContext *Ctx;
 
   const StackFrame *Parent;
+
   int64_t ID;
 
-protected:
-  LocationContext(ContextKind k, AnalysisDeclContext *ctx,
-                  const StackFrame *parent, int64_t ID)
-      : Kind(k), Ctx(ctx), Parent(parent), ID(ID) {
-    assert(ctx);
-  }
-
-public:
-  virtual ~LocationContext();
-
-  ContextKind getKind() const { return Kind; }
-
-  int64_t getID() const { return ID; }
-
-  LLVM_ATTRIBUTE_RETURNS_NONNULL
-  AnalysisDeclContext *getAnalysisDeclContext() const { return Ctx; }
-
-  /// It might return null.
-  const StackFrame *getParent() const { return Parent; }
-
-  bool isParentOf(const LocationContext *LC) const;
-
-  const Decl *getDecl() const { return Ctx->getDecl(); }
-
-  CFG *getCFG() const { return Ctx->getCFG(); }
-
-  template <typename T> T *getAnalysis() const { return Ctx->getAnalysis<T>(); }
-
-  const ParentMap &getParentMap() const { return Ctx->getParentMap(); }
-
-  /// \copydoc AnalysisDeclContext::getSelfDecl()
-  const ImplicitParamDecl *getSelfDecl() const { return Ctx->getSelfDecl(); }
-
   const StackFrame *getStackFrame() const;
-
-  /// \returns Whether the current LocationContext has no caller context.
-  virtual bool inTopFrame() const;
-
-  virtual void Profile(llvm::FoldingSetNodeID &ID) = 0;
-
-  static void ProfileCommon(llvm::FoldingSetNodeID &ID, ContextKind ck,
-                            AnalysisDeclContext *ctx,
-                            const LocationContext *parent, const void *data);
-};
-
-/// It represents a stack frame of the call stack (based on CallEvent).
-class StackFrame : public LocationContext {
-  friend class StackFrameManager;
 
   // Extra data for BlockInvocations
   const void *Data;
@@ -282,14 +232,37 @@ class StackFrame : public LocationContext {
   // The index of the call site in the CFGBlock.
   const unsigned Index;
 
-  StackFrame(AnalysisDeclContext *ADC, const StackFrame *ParentLC,
+public:
+  StackFrame(AnalysisDeclContext *ADC, const StackFrame *Parent,
              const void *Data, const Expr *E, const CFGBlock *Block,
              unsigned BlockCount, unsigned Index, int64_t ID)
-      : LocationContext(StackFrameKind, ADC, ParentLC, ID), Data(Data),
-        CallSite(E), Block(Block), BlockCount(BlockCount), Index(Index) {}
+      : Ctx(ADC), Parent(Parent), ID(ID), Data(Data), CallSite(E), Block(Block),
+        BlockCount(BlockCount), Index(Index) {
+    assert(ADC);
+  }
 
-public:
-  ~StackFrame() override = default;
+  ~StackFrame() = default;
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
+  AnalysisDeclContext *getAnalysisDeclContext() const { return Ctx; }
+
+  /// It might return null.
+  const StackFrame *getParent() const { return Parent; }
+
+  int64_t getID() const { return ID; }
+
+  bool isParentOf(const StackFrame *LC) const;
+
+  const Decl *getDecl() const { return Ctx->getDecl(); }
+
+  CFG *getCFG() const { return Ctx->getCFG(); }
+
+  template <typename T> T *getAnalysis() const { return Ctx->getAnalysis<T>(); }
+
+  const ParentMap &getParentMap() const { return Ctx->getParentMap(); }
+
+  /// \copydoc AnalysisDeclContext::getSelfDecl()
+  const ImplicitParamDecl *getSelfDecl() const { return Ctx->getSelfDecl(); }
 
   const void *getData() const { return Data; }
 
@@ -297,13 +270,12 @@ public:
 
   const CFGBlock *getCallSiteBlock() const { return Block; }
 
-  bool inTopFrame() const override { return getParent() == nullptr; }
+  /// \returns Whether the current StackFrame has no caller context.
+  bool inTopFrame() const { return getParent() == nullptr; }
 
   unsigned getIndex() const { return Index; }
 
   CFGElement getCallSiteCFGElement() const { return (*Block)[Index]; }
-
-  void Profile(llvm::FoldingSetNodeID &ID) override;
 
   /// Prints out the call stack in \c json format.
   ///
@@ -329,19 +301,21 @@ public:
 
   LLVM_DUMP_METHOD void dump() const;
 
+  void Profile(llvm::FoldingSetNodeID &ID);
+
+  static void ProfileCommon(llvm::FoldingSetNodeID &ID,
+                            AnalysisDeclContext *ctx, const StackFrame *parent,
+                            const void *data);
+
   static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,
-                      const LocationContext *ParentLC, const void *Data,
-                      const Expr *E, const CFGBlock *Block, unsigned BlockCount,
+                      const StackFrame *SF, const void *Data, const Expr *E,
+                      const CFGBlock *Block, unsigned BlockCount,
                       unsigned Index) {
-    ProfileCommon(ID, StackFrameKind, ADC, ParentLC, E);
+    ProfileCommon(ID, ADC, SF, E);
     ID.AddPointer(Data);
     ID.AddPointer(Block);
     ID.AddInteger(BlockCount);
     ID.AddInteger(Index);
-  }
-
-  static bool classof(const LocationContext *LC) {
-    return LC->getKind() == StackFrameKind;
   }
 };
 
