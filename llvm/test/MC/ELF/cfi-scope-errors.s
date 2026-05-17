@@ -18,8 +18,15 @@ nop
 .cfi_def_cfa rsp, 8
 # CHECK: [[#@LINE-1]]:1: error: this directive must appear between .cfi_startproc and .cfi_endproc directives
 
-## Check we don't crash on unclosed frame scope.
-.globl foo
-foo:
- .cfi_startproc
+## The .cfi_startproc in .text.qux is left unfinished while a later frame is
+## properly closed, so DwarfFrameInfos.back() has a valid End and the
+## unfinished frame is only visible through the frame stack. Check we
+## diagnose it instead of crashing.
+## https://github.com/llvm/llvm-project/issues/177852
+.pushsection .text.qux, "ax", @progbits
+.cfi_startproc
+.popsection
+
+.cfi_startproc
+.cfi_endproc
 # CHECK: [[#@LINE+1]]:1: error: Unfinished frame!
