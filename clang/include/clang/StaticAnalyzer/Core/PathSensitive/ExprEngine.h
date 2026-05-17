@@ -292,9 +292,8 @@ public:
     return {getCurrBlock(), currStmtIdx};
   }
 
-  unsigned getNumVisited(const LocationContext *LC,
-                         const CFGBlock *Block) const {
-    return Engine.WList->getBlockCounter().getNumVisited(LC->getStackFrame(),
+  unsigned getNumVisited(const StackFrame *SF, const CFGBlock *Block) const {
+    return Engine.WList->getBlockCounter().getNumVisited(SF,
                                                          Block->getBlockID());
   }
 
