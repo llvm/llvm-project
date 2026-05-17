@@ -479,7 +479,7 @@ SVal ProgramState::getLValue(const IndirectFieldDecl *D, SVal Base) const {
 //  State pretty-printing.
 //===----------------------------------------------------------------------===//
 
-void ProgramState::printJson(raw_ostream &Out, const LocationContext *LCtx,
+void ProgramState::printJson(raw_ostream &Out, const StackFrame *SF,
                              const char *NL, unsigned int Space,
                              bool IsDot) const {
   Indent(Out, Space, IsDot) << "\"program_state\": {" << NL;
@@ -491,7 +491,7 @@ void ProgramState::printJson(raw_ostream &Out, const LocationContext *LCtx,
   Mgr.getStoreManager().printJson(Out, getStore(), NL, Space, IsDot);
 
   // Print out the environment.
-  Env.printJson(Out, Mgr.getContext(), LCtx, NL, Space, IsDot);
+  Env.printJson(Out, Mgr.getContext(), SF, NL, Space, IsDot);
 
   // Print out the constraints.
   Mgr.getConstraintManager().printJson(Out, this, NL, Space, IsDot);
@@ -500,15 +500,15 @@ void ProgramState::printJson(raw_ostream &Out, const LocationContext *LCtx,
   printDynamicTypeInfoJson(Out, this, NL, Space, IsDot);
 
   // Print checker-specific data.
-  Mgr.getOwningEngine().printJson(Out, this, LCtx, NL, Space, IsDot);
+  Mgr.getOwningEngine().printJson(Out, this, SF, NL, Space, IsDot);
 
   --Space;
   Indent(Out, Space, IsDot) << '}';
 }
 
-void ProgramState::printDOT(raw_ostream &Out, const LocationContext *LCtx,
+void ProgramState::printDOT(raw_ostream &Out, const StackFrame *SF,
                             unsigned int Space) const {
-  printJson(Out, LCtx, /*NL=*/"\\l", Space, /*IsDot=*/true);
+  printJson(Out, SF, /*NL=*/"\\l", Space, /*IsDot=*/true);
 }
 
 LLVM_DUMP_METHOD void ProgramState::dump() const {

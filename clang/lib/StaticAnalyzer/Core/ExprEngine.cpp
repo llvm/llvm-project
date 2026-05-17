@@ -196,7 +196,7 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(ObjectsUnderConstruction,
 // arr[2][2]; assume arr[1][1] will be the next element under construction, so
 // the index is 3.
 typedef llvm::ImmutableMap<
-    std::pair<const CXXConstructExpr *, const LocationContext *>, unsigned>
+    std::pair<const CXXConstructExpr *, const StackFrame *>, unsigned>
     IndexOfElementToConstructMap;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(IndexOfElementToConstruct,
                                  IndexOfElementToConstructMap)
@@ -637,7 +637,7 @@ bool ExprEngine::isDestructorElided(ProgramStateRef State,
 bool ExprEngine::areAllObjectsFullyConstructed(ProgramStateRef State,
                                                const StackFrame *FromSF,
                                                const StackFrame *ToSF) {
-  const LocationContext *SF = FromSF;
+  const StackFrame *SF = FromSF;
   while (SF != ToSF) {
     assert(SF && "ToSF must be a parent of FromSF!");
     for (auto I : State->get<ObjectsUnderConstruction>())
@@ -670,10 +670,10 @@ ProgramStateRef ExprEngine::processRegionChanges(
 
 static void
 printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
-                                  const char *NL, const LocationContext *LCtx,
+                                  const char *NL, const StackFrame *SF,
                                   unsigned int Space = 0, bool IsDot = false) {
   PrintingPolicy PP =
-      LCtx->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
+      SF->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
 
   ++Space;
   bool HasItem = false;
@@ -682,7 +682,7 @@ printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
   const ConstructedObjectKey *LastKey = nullptr;
   for (const auto &I : State->get<ObjectsUnderConstruction>()) {
     const ConstructedObjectKey &Key = I.first;
-    if (Key.getLocationContext() != LCtx)
+    if (Key.getLocationContext() != SF)
       continue;
 
     if (!HasItem) {
@@ -696,7 +696,7 @@ printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
   for (const auto &I : State->get<ObjectsUnderConstruction>()) {
     const ConstructedObjectKey &Key = I.first;
     SVal Value = I.second;
-    if (Key.getLocationContext() != LCtx)
+    if (Key.getLocationContext() != SF)
       continue;
 
     Indent(Out, Space, IsDot) << "{ ";
@@ -717,10 +717,10 @@ printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
 
 static void printIndicesOfElementsToConstructJson(
     raw_ostream &Out, ProgramStateRef State, const char *NL,
-    const LocationContext *LCtx, unsigned int Space = 0, bool IsDot = false) {
-  using KeyT = std::pair<const Expr *, const LocationContext *>;
+    const StackFrame *SF, unsigned int Space = 0, bool IsDot = false) {
+  using KeyT = std::pair<const Expr *, const StackFrame *>;
 
-  const auto &Context = LCtx->getAnalysisDeclContext()->getASTContext();
+  const auto &Context = SF->getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP = Context.getPrintingPolicy();
 
   ++Space;
@@ -730,7 +730,7 @@ static void printIndicesOfElementsToConstructJson(
   KeyT LastKey;
   for (const auto &I : State->get<IndexOfElementToConstruct>()) {
     const KeyT &Key = I.first;
-    if (Key.second != LCtx)
+    if (Key.second != SF)
       continue;
 
     if (!HasItem) {
@@ -744,7 +744,7 @@ static void printIndicesOfElementsToConstructJson(
   for (const auto &I : State->get<IndexOfElementToConstruct>()) {
     const KeyT &Key = I.first;
     unsigned Value = I.second;
-    if (Key.second != LCtx)
+    if (Key.second != SF)
       continue;
 
     Indent(Out, Space, IsDot) << "{ ";
@@ -778,13 +778,12 @@ static void printIndicesOfElementsToConstructJson(
 }
 
 static void printPendingInitLoopJson(raw_ostream &Out, ProgramStateRef State,
-                                     const char *NL,
-                                     const LocationContext *LCtx,
+                                     const char *NL, const StackFrame *SF,
                                      unsigned int Space = 0,
                                      bool IsDot = false) {
   using KeyT = std::pair<const CXXConstructExpr *, const LocationContext *>;
 
-  const auto &Context = LCtx->getAnalysisDeclContext()->getASTContext();
+  const auto &Context = SF->getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP = Context.getPrintingPolicy();
 
   ++Space;
@@ -794,7 +793,7 @@ static void printPendingInitLoopJson(raw_ostream &Out, ProgramStateRef State,
   KeyT LastKey;
   for (const auto &I : State->get<PendingInitLoop>()) {
     const KeyT &Key = I.first;
-    if (Key.second != LCtx)
+    if (Key.second != SF)
       continue;
 
     if (!HasItem) {
@@ -808,7 +807,7 @@ static void printPendingInitLoopJson(raw_ostream &Out, ProgramStateRef State,
   for (const auto &I : State->get<PendingInitLoop>()) {
     const KeyT &Key = I.first;
     unsigned Value = I.second;
-    if (Key.second != LCtx)
+    if (Key.second != SF)
       continue;
 
     Indent(Out, Space, IsDot) << "{ ";
@@ -839,7 +838,7 @@ static void printPendingInitLoopJson(raw_ostream &Out, ProgramStateRef State,
 
 static void
 printPendingArrayDestructionsJson(raw_ostream &Out, ProgramStateRef State,
-                                  const char *NL, const LocationContext *LCtx,
+                                  const char *NL, const StackFrame *SF,
                                   unsigned int Space = 0, bool IsDot = false) {
   using KeyT = const LocationContext *;
 
@@ -850,7 +849,7 @@ printPendingArrayDestructionsJson(raw_ostream &Out, ProgramStateRef State,
   KeyT LastKey = nullptr;
   for (const auto &I : State->get<PendingArrayDestruction>()) {
     const KeyT &Key = I.first;
-    if (Key != LCtx)
+    if (Key != SF)
       continue;
 
     if (!HasItem) {
@@ -863,7 +862,7 @@ printPendingArrayDestructionsJson(raw_ostream &Out, ProgramStateRef State,
 
   for (const auto &I : State->get<PendingArrayDestruction>()) {
     const KeyT &Key = I.first;
-    if (Key != LCtx)
+    if (Key != SF)
       continue;
 
     Indent(Out, Space, IsDot) << "{ ";
@@ -886,22 +885,22 @@ printPendingArrayDestructionsJson(raw_ostream &Out, ProgramStateRef State,
 }
 
 /// A helper function to generalize program state trait printing.
-/// The function invokes Printer as 'Printer(Out, State, NL, LC, Space, IsDot,
+/// The function invokes Printer as 'Printer(Out, State, NL, SF, Space, IsDot,
 /// std::forward<Args>(args)...)'. \n One possible type for Printer is
-/// 'void()(raw_ostream &, ProgramStateRef, const char *, const LocationContext
-/// *, unsigned int, bool, ...)' \n \param Trait The state trait to be printed.
+/// 'void()(raw_ostream &, ProgramStateRef, const char *, const StackFrame *,
+/// unsigned int, bool, ...)' \n \param Trait The state trait to be printed.
 /// \param Printer A void function that prints Trait.
 /// \param Args An additional parameter pack that is passed to Print upon
 /// invocation.
 template <typename Trait, typename Printer, typename... Args>
-static void printStateTraitWithLocationContextJson(
-    raw_ostream &Out, ProgramStateRef State, const LocationContext *LCtx,
+static void printStateTraitWithStackFrameJson(
+    raw_ostream &Out, ProgramStateRef State, const StackFrame *SF,
     const char *NL, unsigned int Space, bool IsDot,
     const char *jsonPropertyName, Printer printer, Args &&...args) {
 
   using RequiredType =
-      void (*)(raw_ostream &, ProgramStateRef, const char *,
-               const LocationContext *, unsigned int, bool, Args &&...);
+      void (*)(raw_ostream &, ProgramStateRef, const char *, const StackFrame *,
+               unsigned int, bool, Args &&...);
 
   // Try to do as much compile time checking as possible.
   // FIXME: check for invocable instead of function?
@@ -910,12 +909,12 @@ static void printStateTraitWithLocationContextJson(
   static_assert(std::is_convertible_v<Printer, RequiredType>,
                 "Printer doesn't have the required type!");
 
-  if (LCtx && !State->get<Trait>().isEmpty()) {
+  if (SF && !State->get<Trait>().isEmpty()) {
     Indent(Out, Space, IsDot) << '\"' << jsonPropertyName << "\": ";
     ++Space;
     Out << '[' << NL;
-    LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
-      printer(Out, State, NL, LC, Space, IsDot, std::forward<Args>(args)...);
+    SF->printJson(Out, NL, Space, IsDot, [&](const StackFrame *SF) {
+      printer(Out, State, NL, SF, Space, IsDot, std::forward<Args>(args)...);
     });
 
     --Space;
@@ -924,20 +923,20 @@ static void printStateTraitWithLocationContextJson(
 }
 
 void ExprEngine::printJson(raw_ostream &Out, ProgramStateRef State,
-                           const LocationContext *LCtx, const char *NL,
+                           const StackFrame *SF, const char *NL,
                            unsigned int Space, bool IsDot) const {
 
-  printStateTraitWithLocationContextJson<ObjectsUnderConstruction>(
-      Out, State, LCtx, NL, Space, IsDot, "constructing_objects",
+  printStateTraitWithStackFrameJson<ObjectsUnderConstruction>(
+      Out, State, SF, NL, Space, IsDot, "constructing_objects",
       printObjectsUnderConstructionJson);
-  printStateTraitWithLocationContextJson<IndexOfElementToConstruct>(
-      Out, State, LCtx, NL, Space, IsDot, "index_of_element",
+  printStateTraitWithStackFrameJson<IndexOfElementToConstruct>(
+      Out, State, SF, NL, Space, IsDot, "index_of_element",
       printIndicesOfElementsToConstructJson);
-  printStateTraitWithLocationContextJson<PendingInitLoop>(
-      Out, State, LCtx, NL, Space, IsDot, "pending_init_loops",
+  printStateTraitWithStackFrameJson<PendingInitLoop>(
+      Out, State, SF, NL, Space, IsDot, "pending_init_loops",
       printPendingInitLoopJson);
-  printStateTraitWithLocationContextJson<PendingArrayDestruction>(
-      Out, State, LCtx, NL, Space, IsDot, "pending_destructors",
+  printStateTraitWithStackFrameJson<PendingArrayDestruction>(
+      Out, State, SF, NL, Space, IsDot, "pending_destructors",
       printPendingArrayDestructionsJson);
 
   getCheckerManager().runCheckersForPrintStateJson(Out, State, NL, Space,
@@ -1022,7 +1021,7 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
 
   if (!DiagnosticStmt) {
     DiagnosticStmt = ReferenceStmt;
-    assert(DiagnosticStmt && "Required for clearing a LocationContext");
+    assert(DiagnosticStmt && "Required for clearing a StackFrame");
   }
 
   NumRemoveDeadBindings++;
@@ -1033,7 +1032,7 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   // frame, this will be null.)
   if (!ReferenceStmt) {
     assert(K == ProgramPoint::PostStmtPurgeDeadSymbolsKind &&
-           "Use PostStmtPurgeDeadSymbolsKind for clearing a LocationContext");
+           "Use PostStmtPurgeDeadSymbolsKind for clearing a StackFrame");
     SF = SF->getParent();
   }
 

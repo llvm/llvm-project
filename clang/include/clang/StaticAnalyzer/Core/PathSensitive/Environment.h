@@ -91,7 +91,7 @@ public:
   }
 
   void printJson(raw_ostream &Out, const ASTContext &Ctx,
-                 const LocationContext *LCtx = nullptr, const char *NL = "\n",
+                 const StackFrame *SF = nullptr, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const;
 };
 

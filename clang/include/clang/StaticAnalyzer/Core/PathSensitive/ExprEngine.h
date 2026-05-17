@@ -57,7 +57,6 @@ class Decl;
 class DeclStmt;
 class GCCAsmStmt;
 class LambdaExpr;
-class LocationContext;
 class MaterializeTemporaryExpr;
 class MSAsmStmt;
 class NamedDecl;
@@ -470,9 +469,8 @@ public:
   }
 
   /// printJson - Called by ProgramStateManager to print checker-specific data.
-  void printJson(raw_ostream &Out, ProgramStateRef State,
-                 const LocationContext *LCtx, const char *NL,
-                 unsigned int Space, bool IsDot) const;
+  void printJson(raw_ostream &Out, ProgramStateRef State, const StackFrame *SF,
+                 const char *NL, unsigned int Space, bool IsDot) const;
 
   ProgramStateManager &getStateManager() { return StateMgr; }
   const ProgramStateManager &getStateManager() const { return StateMgr; }

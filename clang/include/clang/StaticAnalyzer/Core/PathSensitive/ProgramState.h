@@ -474,11 +474,11 @@ public:
   }
 
   // Pretty-printing.
-  void printJson(raw_ostream &Out, const LocationContext *LCtx = nullptr,
+  void printJson(raw_ostream &Out, const StackFrame *SF = nullptr,
                  const char *NL = "\n", unsigned int Space = 0,
                  bool IsDot = false) const;
 
-  void printDOT(raw_ostream &Out, const LocationContext *LCtx = nullptr,
+  void printDOT(raw_ostream &Out, const StackFrame *SF = nullptr,
                 unsigned int Space = 0) const;
 
   void dump() const;

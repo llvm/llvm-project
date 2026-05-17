@@ -470,7 +470,7 @@ static void printLocation(raw_ostream &Out, const SourceManager &SM,
     Loc.print(Out, SM);
 }
 
-void LocationContext::dumpStack(raw_ostream &Out) const {
+void StackFrame::dumpStack(raw_ostream &Out) const {
   ASTContext &Ctx = getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP(Ctx.getLangOpts());
   PP.TerseOutput = 1;
@@ -479,16 +479,16 @@ void LocationContext::dumpStack(raw_ostream &Out) const {
       getAnalysisDeclContext()->getASTContext().getSourceManager();
 
   unsigned Frame = 0;
-  for (const LocationContext *LCtx = this; LCtx; LCtx = LCtx->getParent()) {
-    switch (LCtx->getKind()) {
+  for (const StackFrame *SF = this; SF; SF = SF->getParent()) {
+    switch (SF->getKind()) {
     case StackFrameKind:
       Out << "\t#" << Frame << ' ';
       ++Frame;
-      if (const auto *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
+      if (const auto *D = dyn_cast<NamedDecl>(SF->getDecl()))
         Out << "Calling " << AnalysisDeclContext::getFunctionName(D);
       else
         Out << "Calling anonymous code";
-      if (const Expr *E = cast<StackFrame>(LCtx)->getCallSite()) {
+      if (const Expr *E = cast<StackFrame>(SF)->getCallSite()) {
         Out << " at line ";
         printLocation(Out, SM, E->getBeginLoc());
       }
@@ -498,10 +498,9 @@ void LocationContext::dumpStack(raw_ostream &Out) const {
   }
 }
 
-void LocationContext::printJson(raw_ostream &Out, const char *NL,
-                                unsigned int Space, bool IsDot,
-                                std::function<void(const LocationContext *)>
-                                    printMoreInfoPerContext) const {
+void StackFrame::printJson(
+    raw_ostream &Out, const char *NL, unsigned int Space, bool IsDot,
+    std::function<void(const StackFrame *)> printMoreInfoPerContext) const {
   ASTContext &Ctx = getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP(Ctx.getLangOpts());
   PP.TerseOutput = 1;
@@ -510,20 +509,20 @@ void LocationContext::printJson(raw_ostream &Out, const char *NL,
       getAnalysisDeclContext()->getASTContext().getSourceManager();
 
   unsigned Frame = 0;
-  for (const LocationContext *LCtx = this; LCtx; LCtx = LCtx->getParent()) {
+  for (const StackFrame *SF = this; SF; SF = SF->getParent()) {
     Indent(Out, Space, IsDot)
-        << "{ \"lctx_id\": " << LCtx->getID() << ", \"location_context\": \"";
-    switch (LCtx->getKind()) {
+        << "{ \"lctx_id\": " << SF->getID() << ", \"location_context\": \"";
+    switch (SF->getKind()) {
     case StackFrameKind:
       Out << '#' << Frame << " Call\", \"calling\": \"";
       ++Frame;
-      if (const auto *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
+      if (const auto *D = dyn_cast<NamedDecl>(SF->getDecl()))
         Out << D->getQualifiedNameAsString();
       else
         Out << "anonymous code";
 
       Out << "\", \"location\": ";
-      if (const Expr *E = cast<StackFrame>(LCtx)->getCallSite()) {
+      if (const Expr *E = cast<StackFrame>(SF)->getCallSite()) {
         printSourceLocationAsJson(Out, E->getBeginLoc(), SM);
       } else {
         Out << "null";
@@ -533,16 +532,16 @@ void LocationContext::printJson(raw_ostream &Out, const char *NL,
       break;
     }
 
-    printMoreInfoPerContext(LCtx);
+    printMoreInfoPerContext(SF);
 
     Out << '}';
-    if (LCtx->getParent())
+    if (SF->getParent())
       Out << ',';
     Out << NL;
   }
 }
 
-LLVM_DUMP_METHOD void LocationContext::dump() const { printJson(llvm::errs()); }
+LLVM_DUMP_METHOD void StackFrame::dump() const { printJson(llvm::errs()); }
 
 //===----------------------------------------------------------------------===//
 // Lazily generated map to query the external variables referenced by a Block.

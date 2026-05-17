@@ -256,30 +256,6 @@ public:
 
   virtual void Profile(llvm::FoldingSetNodeID &ID) = 0;
 
-  /// Prints out the call stack.
-  ///
-  /// \param Out The out stream.
-  LLVM_DUMP_METHOD void dumpStack(raw_ostream &Out) const;
-
-  /// Prints out the call stack in \c json format.
-  ///
-  /// \param Out   The out stream.
-  /// \param NL    The newline.
-  /// \param Space The space count for indentation.
-  /// \param IsDot Whether the output format is \c dot.
-  /// \param printMoreInfoPerContext
-  /// A callback to print more information for each context, for example:
-  /// \code
-  ///   [&](const LocationContext *LC) { LC->dump(); }
-  /// \endcode
-  void printJson(
-      raw_ostream &Out, const char *NL = "\n", unsigned int Space = 0,
-      bool IsDot = false,
-      std::function<void(const LocationContext *)> printMoreInfoPerContext =
-          [](const LocationContext *) {}) const;
-
-  LLVM_DUMP_METHOD void dump() const;
-
   static void ProfileCommon(llvm::FoldingSetNodeID &ID, ContextKind ck,
                             AnalysisDeclContext *ctx,
                             const LocationContext *parent, const void *data);
@@ -328,6 +304,30 @@ public:
   CFGElement getCallSiteCFGElement() const { return (*Block)[Index]; }
 
   void Profile(llvm::FoldingSetNodeID &ID) override;
+
+  /// Prints out the call stack in \c json format.
+  ///
+  /// \param Out   The out stream.
+  /// \param NL    The newline.
+  /// \param Space The space count for indentation.
+  /// \param IsDot Whether the output format is \c dot.
+  /// \param printMoreInfoPerContext
+  /// A callback to print more information for each context, for example:
+  /// \code
+  ///   [&](const StackFrame *SF) { SF->dump(); }
+  /// \endcode
+  void printJson(
+      raw_ostream &Out, const char *NL = "\n", unsigned int Space = 0,
+      bool IsDot = false,
+      std::function<void(const StackFrame *)> printMoreInfoPerContext =
+          [](const StackFrame *) {}) const;
+
+  /// Prints out the call stack.
+  ///
+  /// \param Out The out stream.
+  LLVM_DUMP_METHOD void dumpStack(raw_ostream &Out) const;
+
+  LLVM_DUMP_METHOD void dump() const;
 
   static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,
                       const LocationContext *ParentLC, const void *Data,
