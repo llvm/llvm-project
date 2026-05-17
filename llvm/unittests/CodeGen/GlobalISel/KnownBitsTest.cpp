@@ -2150,3 +2150,257 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUADDO) {
   EXPECT_EQ(0u, Res.One.getZExtValue());
   EXPECT_EQ(31u, Res.Zero.countl_one());
 }
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroConstant) {
+  StringRef MIRString = R"(
+   %zero:_(s32) = G_CONSTANT i32 0
+   %one:_(s32) = G_CONSTANT i32 1
+   %copy_zero:_(s32) = COPY %zero
+   %copy_one:_(s32) = COPY %one
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyOne = Copies[Copies.size() - 1];
+  Register CopyZero = Copies[Copies.size() - 2];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyOne)->getOperand(1).getReg()));
+  EXPECT_FALSE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyZero)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroOr) {
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %x:_(s32) = COPY $w0
+   %or:_(s32) = G_OR %x, %one
+   %copy_or:_(s32) = COPY %or
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyOr = Copies[Copies.size() - 1];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyOr)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroSelect) {
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %two:_(s32) = G_CONSTANT i32 2
+   %cond:_(s1) = G_IMPLICIT_DEF
+   %sel:_(s32) = G_SELECT %cond, %one, %two
+   %copy_sel:_(s32) = COPY %sel
+
+   %zero:_(s32) = G_CONSTANT i32 0
+   %selz:_(s32) = G_SELECT %cond, %one, %zero
+   %copy_selz:_(s32) = COPY %selz
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopySelZ = Copies[Copies.size() - 1];
+  Register CopySel = Copies[Copies.size() - 2];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopySel)->getOperand(1).getReg()));
+  EXPECT_FALSE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopySelZ)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroShlNUW) {
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %x:_(s32) = COPY $w0
+   %shl:_(s32) = nuw G_SHL %one, %x
+   %copy_shl:_(s32) = COPY %shl
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyShl = Copies[Copies.size() - 1];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyShl)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroShlOneByVar) {
+  // 1 << X is always nonzero in the i32 case for any X < 32; KnownBits-based
+  // path proves it from One[0] of the LHS without needing the nuw flag.
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %x:_(s32) = COPY $w0
+   %shl:_(s32) = G_SHL %one, %x
+   %copy_shl:_(s32) = COPY %shl
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyShl = Copies[Copies.size() - 1];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyShl)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroAshrExact) {
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %x:_(s32) = COPY $w0
+   %ashr:_(s32) = exact G_ASHR %one, %x
+   %copy_ashr:_(s32) = COPY %ashr
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyAshr = Copies[Copies.size() - 1];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyAshr)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroUMaxUMin) {
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %x:_(s32) = COPY $w0
+   %umax:_(s32) = G_UMAX %one, %x
+   %copy_umax:_(s32) = COPY %umax
+
+   %two:_(s32) = G_CONSTANT i32 2
+   %umin:_(s32) = G_UMIN %one, %two
+   %copy_umin:_(s32) = COPY %umin
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyUMin = Copies[Copies.size() - 1];
+  Register CopyUMax = Copies[Copies.size() - 2];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyUMax)->getOperand(1).getReg()));
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyUMin)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroZextSext) {
+  StringRef MIRString = R"(
+   %one:_(s8) = G_CONSTANT i8 1
+   %zext:_(s32) = G_ZEXT %one
+   %sext:_(s32) = G_SEXT %one
+   %copy_zext:_(s32) = COPY %zext
+   %copy_sext:_(s32) = COPY %sext
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopySext = Copies[Copies.size() - 1];
+  Register CopyZext = Copies[Copies.size() - 2];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyZext)->getOperand(1).getReg()));
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopySext)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroBuildVector) {
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %two:_(s32) = G_CONSTANT i32 2
+   %bv:_(<2 x s32>) = G_BUILD_VECTOR %one, %two
+   %copy_bv:_(<2 x s32>) = COPY %bv
+
+   %zero:_(s32) = G_CONSTANT i32 0
+   %bvz:_(<2 x s32>) = G_BUILD_VECTOR %one, %zero
+   %copy_bvz:_(<2 x s32>) = COPY %bvz
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyBVZ = Copies[Copies.size() - 1];
+  Register CopyBV = Copies[Copies.size() - 2];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyBV)->getOperand(1).getReg()));
+  EXPECT_FALSE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyBVZ)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroSplatVector) {
+  // Same-width splat: recurses structurally on the source.
+  // Wide-source splat: 0x100 (i64) splatted into i32 lanes is still nonzero;
+  // 0x100000000 (i64) splatted into i32 lanes is zero after truncation.
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %sv:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR %one
+   %copy_sv:_(<vscale x 2 x s32>) = COPY %sv
+
+   %hi32:_(s64) = G_CONSTANT i64 256
+   %sv_hi:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR %hi32
+   %copy_sv_hi:_(<vscale x 2 x s32>) = COPY %sv_hi
+
+   %hi33:_(s64) = G_CONSTANT i64 4294967296
+   %sv_trunc_zero:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR %hi33
+   %copy_sv_trunc_zero:_(<vscale x 2 x s32>) = COPY %sv_trunc_zero
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopySVTruncZero = Copies[Copies.size() - 1];
+  Register CopySVHi = Copies[Copies.size() - 2];
+  Register CopySV = Copies[Copies.size() - 3];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopySV)->getOperand(1).getReg()));
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopySVHi)->getOperand(1).getReg()));
+  EXPECT_FALSE(Info.isKnownNeverZero(
+      MRI->getVRegDef(CopySVTruncZero)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroFallbackKnownBits) {
+  // G_AND has no dedicated case in the switch, so the proof must come from the
+  // KnownBits fallback (which sees the bit-0 set by the inner G_OR).
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %allones:_(s32) = G_CONSTANT i32 -1
+   %x:_(s32) = COPY $w0
+   %or:_(s32) = G_OR %x, %one
+   %and:_(s32) = G_AND %or, %allones
+   %copy_and:_(s32) = COPY %and
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyAnd = Copies[Copies.size() - 1];
+  GISelValueTracking Info(*MF);
+  EXPECT_TRUE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyAnd)->getOperand(1).getReg()));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroDepthCutoff) {
+  // A deep chain of G_OR with one constant-one operand at the very bottom
+  // should be proved nonzero — but only if depth allows. Use a small depth
+  // limit to verify cutoff returns false.
+  StringRef MIRString = R"(
+   %one:_(s32) = G_CONSTANT i32 1
+   %x:_(s32) = COPY $w0
+   %or0:_(s32) = G_OR %x, %one
+   %or1:_(s32) = G_OR %x, %or0
+   %or2:_(s32) = G_OR %x, %or1
+   %or3:_(s32) = G_OR %x, %or2
+   %or4:_(s32) = G_OR %x, %or3
+   %or5:_(s32) = G_OR %x, %or4
+   %or6:_(s32) = G_OR %x, %or5
+   %copy_or:_(s32) = COPY %or6
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyOr = Copies[Copies.size() - 1];
+  // Default MaxDepth (6) is shallower than the chain (7 nested ORs above the
+  // copy), so the recursive proof should give up rather than crash.
+  GISelValueTracking Info(*MF);
+  EXPECT_FALSE(
+      Info.isKnownNeverZero(MRI->getVRegDef(CopyOr)->getOperand(1).getReg()));
+}
