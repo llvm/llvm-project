@@ -16519,7 +16519,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_bswapg:
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
-  case Builtin::BI__builtin_bswap64: {
+  case Builtin::BI__builtin_bswap64:
+  case Builtin::BI__builtin_bswap128: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;

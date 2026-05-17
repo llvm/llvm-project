@@ -760,6 +760,12 @@ def BSwap : Builtin, Template<["unsigned short", "uint32_t", "uint64_t"],
   let Prototype = "T(T)";
 }
 
+def BSwap128 : Builtin {
+  let Spellings = ["__builtin_bswap128"];
+  let Attributes = [NoThrow, Const, Constexpr, RequireInt128];
+  let Prototype = "__uint128_t(__uint128_t)";
+}
+
 def BSwapg : Builtin {
   let Spellings = ["__builtin_bswapg"];
   let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];

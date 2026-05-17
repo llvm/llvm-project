@@ -95,6 +95,8 @@ class VScanfFormat<int I> : IndexedAttribute<"S", I>;
 def Constexpr : Attribute<"E">;
 // Builtin is immediate and must be constant evaluated. Implies Constexpr, and will only be supported in C++20 mode.
 def Consteval : Attribute<"EG">;
+// Builtin requires the target to support __int128.
+def RequireInt128 : Attribute<"H">;
 
 // Callback behavior: the first index argument is called with the arguments
 // indicated by the remaining indices.

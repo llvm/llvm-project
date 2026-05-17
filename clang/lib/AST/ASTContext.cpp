@@ -12916,6 +12916,11 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
     return {};
   }
 
+  if (BuiltinInfo.requiresInt128Type(Id) && !getTargetInfo().hasInt128Type()) {
+    Error = GE_Missing_type;
+    return {};
+  }
+
   SmallVector<QualType, 8> ArgTypes;
 
   bool RequiresICE = false;

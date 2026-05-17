@@ -466,6 +466,11 @@ public:
     return strchr(getAttributesString(ID), 'G') != nullptr;
   }
 
+  /// Returns true if this builtin requires target support for __int128.
+  bool requiresInt128Type(unsigned ID) const {
+    return strchr(getAttributesString(ID), 'H') != nullptr;
+  }
+
 private:
   std::pair<const InfosShard &, const Info &>
   getShardAndInfo(unsigned ID) const;
