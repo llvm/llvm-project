@@ -8750,8 +8750,5 @@ bool CombinerHelper::matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI,
          "Expected G_LSHR/G_ASHR");
 
   LLT XTy = MRI.getType(X);
-  if (XTy != MRI.getType(Y))
-    return false;
-
-  return isLegal({TargetOpc, {XTy}});
+  return XTy == MRI.getType(Y) && isLegal({TargetOpc, {XTy}});
 }
