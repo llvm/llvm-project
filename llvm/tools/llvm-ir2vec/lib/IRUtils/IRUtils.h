@@ -15,7 +15,7 @@
 #ifndef LLVM_TOOLS_LLVM_IR2VEC_UTILS_IRUTILS_H
 #define LLVM_TOOLS_LLVM_IR2VEC_UTILS_IRUTILS_H
 
-#include "Common.h"
+#include "../Common.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/IR/Function.h"

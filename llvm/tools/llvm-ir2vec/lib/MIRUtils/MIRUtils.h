@@ -16,7 +16,7 @@
 #ifndef LLVM_TOOLS_LLVM_IR2VEC_UTILS_MIRUTILS_H
 #define LLVM_TOOLS_LLVM_IR2VEC_UTILS_MIRUTILS_H
 
-#include "Common.h"
+#include "../Common.h"
 #include "llvm/CodeGen/MIR2Vec.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineFunction.h"
