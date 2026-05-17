@@ -997,10 +997,9 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
   }
 }
 
-static bool shouldRemoveDeadBindings(AnalysisManager &AMgr,
-                                     const Stmt *S,
+static bool shouldRemoveDeadBindings(AnalysisManager &AMgr, const Stmt *S,
                                      const ExplodedNode *Pred,
-                                     const LocationContext *LC) {
+                                     const StackFrame *SF) {
   // Are we never purging state values?
   if (AMgr.options.AnalysisPurgeOpt == PurgeNone)
     return false;
@@ -1019,7 +1018,7 @@ static bool shouldRemoveDeadBindings(AnalysisManager &AMgr,
 
   // Is this an expression that is consumed by another expression?  If so,
   // postpone cleaning out the state.
-  ParentMap &PM = LC->getAnalysisDeclContext()->getParentMap();
+  ParentMap &PM = SF->getAnalysisDeclContext()->getParentMap();
   return !PM.isConsumedExpr(cast<Expr>(S));
 }
 
