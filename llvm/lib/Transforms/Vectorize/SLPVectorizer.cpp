@@ -30542,18 +30542,24 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   return Res;
 }
 
-bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
+bool SLPVectorizerPass::tryToVectorize(
+    Instruction *I, BoUpSLP &R, SmallSetVector<Instruction *, 8> &FMACandidates,
+    bool AllowFMACandidates) {
   if (!I)
     return false;
 
   if (!isa<BinaryOperator, CmpInst>(I) || isa<VectorType>(I->getType()))
     return false;
-  // Skip potential FMA candidates.
-  if ((I->getOpcode() == Instruction::FAdd ||
+  // Skip potential FMA candidates and collect them for a retry after all other
+  // instructions in the block have been processed.
+  if (!AllowFMACandidates &&
+      (I->getOpcode() == Instruction::FAdd ||
        I->getOpcode() == Instruction::FSub) &&
       canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI)
-          .isValid())
+          .isValid()) {
+    FMACandidates.insert(I);
     return false;
+  }
 
   Value *P = I->getParent();
 
@@ -30649,20 +30655,22 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
                             R);
 }
 
-bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Instruction *Root,
-                                                 BasicBlock *BB, BoUpSLP &R) {
+bool SLPVectorizerPass::vectorizeRootInstruction(
+    PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R,
+    SmallSetVector<Instruction *, 8> &FMACandidates) {
   SmallVector<WeakTrackingVH> PostponedInsts;
   bool Res = vectorizeHorReduction(P, Root, BB, R, PostponedInsts);
-  Res |= tryToVectorize(PostponedInsts, R);
+  Res |= tryToVectorize(PostponedInsts, R, FMACandidates);
   return Res;
 }
 
-bool SLPVectorizerPass::tryToVectorize(ArrayRef<WeakTrackingVH> Insts,
-                                       BoUpSLP &R) {
+bool SLPVectorizerPass::tryToVectorize(
+    ArrayRef<WeakTrackingVH> Insts, BoUpSLP &R,
+    SmallSetVector<Instruction *, 8> &FMACandidates) {
   bool Res = false;
   for (Value *V : Insts)
     if (auto *Inst = dyn_cast<Instruction>(V); Inst && !R.isDeleted(Inst))
-      Res |= tryToVectorize(Inst, R);
+      Res |= tryToVectorize(Inst, R, FMACandidates);
   return Res;
 }
 
@@ -30908,8 +30916,9 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
 }
 
 template <typename ItT>
-bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
-                                          BasicBlock *BB, BoUpSLP &R) {
+bool SLPVectorizerPass::vectorizeCmpInsts(
+    iterator_range<ItT> CmpInsts, BasicBlock *BB, BoUpSLP &R,
+    SmallSetVector<Instruction *, 8> &FMACandidates) {
   bool Changed = false;
   // Try to find reductions first.
   for (CmpInst *I : CmpInsts) {
@@ -30917,7 +30926,8 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
       continue;
     for (Value *Op : I->operands())
       if (auto *RootOp = dyn_cast<Instruction>(Op)) {
-        Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R);
+        Changed |=
+            vectorizeRootInstruction(nullptr, RootOp, BB, R, FMACandidates);
         if (R.isDeleted(I))
           break;
       }
@@ -30926,7 +30936,7 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
   for (CmpInst *I : CmpInsts) {
     if (R.isDeleted(I))
       continue;
-    Changed |= tryToVectorize(I, R);
+    Changed |= tryToVectorize(I, R, FMACandidates);
   }
   // Try to vectorize list of compares.
   // Sort by type, compare predicate, etc.
@@ -31062,7 +31072,8 @@ static void forEachOperandChainCandidate(Instruction *I, Func F,
 
 template <typename ItT>
 bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
-    iterator_range<ItT> InstRange, BasicBlock *BB, BoUpSLP &R) {
+    iterator_range<ItT> InstRange, BasicBlock *BB, BoUpSLP &R,
+    SmallSetVector<Instruction *, 8> &FMACandidates) {
   SmallVector<Instruction *> Insts(InstRange);
   if (Insts.empty())
     return false;
@@ -31089,7 +31100,8 @@ bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
             return;
           if (!RootSeen.insert(RootOp).second)
             return;
-          Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R);
+          Changed |=
+              vectorizeRootInstruction(nullptr, RootOp, BB, R, FMACandidates);
           if (R.isDeleted(I))
             RootDeleted = true;
         },
@@ -31222,8 +31234,9 @@ bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
   return Changed;
 }
 
-bool SLPVectorizerPass::vectorizeInserts(InstSetVector &Instructions,
-                                         BasicBlock *BB, BoUpSLP &R) {
+bool SLPVectorizerPass::vectorizeInserts(
+    InstSetVector &Instructions, BasicBlock *BB, BoUpSLP &R,
+    SmallSetVector<Instruction *, 8> &FMACandidates) {
   assert(all_of(Instructions, IsaPred<InsertElementInst, InsertValueInst>) &&
          "This function only accepts Insert instructions");
   bool OpsChanged = false;
@@ -31255,7 +31268,7 @@ bool SLPVectorizerPass::vectorizeInserts(InstSetVector &Instructions,
     }
   }
   // Now try to vectorize postponed instructions.
-  OpsChanged |= tryToVectorize(PostponedInsts, R);
+  OpsChanged |= tryToVectorize(PostponedInsts, R, FMACandidates);
 
   Instructions.clear();
   return OpsChanged;
@@ -31500,14 +31513,16 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   SmallSetVector<Instruction *, 8> PostProcessInsts;
   // Stores are processed after all other instructions/roots.
   SmallSetVector<StoreInst *, 8> PostProcessStores;
+  SmallSetVector<Instruction *, 8> FMACandidates;
   auto VectorizeInsertsAndCmps = [&](bool AtTerminator) {
-    bool Changed = vectorizeInserts(PostProcessInserts, BB, R);
+    bool Changed = vectorizeInserts(PostProcessInserts, BB, R, FMACandidates);
     if (AtTerminator) {
-      Changed |= vectorizeCmpInsts(reverse(PostProcessCmps), BB, R);
+      Changed |=
+          vectorizeCmpInsts(reverse(PostProcessCmps), BB, R, FMACandidates);
       PostProcessCmps.clear();
       if (!PostProcessInsts.empty())
-        Changed |=
-            vectorizeNonVectorizableInsts(reverse(PostProcessInsts), BB, R);
+        Changed |= vectorizeNonVectorizableInsts(reverse(PostProcessInsts), BB,
+                                                 R, FMACandidates);
       PostProcessInsts.clear();
     }
     PostProcessInserts.clear();
@@ -31559,7 +31574,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (P->getNumIncomingValues() == 2) {
         // Try to match and vectorize a horizontal reduction.
         Instruction *Root = getReductionInstr(DT, P, BB, LI);
-        if (Root && vectorizeRootInstruction(P, Root, BB, R)) {
+        if (Root && vectorizeRootInstruction(P, Root, BB, R, FMACandidates)) {
           Changed = true;
           It = BB->begin();
           E = BB->end();
@@ -31581,8 +31596,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         // vectorization.
         if (auto *PI = dyn_cast<Instruction>(P->getIncomingValue(I));
             PI && !IsInPostProcessInstrs(PI)) {
-          bool Res =
-              vectorizeRootInstruction(nullptr, PI, P->getIncomingBlock(I), R);
+          bool Res = vectorizeRootInstruction(
+              nullptr, PI, P->getIncomingBlock(I), R, FMACandidates);
           Changed |= Res;
           if (Res && R.isDeleted(P)) {
             It = BB->begin();
@@ -31616,7 +31631,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (auto *VI = dyn_cast<Instruction>(V);
               VI && !IsInPostProcessInstrs(VI))
             // Try to match and vectorize a horizontal reduction.
-            OpsChanged |= vectorizeRootInstruction(nullptr, VI, BB, R);
+            OpsChanged |=
+                vectorizeRootInstruction(nullptr, VI, BB, R, FMACandidates);
         }
       }
       // Start vectorization of post-process list of instructions from the
@@ -31678,8 +31694,17 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (ExtractsCost > PostProcessStores.size() + 1)
         return Changed;
     }
-    Changed |= vectorizeNonVectorizableInsts(reverse(PostProcessStores), BB, R);
+    Changed |= vectorizeNonVectorizableInsts(reverse(PostProcessStores), BB, R,
+                                             FMACandidates);
   }
+  SmallSetVector<Instruction *, 8> Empty;
+  for (Instruction *I : FMACandidates) {
+    if (R.isDeleted(I))
+      continue;
+    Changed |= tryToVectorize(I, R, Empty, /*AllowFMACandidates=*/true);
+  }
+  assert(Empty.empty() &&
+         "No new FMA candidates expected during AllowFMACandidates retry.");
 
   return Changed;
 }
