@@ -280,9 +280,8 @@ public:
 
   /// Create a new state by binding the value \p V to the expression \p E in
   /// the state's environment.
-  [[nodiscard]] ProgramStateRef BindExpr(const Expr *E,
-                                         const LocationContext *LCtx, SVal V,
-                                         bool Invalidate = true) const;
+  [[nodiscard]] ProgramStateRef BindExpr(const Expr *E, const StackFrame *SF,
+                                         SVal V, bool Invalidate = true) const;
 
   [[nodiscard]] ProgramStateRef bindLoc(Loc location, SVal V,
                                         const StackFrame *SF,
@@ -375,9 +374,9 @@ public:
   SVal getLValue(QualType ElementType, SVal Idx, SVal Base) const;
 
   /// Returns the SVal bound to the expression \p E in the state's environment.
-  SVal getSVal(const Expr *E, const LocationContext *LCtx) const;
+  SVal getSVal(const Expr *E, const StackFrame *SF) const;
 
-  SVal getSValAsScalarOrLoc(const Expr *E, const LocationContext *LCtx) const;
+  SVal getSValAsScalarOrLoc(const Expr *E, const StackFrame *SF) const;
 
   /// Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
@@ -788,17 +787,15 @@ inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) c
   return UnknownVal();
 }
 
-inline SVal ProgramState::getSVal(const Expr *E,
-                                  const LocationContext *LCtx) const {
-  return Env.getSVal(EnvironmentEntry(E, LCtx), *getStateManager().svalBuilder);
+inline SVal ProgramState::getSVal(const Expr *E, const StackFrame *SF) const {
+  return Env.getSVal(EnvironmentEntry(E, SF), *getStateManager().svalBuilder);
 }
 
-inline SVal
-ProgramState::getSValAsScalarOrLoc(const Expr *E,
-                                   const LocationContext *LCtx) const {
+inline SVal ProgramState::getSValAsScalarOrLoc(const Expr *E,
+                                               const StackFrame *SF) const {
   QualType T = E->getType();
   if (E->isGLValue() || Loc::isLocType(T) || T->isIntegralOrEnumerationType())
-    return getSVal(E, LCtx);
+    return getSVal(E, SF);
   return UnknownVal();
 }
 

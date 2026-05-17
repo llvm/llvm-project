@@ -28,22 +28,22 @@ namespace ento {
 class SValBuilder;
 class SymbolReaper;
 
-/// An entry in the environment consists of a Stmt and an LocationContext.
+/// An entry in the environment consists of a Stmt and an StackFrame.
 /// This allows the environment to manage context-sensitive bindings,
 /// which is essentially for modeling recursive function analysis, among
 /// other things.
 class EnvironmentEntry : public std::pair<const Expr *, const StackFrame *> {
 public:
-  EnvironmentEntry(const Expr *E, const LocationContext *L);
+  EnvironmentEntry(const Expr *E, const StackFrame *SF);
 
   const Expr *getExpr() const { return first; }
-  const LocationContext *getLocationContext() const { return second; }
+  const StackFrame *getStackFrame() const { return second; }
 
   /// Profile an EnvironmentEntry for inclusion in a FoldingSet.
   static void Profile(llvm::FoldingSetNodeID &ID,
                       const EnvironmentEntry &E) {
     ID.AddPointer(E.getExpr());
-    ID.AddPointer(E.getLocationContext());
+    ID.AddPointer(E.getStackFrame());
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {

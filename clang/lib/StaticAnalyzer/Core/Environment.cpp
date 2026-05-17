@@ -63,9 +63,9 @@ static const Expr *ignoreTransparentExprs(const Expr *E) {
   return ignoreTransparentExprs(E);
 }
 
-EnvironmentEntry::EnvironmentEntry(const Expr *E, const LocationContext *L)
-    : std::pair<const Expr *, const StackFrame *>(
-          ignoreTransparentExprs(E), L ? L->getStackFrame() : nullptr) {}
+EnvironmentEntry::EnvironmentEntry(const Expr *E, const StackFrame *SF)
+    : std::pair<const Expr *, const StackFrame *>(ignoreTransparentExprs(E),
+                                                  SF) {}
 
 SVal Environment::lookupExpr(const EnvironmentEntry &E) const {
   const SVal* X = ExprBindings.lookup(E);
@@ -79,7 +79,7 @@ SVal Environment::lookupExpr(const EnvironmentEntry &E) const {
 SVal Environment::getSVal(const EnvironmentEntry &Entry,
                           SValBuilder& svalBuilder) const {
   const Expr *Ex = Entry.getExpr();
-  const LocationContext *LCtx = Entry.getLocationContext();
+  const StackFrame *SF = Entry.getStackFrame();
 
   switch (Ex->getStmtClass()) {
   case Stmt::CXXBindTemporaryExprClass:
@@ -108,7 +108,7 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
 
   // Handle all other Expr* using a lookup.
   default:
-    return lookupExpr(EnvironmentEntry(Ex, LCtx));
+    return lookupExpr(EnvironmentEntry(Ex, SF));
   }
 }
 
@@ -174,7 +174,7 @@ EnvironmentManager::removeDeadBindings(Environment Env,
     const EnvironmentEntry &BlkExpr = I.getKey();
     SVal X = I.getData();
 
-    if (SymReaper.isLive(BlkExpr.getExpr(), BlkExpr.getLocationContext())) {
+    if (SymReaper.isLive(BlkExpr.getExpr(), BlkExpr.getStackFrame())) {
       // Copy the binding to the new map.
       EBMapRef = EBMapRef.add(BlkExpr, X);
 
@@ -202,7 +202,7 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
     // Find the freshest location context.
     llvm::SmallPtrSet<const LocationContext *, 16> FoundContexts;
     for (const auto &I : *this) {
-      const LocationContext *LC = I.first.getLocationContext();
+      const LocationContext *LC = I.first.getStackFrame();
       if (FoundContexts.count(LC) == 0) {
         // This context is fresher than all other contexts so far.
         LCtx = LC;
@@ -227,7 +227,7 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
     BindingsTy::iterator LastI = ExprBindings.end();
     for (BindingsTy::iterator I = ExprBindings.begin(); I != ExprBindings.end();
          ++I) {
-      if (I->first.getLocationContext() != LC)
+      if (I->first.getStackFrame() != LC)
         continue;
 
       if (!HasItem) {
@@ -244,7 +244,7 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
 
     for (BindingsTy::iterator I = ExprBindings.begin(); I != ExprBindings.end();
          ++I) {
-      if (I->first.getLocationContext() != LC)
+      if (I->first.getStackFrame() != LC)
         continue;
 
       const Expr *Ex = I->first.getExpr();
