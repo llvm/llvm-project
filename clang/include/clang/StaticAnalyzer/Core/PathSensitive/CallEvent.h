@@ -1102,9 +1102,8 @@ public:
   }
 
   SVal getArgSVal(unsigned Index) const override {
-    return getState()->getSVal(
-        getArgExpr(Index),
-        getInheritingStackFrame()->getParent());
+    return getState()->getSVal(getArgExpr(Index),
+                               getInheritingStackFrame()->getParent());
   }
 
   Kind getKind() const override { return CE_CXXInheritedConstructor; }

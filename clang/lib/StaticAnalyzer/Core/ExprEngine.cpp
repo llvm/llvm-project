@@ -1480,8 +1480,7 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
   const StackFrame *SF = Pred->getStackFrame();
 
   const auto *CurDtor = cast<CXXDestructorDecl>(SF->getDecl());
-  Loc ThisStorageLoc =
-      getSValBuilder().getCXXThis(CurDtor, SF);
+  Loc ThisStorageLoc = getSValBuilder().getCXXThis(CurDtor, SF);
   Loc ThisLoc = State->getSVal(ThisStorageLoc).castAs<Loc>();
   SVal FieldVal = State->getLValue(Member, ThisLoc);
 
@@ -2886,8 +2885,7 @@ void ExprEngine::processBranch(
         // recognize cases where the fourth iteration would't be completed), but
         // should be good enough for practical purposes.
         if (!SF->inTopFrame()) {
-          Engine.FunctionSummaries->markShouldNotInline(
-              SF->getDecl());
+          Engine.FunctionSummaries->markShouldNotInline(SF->getDecl());
         }
       }
     }
