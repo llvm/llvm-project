@@ -71,3 +71,19 @@ __device__ void test_div_fmas_f64(double* out, double a, double b, double c, int
 __device__ void test_ds_swizzle(int* out, int a) {
   *out = __builtin_amdgcn_ds_swizzle(a, 32);
 }
+
+// CIR-LABEL: @_Z13test_fcmp_f32Pyff
+// CIR: cir.call_llvm_intrinsic "amdgcn.fcmp" {{.*}} : (!cir.float, !cir.float, !s32i) -> !u64i
+// LLVM: define{{.*}} void @_Z13test_fcmp_f32Pyff
+// LLVM: call{{.*}} i64 @llvm.amdgcn.fcmp.i64.f32(float %{{.*}}, float %{{.*}}, i32 5)
+__device__ void test_fcmp_f32(unsigned long long* out, float a, float b) {
+  *out = __builtin_amdgcn_fcmpf(a, b, 5);
+}
+
+// CIR-LABEL: @_Z13test_fcmp_f64Pydd
+// CIR: cir.call_llvm_intrinsic "amdgcn.fcmp" {{.*}} : (!cir.double, !cir.double, !s32i) -> !u64i
+// LLVM: define{{.*}} void @_Z13test_fcmp_f64Pydd
+// LLVM: call{{.*}} i64 @llvm.amdgcn.fcmp.i64.f64(double %{{.*}}, double %{{.*}}, i32 6)
+__device__ void test_fcmp_f64(unsigned long long* out, double a, double b) {
+  *out = __builtin_amdgcn_fcmp(a, b, 3+3);
+}
