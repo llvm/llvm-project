@@ -680,7 +680,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //   external.
 
   LinkageInfo LV = getExternalLinkageFor(D);
-  if (const auto *ND = dyn_cast<NamespaceDecl>(D->getDeclContext()->getEnclosingNamespaceContext())) {
+  if (const auto *ND = dyn_cast<NamespaceDecl>(
+          D->getDeclContext()->getEnclosingNamespaceContext())) {
     LV.setLinkage(ND->getLinkageInternal());
   }
 
@@ -884,8 +885,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       LV.mergeLinkage(Linkage::Internal);
     }
 
-  // By extension, we assign external linkage to Objective-C
-  // interfaces.
+    // By extension, we assign external linkage to Objective-C
+    // interfaces.
   } else if (isa<ObjCInterfaceDecl>(D)) {
     // fallout
 
