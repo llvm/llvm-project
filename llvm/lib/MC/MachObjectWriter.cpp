@@ -443,7 +443,10 @@ void MachObjectWriter::writeNlist(MachSymbolData &MSD, const MCAssembler &Asm) {
   // The Mach-O streamer uses the lowest 16-bits of the flags for the 'desc'
   // value.
   bool EncodeAsAltEntry = IsAlias && OrigSymbol.isAltEntry();
-  W.write<uint16_t>(Symbol->getEncodedFlags(EncodeAsAltEntry));
+  uint16_t Flags = Symbol->getEncodedFlags(EncodeAsAltEntry);
+  if (IsAlias)
+    Flags |= OrigSymbol.getEncodedFlags(EncodeAsAltEntry);
+  W.write<uint16_t>(Flags);
   if (is64Bit())
     W.write<uint64_t>(Address);
   else
