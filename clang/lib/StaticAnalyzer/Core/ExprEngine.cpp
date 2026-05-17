@@ -305,7 +305,7 @@ ProgramStateRef ExprEngine::getInitialState(const StackFrame *InitSF) {
       // Precondition: 'this' is always non-null upon entry to the
       // top-level function.  This is our starting assumption for
       // analyzing an "open" program.
-      const StackFrame *SF = InitSF->getStackFrame();
+      const StackFrame *SF = InitSF;
       if (SF->getParent() == nullptr) {
         loc::MemRegionVal L = svalBuilder.getCXXThis(MD, SF);
         SVal V = state->getSVal(L);
@@ -1457,7 +1457,7 @@ void ExprEngine::ProcessBaseDtor(const CFGBaseDtor D,
   const StackFrame *SF = Pred->getStackFrame();
 
   const auto *CurDtor = cast<CXXDestructorDecl>(SF->getDecl());
-  Loc ThisPtr = getSValBuilder().getCXXThis(CurDtor, SF->getStackFrame());
+  Loc ThisPtr = getSValBuilder().getCXXThis(CurDtor, SF);
   SVal ThisVal = Pred->getState()->getSVal(ThisPtr);
 
   // Create the base object region.
@@ -1481,7 +1481,7 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
 
   const auto *CurDtor = cast<CXXDestructorDecl>(SF->getDecl());
   Loc ThisStorageLoc =
-      getSValBuilder().getCXXThis(CurDtor, SF->getStackFrame());
+      getSValBuilder().getCXXThis(CurDtor, SF);
   Loc ThisLoc = State->getSVal(ThisStorageLoc).castAs<Loc>();
   SVal FieldVal = State->getLValue(Member, ThisLoc);
 
@@ -2575,8 +2575,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
       // significantly increase the analysis time (because more entry points
       // would exhaust their allocated budget), so it must be compensated by a
       // different (more reasonable) reduction of analysis scope.
-      Engine.FunctionSummaries->markShouldNotInline(
-          SF->getStackFrame()->getDecl());
+      Engine.FunctionSummaries->markShouldNotInline(SF->getDecl());
 
       // Re-run the call evaluation without inlining it, by storing the
       // no-inlining policy in the state and enqueuing the new work item on
@@ -2888,7 +2887,7 @@ void ExprEngine::processBranch(
         // should be good enough for practical purposes.
         if (!SF->inTopFrame()) {
           Engine.FunctionSummaries->markShouldNotInline(
-              SF->getStackFrame()->getDecl());
+              SF->getDecl());
         }
       }
     }
@@ -2998,7 +2997,7 @@ void ExprEngine::processEndOfFunction(ExplodedNode *Pred,
   // should go away.
   {
     const StackFrame *FromSF = Pred->getStackFrame();
-    const StackFrame *ToSF = FromSF->getStackFrame()->getParent();
+    const StackFrame *ToSF = FromSF->getParent();
     const StackFrame *SF = FromSF;
     while (SF != ToSF) {
       assert(SF && "ToSF must be a parent of FromSF!");
@@ -3171,7 +3170,7 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
       // Sema follows a sequence of complex rules to determine whether the
       // variable should be captured.
       if (const FieldDecl *FD = LambdaCaptureFields[VD]) {
-        Loc CXXThis = svalBuilder.getCXXThis(MD, SF->getStackFrame());
+        Loc CXXThis = svalBuilder.getCXXThis(MD, SF);
         SVal CXXThisVal = state->getSVal(CXXThis);
         return std::make_pair(state->getLValue(FD, CXXThisVal), FD->getType());
       }

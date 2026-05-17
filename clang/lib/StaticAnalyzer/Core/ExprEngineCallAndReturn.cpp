@@ -255,7 +255,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
   // The parent context might not be a stack frame, so make sure we
   // look up the first enclosing stack frame.
-  const StackFrame *CallerSF = CalleeSF->getParent()->getStackFrame();
+  const StackFrame *CallerSF = CalleeSF->getParent();
 
   const Expr *CE = CalleeSF->getCallSite();
   ProgramStateRef State = CEBNode->getState();
@@ -633,9 +633,7 @@ ProgramStateRef ExprEngine::finishArgumentConstruction(ProgramStateRef State,
       SVal VV = *V;
       (void)VV;
       assert(cast<VarRegion>(VV.castAs<loc::MemRegionVal>().getRegion())
-                 ->getStackFrame()
-                 ->getParent()
-                 ->getStackFrame() == SF->getStackFrame());
+                 ->getStackFrame()->getParent() == SF);
       State = finishObjectConstruction(State, {E, I}, SF);
     }
   }

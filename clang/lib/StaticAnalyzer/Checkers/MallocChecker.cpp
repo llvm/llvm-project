@@ -4045,7 +4045,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
         //
         // Usually (e.g. in C) we say that the _responsible_ stack frame is the
         // current innermost stack frame:
-        ReleaseFunctionLC = CurrentSF->getStackFrame();
+        ReleaseFunctionLC = CurrentSF;
         // ...but if the stack contains a destructor call, then we say that the
         // outermost destructor stack frame is the _responsible_ one:
         for (const StackFrame *SF = CurrentSF; SF; SF = SF->getParent()) {

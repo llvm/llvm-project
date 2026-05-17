@@ -213,8 +213,6 @@ class StackFrame : public llvm::FoldingSetNode {
 
   int64_t ID;
 
-  const StackFrame *getStackFrame() const;
-
   // Extra data for BlockInvocations
   const void *Data;
 

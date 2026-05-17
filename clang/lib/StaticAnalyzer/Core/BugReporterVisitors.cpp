@@ -390,7 +390,7 @@ void NoStateChangeFuncVisitor::markFrameAsModifying(const StackFrame *SF) {
     if (!p.second)
       break; // Frame and all its parents already inserted.
 
-    SF = SF->getParent()->getStackFrame();
+    SF = SF->getParent();
   }
 }
 
@@ -419,8 +419,7 @@ void NoStateChangeFuncVisitor::findModifyingFrames(
 
   assert(CallExitBeginN->getLocationAs<CallExitBegin>());
 
-  const StackFrame *const OriginalSF =
-      CallExitBeginN->getStackFrame()->getStackFrame();
+  const StackFrame *const OriginalSF = CallExitBeginN->getStackFrame();
 
   const ExplodedNode *CurrCallExitBeginN = CallExitBeginN;
   const StackFrame *CurrentSF = OriginalSF;

@@ -306,7 +306,7 @@ static const ExplodedNode *getCalleeNode(const ExplodedNode *Pred) {
   const StackFrame *SC = Pred->getStackFrame();
   if (SC->inTopFrame())
     return nullptr;
-  const StackFrame *PC = SC->getParent()->getStackFrame();
+  const StackFrame *PC = SC->getParent();
   if (!PC)
     return nullptr;
 
@@ -447,8 +447,8 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   if (!PrevT) {
     const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
 
-    if (isa<ObjCIvarRefExpr>(S) && isSynthesizedAccessor(SF->getStackFrame())) {
-      S = SF->getStackFrame()->getCallSite();
+    if (isa<ObjCIvarRefExpr>(S) && isSynthesizedAccessor(SF)) {
+      S = SF->getCallSite();
     }
 
     if (isa<ObjCArrayLiteral>(S)) {
@@ -635,7 +635,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
       // Do not show local variables belonging to a function other than
       // where the error is reported.
       if (const auto *MR = R->getMemorySpaceAs<StackSpaceRegion>(St))
-        if (MR->getStackFrame() == LeakStackFrame->getStackFrame())
+        if (MR->getStackFrame() == LeakStackFrame)
           FirstBinding = R;
     }
 

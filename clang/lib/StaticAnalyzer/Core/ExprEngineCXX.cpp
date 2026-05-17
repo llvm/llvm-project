@@ -153,7 +153,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
       const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
       const auto *Init = ICC->getCXXCtorInitializer();
       const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(SF->getDecl());
-      Loc ThisPtr = SVB.getCXXThis(CurCtor, SF->getStackFrame());
+      Loc ThisPtr = SVB.getCXXThis(CurCtor, SF);
       SVal ThisVal = State->getSVal(ThisPtr);
       if (Init->isBaseInitializer()) {
         const auto *ThisReg = cast<SubRegion>(ThisVal.getAsRegion());
@@ -617,7 +617,7 @@ void ExprEngine::handleConstructor(const Expr *E,
     // Make sure we are not calling virtual base class initializers twice.
     // Only the most-derived object should initialize virtual base classes.
     const auto *OuterCtor =
-        dyn_cast_or_null<CXXConstructExpr>(SF->getStackFrame()->getCallSite());
+        dyn_cast_or_null<CXXConstructExpr>(SF->getCallSite());
     assert(
         (!OuterCtor ||
          OuterCtor->getConstructionKind() == CXXConstructionKind::Complete ||
@@ -649,7 +649,7 @@ void ExprEngine::handleConstructor(const Expr *E,
     [[fallthrough]];
   case CXXConstructionKind::Delegating: {
     const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(SF->getDecl());
-    Loc ThisPtr = getSValBuilder().getCXXThis(CurCtor, SF->getStackFrame());
+    Loc ThisPtr = getSValBuilder().getCXXThis(CurCtor, SF);
     SVal ThisVal = State->getSVal(ThisPtr);
 
     if (CK == CXXConstructionKind::Delegating) {

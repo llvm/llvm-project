@@ -414,7 +414,7 @@ bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
 
   if (!SF)
     return false;
-  const StackFrame *CurrentSF = SF->getStackFrame();
+  const StackFrame *CurrentSF = SF;
 
   if (VarSF == CurrentSF) {
     // If no statement is provided, everything is live.

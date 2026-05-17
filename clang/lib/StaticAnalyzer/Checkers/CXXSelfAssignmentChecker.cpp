@@ -46,7 +46,7 @@ void CXXSelfAssignmentChecker::checkBeginFunction(CheckerContext &C) const {
     return;
   auto &State = C.getState();
   auto &SVB = C.getSValBuilder();
-  auto ThisVal = State->getSVal(SVB.getCXXThis(MD, SF->getStackFrame()));
+  auto ThisVal = State->getSVal(SVB.getCXXThis(MD, SF));
   auto Param = SVB.makeLoc(State->getRegion(MD->getParamDecl(0), SF));
   auto ParamVal = State->getSVal(Param);
 

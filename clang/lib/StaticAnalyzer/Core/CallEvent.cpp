@@ -980,9 +980,9 @@ void AnyCXXConstructorCall::getInitialStackFrameContents(
 }
 
 const StackFrame *CXXInheritedConstructorCall::getInheritingStackFrame() const {
-  const StackFrame *SF = getStackFrame()->getStackFrame();
+  const StackFrame *SF = getStackFrame();
   while (isa<CXXInheritedCtorInitExpr>(SF->getCallSite()))
-    SF = SF->getParent()->getStackFrame();
+    SF = SF->getParent();
   return SF;
 }
 
@@ -1460,7 +1460,7 @@ CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
 CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
                                            ProgramStateRef State) {
   const StackFrame *ParentCtx = CalleeSF->getParent();
-  const StackFrame *CallerCtx = ParentCtx->getStackFrame();
+  const StackFrame *CallerCtx = ParentCtx;
   CFGBlock::ConstCFGElementRef ElemRef = {CalleeSF->getCallSiteBlock(),
                                           CalleeSF->getIndex()};
   assert(CallerCtx && "This should not be used for top-level stack frames");

@@ -2070,8 +2070,7 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
   if (PDC->shouldAddPathEdges()) {
     // Add an edge to the start of the function.
     // We'll prune it out later, but it helps make diagnostics more uniform.
-    const StackFrame *CalleeLC =
-        Construct.getStackFrameForActivePath()->getStackFrame();
+    const StackFrame *CalleeLC = Construct.getStackFrameForActivePath();
     const Decl *D = CalleeLC->getDecl();
     addEdgeToPath(Construct.getActivePath(), PrevLoc,
                   PathDiagnosticLocation::createBegin(D, SM));

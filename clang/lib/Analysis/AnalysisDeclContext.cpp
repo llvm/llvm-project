@@ -432,8 +432,6 @@ const StackFrame *StackFrameManager::getStackFrame(
 // StackFrame methods.
 //===----------------------------------------------------------------------===//
 
-const StackFrame *StackFrame::getStackFrame() const { return this; }
-
 bool StackFrame::isParentOf(const StackFrame *SF) const {
   do {
     const StackFrame *Parent = SF->getParent();
