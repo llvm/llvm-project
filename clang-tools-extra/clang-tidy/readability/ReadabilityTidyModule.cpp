@@ -63,6 +63,7 @@
 #include "StringCompareCheck.h"
 #include "SuspiciousCallArgumentCheck.h"
 #include "TrailingCommaCheck.h"
+#include "TrivialSwitchCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
@@ -186,6 +187,8 @@ public:
         "readability-suspicious-call-argument");
     CheckFactories.registerCheck<TrailingCommaCheck>(
         "readability-trailing-comma");
+    CheckFactories.registerCheck<TrivialSwitchCheck>(
+        "readability-trivial-switch");
     CheckFactories.registerCheck<UniqueptrDeleteReleaseCheck>(
         "readability-uniqueptr-delete-release");
     CheckFactories.registerCheck<UppercaseLiteralSuffixCheck>(
