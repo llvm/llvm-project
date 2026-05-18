@@ -1998,13 +1998,12 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
     return Sema::ConditionResult();
   }
 
-  case ConditionOrInitStatement::ConditionDecl: {
+  case ConditionOrInitStatement::ConditionDecl:
+  case ConditionOrInitStatement::Error:
     if (getLangOpts().C2y && isParsingSecondClauseOfC2yIfCondition) {
       Diag(Tok.getLocation(), diag::err_expected_expression);
       return Sema::ConditionError();
     }
-  } break;
-  case ConditionOrInitStatement::Error:
     break;
   }
 
@@ -2032,8 +2031,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
   }
 
   // If attributes are present, parse them.
-  if (!getLangOpts().C2y)
-    MaybeParseGNUAttributes(DeclaratorInfo);
+  MaybeParseGNUAttributes(DeclaratorInfo);
 
   // Type-check the declaration itself.
   DeclResult Dcl = Actions.ActOnCXXConditionDeclaration(getCurScope(),
