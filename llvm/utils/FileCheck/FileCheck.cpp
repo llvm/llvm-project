@@ -574,14 +574,15 @@ public:
       Last = SM.getLineAndColumn(EndLoc);
     }
   }
+  /// \p Loc specifies a single input character to be marked by a single
+  /// annotation marker character.
+  MarkerRange(Loc OneChar) : First(OneChar), Last(OneChar) {}
   /// Is the marker range contained on a single line?
   bool isSingleLine() const { return First.Line == Last.Line; }
   /// Get the location of the first marked character.
   Loc getFirstLoc() const { return First; }
   /// Get the location of the last marked character.
   Loc getLastLoc() const { return Last; }
-  /// Return a range marking only the first character.
-  MarkerRange truncate() const { return {First, First}; }
 };
 
 /// Emits search range annotations for each \c MatchResultDiag as it is
@@ -779,7 +780,7 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
       const MatchResultDiag &MRD = Diag.getMatchResultDiag();
       InputRange = MRD.getMatchRange() ? MarkerRange(SM, *MRD.getMatchRange())
                                        : MarkerRange(SM, MRD.getSearchRange());
-      InputRange = InputRange.truncate();
+      InputRange = MarkerRange(InputRange.getFirstLoc());
       assert(A.Marker.Head == ' ' && "expected no marker for no match range");
     }
 
