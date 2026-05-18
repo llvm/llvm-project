@@ -287,13 +287,18 @@ void NVPTXDwarfDebug::addTargetVariableAttributes(
 void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
                                                  DwarfCompileUnit &NewCU) {
   uint16_t Dialect = DIUnit.getSourceLanguage().getDialect();
-  if (Dialect != dwarf::DW_LLVM_LANG_DIALECT_invalid) {
-    if (Dialect != SimtDialect && Dialect != TileDialect &&
-        WarnedDialectCUs.insert(&DIUnit).second) {
+  // A zero dialect means "no dialect specified"; nothing to emit.
+  if (Dialect == 0)
+    return;
+
+  const bool IsKnownDialect = Dialect == SimtDialect || Dialect == TileDialect;
+  if (!IsKnownDialect) {
+    // WarnedDialectCUs only dedups the diagnostic per CU; it does not gate
+    // policy (we always suppress emission of unknown dialects below).
+    if (WarnedDialectCUs.insert(&DIUnit).second) {
+      StringRef DialectName = dwarf::LanguageDialectString(Dialect);
       std::string DialectString =
-          dwarf::LanguageDialectString(Dialect).empty()
-              ? Twine(Dialect).str()
-              : dwarf::LanguageDialectString(Dialect).str();
+          DialectName.empty() ? Twine(Dialect).str() : DialectName.str();
       DIUnit.getContext().diagnose(DiagnosticInfoGeneric(
           Twine("unknown NVPTX language dialect '") + DialectString +
               "' on DICompileUnit; expected '" +
@@ -301,7 +306,12 @@ void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
               dwarf::LanguageDialectString(TileDialect) + "'",
           DS_Warning));
     }
-    NewCU.addUInt(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
-                  dwarf::DW_FORM_data1, Dialect);
+    // Do not emit DW_AT_LLVM_language_dialect for unknown dialect values.
+    // This also avoids DW_FORM_data1 truncation when a value happens to
+    // exceed one byte.
+    return;
   }
+
+  NewCU.addUInt(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
+                dwarf::DW_FORM_data1, Dialect);
 }

@@ -1193,6 +1193,38 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
       StringRef(SysRoot, SysRootLen), StringRef(SDK, SDKLen)));
 }
 
+static uint16_t map_from_llvmDWARFlanguagedialect(LLVMDWARFLanguageDialect D) {
+  switch (D) {
+  case LLVMDWARFLanguageDialectSIMT:
+    return dwarf::DW_LLVM_LANG_DIALECT_simt;
+  case LLVMDWARFLanguageDialectTile:
+    return dwarf::DW_LLVM_LANG_DIALECT_tile;
+  }
+  llvm_unreachable("Unhandled LLVMDWARFLanguageDialect");
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateCompileUnitWithDialect(
+    LLVMDIBuilderRef Builder, LLVMDWARFSourceLanguage Lang,
+    LLVMMetadataRef FileRef, const char *Producer, size_t ProducerLen,
+    LLVMBool isOptimized, const char *Flags, size_t FlagsLen,
+    unsigned RuntimeVer, const char *SplitName, size_t SplitNameLen,
+    LLVMDWARFEmissionKind Kind, unsigned DWOId, LLVMBool SplitDebugInlining,
+    LLVMBool DebugInfoForProfiling, const char *SysRoot, size_t SysRootLen,
+    const char *SDK, size_t SDKLen, LLVMDWARFLanguageDialect Dialect) {
+  auto File = unwrapDI<DIFile>(FileRef);
+
+  return wrap(unwrap(Builder)->createCompileUnit(
+      DISourceLanguageName(map_from_llvmDWARFsourcelanguage(Lang),
+                           map_from_llvmDWARFlanguagedialect(Dialect)),
+      File, StringRef(Producer, ProducerLen), isOptimized,
+      StringRef(Flags, FlagsLen), RuntimeVer,
+      StringRef(SplitName, SplitNameLen),
+      static_cast<DICompileUnit::DebugEmissionKind>(Kind), DWOId,
+      SplitDebugInlining, DebugInfoForProfiling,
+      DICompileUnit::DebugNameTableKind::Default, false,
+      StringRef(SysRoot, SysRootLen), StringRef(SDK, SDKLen)));
+}
+
 LLVMMetadataRef
 LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder, const char *Filename,
                         size_t FilenameLen, const char *Directory,

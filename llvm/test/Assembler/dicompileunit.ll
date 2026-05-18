@@ -4,8 +4,8 @@
 ; Force a specific numbering.
 ; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
 !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
-; CHECK: !llvm.dbg.cu = !{!8, !9, !10}
-!llvm.dbg.cu = !{!8, !9, !10}
+; CHECK: !llvm.dbg.cu = !{!8, !9, !10, !11}
+!llvm.dbg.cu = !{!8, !9, !10, !12}
 
 !0 = distinct !{}
 !1 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
@@ -38,3 +38,10 @@
 
 !llvm.module.flags = !{!11}
 !11 = !{i32 2, !"Debug Info Version", i32 3}
+
+;; Numeric dialect values within range are also accepted and round-trip as
+;; the corresponding symbolic spelling.
+; CHECK: !11 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, dialect: DW_LLVM_LANG_DIALECT_simt)
+!12 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1,
+                              isOptimized: false, runtimeVersion: 0,
+                              emissionKind: NoDebug, dialect: 1)

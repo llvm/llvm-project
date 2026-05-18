@@ -616,11 +616,14 @@ StringRef llvm::dwarf::LanguageDialectString(unsigned LanguageDialect) {
 }
 
 unsigned llvm::dwarf::getLanguageDialect(StringRef LanguageDialectString) {
+  // Return ~0U for unrecognized spellings. The "no dialect" state is
+  // represented by numeric 0 (i.e. omitting the field); there is no
+  // corresponding symbolic enumerator for it.
   return StringSwitch<unsigned>(LanguageDialectString)
 #define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME)                                  \
   .Case("DW_LLVM_LANG_DIALECT_" #NAME, DW_LLVM_LANG_DIALECT_##NAME)
 #include "llvm/BinaryFormat/Dwarf.def"
-      .Default(DW_LLVM_LANG_DIALECT_invalid);
+      .Default(~0U);
 }
 
 StringRef llvm::dwarf::CaseString(unsigned Case) {

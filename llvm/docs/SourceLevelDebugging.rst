@@ -2355,6 +2355,39 @@ standard C++ library that demangles mangled names.
 Language Extensions and File Format Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+LLVM Language Dialect
+"""""""""""""""""""""
+
+LLVM emits an optional ``DW_AT_LLVM_language_dialect`` attribute on
+``DW_TAG_compile_unit`` to identify an execution-model dialect of the
+source-level language declared by ``DW_AT_language`` /
+``DW_AT_LLVM_source_language_name``.
+
+The attribute value is encoded as a small unsigned integer drawn from the
+``DW_LLVM_LANG_DIALECT_*`` enumeration declared in
+``include/llvm/BinaryFormat/Dwarf.def``:
+
+* ``DW_LLVM_LANG_DIALECT_simt`` (``0x01``) -- single-instruction,
+  multiple-thread execution model.
+* ``DW_LLVM_LANG_DIALECT_tile`` (``0x02``) -- tile-based execution model.
+
+To express "no dialect specified", the ``dialect:`` field on
+:ref:`DICompileUnit <DICompileUnit>` is simply omitted; no
+``DW_AT_LLVM_language_dialect`` attribute is emitted in that case.
+
+In LLVM IR, the dialect is set via the ``dialect:`` field of
+:ref:`DICompileUnit <DICompileUnit>`. The textual IR accepts either the
+symbolic spelling (e.g., ``dialect: DW_LLVM_LANG_DIALECT_simt``) or the
+corresponding small numeric value. The assembly parser additionally rejects
+an explicit ``dialect: 0`` (the only way to express "no dialect" in textual
+IR is to omit the field). Values outside the defined enumeration are
+rejected by the assembly parser, the IR verifier, and the bitcode reader.
+
+Target backends decide whether to emit ``DW_AT_LLVM_language_dialect``. The
+NVPTX backend emits it for the ``simt`` and ``tile`` dialects and, for any
+unknown dialect value reached through programmatic IR construction,
+suppresses emission and issues a (per-CU-deduplicated) warning diagnostic.
+
 Objective-C Extensions
 """"""""""""""""""""""
 

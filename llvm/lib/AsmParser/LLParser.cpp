@@ -5012,7 +5012,8 @@ struct DwarfSourceLangNameField : public MDUnsignedField {
 };
 
 struct DwarfLangDialectField : public MDUnsignedField {
-  DwarfLangDialectField() : MDUnsignedField(0, UINT16_MAX) {}
+  DwarfLangDialectField()
+      : MDUnsignedField(0, dwarf::DW_LLVM_LANG_DIALECT_max) {}
 };
 
 struct DwarfCCField : public MDUnsignedField {
@@ -5294,18 +5295,28 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name,
 template <>
 bool LLParser::parseMDField(LocTy Loc, StringRef Name,
                             DwarfLangDialectField &Result) {
-  if (Lex.getKind() == lltok::APSInt)
+  // Specifying the dialect field requires a recognized dialect: simt or
+  // tile (numerically 1 or 2). Omitting the field is the only way to
+  // express "no dialect specified".
+  if (Lex.getKind() == lltok::APSInt) {
+    if (Lex.getAPSIntVal() == 0)
+      return tokError("value for 'dialect' must be a known DWARF language "
+                      "dialect (DW_LLVM_LANG_DIALECT_simt or "
+                      "DW_LLVM_LANG_DIALECT_tile)");
     return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+  }
 
   if (Lex.getKind() != lltok::DwarfLangDialect)
     return tokError("expected DWARF language dialect");
 
   StringRef DialectString = Lex.getStrVal();
+  // getLanguageDialect returns a sentinel above Result.Max for unknown
+  // spellings; only simt and tile are registered, so any unrecognized
+  // DW_LLVM_LANG_DIALECT_* token is rejected here.
   unsigned Dialect = dwarf::getLanguageDialect(DialectString);
-  if (Dialect == dwarf::DW_LLVM_LANG_DIALECT_invalid)
+  if (Dialect > Result.Max)
     return tokError("invalid DWARF language dialect" + Twine(" '") +
                     DialectString + "'");
-  assert(Dialect <= Result.Max && "Expected DWARF language dialect");
   Result.assign(Dialect);
   Lex.Lex();
   return false;

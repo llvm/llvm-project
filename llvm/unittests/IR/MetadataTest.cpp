@@ -2919,7 +2919,7 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(DWOId, N->getDWOId());
   EXPECT_EQ(SysRoot, N->getSysRoot());
   EXPECT_EQ(SDK, N->getSDK());
-  EXPECT_EQ(dwarf::DW_LLVM_LANG_DIALECT_invalid, N->getDialect());
+  EXPECT_EQ(0u, N->getDialect());
 
   TempDICompileUnit Temp = N->clone();
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, Temp->getTag());
@@ -2938,7 +2938,7 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(Macros, Temp->getMacros().get());
   EXPECT_EQ(SysRoot, Temp->getSysRoot());
   EXPECT_EQ(SDK, Temp->getSDK());
-  EXPECT_EQ(dwarf::DW_LLVM_LANG_DIALECT_invalid, Temp->getDialect());
+  EXPECT_EQ(0u, Temp->getDialect());
 
   auto *TempAddress = Temp.get();
   auto *Clone = MDNode::replaceWithPermanent(std::move(Temp));

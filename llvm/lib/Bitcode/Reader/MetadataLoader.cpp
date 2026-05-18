@@ -1947,10 +1947,16 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     const auto LangVersionMask = (uint64_t(1) << 63);
     const bool HasVersionedLanguage = Record[1] & LangVersionMask;
     const uint32_t LanguageVersion = Record.size() > 22 ? Record[22] : 0;
+    // The dialect field is written by writeDICompileUnit as a small enum
+    // value (see dwarf::LanguageDialectAttribute). Reject out-of-range
+    // values rather than silently truncating to uint16_t; this keeps the
+    // writer/reader invariant symmetric and surfaces malformed inputs.
+    // Value 0 means "no dialect specified".
+    if (Record.size() > 23 &&
+        Record[23] > static_cast<uint64_t>(dwarf::DW_LLVM_LANG_DIALECT_max))
+      return error("Invalid DICompileUnit dialect value");
     const uint16_t Dialect =
-        Record.size() > 23
-            ? static_cast<uint16_t>(Record[23])
-            : static_cast<uint16_t>(dwarf::DW_LLVM_LANG_DIALECT_invalid);
+        Record.size() > 23 ? static_cast<uint16_t>(Record[23]) : uint16_t(0);
 
     auto *CU = DICompileUnit::getDistinct(
         Context,
