@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -61,15 +62,8 @@ static void walkIndicesAsAttr(MLIRContext *ctx, ArrayRef<int64_t> shape,
 //  Interfaces for AllocaOp
 //===----------------------------------------------------------------------===//
 
-static bool isSupportedElementType(Type type) {
-  return llvm::isa<MemRefType>(type) ||
-         OpBuilder(type.getContext()).getZeroAttr(type);
-}
-
 SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   MemRefType type = getType();
-  if (!isSupportedElementType(type.getElementType()))
-    return {};
   if (!type.hasStaticShape())
     return {};
   // Make sure the memref contains only a single element.
@@ -81,23 +75,14 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
 
 Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                         OpBuilder &builder) {
-  assert(isSupportedElementType(slot.elemType));
-  // TODO: support more types.
-  return TypeSwitch<Type, Value>(slot.elemType)
-      .Case([&](MemRefType t) {
-        return memref::AllocaOp::create(builder, getLoc(), t);
-      })
-      .Default([&](Type t) {
-        return arith::ConstantOp::create(builder, getLoc(), t,
-                                         builder.getZeroAttr(t));
-      });
+  return ub::PoisonOp::create(builder, getLoc(), slot.elemType);
 }
 
 std::optional<PromotableAllocationOpInterface>
 memref::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
                                           Value defaultValue,
                                           OpBuilder &builder) {
-  if (defaultValue.use_empty())
+  if (defaultValue && defaultValue.use_empty())
     defaultValue.getDefiningOp()->erase();
   this->erase();
   return std::nullopt;

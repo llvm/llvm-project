@@ -78,17 +78,17 @@ public:
   }
 
   void append(unsigned MBBNumber, MCRegUnit Unit, int Def) {
-    AllReachingDefs[MBBNumber][Unit].push_back(Def);
+    AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)].push_back(Def);
   }
 
   void prepend(unsigned MBBNumber, MCRegUnit Unit, int Def) {
-    auto &Defs = AllReachingDefs[MBBNumber][Unit];
+    auto &Defs = AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)];
     Defs.insert(Defs.begin(), Def);
   }
 
   void replaceFront(unsigned MBBNumber, MCRegUnit Unit, int Def) {
-    assert(!AllReachingDefs[MBBNumber][Unit].empty());
-    *AllReachingDefs[MBBNumber][Unit].begin() = Def;
+    assert(!AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)].empty());
+    *AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)].begin() = Def;
   }
 
   void clear() { AllReachingDefs.clear(); }
@@ -97,7 +97,7 @@ public:
     if (AllReachingDefs[MBBNumber].empty())
       // Block IDs are not necessarily dense.
       return ArrayRef<ReachingDef>();
-    return AllReachingDefs[MBBNumber][Unit];
+    return AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)];
   }
 
 private:
@@ -151,7 +151,9 @@ private:
   MBBFrameObjsReachingDefsInfo MBBFrameObjsReachingDefs;
 
   /// Default values are 'nothing happened a long time ago'.
-  const int ReachingDefDefaultVal = -(1 << 21);
+  static constexpr int ReachingDefDefaultVal = -(1 << 21);
+  /// Special values for function live-ins.
+  static constexpr int FunctionLiveInMarker = -1;
 
   using InstSet = SmallPtrSetImpl<MachineInstr*>;
   using BlockSet = SmallPtrSetImpl<MachineBasicBlock*>;
@@ -323,7 +325,8 @@ public:
 };
 
 /// Printer pass for the \c ReachingDefInfo results.
-class ReachingDefPrinterPass : public PassInfoMixin<ReachingDefPrinterPass> {
+class ReachingDefPrinterPass
+    : public RequiredPassInfoMixin<ReachingDefPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -331,8 +334,6 @@ public:
 
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-
-  static bool isRequired() { return true; }
 };
 
 class ReachingDefInfoWrapperPass : public MachineFunctionPass {

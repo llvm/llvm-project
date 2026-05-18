@@ -48,11 +48,112 @@ namespace clang {
 
 class FileManager;
 class LangOptions;
+class Module;
 class ModuleMap;
 class TargetInfo;
 
+/// Interface for on-demand deserialization of submodules stored in a PCM file.
+class ExternalSubmoduleSource {
+public:
+  virtual Module *getSubmodule(uint32_t GlobalID) = 0;
+  virtual ~ExternalSubmoduleSource() = default;
+};
+
 /// Describes the name of a module.
 using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
+
+/// Deduplication key for a loaded module file in \c ModuleManager.
+///
+/// For implicitly-built modules, this is a pointer representing the module
+/// cache directory and the module file name with the (optional) context hash.
+/// This enables using inode-based canonicalization of the user-provided module
+/// cache path without hitting issues on file systems that recycle inodes for
+/// recompiled module files.
+///
+/// For explicitly-built modules, this is \c FileEntry.
+/// This uses \c FileManager's inode-based canonicalization of the user-provided
+/// module file path. Because input explicitly-built modules do not change
+/// during the lifetime of the compiler, inode recycling is not of concern here.
+class ModuleFileKey {
+  /// The entity used for deduplication.
+  const void *Ptr;
+  /// The path relative to the module cache path for implicit module file, empty
+  /// for other kinds of module files.
+  std::string ImplicitModulePathSuffix;
+
+  friend llvm::DenseMapInfo<ModuleFileKey>;
+
+public:
+  ModuleFileKey(const void *ModuleFile) : Ptr(ModuleFile) {}
+
+  ModuleFileKey(const void *ModuleCacheDir, StringRef PathSuffix)
+      : Ptr(ModuleCacheDir), ImplicitModulePathSuffix(PathSuffix) {}
+
+  bool operator==(const ModuleFileKey &Other) const {
+    return Ptr == Other.Ptr &&
+           ImplicitModulePathSuffix == Other.ImplicitModulePathSuffix;
+  }
+
+  bool operator!=(const ModuleFileKey &Other) const {
+    return !operator==(Other);
+  }
+};
+
+/// Identifies a module file to be loaded.
+///
+/// For implicitly-built module files, the path is split into the module cache
+/// path and the module file name with the (optional) context hash. For all
+/// other types of module files, this is just the file system path.
+class ModuleFileName {
+  std::string Path;
+  unsigned ImplicitModuleSuffixLength = 0;
+
+public:
+  /// Creates an empty module file name.
+  ModuleFileName() = default;
+
+  /// Creates a file name for an explicit module.
+  static ModuleFileName makeExplicit(std::string Name) {
+    ModuleFileName File;
+    File.Path = std::move(Name);
+    return File;
+  }
+
+  /// Creates a file name for an explicit module.
+  static ModuleFileName makeExplicit(StringRef Name) {
+    return makeExplicit(Name.str());
+  }
+
+  /// Creates a file name for an implicit module.
+  static ModuleFileName makeImplicit(std::string Name, unsigned SuffixLength) {
+    assert(SuffixLength != 0 && "Empty suffix for implicit module file name");
+    assert(SuffixLength <= Name.size() &&
+           "Suffix for implicit module file name out-of-bounds");
+    ModuleFileName File;
+    File.Path = std::move(Name);
+    File.ImplicitModuleSuffixLength = SuffixLength;
+    return File;
+  }
+
+  /// Creates a file name for an implicit module.
+  static ModuleFileName makeImplicit(StringRef Name, unsigned SuffixLength) {
+    return makeImplicit(Name.str(), SuffixLength);
+  }
+
+  /// Returns the suffix length for an implicit module name, zero otherwise.
+  unsigned getImplicitModuleSuffixLength() const {
+    return ImplicitModuleSuffixLength;
+  }
+
+  /// Returns the plain module file name.
+  StringRef str() const { return Path; }
+
+  /// Converts to StringRef representing the plain module file name.
+  operator StringRef() const { return Path; }
+
+  /// Checks whether the module file name is empty.
+  bool empty() const { return Path.empty(); }
+};
 
 /// The signature of a module, which is a hash of the AST content.
 struct ASTFileSignature : std::array<uint8_t, 20> {
@@ -127,6 +228,62 @@ struct ModuleAttributes {
   ModuleAttributes()
       : IsSystem(false), IsExternC(false), IsExhaustive(false),
         NoUndeclaredIncludes(false) {}
+};
+
+/// Reference to a module that consists of either an existing/materialized
+/// Module object, reference to a serialized submodule record, both, or
+/// neither (null).
+class ModuleRef {
+  /// The existing/materialized Module object.
+  mutable Module *Existing = nullptr;
+
+  /// The external submodule source (i.e. \c ASTReader), and a boolean
+  /// signifying whether it's already been used to deserialize \c SubmoduleID.
+  mutable llvm::PointerIntPair<ExternalSubmoduleSource *, 1, bool>
+      ExternalSource = {nullptr, false};
+
+  /// Identifier of the external submodule in \c ExternalSource.
+  mutable uint64_t SubmoduleID = 0;
+
+public:
+  /// Create an empty reference.
+  ModuleRef() = default;
+
+  /// Create reference to a materialized module.
+  ModuleRef(Module *M) : Existing(M) {}
+
+  /// Create reference to a serialized submodule record.
+  ModuleRef(ExternalSubmoduleSource *ExtSrc, uint64_t SubmoduleID)
+      : ExternalSource(ExtSrc, false), SubmoduleID(SubmoduleID) {}
+
+  /// Get the existing/materialized module, if there's any.
+  Module *getExisting() const { return Existing; }
+  /// Add the existing/materialized module.
+  void setExisting(Module *E) { Existing = E; }
+
+  /// Add the serialized submodule record reference.
+  void setExternal(ExternalSubmoduleSource *ExtSrc, uint64_t ID) {
+    ExternalSource = {ExtSrc, false};
+    SubmoduleID = ID;
+  }
+
+  /// Check whether this is a non-empty reference.
+  operator bool() const {
+    return Existing || (ExternalSource.getPointer() && SubmoduleID);
+  }
+
+  /// Get the existing/materialized module. Try materializing it on-demand from
+  /// the serialized submodule record if possible.
+  operator Module *() const {
+    if (!ExternalSource.getInt() && ExternalSource.getPointer() &&
+        SubmoduleID) {
+      Existing = ExternalSource.getPointer()->getSubmodule(SubmoduleID);
+      ExternalSource.setInt(true);
+    }
+    return Existing;
+  }
+
+  Module *operator->() const { return *this; }
 };
 
 /// Required to construct a Module.
@@ -204,6 +361,9 @@ public:
   /// The umbrella header or directory.
   std::variant<std::monostate, FileEntryRef, DirectoryEntryRef> Umbrella;
 
+  /// The location of the umbrella header or directory declaration.
+  SourceLocation UmbrellaDeclLoc;
+
   /// The module signature.
   ASTFileSignature Signature;
 
@@ -252,15 +412,16 @@ public:
 
 private:
   /// The submodules of this module, indexed by name.
-  std::vector<Module *> SubModules;
+  std::vector<ModuleRef> SubModules;
 
   /// A mapping from the submodule name to the index into the
   /// \c SubModules vector at which that submodule resides.
-  mutable llvm::StringMap<unsigned> SubModuleIndex;
+  llvm::StringMap<unsigned> SubModuleIndex;
 
-  /// The AST file if this is a top-level module which has a
+  /// The AST file name and key if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
-  OptionalFileEntryRef ASTFile;
+  std::optional<ModuleFileName> ASTFileName;
+  std::optional<ModuleFileKey> ASTFileKey;
 
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<FileEntryRef, 2> TopHeaders;
@@ -455,17 +616,17 @@ public:
 
   /// The set of modules imported by this module, and on which this
   /// module depends.
-  llvm::SmallSetVector<Module *, 2> Imports;
+  llvm::SmallVector<ModuleRef, 2> Imports;
 
   /// The set of top-level modules that affected the compilation of this module,
   /// but were not imported.
-  llvm::SmallSetVector<Module *, 2> AffectingClangModules;
+  llvm::SmallVector<ModuleRef, 2> AffectingClangModules;
 
   /// Describes an exported module.
   ///
   /// The pointer is the module being re-exported, while the bit will be true
   /// to indicate that this is a wildcard export.
-  using ExportDecl = llvm::PointerIntPair<Module *, 1, bool>;
+  using ExportDecl = std::pair<ModuleRef, bool>;
 
   /// The set of export declarations.
   SmallVector<ExportDecl, 2> Exports;
@@ -543,7 +704,7 @@ public:
   /// A conflict between two modules.
   struct Conflict {
     /// The module that this module conflicts with.
-    Module *Other;
+    ModuleRef Other;
 
     /// The message provided to the user when there is a conflict.
     std::string Message;
@@ -641,7 +802,25 @@ public:
   void setParent(Module *M) {
     assert(!Parent);
     Parent = M;
+    Parent->SubModuleIndex[M->Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
+  }
+
+  /// Add a child submodule.
+  void addSubmodule(StringRef Name, Module *Submodule) {
+    auto [It, New] = SubModuleIndex.insert({Name, SubModules.size()});
+    if (New)
+      SubModules.emplace_back();
+    SubModules[It->second].setExisting(Submodule);
+  }
+
+  /// Add the external part of a submodule ModuleRef.
+  void addSubmodule(StringRef Name, ExternalSubmoduleSource *ExternalSource,
+                    uint64_t SubmoduleID) {
+    auto [It, New] = SubModuleIndex.insert({Name, SubModules.size()});
+    if (New)
+      SubModules.emplace_back();
+    SubModules[It->second].setExternal(ExternalSource, SubmoduleID);
   }
 
   /// Is this module have similar semantics as headers.
@@ -733,15 +912,26 @@ public:
     return getTopLevelModule()->Name;
   }
 
-  /// The serialized AST file for this module, if one was created.
-  OptionalFileEntryRef getASTFile() const {
-    return getTopLevelModule()->ASTFile;
+  /// The serialized AST file name for this module, if one was created.
+  const ModuleFileName *getASTFileName() const {
+    const Module *TopLevel = getTopLevelModule();
+    return TopLevel->ASTFileName ? &*TopLevel->ASTFileName : nullptr;
   }
 
-  /// Set the serialized AST file for the top-level module of this module.
-  void setASTFile(OptionalFileEntryRef File) {
-    assert((!getASTFile() || getASTFile() == File) && "file path changed");
-    getTopLevelModule()->ASTFile = File;
+  /// The serialized AST file key for this module, if one was created.
+  const ModuleFileKey *getASTFileKey() const {
+    const Module *TopLevel = getTopLevelModule();
+    return TopLevel->ASTFileKey ? &*TopLevel->ASTFileKey : nullptr;
+  }
+
+  /// Set the serialized module file for the top-level module of this module.
+  void setASTFileNameAndKey(ModuleFileName NewName, ModuleFileKey NewKey) {
+    assert(((!getASTFileName() && !getASTFileKey()) ||
+            *getASTFileKey() == NewKey) &&
+           "file path changed");
+    Module *TopLevel = getTopLevelModule();
+    TopLevel->ASTFileName = NewName;
+    TopLevel->ASTFileKey = NewKey;
   }
 
   /// Retrieve the umbrella directory as written.
@@ -804,7 +994,7 @@ public:
   /// Find the submodule with the given name.
   ///
   /// \returns The submodule if found, or NULL otherwise.
-  Module *findSubmodule(StringRef Name) const;
+  ModuleRef findSubmodule(StringRef Name) const;
 
   /// Get the Global Module Fragment (sub-module) for this module, it there is
   /// one.
@@ -832,8 +1022,8 @@ public:
 
   unsigned getVisibilityID() const { return VisibilityID; }
 
-  using submodule_iterator = std::vector<Module *>::iterator;
-  using submodule_const_iterator = std::vector<Module *>::const_iterator;
+  using submodule_iterator = std::vector<ModuleRef>::iterator;
+  using submodule_const_iterator = std::vector<ModuleRef>::const_iterator;
 
   llvm::iterator_range<submodule_iterator> submodules() {
     return llvm::make_range(SubModules.begin(), SubModules.end());
@@ -925,5 +1115,24 @@ private:
 };
 
 } // namespace clang
+
+template <> struct llvm::DenseMapInfo<clang::ModuleFileKey> {
+  static clang::ModuleFileKey getEmptyKey() {
+    return DenseMapInfo<const void *>::getEmptyKey();
+  }
+
+  static clang::ModuleFileKey getTombstoneKey() {
+    return DenseMapInfo<const void *>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(const clang::ModuleFileKey &Val) {
+    return hash_combine(Val.Ptr, Val.ImplicitModulePathSuffix);
+  }
+
+  static bool isEqual(const clang::ModuleFileKey &LHS,
+                      const clang::ModuleFileKey &RHS) {
+    return LHS == RHS;
+  }
+};
 
 #endif // LLVM_CLANG_BASIC_MODULE_H

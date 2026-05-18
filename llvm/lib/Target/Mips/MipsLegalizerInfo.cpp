@@ -259,14 +259,14 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .legalFor({{s32, s32}})
       .maxScalar(0, s32)
       .maxScalar(1, s32);
-  getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+  getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
       .lowerFor({{s32, s32}});
 
   getActionDefinitionsBuilder(G_CTTZ)
       .lowerFor({{s32, s32}})
       .maxScalar(0, s32)
       .maxScalar(1, s32);
-  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON)
       .lowerFor({{s32, s32}, {s64, s64}});
 
   getActionDefinitionsBuilder(G_CTPOP)
@@ -470,13 +470,12 @@ static bool SelectMSA3OpIntrinsic(MachineInstr &MI, unsigned Opcode,
                                   MachineIRBuilder &MIRBuilder,
                                   const MipsSubtarget &ST) {
   assert(ST.hasMSA() && "MSA intrinsic not supported on target without MSA.");
-  if (!MIRBuilder.buildInstr(Opcode)
-           .add(MI.getOperand(0))
-           .add(MI.getOperand(2))
-           .add(MI.getOperand(3))
-           .constrainAllUses(MIRBuilder.getTII(), *ST.getRegisterInfo(),
-                             *ST.getRegBankInfo()))
-    return false;
+  MIRBuilder.buildInstr(Opcode)
+      .add(MI.getOperand(0))
+      .add(MI.getOperand(2))
+      .add(MI.getOperand(3))
+      .constrainAllUses(MIRBuilder.getTII(), *ST.getRegisterInfo(),
+                        *ST.getRegBankInfo());
   MI.eraseFromParent();
   return true;
 }

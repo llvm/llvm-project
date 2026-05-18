@@ -60,27 +60,27 @@ int bar() {
 // WINDOWS: call noundef i32 @"?foo@@YAHH@Z.resolver"(i32 noundef 1)
 // WINDOWS: call noundef i32 @"?foo@ns@@YAHH@Z.resolver"(i32 noundef 2)
 
-// ITANIUM: define weak_odr ptr @_Z3fooi.resolver()
+// ITANIUM: define weak_odr ptr @_Z3fooi.resolver() #[[ATTR_RESOLVER:[0-9]+]]
 // LINUX-SAME: comdat
 // ITANIUM: ret ptr @_Z3fooi.arch_sandybridge
 // ITANIUM: ret ptr @_Z3fooi.arch_ivybridge
 // ITANIUM: ret ptr @_Z3fooi.sse4.2
 // ITANIUM: ret ptr @_Z3fooi
 
-// WINDOWS: define weak_odr dso_local i32 @"?foo@@YAHH@Z.resolver"(i32 %0) comdat
+// WINDOWS: define weak_odr dso_local i32 @"?foo@@YAHH@Z.resolver"(i32 %0) #[[ATTR_RESOLVER:[0-9]+]] comdat
 // WINDOWS: call i32 @"?foo@@YAHH@Z.arch_sandybridge"(i32 %0)
 // WINDOWS: call i32 @"?foo@@YAHH@Z.arch_ivybridge"(i32 %0)
 // WINDOWS: call i32 @"?foo@@YAHH@Z.sse4.2"(i32 %0)
 // WINDOWS: call i32 @"?foo@@YAHH@Z"(i32 %0)
 
-// ITANIUM: define weak_odr ptr @_ZN2ns3fooEi.resolver()
+// ITANIUM: define weak_odr ptr @_ZN2ns3fooEi.resolver() #[[ATTR_RESOLVER]]
 // LINUX-SAME: comdat
 // ITANIUM: ret ptr @_ZN2ns3fooEi.arch_sandybridge
 // ITANIUM: ret ptr @_ZN2ns3fooEi.arch_ivybridge
 // ITANIUM: ret ptr @_ZN2ns3fooEi.sse4.2
 // ITANIUM: ret ptr @_ZN2ns3fooEi
 
-// WINDOWS: define weak_odr dso_local i32 @"?foo@ns@@YAHH@Z.resolver"(i32 %0) comdat
+// WINDOWS: define weak_odr dso_local i32 @"?foo@ns@@YAHH@Z.resolver"(i32 %0) #[[ATTR_RESOLVER]] comdat
 // WINDOWS: call i32 @"?foo@ns@@YAHH@Z.arch_sandybridge"(i32 %0)
 // WINDOWS: call i32 @"?foo@ns@@YAHH@Z.arch_ivybridge"(i32 %0)
 // WINDOWS: call i32 @"?foo@ns@@YAHH@Z.sse4.2"(i32 %0)

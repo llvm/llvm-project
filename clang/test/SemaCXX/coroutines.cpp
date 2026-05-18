@@ -1,8 +1,8 @@
 // This file contains references to sections of the Coroutines TS, which can be
 // found at http://wg21.link/coroutines.
 
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fcxx-exceptions -fexceptions -Wunused-result
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fcxx-exceptions -fexceptions -Wunused-result
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fcxx-exceptions -fexceptions -Wunused-result -Wno-coroutines-unsupported-target
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fcxx-exceptions -fexceptions -Wunused-result -Wno-coroutines-unsupported-target
 
 // Run without -verify to check the order of errors we show.
 // RUN: not %clang_cc1 -std=c++20 -fsyntax-only %s -fcxx-exceptions -fexceptions -Wunused-result 2>&1 | FileCheck %s
@@ -1544,4 +1544,25 @@ void warn_always_inline() { // expected-warning {{this coroutine may be split in
 [[gnu::always_inline]]
 void warn_gnu_always_inline() { // expected-warning {{this coroutine may be split into pieces; not every piece is guaranteed to be inlined}}
   co_await suspend_always{};
+}
+
+namespace GH98923 {
+struct Awaiter : suspend_never {
+  int await_resume() { return 0; }
+};
+
+void f(int x = co_await Awaiter{});
+// expected-error@-1 {{'co_await' cannot be used outside a function}}
+
+void g() {
+    void g1(int x = co_await Awaiter{});
+    // expected-error@-1 {{'co_await' cannot be used outside a function}}
+    void g2(int x = ((co_yield 0), 1));
+    // expected-error@-1 {{'co_yield' cannot be used outside a function}}
+    auto g3 = [&](int x = co_await Awaiter{}) -> void{
+    // expected-error@-1 {{'co_await' cannot be used outside a function}}
+        co_return 0;
+    };
+}
+
 }

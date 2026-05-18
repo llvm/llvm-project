@@ -372,6 +372,14 @@ public:
                                      const SourceManager &SM,
                                      const LangOptions &LangOpts);
 
+  /// Finds the end of an identifier-continuation sequence starting at \p Loc.
+  /// This consumes identifier continuation characters (letters, digits,
+  /// underscores, dollar signs if enabled, UCNs, and unicode), and returns
+  /// the source location immediately after the consumed sequence.
+  static SourceLocation
+  findEndOfIdentifierContinuation(SourceLocation Loc, const SourceManager &SM,
+                                  const LangOptions &LangOpts);
+
   /// Relex the token at the specified location.
   /// \returns true if there was a failure, false on success.
   static bool getRawToken(SourceLocation Loc, Token &Result,
@@ -627,7 +635,7 @@ private:
   /// LexTokenInternal - Internal interface to lex a preprocessing token. Called
   /// by Lex.
   ///
-  bool LexTokenInternal(Token &Result, bool TokAtPhysicalStartOfLine);
+  bool LexTokenInternal(Token &Result);
 
   bool CheckUnicodeWhitespace(Token &Result, uint32_t C, const char *CurPtr);
 
@@ -762,12 +770,9 @@ private:
   bool LexCharConstant       (Token &Result, const char *CurPtr,
                               tok::TokenKind Kind);
   bool LexEndOfFile          (Token &Result, const char *CurPtr);
-  bool SkipWhitespace        (Token &Result, const char *CurPtr,
-                              bool &TokAtPhysicalStartOfLine);
-  bool SkipLineComment       (Token &Result, const char *CurPtr,
-                              bool &TokAtPhysicalStartOfLine);
-  bool SkipBlockComment      (Token &Result, const char *CurPtr,
-                              bool &TokAtPhysicalStartOfLine);
+  bool SkipWhitespace(Token &Result, const char *CurPtr);
+  bool SkipLineComment(Token &Result, const char *CurPtr);
+  bool SkipBlockComment(Token &Result, const char *CurPtr);
   bool SaveLineComment       (Token &Result, const char *CurPtr);
 
   bool IsStartOfConflictMarker(const char *CurPtr);

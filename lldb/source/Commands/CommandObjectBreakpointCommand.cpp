@@ -344,7 +344,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids,
+        command, m_exe_ctx, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     m_bp_options_vec.clear();
@@ -389,16 +389,25 @@ protected:
         } else {
           script_interp->CollectDataForBreakpointCommandCallback(
               m_bp_options_vec, result);
+          // Still gathering input; the IOHandler will set the final status.
+          result.SetStatus(eReturnStatusStarted);
+          return;
         }
         if (!error.Success())
           result.SetError(std::move(error));
+        else
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         // Special handling for one-liner specified inline.
-        if (m_options.m_use_one_liner)
+        if (m_options.m_use_one_liner) {
           SetBreakpointCommandCallback(m_bp_options_vec,
                                        m_options.m_one_liner.c_str());
-        else
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
+        } else {
           CollectDataForBreakpointCommandCallback(m_bp_options_vec, result);
+          // Still gathering input; the IOHandler will set the final status.
+          result.SetStatus(eReturnStatusStarted);
+        }
       }
     }
   }
@@ -500,7 +509,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids,
+        command, m_exe_ctx, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -516,7 +525,7 @@ protected:
             if (bp_loc_sp)
               bp_loc_sp->ClearCallback();
             else {
-              result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u.\n",
+              result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u",
                                            cur_bp_id.GetBreakpointID(),
                                            cur_bp_id.GetLocationID());
               return;
@@ -567,7 +576,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids,
+        command, m_exe_ctx, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -583,7 +592,7 @@ protected:
             if (cur_bp_id.GetLocationID() != LLDB_INVALID_BREAK_ID) {
               bp_loc_sp = bp->FindLocationByID(cur_bp_id.GetLocationID());
               if (!bp_loc_sp) {
-                result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u.\n",
+                result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u",
                                              cur_bp_id.GetBreakpointID(),
                                              cur_bp_id.GetLocationID());
                 return;
@@ -611,14 +620,14 @@ protected:
                                     result.GetOutputStream().GetIndentLevel() +
                                         2);
             } else {
-              result.AppendMessageWithFormat(
-                  "Breakpoint %s does not have an associated command.\n",
+              result.AppendMessageWithFormatv(
+                  "Breakpoint {0} does not have an associated command.",
                   id_str.GetData());
             }
           }
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat("Invalid breakpoint ID: %u.\n",
+          result.AppendErrorWithFormat("Invalid breakpoint ID: %u",
                                        cur_bp_id.GetBreakpointID());
         }
       }

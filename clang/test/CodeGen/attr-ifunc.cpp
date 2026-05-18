@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-linux -verify -emit-llvm-only %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx -verify -emit-llvm-only %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -verify -emit-llvm-only %s
 // RUN: not %clang_cc1 -triple x86_64-linux -emit-llvm-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // RUN: not %clang_cc1 -triple x86_64-apple-macosx -emit-llvm-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // RUN: not %clang_cc1 -triple arm64-apple-macosx -emit-llvm-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -triple powerpc64-ibm-aix-xcoff -emit-llvm-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 void *f1_ifunc(void) { return nullptr; }
 void f1(void) __attribute__((ifunc("f1_ifunc")));

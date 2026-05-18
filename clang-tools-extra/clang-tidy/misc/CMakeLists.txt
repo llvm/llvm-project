@@ -18,21 +18,25 @@ add_custom_target(genconfusable DEPENDS Confusables.inc)
 set_target_properties(genconfusable PROPERTIES FOLDER "Clang Tools Extra/Sourcegenning")
 
 add_clang_library(clangTidyMiscModule STATIC
+  AnonymousNamespaceInHeaderCheck.cpp
+  ConfusableIdentifierCheck.cpp
   ConstCorrectnessCheck.cpp
   CoroutineHostileRAIICheck.cpp
   DefinitionsInHeadersCheck.cpp
-  ConfusableIdentifierCheck.cpp
+  ExplicitConstructorCheck.cpp
   HeaderIncludeCycleCheck.cpp
   IncludeCleanerCheck.cpp
   MiscTidyModule.cpp
   MisleadingBidirectionalCheck.cpp
   MisleadingIdentifierCheck.cpp
   MisplacedConstCheck.cpp
+  MultipleInheritanceCheck.cpp
   NewDeleteOverloadsCheck.cpp
   NoRecursionCheck.cpp
   NonCopyableObjectsCheck.cpp
   NonPrivateMemberVariablesInClassesCheck.cpp
   OverrideWithDifferentVisibilityCheck.cpp
+  PredictableRandCheck.cpp
   RedundantExpressionCheck.cpp
   StaticAssertCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp

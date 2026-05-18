@@ -6,10 +6,14 @@ HELP: USAGE: {{.*}}dsymutil{{[^ ]*}} [options] <input files>
 HELP-NOT: -reverse-iterate
 HELP: Dsymutil Options:
 CHECK: -accelerator
+CHECK: -allow <path>
 CHECK: -arch <arch>
 CHECK: -build-variant-suffix <suffix=buildvariant>
+CHECK: -codesign <identity>
+CHECK: -disallow <path>
 CHECK: -dump-debug-map
 CHECK: -D <path>
+CHECK: -embed-resource <src-path>=<bundle-relative-path>
 CHECK: -fat64
 CHECK: -flat
 CHECK: -gen-reproducer
@@ -52,3 +56,9 @@ BOGUS: warning: ignoring unknown option: -bogus
 
 RUN: not dsymutil --quiet --verbose 2>&1 | FileCheck --check-prefix=CONFLICT %s
 CONFLICT: error: --quiet and --verbose cannot be specified together
+
+RUN: not dsymutil -y file1 --allow file2 2>&1 | FileCheck --check-prefix=CONFLICT2 %s
+CONFLICT2: error: -y and --allow/--disallow cannot be specified together
+
+RUN: not dsymutil --flat --embed-resource /tmp/a.py=Python/a.py file1 2>&1 | FileCheck --check-prefix=FLATEMBED %s
+FLATEMBED: error: --embed-resource is not supported with --flat

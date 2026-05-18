@@ -659,7 +659,7 @@ define i32 @different_ivs(ptr %array, i32 %length, i32 %n) {
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i64 [[I_NEXT]], [[N64]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp samesign ult i64 [[I_NEXT]], [[N64]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
@@ -722,7 +722,7 @@ define i32 @different_ivs2(ptr %array, i32 %length, i32 %n) {
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[J_NEXT]] = sub nuw i32 [[J]], 1
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i64 [[I_NEXT]], [[N64]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp samesign ult i64 [[I_NEXT]], [[N64]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT_LCSSA:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]

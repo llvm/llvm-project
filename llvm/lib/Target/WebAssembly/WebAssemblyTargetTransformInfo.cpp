@@ -13,6 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyTargetTransformInfo.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 
 #include "llvm/CodeGen/CostTable.h"
 using namespace llvm;
@@ -54,6 +57,26 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+
+  if (ST->hasSIMD128()) {
+    static const CostTblEntry ArithCostTbl[]{
+        // extmul + (maybe awkward) shuffle
+        {ISD::MUL, MVT::v8i8, 4},
+        // 2x extmul + (okay) shuffle
+        {ISD::MUL, MVT::v16i8, 4},
+        // extmul
+        {ISD::MUL, MVT::v4i16, 1},
+        // extmul
+        {ISD::MUL, MVT::v2i32, 1},
+    };
+    EVT DstVT = TLI->getValueType(DL, Ty);
+    if (DstVT.isSimple()) {
+      int ISD = TLI->InstructionOpcodeToISD(Opcode);
+      if (const auto *Entry =
+              CostTableLookup(ArithCostTbl, ISD, DstVT.getSimpleVT()))
+        return Entry->Cost;
+    }
+  }
 
   InstructionCost Cost =
       BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
@@ -144,6 +167,9 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i32, 4},
       {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 4},
       {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 4},
+      // 6x extend_low, extend_high
+      {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8, 6},
+      {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8, 6},
       // shuffle
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i32, 2},
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i32, 4},
@@ -271,6 +297,25 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
   return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace, CostKind);
 }
 
+InstructionCost WebAssemblyTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) const {
+  // Canonicalize the ShuffleKind in case optimizations didn't.
+  //  Otherwise, we might end up with the wrong ShuffleKind to match against.
+
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+
+  // Wasm SIMD128 has native splat instructions for all lane types.
+  if (ST->hasSIMD128() && Kind == TTI::SK_Broadcast &&
+      isa<FixedVectorType>(SrcTy))
+    return 1;
+
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
+                               Args, CxtI);
+}
+
 InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *Ty, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -297,6 +342,9 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
     unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
     // Ensure the element type is legal.
     if (ElSize != 8 && ElSize != 16 && ElSize != 32 && ElSize != 64)
+      return InstructionCost::getInvalid();
+
+    if (Factor != 2 && Factor != 4)
       return InstructionCost::getInvalid();
 
     auto *SubVecTy =
@@ -357,9 +405,9 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
 
 InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    const Value *Op0, const Value *Op1) const {
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
-      Opcode, Val, CostKind, Index, Op0, Op1);
+      Opcode, Val, CostKind, Index, Op0, Op1, VIC);
 
   // SIMD128's insert/extract currently only take constant indices.
   if (Index == -1u)
@@ -372,7 +420,7 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
     TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
   if (!VF.isFixed() || !ST->hasSIMD128())
     return Invalid;
@@ -492,4 +540,88 @@ bool WebAssemblyTTIImpl::isProfitableToSinkOperands(
   }
 
   return false;
+}
+
+/// Attempt to convert [relaxed_]swizzle to shufflevector if the mask is
+/// constant.
+static Value *simplifyWasmSwizzle(const IntrinsicInst &II,
+                                  InstCombiner::BuilderTy &Builder,
+                                  bool IsRelaxed) {
+  auto *V = dyn_cast<Constant>(II.getArgOperand(1));
+  if (!V)
+    return nullptr;
+
+  auto *VecTy = cast<FixedVectorType>(II.getType());
+  unsigned NumElts = VecTy->getNumElements();
+  assert(NumElts == 16);
+
+  // Construct a shuffle mask from constant integers or UNDEFs.
+  int Indexes[16];
+  bool AnyOutOfBounds = false;
+
+  for (unsigned I = 0; I < NumElts; ++I) {
+    Constant *COp = V->getAggregateElement(I);
+    if (!COp || (!isa<UndefValue>(COp) && !isa<ConstantInt>(COp)))
+      return nullptr;
+
+    if (isa<UndefValue>(COp)) {
+      Indexes[I] = -1;
+      continue;
+    }
+
+    if (IsRelaxed && cast<ConstantInt>(COp)->getSExtValue() >= NumElts) {
+      // The relaxed_swizzle operation always returns 0 if the lane index is
+      // less than 0 when interpreted as a signed value. For lane indices above
+      // 15, however, it can choose between returning 0 or the lane at `Index %
+      // 16`. However, the choice must be made consistently. As the WebAssembly
+      // spec states:
+      //
+      // "The result of relaxed operators are implementation-dependent, because
+      // the set of possible results may depend on properties of the host
+      // environment, such as its hardware. Technically, their behaviour is
+      // controlled by a set of global parameters to the semantics that an
+      // implementation can instantiate in different ways. These choices are
+      // fixed, that is, parameters are constant during the execution of any
+      // given program."
+      //
+      // The WebAssembly runtime may choose differently from us, so we can't
+      // optimize a relaxed swizzle with lane indices above 15.
+      return nullptr;
+    }
+
+    uint64_t Index = cast<ConstantInt>(COp)->getZExtValue();
+    if (Index >= NumElts) {
+      AnyOutOfBounds = true;
+      // If there are out-of-bounds indices, the swizzle instruction returns
+      // zeroes in those lanes. We'll provide an all-zeroes vector as the
+      // second argument to shufflevector and read the first element from it.
+      Indexes[I] = NumElts;
+      continue;
+    }
+
+    Indexes[I] = Index;
+  }
+
+  auto *V1 = II.getArgOperand(0);
+  auto *V2 =
+      AnyOutOfBounds ? Constant::getNullValue(VecTy) : PoisonValue::get(VecTy);
+
+  return Builder.CreateShuffleVector(V1, V2, ArrayRef(Indexes, NumElts));
+}
+
+std::optional<Instruction *>
+WebAssemblyTTIImpl::instCombineIntrinsic(InstCombiner &IC,
+                                         IntrinsicInst &II) const {
+  Intrinsic::ID IID = II.getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::wasm_swizzle:
+  case Intrinsic::wasm_relaxed_swizzle:
+    if (Value *V = simplifyWasmSwizzle(
+            II, IC.Builder, IID == Intrinsic::wasm_relaxed_swizzle)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+    break;
+  }
+
+  return std::nullopt;
 }

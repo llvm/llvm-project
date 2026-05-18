@@ -21,11 +21,15 @@
 #include <__config>
 
 #include <__concepts/arithmetic.h>
+#include <__concepts/same_as.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/integer_traits.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_signed.h>
 #include <__type_traits/make_unsigned.h>
+#include <__type_traits/remove_cvref.h>
+#include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/unreachable.h>
 #include <array>
@@ -298,11 +302,13 @@ private:
 
 public:
   // [mdspan.extents.obs], observers of multidimensional index space
-  _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank() noexcept { return __rank_; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank_dynamic() noexcept { return __rank_dynamic_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank() noexcept { return __rank_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank_dynamic() noexcept { return __rank_dynamic_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type extent(rank_type __r) const noexcept { return __vals_.__value(__r); }
-  _LIBCPP_HIDE_FROM_ABI static constexpr size_t static_extent(rank_type __r) noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr index_type extent(rank_type __r) const noexcept {
+    return __vals_.__value(__r);
+  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr size_t static_extent(rank_type __r) noexcept {
     return _Values::__static_value(__r);
   }
 
@@ -429,6 +435,15 @@ public:
       }
     }
     return true;
+  }
+
+  template <class _OtherIndexType>
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __index_cast(_OtherIndexType&& __i) noexcept {
+    using _OtherIndex = remove_cvref_t<_OtherIndexType>;
+    if constexpr (integral<_OtherIndex> && !same_as<_OtherIndex, bool>)
+      return __i;
+    else
+      return static_cast<index_type>(std::forward<_OtherIndexType>(__i));
   }
 };
 

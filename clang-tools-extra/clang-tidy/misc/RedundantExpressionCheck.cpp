@@ -31,7 +31,7 @@ using namespace clang::tidy::matchers;
 namespace clang::tidy::misc {
 using llvm::APSInt;
 
-static constexpr llvm::StringLiteral KnownBannedMacroNames[] = {
+static constexpr StringRef KnownBannedMacroNames[] = {
     "EAGAIN",
     "EWOULDBLOCK",
     "SIGCLD",
@@ -458,7 +458,7 @@ AST_MATCHER(ConditionalOperator, conditionalOperatorIsInMacro) {
 
 AST_MATCHER(Expr, isMacro) { return Node.getExprLoc().isMacroID(); }
 
-AST_MATCHER_P(Expr, expandedByMacro, ArrayRef<llvm::StringLiteral>, Names) {
+AST_MATCHER_P(Expr, expandedByMacro, ArrayRef<StringRef>, Names) {
   const SourceManager &SM = Finder->getASTContext().getSourceManager();
   const LangOptions &LO = Finder->getASTContext().getLangOpts();
   SourceLocation Loc = Node.getExprLoc();
@@ -679,11 +679,13 @@ static bool retrieveRelationalIntegerConstantExpr(
           if (!Arg->isValueDependent() &&
               !Arg->isIntegerConstantExpr(*Result.Context))
             return false;
-        } else
+        } else {
           return false;
+        }
       }
-    } else
+    } else {
       return false;
+    }
 
     Symbol = OverloadedOperatorExpr->getArg(IntegerConstantIsFirstArg ? 1 : 0);
     OperandExpr = OverloadedOperatorExpr;
@@ -866,14 +868,14 @@ static bool areExprsMacroAndNonMacro(const Expr *&LhsExpr,
   return LhsLoc.isMacroID() != RhsLoc.isMacroID();
 }
 
-static bool areStringsSameIgnoreSpaces(const llvm::StringRef Left,
-                                       const llvm::StringRef Right) {
+static bool areStringsSameIgnoreSpaces(const StringRef Left,
+                                       const StringRef Right) {
   if (Left == Right)
     return true;
 
   // Do running comparison ignoring spaces
-  llvm::StringRef L = Left.trim();
-  llvm::StringRef R = Right.trim();
+  StringRef L = Left.trim();
+  StringRef R = Right.trim();
   while (!L.empty() && !R.empty()) {
     L = L.ltrim();
     R = R.ltrim();
@@ -890,7 +892,6 @@ static bool areStringsSameIgnoreSpaces(const llvm::StringRef Left,
 
 static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
                                        const ASTContext *Context) {
-
   if (!BinOp)
     return false;
 
@@ -904,9 +905,9 @@ static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
     // Left is macro so right macro too
     if (Rsr.getBegin().isMacroID()) {
       // Both sides are macros so they are same macro or literal
-      const llvm::StringRef L = Lexer::getSourceText(
+      const StringRef L = Lexer::getSourceText(
           CharSourceRange::getTokenRange(Lsr), SM, Context->getLangOpts());
-      const llvm::StringRef R = Lexer::getSourceText(
+      const StringRef R = Lexer::getSourceText(
           CharSourceRange::getTokenRange(Rsr), SM, Context->getLangOpts());
       return areStringsSameIgnoreSpaces(L, R);
     }
@@ -1399,10 +1400,9 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
              : "operator has equivalent nested operands";
 
     const auto Diag = diag(Op->getExprLoc(), Message);
-    for (const auto &KeyValue : Result.Nodes.getMap()) {
+    for (const auto &KeyValue : Result.Nodes.getMap())
       if (StringRef(KeyValue.first).starts_with("duplicate"))
         Diag << KeyValue.second.getSourceRange();
-    }
   }
 
   if (const auto *NegateOperator =

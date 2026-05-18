@@ -8,20 +8,12 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
-#include "../bugprone/UseAfterMoveCheck.h"
-#include "../cppcoreguidelines/AvoidGotoCheck.h"
+#include "../bugprone/UnhandledCodePathsCheck.h"
 #include "../cppcoreguidelines/NoMallocCheck.h"
-#include "../cppcoreguidelines/ProBoundsArrayToPointerDecayCheck.h"
-#include "../cppcoreguidelines/ProTypeMemberInitCheck.h"
 #include "../cppcoreguidelines/ProTypeVarargCheck.h"
 #include "../cppcoreguidelines/SpecialMemberFunctionsCheck.h"
-#include "../google/ExplicitConstructorCheck.h"
-#include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/StaticAssertCheck.h"
-#include "../modernize/AvoidCArraysCheck.h"
-#include "../modernize/DeprecatedHeadersCheck.h"
 #include "../modernize/UseAutoCheck.h"
 #include "../modernize/UseEmplaceCheck.h"
 #include "../modernize/UseEqualsDefaultCheck.h"
@@ -29,59 +21,20 @@
 #include "../modernize/UseNoexceptCheck.h"
 #include "../modernize/UseNullptrCheck.h"
 #include "../modernize/UseOverrideCheck.h"
-#include "../performance/MoveConstArgCheck.h"
-#include "../performance/NoexceptMoveConstructorCheck.h"
-#include "../readability/BracesAroundStatementsCheck.h"
-#include "../readability/FunctionSizeCheck.h"
-#include "../readability/NamedParameterCheck.h"
+#include "../portability/NoAssemblerCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "ExceptionBaseclassCheck.h"
-#include "IgnoredRemoveResultCheck.h"
-#include "MultiwayPathsCoveredCheck.h"
-#include "NoAssemblerCheck.h"
-#include "SignedBitwiseCheck.h"
 
 namespace clang::tidy {
 namespace hicpp {
+namespace {
 
 class HICPPModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
-        "hicpp-avoid-c-arrays");
-    CheckFactories.registerCheck<cppcoreguidelines::AvoidGotoCheck>(
-        "hicpp-avoid-goto");
-    CheckFactories.registerCheck<readability::BracesAroundStatementsCheck>(
-        "hicpp-braces-around-statements");
-    CheckFactories.registerCheck<modernize::DeprecatedHeadersCheck>(
-        "hicpp-deprecated-headers");
-    CheckFactories.registerCheck<ExceptionBaseclassCheck>(
-        "hicpp-exception-baseclass");
-    CheckFactories.registerCheck<IgnoredRemoveResultCheck>(
-        "hicpp-ignored-remove-result");
-    CheckFactories.registerCheck<MultiwayPathsCoveredCheck>(
+    CheckFactories.registerCheck<bugprone::UnhandledCodePathsCheck>(
         "hicpp-multiway-paths-covered");
-    CheckFactories.registerCheck<SignedBitwiseCheck>("hicpp-signed-bitwise");
-    CheckFactories.registerCheck<google::ExplicitConstructorCheck>(
-        "hicpp-explicit-conversions");
-    CheckFactories.registerCheck<readability::FunctionSizeCheck>(
-        "hicpp-function-size");
-    CheckFactories.registerCheck<readability::NamedParameterCheck>(
-        "hicpp-named-parameter");
-    CheckFactories.registerCheck<bugprone::UseAfterMoveCheck>(
-        "hicpp-invalid-access-moved");
-    CheckFactories.registerCheck<cppcoreguidelines::ProTypeMemberInitCheck>(
-        "hicpp-member-init");
-    CheckFactories.registerCheck<performance::MoveConstArgCheck>(
-        "hicpp-move-const-arg");
-    CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
-        "hicpp-new-delete-operators");
-    CheckFactories.registerCheck<performance::NoexceptMoveConstructorCheck>(
-        "hicpp-noexcept-move");
-    CheckFactories
-        .registerCheck<cppcoreguidelines::ProBoundsArrayToPointerDecayCheck>(
-            "hicpp-no-array-decay");
-    CheckFactories.registerCheck<NoAssemblerCheck>("hicpp-no-assembler");
+    CheckFactories.registerCheck<portability::NoAssemblerCheck>(
+        "hicpp-no-assembler");
     CheckFactories.registerCheck<cppcoreguidelines::NoMallocCheck>(
         "hicpp-no-malloc");
     CheckFactories
@@ -110,6 +63,8 @@ public:
         "hicpp-vararg");
   }
 };
+
+} // namespace
 
 // Register the HICPPModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<HICPPModule>

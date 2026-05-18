@@ -201,7 +201,7 @@ enum class RootParameterType : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
-bool isValidParameterType(uint32_t V);
+LLVM_ABI_FOR_TEST bool isValidParameterType(uint32_t V);
 
 bool isValidRangeType(uint32_t V);
 
@@ -562,6 +562,8 @@ struct ResourceBindInfo : public v0::ResourceBindInfo {
 
 namespace v3 {
 struct RuntimeInfo : public v2::RuntimeInfo {
+  // Offset into the string table, which is stored separately in the PSV0 part.
+  // The entry name string itself is not stored in the RuntimeInfo record.
   uint32_t EntryNameOffset;
 
   void swapBytes() {

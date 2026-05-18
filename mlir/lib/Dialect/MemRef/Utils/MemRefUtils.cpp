@@ -51,7 +51,8 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
 std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     OpBuilder &builder, Location loc, int srcBits, int dstBits,
     OpFoldResult offset, ArrayRef<OpFoldResult> sizes,
-    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices) {
+    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices,
+    LinearizedDivKind sizeDivKind) {
   unsigned sourceRank = sizes.size();
   assert(sizes.size() == strides.size() &&
          "expected as many sizes as strides for a memref");
@@ -88,7 +89,10 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     AffineExpr sizeExpr = symbols[symbolIndex++];
     values.push_back(sizes[i]);
 
-    productExpressions.push_back((strideExpr * sizeExpr).floorDiv(scaler));
+    AffineExpr product = strideExpr * sizeExpr;
+    productExpressions.push_back(sizeDivKind == LinearizedDivKind::Ceil
+                                     ? product.ceilDiv(scaler)
+                                     : product.floorDiv(scaler));
   }
   AffineMap maxMap = AffineMap::get(
       /*dimCount=*/0, /*symbolCount=*/symbolIndex, productExpressions,
@@ -112,7 +116,8 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
 LinearizedMemRefInfo
 getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
                                  int dstBits, OpFoldResult offset,
-                                 ArrayRef<OpFoldResult> sizes) {
+                                 ArrayRef<OpFoldResult> sizes,
+                                 LinearizedDivKind sizeDivKind) {
   SmallVector<OpFoldResult> strides(sizes.size());
   if (!sizes.empty()) {
     strides.back() = builder.getIndexAttr(1);
@@ -128,12 +133,13 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
   LinearizedMemRefInfo linearizedMemRefInfo;
   std::tie(linearizedMemRefInfo, std::ignore) =
       getLinearizedMemRefOffsetAndSize(builder, loc, srcBits, dstBits, offset,
-                                       sizes, strides);
+                                       sizes, strides, /*indices=*/{},
+                                       sizeDivKind);
   return linearizedMemRefInfo;
 }
 
 /// Returns true if all the uses of op are not read/load.
-/// There can be SubviewOp users as long as all its users are also
+/// There can be view-like-op users as long as all its users are also
 /// StoreOp/transfer_write. If return true it also fills out the uses, if it
 /// returns false uses is unchanged.
 static bool resultIsNotRead(Operation *op, std::vector<Operation *> &uses) {
@@ -146,7 +152,7 @@ static bool resultIsNotRead(Operation *op, std::vector<Operation *> &uses) {
     if (isa<memref::DeallocOp>(useOp) ||
         (useOp->getNumResults() == 0 && useOp->getNumRegions() == 0 &&
          !mlir::hasEffect<MemoryEffects::Read>(useOp)) ||
-        (isa<memref::SubViewOp>(useOp) && resultIsNotRead(useOp, opUses))) {
+        (isa<ViewLikeOpInterface>(useOp) && resultIsNotRead(useOp, opUses))) {
       opUses.push_back(useOp);
       continue;
     }
@@ -223,10 +229,11 @@ MemrefValue skipViewLikeOps(MemrefValue source) {
   return source;
 }
 
-LogicalResult resolveSourceIndicesExpandShape(
-    Location loc, PatternRewriter &rewriter,
-    memref::ExpandShapeOp expandShapeOp, ValueRange indices,
-    SmallVectorImpl<Value> &sourceIndices, bool startsInbounds) {
+void resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
+                                     memref::ExpandShapeOp expandShapeOp,
+                                     ValueRange indices,
+                                     SmallVectorImpl<Value> &sourceIndices,
+                                     bool startsInbounds) {
   SmallVector<OpFoldResult> destShape = expandShapeOp.getMixedOutputShape();
 
   // Traverse all reassociation groups to determine the appropriate indices
@@ -246,14 +253,12 @@ LogicalResult resolveSourceIndicesExpandShape(
         rewriter, loc, groupIndices, groupBasis, /*disjoint=*/startsInbounds);
     sourceIndices.push_back(collapsedIndex);
   }
-  return success();
 }
 
-LogicalResult
-resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
-                                  memref::CollapseShapeOp collapseShapeOp,
-                                  ValueRange indices,
-                                  SmallVectorImpl<Value> &sourceIndices) {
+void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
+                                       memref::CollapseShapeOp collapseShapeOp,
+                                       ValueRange indices,
+                                       SmallVectorImpl<Value> &sourceIndices) {
   // Note: collapse_shape requires a strided memref, we can do this.
   auto metadata = memref::ExtractStridedMetadataOp::create(
       rewriter, loc, collapseShapeOp.getSrc());
@@ -285,6 +290,46 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
           getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
     }
   }
+}
+
+LogicalResult resolveSourceIndicesRankReducingSubview(
+    Location loc, OpBuilder &b, memref::SubViewOp subViewOp, ValueRange indices,
+    SmallVectorImpl<Value> &sourceIndices) {
+  if (!subViewOp.hasZeroOffset() || !subViewOp.hasUnitStride())
+    return failure();
+
+  MemRefType srcType = subViewOp.getSourceType();
+  MemRefType resType = subViewOp.getType();
+  unsigned srcRank = srcType.getRank();
+  unsigned resRank = resType.getRank();
+  if (srcRank <= resRank || indices.size() != resRank)
+    return failure();
+
+  auto droppedDims = subViewOp.getDroppedDims();
+  if (droppedDims.none() || droppedDims.count() != srcRank - resRank)
+    return failure();
+
+  auto mixedSizes = subViewOp.getMixedSizes();
+  if (mixedSizes.size() != srcRank)
+    return failure();
+
+  unsigned resultDim = 0;
+  for (unsigned sourceDim = 0; sourceDim < srcRank; ++sourceDim) {
+    if (droppedDims.test(sourceDim)) {
+      auto sizeCst = getConstantIntValue(mixedSizes[sourceDim]);
+      if (!sizeCst || *sizeCst != 1)
+        return failure();
+      sourceIndices.push_back(
+          getValueOrCreateConstantIndexOp(b, loc, b.getIndexAttr(0)));
+      continue;
+    }
+    if (resultDim >= indices.size())
+      return failure();
+    sourceIndices.push_back(indices[resultDim++]);
+  }
+  if (resultDim != indices.size())
+    return failure();
+
   return success();
 }
 

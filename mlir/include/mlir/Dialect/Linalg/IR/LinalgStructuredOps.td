@@ -222,7 +222,6 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
-  let hasVerifier = 1;
 }
 
 
@@ -620,7 +619,6 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
 
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
-  let hasVerifier = 1;
 
   let extraClassDeclaration = structuredOpsBaseDecls # [{
       /// Get the arity enum corresponding to the kind of op, e.g. if arg is
@@ -891,6 +889,13 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 
   let skipDefaultBuilders = 1;
   let builders = [
+    OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+                          attributes, regionBuilder);
+      }]>,
     OpBuilder<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
       "ValueRange":$outputs, "ArrayAttr":$indexingMaps,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),

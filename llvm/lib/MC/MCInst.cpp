@@ -29,7 +29,7 @@ void MCOperand::print(raw_ostream &OS, const MCContext *Ctx) const {
     if (Ctx && Ctx->getRegisterInfo())
       OS << Ctx->getRegisterInfo()->getName(getReg());
     else
-      OS << getReg();
+      OS << getReg().id();
   } else if (isImm())
     OS << "Imm:" << getImm();
   else if (isSFPImm())
@@ -39,7 +39,7 @@ void MCOperand::print(raw_ostream &OS, const MCContext *Ctx) const {
   else if (isExpr()) {
     OS << "Expr:";
     if (Ctx)
-      Ctx->getAsmInfo()->printExpr(OS, *getExpr());
+      Ctx->getAsmInfo().printExpr(OS, *getExpr());
     else
       getExpr()->print(OS, nullptr);
   } else if (isInst()) {

@@ -433,7 +433,7 @@ private:
     // When the request ends, we can clean up the entry we just added.
     // The cookie lets us check that it hasn't been overwritten due to ID
     // reuse.
-    return Task.first.derive(llvm::make_scope_exit([this, StrID, Cookie] {
+    return Task.first.derive(llvm::scope_exit([this, StrID, Cookie] {
       std::lock_guard<std::mutex> Lock(RequestCancelersMutex);
       auto It = RequestCancelers.find(StrID);
       if (It != RequestCancelers.end() && It->second.second == Cookie)
@@ -518,8 +518,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   Opts.CodeComplete.EnableSnippets = Params.capabilities.CompletionSnippets;
   Opts.CodeComplete.IncludeFixIts = Params.capabilities.CompletionFixes;
-  if (!Opts.CodeComplete.BundleOverloads)
-    Opts.CodeComplete.BundleOverloads = Params.capabilities.HasSignatureHelp;
+  Opts.CodeComplete.EnableInsertReplace = Params.capabilities.InsertReplace;
   Opts.CodeComplete.DocumentationFormat =
       Params.capabilities.CompletionDocumentationFormat;
   Opts.SignatureHelpDocumentationFormat =
@@ -554,6 +553,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
       CDBOpts.CompileCommandsDir = Dir;
     CDBOpts.ContextProvider = Opts.ContextProvider;
+    if (Opts.StrongWorkspaceMode)
+      CDBOpts.applyFallbackWorkingDirectory(Opts.WorkspaceRoot);
     BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
   }
@@ -1797,9 +1798,9 @@ bool ClangdLSPServer::shouldRunCompletion(
   auto Offset = positionToOffset(*Code, Params.position,
                                  /*AllowColumnsBeyondLineLength=*/false);
   if (!Offset) {
-    vlog("could not convert position '{0}' to offset for file '{1}'",
-         Params.position, Params.textDocument.uri.file());
-    return true;
+    elog("could not convert position '{0}' to offset for file '{1}': {2}",
+         Params.position, Params.textDocument.uri.file(), Offset.takeError());
+    return false;
   }
   return allowImplicitCompletion(*Code, *Offset);
 }
@@ -1831,7 +1832,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
   // Cache DiagRefMap
   {
     std::lock_guard<std::mutex> Lock(DiagRefMutex);
-    DiagRefMap[File] = LocalDiagMap;
+    DiagRefMap[File] = std::move(LocalDiagMap);
   }
 
   // Send a notification to the LSP client.

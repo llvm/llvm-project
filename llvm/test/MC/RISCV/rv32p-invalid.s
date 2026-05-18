@@ -37,9 +37,9 @@ psrari.h ra, sp, 100 # CHECK: :[[@LINE]]:18: error: immediate must be an integer
 psrari.w ra, sp, 15 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 srari ra, sp, 100 # CHECK: :[[@LINE]]:15: error: immediate must be an integer in the range [0, 31]
 
-psati.h ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 15]
+psati.h ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [1, 16]
 psati.w ra, sp, 24 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-sati ra, sp, 100 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]
+sati ra, sp, 100 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [1, 32]
 
 psrl.ws a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 predsum.ws a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
@@ -102,10 +102,10 @@ maccsu.w00 a4, s2, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the fol
 pmaccsu.w.h11 a0, a2, t3 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 maccsu.w11 t5, a4, s2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 
-ppack.w t5, a2, a4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-ppackbt.w t5, s0, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-ppacktb.w t5, t1, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-ppackt.w t3, a0, s2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+ppaire.w t5, s0, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+ppaireo.w t5, s0, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+ppairoe.w t5, t1, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+ppairo.w t3, a0, s2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 
 pli.dh a1, 1 # CHECK: :[[@LINE]]:8: error: register must be even
 pli.db s1, 1 # CHECK: :[[@LINE]]:8: error: register must be even

@@ -89,6 +89,15 @@ static void emitParserPrinter(const EnumInfo &enumInfo, StringRef qualName,
                           caseListOs << name;
                         });
   caseListOs << "]";
+  std::string casesInitList;
+  llvm::raw_string_ostream casesInitListOs(casesInitList);
+  casesInitListOs << "{";
+  llvm::interleaveComma(llvm::enumerate(cases), casesInitListOs,
+                        [&](auto enumerant) {
+                          StringRef name = enumerant.value().getStr();
+                          casesInitListOs << "\"" << name << "\"";
+                        });
+  casesInitListOs << "}";
 
   // Generate the parser and the start of the printer for the enum, excluding
   // non-quoted bit enums.
@@ -125,7 +134,7 @@ struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
     // Parse the keyword/string containing the enum.
     std::string enumKeyword;
     auto loc = parser.getCurrentLocation();
-    if (failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
+    if (failed(parser.parseOptionalKeywordOrString(&enumKeyword, {4})))
       return std::optional<{0}>{{};
 
     // Symbolize the keyword.
@@ -184,7 +193,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
         // Parse the keyword containing a part of the enum.
         ::llvm::StringRef enumKeyword;
         auto loc = parser.getCurrentLocation();
-        if (failed(parser.parseOptionalKeyword(&enumKeyword))) {{
+        if (failed(parser.parseOptionalKeyword(&enumKeyword, {6}))) {{
           if (firstIter)
             return std::optional<{0}>{{};
           return parser.emitError(loc, "expected keyword for {2} after '{4}'");
@@ -223,11 +232,11 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
             .Case(",", "parseOptionalComma")
             .Default("error, enum separator must be '|' or ','");
     os << formatv(parsedAndPrinterStartUnquotedBitEnum, qualName, cppNamespace,
-                  enumInfo.getSummary(), casesList, separator,
-                  parseSeparatorFn);
+                  enumInfo.getSummary(), casesList, separator, parseSeparatorFn,
+                  casesInitList);
   } else {
     os << formatv(parsedAndPrinterStart, qualName, cppNamespace,
-                  enumInfo.getSummary(), casesList);
+                  enumInfo.getSummary(), casesList, casesInitList);
   }
 
   // If all cases require a string, always wrap.
@@ -702,41 +711,45 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
   StringRef underlyingToSymFnName = enumInfo.getUnderlyingToSymbolFnName();
   auto enumerants = enumInfo.getAllCases();
 
-  llvm::NamespaceEmitter ns(os, cppNamespace);
+  {
+    llvm::NamespaceEmitter ns(os, cppNamespace);
 
-  // Emit the enum class definition
-  emitEnumClass(enumDef, enumName, underlyingType, description, enumerants, os);
+    // Emit the enum class definition
+    emitEnumClass(enumDef, enumName, underlyingType, description, enumerants,
+                  os);
 
-  // Emit conversion function declarations
-  if (llvm::all_of(enumerants, [](EnumCase enumerant) {
-        return enumerant.getValue() >= 0;
-      })) {
-    os << formatv(
-        "::std::optional<{0}> {1}({2});\n", enumName, underlyingToSymFnName,
-        underlyingType.empty() ? std::string("unsigned") : underlyingType);
-  }
-  os << formatv("{2} {1}({0});\n", enumName, symToStrFnName, symToStrFnRetType);
-  os << formatv("::std::optional<{0}> {1}(::llvm::StringRef);\n", enumName,
-                strToSymFnName);
+    // Emit conversion function declarations
+    if (llvm::all_of(enumerants, [](EnumCase enumerant) {
+          return enumerant.getValue() >= 0;
+        })) {
+      os << formatv(
+          "::std::optional<{0}> {1}({2});\n", enumName, underlyingToSymFnName,
+          underlyingType.empty() ? std::string("unsigned") : underlyingType);
+    }
+    os << formatv("{2} {1}({0});\n", enumName, symToStrFnName,
+                  symToStrFnRetType);
+    os << formatv("::std::optional<{0}> {1}(::llvm::StringRef);\n", enumName,
+                  strToSymFnName);
 
-  if (enumInfo.isBitEnum()) {
-    emitOperators(enumDef, os);
-  } else {
-    emitMaxValueFn(enumDef, os);
-  }
+    if (enumInfo.isBitEnum()) {
+      emitOperators(enumDef, os);
+    } else {
+      emitMaxValueFn(enumDef, os);
+    }
 
-  // Generate a generic `stringifyEnum` function that forwards to the method
-  // specified by the user.
-  const char *const stringifyEnumStr = R"(
+    // Generate a generic `stringifyEnum` function that forwards to the method
+    // specified by the user.
+    const char *const stringifyEnumStr = R"(
 inline {0} stringifyEnum({1} enumValue) {{
   return {2}(enumValue);
 }
 )";
-  os << formatv(stringifyEnumStr, symToStrFnRetType, enumName, symToStrFnName);
+    os << formatv(stringifyEnumStr, symToStrFnRetType, enumName,
+                  symToStrFnName);
 
-  // Generate a generic `symbolizeEnum` function that forwards to the method
-  // specified by the user.
-  const char *const symbolizeEnumStr = R"(
+    // Generate a generic `symbolizeEnum` function that forwards to the method
+    // specified by the user.
+    const char *const symbolizeEnumStr = R"(
 template <typename EnumType>
 ::std::optional<EnumType> symbolizeEnum(::llvm::StringRef);
 
@@ -745,9 +758,9 @@ inline ::std::optional<{0}> symbolizeEnum<{0}>(::llvm::StringRef str) {
   return {1}(str);
 }
 )";
-  os << formatv(symbolizeEnumStr, enumName, strToSymFnName);
+    os << formatv(symbolizeEnumStr, enumName, strToSymFnName);
 
-  const char *const attrClassDecl = R"(
+    const char *const attrClassDecl = R"(
 class {1} : public ::mlir::{2} {
 public:
   using ValueType = {0};
@@ -757,13 +770,12 @@ public:
   {0} getValue() const;
 };
 )";
-  if (enumInfo.genSpecializedAttr()) {
-    StringRef attrClassName = enumInfo.getSpecializedAttrClassName();
-    StringRef baseAttrClassName = "IntegerAttr";
-    os << formatv(attrClassDecl, enumName, attrClassName, baseAttrClassName);
-  }
-
-  ns.close();
+    if (enumInfo.genSpecializedAttr()) {
+      StringRef attrClassName = enumInfo.getSpecializedAttrClassName();
+      StringRef baseAttrClassName = "IntegerAttr";
+      os << formatv(attrClassDecl, enumName, attrClassName, baseAttrClassName);
+    }
+  } // close `ns`.
 
   // Generate a generic parser and printer for the enum.
   std::string qualName =

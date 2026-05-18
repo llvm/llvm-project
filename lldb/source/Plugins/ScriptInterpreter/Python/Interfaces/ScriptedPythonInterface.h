@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
-
-#if LLDB_ENABLE_PYTHON
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
 
 #include <optional>
 #include <sstream>
@@ -17,7 +15,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "lldb/Host/Config.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
 
@@ -41,7 +38,7 @@ public:
     eValid
   };
 
-  struct AbstrackMethodCheckerPayload {
+  struct AbstractMethodCheckerPayload {
 
     struct InvalidArgumentCountPayload {
       InvalidArgumentCountPayload(size_t required, size_t actual)
@@ -55,13 +52,69 @@ public:
     std::variant<std::monostate, InvalidArgumentCountPayload> payload;
   };
 
-  llvm::Expected<std::map<llvm::StringLiteral, AbstrackMethodCheckerPayload>>
+  llvm::Expected<FileSpec> GetScriptedModulePath() override {
+    using namespace python;
+    using Locker = ScriptInterpreterPythonImpl::Locker;
+
+    Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
+                   Locker::FreeLock);
+
+    if (!m_object_instance_sp)
+      return llvm::createStringError("scripted Interface has invalid object");
+
+    PythonObject py_obj =
+        PythonObject(PyRefType::Borrowed,
+                     static_cast<PyObject *>(m_object_instance_sp->GetValue()));
+
+    if (!py_obj.IsAllocated())
+      return llvm::createStringError(
+          "scripted Interface has invalid python object");
+
+    PythonObject py_obj_class = py_obj.GetAttributeValue("__class__");
+    if (!py_obj_class.IsValid())
+      return llvm::createStringError(
+          "scripted Interface python object is missing '__class__' attribute");
+
+    PythonObject py_obj_module = py_obj_class.GetAttributeValue("__module__");
+    if (!py_obj_module.IsValid())
+      return llvm::createStringError(
+          "scripted Interface python object '__class__' is missing "
+          "'__module__' attribute");
+
+    PythonString py_obj_module_str = py_obj_module.Str();
+    if (!py_obj_module_str.IsValid())
+      return llvm::createStringError(
+          "scripted Interface python object '__class__.__module__' attribute "
+          "is not a string");
+
+    llvm::StringRef py_obj_module_str_ref = py_obj_module_str.GetString();
+    PythonModule py_module = PythonModule::AddModule(py_obj_module_str_ref);
+    if (!py_module.IsValid())
+      return llvm::createStringError("failed to import '%s' module",
+                                     py_obj_module_str_ref.data());
+
+    PythonObject py_module_file = py_module.GetAttributeValue("__file__");
+    if (!py_module_file.IsValid())
+      return llvm::createStringError(
+          "module '%s' is missing '__file__' attribute",
+          py_obj_module_str_ref.data());
+
+    PythonString py_module_file_str = py_module_file.Str();
+    if (!py_module_file_str.IsValid())
+      return llvm::createStringError(
+          "module '%s.__file__' attribute is not a string",
+          py_obj_module_str_ref.data());
+
+    return FileSpec(py_module_file_str.GetString());
+  }
+
+  llvm::Expected<std::map<llvm::StringLiteral, AbstractMethodCheckerPayload>>
   CheckAbstractMethodImplementation(
       const python::PythonDictionary &class_dict) const {
 
     using namespace python;
 
-    std::map<llvm::StringLiteral, AbstrackMethodCheckerPayload> checker;
+    std::map<llvm::StringLiteral, AbstractMethodCheckerPayload> checker;
 #define SET_CASE_AND_CONTINUE(method_name, case)                               \
   {                                                                            \
     checker[method_name] = {case, {}};                                         \
@@ -74,7 +127,8 @@ public:
       if (!class_dict.HasKey(method_name))
         SET_CASE_AND_CONTINUE(method_name,
                               AbstractMethodCheckerCases::eNotImplemented)
-      auto callable_or_err = class_dict.GetItem(method_name);
+      llvm::Expected<PythonObject> callable_or_err =
+          class_dict.GetItem(method_name);
       if (!callable_or_err) {
         llvm::consumeError(callable_or_err.takeError());
         SET_CASE_AND_CONTINUE(method_name,
@@ -102,7 +156,7 @@ public:
       } else {
         checker[method_name] = {
             AbstractMethodCheckerCases::eInvalidArgumentCount,
-            AbstrackMethodCheckerPayload::InvalidArgumentCountPayload(
+            AbstractMethodCheckerPayload::InvalidArgumentCountPayload(
                 requirement.min_arg_count, arg_info.max_positional_args)};
       }
     }
@@ -291,7 +345,7 @@ public:
       case AbstractMethodCheckerCases::eInvalidArgumentCount: {
         auto &payload_variant = method_checker.second.payload;
         if (!std::holds_alternative<
-                AbstrackMethodCheckerPayload::InvalidArgumentCountPayload>(
+                AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
                 payload_variant)) {
           abstract_method_errors = llvm::joinErrors(
               std::move(abstract_method_errors),
@@ -300,7 +354,7 @@ public:
                   obj_class_name.GetString(), method_checker.first)));
         } else {
           auto payload = std::get<
-              AbstrackMethodCheckerPayload::InvalidArgumentCountPayload>(
+              AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
               payload_variant);
           abstract_method_errors = llvm::joinErrors(
               std::move(abstract_method_errors),
@@ -408,8 +462,7 @@ public:
 
     // Call the static method.
     llvm::Expected<PythonObject> expected_return_object =
-        llvm::make_error<llvm::StringError>("Not initialized.",
-                                            llvm::inconvertibleErrorCode());
+        llvm::createStringError("not initialized");
     std::apply(
         [&method, &expected_return_object](auto &&...args) {
           llvm::consumeError(expected_return_object.takeError());
@@ -472,8 +525,7 @@ protected:
     auto transformed_args = TransformArgs(original_args);
 
     llvm::Expected<PythonObject> expected_return_object =
-        llvm::make_error<llvm::StringError>("Not initialized.",
-                                            llvm::inconvertibleErrorCode());
+        llvm::createStringError("not initialized");
     std::apply(
         [&implementor, &method_name, &expected_return_object](auto &&...args) {
           llvm::consumeError(expected_return_object.takeError());
@@ -596,6 +648,10 @@ protected:
   }
 
   python::PythonObject Transform(lldb::DescriptionLevel arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::ValueObjectSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
@@ -757,7 +813,16 @@ lldb::StackFrameListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
     python::PythonObject &p, Status &error);
 
+template <>
+lldb::ValueObjectSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::ValueObjectListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
+    python::PythonObject &p, Status &error);
+
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H

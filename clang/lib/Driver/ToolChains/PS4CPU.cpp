@@ -351,6 +351,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
                                                   : "--lto=full");
 
+  if (Args.hasFlag(options::OPT_ffat_lto_objects,
+                   options::OPT_fno_fat_lto_objects, false))
+    CmdArgs.push_back("--fat-lto-objects");
+
   AddLTOFlag("-emit-jump-table-sizes-section");
 
   if (UseJMC)
@@ -488,6 +492,9 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
   // control of header or library search. If we're not linking, don't check
   // for missing libraries.
   auto CheckSDKPartExists = [&](StringRef Dir, StringRef Desc) {
+    // In ThinLTO code generation mode SDK files are not required.
+    if (Args.hasArgNoClaim(options::OPT_fthinlto_index_EQ))
+      return true;
     if (llvm::sys::fs::exists(Dir))
       return true;
     D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)

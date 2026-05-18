@@ -441,7 +441,7 @@ define half @bf16_to_f32_to_f16(bfloat %a) nounwind {
 
 define bfloat @bf16_frem(bfloat %x) {
 ; CHECK-LABEL: @bf16_frem(
-; CHECK-NEXT:    [[TMP1:%.*]] = frem bfloat [[X:%.*]], 0xR40C9
+; CHECK-NEXT:    [[TMP1:%.*]] = frem bfloat [[X:%.*]], 6.281250e+00
 ; CHECK-NEXT:    ret bfloat [[TMP1]]
 ;
   %t1 = fpext bfloat %x to float
@@ -452,7 +452,7 @@ define bfloat @bf16_frem(bfloat %x) {
 
 define <4 x bfloat> @v4bf16_frem_x_const(<4 x bfloat> %x) {
 ; CHECK-LABEL: @v4bf16_frem_x_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = frem <4 x bfloat> [[X:%.*]], splat (bfloat 0xR40C9)
+; CHECK-NEXT:    [[TMP1:%.*]] = frem <4 x bfloat> [[X:%.*]], splat (bfloat 6.281250e+00)
 ; CHECK-NEXT:    ret <4 x bfloat> [[TMP1]]
 ;
   %t1 = fpext <4 x bfloat> %x to <4 x float>
@@ -463,7 +463,7 @@ define <4 x bfloat> @v4bf16_frem_x_const(<4 x bfloat> %x) {
 
 define <4 x bfloat> @v4bf16_frem_const_x(<4 x bfloat> %x) {
 ; CHECK-LABEL: @v4bf16_frem_const_x(
-; CHECK-NEXT:    [[TMP1:%.*]] = frem <4 x bfloat> splat (bfloat 0xR40C9), [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = frem <4 x bfloat> splat (bfloat 6.281250e+00), [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x bfloat> [[TMP1]]
 ;
   %t1 = fpext <4 x bfloat> %x to <4 x float>

@@ -7,13 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Config.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
 
 // LLDB Python header must be included first
 #include "../lldb-python.h"
@@ -47,7 +44,7 @@ bool ScriptedBreakpointPythonInterface::ResolverCallback(
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
     Log *log = GetLog(LLDBLog::Script);
-    LLDB_LOG(log, "Error calling __callback__ method: {1}", error);
+    LLDB_LOG(log, "Error calling __callback__ method: {}", error);
     return true;
   }
   return obj->GetBooleanValue();
@@ -122,5 +119,3 @@ void ScriptedBreakpointPythonInterface::Initialize() {
 void ScriptedBreakpointPythonInterface::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-#endif

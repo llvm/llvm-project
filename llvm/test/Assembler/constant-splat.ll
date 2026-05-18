@@ -15,7 +15,7 @@
 ; CHECK: @constant.splat.i128 = constant <2 x i128> splat (i128 85070591730234615870450834276742070272)
 @constant.splat.i128 = constant <2 x i128> splat (i128 85070591730234615870450834276742070272)
 
-; CHECK: @constant.splat.f16 = constant <4 x half> splat (half 0xHBC00)
+; CHECK: @constant.splat.f16 = constant <4 x half> splat (half -1.000000e+00)
 @constant.splat.f16 = constant <4 x half> splat (half 0xHBC00)
 
 ; CHECK: @constant.splat.f32 = constant <5 x float> splat (float -2.000000e+00)
@@ -24,16 +24,16 @@
 ; CHECK: @constant.splat.f64 = constant <3 x double> splat (double -3.000000e+00)
 @constant.splat.f64 = constant <3 x double> splat (double -3.000000e+00)
 
-; CHECK: @constant.splat.128 = constant <2 x fp128> splat (fp128 0xL00000000000000018000000000000000)
+; CHECK: @constant.splat.128 = constant <2 x fp128> splat (fp128 -6.475180e-4966)
 @constant.splat.128 = constant <2 x fp128> splat (fp128 0xL00000000000000018000000000000000)
 
-; CHECK: @constant.splat.bf16 = constant <4 x bfloat> splat (bfloat 0xRC0A0)
+; CHECK: @constant.splat.bf16 = constant <4 x bfloat> splat (bfloat -5.000000e+00)
 @constant.splat.bf16 = constant <4 x bfloat> splat (bfloat 0xRC0A0)
 
-; CHECK: @constant.splat.x86_fp80 = constant <3 x x86_fp80> splat (x86_fp80 0xK4000C8F5C28F5C28F800)
+; CHECK: @constant.splat.x86_fp80 = constant <3 x x86_fp80> splat (x86_fp80 f0x4000C8F5C28F5C28F800)
 @constant.splat.x86_fp80 = constant <3 x x86_fp80> splat (x86_fp80 0xK4000C8F5C28F5C28F800)
 
-; CHECK: @constant.splat.ppc_fp128 = constant <1 x ppc_fp128> splat (ppc_fp128 0xM80000000000000000000000000000000)
+; CHECK: @constant.splat.ppc_fp128 = constant <1 x ppc_fp128> splat (ppc_fp128 -0.000000e+00)
 @constant.splat.ppc_fp128 = constant <1 x ppc_fp128> splat (ppc_fp128 0xM80000000000000000000000000000000)
 
 ; CHECK: @constant.splat.global.ptr = constant <4 x ptr> <ptr @my_global, ptr @my_global, ptr @my_global, ptr @my_global>

@@ -160,9 +160,7 @@ private:
     if (F.isDeclaration())
       return false;
 
-    return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
-           F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
-           F.getCallingConv() == CallingConv::PTX_Kernel;
+    return F.hasKernelCallingConv();
   }
 
   static SmallString<0> computeFunctionCategory(SplitByCategoryType Type,
@@ -212,7 +210,7 @@ void cleanupModule(Module &M) {
 
 Error runSplitModuleByCategory(std::unique_ptr<Module> M) {
   size_t OutputID = 0;
-  auto PostSplitCallback = [&](std::unique_ptr<Module> MPart) {
+  auto PostSplitCallback = [&](std::unique_ptr<Module> MPart) -> Error {
     if (verifyModule(*MPart)) {
       errs() << "Broken Module!\n";
       exit(1);
@@ -227,12 +225,12 @@ Error runSplitModuleByCategory(std::unique_ptr<Module> M) {
     std::string ModulePath =
         (Twine(OutputFilename) + "_" + Twine(ID) + ModuleSuffix).str();
     writeModuleToFile(*MPart, ModulePath, OutputAssembly);
+    return Error::success();
   };
 
   auto Categorizer = EntryPointCategorizer(SplitByCategory);
-  splitModuleTransitiveFromEntryPoints(std::move(M), Categorizer,
-                                       PostSplitCallback);
-  return Error::success();
+  return splitModuleTransitiveFromEntryPoints(std::move(M), Categorizer,
+                                              PostSplitCallback);
 }
 
 int main(int argc, char **argv) {

@@ -199,7 +199,8 @@ public:
       Instruction *Destination = Dep.getDestination(DepChecker);
 
       if (Dep.Type == MemoryDepChecker::Dependence::Unknown ||
-          Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
+          Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe ||
+          Dep.Type == MemoryDepChecker::Dependence::InvariantUnsafe) {
         if (isa<LoadInst>(Source))
           LoadsWithUnknownDependence.insert(Source);
         if (isa<LoadInst>(Destination))
@@ -615,8 +616,7 @@ public:
 
     // Next, propagate the value stored by the store to the users of the load.
     // Also for the first iteration, generate the initial value of the load.
-    SCEVExpander SEE(*PSE.getSE(), L->getHeader()->getDataLayout(),
-                     "storeforward");
+    SCEVExpander SEE(*PSE.getSE(), "storeforward");
     for (const auto &Cand : Candidates)
       propagateStoredValueToLoadUsers(Cand, SEE);
     NumLoopLoadEliminted += Candidates.size();

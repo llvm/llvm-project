@@ -22,7 +22,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
-#include <memory>
 
 namespace llvm {
 class Module;
@@ -122,7 +121,7 @@ public:
 
 /// Printer pass for ShaderFlagsAnalysis results.
 class ShaderFlagsAnalysisPrinter
-    : public PassInfoMixin<ShaderFlagsAnalysisPrinter> {
+    : public OptionalPassInfoMixin<ShaderFlagsAnalysisPrinter> {
   raw_ostream &OS;
 
 public:

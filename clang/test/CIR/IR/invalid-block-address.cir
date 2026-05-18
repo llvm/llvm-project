@@ -1,0 +1,21 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!void = !cir.void
+
+// expected-error@+1 {{expects an existing label target in the referenced function}}
+cir.func @bad_block_address() -> () {
+    %0 = cir.block_address <@bad_block_address, "label"> : !cir.ptr<!void>
+    cir.br ^bb1
+  ^bb1:
+    cir.label "wrong_label"
+    cir.return
+}
+
+// expected-error@+1 {{blockaddress references a different function}}
+cir.func @bad_block_func() -> () {
+    %0 = cir.block_address <@mismatch_func, "label"> : !cir.ptr<!void>
+    cir.br ^bb1
+  ^bb1:
+    cir.label "label"
+    cir.return
+}

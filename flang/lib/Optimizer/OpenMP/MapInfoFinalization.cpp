@@ -347,13 +347,18 @@ class MapInfoFinalizationPass
   /// base address (BoxOffsetOp) and a MapInfoOp for it. The most
   /// important thing to note is that we normally move the bounds from
   /// the descriptor map onto the base address map.
-  mlir::omp::MapInfoOp genBaseAddrMap(mlir::Value descriptor,
-                                      mlir::OperandRange bounds,
-                                      mlir::omp::ClauseMapFlags mapType,
-                                      fir::FirOpBuilder &builder) {
-    mlir::Location loc = descriptor.getLoc();
+  ///
+  /// \p mapInfoOpLoc is the location of the MapInfoOp being expanded (the
+  /// descriptor map before this pass splits it). Lowering attaches a NameLoc
+  /// there for the Fortran map text. This is used with new Ops being
+  /// created by this function.
+  mlir::omp::MapInfoOp
+  genBaseAddrMap(mlir::Location mapInfoOpLoc, mlir::Value descriptor,
+                 mlir::OperandRange bounds, mlir::omp::ClauseMapFlags mapType,
+                 fir::FirOpBuilder &builder,
+                 mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr()) {
     mlir::Value baseAddrAddr = fir::BoxOffsetOp::create(
-        builder, loc, descriptor, fir::BoxFieldAttr::base_addr);
+        builder, mapInfoOpLoc, descriptor, fir::BoxFieldAttr::base_addr);
 
     mlir::Type underlyingVarType =
         llvm::cast<mlir::omp::PointerLikeType>(
@@ -365,14 +370,14 @@ class MapInfoFinalizationPass
 
     // Member of the descriptor pointing at the allocated data
     return mlir::omp::MapInfoOp::create(
-        builder, loc, baseAddrAddr.getType(), descriptor,
+        builder, mapInfoOpLoc, baseAddrAddr.getType(), descriptor,
         mlir::TypeAttr::get(underlyingVarType),
         builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         baseAddrAddr, /*members=*/mlir::SmallVector<mlir::Value>{},
         /*membersIndex=*/mlir::ArrayAttr{}, bounds,
-        /*mapperId*/ mlir::FlatSymbolRefAttr(),
+        /*mapperId=*/mapperId,
         /*name=*/builder.getStringAttr(""),
         /*partial_map=*/builder.getBoolAttr(false));
   }
@@ -437,6 +442,20 @@ class MapInfoFinalizationPass
 
     mapFlags flags =
         mapFlags::to | (mapTypeFlag & (mapFlags::implicit | mapFlags::always));
+
+    // Descriptors for objects will always be copied. This is because the
+    // descriptor can be rematerialized by the compiler, and so the address
+    // of the descriptor for a given object at one place in the code may
+    // differ from that address in another place. The contents of the
+    // descriptor (the base address in particular) will remain unchanged
+    // though.
+    // TODO/FIXME: We currently cannot have MAP_CLOSE and MAP_ALWAYS on
+    // the descriptor at once, these are mutually exclusive and when
+    // both are applied the runtime will fail to map.
+    flags |= ((mapFlags(mapTypeFlag) & mapFlags::close) == mapFlags::close)
+                 ? mapFlags::close
+                 : mapFlags::always;
+
     // For unified_shared_memory, we additionally add `CLOSE` on the descriptor
     // to ensure device-local placement where required by tests relying on USM +
     // close semantics.
@@ -578,6 +597,7 @@ class MapInfoFinalizationPass
     // from the descriptor to be used verbatim, i.e. without additional
     // remapping. To avoid this remapping, simply don't generate any map
     // information for the descriptor members.
+    mlir::FlatSymbolRefAttr mapperId = op.getMapperIdAttr();
     if (!mapMemberUsers.empty()) {
       // Currently, there should only be one user per map when this pass
       // is executed. Either a parent map, holding the current map in its
@@ -588,8 +608,8 @@ class MapInfoFinalizationPass
       assert(mapMemberUsers.size() == 1 &&
              "OMPMapInfoFinalization currently only supports single users of a "
              "MapInfoOp");
-      auto baseAddr =
-          genBaseAddrMap(descriptor, op.getBounds(), op.getMapType(), builder);
+      auto baseAddr = genBaseAddrMap(op->getLoc(), descriptor, op.getBounds(),
+                                     op.getMapType(), builder, mapperId);
       ParentAndPlacement mapUser = mapMemberUsers[0];
       adjustMemberIndices(memberIndices, mapUser.index);
       llvm::SmallVector<mlir::Value> newMemberOps;
@@ -602,8 +622,8 @@ class MapInfoFinalizationPass
       mapUser.parent.setMembersIndexAttr(
           builder.create2DI64ArrayAttr(memberIndices));
     } else if (!isHasDeviceAddrFlag) {
-      auto baseAddr =
-          genBaseAddrMap(descriptor, op.getBounds(), op.getMapType(), builder);
+      auto baseAddr = genBaseAddrMap(op->getLoc(), descriptor, op.getBounds(),
+                                     op.getMapType(), builder, mapperId);
       newMembers.push_back(baseAddr);
       if (!op.getMembers().empty()) {
         for (auto &indices : memberIndices)
@@ -635,7 +655,7 @@ class MapInfoFinalizationPass
             getDescriptorMapType(mapType, target)),
         op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{}, newMembers,
         newMembersAttr, /*bounds=*/mlir::SmallVector<mlir::Value>{},
-        /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
+        /*mapperId=*/mlir::FlatSymbolRefAttr(), op.getNameAttr(),
         /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
     op->erase();
@@ -943,6 +963,18 @@ class MapInfoFinalizationPass
       localBoxAllocas.clear();
       deferrableDesc.clear();
 
+      // Walk all of the existing maps for parents with child maps and then
+      // make sure to appropriately bind them to the target region that the
+      // parent is bound to. Necessary for the next implicit record member
+      // map step which depends on this canonicalization step. This step
+      // is executed again as the final step of this pass to maintain
+      // map to block argument consistency.
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        mlir::Operation *targetUser = getFirstTargetUser(op);
+        assert(targetUser && "expected user of map operation was not found");
+        addImplicitMembersToTarget(op, builder, targetUser);
+      });
+
       // Next, walk `omp.map.info` ops to see if any record members should be
       // implicitly mapped.
       func->walk([&](mlir::omp::MapInfoOp op) {
@@ -1128,7 +1160,8 @@ class MapInfoFinalizationPass
           newMemberIndices.emplace_back(path);
 
         op.setMembersIndexAttr(builder.create2DI64ArrayAttr(newMemberIndices));
-        op.setPartialMap(true);
+        // Set to partial map only if there is no user-defined mapper.
+        op.setPartialMap(op.getMapperIdAttr() == nullptr);
 
         return mlir::WalkResult::advance();
       });
@@ -1156,9 +1189,46 @@ class MapInfoFinalizationPass
         // this pass to support multiple users, as we may wish to have a map
         // be re-used by multiple users (e.g. across multiple targets that map
         // the variable and have identical map properties).
-        assert(llvm::hasSingleElement(op->getUsers()) &&
-               "OMPMapInfoFinalization currently only supports single users "
-               "of a MapInfoOp");
+        [[maybe_unused]] auto assertCheck = [&](mlir::omp::MapInfoOp op) {
+          if (llvm::hasSingleElement(op->getUsers()))
+            return true;
+
+          if (llvm::range_size(op->getUsers()) > 2)
+            return false;
+
+          // We only allow a TargetOp or MapInfoOp when we have multiple users
+          // for the moment.
+          bool targetUser = false;
+          for (auto *user : op->getUsers()) {
+            if (targetUser &&
+                !llvm::isa<
+                    mlir::omp::TargetOp, mlir::omp::TargetDataOp,
+                    mlir::omp::TargetUpdateOp, mlir::omp::TargetExitDataOp,
+                    mlir::omp::TargetEnterDataOp,
+                    mlir::omp::DeclareMapperInfoOp, mlir::omp::MapInfoOp>(user))
+              return false;
+
+            // We do not handle multiple target users currently.
+            if (targetUser &&
+                llvm::isa<mlir::omp::TargetDataOp, mlir::omp::TargetUpdateOp,
+                          mlir::omp::TargetExitDataOp,
+                          mlir::omp::TargetEnterDataOp>(user))
+              return false;
+
+            if (!targetUser)
+              targetUser =
+                  llvm::isa<mlir::omp::TargetDataOp, mlir::omp::TargetUpdateOp,
+                            mlir::omp::TargetExitDataOp,
+                            mlir::omp::TargetEnterDataOp>(user);
+          }
+
+          return true;
+        };
+
+        assert(assertCheck(op) &&
+               "OMPMapInfoFinalization currently only supports "
+               "single users or up to two users when those users"
+               "are a MapInfoOp and Target mapping directive");
 
         if (hasADescriptor(op.getVarPtr().getDefiningOp(),
                            fir::unwrapRefType(op.getVarType()))) {
@@ -1166,6 +1236,41 @@ class MapInfoFinalizationPass
           mlir::Operation *targetUser = getFirstTargetUser(op);
           assert(targetUser && "expected user of map operation was not found");
           genDescriptorMemberMaps(op, builder, targetUser);
+        }
+      });
+
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        // If a record type is not mapped with the `close` modifier while some
+        // of its members are (e.g. descriptor maps), then in USM mode, the
+        // memory for the record will be allocated in unified memory while the
+        // the members might be allocated in device memory. This creates an
+        // inconsistent map for the record type where some of its members are
+        // allocated in different address spaces.
+        //
+        // This fixes this issue by taking a conservative approach and removing
+        // the `close` flag from members if it is not used for mapping the
+        // parent record.
+        if (op.getMembers().empty())
+          return;
+
+        mlir::Type varTy = fir::unwrapRefType(op.getVarPtr().getType());
+        if (!mlir::isa<fir::RecordType>(varTy))
+          return;
+
+        auto mapFlag = op.getMapType();
+        bool hasClose = (mapFlag & mlir::omp::ClauseMapFlags::close) ==
+                        mlir::omp::ClauseMapFlags::close;
+
+        if (hasClose)
+          return;
+
+        for (auto member : op.getMembers()) {
+          if (auto memberOp = llvm::dyn_cast_if_present<mlir::omp::MapInfoOp>(
+                  member.getDefiningOp())) {
+            auto memberMapFlag =
+                memberOp.getMapType() & ~mlir::omp::ClauseMapFlags::close;
+            memberOp.setMapType(memberMapFlag);
+          }
         }
       });
 

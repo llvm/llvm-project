@@ -128,10 +128,13 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
 
   PyObject *pfunc_impl = nullptr;
 
-  if (pyfunct_wrapper && *pyfunct_wrapper &&
-      PyFunction_Check(*pyfunct_wrapper)) {
+  if (pyfunct_wrapper && *pyfunct_wrapper
+#ifndef Py_LIMITED_API
+      && PyFunction_Check(*pyfunct_wrapper)
+#endif
+      ) {
     pfunc_impl = (PyObject *)(*pyfunct_wrapper);
-    if (pfunc_impl->ob_refcnt == 1) {
+    if (Py_REFCNT(pfunc_impl) == 1) {
       Py_XDECREF(pfunc_impl);
       pfunc_impl = NULL;
     }
@@ -535,6 +538,18 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValue(PyObject * data
 
   int valid_cast =
       SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBValue, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValueList(PyObject * data) {
+  lldb::SBValueList *sb_ptr = NULL;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBValueList, 0);
 
   if (valid_cast == -1)
     return NULL;

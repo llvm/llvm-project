@@ -46,10 +46,6 @@ class Value;
 /// vectors it is an expression determined at runtime.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 
-/// Return a value for Step multiplied by VF.
-Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
-                       int64_t Step);
-
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
 /// [1, 16) = {1, 2, 4, 8}
@@ -201,6 +197,7 @@ struct VPTransformState {
   /// Hold the index to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
   /// instructions.
+  /// TODO: This is now only used in asserts. Remove as follow-up.
   std::optional<VPLane> Lane;
 
   struct DataState {
@@ -334,15 +331,18 @@ struct VPCostContext {
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
   TargetTransformInfo::TargetCostKind CostKind;
-  ScalarEvolution &SE;
+  PredicatedScalarEvolution &PSE;
   const Loop *L;
+
+  /// Number of predicated stores in the VPlan, computed on demand.
+  std::optional<unsigned> NumPredStores;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind,
-                ScalarEvolution &SE, const Loop *L)
+                PredicatedScalarEvolution &PSE, const Loop *L)
       : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
-        CostKind(CostKind), SE(SE), L(L) {}
+        CostKind(CostKind), PSE(PSE), L(L) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -354,24 +354,29 @@ struct VPCostContext {
 
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
-  unsigned getPredBlockCostDivisor(BasicBlock *BB) const;
+  uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
 
-  /// Return true if \p I is considered uniform-after-vectorization in the
-  /// legacy cost model for \p VF. Only used to check for additional VPlan
-  /// simplifications.
-  bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
-
   /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
   /// and \p Operands with \p VF. This is a convenience wrapper for the
-  /// type-based getScalarizationOverhead API. If \p AlwaysIncludeReplicatingR
-  /// is true, always compute the cost of scalarizing replicating operands.
-  InstructionCost
-  getScalarizationOverhead(Type *ResultTy, ArrayRef<const VPValue *> Operands,
-                           ElementCount VF,
-                           bool AlwaysIncludeReplicatingR = false);
+  /// type-based getScalarizationOverhead API. \p VIC provides context about
+  /// whether the scalarization is for a load/store operation. If \p
+  /// AlwaysIncludeReplicatingR is true, always compute the cost of scalarizing
+  /// replicating operands.
+  InstructionCost getScalarizationOverhead(
+      Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None,
+      bool AlwaysIncludeReplicatingR = false);
+
+  /// Returns true if an artificially high cost for emulated masked memrefs
+  /// should be used.
+  bool useEmulatedMaskMemRefHack(const VPReplicateRecipe *R, ElementCount VF);
+
+  /// Returns true if \p ID is a pseudo intrinsic that is dropped via
+  /// scalarization rather than widened.
+  static bool isFreeScalarIntrinsic(Intrinsic::ID ID);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without
@@ -394,21 +399,40 @@ class VPSlotTracker {
   /// require slot tracking.
   std::unique_ptr<ModuleSlotTracker> MST;
 
+  /// Cached metadata kind names from the Module's LLVMContext.
+  SmallVector<StringRef> MDNames;
+
+  /// Cached Module pointer for printing metadata.
+  const Module *M = nullptr;
+
   void assignName(const VPValue *V);
-  void assignNames(const VPlan &Plan);
+  LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
-    if (Plan)
+    if (Plan) {
       assignNames(*Plan);
+      if (auto *ScalarHeader = Plan->getScalarHeader())
+        M = ScalarHeader->getIRBasicBlock()->getModule();
+    }
   }
 
   /// Returns the name assigned to \p V, if there is one, otherwise try to
   /// construct one from the underlying value, if there's one; else return
   /// <badref>.
   std::string getOrCreateName(const VPValue *V) const;
+
+  /// Returns the cached metadata kind names.
+  ArrayRef<StringRef> getMDNames() {
+    if (MDNames.empty() && M)
+      M->getContext().getMDKindNames(MDNames);
+    return MDNames;
+  }
+
+  /// Returns the cached Module pointer.
+  const Module *getModule() const { return M; }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

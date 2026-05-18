@@ -16,14 +16,21 @@ A list of non-standard directives supported by Flang
   disables some semantic checks at call sites for the actual arguments that
   correspond to some named dummy arguments (or all of them, by default). The
   directive allow actual arguments that would otherwise be diagnosed as
-  incompatible in type (T), kind (K), rank (R), CUDA device (D), or managed (M)
-  status. The letter (A) is a shorthand for (TKRDM), and is the default when no
-  letters appear. The letter (C) checks for contiguity, for example allowing an
-  element of an assumed-shape array to be passed as a dummy argument. The
-  letter (P) ignores pointer and allocatable matching, so that one can pass an
-  allocatable array to routine with pointer array argument and vice versa. For
-  example, if one wanted to call a "set all bytes to zero" utility that could
-  be applied to arrays of any type or rank:
+  incompatible in type (T), kind (K), rank (R), CUDA device (D), or managed/
+  unified (M) status. The letter (A) is a shorthand for (TKRDM), and is the
+  default when no letters appear.  The letter (C) checks for contiguity, for
+  example allowing
+  an element of an assumed-shape array to be passed as a dummy argument. When
+  the dummy argument is passed by descriptor, (C) specifies that the descriptor
+  should not be copied or reboxed, allowing the original descriptor to be passed
+  directly even if attributes like ALLOCATABLE or POINTER don't match exactly.
+  When the dummy argument is not passed by descriptor (e.g., an assumed-size
+  array in a BIND(C) interface), the base address is extracted from the actual
+  argument's descriptor and passed as a raw pointer.
+  The letter (P) ignores pointer and allocatable matching, so that one can pass
+  an allocatable array to routine with pointer array argument and vice versa.
+  For example, if one wanted to call a "set all bytes to zero" utility that
+  could be applied to arrays of any type or rank:
 ```
   interface
     subroutine clear(arr,bytes)
@@ -32,6 +39,25 @@ A list of non-standard directives supported by Flang
     end
   end interface
 ```
+  Note that it's not allowed to pass array actual argument to `ignore_trk(R)`
+  dummy argument that is a scalar with `VALUE` attribute, for example:
+```
+  interface
+    subroutine s(b)
+      !dir$ ignore_tkr(r) b
+      integer, value :: b
+    end
+  end interface
+  integer :: a(5)
+  call s(a)
+```
+  The reason for this limitation is that scalars with `VALUE` attribute can
+  be passed in registers, so it's not clear how lowering should handle this
+  case. (Passing scalar actual argument to `ignore_tkr(R)` dummy argument
+  that is a scalar with `VALUE` attribute is allowed.)
+* `!dir$ ivdep` asserts that there are no vector dependencies in the following loop,
+  allowing the compiler to vectorize or parallelize the loop if it chooses to do so
+  based on its cost model. It does not force vectorization.
 * `!dir$ assume_aligned desginator:alignment`, where designator is a variable,
   maybe with array indices, and alignment is what the compiler should assume the
   alignment to be. E.g A:64 or B(1,1,1):128. The alignment should be a power of 2,
@@ -41,6 +67,18 @@ A list of non-standard directives supported by Flang
 * `!dir$ vector always` forces vectorization on the following loop regardless
   of cost model decisions. The loop must still be vectorizable.
   [This directive currently only works on plain do loops without labels].
+* `!dir$ simd` works the same as `vector always` above, but provides an alternative
+  spelling and support for projects which would have used the classic-flang frontend
+  previously.
+* `!dir$ vector vectorlength({fixed|scalable|<num>|<num>,fixed|<num>,scalable})`
+  specifies a hint to the compiler about the desired vectorization factor. If
+  `fixed` is used, the compiler should prefer fixed-width vectorization.
+  Scalable vectorization instructions may still be used with a fixed-width
+  predicate. If `scalable` is used the compiler should prefer scalable
+  vectorization, though it can choose to use fixed length vectorization or not
+  at all. `<num>` means that the compiler should consider using this specific
+  vectorization factor, which should be an integer literal. This directive
+  currently has the same limitations as `!dir$ vector always`.
 * `!dir$ unroll [n]` specifies that the compiler ought to unroll the immediately
   following loop `n` times. When `n` is `0` or `1`, the loop should not be unrolled
   at all. When `n` is `2` or greater, the loop should be unrolled exactly `n`
@@ -64,6 +102,16 @@ A list of non-standard directives supported by Flang
   assignment statement.
 * `!dir$ forceinline` works in the same way as the `inline` directive, but it forces
    inlining by the compiler on a function call statement.
+* `!dir$ inlinealways <name>`. An alternative spelling to `forceinline`, providing compatibility
+  with older Fortran compilers, such as classic-flang. It can be specified at the callsite, or
+  in the function or subroutine you want to inline. `name` is optional and should only be used
+  when specifying the directive within a function, example:
+  ```
+  function test
+    !DIR$ INLINEALWAYS test
+    ...
+  end function
+  ```
 * `!dir$ noinline` works in the same way as the `inline` directive, but prevents
   any attempt of inlining by the compiler on a function call statement.
 

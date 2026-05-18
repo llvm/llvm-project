@@ -1,5 +1,8 @@
 // RUN: mlir-opt %s -test-vector-transfer-flatten-patterns -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -test-vector-transfer-flatten-patterns=target-vector-bitwidth=128 -split-input-file | FileCheck %s --check-prefix=CHECK-128B
+// RUN: mlir-opt -split-input-file \
+// RUN: -transform-preload-library='transform-library-paths=%p/td/flatten.mlir' \
+// RUN: -transform-interpreter=entry-point=flatten %s | FileCheck %s
 
 // TODO: Align naming and format with e.g. vector-transfer-permutation-lowering.mlir
 
@@ -380,6 +383,28 @@ func.func @transfer_read_non_contiguous_src(
 // CHECK-128B-LABEL: func @transfer_read_non_contiguous_src
 //   CHECK-128B-NOT:   memref.collapse_shape
 //   CHECK-128B-NOT:   vector.shape_cast
+
+// -----
+
+func.func @transfer_read_multi_dim_unit_vector(
+    %mem: memref<5x4x3x2xi8>) -> vector<1x1x1xi8> {
+
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0 : i8
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
+    memref<5x4x3x2xi8>, vector<1x1x1xi8>
+  return %res : vector<1x1x1xi8>
+}
+
+// CHECK-LABEL: func @transfer_read_multi_dim_unit_vector
+// CHECK-SAME:    %[[MEM:[0-9a-zA-Z]+]]: memref<5x4x3x2xi8
+// CHECK:         %[[READ1D:.+]] = vector.transfer_read %[[MEM]]{{.*}}: memref<5x4x3x2xi8>, vector<1xi8>
+// CHECK:         %[[VEC3D:.+]] = vector.shape_cast %[[READ1D]] : vector<1xi8> to vector<1x1x1xi8>
+// CHECK:         return %[[VEC3D]]
+
+// CHECK-128B-LABEL: func @transfer_read_multi_dim_unit_vector
+//       CHECK-128B:   vector.transfer_read {{.*}}: memref<5x4x3x2xi8>, vector<1xi8>
+//       CHECK-128B:   vector.shape_cast {{.*}}: vector<1xi8> to vector<1x1x1xi8>
 
 // -----
 
@@ -782,3 +807,22 @@ func.func @negative_out_of_bound_transfer_write(
 // CHECK-128B-LABEL: func.func @negative_out_of_bound_transfer_write
 //   CHECK-128B-NOT:   memref.collapse_shape
 //   CHECK-128B-NOT:   vector.shape_cast
+
+// -----
+
+func.func @transfer_write_multi_dim_unit_vector(
+    %mem: memref<5x4x3x2xi8>, %vec: vector<1x1x1xi8>) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] :
+    vector<1x1x1xi8>, memref<5x4x3x2xi8>
+  return
+}
+
+// CHECK-LABEL: func @transfer_write_multi_dim_unit_vector
+// CHECK-SAME:    %[[MEM:.+]]: memref<5x4x3x2xi8>, %[[VEC:.+]]: vector<1x1x1xi8>
+// CHECK:         %[[VEC1D:.+]] = vector.shape_cast %[[VEC]] : vector<1x1x1xi8> to vector<1xi8>
+// CHECK:         vector.transfer_write %[[VEC1D]], %[[MEM]]{{.*}}: vector<1xi8>, memref<5x4x3x2xi8>
+
+// CHECK-128B-LABEL: func @transfer_write_multi_dim_unit_vector
+//       CHECK-128B:   vector.shape_cast {{.*}}: vector<1x1x1xi8> to vector<1xi8>
+//       CHECK-128B:   vector.transfer_write {{.*}}: vector<1xi8>, memref<5x4x3x2xi8>

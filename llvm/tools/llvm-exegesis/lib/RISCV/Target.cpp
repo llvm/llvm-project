@@ -101,7 +101,7 @@ template <class BaseT> class RISCVSnippetGenerator : public BaseT {
       return 128U;
     if (isOpcodeAvailableIn(Opcode, {Feature_HasStdExtZvkshBit}))
       return 256U;
-    if (isOpcodeAvailableIn(Opcode, {Feature_HasStdExtZvknhaOrZvknhbBit}))
+    if (isOpcodeAvailableIn(Opcode, {Feature_HasStdExtZvknhaBit}))
       // In Zvknh[ab], when SEW=64 is used (i.e. Zvknhb), EGW is 256.
       // Otherwise it's 128.
       return SEW == 64 ? 256U : 128U;
@@ -400,14 +400,14 @@ void RISCVSnippetGenerator<BaseT>::annotateWithVType(
         using namespace RISCV_MC;
         if (isOpcodeAvailableIn(BaseOpcode, {Feature_HasStdExtZvkgBit,
                                              Feature_HasStdExtZvknedBit,
-                                             Feature_HasStdExtZvknhaOrZvknhbBit,
+                                             Feature_HasStdExtZvknhaBit,
                                              Feature_HasStdExtZvksedBit,
                                              Feature_HasStdExtZvkshBit})) {
           if (*SEW != 32)
             // Zvknhb supports SEW=64 as well.
             if (*SEW != 64 || !STI.hasFeature(RISCV::FeatureStdExtZvknhb) ||
                 !isOpcodeAvailableIn(BaseOpcode,
-                                     {Feature_HasStdExtZvknhaOrZvknhbBit})) {
+                                     {Feature_HasStdExtZvknhaBit})) {
               SEW = SEWCandidates.erase(SEW);
               continue;
             }
@@ -819,6 +819,15 @@ void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
 
   assert(MemOp.isReg() && "Memory operand expected to be register");
 
+  unsigned Opcode = I.getOpcode();
+  if (Opcode == RISCV::C_LDSP || Opcode == RISCV::C_LWSP ||
+      Opcode == RISCV::C_SDSP || Opcode == RISCV::C_SWSP) {
+    IT.getValueFor(I.Operands[0]) = MCOperand::createReg(RISCV::X2);
+    // Force base register to SP (X2)
+    IT.getValueFor(MemOp) = MCOperand::createReg(RISCV::X2);
+    return;
+  }
+
   IT.getValueFor(MemOp) = MCOperand::createReg(Reg);
 }
 
@@ -855,10 +864,17 @@ Error ExegesisRISCVTarget::randomizeTargetMCOperand(
     // 5-bit unsigned immediate value.
     AssignedValue = MCOperand::createImm(randomIndex(31));
     break;
+  case RISCVOp::OPERAND_SIMM12_LO:
+  case RISCVOp::OPERAND_UIMM20_LUI:
+  case RISCVOp::OPERAND_UIMM20_AUIPC:
+  case RISCVOp::OPERAND_BARE_SIMM32:
+    AssignedValue = MCOperand::createImm(0);
+    break;
   default:
     if (OperandType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
         OperandType <= RISCVOp::OPERAND_LAST_RISCV_IMM)
       AssignedValue = MCOperand::createImm(0);
+    break;
   }
   return Error::success();
 }

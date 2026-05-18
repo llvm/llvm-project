@@ -31,6 +31,9 @@ function(lldb_tablegen)
     add_public_tablegen_target(${LTG_TARGET})
     set_property(GLOBAL APPEND PROPERTY LLDB_TABLEGEN_TARGETS ${LTG_TARGET})
   endif()
+  if("-dump-json" IN_LIST ARGN)
+    set_property(GLOBAL APPEND PROPERTY LLDB_DOCS_JSON_OUTPUTS "${TABLEGEN_OUTPUT}")
+  endif()
 endfunction(lldb_tablegen)
 
 function(add_lldb_library name)
@@ -73,7 +76,11 @@ function(add_lldb_library name)
   elseif (PARAM_SHARED)
     set(libkind SHARED)
   elseif (PARAM_OBJECT)
-    set(libkind OBJECT)
+    # Pass STATIC alongside OBJECT so that under BUILD_SHARED_LIBS=ON the
+    # secondary library variant llvm_add_library produces is a STATIC archive
+    # rather than a SHARED library. OBJECT consumers in LLDB carry no LINK_LIBS
+    # of their own (consumers add them), so a SHARED variant would fail to link.
+    set(libkind "OBJECT;STATIC")
   else ()
     # PARAM_STATIC or library type unspecified. BUILD_SHARED_LIBS
     # does not control the kind of libraries created for LLDB,
@@ -171,7 +178,9 @@ function(add_lldb_executable name)
     list(FIND ARG_LINK_LIBS liblldb LIBLLDB_INDEX)
     if(NOT LIBLLDB_INDEX EQUAL -1)
       if (MSVC)
-        target_link_options(${name} PRIVATE "/DELAYLOAD:$<TARGET_FILE_NAME:liblldb>")
+        target_link_options(${name} PRIVATE
+          "LINKER:/DELAYLOAD:$<TARGET_FILE_NAME:liblldb>")
+        target_link_libraries(${name} PRIVATE delayimp)
       elseif (MINGW AND LINKER_IS_LLD)
         # LLD can delay load just by passing a --delayload flag, as long as the import
         # library is a short type import library (which LLD and MS link.exe produce).

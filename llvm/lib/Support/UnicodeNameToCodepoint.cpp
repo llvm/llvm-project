@@ -21,8 +21,8 @@ namespace llvm {
 namespace sys {
 namespace unicode {
 
-extern const char *UnicodeNameToCodepointDict;
-extern const uint8_t *UnicodeNameToCodepointIndex;
+extern const char *const UnicodeNameToCodepointDict;
+extern const uint8_t *const UnicodeNameToCodepointIndex;
 extern const std::size_t UnicodeNameToCodepointIndexSize;
 extern const std::size_t UnicodeNameToCodepointLargestNameSize;
 

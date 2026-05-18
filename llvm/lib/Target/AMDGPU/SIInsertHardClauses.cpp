@@ -209,8 +209,21 @@ public:
     bool Changed = false;
     for (auto &MBB : MF) {
       ClauseInfo CI;
+      unsigned ExistingClauseRemaining = 0;
       for (auto &MI : MBB) {
-        HardClauseType Type = getHardClauseType(MI);
+        HardClauseType Type;
+        if (ExistingClauseRemaining) {
+          if (!MI.isMetaInstruction())
+            ExistingClauseRemaining--;
+          Type = HARDCLAUSE_ILLEGAL;
+        } else if (MI.getOpcode() == AMDGPU::S_CLAUSE) {
+          // Respect existing explicit clauses. Re-clausing instructions that
+          // are already covered by an S_CLAUSE can create nested clauses.
+          ExistingClauseRemaining = (MI.getOperand(0).getImm() & 63) + 1;
+          Type = HARDCLAUSE_ILLEGAL;
+        } else {
+          Type = getHardClauseType(MI);
+        }
 
         int64_t Dummy1;
         bool Dummy2;

@@ -20,6 +20,14 @@ targets="${2}"
 runtimes="${3}"
 runtimes_targets="${4}"
 
+runtime_cmake_args=()
+if [[ " ${runtimes_targets} " == *" check-libclc "* ]]; then
+  runtime_cmake_args+=(
+    -D RUNTIMES_amdgcn-amd-amdhsa-llvm_LLVM_ENABLE_RUNTIMES=libclc
+    -D LLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa-llvm"
+  )
+fi
+
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
@@ -43,19 +51,23 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D COMPILER_RT_BUILD_ORC=OFF \
       -D CMAKE_C_COMPILER_LAUNCHER=sccache \
       -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
+      -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
+      "${runtime_cmake_args[@]}"
 
 start-group "ninja"
 
-# Targets are not escaped as they are passed as separate arguments.
-ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
-cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+if [[ -n "${targets}" ]]; then
+  # Targets are not escaped as they are passed as separate arguments.
+  ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+  cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+fi
 
-if [[ "${runtime_targets}" != "" ]]; then
+if [[ -n "${runtimes_targets}" ]]; then
   start-group "ninja runtimes"
   
   ninja -C "${BUILD_DIR}" -k 0 ${runtimes_targets} |& tee ninja_runtimes.log

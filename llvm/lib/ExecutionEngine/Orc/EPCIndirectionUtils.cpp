@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
 
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <future>
@@ -91,9 +92,9 @@ Error EPCTrampolinePool::deallocatePool() {
   std::promise<MSVCPError> DeallocResultP;
   auto DeallocResultF = DeallocResultP.get_future();
 
-  EPCIU.getExecutorProcessControl().getMemMgr().deallocate(
-      std::move(TrampolineBlocks),
-      [&](Error Err) { DeallocResultP.set_value(std::move(Err)); });
+  EPCIU.getMemManager().deallocate(std::move(TrampolineBlocks), [&](Error Err) {
+    DeallocResultP.set_value(std::move(Err));
+  });
 
   return DeallocResultF.get();
 }
@@ -110,7 +111,7 @@ Error EPCTrampolinePool::grow() {
   auto &EPC = EPCIU.getExecutorProcessControl();
   auto PageSize = EPC.getPageSize();
   auto Alloc = SimpleSegmentAlloc::Create(
-      EPC.getMemMgr(), EPC.getSymbolStringPool(), EPC.getTargetTriple(),
+      EPCIU.getMemManager(), EPC.getSymbolStringPool(), EPC.getTargetTriple(),
       nullptr, {{MemProt::Read | MemProt::Exec, {PageSize, Align(PageSize)}}});
   if (!Alloc)
     return Alloc.takeError();
@@ -154,7 +155,7 @@ Error EPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
     }
   }
 
-  auto &MemAccess = EPCIU.getExecutorProcessControl().getMemoryAccess();
+  auto &MemAccess = EPCIU.getMemoryAccess();
   switch (EPCIU.getABISupport().getPointerSize()) {
   case 4: {
     unsigned ASIdx = 0;
@@ -208,7 +209,7 @@ Error EPCIndirectStubsManager::updatePointer(StringRef Name,
     PtrAddr = I->second.first.PointerAddress;
   }
 
-  auto &MemAccess = EPCIU.getExecutorProcessControl().getMemoryAccess();
+  auto &MemAccess = EPCIU.getMemoryAccess();
   switch (EPCIU.getABISupport().getPointerSize()) {
   case 4: {
     tpctypes::UInt32Write PUpdate(PtrAddr, NewAddr.getValue());
@@ -232,7 +233,9 @@ namespace orc {
 EPCIndirectionUtils::ABISupport::~ABISupport() = default;
 
 Expected<std::unique_ptr<EPCIndirectionUtils>>
-EPCIndirectionUtils::Create(ExecutorProcessControl &EPC) {
+EPCIndirectionUtils::Create(ExecutorProcessControl &EPC,
+                            jitlink::JITLinkMemoryManager &MemMgr,
+                            MemoryAccess &MemAccess) {
   const auto &TT = EPC.getTargetTriple();
   switch (TT.getArch()) {
   default:
@@ -241,38 +244,37 @@ EPCIndirectionUtils::Create(ExecutorProcessControl &EPC) {
         inconvertibleErrorCode());
   case Triple::aarch64:
   case Triple::aarch64_32:
-    return CreateWithABI<OrcAArch64>(EPC);
+    return CreateWithABI<OrcAArch64>(EPC, MemMgr, MemAccess);
 
   case Triple::x86:
-    return CreateWithABI<OrcI386>(EPC);
+    return CreateWithABI<OrcI386>(EPC, MemMgr, MemAccess);
 
   case Triple::loongarch64:
-    return CreateWithABI<OrcLoongArch64>(EPC);
+    return CreateWithABI<OrcLoongArch64>(EPC, MemMgr, MemAccess);
 
   case Triple::mips:
-    return CreateWithABI<OrcMips32Be>(EPC);
+    return CreateWithABI<OrcMips32Be>(EPC, MemMgr, MemAccess);
 
   case Triple::mipsel:
-    return CreateWithABI<OrcMips32Le>(EPC);
+    return CreateWithABI<OrcMips32Le>(EPC, MemMgr, MemAccess);
 
   case Triple::mips64:
   case Triple::mips64el:
-    return CreateWithABI<OrcMips64>(EPC);
+    return CreateWithABI<OrcMips64>(EPC, MemMgr, MemAccess);
 
   case Triple::riscv64:
-    return CreateWithABI<OrcRiscv64>(EPC);
+    return CreateWithABI<OrcRiscv64>(EPC, MemMgr, MemAccess);
 
   case Triple::x86_64:
     if (TT.getOS() == Triple::OSType::Win32)
-      return CreateWithABI<OrcX86_64_Win32>(EPC);
+      return CreateWithABI<OrcX86_64_Win32>(EPC, MemMgr, MemAccess);
     else
-      return CreateWithABI<OrcX86_64_SysV>(EPC);
+      return CreateWithABI<OrcX86_64_SysV>(EPC, MemMgr, MemAccess);
   }
 }
 
 Error EPCIndirectionUtils::cleanup() {
 
-  auto &MemMgr = EPC.getMemMgr();
   auto Err = MemMgr.deallocate(std::move(IndirectStubAllocs));
 
   if (TP)
@@ -294,11 +296,10 @@ EPCIndirectionUtils::writeResolverBlock(ExecutorAddr ReentryFnAddr,
   assert(ABI && "ABI can not be null");
   auto ResolverSize = ABI->getResolverCodeSize();
 
-  auto Alloc =
-      SimpleSegmentAlloc::Create(EPC.getMemMgr(), EPC.getSymbolStringPool(),
-                                 EPC.getTargetTriple(), nullptr,
-                                 {{MemProt::Read | MemProt::Exec,
-                                   {ResolverSize, Align(EPC.getPageSize())}}});
+  auto Alloc = SimpleSegmentAlloc::Create(
+      MemMgr, EPC.getSymbolStringPool(), EPC.getTargetTriple(), nullptr,
+      {{MemProt::Read | MemProt::Exec,
+        {ResolverSize, Align(EPC.getPageSize())}}});
 
   if (!Alloc)
     return Alloc.takeError();
@@ -337,8 +338,10 @@ LazyCallThroughManager &EPCIndirectionUtils::createLazyCallThroughManager(
 }
 
 EPCIndirectionUtils::EPCIndirectionUtils(ExecutorProcessControl &EPC,
+                                         jitlink::JITLinkMemoryManager &MemMgr,
+                                         MemoryAccess &MemAccess,
                                          std::unique_ptr<ABISupport> ABI)
-    : EPC(EPC), ABI(std::move(ABI)) {
+    : EPC(EPC), MemMgr(MemMgr), MemAccess(MemAccess), ABI(std::move(ABI)) {
   assert(this->ABI && "ABI can not be null");
 
   assert(EPC.getPageSize() > getABISupport().getStubSize() &&
@@ -364,8 +367,7 @@ EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
     auto PtrProt = MemProt::Read | MemProt::Write;
 
     auto Alloc = SimpleSegmentAlloc::Create(
-        EPC.getMemMgr(), EPC.getSymbolStringPool(), EPC.getTargetTriple(),
-        nullptr,
+        MemMgr, EPC.getSymbolStringPool(), EPC.getTargetTriple(), nullptr,
         {{StubProt, {static_cast<size_t>(StubBytes), Align(PageSize)}},
          {PtrProt, {static_cast<size_t>(PtrBytes), Align(PageSize)}}});
 

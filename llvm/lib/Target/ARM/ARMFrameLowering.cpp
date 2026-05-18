@@ -420,7 +420,7 @@ static int getArgumentStackToRestore(MachineFunction &MF,
 
 static bool needsWinCFI(const MachineFunction &MF) {
   const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  return MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
          F.needsUnwindTableEntry();
 }
 
@@ -623,6 +623,7 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
     break;
 
   case ARM::tBX_RET:
+  case ARM::t2BXAUT_RET:
   case ARM::TCRETURNri:
   case ARM::TCRETURNrinotr12:
     MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop_Ret))
@@ -1138,6 +1139,12 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
           .add(predOps(ARMCC::AL));
     }
 
+    const ARMTargetLowering *TLI = STI.getTargetLowering();
+    RTLIB::LibcallImpl ChkStkLibcall = TLI->getLibcallImpl(RTLIB::STACK_PROBE);
+    if (ChkStkLibcall == RTLIB::Unsupported)
+      reportFatalUsageError("no available implementation of __chkstk");
+    const char *ChkStk = TLI->getLibcallImplName(ChkStkLibcall).data();
+
     switch (TM.getCodeModel()) {
     case CodeModel::Tiny:
       llvm_unreachable("Tiny code model not available on ARM.");
@@ -1146,14 +1153,14 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     case CodeModel::Kernel:
       BuildMI(MBB, MBBI, dl, TII.get(ARM::tBL))
           .add(predOps(ARMCC::AL))
-          .addExternalSymbol("__chkstk")
+          .addExternalSymbol(ChkStk)
           .addReg(ARM::R4, RegState::Implicit)
           .setMIFlags(MachineInstr::FrameSetup);
       break;
     case CodeModel::Large:
       BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi32imm), ARM::R12)
-        .addExternalSymbol("__chkstk")
-        .setMIFlags(MachineInstr::FrameSetup);
+          .addExternalSymbol(ChkStk)
+          .setMIFlags(MachineInstr::FrameSetup);
 
       BuildMI(MBB, MBBI, dl, TII.get(ARM::tBLXr))
           .add(predOps(ARMCC::AL))
@@ -1545,8 +1552,17 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     // function, the validation instruction is emitted during expansion of the
     // tBXNS_RET, since the validation must use the value of SP at function
     // entry, before saving, resp. after restoring, FPCXTNS.
-    if (AFI->shouldSignReturnAddress() && !AFI->isCmseNSEntryFunction())
-      BuildMI(MBB, MBBI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2AUT));
+    if (AFI->shouldSignReturnAddress() && !AFI->isCmseNSEntryFunction()) {
+      bool CanUseBXAut =
+          STI.isThumb() && STI.hasV8_1MMainlineOps() && STI.hasPACBTI();
+      auto TMBBI = MBB.getFirstTerminator();
+      bool IsBXReturn =
+          TMBBI != MBB.end() && TMBBI->getOpcode() == ARM::tBX_RET;
+      if (IsBXReturn && CanUseBXAut)
+        TMBBI->setDesc(STI.getInstrInfo()->get(ARM::t2BXAUT_RET));
+      else
+        BuildMI(MBB, MBBI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2AUT));
+    }
   }
 
   if (MF.hasWinCFI()) {
@@ -2329,6 +2345,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
     for (auto &Table: MF.getJumpTableInfo()->getJumpTables())
       FnSize += Table.MBBs.size() * 4;
   FnSize += MF.getConstantPool()->getConstants().size() * 4;
+  LLVM_DEBUG(dbgs() << "Estimated function size for " << MF.getName() << " = "
+                    << FnSize << " bytes\n");
   return FnSize;
 }
 
@@ -2465,7 +2483,7 @@ checkNumAlignedDPRCS2Regs(MachineFunction &MF, BitVector &SavedRegs) {
 
 bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // For CMSE entry functions, we want to save the FPCXT_NS immediately
-  // upon function entry (resp. restore it immmediately before return)
+  // upon function entry (resp. restore it immediately before return)
   if (STI.hasV8_1MMainlineOps() &&
       MF.getInfo<ARMFunctionInfo>()->isCmseNSEntryFunction())
     return false;
@@ -2536,7 +2554,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   (void)TRI;  // Silence unused warning in non-assert builds.
-  Register FramePtr = RegInfo->getFrameRegister(MF);
+  Register FramePtr = STI.getFramePointerReg();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
       STI.getPushPopSplitVariation(MF);
 
@@ -2783,7 +2801,11 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);
 
-    if (HasFP) {
+    // Save the FP if:
+    // 1. We currently need it (HasFP), OR
+    // 2. We might need it later due to stack realignment from aligned DPRCS2
+    //    saves (which will make hasFP() become true in emitPrologue).
+    if (HasFP || (isFPReserved(MF) && AFI->getNumAlignedDPRCS2Regs() > 0)) {
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.
@@ -3378,7 +3400,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Emit the relevant DWARF information about the change in stack pointer as
   // well as where to find both r4 and r5 (the callee-save registers)
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
     CFIInstBuilder CFIBuilder(PrevStackMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(8);
     CFIBuilder.buildOffset(ScratchReg1, -4);
@@ -3590,7 +3612,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Emit the DWARF info about the change in stack as well as where to find the
   // previous link register
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
     CFIInstBuilder CFIBuilder(AllocMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(12);
     CFIBuilder.buildOffset(ARM::LR, -12);
@@ -3650,7 +3672,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
+  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI())
     CFIInstBuilder(AllocMBB, MachineInstr::NoFlags).buildDefCFAOffset(0);
 
   // Return from this function.
@@ -3673,7 +3695,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
     CFIInstBuilder CFIBuilder(PostStackMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(0);
 

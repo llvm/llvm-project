@@ -57,7 +57,7 @@ static void collectUnderlyingAddressValues2(
   LDBG() << "  inputValue: " << inputValue;
   LDBG() << "  inputIndex: " << inputIndex;
   LDBG() << "  maxDepth: " << maxDepth;
-  ValueRange inputs = initialSuccessor.getSuccessorInputs();
+  ValueRange inputs = branch.getSuccessorInputs(initialSuccessor);
   if (inputs.empty()) {
     LDBG() << "  input is empty, enqueue value";
     output.push_back(inputValue);
@@ -108,9 +108,9 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
   // Check to see if we can reason about the control flow of this op.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     LDBG() << "  Processing region branch operation";
-    return collectUnderlyingAddressValues2(
-        branch, RegionSuccessor(op, op->getResults()), result,
-        result.getResultNumber(), maxDepth, visited, output);
+    return collectUnderlyingAddressValues2(branch, RegionSuccessor::parent(),
+                                           result, result.getResultNumber(),
+                                           maxDepth, visited, output);
   }
 
   LDBG() << "  Adding result to output: " << result;
@@ -170,24 +170,16 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
     // the entry block.
     SmallVector<RegionSuccessor> successors;
     branch.getSuccessorRegions(RegionBranchPoint::parent(), successors);
-    RegionSuccessor regionSuccessor(region);
-    bool found = false;
     for (RegionSuccessor &successor : successors) {
       if (successor.getSuccessor() == region) {
         LDBG() << "  Found matching region successor: " << successor;
-        found = true;
-        regionSuccessor = successor;
-        break;
+        return collectUnderlyingAddressValues2(
+            branch, successor, arg, argNumber, maxDepth, visited, output);
       }
     }
-    if (!found) {
-      LDBG()
-          << "  No matching region successor found, adding argument to output";
-      output.push_back(arg);
-      return;
-    }
-    return collectUnderlyingAddressValues2(
-        branch, regionSuccessor, arg, argNumber, maxDepth, visited, output);
+    LDBG() << "  No matching region successor found, adding argument to output";
+    output.push_back(arg);
+    return;
   }
 
   LDBG()
@@ -533,7 +525,15 @@ ModRefResult LocalAliasAnalysis::getModRef(Operation *op, Value location) {
                  : aliasResult.isNo() ? "NoAlias"
                                       : "MayAlias");
     } else {
-      LDBG() << "    No effect value, assuming MayAlias";
+      // An effect on a non-addressable resource cannot affect a pointer-based
+      // location.
+      if (!effect.getResource()->isAddressable()) {
+        LDBG() << "    Effect on non-addressable resource '"
+               << effect.getResource()->getName() << "', skipping (NoAlias)";
+        aliasResult = AliasResult::NoAlias;
+      } else {
+        LDBG() << "    No effect value, assuming MayAlias";
+      }
     }
 
     // If we don't alias, ignore this effect.

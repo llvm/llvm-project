@@ -14,12 +14,11 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: clang-modules-build
 
-#include "test_macros.h"
+// FIXME: using `#warning` causes diagnostics from system headers which include deprecated headers. This can only be
+// enabled again once https://github.com/llvm/llvm-project/pull/168041 (or a similar feature) has landed, since that
+// allows suppression in system headers.
+// XFAIL: *
 
 #include <ctgmath>
 
-#if TEST_STD_VER >= 20
-// expected-warning@ctgmath:* {{'__standard_header_ctgmath' is deprecated: removed in C++20. Include <cmath> and <complex> instead.}}
-#else
-// expected-warning@ctgmath:* {{'__standard_header_ctgmath' is deprecated: Include <cmath> and <complex> instead.}}
-#endif
+// expected-warning@ctgmath:* {{<ctgmath> is deprecated in C++17 and removed in C++20. Include <cmath> and <complex> instead.}}

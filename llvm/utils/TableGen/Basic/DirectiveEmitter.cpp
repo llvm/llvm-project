@@ -34,6 +34,9 @@ namespace {
 enum class Frontend { LLVM, Flang, Clang };
 } // namespace
 
+static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
+                                        raw_ostream &OS);
+
 static StringRef getFESpelling(Frontend FE) {
   switch (FE) {
   case Frontend::LLVM:
@@ -269,6 +272,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
 
   OS << "#include \"llvm/ADT/Sequence.h\"\n";
+  OS << "#include \"llvm/ADT/STLExtras.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "#include \"llvm/Frontend/Directive/Spelling.h\"\n";
   OS << "#include \"llvm/Support/Compiler.h\"\n";
@@ -276,80 +280,82 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#include <utility>\n"; // for std::pair
   OS << "\n";
   NamespaceEmitter LlvmNS(OS, "llvm");
-  NamespaceEmitter DirLangNS(OS, DirLang.getCppNamespace());
+  {
+    NamespaceEmitter DirLangNS(OS, DirLang.getCppNamespace());
 
-  if (DirLang.hasEnableBitmaskEnumInNamespace())
-    OS << "LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n\n";
+    if (DirLang.hasEnableBitmaskEnumInNamespace())
+      OS << "LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n\n";
 
-  // Emit Directive associations
-  std::vector<const Record *> Associations;
-  copy_if(DirLang.getAssociations(), std::back_inserter(Associations),
-          // Skip the "special" value
-          [](const Record *Def) { return Def->getName() != "AS_FromLeaves"; });
-  generateEnumClass(Associations, OS, "Association",
-                    /*Prefix=*/"", /*ExportEnums=*/false);
-
-  generateEnumClass(DirLang.getCategories(), OS, "Category", /*Prefix=*/"",
-                    /*ExportEnums=*/false);
-
-  generateEnumBitmask(DirLang.getSourceLanguages(), OS, "SourceLanguage",
+    // Emit Directive associations
+    std::vector<const Record *> Associations;
+    copy_if(
+        DirLang.getAssociations(), std::back_inserter(Associations),
+        // Skip the "special" value
+        [](const Record *Def) { return Def->getName() != "AS_FromLeaves"; });
+    generateEnumClass(Associations, OS, "Association",
                       /*Prefix=*/"", /*ExportEnums=*/false);
 
-  // Emit Directive enumeration
-  generateEnumClass(DirLang.getDirectives(), OS, "Directive",
-                    DirLang.getDirectivePrefix(),
-                    DirLang.hasMakeEnumAvailableInNamespace());
+    generateEnumClass(DirLang.getCategories(), OS, "Category", /*Prefix=*/"",
+                      /*ExportEnums=*/false);
 
-  // Emit Clause enumeration
-  generateEnumClass(DirLang.getClauses(), OS, "Clause",
-                    DirLang.getClausePrefix(),
-                    DirLang.hasMakeEnumAvailableInNamespace());
+    generateEnumBitmask(DirLang.getSourceLanguages(), OS, "SourceLanguage",
+                        /*Prefix=*/"", /*ExportEnums=*/false);
 
-  // Emit ClauseVals enumeration
-  std::string EnumHelperFuncs;
-  generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
+    // Emit Directive enumeration
+    generateEnumClass(DirLang.getDirectives(), OS, "Directive",
+                      DirLang.getDirectivePrefix(),
+                      DirLang.hasMakeEnumAvailableInNamespace());
 
-  // Generic function signatures
-  OS << "// Enumeration helper functions\n";
+    // Emit Clause enumeration
+    generateEnumClass(DirLang.getClauses(), OS, "Clause",
+                      DirLang.getClausePrefix(),
+                      DirLang.hasMakeEnumAvailableInNamespace());
 
-  OS << "LLVM_ABI std::pair<Directive, directive::VersionRange> get" << Lang
-     << "DirectiveKindAndVersions(StringRef Str);\n";
+    // Emit ClauseVals enumeration
+    std::string EnumHelperFuncs;
+    generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
 
-  OS << "inline Directive get" << Lang << "DirectiveKind(StringRef Str) {\n";
-  OS << "  return get" << Lang << "DirectiveKindAndVersions(Str).first;\n";
-  OS << "}\n";
-  OS << "\n";
+    // Emit constexpr functions.
+    emitDirectivesConstexprImpl(DirLang, OS);
 
-  OS << "LLVM_ABI StringRef get" << Lang
-     << "DirectiveName(Directive D, unsigned Ver = 0);\n";
-  OS << "\n";
+    // Generic function signatures
+    OS << "\n";
+    OS << "// Enumeration helper functions\n";
 
-  OS << "LLVM_ABI std::pair<Clause, directive::VersionRange> get" << Lang
-     << "ClauseKindAndVersions(StringRef Str);\n";
-  OS << "\n";
+    OS << "LLVM_ABI std::pair<Directive, directive::VersionRange> get" << Lang
+       << "DirectiveKindAndVersions(StringRef Str);\n";
 
-  OS << "inline Clause get" << Lang << "ClauseKind(StringRef Str) {\n";
-  OS << "  return get" << Lang << "ClauseKindAndVersions(Str).first;\n";
-  OS << "}\n";
-  OS << "\n";
+    OS << "inline Directive get" << Lang << "DirectiveKind(StringRef Str) {\n";
+    OS << "  return get" << Lang << "DirectiveKindAndVersions(Str).first;\n";
+    OS << "}\n";
+    OS << "\n";
 
-  OS << "LLVM_ABI StringRef get" << Lang
-     << "ClauseName(Clause C, unsigned Ver = 0);\n";
-  OS << "\n";
+    OS << "LLVM_ABI StringRef get" << Lang
+       << "DirectiveName(Directive D, unsigned Ver = 0);\n";
+    OS << "\n";
 
-  OS << "/// Return true if \\p C is a valid clause for \\p D in version \\p "
-     << "Version.\n";
-  OS << "LLVM_ABI bool isAllowedClauseForDirective(Directive D, "
-     << "Clause C, unsigned Version);\n";
-  OS << "\n";
-  OS << "constexpr std::size_t getMaxLeafCount() { return "
-     << getMaxLeafCount(DirLang) << "; }\n";
-  OS << "LLVM_ABI Association getDirectiveAssociation(Directive D);\n";
-  OS << "LLVM_ABI Category getDirectiveCategory(Directive D);\n";
-  OS << "LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);\n";
-  OS << EnumHelperFuncs;
+    OS << "LLVM_ABI std::pair<Clause, directive::VersionRange> get" << Lang
+       << "ClauseKindAndVersions(StringRef Str);\n";
+    OS << "\n";
 
-  DirLangNS.close();
+    OS << "inline Clause get" << Lang << "ClauseKind(StringRef Str) {\n";
+    OS << "  return get" << Lang << "ClauseKindAndVersions(Str).first;\n";
+    OS << "}\n";
+    OS << "\n";
+
+    OS << "LLVM_ABI StringRef get" << Lang
+       << "ClauseName(Clause C, unsigned Ver = 0);\n";
+    OS << "\n";
+
+    OS << "/// Return true if \\p C is a valid clause for \\p D in version \\p "
+       << "Version.\n";
+    OS << "LLVM_ABI bool isAllowedClauseForDirective(Directive D, "
+       << "Clause C, unsigned Version);\n";
+    OS << "\n";
+    OS << "constexpr std::size_t getMaxLeafCount() { return "
+       << getMaxLeafCount(DirLang) << "; }\n";
+    OS << EnumHelperFuncs;
+  } // close DirLangNS
 
   // These specializations need to be in ::llvm.
   for (StringRef Enum : {"Association", "Category", "Directive", "Clause"}) {
@@ -728,11 +734,12 @@ static void emitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
 static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
                                             raw_ostream &OS) {
   enum struct Association {
-    None = 0, // None should be the smallest value.
-    Block,    // The values of the rest don't matter.
-    Declaration,
+    None = 0,    // None should be the smallest value.
+    Block,       // If the order of the rest of these changes, update the
+    Declaration, // 'Reduce' function below.
     Delimited,
-    Loop,
+    LoopNest,
+    LoopSeq,
     Separating,
     FromLeaves,
     Invalid,
@@ -745,7 +752,8 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
         .Case("AS_Block", Association::Block)
         .Case("AS_Declaration", Association::Declaration)
         .Case("AS_Delimited", Association::Delimited)
-        .Case("AS_Loop", Association::Loop)
+        .Case("AS_LoopNest", Association::LoopNest)
+        .Case("AS_LoopSeq", Association::LoopSeq)
         .Case("AS_None", Association::None)
         .Case("AS_Separating", Association::Separating)
         .Case("AS_FromLeaves", Association::FromLeaves)
@@ -776,13 +784,12 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     // Calculate the result using the following rules:
     //   x + x = x
     //   AS_None + x = x
-    //   AS_Block + AS_Loop = AS_Loop
+    //   AS_Block + AS_Loop{Nest|Seq} = AS_Loop{Nest|Seq}
     if (A == Association::None || A == B)
       return B;
-    if (A == Association::Block && B == Association::Loop)
+    if (A == Association::Block &&
+        (B == Association::LoopNest || B == Association::LoopSeq))
       return B;
-    if (A == Association::Loop && B == Association::Block)
-      return A;
     return Association::Invalid;
   };
 
@@ -832,13 +839,9 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
   for (const Record *R : DirLang.getDirectives())
     CompAssocImpl(R, CompAssocImpl); // Updates AsMap.
 
-  OS << '\n';
-
   StringRef Prefix = DirLang.getDirectivePrefix();
-  std::string Qual = getQualifier(DirLang);
 
-  OS << Qual << "Association " << Qual << "getDirectiveAssociation(" << Qual
-     << "Directive Dir) {\n";
+  OS << "constexpr Association getDirectiveAssociation(Directive Dir) {\n";
   OS << "  switch (Dir) {\n";
   for (const Record *R : DirLang.getDirectives()) {
     if (auto F = AsMap.find(R); F != AsMap.end()) {
@@ -847,17 +850,17 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     }
   }
   OS << "  } // switch (Dir)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "  assert(llvm::to_underlying(Dir) >= "
+        "llvm::to_underlying(Directive::First_) &&\n";
+  OS << "         llvm::to_underlying(Dir) <= "
+        "llvm::to_underlying(Directive::Last_) &&\n";
+  OS << "         \"Unexpected directive\");\n";
   OS << "}\n";
 }
 
 static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
                                          raw_ostream &OS) {
-  std::string Qual = getQualifier(DirLang);
-
-  OS << '\n';
-  OS << Qual << "Category " << Qual << "getDirectiveCategory(" << Qual
-     << "Directive Dir) {\n";
+  OS << "constexpr Category getDirectiveCategory(Directive Dir) {\n";
   OS << "  switch (Dir) {\n";
 
   StringRef Prefix = DirLang.getDirectivePrefix();
@@ -869,17 +872,17 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
        << ";\n";
   }
   OS << "  } // switch (Dir)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "  assert(llvm::to_underlying(Dir) >= "
+        "llvm::to_underlying(Directive::First_) &&\n";
+  OS << "         llvm::to_underlying(Dir) <= "
+        "llvm::to_underlying(Directive::Last_) &&\n";
+  OS << "         \"Unexpected directive\");\n";
   OS << "}\n";
 }
 
 static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
                                           raw_ostream &OS) {
-  std::string Qual = getQualifier(DirLang);
-
-  OS << '\n';
-  OS << Qual << "SourceLanguage " << Qual << "getDirectiveLanguages(" << Qual
-     << "Directive D) {\n";
+  OS << "constexpr SourceLanguage getDirectiveLanguages(Directive D) {\n";
   OS << "  switch (D) {\n";
 
   StringRef Prefix = DirLang.getDirectivePrefix();
@@ -898,7 +901,11 @@ static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
     OS << ";\n";
   }
   OS << "  } // switch(D)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "  assert(llvm::to_underlying(D) >= "
+        "llvm::to_underlying(Directive::First_) &&\n";
+  OS << "         llvm::to_underlying(D) <= "
+        "llvm::to_underlying(Directive::Last_) &&\n";
+  OS << "         \"Unexpected directive\");\n";
   OS << "}\n";
 }
 
@@ -1308,6 +1315,17 @@ static void generateClauseClassMacro(const DirectiveLanguage &DirLang,
   OS << "#undef CLAUSE\n";
 }
 
+static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
+                                        raw_ostream &OS) {
+  OS << "// Constexpr functions.\n";
+  OS << "\n";
+  generateGetDirectiveAssociation(DirLang, OS);
+  OS << "\n";
+  generateGetDirectiveCategory(DirLang, OS);
+  OS << "\n";
+  generateGetDirectiveLanguages(DirLang, OS);
+}
+
 // Generate the implemenation for the enumeration in the directive
 // language. This code can be included in library.
 void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
@@ -1341,15 +1359,6 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
 
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   generateIsAllowedClause(DirLang, OS);
-
-  // getDirectiveAssociation(Directive D)
-  generateGetDirectiveAssociation(DirLang, OS);
-
-  // getDirectiveCategory(Directive D)
-  generateGetDirectiveCategory(DirLang, OS);
-
-  // getDirectiveLanguages(Directive D)
-  generateGetDirectiveLanguages(DirLang, OS);
 
   // Leaf table for getLeafConstructs, etc.
   emitLeafTable(DirLang, OS, "LeafConstructTable");

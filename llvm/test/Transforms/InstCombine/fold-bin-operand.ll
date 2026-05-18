@@ -267,7 +267,7 @@ define <4 x float> @h1(i1 %A, <4 x i32> %B) {
 ; CHECK-LABEL: @h1(
 ; CHECK-NEXT:  EntryBlock:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[A:%.*]], <4 x float> splat (float 0x36A0000000000000), <4 x float> [[TMP0]]
+; CHECK-NEXT:    [[BC:%.*]] = select i1 [[A:%.*]], <4 x float> splat (float 1.401300e-45), <4 x float> [[TMP0]]
 ; CHECK-NEXT:    ret <4 x float> [[BC]]
 ;
 EntryBlock:
@@ -292,9 +292,9 @@ EntryBlock:
 define <vscale x 2 x i64> @h3(i1 %A, <vscale x 4 x i32> %B) {
 ; CHECK-LABEL: @h3(
 ; CHECK-NEXT:  EntryBlock:
-; CHECK-NEXT:    [[CF:%.*]] = select i1 [[A:%.*]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[B:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <vscale x 4 x i32> [[CF]] to <vscale x 2 x i64>
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[BC]]
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <vscale x 4 x i32> [[CF:%.*]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[BC1:%.*]] = select i1 [[A:%.*]], <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> [[BC]]
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[BC1]]
 ;
 EntryBlock:
   %cf = select i1 %A, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> %B

@@ -45,6 +45,8 @@ public:
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
+  MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
+
 private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
@@ -75,8 +77,10 @@ private:
                             EVT VT,
                             AMDGPUFunctionArgInfo::PreloadedValue) const;
 
-  SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
+  SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
                                  MVT VT, unsigned Offset) const;
   SDValue lowerImage(SDValue Op, const AMDGPU::ImageDimIntrinsicInfo *Intr,
@@ -128,6 +132,7 @@ private:
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M,
                               SelectionDAG &DAG, ArrayRef<SDValue> Ops,
                               bool IsIntrinsic = false) const;
@@ -185,6 +190,7 @@ private:
   SDValue lowerTrapHsa(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerABSi16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
 
   SDNode *adjustWritemask(MachineSDNode *&N, SelectionDAG &DAG) const;
 
@@ -206,7 +212,7 @@ private:
   SDValue performAndCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performOrCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performXorCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performZeroExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performZeroOrAnyExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSignExtendInRegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performClassCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue getCanonicalConstantFP(SelectionDAG &DAG, const SDLoc &SL, EVT VT,
@@ -214,7 +220,8 @@ private:
   SDValue performFCanonicalizeCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue performFPMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
-                                  SDValue Op0, SDValue Op1) const;
+                                  SDValue Op0, SDValue Op1,
+                                  bool IsKnownNoNaNs) const;
   SDValue performIntMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Src, SDValue MinVal, SDValue MaxVal,
                                    bool Signed) const;
@@ -282,6 +289,11 @@ public:
                                        EVT PtrVT) const override;
 
 private:
+  /// Returns true if the first real instruction in MBB is 8 bytes and could
+  /// be split by a 32-byte fetch window boundary. Used on GFX950 to avoid
+  /// instruction fetch delays.
+  bool needsFetchWindowAlignment(const MachineBasicBlock &MBB) const;
+
   // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
   // the three offsets (voffset, soffset and instoffset) into the SDValue[3]
   // array pointed to by Offsets.
@@ -333,7 +345,7 @@ public:
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &, const CallBase &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 
@@ -556,7 +568,7 @@ public:
                            Register N1) const override;
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
-                       unsigned MaxDepth = 5) const;
+                       SDNodeFlags UserFlags = {}, unsigned MaxDepth = 5) const;
   bool isCanonicalized(Register Reg, const MachineFunction &MF,
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
@@ -565,11 +577,12 @@ public:
   bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
                                     const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
   void emitExpandAtomicAddrSpacePredicate(Instruction *AI) const;
   void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
@@ -585,6 +598,8 @@ public:
   bool requiresUniformRegister(MachineFunction &MF,
                                const Value *V) const override;
   Align getPrefLoopAlignment(MachineLoop *ML) const override;
+  unsigned
+  getMaxPermittedBytesForAlignment(MachineBasicBlock *MBB) const override;
 
   void allocateHSAUserSGPRs(CCState &CCInfo,
                             MachineFunction &MF,

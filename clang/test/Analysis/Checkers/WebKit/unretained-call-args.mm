@@ -385,7 +385,9 @@ namespace call_with_explicit_temporary_obj {
 namespace call_with_adopt_ref {
   void foo() {
     [adoptNS(provide()).get() doWork];
+    [adoptNSNullable(provide()).get() doWork];
     CFArrayAppendValue(adoptCF(provide_cf()).get(), nullptr);
+    CFArrayAppendValue(adoptCFNullable(provide_cf()).get(), nullptr);
     consume_dispatch(adoptOSObject(provide_dispatch()).get());
   }
 }
@@ -625,6 +627,8 @@ void Derived<Traits>::send(typename Traits::MessageType messageType) const
 
 } // namespace template_function
 
+SomeObj *allocObj();
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
@@ -647,6 +651,7 @@ void Derived<Traits>::send(typename Traits::MessageType messageType) const
   [self doWork:__null];
   [self doWork:nil];
   [NSApp run];
+  adoptNS([allocObj() init]);
 }
 
 - (SomeObj *)getSomeObj {

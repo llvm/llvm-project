@@ -117,6 +117,11 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   if (ignoreTKR.test(common::IgnoreTKR::Device)) {
     return true;
   }
+  // A use_device(...) actual is compatible only with a Device dummy or a
+  // host dummy (no CUDA attribute); other attributes (Managed, Unified,
+  // Pinned, ...) require the actual to live in that specific kind of memory.
+  if (y && *y == CUDADataAttr::UseDevice)
+    return !x || *x == CUDADataAttr::Device;
   if (!y && isHostDeviceProcedure) {
     return true;
   }
@@ -132,8 +137,8 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
       y.value_or(CUDADataAttr::Device) == CUDADataAttr::Device) {
     return true;
   } else if (ignoreTKR.test(IgnoreTKR::Managed) &&
-      x.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed &&
-      y.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed) {
+      (!x || *x == CUDADataAttr::Managed || *x == CUDADataAttr::Unified) &&
+      (!y || *y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified)) {
     return true;
   } else if (allowUnifiedMatchingRule) {
     if (!x) { // Dummy argument has no attribute -> host

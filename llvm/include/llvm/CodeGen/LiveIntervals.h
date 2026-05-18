@@ -160,6 +160,12 @@ public:
     return LI;
   }
 
+  LiveInterval &createAndComputeVirtRegInterval(Register Reg, bool &NeedSplit) {
+    LiveInterval &LI = createEmptyInterval(Reg);
+    NeedSplit = computeVirtRegInterval(LI);
+    return LI;
+  }
+
   /// Return an existing interval for \p Reg.
   /// If \p Reg has no interval then this creates a new empty one instead.
   /// Note: does not trigger interval computation.
@@ -413,11 +419,12 @@ public:
   /// Return the live range for register unit \p Unit. It will be computed if
   /// it doesn't exist.
   LiveRange &getRegUnit(MCRegUnit Unit) {
-    LiveRange *LR = RegUnitRanges[Unit];
+    LiveRange *LR = RegUnitRanges[static_cast<unsigned>(Unit)];
     if (!LR) {
       // Compute missing ranges on demand.
       // Use segment set to speed-up initial computation of the live range.
-      RegUnitRanges[Unit] = LR = new LiveRange(UseSegmentSetForPhysRegs);
+      RegUnitRanges[static_cast<unsigned>(Unit)] = LR =
+          new LiveRange(UseSegmentSetForPhysRegs);
       computeRegUnitRange(*LR, Unit);
     }
     return *LR;
@@ -425,17 +432,19 @@ public:
 
   /// Return the live range for register unit \p Unit if it has already been
   /// computed, or nullptr if it hasn't been computed yet.
-  LiveRange *getCachedRegUnit(MCRegUnit Unit) { return RegUnitRanges[Unit]; }
+  LiveRange *getCachedRegUnit(MCRegUnit Unit) {
+    return RegUnitRanges[static_cast<unsigned>(Unit)];
+  }
 
   const LiveRange *getCachedRegUnit(MCRegUnit Unit) const {
-    return RegUnitRanges[Unit];
+    return RegUnitRanges[static_cast<unsigned>(Unit)];
   }
 
   /// Remove computed live range for register unit \p Unit. Subsequent uses
   /// should rely on on-demand recomputation.
   void removeRegUnit(MCRegUnit Unit) {
-    delete RegUnitRanges[Unit];
-    RegUnitRanges[Unit] = nullptr;
+    delete RegUnitRanges[static_cast<unsigned>(Unit)];
+    RegUnitRanges[static_cast<unsigned>(Unit)] = nullptr;
   }
 
   /// Remove associated live ranges for the register units associated with \p
@@ -519,14 +528,13 @@ public:
 };
 
 class LiveIntervalsPrinterPass
-    : public PassInfoMixin<LiveIntervalsPrinterPass> {
+    : public RequiredPassInfoMixin<LiveIntervalsPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit LiveIntervalsPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI LiveIntervalsWrapperPass : public MachineFunctionPass {

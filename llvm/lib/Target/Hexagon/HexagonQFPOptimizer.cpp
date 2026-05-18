@@ -112,11 +112,6 @@ const std::map<unsigned short, unsigned short> QFPInstMap{
     {Hexagon::V6_vneg_qf16_hf, Hexagon::V6_vneg_qf16_qf16}};
 } // namespace
 
-namespace llvm {
-FunctionPass *createHexagonQFPOptimizer();
-void initializeHexagonQFPOptimizerPass(PassRegistry &);
-} // namespace llvm
-
 namespace {
 struct HexagonQFPOptimizer : public MachineFunctionPass {
 public:
@@ -169,7 +164,7 @@ bool HexagonQFPOptimizer::optimizeQfp(MachineInstr *MI,
 bool HexagonQFPOptimizer::optimizeQfpOneOp(MachineInstr *MI,
                                            MachineBasicBlock *MBB) {
 
-  unsigned Op0F = 0;
+  RegState Op0F = {};
   auto It = QFPInstMap.find(MI->getOpcode());
   if (It == QFPInstMap.end())
     return false;
@@ -215,8 +210,8 @@ bool HexagonQFPOptimizer::optimizeQfpOneOp(MachineInstr *MI,
 bool HexagonQFPOptimizer::optimizeQfpTwoOp(MachineInstr *MI,
                                            MachineBasicBlock *MBB) {
 
-  unsigned Op0F = 0;
-  unsigned Op1F = 0;
+  RegState Op0F = {};
+  RegState Op1F = {};
   auto It = QFPInstMap.find(MI->getOpcode());
   if (It == QFPInstMap.end())
     return false;

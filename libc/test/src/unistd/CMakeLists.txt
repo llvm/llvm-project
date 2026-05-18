@@ -314,6 +314,7 @@ add_libc_unittest(
     rmdir_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
     libc.src.errno.errno
     libc.src.sys.stat.mkdir
     libc.src.unistd.rmdir
@@ -474,6 +475,17 @@ add_libc_unittest(
   DEPENDS
     libc.src.unistd.gethostname
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
+  getpagesize_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    getpagesize_test.cpp
+  DEPENDS
+    libc.src.unistd.getpagesize
     libc.test.UnitTest.ErrnoCheckingTest
 )
 

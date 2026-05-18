@@ -288,6 +288,23 @@ TEST(MachineOperandTest, PrintGlobalAddress) {
   }
 }
 
+TEST(MachineOperandTest, PrintLaneMask) {
+  // Create a MachineOperand with a lanemask and print it.
+  LaneBitmask LaneMask = LaneBitmask(12);
+  MachineOperand MO = MachineOperand::CreateLaneMask(LaneMask);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isLaneMask());
+  ASSERT_EQ(MO.getLaneMask(), LaneMask);
+
+  std::string str;
+  // Print a MachineOperand that is lanemask as in HEX representation.
+  raw_string_ostream OS(str);
+  MO.print(OS, /*TRI=*/nullptr);
+  ASSERT_EQ(str, "lanemask(0x000000000000000C)");
+}
+
 TEST(MachineOperandTest, PrintRegisterLiveOut) {
   // Create a MachineOperand with a register live out list and print it.
   uint32_t Mask = 0;
@@ -332,9 +349,13 @@ TEST(MachineOperandTest, PrintMetadata) {
 }
 
 TEST(MachineOperandTest, PrintMCSymbol) {
-  MCAsmInfo MAI;
+  MCTargetOptions MCOptions;
+  MCAsmInfo MAI(MCOptions);
+  MCRegisterInfo MRI;
   Triple T = Triple("unknown-unknown-unknown");
-  MCContext Ctx(T, &MAI, /*MRI=*/nullptr, /*MSTI=*/nullptr);
+  MCSubtargetInfo STI(T, "", "", "", {}, {}, {}, nullptr, nullptr, nullptr,
+                      nullptr, nullptr, nullptr);
+  MCContext Ctx(T, MAI, MRI, STI);
   MCSymbol *Sym = Ctx.getOrCreateSymbol("foo");
 
   // Create a MachineOperand with a metadata and print it.

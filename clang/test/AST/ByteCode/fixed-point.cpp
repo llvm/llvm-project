@@ -12,12 +12,18 @@ static_assert(1.0k != 1); // both-error {{failed due to requirement '1.0k != 1'}
 static_assert(-12.0k == -(-(-12.0k)));
 
 constexpr _Accum acc = (0.5r, 6.9k);
+constexpr _Accum acc2 = (-1e+00r, 2.3);
 
 /// Zero-init.
 constexpr _Accum A{};
 static_assert(A == 0.0k);
 static_assert(A == 0);
 static_assert(!A);
+
+#ifdef __SIZEOF_INT128__
+constexpr __int128 i128 = 42;
+static_assert(i128 == 42.0k, "");
+#endif
 
 constexpr bool toBool() {
   if (A)

@@ -363,6 +363,12 @@ MLIR_CAPI_EXPORTED bool mlirLocationIsAName(MlirLocation location);
 /// Creates a location with unknown position owned by the given context.
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationUnknownGet(MlirContext context);
 
+/// TypeID Getter for Unknown.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLocationUnknownGetTypeID(void);
+
+/// Checks whether the given location is an Unknown.
+MLIR_CAPI_EXPORTED bool mlirLocationIsAUnknown(MlirLocation location);
+
 /// Gets the context that a location was created with.
 MLIR_CAPI_EXPORTED MlirContext mlirLocationGetContext(MlirLocation location);
 
@@ -631,6 +637,11 @@ MLIR_CAPI_EXPORTED size_t mlirOperationHashValue(MlirOperation op);
 /// Gets the context this operation is associated with
 MLIR_CAPI_EXPORTED MlirContext mlirOperationGetContext(MlirOperation op);
 
+/// Checks if the operation name has a trait identified by the given type id.
+MLIR_CAPI_EXPORTED bool mlirOperationNameHasTrait(MlirStringRef opName,
+                                                  MlirTypeID traitTypeID,
+                                                  MlirContext context);
+
 /// Gets the location of the operation.
 MLIR_CAPI_EXPORTED MlirLocation mlirOperationGetLocation(MlirOperation op);
 
@@ -672,6 +683,10 @@ MLIR_CAPI_EXPORTED intptr_t mlirOperationGetNumOperands(MlirOperation op);
 /// Returns `pos`-th operand of the operation.
 MLIR_CAPI_EXPORTED MlirValue mlirOperationGetOperand(MlirOperation op,
                                                      intptr_t pos);
+
+/// Returns `pos`-th OpOperand of the operation.
+MLIR_CAPI_EXPORTED MlirOpOperand mlirOperationGetOpOperand(MlirOperation op,
+                                                           intptr_t pos);
 
 /// Sets the `pos`-th operand of the operation.
 MLIR_CAPI_EXPORTED void mlirOperationSetOperand(MlirOperation op, intptr_t pos,
@@ -857,6 +872,10 @@ typedef MlirWalkResult (*MlirOperationWalkCallback)(MlirOperation,
 MLIR_CAPI_EXPORTED
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder);
+
+/// Replace uses of 'of' value with the 'with' value inside the 'op' operation.
+MLIR_CAPI_EXPORTED void
+mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue of, MlirValue with);
 
 //===----------------------------------------------------------------------===//
 // Region API.
@@ -1050,6 +1069,10 @@ MLIR_CAPI_EXPORTED intptr_t mlirBlockArgumentGetArgNumber(MlirValue value);
 /// Sets the type of the block argument to the given type.
 MLIR_CAPI_EXPORTED void mlirBlockArgumentSetType(MlirValue value,
                                                  MlirType type);
+
+/// Sets the location of the block argument to the given location.
+MLIR_CAPI_EXPORTED void mlirBlockArgumentSetLocation(MlirValue value,
+                                                     MlirLocation loc);
 
 /// Returns an operation that produced this value as its result. Asserts if the
 /// value is not an op result.

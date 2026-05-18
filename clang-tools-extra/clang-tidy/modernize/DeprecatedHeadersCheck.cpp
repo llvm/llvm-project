@@ -135,7 +135,6 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
     const LangOptions &LangOpts, const SourceManager &SM, bool CheckHeaderFile)
     : IncludesToBeProcessed(IncludesToBeProcessed), SM(SM),
       CheckHeaderFile(CheckHeaderFile) {
-
   static constexpr std::pair<StringRef, StringRef> CXX98Headers[] = {
       {"assert.h", "cassert"}, {"complex.h", "complex"},
       {"ctype.h", "cctype"},   {"errno.h", "cerrno"},
@@ -167,7 +166,6 @@ void IncludeModernizePPCallbacks::InclusionDirective(
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
     bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
-
   // If we don't want to warn for non-main file reports and this is one, skip
   // it.
   if (!CheckHeaderFile && !SM.isInMainFile(HashLoc))
@@ -175,6 +173,10 @@ void IncludeModernizePPCallbacks::InclusionDirective(
 
   // Ignore system headers.
   if (SM.isInSystemHeader(HashLoc))
+    return;
+
+  // Skip headers that happen to use the same name as a standard library header.
+  if (!File || !SrcMgr::isSystem(FileType))
     return;
 
   // FIXME: Take care of library symbols from the global namespace.

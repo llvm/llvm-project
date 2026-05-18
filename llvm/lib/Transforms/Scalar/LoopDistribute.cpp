@@ -218,7 +218,7 @@ public:
           if (!VMap.empty())
             NewInst = cast<Instruction>(VMap[NewInst]);
 
-          assert(!isa<BranchInst>(NewInst) &&
+          assert((!isa<UncondBrInst, CondBrInst>(NewInst)) &&
                  "Branches are marked used early on");
           Unused.push_back(NewInst);
         }
@@ -520,7 +520,7 @@ public:
         // -1 means belonging to multiple partitions.
         else if (Partition == -1)
           break;
-        else if (Partition != (int)ThisPartition)
+        else if (Partition != ThisPartition)
           Partition = -1;
       }
       assert(Partition != -2 && "Pointer not belonging to any partition");

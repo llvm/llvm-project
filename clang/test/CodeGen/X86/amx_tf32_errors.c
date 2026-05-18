@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown \
-// RUN: -target-feature +amx-tf32 -target-feature +amx-transpose -verify
+// RUN: -target-feature +amx-tf32 -verify
 
 #include <immintrin.h>
 #include <stddef.h>

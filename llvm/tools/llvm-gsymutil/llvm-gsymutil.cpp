@@ -9,7 +9,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
@@ -38,10 +37,15 @@
 #include <system_error>
 #include <vector>
 
+#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/DwarfTransformer.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/DebugInfo/GSYM/GsymCreatorV1.h"
+#include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
+#include "llvm/DebugInfo/GSYM/Header.h"
+#include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
@@ -92,6 +96,7 @@ static std::vector<std::string> ArchFilters;
 static std::string OutputFilename;
 static std::string JsonSummaryFile;
 static bool Verify;
+static bool BenchmarkReader;
 static unsigned NumThreads;
 static uint64_t SegmentSize;
 static bool Quiet;
@@ -101,6 +106,8 @@ static bool UseMergedFunctions = false;
 static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 static std::vector<std::string> MergedFunctionsFilters;
+// Default output version. Can be overridden by --output-version.
+static uint32_t OutputVersion = Header::getVersion();
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -150,6 +157,7 @@ static void parseArgs(int argc, char **argv) {
     JsonSummaryFile = A->getValue();
 
   Verify = Args.hasArg(OPT_verify);
+  BenchmarkReader = Args.hasArg(OPT_benchmark_reader);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_num_threads_EQ)) {
     StringRef S{A->getValue()};
@@ -211,6 +219,18 @@ static void parseArgs(int argc, char **argv) {
           << ": --merged-functions-filter requires --merged-functions\n";
       std::exit(1);
     }
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_output_version_EQ)) {
+    StringRef Val = A->getValue();
+    uint32_t Version;
+    if (Val.getAsInteger(10, Version) || (Version != Header::getVersion() &&
+                                          Version != HeaderV2::getVersion())) {
+      llvm::errs() << ToolName << ": for the --output-version option: '" << Val
+                   << "' is invalid. Use '1' or '2'.\n";
+      std::exit(1);
+    }
+    OutputVersion = Version;
   }
 }
 
@@ -348,7 +368,19 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   auto ThreadCount =
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
 
-  GsymCreator Gsym(Quiet);
+  std::unique_ptr<GsymCreator> GsymPtr;
+  switch (OutputVersion) {
+  case Header::getVersion():
+    GsymPtr = std::make_unique<GsymCreatorV1>(Quiet);
+    break;
+  case HeaderV2::getVersion():
+    GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
+    break;
+  default:
+    return createStringError(std::errc::invalid_argument,
+                             "invalid --output-version option");
+  }
+  GsymCreator &Gsym = *GsymPtr;
 
   // See if we can figure out the base address for a given object file, and if
   // we can, then set the base address to use to this value. This will ease
@@ -597,6 +629,25 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
   }
 }
 
+static llvm::Error benchmarkReader(StringRef GSYMPath) {
+  auto Gsym = GsymReader::openFile(GSYMPath);
+  if (!Gsym)
+    return Gsym.takeError();
+  auto NumAddrs = (*Gsym)->getNumAddresses();
+  for (uint32_t I = 0; I < NumAddrs; ++I) {
+    auto Addr = (*Gsym)->getAddress(I);
+    if (!Addr)
+      return createStringError(std::errc::invalid_argument,
+                               "failed to extract address[%u]", I);
+    auto LR = (*Gsym)->lookup(*Addr);
+    if (!LR)
+      return LR.takeError();
+  }
+  outs() << "Benchmarked " << NumAddrs << " lookups in \"" << GSYMPath
+         << "\"\n";
+  return Error::success();
+}
+
 int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -608,6 +659,13 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
   parseArgs(argc, argv);
 
   raw_ostream &OS = outs();
+
+  if (BenchmarkReader) {
+    for (const auto &GSYMPath : InputFilenames)
+      if (auto Err = benchmarkReader(GSYMPath))
+        error("Benchmark failed: ", std::move(Err));
+    return EXIT_SUCCESS;
+  }
 
   OutputAggregator Aggregation(&OS);
   if (!ConvertFilename.empty()) {
@@ -661,7 +719,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
     std::string InputLine;
     std::string CurrentGSYMPath;
-    std::optional<Expected<GsymReader>> CurrentGsym;
+    std::unique_ptr<GsymReader> CurrentGsym;
 
     while (std::getline(std::cin, InputLine)) {
       // Strip newline characters.
@@ -674,9 +732,10 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           llvm::StringRef{StrippedInputLine}.split(' ');
 
       if (GSYMPath != CurrentGSYMPath) {
-        CurrentGsym = GsymReader::openFile(GSYMPath);
-        if (!*CurrentGsym)
-          error(GSYMPath, CurrentGsym->takeError());
+        auto GsymOrErr = GsymReader::openFile(GSYMPath);
+        if (!GsymOrErr)
+          error(GSYMPath, GsymOrErr.takeError());
+        CurrentGsym = std::move(*GsymOrErr);
         CurrentGSYMPath = GSYMPath;
       }
 
@@ -687,7 +746,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
         return 1;
       }
 
-      doLookup(**CurrentGsym, Addr, OS);
+      doLookup(*CurrentGsym, Addr, OS);
 
       OS << "\n";
       OS.flush();
@@ -703,14 +762,14 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       error(GSYMPath, Gsym.takeError());
 
     if (LookupAddresses.empty()) {
-      Gsym->dump(outs());
+      (*Gsym)->dump(outs());
       continue;
     }
 
     // Lookup an address in a GSYM file and print any matches.
     OS << "Looking up addresses in \"" << GSYMPath << "\":\n";
     for (auto Addr : LookupAddresses) {
-      doLookup(*Gsym, Addr, OS);
+      doLookup(**Gsym, Addr, OS);
     }
   }
   return EXIT_SUCCESS;
