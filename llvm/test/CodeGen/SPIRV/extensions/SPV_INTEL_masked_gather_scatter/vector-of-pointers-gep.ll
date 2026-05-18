@@ -18,15 +18,16 @@
 
 ; The <1 x ptr> GEP collapses to a single scalar OpPtrAccessChain; no
 ; vector-of-pointers value is materialized.
-; CHECK: OpFunction
-; CHECK: %[[#P1:]] = OpFunctionParameter %[[#PTR]]
-; CHECK: %[[#OUT1:]] = OpFunctionParameter %[[#PTR]]
-; CHECK: OpLabel
+; CHECK:      OpFunction
+; CHECK-NEXT: %[[#P1:]] = OpFunctionParameter %[[#PTR]]
+; CHECK-NEXT: %[[#OUT1:]] = OpFunctionParameter %[[#PTR]]
+; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: %[[#GEP1:]] = OpPtrAccessChain %[[#PTR]] %[[#P1]] %[[#FIVE]]
 ; CHECK-NEXT: %[[#VAL1:]] = OpLoad %[[#I32]] %[[#GEP1]]
 ; CHECK-NEXT: OpStore %[[#OUT1]] %[[#VAL1]]
+; CHECK-NEXT: OpReturn
+; CHECK-NEXT: OpFunctionEnd
 ; CHECK-NOT: OpCompositeInsert
-; CHECK: OpFunctionEnd
 define spir_kernel void @test_vector_gep_v1(ptr addrspace(1) %p, ptr addrspace(1) %out) {
   %gep = getelementptr i32, ptr addrspace(1) %p, <1 x i64> <i64 5>
   %elem = extractelement <1 x ptr addrspace(1)> %gep, i32 0
@@ -35,10 +36,10 @@ define spir_kernel void @test_vector_gep_v1(ptr addrspace(1) %p, ptr addrspace(1
   ret void
 }
 
-; CHECK: OpFunction
-; CHECK: %[[#P2:]] = OpFunctionParameter %[[#PTR]]
-; CHECK: %[[#OUT2:]] = OpFunctionParameter %[[#PTR]]
-; CHECK: OpLabel
+; CHECK:      OpFunction
+; CHECK-NEXT: %[[#P2:]] = OpFunctionParameter %[[#PTR]]
+; CHECK-NEXT: %[[#OUT2:]] = OpFunctionParameter %[[#PTR]]
+; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: %[[#IDX2_0:]] = OpCompositeExtract %[[#I64]] %[[#NULL2]] 0
 ; CHECK-NEXT: %[[#GEP2_0:]] = OpPtrAccessChain %[[#PTR]] %[[#P2]] %[[#IDX2_0]]
 ; CHECK-NEXT: %[[#INS2_0:]] = OpCompositeInsert %[[#VPTR2]] %[[#GEP2_0]] %[[#UNDEF2]] 0
@@ -48,7 +49,8 @@ define spir_kernel void @test_vector_gep_v1(ptr addrspace(1) %p, ptr addrspace(1
 ; CHECK-NEXT: %[[#ELT2:]] = OpCompositeExtract %[[#PTR]] %[[#INS2_1]] 0
 ; CHECK-NEXT: %[[#VAL2:]] = OpLoad %[[#I32]] %[[#ELT2]]
 ; CHECK-NEXT: OpStore %[[#OUT2]] %[[#VAL2]]
-; CHECK: OpFunctionEnd
+; CHECK-NEXT: OpReturn
+; CHECK-NEXT: OpFunctionEnd
 define spir_kernel void @test_vector_gep_v2(ptr addrspace(1) %p, ptr addrspace(1) %out) {
   %gep = getelementptr i32, ptr addrspace(1) %p, <2 x i64> zeroinitializer
   %elem = extractelement <2 x ptr addrspace(1)> %gep, i32 0
@@ -57,10 +59,10 @@ define spir_kernel void @test_vector_gep_v2(ptr addrspace(1) %p, ptr addrspace(1
   ret void
 }
 
-; CHECK: OpFunction
-; CHECK: %[[#P4:]] = OpFunctionParameter %[[#PTR]]
-; CHECK: %[[#OUT4:]] = OpFunctionParameter %[[#PTR]]
-; CHECK: OpLabel
+; CHECK:      OpFunction
+; CHECK-NEXT: %[[#P4:]] = OpFunctionParameter %[[#PTR]]
+; CHECK-NEXT: %[[#OUT4:]] = OpFunctionParameter %[[#PTR]]
+; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: %[[#IDX4_0:]] = OpCompositeExtract %[[#I64]] %[[#NULL4]] 0
 ; CHECK-NEXT: %[[#GEP4_0:]] = OpPtrAccessChain %[[#PTR]] %[[#P4]] %[[#IDX4_0]]
 ; CHECK-NEXT: %[[#INS4_0:]] = OpCompositeInsert %[[#VPTR4]] %[[#GEP4_0]] %[[#UNDEF4]] 0
@@ -76,7 +78,8 @@ define spir_kernel void @test_vector_gep_v2(ptr addrspace(1) %p, ptr addrspace(1
 ; CHECK-NEXT: %[[#ELT4:]] = OpCompositeExtract %[[#PTR]] %[[#INS4_3]] 0
 ; CHECK-NEXT: %[[#VAL4:]] = OpLoad %[[#I32]] %[[#ELT4]]
 ; CHECK-NEXT: OpStore %[[#OUT4]] %[[#VAL4]]
-; CHECK: OpFunctionEnd
+; CHECK-NEXT: OpReturn
+; CHECK-NEXT: OpFunctionEnd
 define spir_kernel void @test_vector_gep_v4(ptr addrspace(1) %p, ptr addrspace(1) %out) {
   %gep = getelementptr i32, ptr addrspace(1) %p, <4 x i64> zeroinitializer
   %elem = extractelement <4 x ptr addrspace(1)> %gep, i32 0
@@ -85,10 +88,10 @@ define spir_kernel void @test_vector_gep_v4(ptr addrspace(1) %p, ptr addrspace(1
   ret void
 }
 
-; CHECK: OpFunction
-; CHECK: %[[#PV:]] = OpFunctionParameter %[[#VPTR2]]
-; CHECK: %[[#OUTV:]] = OpFunctionParameter %[[#PTR]]
-; CHECK: OpLabel
+; CHECK:      OpFunction
+; CHECK-NEXT: %[[#PV:]] = OpFunctionParameter %[[#VPTR2]]
+; CHECK-NEXT: %[[#OUTV:]] = OpFunctionParameter %[[#PTR]]
+; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: %[[#EXPV_0:]] = OpCompositeExtract %[[#PTR]] %[[#PV]] 0
 ; CHECK-NEXT: %[[#GEPV_0:]] = OpPtrAccessChain %[[#PTR]] %[[#EXPV_0]] %[[#ONE]]
 ; CHECK-NEXT: %[[#INSV_0:]] = OpCompositeInsert %[[#VPTR2]] %[[#GEPV_0]] %[[#UNDEF2]] 0
@@ -98,7 +101,8 @@ define spir_kernel void @test_vector_gep_v4(ptr addrspace(1) %p, ptr addrspace(1
 ; CHECK-NEXT: %[[#ELTV:]] = OpCompositeExtract %[[#PTR]] %[[#INSV_1]] 0
 ; CHECK-NEXT: %[[#VALV:]] = OpLoad %[[#I32]] %[[#ELTV]]
 ; CHECK-NEXT: OpStore %[[#OUTV]] %[[#VALV]]
-; CHECK: OpFunctionEnd
+; CHECK-NEXT: OpReturn
+; CHECK-NEXT: OpFunctionEnd
 define spir_kernel void @test_vector_gep_vec_ptr(<2 x ptr addrspace(1)> %ptrs, ptr addrspace(1) %out) {
   %gep = getelementptr i32, <2 x ptr addrspace(1)> %ptrs, <2 x i64> <i64 1, i64 2>
   %elem = extractelement <2 x ptr addrspace(1)> %gep, i32 0
