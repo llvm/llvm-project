@@ -26,6 +26,50 @@ define i1 @test_pass_et_commuted(i32 %x0, i32 %x1) {
   ret i1 %op
 }
 
+define <2 x i1> @test_pass_et_vec_splat(<2 x i8> %x0, <2 x i8> %x1) {
+; CHECK-LABEL: define <2 x i1> @test_pass_et_vec_splat(
+; CHECK-SAME: <2 x i8> [[X0:%.*]], <2 x i8> [[X1:%.*]]) {
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %not.x0 = xor <2 x i8> %x0, <i8 -1, i8 -1>
+  %cmp0 = icmp ule <2 x i8> %x1, %not.x0
+  %not.x1 = xor <2 x i8> %x1, <i8 -1, i8 -1>
+  %cmp1 = icmp ugt <2 x i8> %x0, %not.x1
+  %op = and <2 x i1> %cmp0, %cmp1
+  ret <2 x i1> %op
+}
+
+define <2 x i1> @test_pass_et_vec_splat_poison(<2 x i8> %x0, <2 x i8> %x1) {
+; CHECK-LABEL: define <2 x i1> @test_pass_et_vec_splat_poison(
+; CHECK-SAME: <2 x i8> [[X0:%.*]], <2 x i8> [[X1:%.*]]) {
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %not.x0 = xor <2 x i8> %x0, <i8 -1, i8 poison>
+  %cmp0 = icmp ule <2 x i8> %x1, %not.x0
+  %not.x1 = xor <2 x i8> %x1, <i8 -1, i8 poison>
+  %cmp1 = icmp ugt <2 x i8> %x0, %not.x1
+  %op = and <2 x i1> %cmp0, %cmp1
+  ret <2 x i1> %op
+}
+
+define <2 x i1> @test_pass_et_vec_non_splat(<2 x i8> %x0, <2 x i8> %x1) {
+; CHECK-LABEL: define <2 x i1> @test_pass_et_vec_non_splat(
+; CHECK-SAME: <2 x i8> [[X0:%.*]], <2 x i8> [[X1:%.*]]) {
+; CHECK-NEXT:    [[NOT_X0:%.*]] = xor <2 x i8> [[X0]], <i8 -1, i8 -2>
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ule <2 x i8> [[X1]], [[NOT_X0]]
+; CHECK-NEXT:    [[NOT_X1:%.*]] = xor <2 x i8> [[X1]], <i8 -1, i8 -2>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i8> [[X0]], [[NOT_X1]]
+; CHECK-NEXT:    [[OP:%.*]] = and <2 x i1> [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[OP]]
+;
+  %not.x0 = xor <2 x i8> %x0, <i8 -1, i8 -2>
+  %cmp0 = icmp ule <2 x i8> %x1, %not.x0
+  %not.x1 = xor <2 x i8> %x1, <i8 -1, i8 -2>
+  %cmp1 = icmp ugt <2 x i8> %x0, %not.x1
+  %op = and <2 x i1> %cmp0, %cmp1
+  ret <2 x i1> %op
+}
+
 define i1 @test_pass_signed(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: define i1 @test_pass_signed(
 ; CHECK-SAME: i32 [[X0:%.*]], i32 [[X1:%.*]]) {
