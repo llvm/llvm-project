@@ -40,8 +40,8 @@ class WritableBinaryStream;
 }
 
 PDBFileBuilder::PDBFileBuilder(BumpPtrAllocator &Allocator)
-    : Allocator(Allocator), InjectedSourceHashTraits(*Strings),
-      InjectedSourceTable(2) {}
+    : Allocator(Allocator), Strings(std::make_unique<PDBStringTableBuilder>()),
+      InjectedSourceHashTraits(*Strings), InjectedSourceTable(2) {}
 
 PDBFileBuilder::~PDBFileBuilder() = default;
 
