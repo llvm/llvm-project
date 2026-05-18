@@ -131,9 +131,10 @@ define i32 @lzcnt32_no_fold_var_cmp(ptr %p0, i32 %a1, i32 %a2) {
 define i32 @nofold_load_with_intervening_store(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: nofold_load_with_intervening_store:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; CHECK-NEXT:    movq %rax, (%rdi)
-; CHECK-NEXT:    cmpq $2, (%rdi)
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; CHECK-NEXT:    movq %rcx, (%rdi)
+; CHECK-NEXT:    cmpq $2, %rax
 ; CHECK-NEXT:    setge (%rsi)
 ; CHECK-NEXT:    jl .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %taken

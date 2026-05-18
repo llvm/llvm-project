@@ -969,7 +969,12 @@ bool PeepholeOptimizer::optimizeCmpInstr(
     MachineInstr *FlagProducer = MRI->use_nodbg_begin(SrcReg)->getParent();
     MachineInstr *LoadMI = MRI->getVRegDef(SrcReg);
     if (LocalMIs.count(FlagProducer) && LoadMI && LoadMI->canFoldAsLoad() &&
-        LoadMI->mayLoad() && LocalMIs.count(LoadMI))
+        LoadMI->mayLoad() && LocalMIs.count(LoadMI) &&
+        // No store between LoadMI and FlagProducer that could change the value.
+        llvm::none_of(
+            make_range(std::next(LoadMI->getIterator()),
+                       FlagProducer->getIterator()),
+            [](const MachineInstr &I) { return I.isLoadFoldBarrier(); }))
       foldLoadInto(MF, *FlagProducer, SrcReg, LocalMIs);
   }
 
