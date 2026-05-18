@@ -582,28 +582,24 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         %[[VAL_45:.*]] = getelementptr %[[VAL_18]], ptr %[[VAL_43]], i32 0, i32 0
 // CHECK:         %[[VAL_46:.*]] = call i64 @__tgt_mapper_num_components(ptr %[[VAL_37]])
 // CHECK:         %[[VAL_47:.*]] = shl i64 %[[VAL_46]], 48
-// CHECK:         %[[VAL_48:.*]] = add nuw i64 3, %[[VAL_47]]
 // CHECK:         %[[VAL_49:.*]] = and i64 %[[VAL_22]], 3
 // CHECK:         %[[VAL_50:.*]] = icmp eq i64 %[[VAL_49]], 0
 // CHECK:         br i1 %[[VAL_50]], label %[[VAL_51:.*]], label %[[VAL_52:.*]]
 // CHECK:       omp.type.alloc:                                   ; preds = %[[VAL_41]]
-// CHECK:         %[[VAL_53:.*]] = and i64 %[[VAL_48]], -4
 // CHECK:         br label %[[VAL_42]]
 // CHECK:       omp.type.alloc.else:                              ; preds = %[[VAL_41]]
 // CHECK:         %[[VAL_54:.*]] = icmp eq i64 %[[VAL_49]], 1
 // CHECK:         br i1 %[[VAL_54]], label %[[VAL_55:.*]], label %[[VAL_56:.*]]
 // CHECK:       omp.type.to:                                      ; preds = %[[VAL_52]]
-// CHECK:         %[[VAL_57:.*]] = and i64 %[[VAL_48]], -3
 // CHECK:         br label %[[VAL_42]]
 // CHECK:       omp.type.to.else:                                 ; preds = %[[VAL_52]]
 // CHECK:         %[[VAL_58:.*]] = icmp eq i64 %[[VAL_49]], 2
 // CHECK:         br i1 %[[VAL_58]], label %[[VAL_59:.*]], label %[[VAL_42]]
 // CHECK:       omp.type.from:                                    ; preds = %[[VAL_56]]
-// CHECK:         %[[VAL_60:.*]] = and i64 %[[VAL_48]], -2
 // CHECK:         br label %[[VAL_42]]
 // CHECK:       omp.type.end:                                     ; preds = %[[VAL_59]], %[[VAL_56]], %[[VAL_55]], %[[VAL_51]]
-// CHECK:         %[[VAL_61:.*]] = phi i64 [ %[[VAL_53]], %[[VAL_51]] ], [ %[[VAL_57]], %[[VAL_55]] ], [ %[[VAL_60]], %[[VAL_59]] ], [ %[[VAL_48]], %[[VAL_56]] ]
-// CHECK:         call void @__tgt_push_mapper_component(ptr %[[VAL_37]], ptr %[[VAL_43]], ptr %[[VAL_45]], i64 4, i64 %[[VAL_61]], ptr @2)
+// CHECK:         %[[VAL_61:.*]] = phi i64 [ 0, %[[VAL_51]] ], [ 1, %[[VAL_55]] ], [ 2, %[[VAL_59]] ], [ 3, %[[VAL_56]] ]
+// CHECK:         call void @__tgt_push_mapper_component(ptr %[[VAL_37]], ptr %[[VAL_45]], ptr %[[VAL_45]], i64 4, i64 %[[VAL_61]], ptr @2)
 // CHECK:         %[[VAL_44]] = getelementptr %[[VAL_18]], ptr %[[VAL_43]], i32 1
 // CHECK:         %[[VAL_62:.*]] = icmp eq ptr %[[VAL_44]], %[[VAL_17]]
 // CHECK:         br i1 %[[VAL_62]], label %[[VAL_63:.*]], label %[[VAL_41]]

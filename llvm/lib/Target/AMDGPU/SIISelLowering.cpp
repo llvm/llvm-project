@@ -885,9 +885,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
 
     if (Subtarget->hasBF16PackedInsts()) {
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMAXNUM, ISD::FMINNUM,
+                          ISD::FMA, ISD::FNEG, ISD::FABS, ISD::FCANONICALIZE},
+                         MVT::v2bf16, Legal);
+
       for (MVT VT : {MVT::v4bf16, MVT::v8bf16, MVT::v16bf16, MVT::v32bf16})
         // Split vector operations.
-        setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
+        setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE,
+                            ISD::FNEG, ISD::FABS},
                            VT, Custom);
     }
 
@@ -923,7 +928,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);
 
-  if (Subtarget->hasVectorMulU64())
+  if (Subtarget->hasVMulU64Inst())
     setOperationAction(ISD::MUL, MVT::i64, Legal);
   else if (Subtarget->hasScalarSMulU64())
     setOperationAction(ISD::MUL, MVT::i64, Custom);
@@ -997,12 +1002,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasBF16ConversionInsts()) {
     setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
-  }
-
-  if (Subtarget->hasBF16PackedInsts()) {
-    setOperationAction(
-        {ISD::FADD, ISD::FMUL, ISD::FMINNUM, ISD::FMAXNUM, ISD::FMA},
-        MVT::v2bf16, Legal);
   }
 
   if (Subtarget->hasBF16TransInsts()) {
@@ -7861,6 +7860,10 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                       IID == Intrinsic::amdgcn_permlanex16;
   bool IsSetInactive = IID == Intrinsic::amdgcn_set_inactive ||
                        IID == Intrinsic::amdgcn_set_inactive_chain_arg;
+  bool IsPermlaneShuffle = IID == Intrinsic::amdgcn_permlane_bcast ||
+                           IID == Intrinsic::amdgcn_permlane_up ||
+                           IID == Intrinsic::amdgcn_permlane_down ||
+                           IID == Intrinsic::amdgcn_permlane_xor;
   SDLoc SL(N);
   MVT IntVT = MVT::getIntegerVT(ValSize);
   const GCNSubtarget *ST = TLI.getSubtarget();
@@ -7882,6 +7885,10 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
       Operands.push_back(N->getOperand(4));
       [[fallthrough]];
     case Intrinsic::amdgcn_writelane:
+    case Intrinsic::amdgcn_permlane_bcast:
+    case Intrinsic::amdgcn_permlane_up:
+    case Intrinsic::amdgcn_permlane_down:
+    case Intrinsic::amdgcn_permlane_xor:
       Operands.push_back(Src2);
       [[fallthrough]];
     case Intrinsic::amdgcn_readlane:
@@ -7915,10 +7922,12 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   SDValue Src1, Src2;
   if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
       IID == Intrinsic::amdgcn_mov_dpp8 ||
-      IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16) {
+      IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16 ||
+      IsPermlaneShuffle) {
     Src1 = N->getOperand(2);
     if (IID == Intrinsic::amdgcn_writelane ||
-        IID == Intrinsic::amdgcn_update_dpp || IsPermLane16)
+        IID == Intrinsic::amdgcn_update_dpp || IsPermLane16 ||
+        IsPermlaneShuffle)
       Src2 = N->getOperand(3);
   }
 
@@ -8013,18 +8022,21 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                                  DAG.getConstant(EltIdx, SL, MVT::i32));
 
         if (IID == Intrinsic::amdgcn_update_dpp || IsSetInactive ||
-            IsPermLane16)
+            IsPermLane16) {
           Src1SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src1,
                                    DAG.getConstant(EltIdx, SL, MVT::i32));
 
-        if (IID == Intrinsic::amdgcn_writelane)
+          Pieces.push_back(
+              createLaneOp(Src0SubVec, Src1SubVec, Src2, SubVecVT));
+        } else if (IID == Intrinsic::amdgcn_writelane) {
           Src2SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src2,
                                    DAG.getConstant(EltIdx, SL, MVT::i32));
+          Pieces.push_back(
+              createLaneOp(Src0SubVec, Src1, Src2SubVec, SubVecVT));
+        } else {
+          Pieces.push_back(createLaneOp(Src0SubVec, Src1, Src2, SubVecVT));
+        }
 
-        Pieces.push_back(
-            IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16
-                ? createLaneOp(Src0SubVec, Src1SubVec, Src2, SubVecVT)
-                : createLaneOp(Src0SubVec, Src1, Src2SubVec, SubVecVT));
         EltIdx += SubVecNumElt;
       }
       return DAG.getNode(ISD::CONCAT_VECTORS, SL, VT, Pieces);
@@ -11150,6 +11162,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_set_inactive_chain_arg:
   case Intrinsic::amdgcn_mov_dpp8:
   case Intrinsic::amdgcn_update_dpp:
+  case Intrinsic::amdgcn_permlane_bcast:
+  case Intrinsic::amdgcn_permlane_up:
+  case Intrinsic::amdgcn_permlane_down:
+  case Intrinsic::amdgcn_permlane_xor:
     return lowerLaneOp(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_dead: {
     SmallVector<SDValue, 8> Poisons;
@@ -15465,12 +15481,6 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
   if (N0.isUndef()) {
     return DCI.DAG.getConstantFP(APFloat::getQNaN(VT.getFltSemantics()),
                                  SDLoc(N), VT);
-  }
-
-  if (VT == MVT::f32 && (N0.getOpcode() == ISD::UINT_TO_FP ||
-                         N0.getOpcode() == ISD::SINT_TO_FP)) {
-    return DCI.DAG.getNode(AMDGPUISD::RCP_IFLAG, SDLoc(N), VT, N0,
-                           N->getFlags());
   }
 
   // TODO: Could handle f32 + amdgcn.sqrt but probably never reaches here.

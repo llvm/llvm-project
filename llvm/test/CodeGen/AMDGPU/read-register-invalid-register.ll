@@ -1,5 +1,5 @@
 ; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck --implicit-check-not=error %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck --implicit-check-not=error %s
+; RUN: not llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck --implicit-check-not=error %s
 
 declare i32 @llvm.read_register.i32(metadata) #0
 

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
@@ -171,6 +172,21 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
         OS.write(reinterpret_cast<char *>(P.Program->DXIL->data()),
                  P.Program->DXIL->size());
       }
+      break;
+    }
+    case dxbc::PartType::ILDN: {
+      if (!P.DebugName)
+        continue;
+
+      mcdxbc::DebugName DebugName;
+      DebugName.setFilename(P.DebugName->Filename);
+      // Override default flags with value from YAML.
+      if (P.DebugName->Flags)
+        DebugName.Parameters.Flags = *P.DebugName->Flags;
+      // Override computed filename length with value from YAML.
+      if (P.DebugName->NameLength)
+        DebugName.Parameters.NameLength = *P.DebugName->NameLength;
+      DebugName.write(OS);
       break;
     }
     case dxbc::PartType::SFI0: {

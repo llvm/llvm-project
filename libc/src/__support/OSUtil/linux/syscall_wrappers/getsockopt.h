@@ -15,7 +15,6 @@
 #include "src/__support/macros/config.h"
 
 #include "hdr/types/socklen_t.h"
-#include <linux/net.h>   // For SYS_GETSOCKOPT socketcall number.
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
@@ -23,20 +22,8 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> getsockopt(int sockfd, int level, int optname,
                                     void *optval, socklen_t *optlen) {
-#ifdef SYS_getsockopt
   int ret =
       syscall_impl<int>(SYS_getsockopt, sockfd, level, optname, optval, optlen);
-#elif defined(SYS_socketcall)
-  unsigned long sockcall_args[5] = {static_cast<unsigned long>(sockfd),
-                                    static_cast<unsigned long>(level),
-                                    static_cast<unsigned long>(optname),
-                                    reinterpret_cast<unsigned long>(optval),
-                                    reinterpret_cast<unsigned long>(optlen)};
-  int ret = syscall_impl<int>(SYS_socketcall, SYS_GETSOCKOPT, sockcall_args);
-#else
-#error "getsockopt and socketcall syscalls unavailable for this platform."
-#endif
-
   if (ret < 0)
     return Error(-static_cast<int>(ret));
   return ret;
