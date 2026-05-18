@@ -5707,14 +5707,16 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
   for (unsigned J = 0; J + 1 < MD->getNumOperands(); J += 2) {
     auto *OpNoCI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(J));
     Check(OpNoCI,
-          "!mem.cache_hint must alternate between i32 operand numbers and metadata hint nodes", MD);
+          "!mem.cache_hint must alternate between i32 operand numbers and "
+          "metadata hint nodes",
+          MD);
 
     Check(OpNoCI->getValue().isNonNegative(),
           "!mem.cache_hint operand number must be non-negative", MD);
 
     uint64_t OperandNo = OpNoCI->getZExtValue();
-    Check(OperandNo < NumOperands, "!mem.cache_hint operand number is out of range",
-          &I);
+    Check(OperandNo < NumOperands,
+          "!mem.cache_hint operand number is out of range", &I);
 
     Value *Operand =
         CB ? CB->getArgOperand(OperandNo) : I.getOperand(OperandNo);
@@ -5726,7 +5728,9 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
 
     const auto *Node = dyn_cast<MDNode>(MD->getOperand(J + 1));
     Check(Node,
-          "!mem.cache_hint must alternate between i32 operand numbers and metadata hint nodes", MD);
+          "!mem.cache_hint must alternate between i32 operand numbers and "
+          "metadata hint nodes",
+          MD);
 
     Check(Node->getNumOperands() % 2 == 0,
           "!mem.cache_hint hint node must have even number of operands "
