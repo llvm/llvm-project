@@ -445,7 +445,7 @@ class ProcessAPITestCase(TestBase):
 
         process_info.GetParentProcessID()
 
-    @expectedFailureWindows # Not yet implemented.
+    @expectedFailureWindows  # Not yet implemented.
     def test_get_process_info_arguments(self):
         """Test SBProcessInfo Arguments returns the correct values."""
         self.build()
