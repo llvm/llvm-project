@@ -191,7 +191,7 @@ private:
   bool parseDirectiveCPU(SMLoc L);
   bool parseDirectiveInst(SMLoc L);
 
-  bool parseDirectiveTLSDescCall(SMLoc L);
+  bool parseDirectiveTLSDescCall(SMLoc L, bool IsAuth);
 
   bool parseDirectiveLOH(StringRef LOH, SMLoc L);
   bool parseDirectiveLtorg(SMLoc L);
@@ -7271,7 +7271,9 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
   else if (IDVal == ".cpu")
     parseDirectiveCPU(Loc);
   else if (IDVal == ".tlsdesccall")
-    parseDirectiveTLSDescCall(Loc);
+    parseDirectiveTLSDescCall(Loc, /*IsAuth=*/false);
+  else if (IDVal == ".tlsdescauthcall")
+    parseDirectiveTLSDescCall(Loc, /*IsAuth=*/true);
   else if (IDVal == ".ltorg" || IDVal == ".pool")
     parseDirectiveLtorg(Loc);
   else if (IDVal == ".unreq")
@@ -7594,8 +7596,9 @@ bool AArch64AsmParser::parseDirectiveInst(SMLoc Loc) {
 }
 
 // parseDirectiveTLSDescCall:
-//   ::= .tlsdesccall symbol
-bool AArch64AsmParser::parseDirectiveTLSDescCall(SMLoc L) {
+//   ::= .tlsdesccall symbol (if IsAuth is false)
+//   ::= .tlsdescauthcall symbol (if IsAuth is true)
+bool AArch64AsmParser::parseDirectiveTLSDescCall(SMLoc L, bool IsAuth) {
   StringRef Name;
   if (check(getParser().parseIdentifier(Name), L, "expected symbol") ||
       parseToken(AsmToken::EndOfStatement))
@@ -7603,10 +7606,12 @@ bool AArch64AsmParser::parseDirectiveTLSDescCall(SMLoc L) {
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
-  Expr = MCSpecifierExpr::create(Expr, AArch64::S_TLSDESC, getContext());
+  Expr = MCSpecifierExpr::create(
+      Expr, IsAuth ? AArch64::S_TLSDESC_AUTH : AArch64::S_TLSDESC,
+      getContext());
 
   MCInst Inst;
-  Inst.setOpcode(AArch64::TLSDESCCALL);
+  Inst.setOpcode(IsAuth ? AArch64::TLSDESCAUTHCALL : AArch64::TLSDESCCALL);
   Inst.addOperand(MCOperand::createExpr(Expr));
 
   getParser().getStreamer().emitInstruction(Inst, getSTI());

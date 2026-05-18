@@ -44,5 +44,8 @@ fred .REQ x5
 .TLSDESCCALL var
 // CHECK: .tlsdesccall var
 
+.TLSDESCAUTHCALL var
+// CHECK: .tlsdescauthcall var
+
 .LTORG
 .POOL
