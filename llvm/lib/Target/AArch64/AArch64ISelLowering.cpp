@@ -12473,14 +12473,10 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
   }
 
   // Emit first, and possibly only, CSEL.
-  // Propagate only nsz flag as it directly affects CSEL semantics by ignoring
-  // signed-zero differences and relaxing equivalence.
-  // Other flags (reassoc, contract, arcp, etc.) are not applicable to CSEL.
-  SDNodeFlags CSELFlags;
-  CSELFlags.setNoSignedZeros(Flags.hasNoSignedZeros());
+  // Propagate all flags to the CSEL node for downstream optimization passes.
   SDValue CC1Val = getCondCode(DAG, CC1);
-  SDValue CS1 = DAG.getNode(AArch64ISD::CSEL, DL, VT, {TVal, FVal, CC1Val, Cmp},
-                            CSELFlags);
+  SDValue CS1 =
+      DAG.getNode(AArch64ISD::CSEL, DL, VT, {TVal, FVal, CC1Val, Cmp}, Flags);
 
   // If we need a second CSEL, emit it, using the output of the first as the
   // RHS.  We're effectively OR'ing the two CC's together.

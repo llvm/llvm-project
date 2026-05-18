@@ -8003,7 +8003,6 @@ bool AArch64DAGToDAGISel::SelectCmpBranchExtOperand(SDValue N, SDValue &Reg,
 /// by later DAG combines. At this point the DAG is being prepared for
 /// instruction selection, so the use of isKnownNeverSNaN(X) applies to the
 /// final SDValue being selected.
-///
 /// Only handles FCMP(X, C) with scalar FP types, where C is a non-NaN constant.
 /// The nsz requirement is needed only when C is zero, to avoid signed-zero
 /// mismatches. The never-sNaN check is required because AArch64 FMAXNM/FMINNM
