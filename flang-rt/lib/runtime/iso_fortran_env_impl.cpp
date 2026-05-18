@@ -19,19 +19,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Common/float128.h"
-#include "flang/Common/real.h"
 #include "flang/Common/type-kinds.h"
 #include <cstdint>
 
-// Real kind 10 (x87 extended) is only available on x86-64.
+/// Real kind 10 (x87 extended) is only available on x86-64.
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
 #define FLANG_RT_HAS_REAL_10 1
 #else
 #define FLANG_RT_HAS_REAL_10 0
 #endif
 
-// Real kind 16 (IEEE quad) requires a float128 runtime math library.
-// Must match the logic in flang/include/flang/Tools/TargetSetup.h.
+/// Real kind 16 (IEEE quad) requires a float128 runtime math library.
 #if defined(FLANG_RUNTIME_F128_MATH_LIB) || HAS_LDBL128
 #define FLANG_RT_HAS_REAL_16 1
 #else
@@ -42,55 +40,6 @@
 static constexpr std::int32_t Merge(
     std::int32_t tsource, std::int32_t fsource, bool mask) {
   return mask ? tsource : fsource;
-}
-
-// Fortran selected_int_kind(R) returns the smallest integer kind with range >=
-// R digits. Flang integer kinds and their decimal ranges are fixed.
-static constexpr std::int32_t SelectedIntKind(int range) {
-  struct {
-    int kind, range;
-  } constexpr intKinds[]{{1, 2}, {2, 4}, {4, 9}, {8, 18}, {16, 38}};
-  for (auto [k, r] : intKinds) {
-    if (r >= range)
-      return k;
-  }
-  return -1;
-}
-
-// Fortran selected_real_kind(P, R) returns the smallest real kind with decimal
-// precision >= P and decimal range >= R. Returns negative per Fortran
-// 2023 16.9.170 when no kind qualifies.
-static constexpr std::int32_t SelectedRealKind(int p, int r) {
-  constexpr int realKinds[]{
-      2,
-      3,
-      4,
-      8,
-#if FLANG_RT_HAS_REAL_10
-      10,
-#endif
-#if FLANG_RT_HAS_REAL_16
-      16,
-#endif
-  };
-  for (int k : realKinds) {
-    Fortran::common::RealCharacteristics rc{
-        Fortran::common::PrecisionOfRealKind(k)};
-    if (rc.decimalPrecision >= p && rc.decimalRange >= r)
-      return k;
-  }
-  bool pOK{false}, rOK{false};
-  for (int k : realKinds) {
-    Fortran::common::RealCharacteristics rc{
-        Fortran::common::PrecisionOfRealKind(k)};
-    if (rc.decimalPrecision >= p)
-      pOK = true;
-    if (rc.decimalRange >= r)
-      rOK = true;
-  }
-  if (pOK)
-    return rOK ? -4 : -2;
-  return rOK ? -1 : -3;
 }
 
 // Fortran digits() for integer kind K returns 8*K - 1 (excludes sign bit).
@@ -106,25 +55,25 @@ static constexpr int RealDigits(int kind) {
 
 // The smallest valid real kind, used as a safe fallback when a selected
 // real kind is unavailable (so digits() can be called without error).
-static constexpr std::int32_t safeRealFallback{SelectedRealKind(0, 0)};
+static constexpr std::int32_t safeRealFallback{2};
 
 // Integer kinds, selected -> safe -> validated.
-static constexpr std::int32_t selectedInt8{SelectedIntKind(2)};
-static constexpr std::int32_t selectedInt16{SelectedIntKind(4)};
-static constexpr std::int32_t selectedInt32{SelectedIntKind(9)};
-static constexpr std::int32_t selectedInt64{SelectedIntKind(18)};
-static constexpr std::int32_t selectedInt128{SelectedIntKind(38)};
+static constexpr std::int32_t selectedInt8{1};
+static constexpr std::int32_t selectedInt16{2};
+static constexpr std::int32_t selectedInt32{4};
+static constexpr std::int32_t selectedInt64{8};
+static constexpr std::int32_t selectedInt128{16};
 
 static constexpr std::int32_t safeInt8{
-    Merge(selectedInt8, SelectedIntKind(0), selectedInt8 >= 0)};
+    Merge(selectedInt8, 1, selectedInt8 >= 0)};
 static constexpr std::int32_t safeInt16{
-    Merge(selectedInt16, SelectedIntKind(0), selectedInt16 >= 0)};
+    Merge(selectedInt16, 1, selectedInt16 >= 0)};
 static constexpr std::int32_t safeInt32{
-    Merge(selectedInt32, SelectedIntKind(0), selectedInt32 >= 0)};
+    Merge(selectedInt32, 1, selectedInt32 >= 0)};
 static constexpr std::int32_t safeInt64{
-    Merge(selectedInt64, SelectedIntKind(0), selectedInt64 >= 0)};
+    Merge(selectedInt64, 1, selectedInt64 >= 0)};
 static constexpr std::int32_t safeInt128{
-    Merge(selectedInt128, SelectedIntKind(0), selectedInt128 >= 0)};
+    Merge(selectedInt128, 1, selectedInt128 >= 0)};
 
 static constexpr std::int32_t int8{Merge(
     selectedInt8, Merge(-2, -1, selectedInt8 >= 0), IntDigits(safeInt8) == 7)};
@@ -168,13 +117,29 @@ static constexpr std::int32_t logical32{int32};
 static constexpr std::int32_t logical64{int64};
 
 // Real kinds, selected -> safe -> validated.
-static constexpr std::int32_t selectedReal16{SelectedRealKind(3, 4)};
-static constexpr std::int32_t selectedBfloat16{SelectedRealKind(2, 37)};
-static constexpr std::int32_t selectedReal32{SelectedRealKind(6, 37)};
-static constexpr std::int32_t selectedReal64{SelectedRealKind(15, 307)};
-static constexpr std::int32_t selectedReal80{SelectedRealKind(18, 4931)};
-static constexpr std::int32_t selectedReal64x2{SelectedRealKind(31, 307)};
-static constexpr std::int32_t selectedReal128{SelectedRealKind(33, 4931)};
+static constexpr std::int32_t selectedReal16{2};
+static constexpr std::int32_t selectedBfloat16{3};
+static constexpr std::int32_t selectedReal32{4};
+static constexpr std::int32_t selectedReal64{8};
+
+#if FLANG_RT_HAS_REAL_10
+static constexpr std::int32_t selectedReal80{10};
+#elif FLANG_RT_HAS_REAL_16
+static constexpr std::int32_t selectedReal80{16};
+#else
+static constexpr std::int32_t selectedReal80{-3};
+#endif
+
+#if FLANG_RT_HAS_REAL_16
+static constexpr std::int32_t selectedReal64x2{16};
+static constexpr std::int32_t selectedReal128{16};
+#elif FLANG_RT_HAS_REAL_10
+static constexpr std::int32_t selectedReal64x2{-1};
+static constexpr std::int32_t selectedReal128{-1};
+#else
+static constexpr std::int32_t selectedReal64x2{-1};
+static constexpr std::int32_t selectedReal128{-3};
+#endif
 
 static constexpr std::int32_t safeReal16{
     Merge(selectedReal16, safeRealFallback, selectedReal16 >= 0)};
