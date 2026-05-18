@@ -282,7 +282,7 @@ void Lexer::formTokenWithChars(Token &Result, const char *TokEnd,
 const char *Lexer::skipTextToken() {
   const char *TokenPtr = BufferPtr;
   assert(TokenPtr < CommentEnd);
-  StringRef TokStartSymbols = ParseCommands ? "\n\r\\@\"&<" : "\n\r";
+  StringRef TokStartSymbols = ParseCommands ? "\n\r\\@\"`&<" : "\n\r";
 
 again:
   size_t End =
@@ -290,12 +290,15 @@ again:
   if (End == StringRef::npos)
     return CommentEnd;
 
-  // Doxygen doesn't recognize any commands in a one-line double quotation.
-  // If we don't find an ending quotation mark, we pretend it never began.
-  if (*(TokenPtr + End) == '\"') {
+  // Doxygen doesn't recognize any commands in a one-line double quotation
+  // or in a backtick-delimited code span.
+  // If we don't find a balanced ending quote or backtick, we pretend it
+  // never began.
+  char StartChar = *(TokenPtr + End);
+  if (StartChar == '\"' || StartChar == '`') {
     TokenPtr += End + 1;
-    End = StringRef(TokenPtr, CommentEnd - TokenPtr).find_first_of("\n\r\"");
-    if (End != StringRef::npos && *(TokenPtr + End) == '\"')
+    End = StringRef(TokenPtr, CommentEnd - TokenPtr).find_first_of("\n\r\"`");
+    if (End != StringRef::npos && *(TokenPtr + End) == StartChar)
       TokenPtr += End + 1;
     goto again;
   }
