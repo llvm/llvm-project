@@ -1630,6 +1630,10 @@ void VPInstructionWithType::execute(VPTransformState &State) {
     Value *Op = State.get(getOperand(0), VPLane(0));
     Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
                                            Op, ResultTy);
+    if (auto *CastOp = dyn_cast<Instruction>(Cast)) {
+      applyFlags(*CastOp);
+      applyMetadata(*CastOp);
+    }
     State.set(this, Cast, VPLane(0));
     return;
   }
