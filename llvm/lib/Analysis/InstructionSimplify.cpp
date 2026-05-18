@@ -2176,16 +2176,12 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
     return Constant::getNullValue(Op0->getType());
 
-  // (X <= ~Y) && (Y > ~X) --> 0
+  // (X Pred0 ~Y) && (Y Pred1 ~X) --> 0 if Pred0 implies !Pred1.
   CmpPredicate Pred0, Pred1;
   if (match(Op0, m_c_ICmp(Pred0, m_Value(X), m_Not(m_Value(Y)))) &&
       match(Op1, m_c_ICmp(Pred1, m_Specific(Y), m_Not(m_Specific(X))))) {
     if (ICmpInst::isSigned(Pred0) == ICmpInst::isSigned(Pred1)) {
-      if (ICmpInst::isLE(Pred0) && ICmpInst::isGT(Pred1))
-        return ConstantInt::getFalse(Op0->getType());
-      if (ICmpInst::isLT(Pred0) && ICmpInst::isGE(Pred1))
-        return ConstantInt::getFalse(Op0->getType());
-      if (ICmpInst::isLT(Pred0) && ICmpInst::isGT(Pred1))
+      if (ICmpInst::isImpliedByMatchingCmp(Pred0, Pred1) == false)
         return ConstantInt::getFalse(Op0->getType());
     }
   }
