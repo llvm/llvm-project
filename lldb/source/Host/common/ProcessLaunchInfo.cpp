@@ -22,6 +22,7 @@
 
 #ifdef _WIN32
 #include "lldb/Host/windows/PseudoConsole.h"
+#include "lldb/Host/windows/WindowsFileAction.h"
 #else
 #include <climits>
 #endif
@@ -92,6 +93,17 @@ bool ProcessLaunchInfo::AppendDuplicateFileAction(int fd, int dup_fd) {
   return false;
 }
 
+#ifdef _WIN32
+bool ProcessLaunchInfo::AppendDuplicateFileAction(HANDLE fh, HANDLE dup_fh) {
+  WindowsFileAction file_action;
+  if (file_action.Duplicate(fh, dup_fh)) {
+    AppendFileAction(file_action);
+    return true;
+  }
+  return false;
+}
+#endif
+
 bool ProcessLaunchInfo::AppendOpenFileAction(int fd, const FileSpec &file_spec,
                                              bool read, bool write) {
   FileAction file_action;
@@ -124,6 +136,18 @@ const FileAction *ProcessLaunchInfo::GetFileActionForFD(int fd) const {
       return &m_file_actions[idx];
   }
   return nullptr;
+}
+
+bool ProcessLaunchInfo::IsFDRedirected(int fd) const {
+  if (GetFileActionForFD(fd))
+    return true;
+  for (size_t i = 0; i < GetNumFileActions(); ++i) {
+    const FileAction *act = GetFileActionAtIndex(i);
+    if (act->GetAction() == FileAction::eFileActionDuplicate &&
+        act->GetActionArgument() == fd)
+      return true;
+  }
+  return false;
 }
 
 const FileSpec &ProcessLaunchInfo::GetWorkingDirectory() const {

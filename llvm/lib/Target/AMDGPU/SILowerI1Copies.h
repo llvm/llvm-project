@@ -20,7 +20,7 @@
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 
 namespace llvm {
-
+namespace AMDGPU {
 /// Incoming for lane mask phi as machine instruction, incoming register \p Reg
 /// and incoming block \p Block are taken from machine instruction.
 /// \p UpdatedReg (if valid) is \p Reg lane mask merged with another lane mask.
@@ -94,5 +94,5 @@ public:
                                    Register PrevReg, Register CurReg) = 0;
   virtual void constrainAsLaneMask(Incoming &In) = 0;
 };
-
+} // namespace AMDGPU
 } // end namespace llvm

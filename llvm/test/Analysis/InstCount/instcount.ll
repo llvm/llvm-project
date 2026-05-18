@@ -3,7 +3,7 @@
 ; RUN: opt -stats -passes='thinlto<O3>' -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -passes='thinlto-pre-link<O2>' -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -passes='lto<O1>' -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -stats -passes='lto-pre-link<Os>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -passes='lto-pre-link<O2>' -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -O3 -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -O0 -disable-output < %s 2>&1 | FileCheck %s
 

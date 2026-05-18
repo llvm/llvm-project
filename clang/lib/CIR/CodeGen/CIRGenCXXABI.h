@@ -134,10 +134,6 @@ public:
 
   virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
-  virtual void emitBeginCatch(CIRGenFunction &cgf,
-                              const CXXCatchStmt *catchStmt,
-                              mlir::Value ehToken) = 0;
-
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
 
@@ -380,6 +376,10 @@ public:
                                         mlir::Value numElements,
                                         const CXXNewExpr *e,
                                         QualType elementType) = 0;
+
+  /// Return true if the given member pointer can be zero-initialized
+  /// (in the C++ sense).
+  virtual bool isZeroInitializable(const MemberPointerType *mpt) = 0;
 
 protected:
   /// Returns the extra size required in order to store the array

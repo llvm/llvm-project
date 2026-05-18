@@ -15,11 +15,9 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 10, i64 9, i64 8, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 10, [[INDEX]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[VEC_IV]], splat (i64 10)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i8> [[VEC_IND1]], splat (i8 10)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i32, ptr [[NNO]], i64 [[OFFSET_IDX]]
@@ -33,6 +31,7 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[TMP11]] = or <4 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)
+; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add nuw <4 x i8> [[VEC_IND1]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -46,7 +45,7 @@ define i1 @fn(ptr %nno) #0 {
 entry:
   br label %loop.header
 
-loop.header:                                       ; preds = %entry, %loop.latch
+loop.header:
   %iv = phi i64 [ 10, %entry ], [ %iv.next, %loop.latch ]
   %sum.01 = phi i32 [ 0, %entry ], [ %sum.1, %loop.latch ]
   %rem4 = and i64 %iv, 1
@@ -55,19 +54,19 @@ loop.header:                                       ; preds = %entry, %loop.latch
   %0 = load i32, ptr %gep, align 4
   br i1 %cmp21, label %if.then, label %loop.latch
 
-if.then:                                        ; preds = %loop.header
+if.then:
   %mul = shl i32 %0, 1
   %rem27 = urem i32 %mul, 10
   br label %loop.latch
 
-loop.latch:                                        ; preds = %loop.header, %if.then
+loop.latch:
   %rem27.pn = phi i32 [ %rem27, %if.then ], [ %0, %loop.header ]
   %sum.1 = or i32 %rem27.pn, %sum.01
   %iv.next = add nsw i64 %iv, -1
   %cmp19.not = icmp eq i64 %iv, 0
   br i1 %cmp19.not, label %exit, label %loop.header
 
-exit:                                        ; preds = %loop.latch
+exit:
   %sum.1.lcssa = phi i32 [ %sum.1, %loop.latch ]
   %cmp41 = icmp eq i32 %sum.1.lcssa, 0
   ret i1 %cmp41

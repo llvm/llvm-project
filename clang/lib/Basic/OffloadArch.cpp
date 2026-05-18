@@ -40,16 +40,22 @@ static const OffloadArchToStringMap ArchNames[] = {
     SM(90a),                         // Hopper
     SM(100),                         // Blackwell
     SM(100a),                        // Blackwell
+    SM(100f),                        // Blackwell
     SM(101),                         // Blackwell
     SM(101a),                        // Blackwell
+    SM(101f),                        // Blackwell
     SM(103),                         // Blackwell
     SM(103a),                        // Blackwell
+    SM(103f),                        // Blackwell
     SM(110),                         // Blackwell
     SM(110a),                        // Blackwell
+    SM(110f),                        // Blackwell
     SM(120),                         // Blackwell
     SM(120a),                        // Blackwell
+    SM(120f),                        // Blackwell
     SM(121),                         // Blackwell
     SM(121a),                        // Blackwell
+    SM(121f),                        // Blackwell
     GFX(600),  // gfx600
     GFX(601),  // gfx601
     GFX(602),  // gfx602
@@ -99,6 +105,8 @@ static const OffloadArchToStringMap ArchNames[] = {
     GFX(1152), // gfx1152
     GFX(1153), // gfx1153
     GFX(1170), // gfx1170
+    GFX(1171), // gfx1171
+    GFX(1172), // gfx1172
     {OffloadArch::GFX12_GENERIC, "gfx12-generic", "compute_amdgcn"},
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
@@ -150,15 +158,20 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
 llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                                  OffloadArch ID) {
   if (ID == OffloadArch::AMDGCNSPIRV)
-    return llvm::Triple("spirv64-amd-amdhsa");
+    return llvm::Triple(llvm::Triple::spirv64, llvm::Triple::NoSubArch,
+                        llvm::Triple::AMD, llvm::Triple::AMDHSA);
 
-  if (IsNVIDIAOffloadArch(ID))
-    return DefaultToolchainTriple.isArch64Bit()
-               ? llvm::Triple("nvptx64-nvidia-cuda")
-               : llvm::Triple("nvptx-nvidia-cuda");
+  if (IsNVIDIAOffloadArch(ID)) {
+    llvm::Triple::ArchType Arch = DefaultToolchainTriple.isArch64Bit()
+                                      ? llvm::Triple::nvptx64
+                                      : llvm::Triple::nvptx;
+    return llvm::Triple(Arch, llvm::Triple::NoSubArch, llvm::Triple::NVIDIA,
+                        llvm::Triple::CUDA);
+  }
 
   if (IsAMDOffloadArch(ID))
-    return llvm::Triple("amdgcn-amd-amdhsa");
+    return llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
+                        llvm::Triple::AMD, llvm::Triple::AMDHSA);
 
   return {};
 }

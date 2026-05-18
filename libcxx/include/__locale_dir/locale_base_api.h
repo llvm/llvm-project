@@ -33,6 +33,7 @@
 // -----------------
 // namespace __locale {
 //  using __locale_t = implementation-defined;  // required by the headers
+//  using __mbstate_t = implementation-defined; // required by the headers
 //  using __lconv_t  = implementation-defined;
 //  __locale_t  __newlocale(int, const char*, __locale_t);
 //  void        __freelocale(__locale_t);
@@ -112,10 +113,14 @@
 #    include <__locale_dir/support/freebsd.h>
 #  elif defined(__NetBSD__)
 #    include <__locale_dir/support/netbsd.h>
+#  elif defined(__OpenBSD__)
+#    include <__locale_dir/support/bsd_like.h>
 #  elif defined(_LIBCPP_MSVCRT_LIKE)
 #    include <__locale_dir/support/windows.h>
 #  elif defined(__Fuchsia__)
 #    include <__locale_dir/support/fuchsia.h>
+#  elif _LIBCPP_LIBC_LLVM_LIBC
+#    include <__locale_dir/support/llvm_libc.h>
 #  elif defined(__linux__)
 #    include <__locale_dir/support/linux.h>
 #  elif _LIBCPP_LIBC_NEWLIB

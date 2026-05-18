@@ -1,0 +1,191 @@
+# RUN: split-file %s %t
+
+;--- bad-expression.mir
+# RUN: not llc %t/bad-expression.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/bad-expression.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected <CounterName>_<CounterNum>
+# CHECK-NEXT:    S_WAITCNT .BadExpression
+# CHECK-NEXT:               ^
+name: BadExpression
+body: |
+  bb.0:
+    S_WAITCNT .BadExpression
+...
+
+;--- vmcnt-too-large.mir
+# RUN: not llc %t/vmcnt-too-large.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/vmcnt-too-large.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} counter value too large
+# CHECK-NEXT:    S_WAITCNT .Vmcnt_99999
+# CHECK-NEXT:                     ^
+name: VmcntTooLarge
+body: |
+  bb.0:
+    S_WAITCNT .Vmcnt_99999
+...
+
+;--- expcnt-too-large.mir
+# RUN: not llc %t/expcnt-too-large.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/expcnt-too-large.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} counter value too large
+# CHECK-NEXT:    S_WAITCNT .Expcnt_99999
+# CHECK-NEXT:                      ^
+name: ExpcntTooLarge
+body: |
+  bb.0:
+    S_WAITCNT .Expcnt_99999
+...
+
+;--- lgkmcnt-too-large.mir
+# RUN: not llc %t/lgkmcnt-too-large.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/lgkmcnt-too-large.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} counter value too large
+# CHECK-NEXT:    S_WAITCNT .Lgkmcnt_99999
+# CHECK-NEXT:                       ^
+name: LgkmcntTooLarge
+body: |
+  bb.0:
+    S_WAITCNT .Lgkmcnt_99999
+...
+
+;--- expected-prefix.mir
+# RUN: not llc %t/expected-prefix.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/expected-prefix.mir
+---
+# CHECK: error: {{.*}}
+name: MissingDotPrefix
+body: |
+  bb.0:
+    S_WAITCNT MissingDotPrefix
+...
+
+;--- invalid-counter-name.mir
+# RUN: not llc %t/invalid-counter-name.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/invalid-counter-name.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} invalid counter name
+# CHECK-NEXT:    S_WAITCNT .InvalidCounterName_1
+# CHECK-NEXT:               ^
+name: InvalidCounterName
+body: |
+  bb.0:
+    S_WAITCNT .InvalidCounterName_1
+...
+
+;--- vmcnt-non-integer.mir
+# RUN: not llc %t/vmcnt-non-integer.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/vmcnt-non-integer.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT .Vmcnt_BadCnt
+# CHECK-NEXT:                     ^
+name: VmcntNonInteger
+body: |
+  bb.0:
+    S_WAITCNT .Vmcnt_BadCnt
+...
+
+;--- expcnt-non-integer.mir
+# RUN: not llc %t/expcnt-non-integer.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/expcnt-non-integer.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT .Expcnt_BadCnt
+# CHECK-NEXT:                      ^
+name: ExpcntNonInteger
+body: |
+  bb.0:
+    S_WAITCNT .Expcnt_BadCnt
+...
+
+;--- lgkmcnt-non-integer.mir
+# RUN: not llc %t/lgkmcnt-non-integer.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/lgkmcnt-non-integer.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT .Lgkmcnt_BadCnt
+# CHECK-NEXT:                       ^
+name: LgkmcntNonInteger
+body: |
+  bb.0:
+    S_WAITCNT .Lgkmcnt_BadCnt
+...
+
+;--- vmcnt-negative.mir
+# RUN: not llc %t/vmcnt-negative.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/vmcnt-negative.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT .Vmcnt_-1
+# CHECK-NEXT:                     ^
+name: VmcntNegative
+body: |
+  bb.0:
+    S_WAITCNT .Vmcnt_-1
+...
+
+;--- expcnt-negative.mir
+# RUN: not llc %t/expcnt-negative.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/expcnt-negative.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT .Expcnt_-1
+# CHECK-NEXT:                      ^
+name: ExpcntNegative
+body: |
+  bb.0:
+    S_WAITCNT .Expcnt_-1
+...
+
+;--- lgkmcnt-negative.mir
+# RUN: not llc %t/lgkmcnt-negative.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/lgkmcnt-negative.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT .Lgkmcnt_-1
+# CHECK-NEXT:                       ^
+name: LgkmcntNegative
+body: |
+  bb.0:
+    S_WAITCNT .Lgkmcnt_-1
+...
+
+;--- valid-vmcnt-invalid-expcnt.mir
+# RUN: not llc %t/valid-vmcnt-invalid-expcnt.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/valid-vmcnt-invalid-expcnt.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} counter value too large
+# CHECK-NEXT:    S_WAITCNT .Vmcnt_0_Expcnt_99999
+# CHECK-NEXT:                              ^
+name: ValidVmcntInvalidExpcnt
+body: |
+  bb.0:
+    S_WAITCNT .Vmcnt_0_Expcnt_99999
+...
+
+;--- valid-vmcnt-expcnt-invalid-lgkmcnt.mir
+# RUN: not llc %t/valid-vmcnt-expcnt-invalid-lgkmcnt.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/valid-vmcnt-expcnt-invalid-lgkmcnt.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} counter value too large
+# CHECK-NEXT:    S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_99999
+# CHECK-NEXT:                                        ^
+name: ValidVmcntExpcntInvalidLgkmcnt
+body: |
+  bb.0:
+    S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_99999
+...
+
+;--- valid-vmcnt-invalid-name.mir
+# RUN: not llc %t/valid-vmcnt-invalid-name.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/valid-vmcnt-invalid-name.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} invalid counter name
+# CHECK-NEXT:    S_WAITCNT .Vmcnt_0_BadName_1
+# CHECK-NEXT:                       ^
+name: ValidVmcntInvalidName
+body: |
+  bb.0:
+    S_WAITCNT .Vmcnt_0_BadName_1
+...
+
+;--- valid-vmcnt-expcnt-non-integer-lgkmcnt.mir
+# RUN: not llc %t/valid-vmcnt-expcnt-non-integer-lgkmcnt.mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -filetype=null 2>&1 | FileCheck %t/valid-vmcnt-expcnt-non-integer-lgkmcnt.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_abc
+# CHECK-NEXT:                                        ^
+name: ValidVmcntExpcntNonIntegerLgkmcnt
+body: |
+  bb.0:
+    S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_abc
+...

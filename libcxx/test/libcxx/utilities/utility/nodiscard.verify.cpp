@@ -15,6 +15,9 @@
 void test() {
   int i = 0;
 
+#if TEST_STD_VER >= 14
+  std::exchange(i, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
   std::forward<int>(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::forward<int>(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::move(i);         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

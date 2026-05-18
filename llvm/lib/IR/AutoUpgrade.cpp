@@ -1004,6 +1004,13 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
     if (Name.consume_front("sve.")) {
       // 'aarch64.sve.*'.
       if (Name.consume_front("bf")) {
+        if (Name == "mmla") {
+          Type *Tys[] = {F->getReturnType(),
+                         std::next(F->arg_begin())->getType()};
+          NewFn = Intrinsic::getOrInsertDeclaration(
+              F->getParent(), Intrinsic::aarch64_sve_fmmla, Tys);
+          return true;
+        }
         if (Name.consume_back(".lane")) {
           // 'aarch64.sve.bf*.lane'.
           Intrinsic::ID ID =
@@ -1047,14 +1054,17 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
               cast<VectorType>(F->getReturnType())->getElementType();
           ElementCount EC =
               cast<VectorType>(F->arg_begin()->getType())->getElementCount();
+          assert(F->arg_size() == 2 &&
+                 "Expected 2 arguments for ld* intrinsic.");
+          Type *PtrTy = F->getArg(1)->getType();
           Type *Ty = VectorType::get(ScalarTy, EC);
           static const Intrinsic::ID LoadIDs[] = {
               Intrinsic::aarch64_sve_ld2_sret,
               Intrinsic::aarch64_sve_ld3_sret,
               Intrinsic::aarch64_sve_ld4_sret,
           };
-          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                                    LoadIDs[Name[0] - '2'], Ty);
+          NewFn = Intrinsic::getOrInsertDeclaration(
+              F->getParent(), LoadIDs[Name[0] - '2'], {Ty, PtrTy});
           return true;
         }
         return false; // No other 'aarch64.sve.ld*'.
@@ -1323,6 +1333,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
       case Intrinsic::amdgcn_wmma_f16_16x16x32_f16:
       case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16:
+      case Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16:
         if (F->arg_size() == 8) {
           NewFn = nullptr;
           return true;
@@ -1858,10 +1869,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     // intrinsics declared to return a struct, not for intrinsics with
     // overloaded return type, in which case the exact struct type will be
     // mangled into the name.
-    SmallVector<Intrinsic::IITDescriptor> Desc;
-    Intrinsic::getIntrinsicInfoTableEntries(F->getIntrinsicID(), Desc);
-    if (Desc.front().Kind == Intrinsic::IITDescriptor::Struct) {
-      auto *FT = F->getFunctionType();
+    if (Intrinsic::hasStructReturnType(F->getIntrinsicID())) {
+      FunctionType *FT = F->getFunctionType();
       auto *NewST = StructType::get(ST->getContext(), ST->elements());
       auto *NewFT = FunctionType::get(NewST, FT->params(), FT->isVarArg());
       std::string Name = F->getName().str();
@@ -1902,7 +1911,7 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   if (Intrinsic::ID id = F->getIntrinsicID()) {
     // Only do this if the intrinsic signature is valid.
     SmallVector<Type *> OverloadTys;
-    if (Intrinsic::getIntrinsicSignature(id, F->getFunctionType(), OverloadTys))
+    if (Intrinsic::isSignatureValid(id, F->getFunctionType(), OverloadTys))
       F->setAttributes(
           Intrinsic::getAttributes(F->getContext(), id, F->getFunctionType()));
   }
@@ -4733,7 +4742,8 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
   case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
   case Intrinsic::amdgcn_wmma_f16_16x16x32_f16:
-  case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16: {
+  case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16:
+  case Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16: {
     // Drop src0 and src1 modifiers.
     const Value *Op0 = CI->getArgOperand(0);
     const Value *Op2 = CI->getArgOperand(2);
@@ -4747,9 +4757,11 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     for (int I = 4, E = CI->arg_size(); I < E; ++I)
       Args.push_back(CI->getArgOperand(I));
 
+    SmallVector<Type *, 3> Overloads{F->getReturnType(), Args[0]->getType()};
+    if (F->getIntrinsicID() == Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16)
+      Overloads.push_back(Args[3]->getType());
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-        F->getParent(), F->getIntrinsicID(),
-        {F->getReturnType(), Args[0]->getType()});
+        F->getParent(), F->getIntrinsicID(), Overloads);
 
     SmallVector<OperandBundleDef, 1> Bundles;
     CI->getOperandBundlesAsDefs(Bundles);
@@ -5098,6 +5110,12 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::aarch64_sve_ld3_sret:
   case Intrinsic::aarch64_sve_ld4_sret:
   case Intrinsic::aarch64_sve_ld2_sret: {
+    // Is this a trivial remangle of the name to support ptr address spaces?
+    if (isa<StructType>(F->getReturnType())) {
+      DefaultCase();
+      return;
+    }
+
     StringRef Name = F->getName();
     Name = Name.substr(5);
     unsigned N = StringSwitch<unsigned>(Name)

@@ -1133,14 +1133,6 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     auto type = it->getType(false);
     rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
   }
-
-  // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20 and the branch-to-branch optimization.
-  if (ctx.arg.emachine == EM_RISCV || ctx.arg.branchToBranch)
-    llvm::stable_sort(sec.relocs(),
-                      [](const Relocation &lhs, const Relocation &rhs) {
-                        return lhs.offset < rhs.offset;
-                      });
 }
 
 template <class ELFT> void TargetInfo::scanSection1(InputSectionBase &sec) {
@@ -1184,11 +1176,9 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
   // copy relocations, etc. Note that relocations for non-alloc sections are
   // directly processed by InputSection::relocateNonAlloc.
 
-  // Deterministic parallellism needs sorting relocations which is unsuitable
-  // for -z nocombreloc. MIPS and PPC64 use global states which are not suitable
-  // for parallelism.
-  bool serial = !ctx.arg.zCombreloc || ctx.arg.emachine == EM_MIPS ||
-                ctx.arg.emachine == EM_PPC64;
+  // MIPS modifies MipsGotSection during relocation scanning, which is not
+  // suitable for parallelism.
+  bool serial = ctx.arg.emachine == EM_MIPS;
   parallel::TaskGroup tg;
   auto outerFn = [&]() {
     for (ELFFileBase *f : ctx.objectFiles) {

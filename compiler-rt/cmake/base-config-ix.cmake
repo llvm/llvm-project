@@ -121,6 +121,8 @@ if(NOT DEFINED COMPILER_RT_OS_DIR)
     string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
   endif()
 endif()
+
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib)
@@ -288,6 +290,8 @@ macro(test_targets)
       endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
       test_target_arch(nvptx64 "" "--nvptx64-nvidia-cuda" "-nogpulib" "-flto" "-c")
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "spirv64")
+      test_target_arch(spirv64 "" "--spirv64-unknown-unknown" "-nogpulib" "-flto" "-c")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
       if(WIN32)
         test_target_arch(arm "" "" "")

@@ -36,6 +36,9 @@ class Function;
 class IRBuilderBase;
 class OpenMPIRBuilder;
 class Value;
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 } // namespace llvm
 
 namespace mlir {
@@ -64,7 +67,7 @@ class ComdatSelectorOp;
 class ModuleTranslation {
   friend std::unique_ptr<llvm::Module>
   mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef,
-                                bool);
+                                bool, llvm::vfs::FileSystem *);
 
 public:
   /// Stores the mapping between a function name and its LLVM IR representation.
@@ -202,6 +205,9 @@ public:
   /// in these blocks.
   void forgetMapping(Region &region);
 
+  /// Removes the mapping for the given value.
+  void forgetMapping(Value value) { valueMapping.erase(value); }
+
   /// Returns the LLVM metadata corresponding to a mlir LLVM dialect alias scope
   /// attribute. Creates the metadata node if it has not been converted before.
   llvm::MDNode *getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr);
@@ -272,6 +278,10 @@ public:
   /// constructed.
   llvm::OpenMPIRBuilder *getOpenMPBuilder();
 
+  /// Returns the virtual filesystem to use for file operations. Falls back to
+  /// the real filesystem if none was provided.
+  llvm::vfs::FileSystem &getFileSystem();
+
   /// Returns the LLVM module in which the IR is being constructed.
   llvm::Module *getLLVMModule() { return llvmModule.get(); }
 
@@ -306,6 +316,13 @@ public:
                              llvm::IRBuilderBase &builder) {
     return convertBlockImpl(bb, ignoreArguments, builder,
                             /*recordInsertions=*/false);
+  }
+
+  /// Converts the given MLIR operation into LLVM IR using this translator. It
+  /// is up to the caller to ensure that all operands have been mapped before
+  /// calling this function.
+  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder) {
+    return convertOperationImpl(op, builder, /*recordInsertions=*/false);
   }
 
   /// Converts argument and result attributes from `attrsOp` to LLVM IR
@@ -376,13 +393,14 @@ public:
   llvm::Attribute convertAllocsizeAttr(DenseI32ArrayAttr allocsizeAttr);
 
 private:
-  ModuleTranslation(Operation *module,
-                    std::unique_ptr<llvm::Module> llvmModule);
+  ModuleTranslation(Operation *module, std::unique_ptr<llvm::Module> llvmModule,
+                    llvm::vfs::FileSystem *fs = nullptr);
   ~ModuleTranslation();
 
   /// Converts individual components.
-  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder,
-                                 bool recordInsertions = false);
+  LogicalResult convertOperationImpl(Operation &op,
+                                     llvm::IRBuilderBase &builder,
+                                     bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
   LogicalResult convertIFuncs();
@@ -444,6 +462,10 @@ private:
 
   /// Builder for LLVM IR generation of OpenMP constructs.
   std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
+
+  /// Optional virtual filesystem for file operations. When null, the real
+  /// filesystem is used (via getFileSystem()). Not owned.
+  llvm::vfs::FileSystem *fileSystem = nullptr;
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;

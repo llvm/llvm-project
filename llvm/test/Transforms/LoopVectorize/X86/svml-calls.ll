@@ -5,46 +5,30 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare double @sin(double) #0
 declare float @sinf(float) #0
-declare double @llvm.sin.f64(double) #0
-declare float @llvm.sin.f32(float) #0
 
 declare double @cos(double) #0
 declare float @cosf(float) #0
-declare double @llvm.cos.f64(double) #0
-declare float @llvm.cos.f32(float) #0
 
 declare double @pow(double, double) #0
 declare float @powf(float, float) #0
-declare double @llvm.pow.f64(double, double) #0
-declare float @llvm.pow.f32(float, float) #0
 
 declare double @exp(double) #0
 declare float @expf(float) #0
-declare double @llvm.exp.f64(double) #0
-declare float @llvm.exp.f32(float) #0
 
 declare double @log(double) #0
 declare float @logf(float) #0
-declare double @llvm.log.f64(double) #0
-declare float @llvm.log.f32(float) #0
 
 declare double @log2(double) #0
 declare float @log2f(float) #0
-declare double @llvm.log2.f64(double) #0
-declare float @llvm.log2.f32(float) #0
 
 declare double @log10(double) #0
 declare float @log10f(float) #0
-declare double @llvm.log10.f64(double) #0
-declare float @llvm.log10.f32(float) #0
 
 declare double @sqrt(double) #0
 declare float @sqrtf(float) #0
 
 declare double @exp2(double) #0
 declare float @exp2f(float) #0
-declare double @llvm.exp2.f64(double) #0
-declare float @llvm.exp2.f32(float) #0
 
 define void @sin_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @sin_f64(
