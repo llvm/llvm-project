@@ -716,9 +716,8 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   auto *HalfVecTy = FixedVectorType::get(LaneTy, HalfLanes);
   const uint64_t HalfBytes = DL->getTypeStoreSize(HalfVecTy).getFixedValue();
 
-  Value *LoVal =
-      Builder.CreateShuffleVector(Val, createSequentialMask(0, HalfLanes, 0),
-                                  "lo.val");
+  Value *LoVal = Builder.CreateShuffleVector(
+      Val, createSequentialMask(0, HalfLanes, 0), "lo.val");
   Value *HiVal = Builder.CreateShuffleVector(
       Val, createSequentialMask(HalfLanes, HalfLanes, 0), "hi.val");
 
