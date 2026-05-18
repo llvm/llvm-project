@@ -45,6 +45,8 @@ class FunctionPass;
 class GetElementPtrInst;
 class ImplicitControlFlowTracking;
 class LoadInst;
+class Loop;
+class SelectInst;
 class LoopInfo;
 class MemDepResult;
 class MemoryAccess;
@@ -421,6 +423,13 @@ private:
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
   void assignBlockRPONumber(Function &F);
+
+  bool recognizeMinFindingSelectPattern(SelectInst *Select);
+  bool transformMinFindingSelectPattern(Loop *L, Type *LoadType,
+                                        BasicBlock *Preheader, BasicBlock *BB,
+                                        CmpInst *Comparison, SelectInst *Select,
+                                        Value *BasePtr, PHINode *IndexValPhi,
+                                        Value *OffsetVal);
 };
 
 /// Create a legacy GVN pass.

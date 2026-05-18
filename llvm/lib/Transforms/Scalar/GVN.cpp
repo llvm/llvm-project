@@ -72,6 +72,7 @@
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/VNCoercion.h"
 #include <algorithm>
@@ -137,6 +138,10 @@ static cl::opt<uint32_t> MaxNumInsnsPerBlock(
     "gvn-max-num-insns", cl::Hidden, cl::init(100),
     cl::desc("Max number of instructions to scan in each basic block in GVN "
              "(default = 100)"));
+
+static cl::opt<bool> GVNEnableMinFindingSelectPattern(
+    "gvn-enable-min-finding-select-pattern", cl::init(false), cl::Hidden,
+    cl::desc("Enable GVN transformation for minimum finding select pattern"));
 
 struct llvm::GVNPass::Expression {
   uint32_t Opcode;
@@ -2747,6 +2752,11 @@ bool GVNPass::processInstruction(Instruction *I) {
     }
     return Changed;
   }
+  if (SelectInst *Select = dyn_cast<SelectInst>(I)) {
+    if (GVNEnableMinFindingSelectPattern &&
+        recognizeMinFindingSelectPattern(Select))
+      return true;
+  }
 
   // Instructions with void type don't return a value, so there's
   // no point in trying to find redundancies in them.
@@ -3331,6 +3341,430 @@ void GVNPass::assignValNumForDeadCode() {
       LeaderTable.insert(ValNum, &Inst, BB);
     }
   }
+}
+
+/// Return true if no instruction in the loop may write the load's
+/// memory location after the load executes. The transform memoizes the
+/// load's value across iterations, so any post-load mod in any loop
+/// block becomes a backedge clobber that invalidates the memoization.
+/// Scan every loop block; on the load's own block start from the next
+/// instruction, otherwise from the block's start.
+static bool canHoistLoadWithAA(Loop *L, LoadInst *Load, AAResults *AA) {
+  MemoryLocation Loc = MemoryLocation::get(Load);
+  for (BasicBlock *BB : L->blocks()) {
+    BasicBlock::iterator It =
+        BB == Load->getParent() ? std::next(Load->getIterator()) : BB->begin();
+    for (auto E = BB->end(); It != E; ++It) {
+      Instruction &I = *It;
+      if (!I.mayWriteToMemory())
+        continue;
+      if (isModSet(AA->getModRefInfo(&I, Loc))) {
+        LLVM_DEBUG(dbgs() << "GVN (minindx): Cannot hoist - clobbered in "
+                             "loop by "
+                          << I << "\n");
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/// Hoist the chain of operations for the second load to preheader.
+/// In this transformation, we hoist the redundant load to the preheader,
+/// caching the first value of the iteration. This value is used to compare with
+/// the current value of the iteration and update the minimum value.
+/// The comparison is done in the loop body using the new select instruction.
+///
+/// *** Before transformation ***
+///
+///  preheader:
+///    ...
+///  loop:
+///    ...
+///    ...
+///    %val.first = load <TYPE>, ptr %ptr.first.load, align 4
+///    %min.idx.ext = sext i32 %min.idx to i64
+///    %ptr.<TYPE>.min = getelementptr <TYPE>, ptr %0, i64 %min.idx.ext
+///    %ptr.second.load = getelementptr i8, ptr %ptr.<TYPE>.min, i64 -4
+///    %val.current.min = load <TYPE>, ptr %ptr.second.load, align 4
+///    ...
+///    ...
+///    br i1 %cond, label %loop, label %exit
+///
+///    We capture <TYPE> as a part of pattern matching and then later
+///    use it in the transformation.
+///
+/// *** After transformation ***
+///
+///  preheader:
+///    %min.idx.ext = sext i32 %min.idx.ext to i64
+///    %hoist_gep1 = getelementptr <TYPE>, ptr %0, i64 %min.idx.ext
+///    %hoist_gep2 = getelementptr i8, ptr %hoist_gep1, i64 -4
+///    %hoisted_load = load <TYPE>, ptr %hoist_gep2, align 4
+///    br label %loop
+///
+///  loop:
+///    %val.first = load <TYPE>, ptr %ptr.first.load, align 4
+///    ...
+///    (new) %val.current.min = select i1 %cond, <TYPE> %hoisted_load, <TYPE>
+///    %val.current.min
+///    ...
+///    ...
+///    br i1 %cond, label %loop, label %exit
+bool GVNPass::transformMinFindingSelectPattern(
+    Loop *L, Type *LoadType, BasicBlock *Preheader, BasicBlock *BB,
+    CmpInst *Comparison, SelectInst *Select, Value *BasePtr,
+    PHINode *IndexValPhi, Value *OffsetVal) {
+
+  assert(BasePtr && "BasePtr is null");
+  assert(OffsetVal && "OffsetVal is null");
+  assert(IndexValPhi && "IndexValPhi is null");
+
+  // The recognizer canonicalizes the matched (hoistable) load to operand(1)
+  // of the compare. Capture both operands now, before we mutate the compare
+  // below.
+  Value *LHS = Comparison->getOperand(0);
+  Value *LoadVal = Comparison->getOperand(1);
+
+  // The transform memoizes the hoistable load's value across iterations, so
+  // any in-loop store or call that may write the load's location is a
+  // backedge clobber that invalidates the cache. With MSSA, use sink-mode
+  // invalidation (walks every MemoryDef in the loop with phi-translation).
+  // Without MSSA, walk the loop's instructions with AA.
+  auto *HoistableLoad = cast<LoadInst>(LoadVal);
+  bool CanHoist;
+  if (MSSAU) {
+    MemorySSA &MSSA = *MSSAU->getMemorySSA();
+    SinkAndHoistLICMFlags Flags(/*IsSink=*/true, *L, MSSA);
+    CanHoist = canHoistLoad(*HoistableLoad, VN.getAliasAnalysis(), DT, L, MSSA,
+                            /*TargetExecutesOncePerLoop=*/true, Flags, ORE);
+  } else {
+    CanHoist = canHoistLoadWithAA(L, HoistableLoad, VN.getAliasAnalysis());
+  }
+  if (!CanHoist) {
+    LLVM_DEBUG(dbgs() << "GVN: Cannot hoist - may be clobbered by some "
+                         "instruction in the loop.\n");
+    return false;
+  }
+
+  IRBuilder<> Builder(Preheader->getTerminator());
+  Value *InitialMinIndex = IndexValPhi->getIncomingValueForBlock(Preheader);
+
+  // Insert PHI node at the top of this block.
+  // This PHI node will be used to memoize the current minimum value so far.
+  PHINode *KnownMinPhi = PHINode::Create(LoadType, 2, "known_min", BB->begin());
+
+  // Hoist the load and build the necessary operations.
+  // 1. hoist_0 = sext i32 1 to i64
+  Value *HoistedSExt =
+      Builder.CreateSExt(InitialMinIndex, Builder.getInt64Ty(), "hoist_sext");
+
+  // 2. hoist_gep1 = getelementptr float, ptr BasePtr, i64 HoistedSExt
+  Value *HoistedGEP1 =
+      Builder.CreateGEP(LoadType, BasePtr, HoistedSExt, "hoist_gep1");
+
+  // 3. hoist_gep2 = getelementptr i8, ptr HoistedGEP1, i64 OffsetVal
+  Value *HoistedGEP2 = Builder.CreateGEP(Builder.getInt8Ty(), HoistedGEP1,
+                                         OffsetVal, "hoist_gep2");
+
+  // 4. hoisted_load = load float, ptr HoistedGEP2
+  // Preserve alignment and metadata from the original load; IRBuilder's
+  // natural alignment may exceed what the user declared, which would
+  // fault on strict-alignment targets at runtime.
+  LoadInst *OrigLoad = cast<LoadInst>(LoadVal);
+  LoadInst *NewLoad = Builder.CreateLoad(LoadType, HoistedGEP2, "hoisted_load");
+  NewLoad->setAlignment(OrigLoad->getAlign());
+  copyMetadataForLoad(*NewLoad, *OrigLoad);
+
+  // Update MemorySSA before erasing the original load.
+  if (MSSAU) {
+    auto *OrigUse =
+        MSSAU->getMemorySSA()->getMemoryAccess(dyn_cast<Instruction>(LoadVal));
+    if (OrigUse) {
+      MemoryAccess *DefiningAccess = OrigUse->getDefiningAccess();
+      MSSAU->createMemoryAccessInBB(NewLoad, DefiningAccess, Preheader,
+                                    MemorySSA::BeforeTerminator);
+      MSSAU->removeMemoryAccess(OrigUse);
+    }
+  }
+
+  // Invalidate MD cache for the loaded pointer; we added a new load and removed
+  // the old one (removeInstruction handles removing the old load from MD).
+  if (MD)
+    MD->invalidateCachedPointerInfo(NewLoad->getPointerOperand());
+
+  // Let the new load now take the place of the old load.
+  LoadVal->replaceAllUsesWith(NewLoad);
+  Instruction *LoadInst = dyn_cast<Instruction>(LoadVal);
+  if (uint32_t ValNo = VN.lookup(LoadInst, false))
+    LeaderTable.erase(ValNo, LoadInst, LoadInst->getParent());
+  removeInstruction(LoadInst);
+
+  // Comparison should now compare the current value and the newly inserted
+  // PHI node.
+  Comparison->setOperand(1, KnownMinPhi);
+
+  // Create new select instruction for selecting the minimum value.
+  IRBuilder<> SelectBuilder(BB->getTerminator());
+  SelectInst *CurrentMinSelect = dyn_cast<SelectInst>(
+      SelectBuilder.CreateSelect(Comparison, LHS, KnownMinPhi, "current_min"));
+
+  // Populate the newly created PHI node
+  // with (hoisted) NewLoad from the preheader and CurrentMinSelect.
+  KnownMinPhi->addIncoming(NewLoad, Preheader);
+  KnownMinPhi->addIncoming(CurrentMinSelect, BB);
+  LLVM_DEBUG(
+      dbgs() << "GVN: Transformed the code for minimum finding pattern.\n");
+  return true;
+}
+
+/// We are looking for the following pattern:
+/// loop:
+///   ...
+///   ...
+///   %min.idx = phi i32 [ %initial_min_idx, %entry ], [ %min.idx.next, %loop ]
+///   ...
+///   %val.first = load <TYPE>, ptr %ptr.first.load, align 4
+///   %min.idx.ext = sext i32 %min.idx to i64
+///   %ptr.<TYPE>.min = getelementptr <TYPE>, ptr %0, i64 %min.idx.ext
+///   %ptr.second.load = getelementptr i8, ptr %ptr.<TYPE>.min, i64 -4
+///   %val.current.min = load <TYPE>, ptr %ptr.second.load, align 4
+///   %cmp = <CMP_INST> <TYPE> %val.first, %val.current.min
+///   ...
+///   %min.idx.next = select i1 %cmp, ..., i32 %min.idx
+///   ...
+///   ...
+///   br i1 ..., label %loop, ...
+///
+/// Any compare predicate is accepted, and %val.current.min may appear on
+/// either side of the compare. The transform memoizes one operand of the
+/// compare in a loop-carried PHI, which is sound regardless of whether the
+/// pattern computes a min, a max, or an equality check.
+bool GVNPass::recognizeMinFindingSelectPattern(SelectInst *Select) {
+  BasicBlock *BB = Select->getParent();
+
+  // Phase 1: Do trivial checks: loop / select / compare structural checks.
+  // Confirm BB is in a loop with a preheader, the select's condition is a
+  // compare, and both compare operands are loads of the same scalar type.
+  // On success: L, Preheader, Comparison, LoadType are populated.
+
+  // If the block is not in a loop, bail out.
+  Loop *L = LI->getLoopFor(BB);
+  if (!L)
+    return false;
+
+  // If preheader of the loop is not found, bail out.
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): Could not find loop preheader.\n");
+    return false;
+  }
+
+  // The transform plants a 2-input PHI in BB with incomings from Preheader
+  // and BB, so it is well-formed only for a single-block self-loop where
+  // BB is both header and latch.
+  if (BB != L->getHeader() || BB != L->getLoopLatch()) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): select's block is not a single-block "
+                         "self-loop (header == latch).\n");
+    return false;
+  }
+
+  Value *Condition = Select->getCondition();
+  CmpInst *Comparison = dyn_cast<CmpInst>(Condition);
+  if (!Comparison) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): Condition is not a comparison.\n");
+    return false;
+  }
+
+  // Both compare operands must be loads of the same type. The predicate
+  // itself is irrelevant: the rewrite memoizes one operand of the compare
+  // across iterations, and that is sound for any predicate.
+  Value *Op0 = Comparison->getOperand(0);
+  Value *Op1 = Comparison->getOperand(1);
+  if (!isa<LoadInst>(Op0) || !isa<LoadInst>(Op1)) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): Not both operands are loads.\n");
+    return false;
+  }
+  if (Op0->getType() != Op1->getType()) {
+    LLVM_DEBUG(
+        dbgs() << "GVN (minindx): Not both loads are of the same type.\n");
+    return false;
+  }
+  // The transform memoizes the hoistable load's value across iterations,
+  // dropping per-iteration freshness against concurrent writes. That is
+  // unsound for any non-simple (atomic or volatile) load.
+  if (!cast<LoadInst>(Op0)->isSimple() || !cast<LoadInst>(Op1)->isSimple()) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): atomic/volatile load operand.\n");
+    return false;
+  }
+  Type *LoadType = Op0->getType();
+
+  // Phase 2: Match the hoistable (RHS) load and canonicalize the compare.
+  // The rewrite needs one of the loads to be a typed GEP indexed by a
+  // sext'd phi (the recurrence of the candidate min-index). Try Op1 first
+  // to preserve the IR shape; if only Op0 matches, swapOperands() flips
+  // the predicate and moves the matched load to operand(1).
+  // On success: TypedGEP, RHSOffsetAP, IndexValPhi, Base are populated.
+  GetElementPtrInst *TypedGEP = nullptr;
+  APInt RHSOffsetAP;
+  PHINode *IndexValPhi = nullptr;
+  auto MatchHoistableLoad = [&](Value *LoadOp) -> bool {
+    Value *InnerGEP;
+    const APInt *OffsetAPInt;
+    if (!match(LoadOp,
+               m_Load(m_PtrAdd(m_Value(InnerGEP), m_APInt(OffsetAPInt)))))
+      return false;
+    auto *GEP = dyn_cast<GetElementPtrInst>(InnerGEP);
+    if (!GEP || GEP->getSourceElementType() != LoadType)
+      return false;
+    auto *SEInst = dyn_cast<SExtInst>(GEP->getOperand(1));
+    if (!SEInst)
+      return false;
+    if (!SEInst->getType()->isIntegerTy(64) ||
+        !SEInst->getOperand(0)->getType()->isIntegerTy(32))
+      return false;
+    auto *Phi = dyn_cast<PHINode>(SEInst->getOperand(0));
+    if (!Phi)
+      return false;
+    // The transform uses IndexValPhi->getIncomingValueForBlock(Preheader)
+    // and Phi nodes only have incoming entries for their parent's
+    // predecessors, so the Phi must live in BB (which has Preheader as a
+    // predecessor by Gate-3).
+    if (Phi->getParent() != BB)
+      return false;
+    TypedGEP = GEP;
+    RHSOffsetAP = *OffsetAPInt;
+    IndexValPhi = Phi;
+    return true;
+  };
+
+  if (!MatchHoistableLoad(Op1)) {
+    if (!MatchHoistableLoad(Op0)) {
+      LLVM_DEBUG(dbgs() << "GVN (minindx): No operand matches hoistable load "
+                           "pattern.\n");
+      return false;
+    }
+    Comparison->swapOperands();
+  }
+  Value *Base = TypedGEP->getPointerOperand();
+
+  // RAUW with the hoisted value would corrupt any extra in-loop use of
+  // the per-iteration load; require the load to feed only the compare.
+  auto *HoistableLoad = cast<LoadInst>(Comparison->getOperand(1));
+  if (!HoistableLoad->hasOneUse()) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): hoistable load has extra uses.\n");
+    return false;
+  }
+
+  // The transform builds a preheader GEP from Base; Base must dominate
+  // the preheader (i.e. be loop-invariant) for the result to verify.
+  if (!L->isLoopInvariant(Base)) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): Base is not loop-invariant.\n");
+    return false;
+  }
+
+  // Phase 3: Match the LHS load shape.
+  // Extract %inner and an optional byte offset C1 from the LHS load, then
+  // verify %inner is a typed `getelementptr T, Base, IV` sharing the same
+  // base pointer as the RHS load and using a single index.
+  // On success: LHSGEP, LHSIV, C1AP are populated.
+  Value *LHS = Comparison->getOperand(0);
+  Value *LHSInnerGEP;
+  const APInt *C1AP = nullptr;
+  // Accept either of these two shapes for the LHS load:
+  //   1) load T, ptr (getelementptr i8, %inner, C1)   -- byte offset C1 present
+  //   2) load T, ptr %inner                           -- no byte offset, C1 = 0
+  // %inner is the typed `getelementptr T, base, IV` checked just below.
+  if (!match(LHS, m_Load(m_PtrAdd(m_Value(LHSInnerGEP), m_APInt(C1AP)))) &&
+      !match(LHS, m_Load(m_Value(LHSInnerGEP)))) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): LHS load shape unsupported.\n");
+    return false;
+  }
+  // %inner (captured above) must be a typed `getelementptr T, base, IV`:
+  //   - element type T matches the load type,
+  //   - base pointer is the same array as the hoistable load,
+  //   - exactly one index (IV).
+  auto *LHSGEP = dyn_cast<GetElementPtrInst>(LHSInnerGEP);
+  if (!LHSGEP || LHSGEP->getSourceElementType() != LoadType ||
+      LHSGEP->getPointerOperand() != Base || LHSGEP->getNumIndices() != 1) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): LHS GEP shape unsupported.\n");
+    return false;
+  }
+  Value *LHSIV = LHSGEP->getOperand(1);
+
+  // Phase 4: Match the new-index arm of the Select.
+  // One of the Select operands must be trunc(add LHSIV, KStep) with a
+  // constant KStep -- this is the IV update produced when the compare
+  // selects the new minimum index.
+  // On success: KStepAP is populated.
+  const APInt *KStepAP = nullptr;
+  auto MatchNewIdx = [&](Value *SelOp) {
+    Value *IVNext;
+    return match(SelOp, m_Trunc(m_Value(IVNext))) &&
+           match(IVNext, m_Add(m_Specific(LHSIV), m_APInt(KStepAP)));
+  };
+  // The transform plants `select Cmp, LHS, KnownMin`, which assumes the
+  // new index is on the Select's true arm; reject the mirrored polarity.
+  Value *OtherArm = nullptr;
+  if (MatchNewIdx(Select->getTrueValue())) {
+    OtherArm = Select->getFalseValue();
+  } else {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): select's new-index arm is not the "
+                         "true arm.\n");
+    return false;
+  }
+
+  // The transform's "cmp-false keeps known_min" assumes the Select's
+  // non-new-index arm is IndexValPhi itself.
+  if (OtherArm != IndexValPhi) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): select's keep arm is not "
+                         "IndexValPhi.\n");
+    return false;
+  }
+
+  // The algebraic gate below assumes next iter's IndexValPhi takes the
+  // Select's result; enforce that here.
+  if (IndexValPhi->getIncomingValueForBlock(BB) != Select) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): IndexValPhi back-edge is not the "
+                         "select.\n");
+    return false;
+  }
+
+  // Phase 6: Algebraic soundness gate.
+  // The transform is sound only when, on the cmp-true arm, the next
+  // iteration's hoistable load reads from the same address this
+  // iteration's LHS load read. Otherwise propagating the LHS value as
+  // known_min would change the value seen next iteration.
+  //
+  // Both load addresses look like `Base + sizeof(T) * <iv> + <byte off>`.
+  // With C1 / C2 the byte offsets on the LHS / hoistable GEPs and KStep
+  // the addend in `iv.next = add iv, KStep`, the address-equality reduces
+  // to:
+  //     C1 - C2 == sizeof(T) * KStep.
+  // Evaluate that in pointer-index width.
+  const DataLayout &DL = Select->getDataLayout();
+  unsigned PtrBits = DL.getIndexTypeSizeInBits(Base->getType());
+  APInt C1 = C1AP ? C1AP->sextOrTrunc(PtrBits) : APInt::getZero(PtrBits);
+  APInt C2 = RHSOffsetAP.sextOrTrunc(PtrBits);
+  APInt KStep = KStepAP->sextOrTrunc(PtrBits);
+  APInt ElemBytes(PtrBits, DL.getTypeAllocSize(LoadType).getFixedValue());
+  APInt LHSDelta = C1 - C2, Stride = ElemBytes * KStep;
+  if (LHSDelta != Stride) {
+    LLVM_DEBUG(dbgs() << "GVN (minindx): offset/step relationship violated. "
+                      << "C1=" << C1 << " C2=" << C2 << " KStep=" << KStep
+                      << " sizeof(T)=" << ElemBytes
+                      << "; require C1 - C2 == sizeof(T) * KStep, got "
+                      << LHSDelta << " != " << Stride << ".\n");
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "GVN: Found minimum finding pattern in Block: "
+                    << Select->getParent()->getName() << ".\n");
+
+  Value *OffsetVal = ConstantInt::get(Select->getContext(), RHSOffsetAP);
+  return transformMinFindingSelectPattern(L, LoadType, Preheader, BB,
+                                          Comparison, Select, Base, IndexValPhi,
+                                          OffsetVal);
 }
 
 class llvm::gvn::GVNLegacyPass : public FunctionPass {
