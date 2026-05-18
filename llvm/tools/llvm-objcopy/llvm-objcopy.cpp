@@ -124,7 +124,7 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
 /// Returns the format identifier string for non-auto FileFormat values.
 /// Returns "" for Unspecified/ELF so callers can fall back to the input
 /// object's own format string (e.g. "elf64-x86-64").
-static StringRef fileFormatName(FileFormat Fmt) {
+static StringRef toFileFormatName(FileFormat Fmt) {
   switch (Fmt) {
   case FileFormat::Binary:
     return "binary";
@@ -162,11 +162,11 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     MemoryBufferHolder = std::move(*BufOrErr);
 
     if (Config.Verbose) {
-      StringRef InFmt = fileFormatName(Config.InputFormat);
-      StringRef OutFmt = fileFormatName(Config.OutputFormat);
+      StringRef InFormatName = toFileFormatName(Config.InputFormat);
+      StringRef OutFmt = toFileFormatName(Config.OutputFormat);
       if (OutFmt.empty())
-        OutFmt = InFmt;
-      outs() << "copy from '" << Config.InputFilename << "' [" << InFmt
+        OutFmt = InFormatName;
+      outs() << "copy from '" << Config.InputFilename << "' [" << InFormatName
              << "] to '" << Config.OutputFilename << "' [" << OutFmt << "]\n";
     }
 
@@ -195,13 +195,13 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
         return E;
     } else {
       if (Config.Verbose) {
-        StringRef InFmt;
+        StringRef InFormatName;
         if (auto *OF = dyn_cast<object::ObjectFile>(BinaryHolder.getBinary()))
-          InFmt = OF->getFileFormatName();
-        StringRef OutFmt = fileFormatName(Config.OutputFormat);
+          InFormatName = OF->getFileFormatName();
+        StringRef OutFmt = toFileFormatName(Config.OutputFormat);
         if (OutFmt.empty())
-          OutFmt = InFmt;
-        outs() << "copy from '" << Config.InputFilename << "' [" << InFmt
+          OutFmt = InFormatName;
+        outs() << "copy from '" << Config.InputFilename << "' [" << InFormatName
                << "] to '" << Config.OutputFilename << "' [" << OutFmt << "]\n";
       }
       // Handle llvm::object::Binary.
