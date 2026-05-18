@@ -334,13 +334,13 @@ public:
     return {CanonicalDecl, Scope};
   }
 
-  const std::pair<const CXXMethodDecl *, WarningScope>
+  std::pair<const CXXMethodDecl *, WarningScope>
   getCanonicalDeclForAttr(const CXXMethodDecl *MD) {
     auto [CanonicalFD, Scope] = getCanonicalFunctionDeclForAttr(MD);
     return {cast_or_null<CXXMethodDecl>(CanonicalFD), Scope};
   }
 
-  const std::pair<const ParmVarDecl *, WarningScope>
+  std::pair<const ParmVarDecl *, WarningScope>
   getCanonicalDeclForAttr(const FunctionDecl *FD, const ParmVarDecl *PVD) {
     auto [CanonicalFD, Scope] = getCanonicalFunctionDeclForAttr(FD);
     if (!CanonicalFD)
