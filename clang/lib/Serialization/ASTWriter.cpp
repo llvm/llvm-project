@@ -1570,7 +1570,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Implicit suff len
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name raw kind
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
@@ -1604,9 +1604,10 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         Record.push_back(M.Signature ? 0 : M.Size);
         Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.ModTime));
 
+        Record.push_back(M.FileName.getRawKind());
+
         llvm::append_range(Blob, M.Signature);
 
-        Record.push_back(M.FileName.getImplicitModuleSuffixLength());
         AddPathBlob(M.FileName, Record, Blob);
       }
 
@@ -6158,8 +6159,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     AddTypeRef(Context, Context.ObjCClassRedefinitionType, SpecialTypes);
     AddTypeRef(Context, Context.ObjCSelRedefinitionType, SpecialTypes);
     AddTypeRef(Context, Context.getucontext_tType(), SpecialTypes);
-    AddTypeRef(Context, Context.getfexcept_tType(), SpecialTypes);
-    AddTypeRef(Context, Context.getfenv_tType(), SpecialTypes);
   }
 
   if (SemaPtr)

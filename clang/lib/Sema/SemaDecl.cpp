@@ -2398,8 +2398,6 @@ static StringRef getHeaderName(Builtin::Context &BuiltinInfo, unsigned ID,
     return "setjmp.h";
   case ASTContext::GE_Missing_ucontext:
     return "ucontext.h";
-  case ASTContext::GE_Missing_fenv:
-    return "fenv.h";
   }
   llvm_unreachable("unhandled error kind");
 }
@@ -7020,12 +7018,6 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
       case tok::NotableIdentifierKind::ucontext_t:
         Context.setucontext_tDecl(NewTD);
         break;
-      case tok::NotableIdentifierKind::fexcept_t:
-        Context.setfexcept_tDecl(NewTD);
-        break;
-      case tok::NotableIdentifierKind::fenv_t:
-        Context.setfenv_tDecl(NewTD);
-        break;
       case tok::NotableIdentifierKind::float_t:
       case tok::NotableIdentifierKind::double_t:
         NewTD->addAttr(AvailableOnlyInDefaultEvalMethodAttr::Create(Context));
@@ -9169,7 +9161,8 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   }
 
   if (isVM && NewVD->hasAttr<BlocksAttr>()) {
-    Diag(NewVD->getLocation(), diag::err_block_on_vm);
+    Diag(NewVD->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::VariablyModifiedType;
     NewVD->setInvalidDecl();
     return;
   }
@@ -15803,9 +15796,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
         << 1 << New << SourceRange(D.getDeclSpec().getModulePrivateSpecLoc())
         << FixItHint::CreateRemoval(D.getDeclSpec().getModulePrivateSpecLoc());
 
-  if (New->hasAttr<BlocksAttr>()) {
-    Diag(New->getLocation(), diag::err_block_on_nonlocal);
-  }
+  if (New->hasAttr<BlocksAttr>())
+    Diag(New->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::NonlocalVariable;
 
   New->deduceParmAddressSpace(Context);
 
