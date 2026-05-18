@@ -105,7 +105,7 @@ export function parseListProcessesOutput(stdout: string): Process[] {
     return {
       id: entry.pid,
       command: entry.executable ?? entry.name ?? "",
-      arguments: entry.name ?? entry.executable ?? "",
+      arguments: entry.arguments ?? "",
     };
   });
 }

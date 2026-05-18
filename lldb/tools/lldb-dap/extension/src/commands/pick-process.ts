@@ -127,6 +127,6 @@ export function toQuickPickItems(processes: Process[]): ProcessQuickPick[] {
     processId: proc.id,
     label: path.basename(proc.command) || proc.id.toString(),
     description: proc.id.toString(),
-    detail: proc.arguments,
+    detail: `${proc.command} ${proc.arguments}`,
   }));
 }
