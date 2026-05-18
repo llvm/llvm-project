@@ -140,13 +140,6 @@ bool DIEAttributeCloner::shouldSkipAttribute(
   switch (AttrSpec.Attr) {
   default:
     return false;
-  case dwarf::DW_AT_GNU_dwo_id:
-  case dwarf::DW_AT_dwo_id:
-    // The dwo_id identifies a split-DWARF skeleton CU's matching .dwo unit.
-    // The linker inlines the full DIE tree into the output, so the output CU
-    // is not a skeleton and has no .dwo to point at. Keeping the attribute
-    // would mislabel a regular CU as a skeleton.
-    return true;
   case dwarf::DW_AT_low_pc:
   case dwarf::DW_AT_high_pc:
   case dwarf::DW_AT_ranges:
