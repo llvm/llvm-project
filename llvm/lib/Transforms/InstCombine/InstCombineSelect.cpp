@@ -4422,7 +4422,8 @@ static Value *foldSelectBitTest(SelectInst &Sel, Value *CondVal, Value *TrueVal,
 //   -> sub (sext !C), X
 // select C, (xor X, -1), (sub 0, X)
 //   -> sub (sext C), X
-static Instruction *foldSelectNegNot(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
+static Instruction *foldSelectNegNot(SelectInst &SI,
+                                     InstCombiner::BuilderTy &Builder) {
   auto *CondVal = SI.getCondition();
   auto *TrueVal = SI.getTrueValue();
   auto *FalseVal = SI.getFalseValue();
