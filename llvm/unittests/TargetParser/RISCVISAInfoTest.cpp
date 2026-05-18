@@ -1397,6 +1397,8 @@ Experimental extensions
     zvqwbdota8i          0.2
     zvvfmm               0.1
     zvvmm                0.1
+    zvvmtls              0.1
+    zvvmttls             0.1
     zvzip                0.1
     smpmpmt              0.6
     svukte               0.3

@@ -646,7 +646,7 @@ public:
   }
 
   bool isTileLambda() const {
-    return isUImmPred([](int64_t Imm) { return Imm >= 1 && Imm <= 7; });
+    return isUImmPred([](int64_t Imm) { return Imm && isUInt<3>(Imm); });
   }
 
   /// Return true if the operand is a valid for the fence instruction e.g.
@@ -2610,32 +2610,10 @@ ParseStatus RISCVAsmParser::parseTileLambda(OperandVector &Operands) {
   if (Name.getAsInteger(10, Lambda))
     return Error(S, "operand must be L1, L2, L4, L8, L16, L32, or L64");
 
-  unsigned EncodedLambda;
-  switch (Lambda) {
-  case 1:
-    EncodedLambda = 1;
-    break;
-  case 2:
-    EncodedLambda = 2;
-    break;
-  case 4:
-    EncodedLambda = 3;
-    break;
-  case 8:
-    EncodedLambda = 4;
-    break;
-  case 16:
-    EncodedLambda = 5;
-    break;
-  case 32:
-    EncodedLambda = 6;
-    break;
-  case 64:
-    EncodedLambda = 7;
-    break;
-  default:
+  if (!isPowerOf2_32(Lambda) || Lambda >= 128)
     return Error(S, "operand must be L1, L2, L4, L8, L16, L32, or L64");
-  }
+
+  unsigned EncodedLambda = Log2_32(Lambda) + 1;
 
   SMLoc E = getTok().getEndLoc();
   getLexer().Lex();

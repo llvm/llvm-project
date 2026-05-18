@@ -34,7 +34,7 @@ def TileLambdaOp : RISCVOp {
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return Imm >= 1 && Imm <= 7;
+    return Imm && isUInt<3>(Imm);
   }];
 }
 
@@ -75,9 +75,9 @@ class VTileLoadBase<bits<2> mop, dag ins, string opcodestr, string argstr>
   let Inst{11-7} = vd;
   let Inst{6-0} = OPC_LOAD_FP.Value;
 
-  let mayLoad = 1;
-  let mayStore = 0;
-  let hasSideEffects = 0;
+  let mayLoad = true;
+  let mayStore = false;
+  let hasSideEffects = false;
   let Uses = [VL, VTYPE];
   let VMConstraint = true;
   let UseNamedOperandTable = true;
@@ -102,9 +102,9 @@ class VTileStoreBase<bits<2> mop, dag ins, string opcodestr, string argstr>
   let Inst{11-7} = vs3;
   let Inst{6-0} = OPC_STORE_FP.Value;
 
-  let mayLoad = 0;
-  let mayStore = 1;
-  let hasSideEffects = 0;
+  let mayLoad = false;
+  let mayStore = true;
+  let hasSideEffects = false;
   let Uses = [VL, VTYPE];
   let UseNamedOperandTable = true;
 }
@@ -138,9 +138,9 @@ class VIMEMACVV<bits<6> funct6, string opcodestr>
     : RVInstVV<funct6, OPIVV, (outs VR:$vd_wb),
                (ins VR:$vd, VR:$vs1, VR:$vs2), opcodestr,
                "$vd, $vs1, $vs2"> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
+  let mayLoad = false;
+  let mayStore = false;
+  let hasSideEffects = false;
   let Constraints = "$vd = $vd_wb";
   let Uses = [VL, VTYPE];
   let vm = 1;
@@ -151,9 +151,9 @@ class VFMEMACVV<bits<6> funct6, string opcodestr>
     : RVInstVV<funct6, OPFVV, (outs VR:$vd_wb),
                (ins VR:$vd, VR:$vs1, VR:$vs2), opcodestr,
                "$vd, $vs1, $vs2"> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
+  let mayLoad = false;
+  let mayStore = false;
+  let hasSideEffects = false;
   let Constraints = "$vd = $vd_wb";
   let Uses = [FRM, VL, VTYPE];
   let mayRaiseFPException = true;
@@ -165,9 +165,9 @@ class VFMEMACScaleVV<bits<6> funct6, string opcodestr>
     : RVInstVV<funct6, OPFVV, (outs VR:$vd_wb),
                (ins VR:$vd, VR:$vs1, VR:$vs2, VScaleOp:$vm), opcodestr,
                "$vd, $vs1, $vs2$vm"> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
+  let mayLoad = false;
+  let mayStore = false;
+  let hasSideEffects = false;
   let Constraints = "$vd = $vd_wb";
   let Uses = [FRM, VL, VTYPE];
   let mayRaiseFPException = true;
@@ -179,9 +179,9 @@ class VIFMEMACScaleVV<bits<6> funct6, string opcodestr>
     : RVInstVV<funct6, OPIVV, (outs VR:$vd_wb),
                (ins VR:$vd, VR:$vs1, VR:$vs2, VScaleOp:$vm), opcodestr,
                "$vd, $vs1, $vs2$vm"> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
+  let mayLoad = false;
+  let mayStore = false;
+  let hasSideEffects = false;
   let Constraints = "$vd = $vd_wb";
   let Uses = [FRM, VL, VTYPE];
   let mayRaiseFPException = true;
