@@ -13317,6 +13317,17 @@ static SDValue PerformVSELECTCombine(SDNode *N,
   if (!Subtarget->hasMVEIntegerOps())
     return SDValue();
 
+  // Constant fold vselect 0, A, B -> B
+  //           and vselect 0xffff, A, B -> A
+  if (N->getOperand(0).getOpcode() == ARMISD::PREDICATE_CAST &&
+      isa<ConstantSDNode>(N->getOperand(0).getOperand(0))) {
+    unsigned C = N->getOperand(0).getConstantOperandVal(0);
+    if (C == 0)
+      return N->getOperand(2);
+    if (C == 0xffff)
+      return N->getOperand(1);
+  }
+
   if (SDValue V = PerformVQDMULHCombine(N, DCI.DAG))
     return V;
 
@@ -13781,7 +13792,7 @@ bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(
 }
 
 bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
-  if (!Subtarget->hasNEON()) {
+  if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps()) {
     if (Subtarget->isThumb1Only())
       return VT.getScalarSizeInBits() <= 32;
     return true;
@@ -15657,6 +15668,35 @@ static SDValue PerformExtractEltCombine(SDNode *N,
         Idx % Op0->getOperand(0).getValueType().getVectorNumElements();
     return DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, Op0.getOperand(Vec),
                            DCI.DAG.getConstant(SubIdx, dl, MVT::i32));
+  }
+
+  // extract(bitcast(BUILD_VECTOR(extract(bitcast(a)), ..))) -> extract(a)
+  if (ST->isLittle() && Op0.getOpcode() == ISD::BITCAST &&
+      Op0.getOperand(0).getOpcode() == ARMISD::BUILD_VECTOR &&
+      isa<ConstantSDNode>(N->getOperand(1)) &&
+      Op0.getScalarValueSizeInBits() <=
+          Op0.getOperand(0).getScalarValueSizeInBits()) {
+    unsigned Lane = N->getConstantOperandVal(1);
+    EVT ExtVT = Op0.getValueType();
+    EVT BVVT = Op0.getOperand(0).getValueType();
+    unsigned BVLane =
+        (Lane * BVVT.getVectorNumElements()) / ExtVT.getVectorNumElements();
+    assert(BVLane < Op0.getOperand(0).getNumOperands());
+    SDValue Ext = Op0.getOperand(0).getOperand(BVLane);
+    if (Ext.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Ext.getOperand(0).getOpcode() == ISD::BITCAST &&
+        isa<ConstantSDNode>(Ext.getOperand(1)) &&
+        Ext.getOperand(0).getOperand(0).getValueType() == ExtVT) {
+      unsigned InnerLane = Ext.getConstantOperandVal(1);
+      unsigned BVSubLane = Lane - (BVLane * ExtVT.getVectorNumElements()) /
+                                      BVVT.getVectorNumElements();
+      unsigned FinalLane = (InnerLane * ExtVT.getVectorNumElements()) /
+                               BVVT.getVectorNumElements() +
+                           BVSubLane;
+      return DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT,
+                             Ext.getOperand(0).getOperand(0),
+                             DCI.DAG.getConstant(FinalLane, dl, MVT::i32));
+    }
   }
 
   return SDValue();
