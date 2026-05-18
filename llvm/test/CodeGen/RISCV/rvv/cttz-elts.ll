@@ -201,4 +201,36 @@ define i16 @ctz_v8i1_i16_ret(<8 x i1> %a) {
   ret i16 %res
 }
 
+; Regression test for the split path of CTTZ_ELTS.
+; The mask <vscale x 64 x i1> is wide enough that the implied step-vector type
+; (<vscale x 64 x i16>, LMUL > 8) goes through TypeSplitVector during
+; legalization on RISC-V V. Before the fix this crashed in expandCttzElts
+; due to dereferencing a null StepVec SDValue.
+define i64 @ctz_split_nxv64i1(<vscale x 64 x i1> %a) {
+; RV32-LABEL: ctz_split_nxv64i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; RV32-NEXT:    vfirst.m a0, v0
+; RV32-NEXT:    bgez a0, .LBB9_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 3
+; RV32-NEXT:  .LBB9_2:
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ctz_split_nxv64i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; RV64-NEXT:    vfirst.m a0, v0
+; RV64-NEXT:    bgez a0, .LBB9_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    slli a0, a0, 3
+; RV64-NEXT:  .LBB9_2:
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.experimental.cttz.elts.i64.nxv64i1(<vscale x 64 x i1> %a, i1 0)
+  ret i64 %res
+}
+
 attributes #0 = { vscale_range(2,1024) }
