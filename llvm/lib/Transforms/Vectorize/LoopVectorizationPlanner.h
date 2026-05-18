@@ -73,8 +73,8 @@ class VPBuilder {
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
   /// Lightweight SCEV-to-VPlan expander. Converts SCEVConstant, SCEVUnknown,
-  /// SCEVVScale and SCEVMulExpr into VPInstructions, falling back to
-  /// VPExpandSCEVRecipe for other, unsupported expressions.
+  /// SCEVVScale and SCEVMulExpr into VPInstructions. Other SCEV expressions are
+  /// unsupported.
   class VPSCEVExpander {
     VPBuilder &Builder;
     VPlan &Plan;
@@ -455,8 +455,7 @@ public:
   /// Expand \p Expr using VPSCEVExpander. Returns nullptr if \p S cannot be
   /// expanded yet.
   VPValue *expandSCEV(const SCEV *Expr, DebugLoc DL) {
-    VPlan &Plan = getPlan();
-    return VPSCEVExpander(*this, Plan, DL).expand(Expr);
+    return VPSCEVExpander(*this, getPlan(), DL).expand(Expr);
   }
 
   VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr) {
