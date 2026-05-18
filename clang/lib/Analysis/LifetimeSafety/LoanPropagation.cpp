@@ -247,4 +247,40 @@ LoanPropagationAnalysis::~LoanPropagationAnalysis() = default;
 LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
   return PImpl->getLoans(OID, P);
 }
+
+llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
+    const FactManager &FactMgr, ProgramPoint StartPoint,
+    const OriginID StartOID, const LoanID TargetLoan) const {
+  assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
+         "TargetLoan must be present in the StartOID at the StartPoint");
+
+  OriginID CurrOID = StartOID;
+  llvm::SmallVector<OriginID> OriginFlowChain;
+  llvm::ArrayRef<const Fact *> Facts = FactMgr.getBlockContaining(StartPoint);
+
+  for (const Fact *F : llvm::reverse(Facts)) {
+    if (const auto *IF = F->getAs<IssueFact>())
+      if (IF->getLoanID() == TargetLoan && IF->getOriginID() == CurrOID)
+        return OriginFlowChain;
+
+    const auto *OFF = F->getAs<OriginFlowFact>();
+    if (!OFF)
+      continue;
+    if (OFF->getDestOriginID() != CurrOID)
+      continue;
+
+    const OriginID SrcOriginID = OFF->getSrcOriginID();
+    if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
+      continue;
+    OriginFlowChain.push_back(SrcOriginID);
+    CurrOID = SrcOriginID;
+  }
+
+  // FIXME: Ideally, this return is unreachable and should be an assert because
+  // we expect to return via IssueFact. But since current traversal is limited
+  // to a single CFG block, multi-block OriginFlowChain construction might miss
+  // the IssueFact.
+  // We should add llvm_unreachable here once multi-block support is implemented
+  return {};
+}
 } // namespace clang::lifetimes::internal

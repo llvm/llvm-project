@@ -10,7 +10,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/OriginFlowChain.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/ADT/StringMap.h"
 #include "gmock/gmock.h"
@@ -213,10 +212,10 @@ public:
     std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
 
     for (LoanID LID : EndLoanIDs) {
-      const llvm::SmallVector<OriginID> OriginFlowChain = buildOriginFlowChain(
-          Runner.getAnalysis().getFactManager(),
-          Runner.getAnalysis().getLoanPropagation(),
-          getProgramPoint(Annotation), *StartOriginID, LID);
+      const llvm::SmallVector<OriginID> OriginFlowChain =
+          Runner.getAnalysis().getLoanPropagation().buildOriginFlowChain(
+              Runner.getAnalysis().getFactManager(),
+              getProgramPoint(Annotation), *StartOriginID, LID);
       if (!OriginFlowChain.empty())
         return OriginFlowChain;
     }
@@ -1976,19 +1975,28 @@ TEST_F(LifetimeAnalysisTest, LambdaInitCaptureViewByValue) {
 //                    Tests for buildOriginFlowChain
 // ========================================================================= //
 
-TEST_F(LifetimeAnalysisTest, BuildLinearOriginFlowChainInOneBlock) {
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithErrorTargetLoan) {
   SetupTest(R"(
     void target() {
-      int *s;
-      {
-        int tgt = 2;
-        int *a = &tgt;
-        int *c = a;
-        int *b = a;
-        int *e = b;
-        s = e;
-      }
-      (void)s;
+      int tgt = 2;
+      int *a = &tgt;
+      int *s = a;
+      POINT(after_use);
+    }
+  )");
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(Helper->buildOriginFlowChainInOneBlock("s", "a", "after_use"),
+               "TargetLoan must be present in the StartOID at the StartPoint");
+#endif
+}
+
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithSelfAssignment) {
+  SetupTest(R"(
+    void target() {
+      int tgt = 2;
+      int *a = &tgt;
+      int *s = a;
       POINT(after_use);
     }
   )");
@@ -1996,13 +2004,8 @@ TEST_F(LifetimeAnalysisTest, BuildLinearOriginFlowChainInOneBlock) {
   const llvm::SmallVector<OriginID> OriginFlowChain =
       Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
 
-  // 8 == 2 * (e + b + a + tgt)
-  EXPECT_EQ(8u, OriginFlowChain.size());
-
-#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(Helper->buildOriginFlowChainInOneBlock("s", "e", "after_use"),
-               "TargetLoan must be present in the initial propagation point");
-#endif
+  EXPECT_TRUE(
+      llvm::is_contained(OriginFlowChain, *Helper->getOriginForDecl("a")));
 }
 } // anonymous namespace
 } // namespace clang::lifetimes::internal
