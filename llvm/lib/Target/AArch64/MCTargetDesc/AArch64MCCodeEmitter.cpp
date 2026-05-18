@@ -738,6 +738,15 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI,
     return;
   }
 
+  if (MI.getOpcode() == AArch64::TLSDESCAUTHCALL) {
+    // This is a directive which applies an R_AARCH64_AUTH_TLSDESC_CALL to the
+    // following (BLRAA) instruction. It doesn't emit any code itself so it
+    // doesn't go through the normal TableGenerated channels.
+    addFixup(Fixups, 0, MI.getOperand(0).getExpr(),
+             ELF::R_AARCH64_AUTH_TLSDESC_CALL);
+    return;
+  }
+
   if (MI.getOpcode() == AArch64::SPACE) {
     // SPACE just increases basic block size, in both cases no actual code.
     return;
