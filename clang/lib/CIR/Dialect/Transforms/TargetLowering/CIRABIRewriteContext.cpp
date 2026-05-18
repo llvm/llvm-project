@@ -236,11 +236,14 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   if (!needsRewrite(fc))
     return success();
 
-  // TODO: also handle cir::TryCallOp (the throwing-call form used by C++
-  // exceptions) -- templating this routine on the call op type lets the
-  // rewriting logic stay shared.  Will land with the EH-aware follow-up
-  // since the EH paths also need their own ABI considerations.
+  if (isa<cir::TryCallOp>(callOp))
+    return callOp->emitOpError()
+           << "TryCallOp not yet implemented in CallConvLowering";
+
   auto call = cast<cir::CallOp>(callOp);
+  if (call.isIndirect())
+    return call.emitOpError()
+           << "indirect call not yet implemented in CallConvLowering";
 
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     switch (ac.kind) {

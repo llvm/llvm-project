@@ -55,6 +55,15 @@ namespace mlir {
 
 namespace {
 
+bool needsRewrite(const FunctionClassification &fc) {
+  if ((fc.returnInfo.kind != ArgKind::Direct) || fc.returnInfo.coercedType)
+    return true;
+  for (const ArgClassification &ac : fc.argInfos)
+    if ((ac.kind != ArgKind::Direct) || ac.coercedType)
+      return true;
+  return false;
+}
+
 struct CallConvLoweringPass
     : public impl::CallConvLoweringBase<CallConvLoweringPass> {
   using CallConvLoweringBase::CallConvLoweringBase;
@@ -90,13 +99,19 @@ classifyFunction(cir::FuncOp func, const DataLayout &dl, StringRef target,
   return std::nullopt;
 }
 
-/// Find the cir.func declaration matching a cir.call's callee, if any.
-/// Returns nullptr if the callee is indirect or the symbol cannot be
-/// resolved (in which case the call is left alone).  Takes a SymbolTable
-/// instead of a ModuleOp so the symbol lookup is amortized across all the
-/// call sites the driver walks (ModuleOp::lookupSymbol is linear per call).
-cir::FuncOp lookupCallee(cir::CallOp call, SymbolTable &symbolTable) {
-  FlatSymbolRefAttr callee = call.getCalleeAttr();
+/// Find the cir.func declaration matching a direct cir.call / cir.try_call
+/// callee, if any.  Returns nullptr if the callee is indirect or the symbol
+/// cannot be resolved.  Takes a SymbolTable instead of a ModuleOp so the
+/// symbol lookup is amortized across all the call sites the driver walks
+/// (ModuleOp::lookupSymbol is linear per call).
+cir::FuncOp lookupCallee(Operation *callOp, SymbolTable &symbolTable) {
+  FlatSymbolRefAttr callee;
+  if (auto call = dyn_cast<cir::CallOp>(callOp))
+    callee = call.getCalleeAttr();
+  else if (auto tryCall = dyn_cast<cir::TryCallOp>(callOp))
+    callee = tryCall.getCalleeAttr();
+  else
+    return nullptr;
   if (!callee)
     return nullptr;
   return symbolTable.lookup<cir::FuncOp>(callee.getValue());
@@ -144,14 +159,16 @@ void CallConvLoweringPass::runOnOperation() {
   }
 
   // Phase 2: build a callee -> callers index.  A single module walk gives
-  // us every direct call to each cir.func; we use this in phase 3 to
-  // rewrite a function and all of its call sites together.  Indirect or
-  // unresolved callees are silently skipped (they cannot be ABI-rewritten
-  // without knowing the callee's classification).
-  llvm::DenseMap<cir::FuncOp, SmallVector<cir::CallOp>> callers;
-  moduleOp.walk([&](cir::CallOp c) {
-    if (cir::FuncOp callee = lookupCallee(c, symbolTable))
-      callers[callee].push_back(c);
+  // us every direct cir.call / cir.try_call to each cir.func; we use this
+  // in phase 3 to rewrite a function and all of its call sites together.
+  // Indirect or unresolved callees are skipped here (rewriteCallSite
+  // rejects indirect calls; see phase 4).
+  llvm::DenseMap<cir::FuncOp, SmallVector<Operation *>> callers;
+  moduleOp.walk([&](Operation *op) {
+    if (!isa<cir::CallOp, cir::TryCallOp>(op))
+      return;
+    if (cir::FuncOp callee = lookupCallee(op, symbolTable))
+      callers[callee].push_back(op);
   });
 
   // Phase 3: rewrite each function together with every direct call to
@@ -174,11 +191,33 @@ void CallConvLoweringPass::runOnOperation() {
       signalPassFailure();
       return;
     }
-    for (cir::CallOp call : callers.lookup(func))
-      if (failed(rewriteCtx.rewriteCallSite(call, fc, rewriter))) {
+    for (Operation *callOp : callers.lookup(func))
+      if (failed(rewriteCtx.rewriteCallSite(callOp, fc, rewriter))) {
         signalPassFailure();
         return;
       }
+  }
+
+  // Phase 4: reject indirect calls when the module contains any ABI rewrite
+  // that would need call-site lowering.  We cannot strip or coerce operands
+  // without a resolved callee symbol.
+  const FunctionClassification *rewriteFc = nullptr;
+  for (auto &kv : classifications)
+    if (needsRewrite(kv.second)) {
+      rewriteFc = &kv.second;
+      break;
+    }
+  if (rewriteFc) {
+    moduleOp.walk([&](cir::CallOp c) {
+      if (!c.isIndirect())
+        return;
+      if (failed(rewriteCtx.rewriteCallSite(c, *rewriteFc, rewriter)))
+        anyFailed = true;
+    });
+    if (anyFailed) {
+      signalPassFailure();
+      return;
+    }
   }
 }
 
