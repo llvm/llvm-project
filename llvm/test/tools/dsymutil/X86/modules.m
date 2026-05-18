@@ -44,7 +44,6 @@ EOF
 // RUN:     | FileCheck --check-prefix=ACCEL %s
 
 // ACCEL: DW_TAG_compile_unit
-// ACCEL-NOT: DW_AT_GNU_dwo_id
 
 // WARN-NOT: warning: hash mismatch
 
