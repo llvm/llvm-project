@@ -28,8 +28,8 @@ void TrivialSwitchCheck::check(const MatchFinder::MatchResult &Result) {
       HasDefault = true;
   }
 
-  // FIXME: Try to add fixit for each case.
-  switch (SourceLocation Loc = Switch->getBeginLoc(); CaseCount) {
+  // FIXME: Try to add fix-it for each case.
+  switch (const SourceLocation Loc = Switch->getBeginLoc(); CaseCount) {
   case 0:
     diag(Loc, "switch statement without labels has no effect");
     return;
@@ -42,6 +42,9 @@ void TrivialSwitchCheck::check(const MatchFinder::MatchResult &Result) {
   case 2:
     if (HasDefault)
       diag(Loc, "switch could be better written as an if-else statement");
+    [[fallthrough]];
+  default:
+    break;
   }
 }
 
