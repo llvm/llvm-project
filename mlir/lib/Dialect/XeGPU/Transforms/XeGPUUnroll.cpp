@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
@@ -804,13 +806,152 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
   }
 };
 
+/// Unrolls vector.multi_reduction by performing tree reduction with
+/// elementwise arith operations first, then a single multi_reduction
+/// per non-reduced tile position. This avoids generating long chains of
+/// multi_reduction ops (as the upstream pattern does) and is more efficient.
+///
+/// Example:
+/// vector.multi_reduction <32,64> to <32> (tile_shape=32, 32)
+/// -- Upstream pattern generates:
+/// %tmp1 = vector.multi_reduction %tile0, %zero_acc <32,32> to <32>
+/// %res = vector.multi_reduction %tmp1, %tile1 <32,32> to <32>
+/// -- This pattern generates:
+/// %tmp1 = arith.reduction %tile0, %tile1 <32,32> -> <32x,2> // elementwise
+/// %res = vector.multi_reduction %tmp1, %zero_acc <32,32> to <32>
+///
+/// The patterns supports any-D vectors but only handles the case where there
+/// is a single reduction dimension that is the innermost dim.
+struct UnrollMultiReductionOp
+    : public UnrollPattern<vector::MultiDimReductionOp> {
+  UnrollMultiReductionOp(MLIRContext *context,
+                         const xegpu::UnrollOptions &options,
+                         PatternBenefit benefit = 2)
+      : UnrollPattern<vector::MultiDimReductionOp>(context, options, benefit) {}
+
+  LogicalResult matchAndRewrite(vector::MultiDimReductionOp reductionOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType srcTy = reductionOp.getSourceVectorType();
+    ArrayRef<int64_t> srcShape = srcTy.getShape();
+    int64_t srcRank = srcTy.getRank();
+
+    // Only handle a single reduction dimension that is the last dim.
+    ArrayRef<int64_t> reductionDims = reductionOp.getReductionDims();
+    if (reductionDims.size() != 1 || reductionDims[0] != srcRank - 1)
+      return failure();
+
+    // Result must be a vector (not scalar).
+    auto resultType = dyn_cast<VectorType>(reductionOp.getDestType());
+    if (!resultType)
+      return failure();
+
+    std::optional<SmallVector<int64_t>> targetShapeOpt =
+        getTargetShape(reductionOp);
+    if (!targetShapeOpt ||
+        static_cast<int64_t>(targetShapeOpt->size()) != srcRank)
+      return failure();
+
+    SmallVector<int64_t> targetShape = *targetShapeOpt;
+
+    // Check divisibility for all dimensions.
+    for (int64_t i = 0; i < srcRank; ++i) {
+      if (srcShape[i] % targetShape[i] != 0)
+        return failure();
+    }
+
+    int64_t reducedDim = srcRank - 1;
+    int64_t numReducedTiles = srcShape[reducedDim] / targetShape[reducedDim];
+
+    // Need more than 1 tile along the reduction dimension for tree reduction
+    // to be beneficial. Fall through to the upstream pattern otherwise.
+    if (numReducedTiles <= 1)
+      return failure();
+
+    Location loc = reductionOp.getLoc();
+    Value source = reductionOp.getSource();
+    Value acc = reductionOp.getAcc();
+    vector::CombiningKind kind = reductionOp.getKind();
+    SmallVector<bool> reductionMask = reductionOp.getReductionMask();
+
+    // The kept dimensions are all dims except the last (reduced) one.
+    SmallVector<int64_t> keptShape(srcShape.begin(), srcShape.end() - 1);
+    SmallVector<int64_t> keptTileShape(targetShape.begin(),
+                                       targetShape.end() - 1);
+
+    // Initialize the result vector for assembly.
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
+
+    // Iterate over all tile positions in the kept dimensions.
+    for (SmallVector<int64_t> keptOffsets :
+         StaticTileOffsetRange(keptShape, keptTileShape)) {
+
+      // Step 1: Extract all source tiles along the reduction dimension.
+      SmallVector<Value> tiles;
+      for (int64_t k = 0; k < numReducedTiles; ++k) {
+        SmallVector<int64_t> offsets(keptOffsets);
+        // 'keptOffsets' contains values for every dimension except the reduced
+        // one, adding the offset for the reduced dimension here. ex:
+        // %source_vec: <2, 4, 32, 64>
+        // %targetShape: <1, 1, 16, 16>
+        // offsets: [a, b, c] + [k * targetShape(reducedDim)]
+        offsets.push_back(k * targetShape[reducedDim]);
+        SmallVector<int64_t> strides(srcRank, 1);
+        Value tile = vector::ExtractStridedSliceOp::create(
+            rewriter, loc, source, offsets, targetShape, strides);
+        tiles.push_back(tile);
+      }
+
+      // Step 2: Tree-reduce tiles using elementwise arith operations.
+      // We perform 'reduction' steps in a 'while-loop' until only a
+      // single 'tile' remains:
+      // |tile0 | tile1|tile2 |tile3 |tile4 |tile5 | tile6 |
+      // |-------------|-------------|-------------|-------|
+      // |arith.op     |arith.op     |arith.op     | tile6 |
+      // |---------------------------|---------------------|
+      // |       arith.op            |   arith.op          |
+      // |-------------------------------------------------|
+      // |                arith.op                         |
+      //                  ^---- this now goes to multi_reduction
+      while (tiles.size() > 1) {
+        SmallVector<Value> reduced;
+        for (size_t i = 0; i + 1 < tiles.size(); i += 2) {
+          Value combined = vector::makeArithReduction(rewriter, loc, kind,
+                                                      tiles[i], tiles[i + 1]);
+          reduced.push_back(combined);
+        }
+        if (tiles.size() % 2 != 0)
+          reduced.push_back(tiles.back());
+        tiles = std::move(reduced);
+      }
+
+      // Step 3: Perform a single multi_reduction with the accumulator slice.
+      SmallVector<int64_t> accStrides(keptTileShape.size(), 1);
+      Value accSlice = vector::ExtractStridedSliceOp::create(
+          rewriter, loc, acc, keptOffsets, keptTileShape, accStrides);
+
+      auto newReduction = vector::MultiDimReductionOp::create(
+          rewriter, loc, tiles[0], accSlice, reductionMask, kind);
+
+      // Step 4: Insert the reduced result into the output vector.
+      SmallVector<int64_t> dstStrides(keptTileShape.size(), 1);
+      result = vector::InsertStridedSliceOp::create(
+          rewriter, loc, newReduction, result, keptOffsets, dstStrides);
+    }
+
+    rewriter.replaceOp(reductionOp, result);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
-  patterns.add<UnrollCreateNdOp, UnrollPrefetchNdOp, UnrollLoadNdOp,
-               UnrollStoreNdOp, UnrollDpasOp, UnrollDpasMxOp,
-               UnrollLoadMatrixOp, UnrollStoreMatrixOp, UnrollLoadGatherOp,
-               UnrollStoreScatterOp, UnrollConvertLayoutOp>(
-      patterns.getContext(), options);
+  patterns
+      .add<UnrollCreateNdOp, UnrollPrefetchNdOp, UnrollLoadNdOp,
+           UnrollStoreNdOp, UnrollDpasOp, UnrollDpasMxOp, UnrollLoadMatrixOp,
+           UnrollStoreMatrixOp, UnrollLoadGatherOp, UnrollStoreScatterOp,
+           UnrollConvertLayoutOp, UnrollMultiReductionOp>(patterns.getContext(),
+                                                          options);
 }
