@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -709,19 +710,17 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
 
   // N > 2: split into two <N/2 x T> elementwise atomicrmws and recurse via
   // processAtomicInstr().
-  assert(NumLanes % 2 == 0 &&
+  assert(isPowerOf2_32(NumLanes) &&
          "elementwise atomicrmw vector length must be a power of two");
   const unsigned HalfLanes = NumLanes / 2;
   auto *HalfVecTy = FixedVectorType::get(LaneTy, HalfLanes);
   const uint64_t HalfBytes = DL->getTypeStoreSize(HalfVecTy).getFixedValue();
 
-  SmallVector<int, 16> LoMask(HalfLanes), HiMask(HalfLanes);
-  for (unsigned I = 0; I < HalfLanes; ++I) {
-    LoMask[I] = static_cast<int>(I);
-    HiMask[I] = static_cast<int>(HalfLanes + I);
-  }
-  Value *LoVal = Builder.CreateShuffleVector(Val, LoMask, "lo.val");
-  Value *HiVal = Builder.CreateShuffleVector(Val, HiMask, "hi.val");
+  Value *LoVal =
+      Builder.CreateShuffleVector(Val, createSequentialMask(0, HalfLanes, 0),
+                                  "lo.val");
+  Value *HiVal = Builder.CreateShuffleVector(
+      Val, createSequentialMask(HalfLanes, HalfLanes, 0), "hi.val");
 
   Value *HiPtr = Builder.CreateInBoundsGEP(HalfVecTy, Ptr, IdxOne, "hi.ptr");
   Align LoAlign = AI->getAlign();
@@ -732,10 +731,8 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   AtomicRMWInst *HiRMW =
       CreateRMWInstruction(HiPtr, HiVal, HiAlign, /*Elementwise=*/true);
 
-  SmallVector<int, 16> Mask(NumLanes);
-  for (unsigned I = 0; I < NumLanes; ++I)
-    Mask[I] = static_cast<int>(I);
-  Value *Result = Builder.CreateShuffleVector(LoRMW, HiRMW, Mask, "old");
+  Value *Result = concatenateVectors(Builder, {LoRMW, HiRMW});
+  Result->setName("old");
 
   AI->replaceAllUsesWith(Result);
   AI->eraseFromParent();
