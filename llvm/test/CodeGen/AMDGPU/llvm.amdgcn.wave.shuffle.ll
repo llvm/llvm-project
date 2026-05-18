@@ -18,6 +18,7 @@
 ; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX9-W64-GISEL %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX11-W64-GISEL %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12-W64-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-enable-uniform-intrinsic-combine=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12-W64-GISEL-NO-WIC %s
 
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX6-SDAG-ERR %s
 ; RUN: not llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX6-GISEL-ERR %s
@@ -221,6 +222,18 @@ define float @test_wave_shuffle_float(float %val, i32 %idx) {
 ; GFX12-W64-GISEL-NEXT:    ds_bpermute_b32 v0, v1, v0
 ; GFX12-W64-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX12-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W64-GISEL-NO-WIC-LABEL: test_wave_shuffle_float:
+; GFX12-W64-GISEL-NO-WIC:       ; %bb.0: ; %entry
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_expcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX12-W64-GISEL-NO-WIC-NEXT:    ds_bpermute_b32 v0, v1, v0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call float @llvm.amdgcn.wave.shuffle(float %val, i32 %idx)
   ret float %0
@@ -366,6 +379,18 @@ define float @test_wave_shuffle_vs(float %val, i32 inreg %idx) {
 ; GFX12-W64-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-W64-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W64-GISEL-NO-WIC-LABEL: test_wave_shuffle_vs:
+; GFX12-W64-GISEL-NO-WIC:       ; %bb.0: ; %entry
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_expcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    v_lshlrev_b32_e64 v1, 2, s0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    ds_bpermute_b32 v0, v1, v0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call float @llvm.amdgcn.wave.shuffle(float %val, i32 %idx)
   ret float %0
@@ -483,6 +508,19 @@ define float @test_wave_shuffle_ss(float inreg %val, i32 inreg %idx) {
 ; GFX12-W64-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-W64-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-W64-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-W64-GISEL-NO-WIC-LABEL: test_wave_shuffle_ss:
+; GFX12-W64-GISEL-NO-WIC:       ; %bb.0: ; %entry
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_expcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_samplecnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    v_lshlrev_b32_e64 v1, 2, s1
+; GFX12-W64-GISEL-NO-WIC-NEXT:    ds_bpermute_b32 v0, v1, v0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_wait_dscnt 0x0
+; GFX12-W64-GISEL-NO-WIC-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call float @llvm.amdgcn.wave.shuffle(float %val, i32 %idx)
   ret float %0

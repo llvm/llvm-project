@@ -1713,6 +1713,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Sgpr64ToVgprDst}, {IntrId, VgprB64}});
 
   addRulesForIOpcs({amdgcn_wave_shuffle}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_bitop3, amdgcn_fmad_ftz}, Standard)
