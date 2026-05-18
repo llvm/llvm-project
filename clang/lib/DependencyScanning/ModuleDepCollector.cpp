@@ -10,6 +10,7 @@
 
 #include "clang/Basic/MakeSupport.h"
 #include "clang/DependencyScanning/DependencyActionController.h"
+#include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
@@ -558,7 +559,7 @@ void ModuleDepCollectorPP::InclusionDirective(
     // here as `FileChanged` will never see it.
     MDC.addFileDep(FileName);
   }
-  handleImport(SuggestedModule);
+  MDC.handleImport(SuggestedModule);
 }
 
 void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
@@ -573,10 +574,12 @@ void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
     return;
   }
 
-  handleImport(Imported);
+  MDC.handleImport(Imported);
 }
 
-void ModuleDepCollectorPP::handleImport(const Module *Imported) {
+void ModuleDepCollector::handleImport(const Module *Imported) {
+  auto &MDC = *this;
+
   if (!Imported)
     return;
 
@@ -595,7 +598,9 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
   }
 }
 
-void ModuleDepCollectorPP::EndOfMainFile() {
+void ModuleDepCollector::run(DependencyConsumer &Consumer) {
+  auto &MDC = *this;
+
   FileID MainFileID = MDC.ScanInstance.getSourceManager().getMainFileID();
   MDC.MainFile = std::string(MDC.ScanInstance.getSourceManager()
                                  .getFileEntryRefForID(MainFileID)
@@ -644,32 +649,32 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   for (serialization::ModuleFile *MF : MDC.DirectModularDeps)
     handleTopLevelModule(MF);
 
-  MDC.Consumer.handleContextHash(
+  Consumer.handleContextHash(
       MDC.ScanInstance.getInvocation().computeContextHash());
 
-  MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
+  Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
-  MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
-      MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
+  Consumer.handleProvidedAndRequiredStdCXXModules(MDC.ProvidedStdCXXModule,
+                                                  MDC.RequiredStdCXXModules);
 
   for (auto &&I : MDC.ModularDeps)
-    MDC.Consumer.handleModuleDependency(*I.second);
+    Consumer.handleModuleDependency(*I.second);
 
   for (serialization::ModuleFile *MF : MDC.DirectModularDeps) {
     auto It = MDC.ModularDeps.find(MF);
     // Only report direct dependencies that were successfully handled.
     if (It != MDC.ModularDeps.end())
-      MDC.Consumer.handleDirectModuleDependency(It->second->ID);
+      Consumer.handleDirectModuleDependency(It->second->ID);
   }
 
   for (auto &&I : MDC.VisibleModules)
-    MDC.Consumer.handleVisibleModule(std::string(I.getKey()));
+    Consumer.handleVisibleModule(std::string(I.getKey()));
 
   for (auto &&I : MDC.FileDeps)
-    MDC.Consumer.handleFileDependency(I);
+    Consumer.handleFileDependency(I);
 
   for (auto &&I : MDC.DirectPrebuiltModularDeps)
-    MDC.Consumer.handlePrebuiltModuleDependency(I.second);
+    Consumer.handlePrebuiltModuleDependency(I.second);
 }
 
 static StringRef makeAbsoluteAndCanonicalize(CompilerInstance &CI,
@@ -683,7 +688,9 @@ static StringRef makeAbsoluteAndCanonicalize(CompilerInstance &CI,
 }
 
 std::optional<ModuleID>
-ModuleDepCollectorPP::handleTopLevelModule(serialization::ModuleFile *MF) {
+ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
+  auto &MDC = *this;
+
   // If this module has been handled already, just return its ID.
   if (auto ModI = MDC.ModularDeps.find(MF); ModI != MDC.ModularDeps.end())
     return ModI->second->ID;
@@ -812,8 +819,10 @@ ModuleDepCollectorPP::handleTopLevelModule(serialization::ModuleFile *MF) {
   return MD.ID;
 }
 
-void ModuleDepCollectorPP::addAllModuleDeps(serialization::ModuleFile &MF,
-                                            ModuleDeps &MD) {
+void ModuleDepCollector::addAllModuleDeps(serialization::ModuleFile &MF,
+                                          ModuleDeps &MD) {
+  auto &MDC = *this;
+
   llvm::DenseSet<const Module *> Seen;
   for (serialization::ModuleFile *Import : MF.Imports) {
     if (MDC.isPrebuiltModule(Import)) {
@@ -838,12 +847,11 @@ void ModuleDepCollectorPP::addAllModuleDeps(serialization::ModuleFile &MF,
 ModuleDepCollector::ModuleDepCollector(
     DependencyScanningService &Service,
     std::unique_ptr<DependencyOutputOptions> Opts,
-    CompilerInstance &ScanInstance, DependencyConsumer &C,
-    DependencyActionController &Controller, CompilerInvocation OriginalCI,
+    CompilerInstance &ScanInstance, DependencyActionController &Controller,
+    CompilerInvocation OriginalCI,
     const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
     const ArrayRef<StringRef> StableDirs)
-    : Service(Service), ScanInstance(ScanInstance), Consumer(C),
-      Controller(Controller),
+    : Service(Service), ScanInstance(ScanInstance), Controller(Controller),
       PrebuiltModulesASTMap(std::move(PrebuiltModulesASTMap)),
       StableDirs(StableDirs), Opts(std::move(Opts)),
       CommonInvocation(

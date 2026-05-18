@@ -155,6 +155,8 @@ C++2c Feature Support
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Partially implement Itanium mangling for pack indexing. Partially substituted packs are not yet supported. (#GH112003)
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -504,6 +506,9 @@ Improvements to Clang's diagnostics
 
 - Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
 
+- Added warnings for floating-point exception function calls (fenv.h) without enabling
+  floating-point exception behavior via the appropriate flags or pragmas. (#GH128239)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -548,6 +553,7 @@ Bug Fixes in This Version
 - Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with ``--triple spirv``. (#GH189964)
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
+- Fixed a bug where Clang fails to find instantiation of Decls in constraint checking. (#GH173086)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
 - Fixed a crash caused by declaring multiple ``ownership_returns`` attributes with mismatched or missing arguments. (#GH188733)
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
@@ -555,6 +561,7 @@ Bug Fixes in This Version
 - Fixed a crash when parsing invalid ``static_assert`` declarations with string-literal messages (#GH187690).
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
+- Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -612,6 +619,8 @@ Bug Fixes to C++ Support
 - Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
 - Fixed an invalid rejection and assertion failure while generating ``operator=`` for fields with the ``__restrict`` qualifier. (#GH37979)
 - Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
+- Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
+- Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

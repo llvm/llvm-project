@@ -52,6 +52,7 @@ private:
 ConcurrentStringPool &getGlobalStringPool();
 
 extern thread_local llvm::BumpPtrAllocator TransientArena;
+extern thread_local llvm::BumpPtrAllocator PersistentArena;
 
 inline StringRef internString(const Twine &T) {
   if (T.isTriviallyEmpty())
@@ -173,6 +174,15 @@ InfoNode<T> *allocateListNode(llvm::BumpPtrAllocator &Alloc, T *Item) {
 
 template <typename T> InfoNode<T> *allocateListNodeTransient(T *Item) {
   return allocateListNode<T>(TransientArena, Item);
+}
+
+template <typename T, typename... Args>
+InfoNode<T> *allocateListNodePersistent(Args &&...args) {
+  return allocateListNode<T>(PersistentArena, std::forward<Args>(args)...);
+}
+
+template <typename T> InfoNode<T> *allocateListNodePersistent(T *Item) {
+  return allocateListNode<T>(PersistentArena, Item);
 }
 
 // An abstraction for lists that are dynamically managed (inserted/removed).
@@ -411,6 +421,10 @@ struct TemplateParamInfo {
 };
 
 struct TemplateSpecializationInfo {
+  TemplateSpecializationInfo() = default;
+  TemplateSpecializationInfo(const TemplateSpecializationInfo &Other,
+                             llvm::BumpPtrAllocator &Arena);
+
   // Indicates the declaration that this specializes.
   SymbolID SpecializationOf;
 
@@ -430,6 +444,9 @@ struct ConstraintInfo {
 // Records the template information for a struct or function that is a template
 // or an explicit template specialization.
 struct TemplateInfo {
+  TemplateInfo() = default;
+  TemplateInfo(const TemplateInfo &Other, llvm::BumpPtrAllocator &Arena);
+
   // May be empty for non-partial specializations.
   llvm::ArrayRef<TemplateParamInfo> Params = {};
 
@@ -461,6 +478,7 @@ struct FieldTypeInfo : public TypeInfo {
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
+  MemberTypeInfo(const MemberTypeInfo &Other, llvm::BumpPtrAllocator &Arena);
   MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access,
                  bool IsStatic = false)
       : FieldTypeInfo(TI, Name), Access(Access), IsStatic(IsStatic) {}
@@ -517,6 +535,7 @@ struct Info {
        StringRef Name = StringRef(), StringRef Path = StringRef())
       : Path(internString(Path)), Name(internString(Name)), USR(USR), IT(IT) {}
 
+  Info(const Info &Other, llvm::BumpPtrAllocator &Arena);
   Info(const Info &Other) = delete;
   Info(Info &&Other) = default;
 
@@ -579,6 +598,8 @@ struct SymbolInfo : public Info {
              StringRef Name = StringRef(), StringRef Path = StringRef())
       : Info(IT, USR, Name, Path) {}
 
+  SymbolInfo(const SymbolInfo &Other, llvm::BumpPtrAllocator &Arena);
+
   void merge(SymbolInfo &&I);
 
   bool operator<(const SymbolInfo &Other) const {
@@ -607,6 +628,7 @@ struct FriendInfo : public SymbolInfo {
   FriendInfo(const InfoType IT, const SymbolID &USR,
              const StringRef Name = StringRef())
       : SymbolInfo(IT, USR, Name) {}
+  FriendInfo(const FriendInfo &Other, llvm::BumpPtrAllocator &Arena);
   bool mergeable(const FriendInfo &Other);
   void merge(FriendInfo &&Other);
 
@@ -657,6 +679,8 @@ struct FunctionInfo : public SymbolInfo {
 struct RecordInfo : public SymbolInfo {
   RecordInfo(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
              StringRef Path = StringRef());
+
+  RecordInfo(const RecordInfo &Other, llvm::BumpPtrAllocator &Arena);
 
   void merge(RecordInfo &&I);
 
@@ -712,6 +736,7 @@ struct TypedefInfo : public SymbolInfo {
 
 struct BaseRecordInfo : public RecordInfo {
   BaseRecordInfo();
+  BaseRecordInfo(const BaseRecordInfo &Other, llvm::BumpPtrAllocator &Arena);
   BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path, bool IsVirtual,
                  AccessSpecifier Access, bool IsParent);
 
@@ -730,6 +755,8 @@ struct EnumValueInfo {
                          StringRef ValueExpr = StringRef())
       : Name(internString(Name)), Value(internString(Value)),
         ValueExpr(internString(ValueExpr)) {}
+
+  EnumValueInfo(const EnumValueInfo &Other, llvm::BumpPtrAllocator &Arena);
 
   bool operator==(const EnumValueInfo &Other) const {
     return std::tie(Name, Value, ValueExpr) ==
@@ -805,6 +832,12 @@ struct Index : public Reference {
 // This assumes that all infos in the vector are of the same type, and will fail
 // if they are different.
 llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values);
+
+// Merges a single new Info into an existing Reduced Info (allocating it if
+// needed).
+llvm::Error mergeSingleInfo(doc::OwnedPtr<doc::Info> &Reduced,
+                            doc::OwnedPtr<doc::Info> &&NewInfo,
+                            llvm::BumpPtrAllocator &Arena);
 
 struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,

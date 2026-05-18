@@ -65,8 +65,8 @@ LIBC_INLINE double get_error(const DoubleDouble &x_3,
          fputil::multiply_add(x_3.lo, a_sq.hi, x_3.hi * a_sq.lo);
 }
 #else
-LIBC_INLINE LIBC_CONSTEXPR double get_error(const DoubleDouble &x_3,
-                                            const DoubleDouble &a_sq) {
+LIBC_INLINE constexpr double get_error(const DoubleDouble &x_3,
+                                       const DoubleDouble &a_sq) {
   DoubleDouble x_3_a_sq = fputil::quick_mult(a_sq, x_3);
   return (x_3_a_sq.hi - 1.0) + x_3_a_sq.lo;
 }
@@ -144,7 +144,7 @@ LIBC_INLINE LIBC_CONSTEXPR double get_error(const DoubleDouble &x_3,
 // exceptional handling, similar to what was done in the CORE-MATH project:
 // https://gitlab.inria.fr/core-math/core-math/-/blob/master/src/binary64/cbrt/cbrt.c
 
-LIBC_INLINE LIBC_CONSTEXPR double cbrt(double x) {
+LIBC_INLINE constexpr double cbrt(double x) {
   using DoubleDouble = fputil::DoubleDouble;
   using namespace cbrt_internal;
   using FPBits = fputil::FPBits<double>;

@@ -46,7 +46,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS> ACOSF_EXCEPTS =
 
 } // namespace acosf_internal
 
-LIBC_INLINE LIBC_CONSTEXPR float acosf(float x) {
+LIBC_INLINE constexpr float acosf(float x) {
   using namespace acosf_internal;
   using namespace inv_trigf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
