@@ -10,6 +10,8 @@
 // RUN:         bugprone-implicit-widening-of-multiplication-result.UseCXXStaticCastsInCppSources: false \
 // RUN:     }}' -- -target x86_64-unknown-unknown -x c++
 
+typedef long long int64_t;
+
 long t0(int a, int b) {
   return a * b;
   // CHECK-NOTES-ALL: :[[@LINE-1]]:10: warning: performing an implicit widening conversion to type 'long' of a multiplication performed in type 'int'
@@ -87,6 +89,12 @@ long t8(int a, int b) {
 long t9(int a, int b) {
   return (a)*b;
   // CHECK-NOTES-ALL: :[[@LINE-1]]:10: warning: performing an implicit widening conversion to type 'long' of a multiplication performed in type 'int'
+  // CHECK-NOTES-ALL: :[[@LINE-2]]:10: note: make conversion explicit to silence this warning
+  // CHECK-NOTES-ALL: :[[@LINE-3]]:10: note: perform multiplication in a wider type
+}
+int64_t t10() {
+  return 512 * 1024;
+  // CHECK-NOTES-ALL: :[[@LINE-1]]:10: warning: performing an implicit widening conversion to type 'int64_t' (aka 'long long') of a multiplication performed in type 'int'
   // CHECK-NOTES-ALL: :[[@LINE-2]]:10: note: make conversion explicit to silence this warning
   // CHECK-NOTES-ALL: :[[@LINE-3]]:10: note: perform multiplication in a wider type
 }
