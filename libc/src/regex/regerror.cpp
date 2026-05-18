@@ -26,60 +26,46 @@ LLVM_LIBC_FUNCTION(size_t, regerror,
                     char *__restrict errbuf, size_t errbuf_size)) {
   (void)preg; // preg is reserved for implementation-specific messages.
 
-  const char *msg;
-  switch (errcode) {
-  case 0:
-    msg = "Success";
-    break;
-  case REG_NOMATCH:
-    msg = "No match";
-    break;
-  case REG_BADPAT:
-    msg = "Invalid regular expression";
-    break;
-  case REG_ECOLLATE:
-    msg = "Invalid collating element";
-    break;
-  case REG_ECTYPE:
-    msg = "Invalid character class";
-    break;
-  case REG_EESCAPE:
-    msg = "Trailing backslash";
-    break;
-  case REG_ESUBREG:
-    msg = "Invalid backreference";
-    break;
-  case REG_EBRACK:
-    msg = "Missing ']'";
-    break;
-  case REG_EPAREN:
-    msg = "Missing ')'";
-    break;
-  case REG_EBRACE:
-    msg = "Missing '}'";
-    break;
-  case REG_BADBR:
-    msg = "Invalid repetition count";
-    break;
-  case REG_ERANGE:
-    msg = "Invalid range end";
-    break;
-  case REG_ESPACE:
-    msg = "Out of memory";
-    break;
-  case REG_BADRPT:
-    msg = "Invalid preceding expression";
-    break;
-  default:
-    msg = "Unknown error";
-    break;
-  }
+  cpp::string_view msg = [errcode]() -> const char * {
+    switch (errcode) {
+    case 0:
+      return "Success";
+    case REG_NOMATCH:
+      return "No match";
+    case REG_BADPAT:
+      return "Invalid regular expression";
+    case REG_ECOLLATE:
+      return "Invalid collating element";
+    case REG_ECTYPE:
+      return "Invalid character class";
+    case REG_EESCAPE:
+      return "Trailing backslash";
+    case REG_ESUBREG:
+      return "Invalid backreference";
+    case REG_EBRACK:
+      return "Missing ']'";
+    case REG_EPAREN:
+      return "Missing ')'";
+    case REG_EBRACE:
+      return "Missing '}'";
+    case REG_BADBR:
+      return "Invalid repetition count";
+    case REG_ERANGE:
+      return "Invalid range end";
+    case REG_ESPACE:
+      return "Out of memory";
+    case REG_BADRPT:
+      return "Invalid preceding expression";
+    default:
+      return "Unknown error";
+    }
+  }();
 
-  size_t msg_len = cpp::string_view(msg).size() + 1; // include NUL
+  size_t msg_len = msg.size() + 1; // include NUL
 
   if (errbuf_size > 0 && errbuf) {
     size_t copy_len = msg_len < errbuf_size ? msg_len : errbuf_size;
-    inline_memcpy(errbuf, msg, copy_len - 1);
+    inline_memcpy(errbuf, msg.data(), copy_len - 1);
     errbuf[copy_len - 1] = '\0';
   }
   // POSIX requires returning the size needed to hold the full NUL-terminated

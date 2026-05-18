@@ -66,3 +66,12 @@ TEST(LlvmLibcRegexTest, ExactMatch) {
   ASSERT_EQ(0, LIBC_NAMESPACE::regexec(&preg, "test", 0, nullptr, 0));
   LIBC_NAMESPACE::regfree(&preg);
 }
+
+TEST(LlvmLibcRegexTest, NullByteStopsParsing) {
+  regex_t preg;
+  ASSERT_EQ(0,
+            LIBC_NAMESPACE::regcomp(&preg, "match", REG_EXTENDED | REG_NOSUB));
+  ASSERT_EQ(REG_NOMATCH,
+            LIBC_NAMESPACE::regexec(&preg, "doesn't \0 match", 0, nullptr, 0));
+  LIBC_NAMESPACE::regfree(&preg);
+}

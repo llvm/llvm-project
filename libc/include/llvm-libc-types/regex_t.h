@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Type definition for regex_t.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_TYPES_REGEX_T_H
 #define LLVM_LIBC_TYPES_REGEX_T_H

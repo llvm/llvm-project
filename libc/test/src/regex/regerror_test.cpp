@@ -32,6 +32,7 @@ TEST(LlvmLibcRegexTest, RegerrorTruncation) {
   char buf[5];
   size_t needed =
       LIBC_NAMESPACE::regerror(REG_NOMATCH, nullptr, buf, sizeof(buf));
+  ASSERT_EQ(needed, size_t(9)); // strlen("No match") + 1
   ASSERT_STREQ("No m", buf); // "No match" truncated to 5 bytes (including NUL)
 }
 

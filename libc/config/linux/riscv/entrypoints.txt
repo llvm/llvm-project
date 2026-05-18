@@ -393,6 +393,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.setsid
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
+    libc.src.unistd.sysconf
     libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
@@ -1388,23 +1389,20 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.link.dl_iterate_phdr
 
     # wchar.h entrypoints
-    # libc.src.wchar.fgetwc
+    libc.src.wchar.fgetwc
     # libc.src.wchar.fgetws
     # libc.src.wchar.fputwc
     # libc.src.wchar.fputws
     libc.src.wchar.fwide
-    # libc.src.wchar.getwc
+    libc.src.wchar.getwc
     # libc.src.wchar.getwchar
     # libc.src.wchar.putwc
-    # libc.src.wchar.putwchar
-    # libc.src.wchar.ungetwc
+    libc.src.wchar.putwchar
+    libc.src.wchar.ungetwc
   )
 endif()
 
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
-  list(APPEND TARGET_LIBC_ENTRYPOINTS
-    libc.src.unistd.sysconf
-  )
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # regex.h entrypoints

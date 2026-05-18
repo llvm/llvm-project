@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Proxy header for regmatch_t.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_HDR_TYPES_REGMATCH_T_H
 #define LLVM_LIBC_HDR_TYPES_REGMATCH_T_H

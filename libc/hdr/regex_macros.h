@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Proxy header for regex macros.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_HDR_REGEX_MACROS_H
 #define LLVM_LIBC_HDR_REGEX_MACROS_H
