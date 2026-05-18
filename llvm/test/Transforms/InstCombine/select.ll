@@ -5426,10 +5426,9 @@ define i64 @fold_select_neg_not_eq(i64 %lo, i64 %hi) {
 ; CHECK-LABEL: define i64 @fold_select_neg_not_eq(
 ; CHECK-SAME: i64 [[LO:%.*]], i64 [[HI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[NOT_HI:%.*]] = xor i64 [[HI]], -1
-; CHECK-NEXT:    [[LO_IS_ZERO:%.*]] = icmp eq i64 [[LO]], 0
-; CHECK-NEXT:    [[NEG_HI:%.*]] = sub i64 0, [[HI]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[LO_IS_ZERO]], i64 [[NEG_HI]], i64 [[NOT_HI]]
+; CHECK-NEXT:    [[LO_IS_ZERO:%.*]] = icmp ne i64 [[LO]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[LO_IS_ZERO]] to i64
+; CHECK-NEXT:    [[R:%.*]] = sub i64 [[TMP0]], [[HI]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -5444,10 +5443,9 @@ define i64 @fold_select_not_neg_ne(i64 %lo, i64 %hi) {
 ; CHECK-LABEL: define i64 @fold_select_not_neg_ne(
 ; CHECK-SAME: i64 [[LO:%.*]], i64 [[HI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[NOT_HI:%.*]] = xor i64 [[HI]], -1
-; CHECK-NEXT:    [[LO_NOT_ZERO_NOT:%.*]] = icmp eq i64 [[LO]], 0
-; CHECK-NEXT:    [[NEG_HI:%.*]] = sub i64 0, [[HI]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[LO_NOT_ZERO_NOT]], i64 [[NEG_HI]], i64 [[NOT_HI]]
+; CHECK-NEXT:    [[LO_NOT_ZERO_NOT:%.*]] = icmp ne i64 [[LO]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[LO_NOT_ZERO_NOT]] to i64
+; CHECK-NEXT:    [[R:%.*]] = sub i64 [[TMP0]], [[HI]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -5462,9 +5460,9 @@ define i32 @fold_select_neg_not_i32(i1 %c, i32 %y) {
 ; CHECK-LABEL: define i32 @fold_select_neg_not_i32(
 ; CHECK-SAME: i1 [[C:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[Y]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[Y]], -1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[NEG]], i32 [[NOT]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[NOT_C]] to i32
+; CHECK-NEXT:    [[R:%.*]] = sub i32 [[TMP0]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -5478,9 +5476,8 @@ define i8 @fold_select_not_neg_i8(i1 %c, i8 %y) {
 ; CHECK-LABEL: define i8 @fold_select_not_neg_i8(
 ; CHECK-SAME: i1 [[C:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[Y]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[Y]], -1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[NOT]], i8 [[NEG]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[C]] to i8
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[TMP0]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -5494,9 +5491,9 @@ define i64 @fold_select_neg_not_commuted_xor(i1 %c, i64 %y) {
 ; CHECK-LABEL: define i64 @fold_select_neg_not_commuted_xor(
 ; CHECK-SAME: i1 [[C:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[Y]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i64 [[Y]], -1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i64 [[NEG]], i64 [[NOT]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[NOT_C]] to i64
+; CHECK-NEXT:    [[R:%.*]] = sub i64 [[TMP0]], [[Y]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -5510,11 +5507,10 @@ define i64 @fold_select_twoword_neg_hi(i64 %lo, i64 %hi) {
 ; CHECK-LABEL: define i64 @fold_select_twoword_neg_hi(
 ; CHECK-SAME: i64 [[LO:%.*]], i64 [[HI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[LO_IS_ZERO:%.*]] = icmp eq i64 [[LO]], 0
-; CHECK-NEXT:    [[NEG_HI:%.*]] = sub i64 0, [[HI]]
-; CHECK-NEXT:    [[NOT_HI:%.*]] = xor i64 [[HI]], -1
-; CHECK-NEXT:    [[NEW_HI:%.*]] = select i1 [[LO_IS_ZERO]], i64 [[NEG_HI]], i64 [[NOT_HI]]
-; CHECK-NEXT:    [[SUM:%.*]] = sub i64 [[NEW_HI]], [[LO]]
+; CHECK-NEXT:    [[LO_IS_ZERO:%.*]] = icmp ne i64 [[LO]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[LO_IS_ZERO]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[HI]], [[LO]]
+; CHECK-NEXT:    [[SUM:%.*]] = sub i64 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[SUM]]
 ;
 entry:
@@ -5531,9 +5527,9 @@ define i64 @fold_select_neg_not_nsw(i1 %c, i64 %y) {
 ; CHECK-LABEL: define i64 @fold_select_neg_not_nsw(
 ; CHECK-SAME: i1 [[C:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i64 0, [[Y]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i64 [[Y]], -1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i64 [[NEG]], i64 [[NOT]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[NOT_C]] to i64
+; CHECK-NEXT:    [[R:%.*]] = sub i64 [[TMP0]], [[Y]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -5661,9 +5657,9 @@ define <2 x i64> @fold_select_neg_not_vec_splat(<2 x i1> %c, <2 x i64> %y) {
 ; CHECK-LABEL: define <2 x i64> @fold_select_neg_not_vec_splat(
 ; CHECK-SAME: <2 x i1> [[C:%.*]], <2 x i64> [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i64> zeroinitializer, [[Y]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i64> [[Y]], splat (i64 -1)
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i64> [[NEG]], <2 x i64> [[NOT]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C]], splat (i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = sext <2 x i1> [[NOT_C]] to <2 x i64>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i64> [[TMP0]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
 entry:
