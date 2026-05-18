@@ -183,18 +183,18 @@ TEST(EJitModuleLoader, GetTotalBitcodeSize) {
 TEST(EJitCache, BasicPutAndGet) {
   EJitCache cache(10, 1024 * 1024);
   int dummy = 0;
-  cache.put("key1", &dummy, 64);
-  EXPECT_EQ(cache.getOrNull("key1"), &dummy);
-  EXPECT_EQ(cache.getOrNull("nonexistent"), nullptr);
+  cache.put(1, &dummy, 64);
+  EXPECT_EQ(cache.getOrNull(1), &dummy);
+  EXPECT_EQ(cache.getOrNull(999), nullptr);
 }
 
 TEST(EJitCache, StatsTracking) {
   EJitCache cache(10, 1024 * 1024);
   int dummy;
-  cache.put("k1", &dummy, 64 );
-  cache.getOrNull("k1");  // hit
-  cache.getOrNull("k1");  // hit
-  cache.getOrNull("k2");  // miss
+  cache.put(100, &dummy, 64 );
+  cache.getOrNull(100);  // hit
+  cache.getOrNull(100);  // hit
+  cache.getOrNull(200);  // miss
 
   auto stats = cache.getStats();
   EXPECT_EQ(stats.entryCount, 1u);
@@ -206,13 +206,13 @@ TEST(EJitCache, LRUEvictionByEntryCount) {
   EJitCache cache(2, 1024 * 1024);
   int a, b, c;
 
-  EXPECT_TRUE(cache.put("a", &a, 1));
-  EXPECT_TRUE(cache.put("b", &b, 1));
-  EXPECT_TRUE(cache.put("c", &c, 1)); // should evict 'a'
+  EXPECT_TRUE(cache.put(10, &a, 1));
+  EXPECT_TRUE(cache.put(20, &b, 1));
+  EXPECT_TRUE(cache.put(30, &c, 1)); // should evict 'a'
 
-  EXPECT_EQ(cache.getOrNull("a"), nullptr);
-  EXPECT_EQ(cache.getOrNull("b"), &b);
-  EXPECT_EQ(cache.getOrNull("c"), &c);
+  EXPECT_EQ(cache.getOrNull(10), nullptr);
+  EXPECT_EQ(cache.getOrNull(20), &b);
+  EXPECT_EQ(cache.getOrNull(30), &c);
 
   auto stats = cache.getStats();
   EXPECT_EQ(stats.evictions, 1ull);
@@ -222,18 +222,18 @@ TEST(EJitCache, LRUEvictionByTotalSize) {
   EJitCache cache(100, 200);
   int dummy;
 
-  cache.put("a", &dummy, 120); // ok
-  cache.put("b", &dummy, 90);  // should evict 'a'
+  cache.put(10, &dummy, 120); // ok
+  cache.put(20, &dummy, 90);  // should evict 'a'
 
-  EXPECT_EQ(cache.getOrNull("a"), nullptr);
-  EXPECT_EQ(cache.getOrNull("b"), &dummy);
+  EXPECT_EQ(cache.getOrNull(10), nullptr);
+  EXPECT_EQ(cache.getOrNull(20), &dummy);
 }
 
 TEST(EJitCache, SingleFuncSizeLimit) {
   EJitCache cache(10, 1024 * 1024, 100);
   int dummy;
-  EXPECT_FALSE(cache.put("too_big", &dummy, 200));
-  EXPECT_TRUE(cache.put("ok", &dummy, 50));
+  EXPECT_FALSE(cache.put(9999, &dummy, 200));
+  EXPECT_TRUE(cache.put(500, &dummy, 50));
 
   auto stats = cache.getStats();
   EXPECT_EQ(stats.entryCount, 1u);
@@ -247,45 +247,46 @@ TEST(EJitCache, PeriodicInvalidation) {
   std::set<std::string> depsB = {"cell=1"};
   std::set<std::string> depsC = {"trp=0"};
 
-  cache.put("a", &dummy, 1, depsA);
-  cache.put("b", &dummy, 1, depsB);
-  cache.put("c", &dummy, 1, depsC);
+  cache.put(10, &dummy, 1, depsA);
+  cache.put(20, &dummy, 1, depsB);
+  cache.put(30, &dummy, 1, depsC);
 
-  EXPECT_EQ(cache.getOrNull("a"), &dummy);
-  EXPECT_EQ(cache.getOrNull("b"), &dummy);
-  EXPECT_EQ(cache.getOrNull("c"), &dummy);
+  EXPECT_EQ(cache.getOrNull(10), &dummy);
+  EXPECT_EQ(cache.getOrNull(20), &dummy);
+  EXPECT_EQ(cache.getOrNull(30), &dummy);
 
   cache.invalidateByPeriod("cell", 0);
-  EXPECT_EQ(cache.getOrNull("a"), nullptr);  // invalidated
-  EXPECT_EQ(cache.getOrNull("b"), &dummy);   // still valid (cell=1)
-  EXPECT_EQ(cache.getOrNull("c"), &dummy);   // still valid (trp=0)
+  EXPECT_EQ(cache.getOrNull(10), nullptr);  // invalidated
+  EXPECT_EQ(cache.getOrNull(20), &dummy);   // still valid (cell=1)
+  EXPECT_EQ(cache.getOrNull(30), &dummy);   // still valid (trp=0)
 }
 
 TEST(EJitCache, BuildCacheKey) {
-  // No dimensions
-  std::string key0 = EJitCache::buildCacheKey("myfunc", nullptr, 0);
-  EXPECT_EQ(key0, "myfunc");
+  // uint32_t key = funcIdx(16b) | dim[0](4b) | dim[1](4b) | dim[2](4b) | dim[3](4b)
+  // No dimensions → key = funcIdx << 16
+  uint32_t key0 = EJitCache::buildCacheKey(7, nullptr, 0);
+  EXPECT_EQ(key0, 0x00070000u);
 
-  // Single dimension
+  // Single dimension: funcIdx=1, cell=3 → 0x00010003
   std::pair<std::string, uint8_t> dims1[] = {{"cell", 3}};
-  std::string key1 = EJitCache::buildCacheKey("myfunc", dims1, 1);
-  EXPECT_EQ(key1, "myfunc|cell=3");
+  uint32_t key1 = EJitCache::buildCacheKey(1, dims1, 1);
+  EXPECT_EQ(key1, 0x00010003u);
 
-  // Multiple dimensions, sorted by name
+  // Multiple dimensions: funcIdx=2, cell=5, trp=1 → 0x00020051
   std::pair<std::string, uint8_t> dims2[] = {{"trp", 1}, {"cell", 5}};
-  std::string key2 = EJitCache::buildCacheKey("myfunc", dims2, 2);
-  EXPECT_EQ(key2, "myfunc|cell=5,trp=1");
+  uint32_t key2 = EJitCache::buildCacheKey(2, dims2, 2);
+  EXPECT_EQ(key2, 0x00020051u);
 }
 
 TEST(EJitCache, Clear) {
   EJitCache cache(10, 1024 * 1024);
   int dummy;
-  cache.put("a", &dummy, 64 );
-  cache.put("b", &dummy, 64 );
+  cache.put(10, &dummy, 64 );
+  cache.put(20, &dummy, 64 );
   cache.clear();
 
-  EXPECT_EQ(cache.getOrNull("a"), nullptr);
-  EXPECT_EQ(cache.getOrNull("b"), nullptr);
+  EXPECT_EQ(cache.getOrNull(10), nullptr);
+  EXPECT_EQ(cache.getOrNull(20), nullptr);
 
   auto stats = cache.getStats();
   EXPECT_EQ(stats.entryCount, 0u);
@@ -297,12 +298,12 @@ TEST(EJitCache, ThreadSafety) {
 
   std::thread writer([&]() {
     for (int i = 0; i < 100; ++i)
-      cache.put("key" + std::to_string(i), &dummy[i], 1);
+      cache.put(static_cast<uint32_t>(i), &dummy[i], 1);
   });
 
   std::thread reader([&]() {
     for (int i = 0; i < 1000; ++i)
-      cache.getOrNull("key" + std::to_string(i % 100));
+      cache.getOrNull(static_cast<uint32_t>(i % 100));
   });
 
   writer.join();
@@ -838,7 +839,6 @@ TEST(EJitOptimizer, FullPipelineEndToEnd) {
   opt.runInstCombine(*M);
 
   // 3. Inline (no-op for a single function, but shouldn't crash)
-  opt.runInline(*M);
 
   // 4. Optimization pipeline at L3
   opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L3);
@@ -1526,7 +1526,6 @@ TEST(EJitOptimizer, OptimizationL2InlineAndSimplify) {
 
   PeriodArrayRegistry reg;
   EJitOptimizer opt(reg);
-  opt.runInline(*M);
   opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
 
   // After inlining 41+1, should fold to constant 42
@@ -1681,7 +1680,6 @@ TEST(EJitEndToEnd, BranchFolding) {
 
   sfp.run(*F, FAM);
   opt.runInstCombine(*M);
-  opt.runInline(*M);
   opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
 
   auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
@@ -1783,21 +1781,21 @@ TEST(EJitEndToEnd, CacheInvalidation) {
   std::set<std::string> depsB = {"cell=3", "slice=0"};
   std::set<std::string> depsC = {"cell=1", "carrier=5"};
 
-  cache.put("key_a", &dummy, 64, depsA);
-  cache.put("key_b", &dummy, 64, depsB);
-  cache.put("key_c", &dummy, 64, depsC);
+  cache.put(1001, &dummy, 64, depsA);
+  cache.put(1002, &dummy, 64, depsB);
+  cache.put(1003, &dummy, 64, depsC);
 
-  EXPECT_NE(cache.getOrNull("key_a"), nullptr);
-  EXPECT_NE(cache.getOrNull("key_b"), nullptr);
-  EXPECT_NE(cache.getOrNull("key_c"), nullptr);
+  EXPECT_NE(cache.getOrNull(1001), nullptr);
+  EXPECT_NE(cache.getOrNull(1002), nullptr);
+  EXPECT_NE(cache.getOrNull(1003), nullptr);
 
   // Invalidate cell=1: should remove key_a (cell=1,trp=2) and key_c (cell=1,carrier=5)
   // but NOT key_b (cell=3,slice=0)
   cache.invalidateByPeriod("cell", 1);
 
-  EXPECT_EQ(cache.getOrNull("key_a"), nullptr);
-  EXPECT_NE(cache.getOrNull("key_b"), nullptr);
-  EXPECT_EQ(cache.getOrNull("key_c"), nullptr);
+  EXPECT_EQ(cache.getOrNull(1001), nullptr);
+  EXPECT_NE(cache.getOrNull(1002), nullptr);
+  EXPECT_EQ(cache.getOrNull(1003), nullptr);
 
   auto stats = cache.getStats();
   EXPECT_EQ(stats.entryCount, 1u);  // only key_b remains
@@ -1897,7 +1895,6 @@ TEST(EJitPipelineIR, BranchFoldingOnMayConst) {
 
   sfp.run(*F, FAM);
   opt.runInstCombine(*M);
-  opt.runInline(*M);
   opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
 
   // After full pipeline: no loads should remain (all may_const replaced)
@@ -2028,7 +2025,6 @@ TEST(EJitPipelineIR, CellProcessBranchFolding) {
 
   // 4. Final cleanup
   opt.runInstCombine(*M);
-  opt.runInline(*M);
   opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
 
   // All may_const loads should be gone
@@ -2096,46 +2092,6 @@ TEST(EJitPipelineIR, PeriodIndexReplacementAndFold) {
   EXPECT_EQ(RetVal->getSExtValue(), 94);
 }
 
-/// Verify that Inline actually inlines a callee (for L2+ optimization).
-TEST(EJitPipelineIR, InlineVerification) {
-  LLVMContext Ctx;
-  auto M = std::make_unique<Module>("inline_verify", Ctx);
-  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
-
-  IRBuilder<> B(Ctx);
-  auto *Int32Ty = B.getInt32Ty();
-
-  // Callee (internal, always_inline)
-  FunctionType *CalleeFT = FunctionType::get(Int32Ty, {}, false);
-  auto *Callee = Function::Create(CalleeFT, GlobalValue::InternalLinkage, "callee", M.get());
-  Callee->addFnAttr(Attribute::AlwaysInline);
-  BasicBlock *CalleeBB = BasicBlock::Create(Ctx, "entry", Callee);
-  B.SetInsertPoint(CalleeBB);
-  B.CreateRet(B.getInt32(77));
-
-  // Caller
-  FunctionType *CallerFT = FunctionType::get(Int32Ty, {}, false);
-  auto *Caller = Function::Create(CallerFT, GlobalValue::ExternalLinkage, "caller", M.get());
-  BasicBlock *CallerBB = BasicBlock::Create(Ctx, "entry", Caller);
-  B.SetInsertPoint(CallerBB);
-  auto *Call = B.CreateCall(Callee);
-  B.CreateRet(Call);
-
-  PeriodArrayRegistry reg;
-  EJitOptimizer opt(reg);
-  opt.runInline(*M);
-
-  // Callee should be dead (all uses inlined)
-  EXPECT_TRUE(Callee->use_empty() || Callee->hasNUses(0));
-
-  // Return should be constant 77
-  auto *Ret = dyn_cast_or_null<ReturnInst>(&Caller->back().back());
-  ASSERT_NE(Ret, nullptr);
-  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
-  ASSERT_NE(RetVal, nullptr);
-  EXPECT_EQ(RetVal->getSExtValue(), 77);
-}
-
 //===----------------------------------------------------------------------===//
 // JIT cache lifecycle tests
 //===----------------------------------------------------------------------===//
@@ -2143,51 +2099,51 @@ TEST(EJitPipelineIR, InlineVerification) {
 TEST(EJitCacheLifecycle, HitAfterPut) {
   EJitCache cache(100, 1024 * 1024);
   int dummy = 42;
-  EXPECT_EQ(cache.getOrNull("key"), nullptr);
-  cache.put("key", &dummy, 64);
-  EXPECT_EQ(cache.getOrNull("key"), &dummy);
+  EXPECT_EQ(cache.getOrNull(777), nullptr);
+  cache.put(777, &dummy, 64);
+  EXPECT_EQ(cache.getOrNull(777), &dummy);
 }
 
 TEST(EJitCacheLifecycle, MissAfterInvalidate) {
   EJitCache cache(100, 1024 * 1024);
   int dummy = 42;
   std::set<std::string> deps = {"cell=5"};
-  cache.put("key", &dummy, 64, deps);
-  EXPECT_NE(cache.getOrNull("key"), nullptr);
+  cache.put(777, &dummy, 64, deps);
+  EXPECT_NE(cache.getOrNull(777), nullptr);
   cache.invalidateByPeriod("cell", 5);
-  EXPECT_EQ(cache.getOrNull("key"), nullptr);
+  EXPECT_EQ(cache.getOrNull(777), nullptr);
 }
 
 TEST(EJitCacheLifecycle, MissAfterEviction) {
   EJitCache cache(2, 1024 * 1024);
   int a, b, c;
-  cache.put("a", &a, 1);
-  cache.put("b", &b, 1);
-  cache.put("c", &c, 1);  // should evict 'a'
-  EXPECT_EQ(cache.getOrNull("a"), nullptr);
-  EXPECT_NE(cache.getOrNull("c"), nullptr);
+  cache.put(10, &a, 1);
+  cache.put(20, &b, 1);
+  cache.put(30, &c, 1);  // should evict 'a'
+  EXPECT_EQ(cache.getOrNull(10), nullptr);
+  EXPECT_NE(cache.getOrNull(30), nullptr);
 }
 
 TEST(EJitCacheLifecycle, MissAfterClear) {
   EJitCache cache(10, 1024 * 1024);
   int dummy;
-  cache.put("a", &dummy, 64);
-  cache.put("b", &dummy, 64);
+  cache.put(10, &dummy, 64);
+  cache.put(20, &dummy, 64);
   cache.clear();
-  EXPECT_EQ(cache.getOrNull("a"), nullptr);
-  EXPECT_EQ(cache.getOrNull("b"), nullptr);
+  EXPECT_EQ(cache.getOrNull(10), nullptr);
+  EXPECT_EQ(cache.getOrNull(20), nullptr);
 }
 
 TEST(EJitCacheLifecycle, ReputAfterInvalidate) {
   EJitCache cache(100, 1024 * 1024);
   int dummy = 42;
   std::set<std::string> deps = {"cell=3"};
-  cache.put("key", &dummy, 64, deps);
+  cache.put(777, &dummy, 64, deps);
   cache.invalidateByPeriod("cell", 3);
   // Reput with new value
   int newVal = 99;
-  cache.put("key", &newVal, 64, deps);
-  EXPECT_EQ(cache.getOrNull("key"), &newVal);
+  cache.put(777, &newVal, 64, deps);
+  EXPECT_EQ(cache.getOrNull(777), &newVal);
 }
 
 

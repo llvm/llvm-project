@@ -12,7 +12,7 @@ EJitCache::EJitCache(size_t maxEntries, size_t maxTotalSize,
     : maxEntries_(maxEntries), maxTotalSize_(maxTotalSize),
       maxSingleFuncSize_(maxSingleFuncSize) {}
 
-void *EJitCache::getOrNull(const std::string &cacheKey) {
+void *EJitCache::getOrNull(uint32_t cacheKey) {
   std::shared_lock<std::shared_mutex> lock(mutex_);
   auto it = cache_.find(cacheKey);
   if (it == cache_.end()) {
@@ -26,7 +26,6 @@ void *EJitCache::getOrNull(const std::string &cacheKey) {
           std::chrono::steady_clock::now().time_since_epoch())
           .count();
 
-  // Move to front of LRU list
   auto lruIt = lruIter_.find(cacheKey);
   if (lruIt != lruIter_.end()) {
     lruList_.splice(lruList_.begin(), lruList_, lruIt->second);
@@ -36,7 +35,7 @@ void *EJitCache::getOrNull(const std::string &cacheKey) {
   return it->second.funcPtr;
 }
 
-bool EJitCache::put(const std::string &cacheKey, void *funcPtr,
+bool EJitCache::put(uint32_t cacheKey, void *funcPtr,
                     size_t codeSize,
                     const std::set<std::string> &periodDeps) {
   std::unique_lock<std::shared_mutex> lock(mutex_);
@@ -44,12 +43,10 @@ bool EJitCache::put(const std::string &cacheKey, void *funcPtr,
   if (codeSize > maxSingleFuncSize_)
     return false;
 
-  // Evict if needed
   while (!cache_.empty() &&
          (cache_.size() >= maxEntries_ ||
-          currentTotalSize_ + codeSize > maxTotalSize_)) {
+          currentTotalSize_ + codeSize > maxTotalSize_))
     evictLRU();
-  }
 
   uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
                      std::chrono::steady_clock::now().time_since_epoch())
@@ -59,11 +56,9 @@ bool EJitCache::put(const std::string &cacheKey, void *funcPtr,
   cache_[cacheKey] = entry;
   currentTotalSize_ += codeSize;
 
-  // Add to LRU front
   lruList_.push_front(cacheKey);
   lruIter_[cacheKey] = lruList_.begin();
 
-  // Index by period dependencies
   for (const auto &dep : periodDeps)
     periodIndex_[dep].insert(cacheKey);
 
@@ -79,7 +74,7 @@ void EJitCache::invalidateByPeriod(const std::string &periodName,
   if (it == periodIndex_.end())
     return;
 
-  for (const auto &key : it->second) {
+  for (uint32_t key : it->second) {
     auto cacheIt = cache_.find(key);
     if (cacheIt != cache_.end()) {
       currentTotalSize_ -= cacheIt->second.codeSize;
@@ -115,23 +110,12 @@ EJitCache::Stats EJitCache::getStats() const {
   return s;
 }
 
-std::string EJitCache::buildCacheKey(
-    const std::string &fnName,
+uint32_t EJitCache::buildCacheKey(
+    uint16_t funcIdx,
     const std::pair<std::string, uint8_t> *dims, unsigned count) {
-  if (count == 0)
-    return fnName;
-
-  // Sort by periodName for deterministic keys
-  llvm::SmallVector<std::pair<std::string, uint8_t>, 4> sorted(dims, dims + count);
-  std::sort(sorted.begin(), sorted.end());
-
-  std::string key = fnName;
-  for (unsigned i = 0; i < count; ++i) {
-    key += (i == 0 ? "|" : ",");
-    key += sorted[i].first;
-    key += "=";
-    key += std::to_string(sorted[i].second);
-  }
+  uint32_t key = static_cast<uint32_t>(funcIdx) << 16;
+  for (unsigned i = 0; i < count && i < 4; ++i)
+    key |= (static_cast<uint32_t>(dims[i].second) & 0xF) << (i * 4);
   return key;
 }
 
@@ -139,12 +123,11 @@ void EJitCache::evictLRU() {
   if (lruList_.empty())
     return;
 
-  const std::string &key = lruList_.back();
+  uint32_t key = lruList_.back();
   auto it = cache_.find(key);
   if (it != cache_.end()) {
     currentTotalSize_ -= it->second.codeSize;
 
-    // Clean up period dependencies
     for (const auto &dep : it->second.periodDeps) {
       auto pit = periodIndex_.find(dep);
       if (pit != periodIndex_.end()) {

@@ -22,11 +22,11 @@ namespace llvm {
 namespace ejit {
 
 /// Thread-safe LRU code cache with size and entry limits.
-/// Cache key format: "fnName|period1=idx1,period2=idx2,..."
+/// Cache key: uint32_t = funcIdx(16b) | dim3(4b) | dim2(4b) | dim1(4b) | dim0(4b)
 class EJitCache {
 public:
   struct Entry {
-    std::string cacheKey;
+    uint32_t cacheKey;
     void *funcPtr;
     size_t codeSize;
     uint64_t lastAccessTime;
@@ -46,10 +46,10 @@ public:
             size_t maxSingleFuncSize = 512 * 1024);
 
   /// Look up a cache entry. Returns nullptr on miss.
-  void *getOrNull(const std::string &cacheKey);
+  void *getOrNull(uint32_t cacheKey);
 
   /// Insert a compiled function into the cache.
-  bool put(const std::string &cacheKey, void *funcPtr,
+  bool put(uint32_t cacheKey, void *funcPtr,
            size_t codeSize, const std::set<std::string> &periodDeps = {});
 
   /// Invalidate all entries that depend on a specific period/cell.
@@ -60,18 +60,18 @@ public:
 
   Stats getStats() const;
 
-  /// Build a deterministic cache key from function name and dimension array.
-  static std::string buildCacheKey(const std::string &fnName,
+  /// Build cache key: upper 16 bits = funcIdx, lower 16 bits = 4x4-bit dims.
+  static uint32_t buildCacheKey(uint16_t funcIdx,
       const std::pair<std::string, uint8_t> *dims, unsigned count);
 
 private:
   void evictLRU();
 
   mutable std::shared_mutex mutex_;
-  std::unordered_map<std::string, Entry> cache_;
-  std::list<std::string> lruList_;              // front = most recent
-  std::unordered_map<std::string, std::list<std::string>::iterator> lruIter_;
-  std::unordered_map<std::string, std::set<std::string>> periodIndex_;
+  std::unordered_map<uint32_t, Entry> cache_;
+  std::list<uint32_t> lruList_;
+  std::unordered_map<uint32_t, std::list<uint32_t>::iterator> lruIter_;
+  std::unordered_map<std::string, std::set<uint32_t>> periodIndex_;
 
   size_t maxEntries_;
   size_t maxTotalSize_;

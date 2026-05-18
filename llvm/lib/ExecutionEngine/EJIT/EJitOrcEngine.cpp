@@ -30,7 +30,7 @@ struct EJitOrcEngine::Impl {
   /// Per-specialization JITDylib pointers so each specialization is
   /// independently compiled and symbols from different specializations
   /// never conflict.
-  std::map<std::string, orc::JITDylib *> specDylibs;
+  std::map<uint32_t, orc::JITDylib *> specDylibs;
   /// User-registered symbols (functions + globals) for bare-metal.
   /// Populated via ejit_register_symbol() / addUserSymbol().
   std::map<std::string, void *> userSymbols;
@@ -120,7 +120,8 @@ EJitOrcEngine::Create(const Config &config,
           // Dump pre-optimization IR if configured.
           if (!engine->P->dumpJITDir.empty() && ctx) {
             std::string path = engine->P->dumpJITDir + "/" +
-                               ctx->fnName + "_" + ctx->cacheKey + "_pre.ll";
+                               ctx->fnName + "_" +
+                               std::to_string(ctx->cacheKey) + "_pre.ll";
             std::error_code EC;
             llvm::raw_fd_ostream OS(path, EC);
             if (!EC)
@@ -154,7 +155,7 @@ EJitOrcEngine::Create(const Config &config,
           if (!engine->P->dumpJITDir.empty() && ctx) {
             std::string path = engine->P->dumpJITDir + "/" +
                                ctx->fnName + "_" +
-                               ctx->cacheKey + "_opt.ll";
+                               std::to_string(ctx->cacheKey) + "_opt.ll";
             std::error_code EC;
             llvm::raw_fd_ostream OS(path, EC);
             if (!EC)
@@ -168,10 +169,11 @@ EJitOrcEngine::Create(const Config &config,
 }
 
 Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
-                                       const std::string &cacheKey,
+                                       uint32_t cacheKey,
                                        const std::string &origFnName) {
   auto Ctx = std::make_unique<LLVMContext>();
-  auto Buf = MemoryBuffer::getMemBuffer(bitcodeData, cacheKey + ".bc");
+  auto Buf = MemoryBuffer::getMemBuffer(
+      bitcodeData, ("spec_" + std::to_string(cacheKey) + ".bc"));
   auto ModuleOrErr = parseBitcodeFile(Buf->getMemBufferRef(), *Ctx);
   if (!ModuleOrErr)
     return ModuleOrErr.takeError();
@@ -206,7 +208,7 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
     P->specDylibs.erase(it);
   }
 
-  auto JDOrErr = P->J->createJITDylib("spec_" + cacheKey);
+  auto JDOrErr = P->J->createJITDylib("spec_" + std::to_string(cacheKey));
   if (!JDOrErr)
     return JDOrErr.takeError();
 
@@ -255,12 +257,12 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
   return Error::success();
 }
 
-Expected<void *> EJitOrcEngine::lookup(const std::string &cacheKey,
+Expected<void *> EJitOrcEngine::lookup(uint32_t cacheKey,
                                        const std::string &name) {
   auto it = P->specDylibs.find(cacheKey);
   if (it == P->specDylibs.end())
     return make_error<StringError>(
-        "No specialization JITDylib found for: " + cacheKey,
+        "No specialization JITDylib found for: " + std::to_string(cacheKey),
         inconvertibleErrorCode());
 
   auto addr = P->J->lookup(*it->second, name);

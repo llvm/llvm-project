@@ -454,8 +454,7 @@ public:
 
     Result compile(EJitOrcEngine& engine,
                    const std::string& bitcodeData,
-                   const SpecializationContext& ctx,
-                   const std::string& cacheKey) {
+                   const SpecializationContext& ctx) {
         Result result = {nullptr, 0, 0};
         auto startTime = std::chrono::steady_clock::now();
 
@@ -463,17 +462,14 @@ public:
         engine.ActiveCtx = &ctx;
         engine.OptLevel = ctx.optLevel;
 
-        // Step 2: 加载 bitcode module 到 LLJIT
-        if (auto Err = engine.loadBitcodeModule(bitcodeData, ctx.fnName)) {
+        // Step 2: 加载 bitcode module 到 LLJIT (使用 uint32_t cacheKey)
+        if (auto Err = engine.loadBitcodeModule(bitcodeData, ctx.cacheKey, ctx.fnName)) {
             engine.ActiveCtx = nullptr;
             return result;
         }
 
         // Step 3: lookup 触发 materialization
-        // LLJIT 内部 Pipeline: IRTransformLayer → IRCompileLayer → ObjectLinkingLayer
-        // IRTransformLayer 回调中执行: 参数替换 → InstCombine → Inline → PASS6 → 标准优化
-        // Step 4: lookup 编译结果
-        auto addr = engine.lookup(ctx.fnName);
+        auto addr = engine.lookup(ctx.cacheKey, ctx.fnName);
         engine.ActiveCtx = nullptr;  // 清理上下文
         if (!addr) {
             return result;
@@ -538,18 +534,17 @@ private:
     std::atomic<bool> running_{false};
     std::atomic<bool> stopping_{false};
 
-    // 正在编译的请求集合 (按 cacheKey)
+    // 正在编译的请求集合 (按 cacheKey, uint32_t)
     // 防止同一 cacheKey 重复提交编译请求
-    std::unordered_set<std::string> requestsInFlight_;
+    std::set<uint32_t> requestsInFlight_;
     std::mutex inFlightMutex_;
 };
 
-// 编译请求
+// 编译请求 (v1.7: cacheKey 在 ctx 内, 去掉冗余字段)
 struct CompileRequest {
     std::string funcName;
-    std::string cacheKey;
-    std::string bitcodeData;           // 复制一份 bitcode 数据
-    SpecializationContext ctx;         // 特化上下文
+    std::string bitcodeData;
+    SpecializationContext ctx;         // 含 uint32_t cacheKey
     uint64_t timestamp;
 };
 ```
@@ -558,11 +553,11 @@ struct CompileRequest {
 void EJitAsyncCompiler::submitRequest(CompileRequest req) {
     {
         std::lock_guard<std::mutex> lock(inFlightMutex_);
-        // 去重: 相同 cacheKey 已有编译在进行中，跳过
-        if (requestsInFlight_.count(req.cacheKey)) {
+        // 去重: 相同 cacheKey (uint32_t) 已有编译在进行中，跳过
+        if (requestsInFlight_.count(req.ctx.cacheKey)) {
             return;
         }
-        requestsInFlight_.insert(req.cacheKey);
+        requestsInFlight_.insert(req.ctx.cacheKey);
     }
 
     {
@@ -613,7 +608,7 @@ void EJitAsyncCompiler::compileOne(const CompileRequest& req) {
     // 若时间窗已失效，跳过编译并清理 in-flight 记录。
     if (!runtimeState_->isPeriodActive(req.ctx)) {
         std::lock_guard<std::mutex> lock(inFlightMutex_);
-        requestsInFlight_.erase(req.cacheKey);
+        requestsInFlight_.erase(req.ctx.cacheKey);
         return;
     }
 
@@ -630,20 +625,20 @@ void EJitAsyncCompiler::compileOne(const CompileRequest& req) {
     auto result = syncCompiler.compile(*workerEngine_,
                                        req.bitcodeData,
                                        req.ctx,
-                                       req.cacheKey);
+                                       req.ctx.cacheKey);
 
     workerEngine_->ActiveCtx = nullptr;  // 清理上下文
 
     if (result.funcPtr) {
         // 编译成功: 存入 Cache (内部 mutex 保护)
-        cache_.put(req.cacheKey, result.funcPtr, result.codeSize);
+        cache_.put(req.ctx.cacheKey, result.funcPtr, result.codeSize);
     }
     // 编译失败: 不存缓存, 后续调用 retry 或 fallback
 
     // 编译完成 (成功或失败), 从 in-flight 集合移除
     {
         std::lock_guard<std::mutex> lock(inFlightMutex_);
-        requestsInFlight_.erase(req.cacheKey);
+        requestsInFlight_.erase(req.ctx.cacheKey);
     }
 }
 ```
@@ -829,9 +824,9 @@ private:
     // AOT 嵌入的 bitcode 在 ejit_init 时加载到此缓存
     std::unordered_map<std::string, std::string> bitcodeCache_;
 
-    // 构建 Cache Key
-    std::string buildCacheKey(const std::string& funcName,
-                               ejit_dim_t* dims, int count);
+    // 构建 Cache Key (v1.7: uint32_t)
+    // funcIdx(16b) | dim[0](4b) | dim[1](4b) | dim[2](4b) | dim[3](4b)
+    uint32_t buildCacheKey(uint16_t funcIdx, ejit_dim_t* dims, int count);
 
     // 构建 SpecializationContext
     SpecializationContext buildContext(const std::string& funcName,
@@ -843,8 +838,9 @@ private:
 void* EJitCompileDriver::getOrCompile(const std::string& funcName,
                                        ejit_dim_t* dims,
                                        int count) {
-    // Step 1: 构建 Cache key
-    std::string cacheKey = buildCacheKey(funcName, dims, count);
+    // Step 1: 构建 Cache key (uint32_t, 无字符串开销)
+    uint16_t funcIdx = loader_.getFuncIndex(funcName);
+    uint32_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
 
     // Step 2: 查 Cache
     if (void* cached = cache_.getOrNull(cacheKey)) {
@@ -875,7 +871,7 @@ void* EJitCompileDriver::getOrCompile(const std::string& funcName,
         // 异步: 提交编译请求 → 立即返回 NULL
         CompileRequest req;
         req.funcName = funcName;
-        req.cacheKey = cacheKey;
+        req.ctx.cacheKey = cacheKey;
         req.bitcodeData = it->second;
         req.ctx = std::move(ctx);
         asyncCompiler_->submitRequest(std::move(req));

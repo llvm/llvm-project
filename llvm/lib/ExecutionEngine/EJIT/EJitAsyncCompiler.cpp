@@ -48,9 +48,9 @@ void EJitAsyncCompiler::submitRequest(CompileRequest req) {
   // Dedup: skip if same key is already in flight
   {
     std::lock_guard<std::mutex> lock(inFlightMutex_);
-    if (requestsInFlight_.count(req.cacheKey))
+    if (requestsInFlight_.count(req.ctx.cacheKey))
       return;
-    requestsInFlight_.insert(req.cacheKey);
+    requestsInFlight_.insert(req.ctx.cacheKey);
   }
 
   {
@@ -78,7 +78,7 @@ void EJitAsyncCompiler::workerLoop() {
 
     {
       std::lock_guard<std::mutex> lock(inFlightMutex_);
-      requestsInFlight_.erase(req.cacheKey);
+      requestsInFlight_.erase(req.ctx.cacheKey);
     }
   }
 }
@@ -94,13 +94,12 @@ void EJitAsyncCompiler::compileOne(const CompileRequest &req) {
     return;
 
   auto result =
-      syncCompiler_->compile(*workerEngine_, req.bitcodeData,
-                             req.ctx, req.cacheKey);
+      syncCompiler_->compile(*workerEngine_, req.bitcodeData, req.ctx);
 
   if (result.funcPtr) {
     std::set<std::string> deps;
     for (auto &dim : req.ctx.dimensions)
       deps.insert(dim.periodName + "=" + std::to_string(dim.cellIdx));
-    cache_.put(req.cacheKey, result.funcPtr, result.codeSize, deps);
+    cache_.put(req.ctx.cacheKey, result.funcPtr, result.codeSize, deps);
   }
 }

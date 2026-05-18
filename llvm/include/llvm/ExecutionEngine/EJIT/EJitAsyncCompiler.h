@@ -31,7 +31,6 @@ class EJitSyncCompiler;
 /// Compile request queued for asynchronous compilation.
 struct CompileRequest {
   std::string funcName;
-  std::string cacheKey;
   std::string bitcodeData;
   SpecializationContext ctx;
   uint64_t timestamp;
@@ -67,7 +66,7 @@ private:
   std::atomic<bool> running_{false};
   std::atomic<bool> stopping_{false};
 
-  std::set<std::string> requestsInFlight_;
+  std::set<uint32_t> requestsInFlight_;
   std::mutex inFlightMutex_;
 
   std::unique_ptr<EJitOrcEngine> workerEngine_;

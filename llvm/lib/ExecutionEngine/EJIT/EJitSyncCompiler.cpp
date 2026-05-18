@@ -10,20 +10,19 @@ using namespace llvm::ejit;
 EJitSyncCompiler::Result
 EJitSyncCompiler::compile(EJitOrcEngine &engine,
                           const std::string &bitcodeData,
-                          const SpecializationContext &ctx,
-                          const std::string &cacheKey) {
+                          const SpecializationContext &ctx) {
   Result result;
 
   auto start = std::chrono::steady_clock::now();
 
   engine.setActiveContext(&ctx);
 
-  if (auto Err = engine.loadBitcodeModule(bitcodeData, cacheKey, ctx.fnName)) {
+  if (auto Err = engine.loadBitcodeModule(bitcodeData, ctx.cacheKey, ctx.fnName)) {
     engine.setActiveContext(nullptr);
     return result;
   }
 
-  auto addrOrErr = engine.lookup(cacheKey, ctx.fnName);
+  auto addrOrErr = engine.lookup(ctx.cacheKey, ctx.fnName);
   engine.setActiveContext(nullptr);
 
   if (!addrOrErr)

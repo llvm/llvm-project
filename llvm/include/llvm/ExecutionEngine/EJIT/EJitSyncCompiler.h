@@ -29,11 +29,10 @@ public:
     size_t codeSize = 0;
   };
 
-  /// Compile a function synchronously.
+  /// Compile a function synchronously. Uses ctx.cacheKey.
   Result compile(EJitOrcEngine &engine,
                  const std::string &bitcodeData,
-                 const SpecializationContext &ctx,
-                 const std::string &cacheKey);
+                 const SpecializationContext &ctx);
 };
 
 } // namespace ejit

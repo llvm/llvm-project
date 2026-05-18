@@ -30,6 +30,13 @@ public:
   /// lifetime of the process (pointing to embedded .ejit.bitcode section).
   Expected<StringRef> getBitcode(const std::string &funcName) const;
 
+  /// Returns a unique uint16_t index for a function name (0..65535).
+  /// Assigns a new index on first call; stable thereafter.
+  uint16_t getFuncIndex(const std::string &funcName);
+
+  /// Reverse lookup: index → function name. Returns "" if unknown.
+  const std::string &getFuncName(uint16_t index) const;
+
   size_t getEntryCount() const;
   size_t getTotalBitcodeSize() const;
 
@@ -39,6 +46,8 @@ private:
     size_t size;
   };
   std::unordered_map<std::string, Entry> entries_;
+  std::unordered_map<std::string, uint16_t> funcToIndex_;
+  std::vector<std::string> indexToFunc_;
   size_t totalSize_ = 0;
 };
 

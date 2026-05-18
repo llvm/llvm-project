@@ -33,8 +33,9 @@ void *EJitCompileDriver::getOrCompile(
     const std::pair<std::string, uint8_t> *dims,
     unsigned count) {
 
-  // Build cache key
-  std::string cacheKey = EJitCache::buildCacheKey(funcName, dims, count);
+  // Build cache key: uint32_t = funcIdx(16b) | dim[0..3](4x4b)
+  uint16_t funcIdx = loader_.getFuncIndex(funcName);
+  uint32_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
 
   // Check cache
   if (void *cached = cache_.getOrNull(cacheKey))
@@ -46,7 +47,7 @@ void *EJitCompileDriver::getOrCompile(
       if (logger_)
         logger_->log(ErrorCode::TimeWindowNotActive,
                      "Time window not active for " + dims[i].first,
-                     funcName, cacheKey);
+                     funcName, std::to_string(cacheKey));
       return nullptr;
     }
   }
@@ -56,7 +57,7 @@ void *EJitCompileDriver::getOrCompile(
   if (!bitcodeOrErr) {
     if (logger_)
       logger_->log(ErrorCode::BitcodeNotFound,
-                   "No bitcode for function", funcName, cacheKey);
+                   "No bitcode for function", funcName, std::to_string(cacheKey));
     return nullptr;
   }
 
@@ -74,7 +75,8 @@ void *EJitCompileDriver::getOrCompile(
   if (!syncEngine_) {
     if (logger_)
       logger_->log(ErrorCode::NotActive,
-                   "Sync engine not initialized", funcName, cacheKey);
+                   "Sync engine not initialized", funcName,
+                   std::to_string(cacheKey));
     return nullptr;
   }
 
@@ -88,7 +90,7 @@ void *EJitCompileDriver::getOrCompile(
     syncEngine_->setActiveContext(nullptr);
     if (logger_)
       logger_->log(ErrorCode::CompilationFailed,
-                   "Failed to load bitcode module", funcName, cacheKey);
+                   "Failed to load bitcode module", funcName, std::to_string(cacheKey));
     return nullptr;
   }
 
@@ -98,7 +100,7 @@ void *EJitCompileDriver::getOrCompile(
   if (!addrOrErr) {
     if (logger_)
       logger_->log(ErrorCode::CompilationFailed,
-                   "Failed to look up compiled function", funcName, cacheKey);
+                   "Failed to look up compiled function", funcName, std::to_string(cacheKey));
     return nullptr;
   }
 

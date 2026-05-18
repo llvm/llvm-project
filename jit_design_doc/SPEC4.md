@@ -155,9 +155,19 @@ ejit_entry void jit_entry(ejit_period_arr_ind(cell) uint8_t cellIndex)
 - 单个函数最多支持 4 个 `ejit_period_arr_ind` 参数
 - 每个维度最多关联 1024 个数组
 
-**Cache Key 格式**:
-- 单维度: `"fnName|cell=cellIndex"` (如 `"process_task|cell=1"`)
-- 多维度: `"fnName|cell=cellIndex,trp=trpIndex,..."` (如 `"func|cell=1,trp=5"`)
+**Cache Key 格式** (v1.7: uint32_t):
+
+```
+┌─────────────────┬────────┬────────┬────────┬────────┐
+│  funcIdx (16b)  │ d[3]   │ d[2]   │ d[1]   │ d[0]   │
+└─────────────────┴────────┴────────┴────────┴────────┘
+ bit 31-16         15-12    11-8     7-4      3-0
+```
+
+- **funcIdx**：`EJitModuleLoader` 注册时自增分配，进程内唯一（0..65535）
+- **d[0..3]**：每个维度 index 占 4-bit（max 15），按 `ejit_period_arr_ind` 参数顺序排列
+- 无维度时低 16 位为 0
+- 相比旧方案（字符串拼接 `"fnName|cell=3,trp=1"`），uint32_t 直接比较/哈希，无内存分配
 
 #### 2.3.3 ejit_period_lc(name) — 时间窗生命周期管理函数
 
