@@ -1871,16 +1871,29 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
     Value *PtrOp = I.getPointerOperand();
     bool PtrIsVec = isa<VectorType>(PtrOp->getType());
     Type *ResultPtrTy = RetVTy->getElementType();
-    SmallVector<Type *, 2> Types = {ResultPtrTy,
-                                    PtrOp->getType()->getScalarType()};
+    Type *ScalarPtrTy = PtrOp->getType()->getScalarType();
+    SmallVector<Type *, 2> GepTypes = {ResultPtrTy, ScalarPtrTy};
     Value *InBounds = B.getInt1(I.isInBounds());
     Type *LanePointeeTy = getGEPType(&I);
+    Type *SrcElemTy = I.getSourceElementType();
+
+    // Pin the lane pointee type on the vector operand and on each extracted
+    // lane so the prelegalizer wraps them as OpTypeVector/OpTypePointer of
+    // the right element type instead of defaulting to i8.
+    if (PtrIsVec)
+      GR->buildAssignPtr(B, SrcElemTy, PtrOp);
 
     Value *VecResult = PoisonValue::get(RetVTy);
     for (unsigned Lane = 0; Lane < N; ++Lane) {
       Value *LaneIdx = B.getInt32(Lane);
-      Value *ScalarPtr =
-          PtrIsVec ? B.CreateExtractElement(PtrOp, LaneIdx) : PtrOp;
+      Value *ScalarPtr = PtrOp;
+      if (PtrIsVec) {
+        SmallVector<Type *, 3> ExtractTypes = {ScalarPtrTy, PtrOp->getType(),
+                                               LaneIdx->getType()};
+        ScalarPtr = B.CreateIntrinsic(Intrinsic::spv_extractelt, {ExtractTypes},
+                                      {PtrOp, LaneIdx});
+        GR->buildAssignPtr(B, SrcElemTy, ScalarPtr);
+      }
       SmallVector<Value *, 4> Args;
       Args.push_back(InBounds);
       Args.push_back(ScalarPtr);
@@ -1890,7 +1903,7 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
         else
           Args.push_back(Idx);
       }
-      Value *ScalarGep = B.CreateIntrinsic(Intrinsic::spv_gep, Types, Args);
+      Value *ScalarGep = B.CreateIntrinsic(Intrinsic::spv_gep, GepTypes, Args);
       GR->buildAssignPtr(B, LanePointeeTy, ScalarGep);
       VecResult = B.CreateInsertElement(VecResult, ScalarGep, LaneIdx);
     }
@@ -3082,6 +3095,19 @@ void SPIRVEmitIntrinsics::processParamTypesByFunHeader(Function *F,
   B.SetInsertPointPastAllocas(F);
   for (unsigned OpIdx = 0; OpIdx < F->arg_size(); ++OpIdx) {
     Argument *Arg = F->getArg(OpIdx);
+    // Vector-of-pointers arg: deduce pointee from a GEP user so the function
+    // type isn't emitted with the default i8 pointee.
+    if (isUntypedPointerVectorTy(Arg->getType()) &&
+        !GR->findDeducedElementType(Arg)) {
+      for (User *U : Arg->users()) {
+        auto *GEP = dyn_cast<GetElementPtrInst>(U);
+        if (GEP && GEP->getPointerOperand() == Arg) {
+          GR->buildAssignPtr(B, GEP->getSourceElementType(), Arg);
+          break;
+        }
+      }
+      continue;
+    }
     if (!isUntypedPointerTy(Arg->getType()))
       continue;
     Type *ElemTy = GR->findDeducedElementType(Arg);
