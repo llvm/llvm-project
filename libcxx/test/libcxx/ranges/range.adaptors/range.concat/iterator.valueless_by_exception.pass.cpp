@@ -218,7 +218,7 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([=] { *iter1; }(), "Trying to dereference a valueless iterator of concat_view.");
+      TEST_LIBCPP_ASSERT_FAILURE([=] { (void)*iter1; }(), "Trying to dereference a valueless iterator of concat_view.");
     }
   }
 
@@ -384,7 +384,7 @@ int main() {
       iter1 = std::move(iter2);
       assert(false);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { iter1[1]; }(), "Trying to increment a valueless iterator of concat_view.");
+      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)iter1[1]; }(), "Trying to increment a valueless iterator of concat_view.");
     }
   }
 
