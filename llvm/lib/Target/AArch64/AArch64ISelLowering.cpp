@@ -21078,6 +21078,60 @@ static SDValue performANDORDUPNOTCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(Opc, DL, VT, X, Not);
 }
 
+/// Fold (or (trunc (and A B)) (and C (xor (trunc A) -1))) into
+/// BSP(trunc(A), trunc(B), C). DAGCombiner canonicalizes
+/// (and (trunc x) (trunc y)) into (trunc (and x y)), which hides this BSP
+/// shape from both tryLowerToBSL and the BSP TableGen pattern; rewrite it
+/// here so ISel emits BIF/BSL/BIT.
+static SDValue performORBSLTruncCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (DCI.isBeforeLegalizeOps() || !VT.isFixedLengthVector() ||
+      !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() ||
+      // BSP has TableGen patterns only for legal NEON vector types; emitting
+      // it in an illegal type (e.g. v4i8) crashes the type legalizer.
+      !DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
+  for (unsigned Side = 0; Side != 2; ++Side) {
+    // Side = which operand of OR holds (trunc (and A B)).
+    SDValue TruncSide = N->getOperand(Side);
+    SDValue AndSide = N->getOperand(1 - Side);
+    if (TruncSide.getOpcode() != ISD::TRUNCATE || !TruncSide.hasOneUse() ||
+        AndSide.getOpcode() != ISD::AND)
+      continue;
+    SDValue InnerAnd = TruncSide.getOperand(0);
+    if (InnerAnd.getOpcode() != ISD::AND || !InnerAnd.hasOneUse())
+      continue;
+
+    // Find the NOT-of-trunc and the other operand of the second AND.
+    for (unsigned I = 0; I != 2; ++I) {
+      SDValue NotOp = AndSide.getOperand(I);
+      if (!isBitwiseNot(NotOp))
+        continue;
+      SDValue MaskTrunc = NotOp.getOperand(0);
+      if (MaskTrunc.getOpcode() != ISD::TRUNCATE)
+        continue;
+      SDValue WideA = MaskTrunc.getOperand(0);
+      SDValue WideB;
+      if (InnerAnd.getOperand(0) == WideA)
+        WideB = InnerAnd.getOperand(1);
+      else if (InnerAnd.getOperand(1) == WideA)
+        WideB = InnerAnd.getOperand(0);
+      else
+        continue;
+
+      SDLoc DL(N);
+      return DAG.getNode(AArch64ISD::BSP, DL, VT,
+                         DAG.getNode(ISD::TRUNCATE, DL, VT, WideA),
+                         DAG.getNode(ISD::TRUNCATE, DL, VT, WideB),
+                         AndSide.getOperand(1 - I));
+    }
+  }
+  return SDValue();
+}
+
 static SDValue performORCombine(SDNode *N,
                                 TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -21089,6 +21143,9 @@ static SDValue performORCombine(SDNode *N,
     return R;
 
   if (SDValue R = performANDORDUPNOTCombine(N, DAG))
+    return R;
+
+  if (SDValue R = performORBSLTruncCombine(N, DCI, DAG))
     return R;
 
   return SDValue();
