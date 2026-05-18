@@ -842,7 +842,6 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       return false;
     }
 
-    // TODO: failing here
     RecurrenceDescriptor RedDes;
     if (RecurrenceDescriptor::isReductionPHI(Phi, TheLoop, RedDes, DB, AC, DT,
                                              PSE.getSE())) {

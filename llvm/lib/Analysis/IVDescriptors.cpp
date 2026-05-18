@@ -1125,7 +1125,6 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
     LLVM_DEBUG(dbgs() << "Found a XOR reduction PHI." << *Phi << "\n");
     return true;
   }
-
   auto RD = getMinMaxRecurrence(Phi, TheLoop, SE);
   if (RD.getRecurrenceKind() != RecurKind::None) {
     assert(
@@ -1470,7 +1469,6 @@ bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
 
   // Here we only handle FP induction variables.
   assert(Phi->getType()->isFloatingPointTy() && "Unexpected Phi type");
-  errs() << "Phi = " << *Phi << '\n';
 
   if (TheLoop->getHeader() != Phi->getParent())
     return false;
