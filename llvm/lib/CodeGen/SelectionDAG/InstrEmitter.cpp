@@ -188,6 +188,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
               VRBase)
           .addReg(SrcReg);
     }
+  }
 
   if (IsClone)
     VRBaseMap.erase(Op);
