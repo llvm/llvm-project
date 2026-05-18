@@ -839,6 +839,28 @@ def ConvertMathToLLVMPass : Pass<"convert-math-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MathToLLVMSPV
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToLLVMSPV : Pass<"convert-math-to-llvm-spv", "ModuleOp"> {
+  let summary = "Convert Math dialect to LLVM SPV builtin calls";
+  let description = [{
+    This pass converts supported Math ops to function calls for SPIR-V
+    math intrinsics.
+
+    The extensionSetName option specifies the instruction set chosen for
+    math op lowerings.  
+  }];
+  let dependentDialects = [
+    "func::FuncDialect",
+    "LLVM::LLVMDialect",
+    "vector::VectorDialect"];
+  let options = [Option<"extensionSetName", "extension-set-name", "std::string",
+                        /*default=*/"\"\"",
+                        "SPIR-V Extension set to use for math lowering">];
+}
+
+//===----------------------------------------------------------------------===//
 // MathToLibm
 //===----------------------------------------------------------------------===//
 

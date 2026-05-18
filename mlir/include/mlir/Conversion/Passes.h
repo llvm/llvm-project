@@ -48,6 +48,7 @@
 #include "mlir/Conversion/MathToEmitC/MathToEmitCPass.h"
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
+#include "mlir/Conversion/MathToLLVMSPV/MathToLLVMSPV.h"
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
 #include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
