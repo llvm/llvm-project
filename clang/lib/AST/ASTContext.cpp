@@ -15669,23 +15669,11 @@ bool ASTContext::maybeFoldMSConstexpr(
   if (Notes.size() != 1 || !getLangOpts().MSVCCompat)
     return false;
   auto &PD = Notes[0].second;
-  if (PD.getDiagID() != diag::note_constexpr_invalid_cast)
+  if (PD.getDiagID() != diag::note_constexpr_invalid_cast_ptrtoint)
     return false;
-  unsigned CastID;
-  switch (PD.getValueArg(0)) {
-  case diag::ConstexprInvalidCastKind::Reinterpret:
-    CastID = 0;
-    break;
-  case diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret:
-    if (!PD.getValueArg(1))
-      return false;
-    CastID = 1;
-    break;
-  default:
-    return false;
-  }
   getDiagnostics().Report(Notes[0].first, diag::warn_relaxed_constant_fold)
-      << CastID;
+      << !!PD.getValueArg(0);
   Notes.clear();
+
   return true;
 }

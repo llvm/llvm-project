@@ -16,6 +16,10 @@ def note_constexpr_invalid_cast : Note<
   "of a reinterpret_cast}1}|%CastFrom{cast from %1}}0"
   " is not allowed in a constant expression"
   "%select{| in C++ standards before C++20||}0">;
+def note_constexpr_invalid_cast_ptrtoint : Note<
+  "%select{reinterpret_cast||"
+  "%select{this conversion|cast that performs the conversions of a reinterpret_cast}1|"
+  "}0 is not allowed in a constant expression">;
 def note_constexpr_invalid_void_star_cast : Note<
   "cast from %0 is not allowed in a constant expression "
   "%select{in C++ standards before C++2c|because the pointed object "
