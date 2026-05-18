@@ -148,3 +148,28 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage, BFloat1
     spirv.Return
   }
 }
+
+// -----
+
+// Test select works with composite types.
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.6, [Shader, Linkage], []> {
+  spirv.func @select_op_array(%arg0: i1, %arg1: !spirv.array<4 x i32>, %arg2: !spirv.array<4 x i32>) -> () "None" {
+    // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.array<4 x i32>
+    %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.array<4 x i32>
+    spirv.Return
+  }
+
+  spirv.func @select_op_struct(%arg0: i1, %arg1: !spirv.struct<(i32, i32)>, %arg2: !spirv.struct<(i32, i32)>) -> () "None" {
+    // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.struct<(i32, i32)>
+    %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.struct<(i32, i32)>
+    spirv.Return
+  }
+
+  spirv.func @select_op_matrix(%arg0: i1, %arg1: !spirv.matrix<4 x vector<3xf32>>, %arg2: !spirv.matrix<4 x vector<3xf32>>) -> () "None" {
+    // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.matrix<4 x vector<3xf32>>
+    %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.matrix<4 x vector<3xf32>>
+    spirv.Return
+  }
+}
+

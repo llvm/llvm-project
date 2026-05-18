@@ -11,26 +11,29 @@ body:             |
     ; CHECK-LABEL: name: legalize_s32
     ; CHECK: liveins: $s0, $s1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %val:_(s32) = COPY $s0
-    ; CHECK-NEXT: %sign:_(s32) = COPY $s1
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR %val(s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR %sign(s32), [[DEF]](s32)
+    ; CHECK-NEXT: %val:_(f32) = COPY $s0
+    ; CHECK-NEXT: %sign:_(f32) = COPY $s1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(f32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR %val(f32), [[DEF]](f32)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR %sign(f32), [[DEF]](f32)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[BUILD_VECTOR]](<2 x f32>)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[BUILD_VECTOR1]](<2 x f32>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
     ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 2147483647
     ; CHECK-NEXT: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[C1]](i32), [[C1]](i32)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<2 x i32>) = G_AND [[BUILD_VECTOR]], [[BUILD_VECTOR3]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<2 x i32>) = G_AND [[BUILD_VECTOR1]], [[BUILD_VECTOR2]]
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s32>) = disjoint G_OR [[AND]], [[AND1]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[OR]](<2 x s32>)
-    ; CHECK-NEXT: %fcopysign:_(s32) = COPY [[UV]](s32)
-    ; CHECK-NEXT: $s0 = COPY %fcopysign(s32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<2 x i32>) = G_AND [[BITCAST]], [[BUILD_VECTOR3]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<2 x i32>) = G_AND [[BITCAST1]], [[BUILD_VECTOR2]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x i32>) = disjoint G_OR [[AND]], [[AND1]]
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[OR]](<2 x i32>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST2]](<2 x f32>)
+    ; CHECK-NEXT: %fcopysign:_(f32) = COPY [[UV]](f32)
+    ; CHECK-NEXT: $s0 = COPY %fcopysign(f32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
-    %val:_(s32) = COPY $s0
-    %sign:_(s32) = COPY $s1
-    %fcopysign:_(s32) = G_FCOPYSIGN %val, %sign(s32)
-    $s0 = COPY %fcopysign(s32)
+    %val:_(f32) = COPY $s0
+    %sign:_(f32) = COPY $s1
+    %fcopysign:_(f32) = G_FCOPYSIGN %val, %sign(f32)
+    $s0 = COPY %fcopysign(f32)
     RET_ReallyLR implicit $s0
 
 ...
@@ -43,24 +46,27 @@ body:             |
     ; CHECK-LABEL: name: legalize_s64
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %val:_(s64) = COPY $d0
-    ; CHECK-NEXT: %sign:_(s64) = COPY $d1
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR %val(s64), [[DEF]](s64)
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR %sign(s64), [[DEF]](s64)
+    ; CHECK-NEXT: %val:_(f64) = COPY $d0
+    ; CHECK-NEXT: %sign:_(f64) = COPY $d1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(f64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR %val(f64), [[DEF]](f64)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR %sign(f64), [[DEF]](f64)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[BUILD_VECTOR]](<2 x f64>)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[BUILD_VECTOR1]](<2 x f64>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
     ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 9223372036854775807
     ; CHECK-NEXT: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[C1]](i64), [[C1]](i64)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<2 x i64>) = G_AND [[BUILD_VECTOR]], [[BUILD_VECTOR3]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<2 x i64>) = G_AND [[BUILD_VECTOR1]], [[BUILD_VECTOR2]]
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s64>) = disjoint G_OR [[AND]], [[AND1]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[OR]](<2 x s64>)
-    ; CHECK-NEXT: %fcopysign:_(s64) = COPY [[UV]](s64)
-    ; CHECK-NEXT: $d0 = COPY %fcopysign(s64)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<2 x i64>) = G_AND [[BITCAST]], [[BUILD_VECTOR3]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<2 x i64>) = G_AND [[BITCAST1]], [[BUILD_VECTOR2]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x i64>) = disjoint G_OR [[AND]], [[AND1]]
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[OR]](<2 x i64>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST2]](<2 x f64>)
+    ; CHECK-NEXT: %fcopysign:_(f64) = COPY [[UV]](f64)
+    ; CHECK-NEXT: $d0 = COPY %fcopysign(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %val:_(s64) = COPY $d0
-    %sign:_(s64) = COPY $d1
-    %fcopysign:_(s64) = G_FCOPYSIGN %val, %sign(s64)
-    $d0 = COPY %fcopysign(s64)
+    %val:_(f64) = COPY $d0
+    %sign:_(f64) = COPY $d1
+    %fcopysign:_(f64) = G_FCOPYSIGN %val, %sign(f64)
+    $d0 = COPY %fcopysign(f64)
     RET_ReallyLR implicit $d0

@@ -566,6 +566,7 @@ namespace clang {
     ExpectedDecl VisitObjCImplementationDecl(ObjCImplementationDecl *D);
     ExpectedDecl VisitObjCPropertyDecl(ObjCPropertyDecl *D);
     ExpectedDecl VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D);
+    ExpectedDecl VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D);
     ExpectedDecl VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D);
     ExpectedDecl VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D);
     ExpectedDecl VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D);
@@ -3579,13 +3580,13 @@ ExpectedDecl ASTNodeImporter::VisitEnumConstantDecl(EnumConstantDecl *D) {
 template <typename DeclTy>
 Error ASTNodeImporter::ImportTemplateParameterLists(const DeclTy *FromD,
                                                     DeclTy *ToD) {
-  unsigned int Num = FromD->getNumTemplateParameterLists();
-  if (Num == 0)
+  ArrayRef<TemplateParameterList *> FromTPLs =
+      FromD->getTemplateParameterLists();
+  if (FromTPLs.empty())
     return Error::success();
-  SmallVector<TemplateParameterList *, 2> ToTPLists(Num);
-  for (unsigned int I = 0; I < Num; ++I)
-    if (Expected<TemplateParameterList *> ToTPListOrErr =
-            import(FromD->getTemplateParameterList(I)))
+  SmallVector<TemplateParameterList *, 2> ToTPLists(FromTPLs.size());
+  for (unsigned int I = 0; I < FromTPLs.size(); ++I)
+    if (Expected<TemplateParameterList *> ToTPListOrErr = import(FromTPLs[I]))
       ToTPLists[I] = *ToTPListOrErr;
     else
       return ToTPListOrErr.takeError();
@@ -6135,6 +6136,22 @@ ASTNodeImporter::VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D) {
   }
 
   return ToImpl;
+}
+
+ExpectedDecl
+ASTNodeImporter::VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, D->getType());
+  auto ToValue = importChecked(Err, D->getValue());
+  if (Err)
+    return std::move(Err);
+
+  TemplateParamObjectDecl *ToD;
+  auto Create = [this](QualType T, const APValue &V) {
+    return Importer.ToContext.getTemplateParamObjectDecl(T, V);
+  };
+  (void)GetImportedOrCreateSpecialDecl(ToD, Create, D, ToType, ToValue);
+  return ToD;
 }
 
 ExpectedDecl
@@ -9028,8 +9045,8 @@ ExpectedStmt ASTNodeImporter::VisitInitListExpr(InitListExpr *E) {
     return std::move(Err);
 
   ASTContext &ToCtx = Importer.getToContext();
-  InitListExpr *To = new (ToCtx) InitListExpr(
-      ToCtx, ToLBraceLoc, ToExprs, ToRBraceLoc);
+  InitListExpr *To = new (ToCtx)
+      InitListExpr(ToCtx, ToLBraceLoc, ToExprs, ToRBraceLoc, E->isExplicit());
   To->setType(ToType);
 
   if (E->hasArrayFiller()) {

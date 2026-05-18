@@ -126,6 +126,7 @@ struct True16D16Info {
 struct WMMAInstInfo {
   uint32_t Opcode;
   bool is_wmma_xdl;
+  bool HasMatrixScale;
 };
 
 #define GET_MIMGBaseOpcode_DECL
@@ -617,6 +618,9 @@ bool getMAIIsGFX940XDL(unsigned Opc);
 
 LLVM_READONLY
 bool getWMMAIsXDL(unsigned Opc);
+
+LLVM_READONLY
+bool getHasMatrixScale(unsigned Opc);
 
 // Get an equivalent BitOp3 for a binary logical \p Opc.
 // \returns BitOp3 modifier for the logical operation or zero.

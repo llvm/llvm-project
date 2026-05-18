@@ -12784,6 +12784,16 @@ class LoadStore64B<bits<3> opc, string asm_inst, dag iops, dag oops,
   let Inst{20-16} = 0b11111;
 }
 
+multiclass LoadStore64B<bits<3> opc, string asm_inst,
+                        bit may_load, bit may_store,
+                        dag iops, dag oops,
+                        list<dag> pat = []> {
+  let mayLoad = may_load, mayStore = may_store in
+  def "" : LoadStore64B<opc, asm_inst, iops, oops, pat>;
+  def : InstAlias<asm_inst # "\t$Rt, [$Rn, #0]",
+                  (!cast<Instruction>(NAME) GPR64x8:$Rt, GPR64sp:$Rn)>;
+}
+
 class Store64BV<bits<3> opc, string asm_inst, list<dag> pat = []>
     : LoadStore64B_base<opc, asm_inst, "\t$Rs, $Rt, [$Rn]",
                        (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs GPR64:$Rs), pat> {

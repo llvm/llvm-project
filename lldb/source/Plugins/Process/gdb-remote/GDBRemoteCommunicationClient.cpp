@@ -217,6 +217,12 @@ bool GDBRemoteCommunicationClient::GetMultiMemReadSupported() {
   return m_supports_multi_mem_read == eLazyBoolYes;
 }
 
+bool GDBRemoteCommunicationClient::GetMultiBreakpointSupported() {
+  if (m_supports_multi_breakpoint == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_multi_breakpoint == eLazyBoolYes;
+}
+
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
   if (m_supports_not_sending_acks == eLazyBoolCalculate) {
     m_send_acks = true;
@@ -346,6 +352,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supported_async_json_packets_sp.reset();
     m_supports_jModulesInfo = true;
     m_supports_multi_mem_read = eLazyBoolCalculate;
+    m_supports_multi_breakpoint = eLazyBoolCalculate;
   }
 
   // These flags should be reset when we first connect to a GDB server and when
@@ -373,6 +380,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_reverse_continue = eLazyBoolNo;
   m_supports_reverse_step = eLazyBoolNo;
   m_supports_multi_mem_read = eLazyBoolNo;
+  m_supports_multi_breakpoint = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -434,6 +442,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_reverse_step = eLazyBoolYes;
       else if (x == "MultiMemRead+")
         m_supports_multi_mem_read = eLazyBoolYes;
+      else if (x == "jMultiBreakpoint+")
+        m_supports_multi_breakpoint = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -2618,18 +2628,7 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
 bool GDBRemoteCommunicationClient::SendSpeedTestPacket(uint32_t send_size,
                                                        uint32_t recv_size) {
   StreamString packet;
-  packet.Printf("qSpeedTest:response_size:%i;data:", recv_size);
-  uint32_t bytes_left = send_size;
-  while (bytes_left > 0) {
-    if (bytes_left >= 26) {
-      packet.PutCString("abcdefghijklmnopqrstuvwxyz");
-      bytes_left -= 26;
-    } else {
-      packet.Printf("%*.*s;", bytes_left, bytes_left,
-                    "abcdefghijklmnopqrstuvwxyz");
-      bytes_left = 0;
-    }
-  }
+  MakeSpeedTestPacket(packet, send_size, recv_size);
 
   StringExtractorGDBRemote response;
   return SendPacketAndWaitForResponse(packet.GetString(), response) ==

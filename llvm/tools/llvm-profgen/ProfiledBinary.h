@@ -200,6 +200,8 @@ struct MMapEvent {
 };
 
 class ProfiledBinary {
+  // The executable binary file.
+  object::OwningBinary<object::Binary> OBinary;
   // Absolute path of the executable binary.
   std::string Path;
   // Path of the debug info binary.
@@ -414,6 +416,11 @@ class ProfiledBinary {
   SampleContextFrameVector symbolize(const InstructionPointer &IP,
                                      bool UseCanonicalFnName = false,
                                      bool UseProbeDiscriminator = false);
+
+public:
+  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
+  ~ProfiledBinary();
+
   /// Decode the interesting parts of the binary and build internal data
   /// structures. On high level, the parts of interest are:
   ///   1. Text sections, including the main code section and the PLT
@@ -421,11 +428,7 @@ class ProfiledBinary {
   ///   2. The .debug_line section, used by Dwarf-based profile generation.
   ///   3. Pseudo probe related sections, used by probe-based profile
   ///   generation.
-  void load();
-
-public:
-  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
-  ~ProfiledBinary();
+  void load(StringRef TripleStr = "");
 
   /// Symbolize an address and return the symbol name. The returned StringRef is
   /// owned by this ProfiledBinary object.
@@ -435,6 +438,8 @@ public:
 
   StringRef getPath() const { return Path; }
   StringRef getName() const { return llvm::sys::path::filename(Path); }
+  const Triple &getTriple() const { return TheTriple; }
+  const object::Binary &getBinary() const { return *OBinary.getBinary(); }
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
 

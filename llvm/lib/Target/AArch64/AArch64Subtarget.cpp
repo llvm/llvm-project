@@ -370,6 +370,14 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride),
       EnableSRLTSubregToRegMitigation(EnableSRLTSubregToRegMitigation),
+      // To benefit from SME2's strided-register multi-vector load/store
+      // instructions we'll need to enable subreg liveness. Our longer
+      // term aim is to make this the default, regardless of streaming
+      // mode, but there are still some outstanding issues, see:
+      //  https://github.com/llvm/llvm-project/pull/174188
+      // and:
+      //  https://github.com/llvm/llvm-project/pull/168353
+      EnableSubregLiveness(IsStreaming || EnableSubregLivenessTracking),
       TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
       TLInfo(TM, *this) {
@@ -402,18 +410,6 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   // X29 is named FP, so we can't use TRI->getName to check X29.
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
-
-  // To benefit from SME2's strided-register multi-vector load/store
-  // instructions we'll need to enable subreg liveness. Our longer
-  // term aim is to make this the default, regardless of streaming
-  // mode, but there are still some outstanding issues, see:
-  //  https://github.com/llvm/llvm-project/pull/174188
-  // and:
-  //  https://github.com/llvm/llvm-project/pull/168353
-  if (IsStreaming)
-    EnableSubregLiveness = true;
-  else
-    EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
