@@ -1,46 +1,46 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -verify=intra %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -verify %s
 
 struct MyObj {
   ~MyObj() {}
 };
 
-MyObj &free_param(MyObj &obj); // intra-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
-MyObj &free_param(MyObj &obj [[clang::lifetimebound]]) { // intra-note {{'lifetimebound' attribute appears here on the definition}}
+MyObj &free_param(MyObj &obj);                           // expected-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
+MyObj &free_param(MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
 }
 
 struct S {
   MyObj data;
-  const MyObj &implicit_this_only(); // intra-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
-  const MyObj &param_only(const MyObj &obj); // intra-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
-  const MyObj &both(const MyObj &obj, bool); // intra-warning 2 {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
+  const MyObj &implicit_this_only();         // expected-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
+  const MyObj &param_only(const MyObj &obj); // expected-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
+  const MyObj &both(const MyObj &obj, bool); // expected-warning 2 {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
 };
 
-const MyObj &S::implicit_this_only() [[clang::lifetimebound]] { // intra-note {{'lifetimebound' attribute appears here on the definition}}
+const MyObj &S::implicit_this_only() [[clang::lifetimebound]] { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return data;
 }
 
 const MyObj &S::param_only(
-    const MyObj &obj [[clang::lifetimebound]]) { // intra-note {{'lifetimebound' attribute appears here on the definition}}
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
 }
 
 const MyObj &S::both(
-    const MyObj &obj [[clang::lifetimebound]], bool use_obj) // intra-note {{'lifetimebound' attribute appears here on the definition}}
-    [[clang::lifetimebound]] { // intra-note {{'lifetimebound' attribute appears here on the definition}}
+    const MyObj &obj [[clang::lifetimebound]], bool use_obj) // expected-note {{'lifetimebound' attribute appears here on the definition}}
+    [[clang::lifetimebound]] {                               // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return use_obj ? obj : data;
 }
 
 template <class T>
 struct MixedSpecializations {
   T data;
-  T &both(T &arg, bool); // intra-warning 2 {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
+  T &both(T &arg, bool); // expected-warning 2 {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
 };
 
 template <>
 MyObj &MixedSpecializations<MyObj>::both(
-    MyObj &arg [[clang::lifetimebound]], bool use_arg) // intra-note {{'lifetimebound' attribute appears here on the definition}}
-    [[clang::lifetimebound]] { // intra-note {{'lifetimebound' attribute appears here on the definition}}
+    MyObj &arg [[clang::lifetimebound]], bool use_arg) // expected-note {{'lifetimebound' attribute appears here on the definition}}
+    [[clang::lifetimebound]] {                         // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return use_arg ? arg : data;
 }
 
@@ -49,23 +49,23 @@ struct InternalObj {
 };
 
 namespace {
-InternalObj &anon_param(InternalObj &obj);
-InternalObj &anon_param(InternalObj &obj [[clang::lifetimebound]]) {
+InternalObj &anon_param(InternalObj &obj);                           // expected-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
+InternalObj &anon_param(InternalObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
 }
 
 struct AnonS {
   InternalObj data;
-  InternalObj &anon_this();
+  InternalObj &anon_this(); // expected-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
 };
 
-InternalObj &AnonS::anon_this() [[clang::lifetimebound]] {
+InternalObj &AnonS::anon_this() [[clang::lifetimebound]] { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return data;
 }
 } // namespace
 
-static InternalObj &static_param(InternalObj &obj);
-static InternalObj &static_param(InternalObj &obj [[clang::lifetimebound]]) {
+static InternalObj &static_param(InternalObj &obj); // expected-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
+static InternalObj &static_param(InternalObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
 }
 
@@ -73,18 +73,18 @@ struct IntraSuppressedObj {
   ~IntraSuppressedObj() {}
 };
 
-IntraSuppressedObj &intra_suppressed(IntraSuppressedObj &obj); // intra-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
+IntraSuppressedObj &intra_suppressed(IntraSuppressedObj &obj); // expected-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
 IntraSuppressedObj &intra_suppressed(
-    IntraSuppressedObj &obj [[clang::lifetimebound]]) { // intra-note {{'lifetimebound' attribute appears here on the definition}}
+    IntraSuppressedObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
 }
 
 struct View {
-  friend View friend_redecl(MyObj &obj); // intra-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
+  friend View friend_redecl(MyObj &obj); // expected-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
 };
 
 // FIXME: This diagnoses an attribute inherited from another redeclaration, not one written on the definition. Once we enforce that redeclarations agree on lifetimebound, handle this with a dedicated warning and note.
-View friend_redecl(MyObj &obj [[clang::lifetimebound]]); // intra-note {{'lifetimebound' attribute appears here on the definition}}
+View friend_redecl(MyObj &obj [[clang::lifetimebound]]); // expected-note {{'lifetimebound' attribute appears here on the definition}}
 
 View friend_redecl(MyObj &obj) {
   return View{};

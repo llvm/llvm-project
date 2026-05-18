@@ -318,7 +318,7 @@ public:
 
   const std::pair<const FunctionDecl *, WarningScope>
   getCanonicalFunctionDeclForAttr(const FunctionDecl *FD) {
-    if (!FD || !FD->isExternallyVisible())
+    if (!FD)
       return {nullptr, WarningScope::IntraTU};
 
     const auto &SM = FD->getASTContext().getSourceManager();
