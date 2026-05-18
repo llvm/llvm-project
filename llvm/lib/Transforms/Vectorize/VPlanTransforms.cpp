@@ -6250,6 +6250,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   auto *ExtendedOp = cast<VPSingleDefRecipe>(
       WidenRecipe->getOperand(1 - Chain.AccumulatorOpIdx));
 
+  // FIXME: Do these transforms before invoking the cost-model.
+  ExtendedOp = optimizeExtendsForPartialReduction(ExtendedOp);
+
   // Sub-reductions can be implemented in two ways:
   // (1) negate the operand in the vector loop (the default way).
   // (2) subtract the reduced value from the init value in the middle block.
@@ -6284,9 +6287,6 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     Builder.insert(NegRecipe);
     ExtendedOp = NegRecipe;
   }
-
-  // FIXME: Do these transforms before invoking the cost-model.
-  ExtendedOp = optimizeExtendsForPartialReduction(ExtendedOp);
 
   // Check if WidenRecipe is the final result of the reduction. If so look
   // through selects for predicated reductions.
@@ -6452,9 +6452,6 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
       // by widening the inner extends to match it. See
       // optimizeExtendsForPartialReduction.
       Op = CastSource;
-      // FIXME: createPartialReductionExpression can't handle sub(ext(mul(...)))
-      if (UpdateR->getOpcode() == Instruction::Sub)
-        return std::nullopt;
     } else {
       return ExtendedReductionOperand{
           UpdateR,
