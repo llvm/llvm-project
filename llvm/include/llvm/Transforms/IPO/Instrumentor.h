@@ -64,6 +64,7 @@ struct IRTArg {
     REPLACABLE_CUSTOM = 1 << 2,
     POTENTIALLY_INDIRECT = 1 << 3,
     INDIRECT_HAS_SIZE = 1 << 4,
+    VALUE_PACK = 1 << 5,
     LAST,
   };
 
