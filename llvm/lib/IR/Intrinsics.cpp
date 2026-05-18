@@ -866,7 +866,8 @@ struct MatchPosition {
   uint16_t IsRet : 1;
   uint16_t Num : 15; // Argument number (when IsRet = false).
   struct Index {
-    uint16_t IsStruct : 1; // Is this a struct element or vector element?
+    uint16_t IsStruct : 1; // If true, this is a struct element with element
+                           // index `Num`, else its a vector element.
     uint16_t Num : 15;     // Struct element index.
   };
   // We expect this to be just 2 levels deep, since nested structs are not
@@ -1002,8 +1003,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     bool IsValid = PT && PT->getAddressSpace() == AS;
     if (AS == 0)
       return PrintMsg(IsValid, "ptr");
-    else
-      return PrintMsg(IsValid, "ptr addrspace(" + Twine(AS) + ")");
+    return PrintMsg(IsValid, "ptr addrspace(" + Twine(AS) + ")");
   }
 
   case IITDescriptor::Struct: {

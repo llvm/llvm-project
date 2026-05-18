@@ -275,3 +275,17 @@ entry:
   call { i32, i2 } @llvm.nvvm.elect.sync(i32 0)
   ret void
 }
+
+;--- test21.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test21.ll | FileCheck %t/test21.ll
+; CHECK: intrinsic return type expected literal non-packed struct with 2 elements, but got { i32, i1, i1 }
+; CHECK-NEXT: ptr @llvm.nvvm.elect.sync
+
+; Expected return type is { i32, i1 }.
+declare { i32, i1, i1 } @llvm.nvvm.elect.sync(i32)
+
+define void @test1() {
+entry:
+  call { i32, i1, i1 } @llvm.nvvm.elect.sync(i32 0)
+  ret void
+}
