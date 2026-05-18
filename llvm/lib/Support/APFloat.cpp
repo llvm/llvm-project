@@ -29,19 +29,6 @@
 #include <cstring>
 #include <limits.h>
 
-/// Shared headers from LLVM libc
-/// Make sure to add ${LLVM_SOURCE_DIR}/../libc to include directories.
-///
-/// Notes: So far it looks like APFloat does not check errnos or floating-point
-/// exceptions after calling the math functions, so we will configure LLVM libc
-/// math functions to skip setting errnos and floating-point exceptions
-/// explicitly.  We also put them in a separate namespace so that the symbols
-/// do not clash with other libc math builds just in case.
-#define LIBC_NAMESPACE __llvm_libc_apfloat
-#define LIBC_MATH (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
-
-#include "shared/math.h"
-
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
     if (usesLayout<IEEEFloat>(getSemantics()))                                 \
@@ -6091,24 +6078,6 @@ APFloat::Storage &APFloat::Storage::operator=(APFloat::Storage &&RHS) {
     new (this) Storage(std::move(RHS));
   }
   return *this;
-}
-
-// TODO: Support other rounding modes when LLVM libc math implement static
-// roundings.
-APFloat exp(const APFloat &X, RoundingMode rounding_mode) {
-  if (rounding_mode == APFloatBase::rmNearestTiesToEven) {
-    if (APFloat::SemanticsToEnum(X.getSemantics()) ==
-        APFloatBase::S_IEEEsingle) {
-      float result = LIBC_NAMESPACE::shared::expf(X.convertToFloat());
-      return APFloat(result);
-    }
-    if (APFloat::SemanticsToEnum(X.getSemantics()) ==
-        APFloatBase::S_IEEEdouble) {
-      double result = LIBC_NAMESPACE::shared::exp(X.convertToDouble());
-      return APFloat(result);
-    }
-  }
-  llvm_unreachable("Unexpected semantics");
 }
 
 } // namespace llvm

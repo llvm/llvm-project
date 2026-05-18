@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float128 roundevenf128(float128 x) {
+LIBC_INLINE constexpr float128 roundevenf128(float128 x) {
   return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
 }
 
