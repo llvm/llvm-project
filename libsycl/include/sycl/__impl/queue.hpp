@@ -31,6 +31,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 class context;
 
 namespace detail {
+class MockQueue;
 class QueueImpl;
 
 template <typename, typename T> struct CheckFunctionSignature {
@@ -244,6 +245,7 @@ private:
   std::shared_ptr<detail::QueueImpl> impl;
 
   friend sycl::detail::ImplUtils;
+  friend sycl::detail::MockQueue;
 }; // class queue
 
 _LIBSYCL_END_NAMESPACE_SYCL

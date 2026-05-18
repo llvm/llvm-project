@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <mock/device_images.hpp>
 #include <mock/helpers.hpp>
 
 #include <detail/device_image_wrapper.hpp>
@@ -26,68 +27,9 @@ struct MockProgramAndKernelManager : public detail::ProgramAndKernelManager {
   using detail::ProgramAndKernelManager::MDeviceKernelInfoMap;
 };
 
-// c++20 designated initializers would be helpful.
-constexpr llvm::offloading::EntryTy GGenericEntryTy = {
-    /// Reserved bytes used to detect an older version of the struct, always
-    /// zero.
-    0,
-    /// The current version of the struct for runtime forward compatibility.
-    1,
-    /// The expected consumer of this entry, e.g. CUDA or OpenMP.
-    llvm::object::OFK_SYCL,
-    /// Flags associated with the global.
-    0,
-    /// The address of the global to be registered by the runtime.
-    nullptr,
-    /// The name of the symbol in the device image.
-    nullptr,
-    /// The number of bytes the symbol takes.
-    0,
-    /// Extra generic data used to register this entry.
-    0,
-    /// An extra pointer, usually null.
-    nullptr};
-
-constexpr sycl::detail::__sycl_tgt_device_image GGenericDeviceImage = {
-    // Version
-    3,
-    // OffloadKind
-    llvm::object::OFK_SYCL,
-    // ImageFormat
-    llvm::object::IMG_SPIRV,
-    // TripleString
-    "spirv64-unknown-unknown",
-    // CompileOptions
-    "",
-    // LinkOptions
-    "",
-    // ImageStart
-    nullptr,
-    // ImageEnd
-    nullptr,
-    // EntriesBegin
-    nullptr,
-    // EntriesEnd
-    nullptr,
-    // PropertiesBegin
-    nullptr,
-    // PropertiesEnd
-    nullptr};
-
-constexpr sycl::detail::__sycl_tgt_bin_desc GGenericDeviceImages = {
-    // Version.
-    1,
-    // Num binaries
-    0,
-    /// Device binaries data.
-    nullptr,
-    // HostEntriesBegin.
-    nullptr,
-    // HostEntriesEnd.
-    nullptr};
-
 TEST(ProgramAndKernelManager, CheckUnsupportedVersionOfFatbin) {
-  sycl::detail::__sycl_tgt_bin_desc DeviceImages = GGenericDeviceImages;
+  sycl::detail::__sycl_tgt_bin_desc DeviceImages =
+      sycl::unittest::GenericDeviceImages;
   DeviceImages.Version = 3;
 
   MockProgramAndKernelManager Manager;
@@ -105,9 +47,10 @@ TEST(ProgramAndKernelManager, CheckUnsupportedVersionOfFatbin) {
 
 TEST(ProgramAndKernelManager, CheckUnsupportedVersionOfImage) {
   std::array<sycl::detail::__sycl_tgt_device_image, 1> DevImage{
-      GGenericDeviceImage};
+      sycl::unittest::GenericDeviceImage};
   DevImage[0].Version = 2;
-  sycl::detail::__sycl_tgt_bin_desc DeviceImages = GGenericDeviceImages;
+  sycl::detail::__sycl_tgt_bin_desc DeviceImages =
+      sycl::unittest::GenericDeviceImages;
   DeviceImages.NumDeviceBinaries = DevImage.size();
   DeviceImages.DeviceImages = DevImage.data();
 
@@ -126,25 +69,27 @@ TEST(ProgramAndKernelManager, CheckUnsupportedVersionOfImage) {
 TEST(ProgramAndKernelManager, CheckRegisterAndUnregister) {
   std::array<std::string, 3> KernelNames = {"kernel1.1", "kernel1.2",
                                             "kernel2.1"};
-  std::array<llvm::offloading::EntryTy, 2> Entries1 = {GGenericEntryTy,
-                                                       GGenericEntryTy};
+  std::array<llvm::offloading::EntryTy, 2> Entries1 = {
+      sycl::unittest::GenericEntry, sycl::unittest::GenericEntry};
   Entries1[0].SymbolName = KernelNames[0].data();
   Entries1[0].Size = KernelNames[0].size();
   Entries1[1].SymbolName = KernelNames[1].data();
   Entries1[1].Size = KernelNames[1].size();
 
-  std::array<llvm::offloading::EntryTy, 1> Entries2 = {GGenericEntryTy};
+  std::array<llvm::offloading::EntryTy, 1> Entries2 = {
+      sycl::unittest::GenericEntry};
   Entries2[0].SymbolName = KernelNames[2].data();
   Entries2[0].Size = KernelNames[2].size();
 
   std::array<sycl::detail::__sycl_tgt_device_image, 2> DevImages = {
-      GGenericDeviceImage, GGenericDeviceImage};
+      sycl::unittest::GenericDeviceImage, sycl::unittest::GenericDeviceImage};
   DevImages[0].EntriesBegin = Entries1.begin();
   DevImages[0].EntriesEnd = Entries1.end();
   DevImages[1].EntriesBegin = Entries2.begin();
   DevImages[1].EntriesEnd = Entries2.end();
 
-  sycl::detail::__sycl_tgt_bin_desc DeviceImagesDesc = GGenericDeviceImages;
+  sycl::detail::__sycl_tgt_bin_desc DeviceImagesDesc =
+      sycl::unittest::GenericDeviceImages;
   DeviceImagesDesc.NumDeviceBinaries = DevImages.size();
   DeviceImagesDesc.DeviceImages = DevImages.data();
 
@@ -172,7 +117,8 @@ TEST(ProgramAndKernelManager, CheckRegisterAndUnregister) {
   }
 
   // Unregister the first image with 2 kernels.
-  sycl::detail::__sycl_tgt_bin_desc SingleImageDesc = GGenericDeviceImages;
+  sycl::detail::__sycl_tgt_bin_desc SingleImageDesc =
+      sycl::unittest::GenericDeviceImages;
   SingleImageDesc.NumDeviceBinaries = 1;
   SingleImageDesc.DeviceImages = DevImages.data();
   EXPECT_NO_THROW(Manager.unregisterFatBin(&SingleImageDesc));

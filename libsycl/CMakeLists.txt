@@ -149,4 +149,6 @@ add_custom_target(libsycl-toolchain ALL
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
-add_subdirectory(unittests)
+if(LLVM_INCLUDE_TESTS)
+  add_subdirectory(unittests)
+endif()

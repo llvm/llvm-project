@@ -1,4 +1,19 @@
-#pragma once
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains declarations and utilities for liboffload mocking in
+/// libsycl unit tests.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBSYCL_UNITTESTS_MOCK_HELPERS_HPP
+#define _LIBSYCL_UNITTESTS_MOCK_HELPERS_HPP
 
 #include <OffloadAPI.h>
 
@@ -81,6 +96,33 @@ public:
   MOCK_METHOD(ol_result_t, olCreateQueue,
               (ol_device_handle_t Device, ol_queue_handle_t *Queue));
   MOCK_METHOD(ol_result_t, olDestroyQueue, (ol_queue_handle_t Queue));
+  MOCK_METHOD(ol_result_t, olSyncQueue, (ol_queue_handle_t Queue));
+  MOCK_METHOD(ol_result_t, olDestroyEvent, (ol_event_handle_t Event));
+  MOCK_METHOD(ol_result_t, olCreateProgram, (ol_device_handle_t Device,
+    const void *ProgData,
+    size_t ProgDataSize,
+    ol_program_handle_t *Program));
+
+  MOCK_METHOD(ol_result_t, olGetSymbol, (ol_program_handle_t Program,
+    const char *Name,
+    ol_symbol_kind_t Kind,
+    ol_symbol_handle_t *Symbol));
+  MOCK_METHOD(ol_result_t, olIsValidBinary, (ol_device_handle_t Device,
+    const void *ProgData,
+    size_t ProgDataSize,
+    bool *Valid));
+  MOCK_METHOD(ol_result_t, olWaitEvents, (ol_queue_handle_t Queue,
+    ol_event_handle_t *Events,
+    size_t NumEvents));
+  MOCK_METHOD(ol_result_t, olLaunchKernel, (ol_queue_handle_t Queue,
+    ol_device_handle_t Device,
+    ol_symbol_handle_t Kernel,
+    const void *ArgumentsData,
+    size_t ArgumentsSize,
+    const ol_kernel_launch_size_args_t *LaunchSizeArgs));
+  MOCK_METHOD(ol_result_t, olCreateEvent, (    ol_queue_handle_t Queue,
+    ol_event_handle_t *Event));
+
 
   void initDefault();
 
@@ -119,3 +161,5 @@ public:
 private:
   unittest::MockLiboffload &Mock;
 };
+
+#endif // _LIBSYCL_UNITTESTS_MOCK_HELPERS_HPP

@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "helpers.hpp"
 
 namespace unittest {
@@ -158,15 +166,60 @@ void unittest::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olDestroyProgram)
-      .WillByDefault([](ol_program_handle_t Program) -> ol_result_t {
+      .WillByDefault([this](ol_program_handle_t Program) -> ol_result_t {
+        if (!Program)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
         mock::releaseDummyHandle(Program);
         return OL_SUCCESS;
       });
 
+  ON_CALL(*this, olCreateProgram)
+      .WillByDefault([this](ol_device_handle_t Device, const void *ProgData,
+                            size_t ProgDataSize,
+                            ol_program_handle_t *Program) -> ol_result_t {
+        if (!Device)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (!ProgData || !Program || !ProgDataSize)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+
+        *Program = mock::createDummyHandleWithData<ol_program_handle_t>(
+            reinterpret_cast<unsigned char *>(&Device), sizeof(Device));
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olIsValidBinary)
+      .WillByDefault([this](ol_device_handle_t Device, const void *ProgData,
+                            size_t ProgDataSize, bool *Valid) -> ol_result_t {
+        if (!Device)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (!ProgData || !Valid || !ProgDataSize)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        *Valid = true;
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olGetSymbol)
+      .WillByDefault([this](ol_program_handle_t Program, const char *Name,
+                            ol_symbol_kind_t Kind,
+                            ol_symbol_handle_t *Symbol) -> ol_result_t {
+        if (!Program)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (!Name || !Symbol)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        std::ignore = Kind;
+
+        *Symbol = mock::createDummyHandleWithData<ol_symbol_handle_t>(
+            reinterpret_cast<unsigned char *>(&Program), sizeof(Program));
+        return OL_SUCCESS;
+      });
+
   ON_CALL(*this, olCreateQueue)
-      .WillByDefault([](ol_device_handle_t Device,
-                        ol_queue_handle_t *Queue) -> ol_result_t {
-        assert(Device);
+      .WillByDefault([this](ol_device_handle_t Device,
+                            ol_queue_handle_t *Queue) -> ol_result_t {
+        if (!Device)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (!Queue)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
         // Attach device as data to check what device queue belongs to if needed
         *Queue = mock::createDummyHandleWithData<ol_queue_handle_t>(
             reinterpret_cast<unsigned char *>(Device), sizeof(Device));
@@ -174,8 +227,67 @@ void unittest::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olDestroyQueue)
-      .WillByDefault([](ol_queue_handle_t Queue) -> ol_result_t {
+      .WillByDefault([this](ol_queue_handle_t Queue) -> ol_result_t {
+        if (!Queue)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
         mock::releaseDummyHandle(Queue);
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olSyncQueue)
+      .WillByDefault([this](ol_queue_handle_t Queue) -> ol_result_t {
+        if (!Queue)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        std::ignore = Queue;
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olWaitEvents)
+      .WillByDefault([this](ol_queue_handle_t Queue, ol_event_handle_t *Events,
+                            size_t NumEvents) -> ol_result_t {
+        if (!Queue)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (!Events)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        for (size_t I = 0; I < NumEvents; ++I) {
+          if (!Events[I])
+            return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        }
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olLaunchKernel)
+      .WillByDefault([this](ol_queue_handle_t Queue, ol_device_handle_t Device,
+                            ol_symbol_handle_t Kernel,
+                            const void *ArgumentsData, size_t ArgumentsSize,
+                            const ol_kernel_launch_size_args_t *LaunchSizeArgs)
+                         -> ol_result_t {
+        if (!Device || !Kernel || !Queue)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (!LaunchSizeArgs)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        if (ArgumentsSize > 0 && !ArgumentsData)
+          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olCreateEvent)
+      .WillByDefault([this](ol_queue_handle_t Queue,
+                            ol_event_handle_t *Event) -> ol_result_t {
+        if (!Queue)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (!Event)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        *Event = mock::createDummyHandleWithData<ol_event_handle_t>(
+            reinterpret_cast<unsigned char *>(&Queue), sizeof(Queue));
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olDestroyEvent)
+      .WillByDefault([this](ol_event_handle_t Event) -> ol_result_t {
+        if (!Event)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        mock::releaseDummyHandle(Event);
         return OL_SUCCESS;
       });
 }
