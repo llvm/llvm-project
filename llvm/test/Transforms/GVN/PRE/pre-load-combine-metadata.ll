@@ -18,7 +18,7 @@ define void @test_combine_metadata(i1 %c, i64 %arg) {
 ; MDEP-NEXT:    store i64 [[ARG]], ptr @g_long, align 8, !tbaa [[LONG_TBAA0:![0-9]+]]
 ; MDEP-NEXT:    [[TR:%.*]] = trunc i64 [[ARG]] to i8
 ; MDEP-NEXT:    store i8 [[TR]], ptr [[C3]], align 1, !tbaa [[_BOOL_TBAA4:![0-9]+]]
-; MDEP-NEXT:    [[V1_PRE:%.*]] = load i8, ptr [[PHI]], align 1, !tbaa [[_BOOL_TBAA4]]
+; MDEP-NEXT:    [[V1_PRE:%.*]] = load i8, ptr [[PHI]], align 1, !tbaa [[CHAR_TBAA6:![0-9]+]]
 ; MDEP-NEXT:    br i1 [[C]], label %[[IF_THEN]], label %[[IF_ELSE:.*]]
 ; MDEP:       [[IF_ELSE]]:
 ; MDEP-NEXT:    store i8 [[V1_PRE]], ptr @g_bool, align 8, !tbaa [[LONG_TBAA0]]
@@ -83,6 +83,7 @@ if.then:
 ; MDEP: [[META3]] = !{!"Simple C/C++ TBAA"}
 ; MDEP: [[_BOOL_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
 ; MDEP: [[META5]] = !{!"_Bool", [[META2]], i64 0}
+; MDEP: [[CHAR_TBAA6]] = !{[[META2]], [[META2]], i64 0}
 ;.
 ; MSSA: [[LONG_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; MSSA: [[META1]] = !{!"long", [[META2:![0-9]+]], i64 0}
