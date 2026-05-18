@@ -1421,13 +1421,6 @@ static bool areInnerLoopLatchPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
   return true;
 }
 
-/// We currently only support PHI nodes in the outer loop latch if they have a
-/// single incoming value.
-static bool areOuterLoopLatchPHIsSupported(Loop *OuterLoop) {
-  return all_of(OuterLoop->getLoopLatch()->phis(),
-                [](PHINode &PHI) { return PHI.getNumIncomingValues() == 1; });
-}
-
 bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
                                                   unsigned OuterLoopId,
                                                   CharMatrix &DepMatrix) {
@@ -1531,13 +1524,16 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
-  if (!areOuterLoopLatchPHIsSupported(OuterLoop)) {
-    LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in outer loop latch.\n");
+  if (any_of(OuterLoop->getLoopLatch()->phis(),
+             [](PHINode &PHI) { return PHI.getNumIncomingValues() != 1; })) {
+    LLVM_DEBUG(dbgs() << "Only outer loop latch PHI nodes with one incoming "
+                         "value are supported.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLatchPHI",
                                       OuterLoop->getStartLoc(),
                                       OuterLoop->getHeader())
-             << "Found unsupported PHI node in outer loop latch.";
+             << "Only outer loop latch PHI nodes with one incoming value are "
+                "supported.";
     });
     return false;
   }
