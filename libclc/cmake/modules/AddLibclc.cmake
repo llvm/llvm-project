@@ -37,6 +37,9 @@ function(libclc_add_sources target)
     endforeach()
     list(REMOVE_DUPLICATES inc_dirs)
     target_include_directories(${target} PRIVATE ${inc_dirs})
+    set_property(SOURCE ${new_sources}
+      TARGET_DIRECTORY ${target}
+      APPEND PROPERTY OBJECT_DEPENDS "${CMAKE_CLC_COMPILER}")
   endif()
 endfunction()
 
