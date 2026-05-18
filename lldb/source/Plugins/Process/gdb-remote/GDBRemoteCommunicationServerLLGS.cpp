@@ -1054,8 +1054,10 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
                     tid_stop_info.details.fork.child_tid);
   }
 
-  if (process.HasPendingLibraryEvents())
+  if (process.HasPendingLibraryEvents()) {
+    // 1 is an arbitrary value here. The parameter is ignored.
     response.PutCString("library:1;");
+  }
 
   return response;
 }
