@@ -2011,19 +2011,40 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   MVT IntVT = MVT::i32;
   MVT FltVT = MVT::f32;
 
-  unsigned LHSSignBits = DAG.ComputeNumSignBits(LHS);
-  if (LHSSignBits < 9)
-    return SDValue();
-
-  unsigned RHSSignBits = DAG.ComputeNumSignBits(RHS);
-  if (RHSSignBits < 9)
-    return SDValue();
-
   unsigned BitSize = VT.getSizeInBits();
-  unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
-  unsigned DivBits = BitSize - SignBits;
-  if (Sign)
-    ++DivBits;
+  unsigned DivBits;
+
+  if (Sign) {
+    unsigned LHSSignBits = DAG.ComputeNumSignBits(LHS);
+    if (LHSSignBits < 9)
+      return SDValue();
+
+    unsigned RHSSignBits = DAG.ComputeNumSignBits(RHS);
+    if (RHSSignBits < 9)
+      return SDValue();
+
+    DivBits = BitSize - std::min(LHSSignBits, RHSSignBits) + 1;
+  } else {
+    // For unsigned division the operands must fit in the float mantissa (24
+    // bits).  ComputeNumSignBits only tells us the top N bits are identical;
+    // when those bits are ones the unsigned value is near 2^32 and cannot be
+    // converted to float precisely.  Use leading-zero counts instead.
+    KnownBits KnownLHS = DAG.computeKnownBits(LHS);
+    if (!KnownLHS.isNonNegative())
+      return SDValue();
+    unsigned LHSLeadingZeros = KnownLHS.countMinLeadingZeros();
+    if (LHSLeadingZeros < 9)
+      return SDValue();
+
+    KnownBits KnownRHS = DAG.computeKnownBits(RHS);
+    if (!KnownRHS.isNonNegative())
+      return SDValue();
+    unsigned RHSLeadingZeros = KnownRHS.countMinLeadingZeros();
+    if (RHSLeadingZeros < 9)
+      return SDValue();
+
+    DivBits = BitSize - std::min(LHSLeadingZeros, RHSLeadingZeros);
+  }
 
   ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
   ISD::NodeType ToInt = Sign ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
