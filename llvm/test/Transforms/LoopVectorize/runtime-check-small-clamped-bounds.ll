@@ -447,7 +447,7 @@ define void @wider_nusw_does_not_imply_narrower(ptr %dst, i64 %n) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext <4 x i32> [[TMP16]] to <4 x i64>
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP13]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP13]], i64 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP5]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

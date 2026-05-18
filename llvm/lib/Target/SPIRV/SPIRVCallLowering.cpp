@@ -288,43 +288,45 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,
                         {Alignment});
       }
-      if (Arg.hasAttribute(Attribute::ReadOnly)) {
-        auto Attr =
-            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoWrite);
-        buildOpDecorate(VRegs[i][0], MIRBuilder,
-                        SPIRV::Decoration::FuncParamAttr, {Attr});
-      }
-      if (Arg.hasAttribute(Attribute::ZExt)) {
-        auto Attr =
-            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
-        buildOpDecorate(VRegs[i][0], MIRBuilder,
-                        SPIRV::Decoration::FuncParamAttr, {Attr});
-      }
-      if (Arg.hasAttribute(Attribute::NoAlias)) {
-        auto Attr =
-            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoAlias);
-        buildOpDecorate(VRegs[i][0], MIRBuilder,
-                        SPIRV::Decoration::FuncParamAttr, {Attr});
-      }
-      // TODO: the AMDGPU BE only supports ByRef argument passing, thus for
-      //       AMDGCN flavoured SPIRV we CodeGen for ByRef, but lower it to
-      //       ByVal, handling the impedance mismatch during reverse
-      //       translation from SPIRV to LLVM IR; the vendor check should be
-      //       removed once / if SPIRV adds ByRef support.
-      if (Arg.hasAttribute(Attribute::ByVal) ||
-          (Arg.hasAttribute(Attribute::ByRef) &&
-           F.getParent()->getTargetTriple().getVendor() ==
-               Triple::VendorType::AMD)) {
-        auto Attr =
-            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::ByVal);
-        buildOpDecorate(VRegs[i][0], MIRBuilder,
-                        SPIRV::Decoration::FuncParamAttr, {Attr});
-      }
-      if (Arg.hasAttribute(Attribute::StructRet)) {
-        auto Attr =
-            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sret);
-        buildOpDecorate(VRegs[i][0], MIRBuilder,
-                        SPIRV::Decoration::FuncParamAttr, {Attr});
+      if (!ST->isShader()) {
+        if (Arg.hasAttribute(Attribute::ReadOnly)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoWrite);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        if (Arg.hasAttribute(Attribute::ZExt)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        if (Arg.hasAttribute(Attribute::NoAlias)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoAlias);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        // TODO: the AMDGPU BE only supports ByRef argument passing, thus for
+        //       AMDGCN flavoured SPIRV we CodeGen for ByRef, but lower it to
+        //       ByVal, handling the impedance mismatch during reverse
+        //       translation from SPIRV to LLVM IR; the vendor check should be
+        //       removed once / if SPIRV adds ByRef support.
+        if (Arg.hasAttribute(Attribute::ByVal) ||
+            (Arg.hasAttribute(Attribute::ByRef) &&
+             F.getParent()->getTargetTriple().getVendor() ==
+                 Triple::VendorType::AMD)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::ByVal);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        if (Arg.hasAttribute(Attribute::StructRet)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sret);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
       }
 
       if (F.getCallingConv() == CallingConv::SPIR_KERNEL) {
@@ -458,19 +460,19 @@ void SPIRVCallLowering::produceIndirectPtrType(
     if (!GR->getSPIRVTypeForVReg(IC.ArgRegs[i]))
       GR->assignSPIRVTypeToVReg(SPIRVTy, IC.ArgRegs[i], MF);
   }
-    // SPIR-V function type:
-    FunctionType *FTy =
-        FunctionType::get(const_cast<Type *>(IC.RetTy), IC.ArgTys, false);
-    SPIRVTypeInst SpirvFuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
-        FTy, SpirvRetTy, SpirvArgTypes, MIRBuilder);
-    // SPIR-V pointer to function type:
-    auto SC = ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
-                  ? SPIRV::StorageClass::CodeSectionINTEL
-                  : SPIRV::StorageClass::Function;
-    SPIRVTypeInst IndirectFuncPtrTy =
-        GR->getOrCreateSPIRVPointerType(SpirvFuncTy, MIRBuilder, SC);
-    // Correct the Callee type
-    GR->assignSPIRVTypeToVReg(IndirectFuncPtrTy, IC.Callee, MF);
+  // SPIR-V function type:
+  FunctionType *FTy =
+      FunctionType::get(const_cast<Type *>(IC.RetTy), IC.ArgTys, false);
+  SPIRVTypeInst SpirvFuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
+      FTy, SpirvRetTy, SpirvArgTypes, MIRBuilder);
+  // SPIR-V pointer to function type:
+  auto SC = ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
+                ? SPIRV::StorageClass::CodeSectionINTEL
+                : SPIRV::StorageClass::Function;
+  SPIRVTypeInst IndirectFuncPtrTy =
+      GR->getOrCreateSPIRVPointerType(SpirvFuncTy, MIRBuilder, SC);
+  // Correct the Callee type
+  GR->assignSPIRVTypeToVReg(IndirectFuncPtrTy, IC.Callee, MF);
 }
 
 bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,

@@ -273,7 +273,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
-          omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
+          omp_initial_device, HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
@@ -293,7 +293,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
-          DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
+          DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,

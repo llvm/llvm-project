@@ -12,8 +12,10 @@
 
 #include "DXILBitcodeWriter.h"
 #include "DXILValueEnumerator.h"
+#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
@@ -127,16 +129,20 @@ class DXILBitcodeWriter {
   /// This maps values to their typed pointers
   PointerTypeMap PointerMap;
 
+  /// Tracks debug info metadata.
+  const DXILDebugInfoMap &DebugInfo;
+
 public:
   /// Constructs a ModuleBitcodeWriter object for the given Module,
   /// writing to the provided \p Buffer.
   DXILBitcodeWriter(const Module &M, SmallVectorImpl<char> &Buffer,
-                    StringTableBuilder &StrtabBuilder, BitstreamWriter &Stream)
+                    StringTableBuilder &StrtabBuilder, BitstreamWriter &Stream,
+                    const DXILDebugInfoMap &DebugInfo)
       : I8Ty(Type::getInt8Ty(M.getContext())),
         I8PtrTy(TypedPointerType::get(I8Ty, 0)), Stream(Stream),
-        StrtabBuilder(StrtabBuilder), M(M), VE(M, I8PtrTy), Buffer(Buffer),
-        BitcodeStartBit(Stream.GetCurrentBitNo()),
-        PointerMap(PointerTypeAnalysis::run(M)) {
+        StrtabBuilder(StrtabBuilder), M(M), VE(M, I8PtrTy, DebugInfo),
+        Buffer(Buffer), BitcodeStartBit(Stream.GetCurrentBitNo()),
+        PointerMap(PointerTypeAnalysis::run(M)), DebugInfo(DebugInfo) {
     GlobalValueId = VE.getValues().size();
     // Enumerate the typed pointers
     for (auto El : PointerMap)
@@ -392,7 +398,8 @@ dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
 dxil::BitcodeWriter::~BitcodeWriter() { }
 
 /// Write the specified module to the specified output stream.
-void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out) {
+void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out,
+                           const DXILDebugInfoMap &DebugInfo) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256 * 1024);
 
@@ -403,7 +410,7 @@ void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out) {
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
 
   BitcodeWriter Writer(Buffer);
-  Writer.writeModule(M);
+  Writer.writeModule(M, DebugInfo);
 
   // Write the generated bitstream to "Out".
   if (!Buffer.empty())
@@ -423,7 +430,8 @@ void BitcodeWriter::writeBlob(unsigned Block, unsigned Record, StringRef Blob) {
   Stream->ExitBlock();
 }
 
-void BitcodeWriter::writeModule(const Module &M) {
+void BitcodeWriter::writeModule(const Module &M,
+                                const DXILDebugInfoMap &DebugInfo) {
 
   // The Mods vector is used by irsymtab::build, which requires non-const
   // Modules in case it needs to materialize metadata. But the bitcode writer
@@ -432,7 +440,7 @@ void BitcodeWriter::writeModule(const Module &M) {
   assert(M.isMaterialized());
   Mods.push_back(const_cast<Module *>(&M));
 
-  DXILBitcodeWriter ModuleWriter(M, Buffer, StrtabBuilder, *Stream);
+  DXILBitcodeWriter ModuleWriter(M, Buffer, StrtabBuilder, *Stream, DebugInfo);
   ModuleWriter.write();
 }
 
@@ -1404,18 +1412,22 @@ void DXILBitcodeWriter::writeDISubrange(const DISubrange *N,
                                         unsigned Abbrev) {
   Record.push_back(N->isDistinct());
 
-  // TODO: Do we need to handle DIExpression here? What about cases where Count
-  // isn't specified but UpperBound and such are?
-  ConstantInt *Count = dyn_cast<ConstantInt *>(N->getCount());
-  assert(Count && "Count is missing or not ConstantInt");
-  Record.push_back(Count->getValue().getSExtValue());
+  // Count may be a reference to a DILocalVariable or DIGlobalVariable
+  // in case of C99 VLA. Non-constant count It is not supported by
+  // DXIL, so we emit a subrange of -1 (empty).
+  if (ConstantInt *Count = dyn_cast<ConstantInt *>(N->getCount())) {
+    Record.push_back(Count->getValue().getSExtValue());
+  } else {
+    Record.push_back(-1);
+  }
 
-  // TODO: Similarly, DIExpression is allowed here now
+  // Similarly, non constant lower bound is not allowed here.
   DISubrange::BoundType LowerBound = N->getLowerBound();
-  assert((LowerBound.isNull() || isa<ConstantInt *>(LowerBound)) &&
-         "Lower bound provided but not ConstantInt");
-  Record.push_back(
-      LowerBound ? rotateSign(cast<ConstantInt *>(LowerBound)->getValue()) : 0);
+  if (!LowerBound.isNull() && isa<ConstantInt *>(LowerBound)) {
+    Record.push_back(rotateSign(cast<ConstantInt *>(LowerBound)->getValue()));
+  } else {
+    Record.push_back(0);
+  }
 
   Stream.EmitRecord(bitc::METADATA_SUBRANGE, Record, Abbrev);
   Record.clear();
@@ -1526,7 +1538,7 @@ void DXILBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back(N->getEmissionKind());
   Record.push_back(VE.getMetadataOrNullID(N->getEnumTypes().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getRetainedTypes().get()));
-  Record.push_back(/* subprograms */ 0);
+  Record.push_back(VE.getMetadataOrNullID(DebugInfo.MDExtra.lookup(N)));
   Record.push_back(VE.getMetadataOrNullID(N->getGlobalVariables().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getImportedEntities().get()));
   Record.push_back(N->getDWOId());
@@ -1553,7 +1565,7 @@ void DXILBitcodeWriter::writeDISubprogram(const DISubprogram *N,
   Record.push_back(N->getVirtualIndex());
   Record.push_back(N->getFlags());
   Record.push_back(N->isOptimized());
-  Record.push_back(VE.getMetadataOrNullID(N->getRawUnit()));
+  Record.push_back(VE.getMetadataOrNullID(DebugInfo.MDExtra.lookup(N)));
   Record.push_back(VE.getMetadataOrNullID(N->getTemplateParams().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getDeclaration()));
   Record.push_back(VE.getMetadataOrNullID(N->getRetainedNodes().get()));
@@ -1657,8 +1669,11 @@ void DXILBitcodeWriter::writeDIGlobalVariable(const DIGlobalVariable *N,
 void DXILBitcodeWriter::writeDILocalVariable(const DILocalVariable *N,
                                              SmallVectorImpl<uint64_t> &Record,
                                              unsigned Abbrev) {
+  constexpr unsigned DW_TAG_auto_variable = 0x0100;
+  constexpr unsigned DW_TAG_arg_variable = 0x0101;
   Record.push_back(N->isDistinct());
-  Record.push_back(N->getTag());
+  assert(N->getTag() == dwarf::DW_TAG_variable);
+  Record.push_back(N->getArg() ? DW_TAG_arg_variable : DW_TAG_auto_variable);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
@@ -1867,9 +1882,13 @@ void DXILBitcodeWriter::writeFunctionMetadataAttachment(const Function &F) {
   F.getAllMetadata(MDs);
   if (!MDs.empty()) {
     for (const auto &I : MDs) {
+      if (I.first == LLVMContext::MD_dbg)
+        continue;
       Record.push_back(I.first);
       Record.push_back(VE.getMetadataID(I.second));
     }
+  }
+  if (!Record.empty()) {
     Stream.EmitRecord(bitc::METADATA_ATTACHMENT, Record, 0);
     Record.clear();
   }

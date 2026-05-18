@@ -31,7 +31,6 @@
 namespace llvm {
 class MCInst;
 class MachineFunction;
-class MachineInstr;
 class MachineInstrBuilder;
 class MachineIRBuilder;
 class MachineRegisterInfo;
@@ -40,7 +39,6 @@ class StringRef;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
 class SPIRVGlobalRegistry;
-class SPIRVTypeInst;
 
 // This class implements a partial ordering visitor, which visits a cyclic graph
 // in natural topological-like ordering. Topological ordering is not defined for
@@ -168,6 +166,9 @@ struct FPFastMathDefaultInfoVector
 // during the translation to cope with aggregate flattening etc.
 FunctionType *getOriginalFunctionType(const Function &F);
 FunctionType *getOriginalFunctionType(const CallBase &CB);
+// This handles retrieving the original ASM constraints, which we had to spoof
+// into having a single output.
+StringRef getOriginalAsmConstraints(const CallBase &CB);
 } // namespace SPIRV
 
 // Add the given string as a series of integer operand, inserting null
@@ -222,7 +223,7 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
 
 // Return a valid position for the OpVariable instruction inside a function,
 // i.e., at the beginning of the first block of the function.
-MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineFunction &MF);
 
 // Return a valid position for the instruction at the end of the block before
 // terminators and debug instructions.
@@ -393,13 +394,6 @@ inline Type *getPointeeTypeByAttr(Argument *Arg) {
   if (Arg->hasByRefAttr())
     return Arg->getParamByRefType();
   return nullptr;
-}
-
-inline Type *reconstructFunctionType(Function *F) {
-  SmallVector<Type *> ArgTys;
-  for (unsigned i = 0; i < F->arg_size(); ++i)
-    ArgTys.push_back(F->getArg(i)->getType());
-  return FunctionType::get(F->getReturnType(), ArgTys, F->isVarArg());
 }
 
 #define TYPED_PTR_TARGET_EXT_NAME "spirv.$TypedPointerType"
@@ -587,8 +581,6 @@ MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType);
-MachineBasicBlock::iterator
-getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);

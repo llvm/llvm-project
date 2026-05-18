@@ -912,9 +912,8 @@ void TargetPassConfig::addIRPasses() {
 /// Turn exception handling constructs into something the code generators can
 /// handle.
 void TargetPassConfig::addPassesToHandleExceptions() {
-  const MCAsmInfo *MCAI = TM->getMCAsmInfo();
-  assert(MCAI && "No MCAsmInfo");
-  switch (MCAI->getExceptionHandlingType()) {
+  const MCAsmInfo &MCAI = TM->getMCAsmInfo();
+  switch (MCAI.getExceptionHandlingType()) {
   case ExceptionHandling::SjLj:
     // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
     // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,

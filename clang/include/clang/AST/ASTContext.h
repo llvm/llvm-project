@@ -104,6 +104,7 @@ class CXXRecordDecl;
 class DiagnosticsEngine;
 class DynTypedNodeList;
 class Expr;
+class ExplicitInstantiationDecl;
 enum class FloatModeKind;
 class GlobalDecl;
 class IdentifierTable;
@@ -497,6 +498,12 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The type for the C ucontext_t type.
   TypeDecl *ucontext_tDecl = nullptr;
 
+  /// The type for the C fexcept_t type.
+  TypeDecl *fexcept_tDecl = nullptr;
+
+  /// The type for the C fenv_t type.
+  TypeDecl *fenv_tDecl = nullptr;
+
   /// Type for the Block descriptor for Blocks CodeGen.
   ///
   /// Since this is only used for generation of debug info, it is not
@@ -655,6 +662,12 @@ private:
     InstantiatedFromUsingShadowDecl;
 
   llvm::DenseMap<FieldDecl *, FieldDecl *> InstantiatedFromUnnamedFieldDecl;
+
+  /// Maps a canonical specialization Decl to all ExplicitInstantiationDecls
+  /// that reference it (declarations and definitions).
+  llvm::DenseMap<const NamedDecl *,
+                 llvm::TinyPtrVector<ExplicitInstantiationDecl *>>
+      ExplicitInstantiations;
 
   /// Mapping that stores the methods overridden by a given C++
   /// member function.
@@ -1133,6 +1146,14 @@ public:
 
   /// Erase the attributes corresponding to the given declaration.
   void eraseDeclAttrs(const Decl *D);
+
+  /// Get all ExplicitInstantiationDecls for a given specialization.
+  ArrayRef<ExplicitInstantiationDecl *>
+  getExplicitInstantiationDecls(const NamedDecl *Spec) const;
+
+  /// Add an ExplicitInstantiationDecl for a given specialization.
+  void addExplicitInstantiationDecl(const NamedDecl *Spec,
+                                    ExplicitInstantiationDecl *EID);
 
   /// If this variable is an instantiated static data member of a
   /// class template specialization, returns the templated static data member
@@ -1983,8 +2004,7 @@ public:
   QualType getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack);
 
   QualType
-  getTemplateTypeParmType(unsigned Depth, unsigned Index,
-                          bool ParameterPack,
+  getTemplateTypeParmType(int Depth, int Index, bool ParameterPack,
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
   QualType getCanonicalTemplateSpecializationType(
@@ -2336,6 +2356,30 @@ public:
     return QualType();
   }
 
+  /// Set the type for the C fexcept_t type.
+  void setfexcept_tDecl(TypeDecl *fexcept_tDecl) {
+    this->fexcept_tDecl = fexcept_tDecl;
+  }
+
+  /// Retrieve the C fexcept_t type.
+  QualType getfexcept_tType() const {
+    if (fexcept_tDecl)
+      return getTypeDeclType(ElaboratedTypeKeyword::None,
+                             /*Qualifier=*/std::nullopt, fexcept_tDecl);
+    return QualType();
+  }
+
+  /// Set the type for the C fenv_t type.
+  void setfenv_tDecl(TypeDecl *fenv_tDecl) { this->fenv_tDecl = fenv_tDecl; }
+
+  /// Retrieve the C fenv_t type.
+  QualType getfenv_tType() const {
+    if (fenv_tDecl)
+      return getTypeDeclType(ElaboratedTypeKeyword::None,
+                             /*Qualifier=*/std::nullopt, fenv_tDecl);
+    return QualType();
+  }
+
   /// The result type of logical operations, '<', '>', '!=', etc.
   CanQualType getLogicalOperationType() const {
     return getLangOpts().CPlusPlus ? BoolTy : IntTy;
@@ -2616,7 +2660,10 @@ public:
     GE_Missing_setjmp,
 
     /// Missing a type from <ucontext.h>
-    GE_Missing_ucontext
+    GE_Missing_ucontext,
+
+    /// Missing a type from <fenv.h>
+    GE_Missing_fenv
   };
 
   QualType DecodeTypeStr(const char *&Str, const ASTContext &Context,
