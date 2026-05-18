@@ -23,7 +23,9 @@
 
 namespace clang::lifetimes {
 
-inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
+inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
+  if (S.getLangOpts().DebugRunLifetimeSafety)
+    return true;
   DiagnosticsEngine &Diags = S.getDiagnostics();
   constexpr unsigned DiagIDs[] = {
       diag::warn_lifetime_safety_use_after_scope,
@@ -238,6 +240,12 @@ public:
       // parsed as a type attribute, not a parameter attribute.
       InsertionPoint = ParmToAnnotate->getBeginLoc();
       FixItText = "[[clang::lifetimebound]] ";
+    } else if (ParmToAnnotate->hasDefaultArg()) {
+      // If the parameter has a default argument, place the attribute after the
+      // named argument.
+      InsertionPoint =
+          Lexer::getLocForEndOfToken(ParmToAnnotate->getLocation(), 0,
+                                     S.getSourceManager(), S.getLangOpts());
     }
     S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
         << ParmToAnnotate->getSourceRange()

@@ -286,7 +286,8 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
           OpInfo.OperandType == AMDGPU::OPERAND_KIMM64)
         return Imm;
       if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-          AMDGPU::getOperandSize(OpInfo) == 8)
+          AMDGPU::getOperandSize(OpInfo) == 8 &&
+          AMDGPU::getExprKind(MO.getExpr()) != AMDGPUMCExpr::AGVK_Lit)
         return 254;
       return 255;
     }

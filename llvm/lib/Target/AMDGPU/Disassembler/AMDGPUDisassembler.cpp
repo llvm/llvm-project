@@ -1681,7 +1681,9 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-    Val <<= 32;
+    UseLit = AMDGPU::isInlinableLiteral64(Val << 32, HasInv2Pi);
+    if (!UseLit)
+      Val <<= 32;
     break;
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
@@ -1713,6 +1715,10 @@ MCOperand AMDGPUDisassembler::decodeLiteral64Constant() const {
   }
 
   bool UseLit64 = Hi_32(Literal) == 0;
+
+  UseLit64 |= AMDGPU::isInlinableLiteral64(
+      Literal, STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm));
+
   return UseLit64 ? MCOperand::createExpr(AMDGPUMCExpr::createLit(
                         LitModifier::Lit64, Literal, getContext()))
                   : MCOperand::createImm(Literal);
