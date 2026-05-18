@@ -57201,32 +57201,27 @@ static SDValue combineBTToBitOpFlag(SDNode *N, SelectionDAG &DAG) {
     if (User == N)
       continue;
 
-    SDValue Mask;
-    if (!sd_match(User,
-                  m_BitwiseLogic(m_Specific(Src), m_OneUse(m_Value(Mask)))))
-      continue;
-
-    unsigned UOpc = User->getOpcode();
     unsigned FlagOp = 0;
     SDValue ShAmt;
-    if (UOpc == ISD::AND && Mask.getOpcode() == ISD::ROTL) {
+    if (sd_match(User,
+                 m_And(m_Specific(Src),
+                       m_OneUse(m_Rotl(m_SpecificInt(APInt::getAllOnes(BW) - 1),
+                                       m_Value(ShAmt)))))) {
       // (and Src, (rotl -2, X)): clears bit X.
-      if (auto *C = dyn_cast<ConstantSDNode>(Mask.getOperand(0)))
-        if (C->getAPIntValue() == APInt::getAllOnes(BW) - 1) {
-          FlagOp = X86ISD::BTR;
-          ShAmt = Mask.getOperand(1);
-        }
-    } else if ((UOpc == ISD::OR || UOpc == ISD::XOR) &&
-               Mask.getOpcode() == ISD::SHL) {
-      // (or/xor Src, (shl 1, X)): sets/flips bit X.
-      if (auto *C = dyn_cast<ConstantSDNode>(Mask.getOperand(0)))
-        if (C->getAPIntValue() == 1) {
-          FlagOp = UOpc == ISD::OR ? X86ISD::BTS : X86ISD::BTC;
-          ShAmt = Mask.getOperand(1);
-        }
-    }
-    if (!FlagOp)
+      FlagOp = X86ISD::BTR;
+    } else if (sd_match(User, m_Or(m_Specific(Src),
+                                   m_OneUse(m_Shl(m_SpecificInt(1),
+                                                  m_Value(ShAmt)))))) {
+      // (or Src, (shl 1, X)): sets bit X.
+      FlagOp = X86ISD::BTS;
+    } else if (sd_match(User, m_Xor(m_Specific(Src),
+                                    m_OneUse(m_Shl(m_SpecificInt(1),
+                                                   m_Value(ShAmt)))))) {
+      // (xor Src, (shl 1, X)): flips bit X.
+      FlagOp = X86ISD::BTC;
+    } else {
       continue;
+    }
 
     // The BT and the bit-op must address the same bit. They can differ only
     // by truncation/extension or an AND that preserves the low log2(BW) bits.
