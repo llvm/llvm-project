@@ -11,17 +11,19 @@ define void @buildvector_store_middle(ptr %p, float %a0, float %a1, float %a2, f
 ; CHECK-LABEL: define void @buildvector_store_middle(
 ; CHECK-SAME: ptr [[P:%.*]], float [[A0:%.*]], float [[A1:%.*]], float [[A2:%.*]], float [[A3:%.*]], float [[A4:%.*]], float [[A5:%.*]], float [[A6:%.*]], float [[A7:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <3 x float> poison, float [[A0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> [[TMP0]], float [[A1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[TMP1]], float [[A2]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <3 x float> [[TMP2]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[A0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[A1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP1]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[V2:%.*]] = fadd float [[A2]], 1.000000e+00
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[A3]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[A4]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[A5]], i32 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[A6]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP6]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[V7:%.*]] = fadd float [[A7]], 1.000000e+00
-; CHECK-NEXT:    store <3 x float> [[TMP8]], ptr [[P]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[P]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 2
+; CHECK-NEXT:    store float [[V2]], ptr [[P2]], align 4
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
 ; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[P3]], align 4
 ; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds float, ptr [[P]], i64 7

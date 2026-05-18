@@ -239,7 +239,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%and.red> = phi vp<[[VP3]]>, ir<%and.red.next>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%and.red> = phi (and) vp<[[VP3]]>, ir<%and.red.next>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP2]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-order splice ir<%recur>, ir<%recur.next>

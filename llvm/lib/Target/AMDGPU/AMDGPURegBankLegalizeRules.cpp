@@ -151,7 +151,7 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
   case UniB512:
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isUniformAtDef(Reg);
   case UniBRC: {
-    if (!MUI.isUniformAtDef(Reg))
+    if (MUI.isDivergentAtDef(Reg))
       return false;
     // Check if there is SGPR register class of same size as the LLT.
     const SIRegisterInfo *TRI =
@@ -219,7 +219,7 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
   case DivB512:
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isDivergentAtDef(Reg);
   case DivBRC: {
-    if (!MUI.isDivergentAtDef(Reg))
+    if (MUI.isUniformAtDef(Reg))
       return false;
     // Check if there is VGPR register class of same size as the LLT.
     const SIRegisterInfo *TRI =
