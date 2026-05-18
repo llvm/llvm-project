@@ -253,8 +253,7 @@ DirectoryBasedGlobalCompilationDatabase::DirectoryCache::CachedFile::load(
 // Adapt CDB-loading functions to a common interface for DirectoryCache::load().
 static std::unique_ptr<tooling::CompilationDatabase>
 parseBuildDatabaseJSON(PathRef Path, llvm::StringRef Data, std::string &Error) {
-  if (auto CDB = tooling::JSONCompilationDatabase::loadFromBuffer(
-          Data, Error, tooling::JSONCommandLineSyntax::AutoDetect)) {
+  if (auto CDB = tooling::JSONBuildDatabase::loadFromBuffer(Data, Error)) {
     // FS used for expanding response files.
     // FIXME: ExpandResponseFilesDatabase appears not to provide the usual
     // thread-safety guarantees, as the access to FS is not locked!

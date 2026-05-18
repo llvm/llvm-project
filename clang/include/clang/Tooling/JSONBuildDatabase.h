@@ -100,6 +100,9 @@ private:
   /// Returns whether parsing succeeded. Sets ErrorMessage if parsing
   /// failed.
   bool parse(std::string &ErrorMessage);
+  bool parseRoot(std::string &ErrorMessage, llvm::yaml::MappingNode *Object);
+  bool parseSet(std::string &ErrorMessage, llvm::yaml::MappingNode *Object);
+  bool parseTU(std::string &ErrorMessage, llvm::yaml::MappingNode *Object);
 
   // Tuple (directory, filename, commandline, output) where 'commandline'
   // points to the corresponding scalar nodes in the YAML stream.

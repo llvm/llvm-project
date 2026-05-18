@@ -30,8 +30,11 @@
 #include <cassert>
 #include <memory>
 #include <optional>
+#include <signal.h>
 #include <string>
 #include <system_error>
+#include <thread>
+#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -208,100 +211,270 @@ bool JSONBuildDatabase::parse(std::string &ErrorMessage) {
     ErrorMessage = "Error while parsing YAML.";
     return false;
   }
-  auto *Array = dyn_cast<llvm::yaml::SequenceNode>(Root);
-  if (!Array) {
-    ErrorMessage = "Expected array.";
+  auto *RootObject = dyn_cast<llvm::yaml::MappingNode>(Root);
+  if (!RootObject) {
+    ErrorMessage = "Expected object at root.";
     return false;
   }
-  for (auto &NextObject : *Array) {
-    auto *Object = dyn_cast<llvm::yaml::MappingNode>(&NextObject);
-    if (!Object) {
-      ErrorMessage = "Expected object.";
+  return parseRoot(ErrorMessage, RootObject);
+}
+
+bool JSONBuildDatabase::parseRoot(std::string &ErrorMessage,
+                                  llvm::yaml::MappingNode *RootObject) {
+  llvm::yaml::ScalarNode *Version = nullptr;
+  llvm::yaml::ScalarNode *Revision = nullptr;
+  llvm::yaml::SequenceNode *Sets = nullptr;
+  for (auto &NextKeyValue : *RootObject) {
+    auto *KeyString =
+        dyn_cast_if_present<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString) {
+      ErrorMessage = "Expected strings as key.";
       return false;
     }
-    llvm::yaml::ScalarNode *Directory = nullptr;
-    std::optional<std::vector<llvm::yaml::ScalarNode *>> Command;
-    llvm::yaml::ScalarNode *File = nullptr;
-    llvm::yaml::ScalarNode *Output = nullptr;
-    for (auto &NextKeyValue : *Object) {
-      auto *KeyString =
-          dyn_cast_if_present<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
-      if (!KeyString) {
-        ErrorMessage = "Expected strings as key.";
+    SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    llvm::yaml::Node *Value = NextKeyValue.getValue();
+    if (!Value) {
+      ErrorMessage = "Expected value.";
+      return false;
+    }
+    if (KeyValue == "version") {
+      Version = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!Version) {
+        ErrorMessage = "Expected string as value for \"version\".";
         return false;
       }
-      SmallString<10> KeyStorage;
-      StringRef KeyValue = KeyString->getValue(KeyStorage);
-      llvm::yaml::Node *Value = NextKeyValue.getValue();
-      if (!Value) {
-        ErrorMessage = "Expected value.";
+    } else if (KeyValue == "revision") {
+      Revision = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!Revision) {
+        ErrorMessage = "Expected string as value for \"revision\".";
         return false;
       }
-      auto *ValueString = dyn_cast<llvm::yaml::ScalarNode>(Value);
-      auto *SequenceString = dyn_cast<llvm::yaml::SequenceNode>(Value);
-      if (KeyValue == "arguments") {
-        if (!SequenceString) {
-          ErrorMessage = "Expected sequence as value.";
+    } else if (KeyValue == "sets") {
+      Sets = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!Sets) {
+        ErrorMessage = "Expected array as value for \"sets\".";
+        return false;
+      }
+      for (auto &NextObject : *Sets) {
+        auto *SetObject = dyn_cast<llvm::yaml::MappingNode>(&NextObject);
+        if (!RootObject) {
+          ErrorMessage = "Expected sets item as object.";
           return false;
         }
-        Command = std::vector<llvm::yaml::ScalarNode *>();
-        for (auto &Argument : *SequenceString) {
-          auto *Scalar = dyn_cast<llvm::yaml::ScalarNode>(&Argument);
-          if (!Scalar) {
-            ErrorMessage = "Only strings are allowed in 'arguments'.";
-            return false;
-          }
-          Command->push_back(Scalar);
-        }
-      } else {
-        if (!ValueString) {
-          ErrorMessage = "Expected string as value.";
-          return false;
-        }
-        if (KeyValue == "directory") {
-          Directory = ValueString;
-        } else if (KeyValue == "command") {
-          if (!Command)
-            Command = std::vector<llvm::yaml::ScalarNode *>(1, ValueString);
-        } else if (KeyValue == "file") {
-          File = ValueString;
-        } else if (KeyValue == "output") {
-          Output = ValueString;
-        } else {
-          ErrorMessage =
-              ("Unknown key: \"" + KeyString->getRawValue() + "\"").str();
+        if (!parseSet(ErrorMessage, SetObject)) {
           return false;
         }
       }
-    }
-    if (!File) {
-      ErrorMessage = "Missing key: \"file\".";
-      return false;
-    }
-    if (!Command) {
-      ErrorMessage = "Missing key: \"command\" or \"arguments\".";
-      return false;
-    }
-    if (!Directory) {
-      ErrorMessage = "Missing key: \"directory\".";
-      return false;
-    }
-    SmallString<8> FileStorage;
-    StringRef FileName = File->getValue(FileStorage);
-    SmallString<128> NativeFilePath;
-    if (llvm::sys::path::is_relative(FileName)) {
-      SmallString<8> DirectoryStorage;
-      SmallString<128> AbsolutePath(Directory->getValue(DirectoryStorage));
-      llvm::sys::path::append(AbsolutePath, FileName);
-      llvm::sys::path::native(AbsolutePath, NativeFilePath);
     } else {
-      llvm::sys::path::native(FileName, NativeFilePath);
+      ErrorMessage =
+          ("Unknown key in root: \"" + KeyString->getRawValue() + "\"").str();
+      return false;
     }
-    llvm::sys::path::remove_dots(NativeFilePath, /*remove_dot_dot=*/true);
-    auto Cmd = CompileCommandRef(Directory, File, *Command, Output);
-    IndexByFile[NativeFilePath].push_back(Cmd);
-    AllCommands.push_back(Cmd);
-    MatchTrie.insert(NativeFilePath);
+  }
+  // Check required fields
+  if (!Version) {
+    ErrorMessage = "Missing key in root: \"version\".";
+    return false;
+  }
+  if (!Sets) {
+    ErrorMessage = "Missing key in root: \"sets\".";
+    return false;
+  }
+  // Check compatible version
+  if (Version->getRawValue() != "1") {
+    ErrorMessage =
+        ("Unsupported version: \"" + Version->getRawValue() + "\"").str();
+    return false;
+  }
+  return true;
+}
+
+bool JSONBuildDatabase::parseSet(std::string &ErrorMessage,
+                                 llvm::yaml::MappingNode *SetObject) {
+  llvm::yaml::SequenceNode *BaselineArguments = nullptr;
+  llvm::yaml::ScalarNode *FamilyName = nullptr;
+  llvm::yaml::ScalarNode *Name = nullptr;
+  llvm::yaml::SequenceNode *VisibleSets = nullptr;
+  llvm::yaml::SequenceNode *TUs = nullptr;
+  for (auto &NextKeyValue : *SetObject) {
+    auto *KeyString =
+        dyn_cast_if_present<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString) {
+      ErrorMessage = "Expected strings as key.";
+      return false;
+    }
+    SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    llvm::yaml::Node *Value = NextKeyValue.getValue();
+    if (!Value) {
+      ErrorMessage = "Expected value.";
+      return false;
+    }
+    if (KeyValue == "baseline-arguments") {
+      BaselineArguments = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!BaselineArguments) {
+        ErrorMessage = "Expected array as value for \"version\".";
+        return false;
+      }
+    } else if (KeyValue == "family-name") {
+      FamilyName = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!FamilyName) {
+        ErrorMessage = "Expected string as value for \"family-name\".";
+        return false;
+      }
+    } else if (KeyValue == "name") {
+      Name = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!Name) {
+        ErrorMessage = "Expected string as value for \"name\".";
+        return false;
+      }
+    } else if (KeyValue == "visible-sets") {
+      VisibleSets = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!VisibleSets) {
+        ErrorMessage = "Expected array as value for \"visible-sets\".";
+        return false;
+      }
+    } else if (KeyValue == "translation-units") {
+      TUs = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!TUs) {
+        ErrorMessage = "Expected array as value for \"translation-units\".";
+        return false;
+      }
+      for (auto &NextObject : *TUs) {
+        auto *TUObject = dyn_cast<llvm::yaml::MappingNode>(&NextObject);
+        if (!TUObject) {
+          ErrorMessage = "Expected translation-units item as object.";
+          return false;
+        }
+        if (!parseTU(ErrorMessage, TUObject)) {
+          return false;
+        }
+      }
+    } else {
+      ErrorMessage =
+          ("Unknown key in set: \"" + KeyString->getRawValue() + "\"").str();
+      return false;
+    }
+  }
+  // Check required fields
+  if (!BaselineArguments) {
+    ErrorMessage = "Missing key in set: \"baseline-arguments\".";
+    return false;
+  }
+  if (!FamilyName) {
+    ErrorMessage = "Missing key in set: \"family-name\".";
+    return false;
+  }
+  if (!Name) {
+    ErrorMessage = "Missing key in set: \"name\".";
+    return false;
+  }
+  if (!TUs) {
+    ErrorMessage = "Missing key in set: \"translation-units\".";
+    return false;
+  }
+  return true;
+}
+
+bool JSONBuildDatabase::parseTU(std::string &ErrorMessage,
+                                llvm::yaml::MappingNode *TUObject) {
+  llvm::yaml::SequenceNode *Arguments = nullptr;
+  llvm::yaml::ScalarNode *Language = nullptr;
+  llvm::yaml::SequenceNode *LocalArguments = nullptr;
+  llvm::yaml::ScalarNode *WorkingDirectory = nullptr;
+  llvm::yaml::ScalarNode *Private = nullptr;
+  llvm::yaml::ScalarNode *Source = nullptr;
+  llvm::yaml::ScalarNode *Object = nullptr;
+  llvm::yaml::SequenceNode *Provides = nullptr;
+  llvm::yaml::SequenceNode *Requires = nullptr;
+  for (auto &NextKeyValue : *TUObject) {
+    auto *KeyString =
+        dyn_cast_if_present<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString) {
+      ErrorMessage = "Expected strings as key.";
+      return false;
+    }
+    SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    llvm::yaml::Node *Value = NextKeyValue.getValue();
+    if (!Value) {
+      ErrorMessage = "Expected value.";
+      return false;
+    }
+    if (KeyValue == "arguments") {
+      Arguments = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!Arguments) {
+        ErrorMessage = "Expected array as value for \"arguments\".";
+        return false;
+      }
+    } else if (KeyValue == "language") {
+      Language = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!Language) {
+        ErrorMessage = "Expected string as value for \"language\".";
+        return false;
+      }
+    } else if (KeyValue == "local-arguments") {
+      LocalArguments = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!LocalArguments) {
+        ErrorMessage = "Expected array as value for \"local-arguments\".";
+        return false;
+      }
+    } else if (KeyValue == "working-directory") {
+      WorkingDirectory = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!WorkingDirectory) {
+        ErrorMessage = "Expected string as value for \"working-directory\".";
+        return false;
+      }
+    } else if (KeyValue == "private") {
+      Private = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!Private) {
+        ErrorMessage = "Expected string as value for \"private\".";
+        return false;
+      }
+    } else if (KeyValue == "source") {
+      Source = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!Source) {
+        ErrorMessage = "Expected string as value for \"source\".";
+        return false;
+      }
+    } else if (KeyValue == "object") {
+      Object = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!Object) {
+        ErrorMessage = "Expected string as value for \"object\".";
+        return false;
+      }
+    } else if (KeyValue == "provides") {
+      Provides = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!Provides) {
+        ErrorMessage = "Expected array as value for \"provides\".";
+        return false;
+      }
+    } else if (KeyValue == "requires") {
+      Requires = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!Requires) {
+        ErrorMessage = "Expected array as value for \"requires\".";
+        return false;
+      }
+    } else {
+      ErrorMessage = ("Unknown key in translation-unit: \"" +
+                      KeyString->getRawValue() + "\"")
+                         .str();
+      return false;
+    }
+  }
+  // Check required fields
+  if (!Source) {
+    ErrorMessage = "Missing key in translation-unit: \"source\".";
+    return false;
+  }
+  if (!Language) {
+    ErrorMessage = "Missing key in translation-unit: \"language\".";
+    return false;
+  }
+  if (!Arguments) {
+    ErrorMessage = "Missing key in translation-unit: \"arguments\".";
+    return false;
   }
   return true;
 }
