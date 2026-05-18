@@ -455,6 +455,10 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
         return preservesUniformity(R->getOpcode()) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
+      .Case([](const VPPhi *) {
+        // Bail out on VPPhi, as we can end up in infinite cycles.
+        return false;
+      })
       .Case([](const VPInstruction *VPI) {
         return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
                 preservesUniformity(VPI->getOpcode())) &&
