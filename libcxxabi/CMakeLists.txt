@@ -26,6 +26,9 @@ set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
         "Specify path to libc++ source.")
 
 include(GNUInstallDirs)
+include(LLVMRuntimeCompilerDependency)
+
+llvm_defer_compiler_dependency_tracking("${CMAKE_CXX_COMPILER}")
 
 # Require out of source build.
 include(MacroEnsureOutOfSourceBuild)

@@ -88,6 +88,9 @@ else()
   cmake_path( APPEND LIBCLC_OUTPUT_LIBRARY_DIR ${LIBCLC_INSTALL_DIR} )
 endif()
 
+include(LLVMRuntimeCompilerDependency)
+llvm_defer_compiler_dependency_tracking("${CMAKE_CLC_COMPILER}")
+
 if( NOT LIBCLC_USE_SPIRV_BACKEND )
   # llvm-spirv is an optional dependency, used to build spirv-* targets when
   # the SPIR-V backend hasn't been requested. It may be provided in-tree or

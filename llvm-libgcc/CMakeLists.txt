@@ -34,6 +34,10 @@ set(LLVM_LIBGCC_COMPILER_RT_PATH "${CMAKE_CURRENT_LIST_DIR}/../compiler-rt"
   CACHE PATH "Specify path to compiler-rt source.")
 
 include(GNUInstallDirs)
+include(LLVMRuntimeCompilerDependency)
+
+llvm_defer_compiler_dependency_tracking(
+  "${CMAKE_C_COMPILER}" "${CMAKE_CXX_COMPILER}" "${CMAKE_ASM_COMPILER}")
 
 if(NOT LLVM_LIBGCC_EXPLICIT_OPT_IN)
   message(FATAL_ERROR

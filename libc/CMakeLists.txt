@@ -38,6 +38,10 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+include(LLVMRuntimeCompilerDependency)
+
+llvm_defer_compiler_dependency_tracking(
+  "${CMAKE_C_COMPILER}" "${CMAKE_CXX_COMPILER}" "${CMAKE_ASM_COMPILER}")
 
 # The top-level source directory.
 set(LIBC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})

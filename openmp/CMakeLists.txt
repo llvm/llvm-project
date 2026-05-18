@@ -22,6 +22,10 @@ endif()
 
 # Must go below project(..)
 include(GNUInstallDirs)
+include(LLVMRuntimeCompilerDependency)
+
+llvm_defer_compiler_dependency_tracking(
+  "${CMAKE_C_COMPILER}" "${CMAKE_CXX_COMPILER}" "${CMAKE_ASM_COMPILER}")
 
 # Usually <llvm-project>/runtimes/CMakeLists.txt sets LLVM_TREE_AVAILABLE and
 # we assume it is not available otherwise. The exception is that we are in an
