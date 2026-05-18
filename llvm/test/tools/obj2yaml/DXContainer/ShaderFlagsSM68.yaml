@@ -1,9 +1,7 @@
 # RUN: yaml2obj %s | obj2yaml | FileCheck %s
 
 # This test verifies round-tripping of the shader feature flags added for
-# Shader Model 6.8 and the experimental SM 6.9+ WaveMMA flag (see issue
-# llvm/llvm-project#83177):
-#   - WaveMMA                     (bit 27, value 0x0000000008000000)
+# Shader Model 6.8 (see issue llvm/llvm-project#83177):
 #   - SampleCmpWithGradientOrBias (bit 31, value 0x0000000080000000)
 #   - ExtendedCommandInfo         (bit 32, value 0x0000000100000000)
 --- !dxcontainer
@@ -45,7 +43,7 @@ Parts:
       DerivativesInMeshAndAmpShaders: false
       ResourceDescriptorHeapIndexing: false
       SamplerDescriptorHeapIndexing: false
-      WaveMMA:         true
+      RESERVED:        false
       AtomicInt64OnHeapResource: false
       AdvancedTextureOps: false
       WriteableMSAATextures: false
@@ -85,7 +83,7 @@ Parts:
 # CHECK-NEXT:       DerivativesInMeshAndAmpShaders: false
 # CHECK-NEXT:       ResourceDescriptorHeapIndexing: false
 # CHECK-NEXT:       SamplerDescriptorHeapIndexing: false
-# CHECK-NEXT:       WaveMMA:         true
+# CHECK-NEXT:       RESERVED:        false
 # CHECK-NEXT:       AtomicInt64OnHeapResource: false
 # CHECK-NEXT:       AdvancedTextureOps: false
 # CHECK-NEXT:       WriteableMSAATextures: false

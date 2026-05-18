@@ -40,7 +40,7 @@ Parts:
       DerivativesInMeshAndAmpShaders: true
       ResourceDescriptorHeapIndexing: false
       SamplerDescriptorHeapIndexing: false
-      WaveMMA:         true
+      RESERVED:        true
       AtomicInt64OnHeapResource: false
       AdvancedTextureOps: true
       WriteableMSAATextures: false
@@ -82,7 +82,7 @@ Parts:
 # CHECK-NEXT:       DerivativesInMeshAndAmpShaders: true
 # CHECK-NEXT:       ResourceDescriptorHeapIndexing: false
 # CHECK-NEXT:       SamplerDescriptorHeapIndexing: false
-# CHECK-NEXT:       WaveMMA:         true
+# CHECK-NEXT:       RESERVED:        true
 # CHECK-NEXT:       AtomicInt64OnHeapResource: false
 # CHECK-NEXT:       AdvancedTextureOps: true
 # CHECK-NEXT:       WriteableMSAATextures: false
