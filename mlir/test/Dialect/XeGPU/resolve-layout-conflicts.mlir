@@ -288,7 +288,7 @@ func.func @convert_layout() {
 // CHECK-DAG:     vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
 // CHECK-DAG:     vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
 // CHECK-NOT:     xegpu.convert_layout {{.*}} : vector<32xindex>
-gpu.func @step_clone_via_anchor(%arg0: i64) kernel {
+gpu.func @step_clone_via_anchor(%arg0: i64, %arg1: memref<32x32xf32>) kernel {
   %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} dense<true> : vector<32x32xi1>
   %cst32 = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} dense<32> : vector<32xindex>
   %step = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
@@ -299,7 +299,8 @@ gpu.func @step_clone_via_anchor(%arg0: i64) kernel {
   %off = arith.addi %colb, %rowb {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<32x32xindex>
   %v = xegpu.load %arg0[%off], %mask <{layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>}>
       : i64, vector<32x32xindex>, vector<32x32xi1> -> vector<32x32xf32>
-  "consume"(%v) : (vector<32x32xf32>) -> ()
+  %tdesc = xegpu.create_nd_tdesc %arg1 : memref<32x32xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>>
+  xegpu.store_nd %v, %tdesc[0, 0] : vector<32x32xf32>, !xegpu.tensor_desc<32x32xf32, #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>>
   gpu.return
 }
 
