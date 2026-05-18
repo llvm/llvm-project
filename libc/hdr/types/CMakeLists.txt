@@ -1004,3 +1004,27 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.VISIT
     libc.include.search
 )
+
+add_proxy_header_library(
+  regex_t
+  HDRS
+    regex_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.regex_t
+)
+
+add_proxy_header_library(
+  regoff_t
+  HDRS
+    regoff_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.regoff_t
+)
+
+add_proxy_header_library(
+  regmatch_t
+  HDRS
+    regmatch_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.regmatch_t
+)
