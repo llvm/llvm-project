@@ -26,7 +26,7 @@ void f3(int a) { // #a-param
     struct Y {
       int f() { return a; }
       // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'f3'}}
-       // expected-note@#a-param {{'a' declared here}}
+      //   expected-note@#a-param {{'a' declared here}}
     };
   };
 }
