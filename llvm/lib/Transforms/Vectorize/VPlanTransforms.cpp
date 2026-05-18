@@ -5254,6 +5254,25 @@ static bool isAlreadyNarrow(VPValue *VPV) {
   return RepR && RepR->isSingleScalar();
 }
 
+/// If \p R is a VPWidenLoadRecipe whose address is a VPVectorPointerRecipe,
+/// create a uniform scalar VPReplicateRecipe using the underlying scalar
+/// pointer, insert it before \p R, and return it.  Returns nullptr if either
+/// cast fails.
+static VPReplicateRecipe *tryNarrowWideLoadToScalar(VPRecipeBase *R) {
+  auto *WideLoad = dyn_cast<VPWidenLoadRecipe>(R);
+  if (!WideLoad)
+    return nullptr;
+  auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(WideLoad->getAddr());
+  if (!VecPtr)
+    return nullptr;
+  auto *N =
+      new VPReplicateRecipe(&WideLoad->getIngredient(), {VecPtr->getOperand(0)},
+                            /*IsUniform=*/true,
+                            /*Mask=*/nullptr, {}, *WideLoad);
+  N->insertBefore(WideLoad);
+  return N;
+}
+
 // Convert a wide recipe defining a VPValue \p V feeding an interleave group to
 // a narrow variant.
 static VPValue *
@@ -5293,16 +5312,10 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
     return RepR;
   }
 
-  auto *WideLoad = cast<VPWidenLoadRecipe>(R);
-  VPValue *PtrOp = WideLoad->getAddr();
-  if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(PtrOp))
-    PtrOp = VecPtr->getOperand(0);
   // Narrow wide load to uniform scalar load, as transformed VPlan will only
   // process one original iteration.
-  auto *N = new VPReplicateRecipe(&WideLoad->getIngredient(), {PtrOp},
-                                  /*IsUniform*/ true,
-                                  /*Mask*/ nullptr, {}, *WideLoad);
-  N->insertBefore(WideLoad);
+  VPReplicateRecipe *N = tryNarrowWideLoadToScalar(R);
+  assert(N && "expected VPWidenLoadRecipe with VPVectorPointerRecipe addr");
   NarrowedOps.insert(N);
   return N;
 }
@@ -5446,6 +5459,15 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
                                      StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
+  }
+
+  // Narrow any remaining wide loads that are not part of a store
+  // group. (e.g. whose results feed the scalar epilogue).
+  for (auto &R : make_early_inc_range(*VectorLoop->getEntryBasicBlock())) {
+    if (VPReplicateRecipe *N = tryNarrowWideLoadToScalar(&R)) {
+      cast<VPWidenLoadRecipe>(&R)->replaceAllUsesWith(N);
+      R.eraseFromParent();
+    }
   }
 
   // Adjust induction to reflect that the transformed plan only processes one
