@@ -1179,6 +1179,10 @@ public:
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;
     int64_t Value = CE->getValue();
+    // ARM assembly uses #-0 to request the subtract-zero encoding,
+    // which is distinct from the add-zero spelling even though both
+    // have zero magnitude. The rather odd std::numeric_limits
+    // invocation gives us this.
     return (((Value & 3) == 0) && Value >= N && Value <= M) ||
            Value == std::numeric_limits<int32_t>::min();
   }
