@@ -13,3 +13,11 @@ block
 end block
 print *, arr(1) ! no error
 end
+
+subroutine sub(func_arg, n)
+  implicit none(external)
+  integer :: func_arg
+  integer :: n
+  !ERROR: 'func_arg' is an external procedure without the EXTERNAL attribute in a scope with IMPLICIT NONE(EXTERNAL)
+  n = func_arg(n)
+end subroutine
