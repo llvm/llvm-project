@@ -507,30 +507,16 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
   path.append(ext.begin(), ext.end());
 }
 
+template <typename T> static T &asLValue(T &&RValue) { return RValue; }
+
 bool starts_with(StringRef Path, StringRef Prefix, Style style) {
-  auto ConsumeFront = [&]() {
-    if (Path.consume_front(Prefix))
-      return true;
-    // Windows prefix matching : case and separator insensitive
-    if (is_style_windows(style)) {
-      if (Path.size() < Prefix.size())
-        return false;
-      for (size_t I = 0, E = Prefix.size(); I != E; ++I) {
-        bool SepPath = is_separator(Path[I], style);
-        bool SepPrefix = is_separator(Prefix[I], style);
-        if (SepPath != SepPrefix)
-          return false;
-        if (!SepPath && toLower(Path[I]) != toLower(Prefix[I]))
-          return false;
-      }
-      Path = Path.drop_front(Prefix.size());
-      return true;
-    }
-    return false;
-  };
+  assert(!remove_dots(asLValue(SmallString<128>{Path}), false, style));
+  assert(!remove_dots(asLValue(SmallString<128>{Prefix}), false, style));
+
   // The path must start with the prefix and last matching component must match
   // in its entirety, not just the prefix.
-  return ConsumeFront() && (Path.empty() || is_separator(Path[0], style));
+  return Path.consume_front(Prefix) &&
+         (Path.empty() || is_separator(Path[0], style));
 }
 
 // Unlike \c starts_with, this returns true even when the last component is just

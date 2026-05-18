@@ -180,8 +180,8 @@ LLVM_ABI void replace_extension(SmallVectorImpl<char> &path,
 /// of the last component in order to correctly return false for path "/foo/bar"
 /// and prefix "/foo/b", which are likely different file system entities.
 ///
-/// On Windows, this also ignores path separator differences and upper/lower
-/// case differences.
+/// Both \a Path and \a Prefix need to be normalized - without './' components
+/// and with consistent separators.
 LLVM_ABI bool starts_with(StringRef Path, StringRef Prefix,
                           Style style = Style::native);
 

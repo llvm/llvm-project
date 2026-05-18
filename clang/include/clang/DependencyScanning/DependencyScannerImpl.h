@@ -107,12 +107,12 @@ void initializeScanCompilerInstance(
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
     IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS);
 
-SmallVector<StringRef>
+SmallVector<SmallString<0>, 2>
 getInitialStableDirs(const CompilerInstance &ScanInstance);
 
 std::optional<PrebuiltModulesAttrsMap>
 computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
-                             SmallVector<StringRef> &StableDirs);
+                             ArrayRef<SmallString<0>> StableDirs);
 
 /// Create the dependency collector that will collect the produced
 /// dependencies. May return the created ModuleDepCollector depending
@@ -123,7 +123,7 @@ std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
     DependencyScanningService &Service, CompilerInvocation &Inv,
     DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    SmallVector<StringRef> &StableDirs);
+    SmallVector<SmallString<0>, 2> StableDirs);
 } // namespace dependencies
 } // namespace clang
 

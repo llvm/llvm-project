@@ -162,7 +162,7 @@ class CompilerInstanceWithContext {
   std::unique_ptr<DependencyOutputOptions> OutputOpts;
 
   // Context - stable directory handling
-  llvm::SmallVector<StringRef> StableDirs;
+  SmallVector<SmallString<0>, 2> StableDirs;
   dependencies::PrebuiltModulesAttrsMap PrebuiltModuleASTMap;
 
   // Compiler Instance

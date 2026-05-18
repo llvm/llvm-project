@@ -193,7 +193,7 @@ void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
   }
 }
 
-bool dependencies::isPathInStableDir(const ArrayRef<StringRef> Directories,
+bool dependencies::isPathInStableDir(const ArrayRef<SmallString<0>> Directories,
                                      const StringRef Input) {
   using namespace llvm::sys;
 
@@ -205,8 +205,9 @@ bool dependencies::isPathInStableDir(const ArrayRef<StringRef> Directories,
   });
 }
 
-bool dependencies::areOptionsInStableDir(const ArrayRef<StringRef> Directories,
-                                         const HeaderSearchOptions &HSOpts) {
+bool dependencies::areOptionsInStableDir(
+    const ArrayRef<SmallString<0>> Directories,
+    const HeaderSearchOptions &HSOpts) {
   assert(isPathInStableDir(Directories, HSOpts.Sysroot) &&
          "Sysroots differ between module dependencies and current TU");
 
@@ -855,10 +856,10 @@ ModuleDepCollector::ModuleDepCollector(
     CompilerInstance &ScanInstance, DependencyActionController &Controller,
     CompilerInvocation OriginalCI,
     const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    const ArrayRef<StringRef> StableDirs)
+    SmallVector<SmallString<0>, 2> StableDirs)
     : Service(Service), ScanInstance(ScanInstance), Controller(Controller),
       PrebuiltModulesASTMap(std::move(PrebuiltModulesASTMap)),
-      StableDirs(StableDirs), Opts(std::move(Opts)),
+      StableDirs(std::move(StableDirs)), Opts(std::move(Opts)),
       CommonInvocation(
           makeCommonInvocationForModuleBuild(std::move(OriginalCI))) {}
 
