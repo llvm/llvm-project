@@ -144,3 +144,7 @@ struct AssignementIncorr {
     return tmp;
   }
 };
+
+void implicit_lifetimebound_in_nested_std_namespace() {
+  (void)std::basic_string_view<char>("hello");
+}

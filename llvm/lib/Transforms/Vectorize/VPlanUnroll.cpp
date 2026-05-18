@@ -161,8 +161,8 @@ void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
     auto PartI = vp_depth_first_shallow(Copy->getEntry());
     auto Part0 = vp_depth_first_shallow(VPR->getEntry());
     for (const auto &[PartIVPBB, Part0VPBB] :
-         zip(VPBlockUtils::blocksOnly<VPBasicBlock>(PartI),
-             VPBlockUtils::blocksOnly<VPBasicBlock>(Part0))) {
+         zip(VPBlockUtils::blocksAs<VPBasicBlock>(PartI),
+             VPBlockUtils::blocksAs<VPBasicBlock>(Part0))) {
       for (const auto &[PartIR, Part0R] : zip(*PartIVPBB, *Part0VPBB)) {
         remapOperands(&PartIR, Part);
         if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&PartIR))

@@ -163,10 +163,6 @@ def SDT_PPCBcdUShift : SDTypeProfile<1, 2, [ SDTCisVT<0, v16i8>,
   SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>
 ]>;
 
-def SDT_PPCstat : SDTypeProfile<0, 3, [
-  SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>
-]>;
-
 //===----------------------------------------------------------------------===//
 // PowerPC specific DAG Nodes.
 //
@@ -716,9 +712,6 @@ def PPCbcdsr     : SDNode<"PPCISD::BCDSHIFTROUND", SDT_PPCBcdShiftRound, []>;
 def PPCbcdtrunc  : SDNode<"PPCISD::BCDTRUNC", SDT_PPCBcdTrunc, []>;
 def PPCbcdutrunc : SDNode<"PPCISD::BCDUTRUNC", SDT_PPCBcdUTrunc, []>;
 def PPCbcdus     : SDNode<"PPCISD::BCDUSHIFT", SDT_PPCBcdUShift, []>;
-
-def PPCstat : SDNode<"PPCISD::STAT", SDT_PPCstat,
-                     [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC specific transformation functions and pattern fragments.
@@ -2174,10 +2167,10 @@ def STWCX : XForm_1_memOp<31, 150, (outs), (ins gprc:$RST, (memrr $RA, $RB):$add
                     "stwcx. $RST, $addr", IIC_LdStSTWCX, []>, isRecordForm;
 }
 
-let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
+let mayStore = 1, mayLoad = 1, hasSideEffects = 0 in
 def STWAT : XForm_base_r3xo_memOp<31, 710, (outs), (ins gprc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
                                   "stwat $RST, $RA, $RB", IIC_LdStStore,
-                                  [(PPCstat i32:$RST, ptr_rc_nor0:$RA, u5imm_timm:$RB)]>,
+                                  [(int_ppc_amo_stwat ptr_rc_nor0:$RA, i32:$RST, u5imm_timm:$RB)]>,
             Requires<[IsISA3_0]>;
 
 let isTrap = 1, hasCtrlDep = 1 in
