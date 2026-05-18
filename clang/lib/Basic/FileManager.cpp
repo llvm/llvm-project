@@ -17,7 +17,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/FileSystemStatCache.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
@@ -75,13 +74,6 @@ FileManager::FileManager(const FileSystemOptions &FSO,
 }
 
 FileManager::~FileManager() = default;
-
-void FileManager::setStatCache(std::unique_ptr<FileSystemStatCache> statCache) {
-  assert(statCache && "No stat cache provided?");
-  StatCache = std::move(statCache);
-}
-
-void FileManager::clearStatCache() { StatCache.reset(); }
 
 llvm::ErrorOr<DirectoryEntryRef>
 FileManager::getDirectoryFromFile(StringRef Filename, bool CacheFailure) {
@@ -574,39 +566,79 @@ FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
                               isVolatile, IsText);
 }
 
-/// getStatValue - Get the 'stat' information for the specified path,
-/// using the cache to accelerate it if possible.  This returns true
-/// if the path points to a virtual file or does not exist, or returns
-/// false if it's an existent real file.  If FileDescriptor is NULL,
-/// do directory look-up instead of file look-up.
 std::error_code FileManager::getStatValue(StringRef Path,
                                           llvm::vfs::Status &Status,
                                           bool isFile,
                                           std::unique_ptr<llvm::vfs::File> *F,
                                           bool IsText) {
+  SmallString<128> FilePath;
+
   // FIXME: FileSystemOpts shouldn't be passed in here, all paths should be
   // absolute!
-  if (FileSystemOpts.WorkingDir.empty())
-    return FileSystemStatCache::get(Path, Status, isFile, F, StatCache.get(),
-                                    *FS, IsText);
+  if (!FileSystemOpts.WorkingDir.empty()) {
+    FilePath = Path;
+    FixupRelativePath(FilePath);
+    Path = FilePath;
+  }
 
-  SmallString<128> FilePath(Path);
-  FixupRelativePath(FilePath);
+  bool isForDir = !isFile;
+  std::error_code RetCode;
 
-  return FileSystemStatCache::get(FilePath.c_str(), Status, isFile, F,
-                                  StatCache.get(), *FS, IsText);
-}
+  if (isForDir || !F) {
+    // If this is a directory or a file descriptor is not needed, just go to the
+    // file system.
+    llvm::ErrorOr<llvm::vfs::Status> StatusOrErr = FS->status(Path);
+    if (!StatusOrErr) {
+      RetCode = StatusOrErr.getError();
+    } else {
+      Status = *StatusOrErr;
+    }
+  } else {
+    // We can always just use 'stat' here, but (for files) the client is asking
+    // whether the file exists because it wants to turn around and *open* it.
+    // It is more efficient to do "open+fstat" on success than it is to do
+    // "stat+open".
+    //
+    // Because of this, check to see if the file exists with 'open'.  If the
+    // open succeeds, use fstat to get the stat info.
+    auto OwnedFile =
+        IsText ? FS->openFileForRead(Path) : FS->openFileForReadBinary(Path);
 
-std::error_code
-FileManager::getNoncachedStatValue(StringRef Path,
-                                   llvm::vfs::Status &Result) {
-  SmallString<128> FilePath(Path);
-  FixupRelativePath(FilePath);
+    if (!OwnedFile) {
+      // If the open fails, our "stat" fails.
+      RetCode = OwnedFile.getError();
+    } else {
+      // Otherwise, the open succeeded.  Do an fstat to get the information
+      // about the file.  We'll end up returning the open file descriptor to the
+      // client to do what they please with it.
+      llvm::ErrorOr<llvm::vfs::Status> StatusOrErr = (*OwnedFile)->status();
+      if (StatusOrErr) {
+        Status = *StatusOrErr;
+        *F = std::move(*OwnedFile);
+      } else {
+        // fstat rarely fails.  If it does, claim the initial open didn't
+        // succeed.
+        *F = nullptr;
+        RetCode = StatusOrErr.getError();
+      }
+    }
+  }
 
-  llvm::ErrorOr<llvm::vfs::Status> S = FS->status(FilePath.c_str());
-  if (!S)
-    return S.getError();
-  Result = *S;
+  // If the path doesn't exist, return failure.
+  if (RetCode)
+    return RetCode;
+
+  // If the path exists, make sure that its "directoryness" matches the clients
+  // demands.
+  if (Status.isDirectory() != isForDir) {
+    // If not, close the file if opened.
+    if (F)
+      *F = nullptr;
+    return std::make_error_code(
+        Status.isDirectory() ?
+            std::errc::is_a_directory : std::errc::not_a_directory);
+  }
+
   return std::error_code();
 }
 
