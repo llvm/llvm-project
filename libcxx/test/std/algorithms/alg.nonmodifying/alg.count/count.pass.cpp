@@ -20,12 +20,14 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <vector>
 
 #include "sized_allocator.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "type_algorithms.h"
+#include <list>
 
 struct Test {
   template <class Iter>
@@ -87,10 +89,47 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
+void test_deque_and_join_view_iterators() {
+  {
+    // Verify that segmented deque iterators work properly
+    const int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
+    for (const int size : sizes) {
+      std::deque<int> deque(size, 1);
+
+      std::ptrdiff_t twos = 0;
+      for (int i = 0; i < size; i += 3) {
+        deque[i] = 2;
+        ++twos;
+      }
+      std::ptrdiff_t ones = deque.size() - twos;
+
+      assert(std::count(deque.begin(), deque.end(), 1) == ones);
+      assert(std::count(deque.begin(), deque.end(), 2) == twos);
+      assert(std::count(deque.begin(), deque.end(), 99) == 0);
+    }
+  }
+
+#if TEST_STD_VER >= 20
+  {
+    // Verify that join_view of lists work properly
+    std::list<std::list<int>> list = {{}, {0}, {1, 2}, {}, {0, 1, 2}, {0, 1, 2, 0}, {1}, {2, 0, 1}};
+    auto joined                    = list | std::views::join;
+
+    assert(std::count(joined.begin(), joined.end(), 0) == 5);
+    assert(std::count(joined.begin(), joined.end(), 1) == 5);
+    assert(std::count(joined.begin(), joined.end(), 2) == 4);
+    assert(std::count(joined.begin(), joined.end(), 99) == 0);
+  }
+#endif // TEST_STD_VER >= 20
+}
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER >= 20
   static_assert(test());
+#endif
+#if TEST_STD_VER >= 11
+  test_deque_and_join_view_iterators();
 #endif
 
   return 0;
