@@ -1253,7 +1253,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     auto Unmerge = B.buildUnmerge({VgprRB, S32}, MI.getOperand(1).getReg());
     auto LoPopCnt = B.buildCTPOP({VgprRB, S32}, Unmerge.getReg(0));
     auto HiPopCnt = B.buildCTPOP({VgprRB, S32}, Unmerge.getReg(1));
-    B.buildAdd(MI.getOperand(0).getReg(), LoPopCnt, HiPopCnt);
+    // Max popcount of two 32-bit values is 64, so this add cannot overflow.
+    B.buildAdd(MI.getOperand(0).getReg(), LoPopCnt, HiPopCnt, MachineInstr::NoSWrap | MachineInstr::NoUWrap);
 
     MI.eraseFromParent();
     break;
