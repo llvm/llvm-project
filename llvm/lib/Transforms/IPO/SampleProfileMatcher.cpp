@@ -1038,8 +1038,8 @@ void SampleProfileMatcher::runOnModule() {
     runOnFunction(*F);
   }
 
-  // Run a second stale profile matching with inferred profiles for orphan
-  // toplevel functions based on basename matching.
+  // Run a second stale profile matching with for orphan functions based on
+  // basename pre-matching.
   if (SalvageUnusedProfile) {
     for (auto *F : TopDownFunctionList) {
       if (skipProfileForFunction(*F))
@@ -1051,7 +1051,8 @@ void SampleProfileMatcher::runOnModule() {
           continue;
       }
       auto Matched = FuncProfileMatchCache.find({F, ProfFunc->second});
-      // Skip already matched functions
+      // Avoid running stale profile matching on already matched orphan
+      // functions
       if (functionMatchesProfile(*F, ProfFunc->second, true))
         continue;
       FuncToProfileNameMap[F] = ProfFunc->second;
