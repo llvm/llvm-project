@@ -1296,6 +1296,8 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
       } else {
         OS << (HasPrefix ? "initialized" : "Initialized") << " here";
       }
+    } else {
+      OS << (HasPrefix ? "initialized" : "Initialized") << " here";
     }
   }
 }
