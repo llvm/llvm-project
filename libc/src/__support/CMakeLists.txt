@@ -145,6 +145,14 @@ add_header_library(
 )
 
 add_header_library(
+  alloc_checker
+  HDRS
+    alloc-checker.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ctype_utils
   HDRS
     ctype_utils.h

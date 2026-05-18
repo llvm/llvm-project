@@ -180,7 +180,7 @@ static bool DecodeAArch64HostFeatures(llvm::AArch64::ExtensionSet &Extensions) {
 static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
                               llvm::AArch64::ExtensionSet &Extensions,
                               std::optional<std::string> &InvalidArg) {
-  auto [CPU, features] = Mcpu.split("+");
+  auto [CPU, Features] = Mcpu.split("+");
   const bool IsNative = CPU == "native";
 
   if (IsNative)
@@ -198,8 +198,8 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
   if (IsNative && !DecodeAArch64HostFeatures(Extensions))
     return false;
 
-  if (features.size() &&
-      !DecodeAArch64Features(D, features, Extensions, InvalidArg))
+  if (Features.size() &&
+      !DecodeAArch64Features(D, Features, Extensions, InvalidArg))
     return false;
 
   return true;
@@ -211,7 +211,7 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
                                 llvm::AArch64::ExtensionSet &Extensions,
                                 std::optional<std::string> &InvalidArg) {
   std::string MarchLowerCase = March.lower();
-  auto [CPU, features] = StringRef(MarchLowerCase).split("+");
+  auto [CPU, Features] = StringRef(MarchLowerCase).split("+");
 
   if (CPU == "native")
     return DecodeAArch64Mcpu(D, MarchLowerCase, Extensions, InvalidArg);
@@ -225,8 +225,8 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
 
   Extensions.addArchDefaults(*ArchInfo);
 
-  if ((features.size() &&
-       !DecodeAArch64Features(D, features, Extensions, InvalidArg)))
+  if ((Features.size() &&
+       !DecodeAArch64Features(D, Features, Extensions, InvalidArg)))
     return false;
 
   return true;

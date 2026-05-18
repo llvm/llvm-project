@@ -37,6 +37,26 @@
 using namespace lldb;
 using namespace lldb_private;
 
+namespace {
+/// RAII scope that resets the result's status to eReturnStatusInvalid on entry
+/// and asserts on exit that DoExecute changed it (directly via SetStatus, or
+/// indirectly via AppendError/SetError, which call SetStatus internally).
+class DoExecuteStatusCheck {
+public:
+  explicit DoExecuteStatusCheck(CommandReturnObject &result)
+      : m_result(result) {
+    m_result.SetStatus(eReturnStatusInvalid);
+  }
+  ~DoExecuteStatusCheck() {
+    assert(m_result.GetStatus() != eReturnStatusInvalid &&
+           "DoExecute did not set a status on the CommandReturnObject");
+  }
+
+private:
+  CommandReturnObject &m_result;
+};
+} // namespace
+
 // CommandObject
 
 CommandObject::CommandObject(CommandInterpreter &interpreter,
@@ -779,7 +799,7 @@ Thread *CommandObject::GetDefaultThread() {
   if (!process) {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (!target) {
-      target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+      target = m_interpreter.GetSelectedTarget().get();
     }
     if (target)
       process = target->GetProcessSP().get();
@@ -825,6 +845,7 @@ void CommandObjectParsed::Execute(const char *args_string,
           return;
         }
         m_interpreter.IncreaseCommandUsage(*this);
+        DoExecuteStatusCheck check(result);
         DoExecute(cmd_args, result);
       }
     }
@@ -845,8 +866,10 @@ void CommandObjectRaw::Execute(const char *args_string,
     handled = InvokeOverrideCallback(argv, result);
   }
   if (!handled) {
-    if (CheckRequirements(result))
+    if (CheckRequirements(result)) {
+      DoExecuteStatusCheck check(result);
       DoExecute(args_string, result);
+    }
 
     Cleanup();
   }

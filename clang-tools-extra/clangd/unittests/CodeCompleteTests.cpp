@@ -4129,8 +4129,8 @@ TEST(CompletionTest, ReplaceRange) {
   EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
 
   // Cursor mid-word with UTF-8 continuation: replace extends past UTF-8.
-  const char *MidWordUTF8 = "struct S { int ab🙂cd; }; void f() { S s; "
-                            "s.$replace[[$insert[[ab^]]🙂cd]]; }";
+  const char *MidWordUTF8 = "struct S { int naïve; }; void f() { S s; "
+                            "s.$replace[[$insert[[na^]]ïve]]; }";
   Completions = completions(MidWordUTF8, /*IndexSymbols=*/{}, Opts);
   A = Annotations(MidWordUTF8);
   EXPECT_EQ(Completions.InsertRange, A.range("insert"));
@@ -4196,7 +4196,7 @@ TEST(CompletionTest, ReplaceRangeNoCompile) {
   EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
 
   // ASCII heuristic stops at non-ASCII: replace doesn't extend past UTF-8.
-  const char *MidWordUTF8 = "auto x = $replace[[$insert[[ab^]]]]🙂cd";
+  const char *MidWordUTF8 = "auto x = $replace[[$insert[[na^]]]]ïve";
   Results = completionsNoCompile(MidWordUTF8, /*IndexSymbols=*/{}, Opts);
   A = Annotations(MidWordUTF8);
   EXPECT_EQ(Results.InsertRange, A.range("insert"));
@@ -4590,8 +4590,7 @@ TEST(CompletionTest, CommentParamName) {
   }
   {
     // With */ and UTF-8 suffix: replace extends past UTF-8 to */.
-    const std::string WithUTF8(Code +
-                               "fun(/*$replace[[$insert[[fo^]]o🙂=*/]])");
+    const std::string WithUTF8(Code + "fun(/*$replace[[$insert[[ca^]]fé=*/]])");
     const CodeCompleteResult Results = completions(WithUTF8, {}, ReplaceOpts);
     const Annotations A(WithUTF8);
     EXPECT_EQ(Results.InsertRange, A.range("insert"));
