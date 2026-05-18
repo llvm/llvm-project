@@ -147,29 +147,3 @@ gpu.func @if_basic(
 }
 }
 
-// -----
-// Test splitOnConflictingUseLayouts: a single `vector.step` (a trivially
-// rematerializable pure value generator, like one produced by CSE) whose two
-// uses require different *workgroup* layouts must be cloned so each clone has
-// a single well-defined layout. Without this, layout recovery would have to
-// insert a bridging `xegpu.convert_layout`, whose WG-to-SG lowering would
-// entail an SLM round-trip to redistribute data across subgroups.
-
-gpu.module @test_step_split {
-// CHECK-LABEL: gpu.func @step_split_on_conflicting_sg_layouts
-gpu.func @step_split_on_conflicting_sg_layouts(
-    %arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
-  %mask = arith.constant dense<true> : vector<128xi1>
-  // CHECK-DAG: vector.step {layout_result_0 = #xegpu.layout<sg_layout = [16], sg_data = [8]>} : vector<128xindex>
-  // CHECK-DAG: vector.step {layout_result_0 = #xegpu.layout<sg_layout = [8], sg_data = [16]>} : vector<128xindex>
-  // CHECK-NOT: xegpu.convert_layout
-  %off = vector.step : vector<128xindex>
-  %ld_a = xegpu.load %arg0[%off], %mask
-      <{layout = #xegpu.layout<sg_layout = [16], sg_data = [8]>}>
-      : memref<1024xf32>, vector<128xindex>, vector<128xi1> -> vector<128xf32>
-  %ld_b = xegpu.load %arg1[%off], %mask
-      <{layout = #xegpu.layout<sg_layout = [8], sg_data = [16]>}>
-      : memref<1024xf32>, vector<128xindex>, vector<128xi1> -> vector<128xf32>
-  gpu.return
-}
-}

@@ -27,7 +27,6 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
@@ -130,7 +129,7 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
 // regions, and all operands are themselves trivially rematerializable, e.g.
 // block-arg-free pure value generators such as `vector.step`, splat
 // `arith.constant`, or `vector.create_mask` whose operands are constants).
-static bool isTriviallyRematerializable(Operation *op) {
+bool xegpu::isTriviallyRematerializable(Operation *op) {
   if (!op || op->getNumRegions() != 0)
     return false;
   if (!isMemoryEffectFree(op))
@@ -145,55 +144,6 @@ static bool isTriviallyRematerializable(Operation *op) {
   return true;
 }
 
-// Backward layout propagation assumes a single well-defined layout per def at
-// all its use points. Upstream value-numbering passes (e.g. CSE) can merge
-// pure value generators with no operands and no layout-bearing attributes
-// (such as two identical `vector.step` ops), producing a single SSA value
-// whose distinct consumers later require *different* layouts. Bridging two
-// such layouts at distribution time can force a cross-subgroup data movement
-// through SLM. To preserve the single-layout-per-def invariant without paying
-// that cost, clone the producer once per distinct required layout and rewrite
-// the offending uses, but only when the producer is trivially
-// rematerializable.
-static void splitOnConflictingUseLayouts(Operation *op) {
-  if (op->getNumResults() != 1)
-    return;
-  OpResult result = op->getResult(0);
-  if (!isa<VectorType>(result.getType()) || result.use_empty())
-    return;
-
-  // Bucket uses by required layout. Uses without a recorded layout are
-  // attached to the first bucket that gets created so they stay on the
-  // original op.
-  llvm::MapVector<mlir::Attribute, SmallVector<OpOperand *>> buckets;
-  SmallVector<OpOperand *> unlabeled;
-  for (OpOperand &use : result.getUses()) {
-    if (auto l = xegpu::getDistributeLayoutAttr(use))
-      buckets[l].push_back(&use);
-    else
-      unlabeled.push_back(&use);
-  }
-  if (buckets.size() <= 1)
-    return;
-  if (!isTriviallyRematerializable(op))
-    return;
-
-  // Keep the first bucket (and any unlabeled uses) on the original op.
-  // Clone the op for each remaining bucket and rewire its uses.
-  OpBuilder builder(op);
-  bool first = true;
-  for (auto &kv : buckets) {
-    if (first) {
-      first = false;
-      continue;
-    }
-    Operation *clone = builder.clone(*op);
-    Value newRes = clone->getResult(0);
-    for (OpOperand *use : kv.second)
-      use->set(newRes);
-  }
-}
-
 // For regular operations: First the result layouts are propagated from uses.
 // Then the result layouts are propagated to uses (operands).
 static void propagateResultsToRegularOperands(Operation *op) {
@@ -201,14 +151,6 @@ static void propagateResultsToRegularOperands(Operation *op) {
     return;
   if (op->getNumResults() > 1 && !isa<vector::DeinterleaveOp>(op))
     return;
-
-  // If multiple uses demand distinct layouts and op is cheap to
-  // rematerialize, clone per layout so the recovered IR has a single
-  // well-defined layout per def. This avoids inserting `convert_layout`
-  // (and the SLM round-trip its WG-level lowering would entail) for cases
-  // like CSE-merged `vector.step` feeding broadcasts with conflicting
-  // distributions.
-  splitOnConflictingUseLayouts(op);
 
   OpResult result = op->getResult(0);
   xegpu::DistributeLayoutAttr resLayout = getLayoutFromUsePoints(result);
