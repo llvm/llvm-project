@@ -8360,7 +8360,7 @@ struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
     if (!lhsDefOp || !rhsDefOp || lhsDefOp != rhsDefOp)
       return failure();
     for (auto [idx, operand] : llvm::enumerate(interleaveOp.getOperands())) {
-      if (auto opRes = cast<OpResult>(operand); opRes.getResultNumber() != idx)
+      if (cast<OpResult>(operand).getResultNumber() != idx)
         return failure();
     }
     rewriter.replaceOp(interleaveOp, lhsDefOp.getSource());
