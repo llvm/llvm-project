@@ -157,37 +157,38 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   } else if (const TargetRegisterClass *CommonSubClass =
                  TRI->getCommonSubClass(UseRC, RegClassForVT)) {
     UseRC = CommonSubClass;
-    if (!UseRC || !UseRC->isAllocatable())
-      UseRC = RegClassForVT;
-    else if (const TargetRegisterClass *CommonSubClass =
-                 TRI->getCommonSubClass(UseRC, RegClassForVT))
-      UseRC = CommonSubClass;
+  }
 
-    const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
-    SrcRC = TRI->getMinimalPhysRegClass(SrcReg, VT);
+  if (!UseRC || !UseRC->isAllocatable())
+    UseRC = RegClassForVT;
+  else if (const TargetRegisterClass *CommonSubClass =
+               TRI->getCommonSubClass(UseRC, RegClassForVT))
+    UseRC = CommonSubClass;
 
-    // Figure out the register class to create for the destreg.
-    if (VRBase) {
-      DstRC = MRI->getRegClass(VRBase);
-    } else if (UseRC) {
-      assert(TRI->isTypeLegalForClass(*UseRC, VT) &&
-             "Incompatible phys register def and uses!");
-      DstRC = UseRC;
-    } else
-      DstRC = SrcRC;
+  const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
+  SrcRC = TRI->getMinimalPhysRegClass(SrcReg, VT);
 
-    // If all uses are reading from the src physical register and copying the
-    // register is either impossible or very expensive, then don't create a
-    // copy.
-    if (MatchReg && SrcRC->expensiveOrImpossibleToCopy()) {
-      VRBase = SrcReg;
-    } else {
-      // Create the reg, emit the copy.
-      VRBase = MRI->createVirtualRegister(DstRC);
-      BuildMI(*MBB, InsertPos, Op.getDebugLoc(), TII->get(TargetOpcode::COPY),
-              VRBase)
-          .addReg(SrcReg);
-    }
+  // Figure out the register class to create for the destreg.
+  if (VRBase) {
+    DstRC = MRI->getRegClass(VRBase);
+  } else if (UseRC) {
+    assert(TRI->isTypeLegalForClass(*UseRC, VT) &&
+           "Incompatible phys register def and uses!");
+    DstRC = UseRC;
+  } else
+    DstRC = SrcRC;
+
+  // If all uses are reading from the src physical register and copying the
+  // register is either impossible or very expensive, then don't create a
+  // copy.
+  if (MatchReg && SrcRC->expensiveOrImpossibleToCopy()) {
+    VRBase = SrcReg;
+  } else {
+    // Create the reg, emit the copy.
+    VRBase = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, InsertPos, Op.getDebugLoc(), TII->get(TargetOpcode::COPY),
+            VRBase)
+        .addReg(SrcReg);
   }
 
   if (IsClone)
