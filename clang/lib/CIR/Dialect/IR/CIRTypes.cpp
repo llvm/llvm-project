@@ -137,6 +137,7 @@ Type RecordType::parse(mlir::AsmParser &parser) {
   const mlir::Location eLoc = parser.getEncodedSourceLoc(loc);
   bool packed = false;
   bool padded = false;
+  mlir::Type padding;
   RecordKind kind;
   mlir::MLIRContext *context = parser.getContext();
 
@@ -198,6 +199,19 @@ Type RecordType::parse(mlir::AsmParser &parser) {
       return {};
   }
 
+  if (parser.parseOptionalComma().succeeded()) {
+    if (parser.parseKeyword("padding").failed())
+      return {};
+    if (parser.parseEqual().failed())
+      return {};
+    if (parser.parseLBrace().failed())
+      return {};
+    if (parser.parseType(padding).failed())
+      return {};
+    if (parser.parseRBrace().failed())
+      return {};
+  }
+
   if (parser.parseGreater())
     return {};
 
@@ -207,13 +221,15 @@ Type RecordType::parse(mlir::AsmParser &parser) {
   if (name && incomplete) { // Identified & incomplete
     type = getChecked(eLoc, context, name, kind);
   } else if (!name && !incomplete) { // Anonymous & complete
-    type = getChecked(eLoc, context, membersRef, packed, padded, kind);
+    type = getChecked(eLoc, context, membersRef, packed, padded, kind, padding);
   } else if (!incomplete) { // Identified & complete
-    type = getChecked(eLoc, context, membersRef, name, packed, padded, kind);
+    type = getChecked(eLoc, context, membersRef, name, packed, padded, kind,
+                      padding);
     // If the record has a self-reference, its type already exists in a
     // incomplete state. In this case, we must complete it.
     if (mlir::cast<RecordType>(type).isIncomplete())
-      mlir::cast<RecordType>(type).complete(membersRef, packed, padded);
+      mlir::cast<RecordType>(type).complete(membersRef, packed, padded,
+                                            padding);
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else { // anonymous & incomplete
     parser.emitError(loc, "anonymous records must be complete");
@@ -264,6 +280,11 @@ void RecordType::print(mlir::AsmPrinter &printer) const {
     printer << "{";
     llvm::interleaveComma(getMembers(), printer);
     printer << "}";
+    if (mlir::Type pad = getPadding()) {
+      printer << ", padding = {";
+      printer.printType(pad);
+      printer << '}';
+    }
   }
 
   printer << '>';
@@ -273,9 +294,15 @@ mlir::LogicalResult
 RecordType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
                    llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
                    bool incomplete, bool packed, bool padded,
-                   RecordType::RecordKind kind) {
+                   RecordType::RecordKind kind, mlir::Type padding) {
   if (name && name.getValue().empty())
     return emitError() << "identified records cannot have an empty name";
+  if (padding) {
+    if (kind != RecordKind::Union)
+      return emitError() << "record padding is only supported on union types";
+    if (!padded)
+      return emitError() << "padded keyword required when padding is set";
+  }
   return mlir::success();
 }
 
@@ -292,6 +319,8 @@ bool RecordType::getIncomplete() const { return getImpl()->incomplete; }
 bool RecordType::getPacked() const { return getImpl()->packed; }
 
 bool RecordType::getPadded() const { return getImpl()->padded; }
+
+mlir::Type RecordType::getPadding() const { return getImpl()->padding; }
 
 cir::RecordType::RecordKind RecordType::getKind() const {
   return getImpl()->kind;
@@ -316,9 +345,10 @@ void RecordType::removeABIConversionNamePrefix() {
         recordName.getType());
 }
 
-void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
+void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded,
+                          mlir::Type padding) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, padded).failed())
+  if (mutate(members, packed, padded, padding).failed())
     llvm_unreachable("failed to complete record");
 }
 
@@ -330,19 +360,14 @@ Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   llvm::ArrayRef<Type> members = getMembers();
   if (members.empty())
     return {};
-
-  // If the union is padded, we need to ignore the last member,
-  // which is the padding.
-  auto endIt = getPadded() ? std::prev(members.end()) : members.end();
-  if (endIt == members.begin())
-    return {};
-  return *std::max_element(members.begin(), endIt, [&](Type lhs, Type rhs) {
-    return dataLayout.getTypeABIAlignment(lhs) <
-               dataLayout.getTypeABIAlignment(rhs) ||
-           (dataLayout.getTypeABIAlignment(lhs) ==
-                dataLayout.getTypeABIAlignment(rhs) &&
-            dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
-  });
+  return *std::max_element(
+      members.begin(), members.end(), [&](Type lhs, Type rhs) {
+        return dataLayout.getTypeABIAlignment(lhs) <
+                   dataLayout.getTypeABIAlignment(rhs) ||
+               (dataLayout.getTypeABIAlignment(lhs) ==
+                    dataLayout.getTypeABIAlignment(rhs) &&
+                dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
+      });
 }
 
 bool RecordType::isLayoutIdentical(const RecordType &other) {
@@ -396,8 +421,8 @@ RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
     // by `insertPadding`, making `sizeof(parent)` and array GEPs off by the
     // missing bytes.
     llvm::TypeSize size = dataLayout.getTypeSizeInBits(largest);
-    if (getPadded())
-      size += dataLayout.getTypeSizeInBits(*getMembers().rbegin());
+    if (mlir::Type tailPad = getPadding())
+      size += dataLayout.getTypeSizeInBits(tailPad);
     return size;
   }
 
@@ -457,8 +482,9 @@ RecordType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
   // non-padded records, data size equals the full struct size without
   // alignment.
   auto members = getMembers();
-  unsigned numMembers =
-      getPadded() && members.size() > 1 ? members.size() - 1 : members.size();
+  unsigned numMembers = members.size();
+  if (getPadded() && !getPadding() && members.size() > 1)
+    numMembers = members.size() - 1;
   unsigned recordSize = 0;
   for (unsigned i = 0; i < numMembers; ++i) {
     mlir::Type ty = members[i];

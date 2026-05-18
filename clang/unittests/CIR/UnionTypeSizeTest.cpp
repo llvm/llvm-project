@@ -63,6 +63,23 @@ TEST_F(UnionTypeSizeTest, MultiMemberUnion) {
   module->erase();
 }
 
+TEST_F(UnionTypeSizeTest, PaddedUnionWithSeparatePadding) {
+  IntType i64 = IntType::get(&context, 64, false);
+  ArrayType pad = ArrayType::get(IntType::get(&context, 8, false), 8);
+  auto ty = RecordType::get(&context, getName("PaddedU"), RecordType::Union);
+  ty.complete({i64}, /*packed=*/false, /*padded=*/true, pad);
+
+  OpBuilder builder(&context);
+  auto loc = builder.getUnknownLoc();
+  auto module = ModuleOp::create(loc);
+  mlir::DataLayout dl(module);
+
+  llvm::TypeSize size = dl.getTypeSizeInBits(ty);
+  EXPECT_EQ(size.getFixedValue(), 128u);
+
+  module->erase();
+}
+
 TEST_F(UnionTypeSizeTest, EmptyUnion) {
   auto ty = RecordType::get(&context, getName("Empty"), RecordType::Union);
   ty.complete({}, /*packed=*/false, /*padded=*/false);

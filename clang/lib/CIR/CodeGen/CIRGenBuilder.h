@@ -201,24 +201,25 @@ public:
   /// it with a different set of attributes, this method will crash.
   cir::RecordType getCompleteNamedRecordType(llvm::ArrayRef<mlir::Type> members,
                                              bool packed, bool padded,
+                                             mlir::Type padding,
                                              llvm::StringRef name) {
     const auto nameAttr = getStringAttr(name);
     auto kind = cir::RecordType::RecordKind::Struct;
     assert(!cir::MissingFeatures::astRecordDeclAttr());
 
     // Create or get the record.
-    auto type =
-        getType<cir::RecordType>(members, nameAttr, packed, padded, kind);
+    auto type = getType<cir::RecordType>(members, nameAttr, packed, padded,
+                                         kind, padding);
 
     // If we found an existing type, verify that either it is incomplete or
     // it matches the requested attributes.
     assert(!type.isIncomplete() ||
            (type.getMembers() == members && type.getPacked() == packed &&
-            type.getPadded() == padded));
+            type.getPadded() == padded && type.getPadding() == padding));
 
     // Complete an incomplete record or ensure the existing complete record
     // matches the requested attributes.
-    type.complete(members, packed, padded);
+    type.complete(members, packed, padded, padding);
 
     return type;
   }

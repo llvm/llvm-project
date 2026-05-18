@@ -661,6 +661,8 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
         !rec_p1 = !cir.record<struct "p1" packed {!u8i, !u8i}>
         !rec_p2 = !cir.record<struct "p2" padded {!u8i, !u8i}>
         !rec_p3 = !cir.record<struct "p3" packed padded {!s32i, !u8i, !u8i}>
+        !rec_u = !cir.record<union "u" padded {!s8i, !u64i},
+            padding = {!cir.array<!u8i x 8>}>
     ```
 
     Incomplete records are mutable, meaning they can be later completed with a
@@ -682,7 +684,8 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     "bool":$incomplete,
     "bool":$packed,
     "bool":$padded,
-    "RecordType::RecordKind":$kind
+    "RecordType::RecordKind":$kind,
+    OptionalParameter<"mlir::Type">:$padding
   );
 
   // StorageClass is defined in C++ for mutability.
@@ -699,10 +702,11 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
       "mlir::StringAttr":$name,
       "bool":$packed,
       "bool":$padded,
-      "RecordKind":$kind
+      "RecordKind":$kind,
+      CArg<"mlir::Type", "{}">:$padding
     ), [{
       return $_get($_ctxt, members, name, /*incomplete=*/false, packed, padded,
-                   kind);
+                   kind, padding);
     }]>,
 
     // Create an identified and incomplete record type.
@@ -712,7 +716,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     ), [{
       return $_get($_ctxt, /*members=*/llvm::ArrayRef<Type>{}, name,
                          /*incomplete=*/true, /*packed=*/false,
-                         /*padded=*/false, kind);
+                         /*padded=*/false, kind, mlir::Type{});
     }]>,
 
     // Create an anonymous record type (always complete).
@@ -720,10 +724,11 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
       "llvm::ArrayRef<mlir::Type>":$members,
       "bool":$packed,
       "bool":$padded,
-      "RecordKind":$kind
+      "RecordKind":$kind,
+      CArg<"mlir::Type", "{}">:$padding
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                      packed, padded, kind);
+                      packed, padded, kind, padding);
     }]>];
 
   let extraClassDeclaration = [{
@@ -758,7 +763,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     }
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
-                  bool isPadded);
+                  bool isPadded, mlir::Type padding = {});
 
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
               unsigned idx) const;

@@ -194,7 +194,8 @@ cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(
   if (name.empty())
     return getAnonRecordTy(members, packed, padded);
 
-  return getCompleteNamedRecordType(members, packed, padded, name);
+  return getCompleteNamedRecordType(members, packed, padded, mlir::Type{},
+                                    name);
 }
 
 mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(

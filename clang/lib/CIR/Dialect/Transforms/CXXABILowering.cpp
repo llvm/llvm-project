@@ -837,10 +837,14 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     // Unnamed record types can't be referred to recursively, so we can just
     // convert this one. It also doesn't have uniqueness problems, so we can
     // just do a conversion on it.
-    if (!type.getName())
+    if (!type.getName()) {
+      mlir::Type loweredPadding;
+      if (type.getPadding())
+        loweredPadding = convertType(type.getPadding());
       return cir::RecordType::get(
           type.getContext(), convertRecordMemberTypes(type), type.getPacked(),
-          type.getPadded(), type.getKind());
+          type.getPadded(), type.getKind(), loweredPadding);
+    }
 
     assert(!type.isIncomplete() || type.getMembers().empty());
 
@@ -873,8 +877,11 @@ class CIRABITypeConverter : public mlir::TypeConverter {
 
     SmallVector<mlir::Type> convertedMembers = convertRecordMemberTypes(type);
 
-    convertedType.complete(convertedMembers, type.getPacked(),
-                           type.getPadded());
+    mlir::Type loweredPadding;
+    if (type.getPadding())
+      loweredPadding = convertType(type.getPadding());
+    convertedType.complete(convertedMembers, type.getPacked(), type.getPadded(),
+                           loweredPadding);
     addConvertedRecordType(convertedType);
     return convertedType;
   }

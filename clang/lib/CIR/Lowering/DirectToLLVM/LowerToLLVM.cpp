@@ -3313,16 +3313,12 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       break;
     // Unions are lowered as only the largest member.
     case cir::RecordType::Union:
-      if (type.getMembers().empty())
-        break;
       if (auto largestMember = type.getLargestMember(dataLayout))
         llvmMembers.push_back(
             convertTypeForMemory(converter, dataLayout, largestMember));
-      if (type.getPadded()) {
-        auto last = *type.getMembers().rbegin();
+      if (mlir::Type tailPad = type.getPadding())
         llvmMembers.push_back(
-            convertTypeForMemory(converter, dataLayout, last));
-      }
+            convertTypeForMemory(converter, dataLayout, tailPad));
       break;
     }
 
