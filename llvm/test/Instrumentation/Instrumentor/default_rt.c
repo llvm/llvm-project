@@ -23,34 +23,55 @@
 extern "C" {
 #endif
 
-void __instrumentor_pre_module(char *module_name, char *target_triple, int32_t id) {
-  printf("module pre -- module_name: %s, target_triple: %s, id: %" PRId32 "\n", module_name, target_triple, id);
+void __instrumentor_pre_module(char *module_name, char *target_triple, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("module pre -- module_name: %s, target_triple: %s, id: %" PRId32 ", location: %p\n", module_name, target_triple, id, location);
 }
 
-void __instrumentor_post_module(char *module_name, char *target_triple, int32_t id) {
-  printf("module post -- module_name: %s, target_triple: %s, id: %" PRId32 "\n", module_name, target_triple, id);
+void __instrumentor_post_module(char *module_name, char *target_triple, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("module post -- module_name: %s, target_triple: %s, id: %" PRId32 ", location: %p\n", module_name, target_triple, id, location);
 }
 
-void *__instrumentor_pre_global(void *address, int32_t address_space, int64_t declared_size, int64_t alignment, char *name, int64_t initial_value, int8_t is_constant, int8_t is_definition, int32_t id) {
-  printf("global pre -- address: %p, address_space: %" PRId32 ", declared_size: %" PRId64 ", alignment: %" PRId64 ", name: %s, initial_value: %" PRId64 ", is_constant: %" PRId32 ", is_definition: %" PRId32 ", id: %" PRId32 "\n", address, address_space, declared_size, alignment, name, initial_value, is_constant, is_definition, id);
+void *__instrumentor_pre_global(void *address, int32_t address_space, int64_t declared_size, int64_t alignment, char *name, int64_t initial_value, int8_t is_constant, int8_t is_definition, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("global pre -- address: %p, address_space: %" PRId32 ", declared_size: %" PRId64 ", alignment: %" PRId64 ", name: %s, initial_value: %" PRId64 ", is_constant: %" PRId32 ", is_definition: %" PRId32 ", id: %" PRId32 ", location: %p\n", address, address_space, declared_size, alignment, name, initial_value, is_constant, is_definition, id, location);
   return address;
 }
 
-void *__instrumentor_pre_global_ind(void *address, int32_t address_space, int64_t declared_size, int64_t alignment, char *name, int64_t *initial_value_ptr, int8_t is_constant, int8_t is_definition, int32_t id) {
-  printf("global pre -- address: %p, address_space: %" PRId32 ", declared_size: %" PRId64 ", alignment: %" PRId64 ", name: %s, initial_value: %p, is_constant: %" PRId32 ", is_definition: %" PRId32 ", id: %" PRId32 "\n", address, address_space, declared_size, alignment, name, initial_value_ptr, is_constant, is_definition, id);
+void *__instrumentor_pre_global_ind(void *address, int32_t address_space, int64_t declared_size, int64_t alignment, char *name, int64_t *initial_value_ptr, int8_t is_constant, int8_t is_definition, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("global pre -- address: %p, address_space: %" PRId32 ", declared_size: %" PRId64 ", alignment: %" PRId64 ", name: %s, initial_value: %p, is_constant: %" PRId32 ", is_definition: %" PRId32 ", id: %" PRId32 ", location: %p\n", address, address_space, declared_size, alignment, name, initial_value_ptr, is_constant, is_definition, id, location);
   return address;
 }
 
-void __instrumentor_post_global(void *address, int32_t address_space, int64_t declared_size, int64_t alignment, char *name, int64_t initial_value, int8_t is_constant, int8_t is_definition, int32_t id) {
-  printf("global post -- address: %p, address_space: %" PRId32 ", declared_size: %" PRId64 ", alignment: %" PRId64 ", name: %s, initial_value: %" PRId64 ", is_constant: %" PRId32 ", is_definition: %" PRId32 ", id: %" PRId32 "\n", address, address_space, declared_size, alignment, name, initial_value, is_constant, is_definition, id);
+void __instrumentor_post_global(void *address, int32_t address_space, int64_t declared_size, int64_t alignment, char *name, int64_t initial_value, int8_t is_constant, int8_t is_definition, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("global post -- address: %p, address_space: %" PRId32 ", declared_size: %" PRId64 ", alignment: %" PRId64 ", name: %s, initial_value: %" PRId64 ", is_constant: %" PRId32 ", is_definition: %" PRId32 ", id: %" PRId32 ", location: %p\n", address, address_space, declared_size, alignment, name, initial_value, is_constant, is_definition, id, location);
 }
 
-void __instrumentor_post_global_ind(void *address, int32_t address_space, int64_t declared_size, int64_t alignment, char *name, int64_t *initial_value_ptr, int8_t is_constant, int8_t is_definition, int32_t id) {
-  printf("global post -- address: %p, address_space: %" PRId32 ", declared_size: %" PRId64 ", alignment: %" PRId64 ", name: %s, initial_value: %p, is_constant: %" PRId32 ", is_definition: %" PRId32 ", id: %" PRId32 "\n", address, address_space, declared_size, alignment, name, initial_value_ptr, is_constant, is_definition, id);
+void __instrumentor_post_global_ind(void *address, int32_t address_space, int64_t declared_size, int64_t alignment, char *name, int64_t *initial_value_ptr, int8_t is_constant, int8_t is_definition, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("global post -- address: %p, address_space: %" PRId32 ", declared_size: %" PRId64 ", alignment: %" PRId64 ", name: %s, initial_value: %p, is_constant: %" PRId32 ", is_definition: %" PRId32 ", id: %" PRId32 ", location: %p\n", address, address_space, declared_size, alignment, name, initial_value_ptr, is_constant, is_definition, id, location);
 }
 
-void __instrumentor_pre_function(void *address, char *name, int32_t num_arguments, void *arguments, int8_t is_main, int32_t id) {
-  printf("function pre -- address: %p, name: %s, num_arguments: %" PRId32 ", arguments: [value pack at %p], is_main: %" PRId32 ", id: %" PRId32 "\n", address, name, num_arguments, arguments, is_main, id);
+void __instrumentor_pre_function(void *address, char *name, int32_t num_arguments, void *arguments, int8_t is_main, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("function pre -- address: %p, name: %s, num_arguments: %" PRId32 ", arguments: [value pack at %p], is_main: %" PRId32 ", id: %" PRId32 ", location: %p\n", address, name, num_arguments, arguments, is_main, id, location);
   ValuePackIterator iter_arguments;
   initValuePackIterator(&iter_arguments, arguments, num_arguments);
   while (iter_arguments.index < iter_arguments.count) {
@@ -61,8 +82,11 @@ void __instrumentor_pre_function(void *address, char *name, int32_t num_argument
   }
 }
 
-void __instrumentor_post_function(void *address, char *name, int32_t num_arguments, void *arguments, int8_t is_main, int32_t id) {
-  printf("function post -- address: %p, name: %s, num_arguments: %" PRId32 ", arguments: [value pack at %p], is_main: %" PRId32 ", id: %" PRId32 "\n", address, name, num_arguments, arguments, is_main, id);
+void __instrumentor_post_function(void *address, char *name, int32_t num_arguments, void *arguments, int8_t is_main, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("function post -- address: %p, name: %s, num_arguments: %" PRId32 ", arguments: [value pack at %p], is_main: %" PRId32 ", id: %" PRId32 ", location: %p\n", address, name, num_arguments, arguments, is_main, id, location);
   ValuePackIterator iter_arguments;
   initValuePackIterator(&iter_arguments, arguments, num_arguments);
   while (iter_arguments.index < iter_arguments.count) {
@@ -73,50 +97,80 @@ void __instrumentor_post_function(void *address, char *name, int32_t num_argumen
   }
 }
 
-void __instrumentor_pre_unreachable(int32_t id) {
-  printf("unreachable pre -- id: %" PRId32 "\n", id);
+void __instrumentor_pre_unreachable(int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("unreachable pre -- id: %" PRId32 ", location: %p\n", id, location);
 }
 
-void *__instrumentor_pre_load(void *pointer, int32_t pointer_as, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id) {
-  printf("load pre -- pointer: %p, pointer_as: %" PRId32 ", value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id);
+void *__instrumentor_pre_load(void *pointer, int32_t pointer_as, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("load pre -- pointer: %p, pointer_as: %" PRId32 ", value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 ", location: %p\n", pointer, pointer_as, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id, location);
   return pointer;
 }
 
-int64_t __instrumentor_pre_alloca(int64_t size, int64_t alignment, int32_t id) {
-  printf("alloca pre -- size: %" PRId64 ", alignment: %" PRId64 ", id: %" PRId32 "\n", size, alignment, id);
+int64_t __instrumentor_pre_alloca(int64_t size, int64_t alignment, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("alloca pre -- size: %" PRId64 ", alignment: %" PRId64 ", id: %" PRId32 ", location: %p\n", size, alignment, id, location);
   return size;
 }
 
-void *__instrumentor_pre_store(void *pointer, int32_t pointer_as, int64_t value, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id) {
-  printf("store pre -- pointer: %p, pointer_as: %" PRId32 ", value: %" PRId64 ", value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, value, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id);
+void *__instrumentor_pre_store(void *pointer, int32_t pointer_as, int64_t value, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("store pre -- pointer: %p, pointer_as: %" PRId32 ", value: %" PRId64 ", value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 ", location: %p\n", pointer, pointer_as, value, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id, location);
   return pointer;
 }
 
-void *__instrumentor_pre_store_ind(void *pointer, int32_t pointer_as, int64_t *value_ptr, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id) {
-  printf("store pre -- pointer: %p, pointer_as: %" PRId32 ", value: %p, value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, value_ptr, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id);
+void *__instrumentor_pre_store_ind(void *pointer, int32_t pointer_as, int64_t *value_ptr, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("store pre -- pointer: %p, pointer_as: %" PRId32 ", value: %p, value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 ", location: %p\n", pointer, pointer_as, value_ptr, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id, location);
   return pointer;
 }
 
-int64_t __instrumentor_post_load(void *pointer, int32_t pointer_as, int64_t value, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id) {
-  printf("load post -- pointer: %p, pointer_as: %" PRId32 ", value: %" PRId64 ", value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, value, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id);
+int64_t __instrumentor_post_load(void *pointer, int32_t pointer_as, int64_t value, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("load post -- pointer: %p, pointer_as: %" PRId32 ", value: %" PRId64 ", value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 ", location: %p\n", pointer, pointer_as, value, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id, location);
   return value;
 }
 
-void __instrumentor_post_load_ind(void *pointer, int32_t pointer_as, int64_t *value_ptr, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id) {
-  printf("load post -- pointer: %p, pointer_as: %" PRId32 ", value: %p, value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, value_ptr, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id);
+void __instrumentor_post_load_ind(void *pointer, int32_t pointer_as, int64_t *value_ptr, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("load post -- pointer: %p, pointer_as: %" PRId32 ", value: %p, value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 ", location: %p\n", pointer, pointer_as, value_ptr, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id, location);
 }
 
-void *__instrumentor_post_alloca(void *address, int64_t size, int64_t alignment, int32_t id) {
-  printf("alloca post -- address: %p, size: %" PRId64 ", alignment: %" PRId64 ", id: %" PRId32 "\n", address, size, alignment, id);
+void *__instrumentor_post_alloca(void *address, int64_t size, int64_t alignment, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("alloca post -- address: %p, size: %" PRId64 ", alignment: %" PRId64 ", id: %" PRId32 ", location: %p\n", address, size, alignment, id, location);
   return address;
 }
 
-void __instrumentor_post_store(void *pointer, int32_t pointer_as, int64_t value, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id) {
-  printf("store post -- pointer: %p, pointer_as: %" PRId32 ", value: %" PRId64 ", value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, value, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id);
+void __instrumentor_post_store(void *pointer, int32_t pointer_as, int64_t value, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("store post -- pointer: %p, pointer_as: %" PRId32 ", value: %" PRId64 ", value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 ", location: %p\n", pointer, pointer_as, value, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id, location);
 }
 
-void __instrumentor_post_store_ind(void *pointer, int32_t pointer_as, int64_t *value_ptr, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id) {
-  printf("store post -- pointer: %p, pointer_as: %" PRId32 ", value: %p, value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, value_ptr, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id);
+void __instrumentor_post_store_ind(void *pointer, int32_t pointer_as, int64_t *value_ptr, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id, InstrumentorLocationInfo *location) {
+    InstrumentorLocation loc = getInstrumentorLocation(location->index, location->locations, location->strings);
+  printf("%s:%s:%" PRIu64 ":%" PRIu64 " ", loc.file_name, loc.function_name, loc.line_no, loc.column_no);
+
+  printf("store post -- pointer: %p, pointer_as: %" PRId32 ", value: %p, value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %" PRId32 ", atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 ", location: %p\n", pointer, pointer_as, value_ptr, value_size, alignment, value_type_id, atomicity_ordering, sync_scope_id, is_volatile, id, location);
 }
 
 #ifdef __cplusplus

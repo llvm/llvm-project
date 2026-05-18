@@ -25,7 +25,9 @@
       "target_triple": true,
       "target_triple.description": "The target triple.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     }
   },
   "module_post": {
@@ -38,7 +40,9 @@
       "target_triple": true,
       "target_triple.description": "The target triple.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     }
   },
   "global_pre": {
@@ -64,7 +68,9 @@
       "is_definition": true,
       "is_definition.description": "Flag to indicate global definitions.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     }
   },
   "global_post": {
@@ -89,7 +95,9 @@
       "is_definition": true,
       "is_definition.description": "Flag to indicate global definitions.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     }
   },
   "function_pre": {
@@ -109,7 +117,9 @@
       "is_main": true,
       "is_main.description": "Flag to indicate it is the main function.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     }
   },
   "function_post": {
@@ -128,7 +138,9 @@
       "is_main": true,
       "is_main.description": "Flag to indicate it is the main function.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     }
   },
   "instruction_pre": {
@@ -137,7 +149,9 @@
       "filter": "",
       "filter.description": "Static property filter to exclude instrumentation.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     },
     "load": {
       "enabled": true,
@@ -161,7 +175,9 @@
       "is_volatile": true,
       "is_volatile.description": "Flag indicating a volatile load.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     },
     "ptrtoint": {
       "enabled": true,
@@ -170,7 +186,9 @@
       "pointer": true,
       "pointer.description": "Input pointer of the ptr to int.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     },
     "alloca": {
       "enabled": true,
@@ -182,7 +200,9 @@
       "alignment": true,
       "alignment.description": "The allocation alignment.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     },
     "store": {
       "enabled": true,
@@ -208,7 +228,9 @@
       "is_volatile": true,
       "is_volatile.description": "Flag indicating a volatile store.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     }
   },
   "instruction_post": {
@@ -236,7 +258,9 @@
       "is_volatile": true,
       "is_volatile.description": "Flag indicating a volatile load.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     },
     "ptrtoint": {
       "enabled": true,
@@ -248,7 +272,9 @@
       "value.replace": true,
       "value.description": "Result of the ptr to int.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     },
     "alloca": {
       "enabled": true,
@@ -262,7 +288,9 @@
       "alignment": true,
       "alignment.description": "The allocation alignment.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     },
     "store": {
       "enabled": true,
@@ -287,7 +315,9 @@
       "is_volatile": true,
       "is_volatile.description": "Flag indicating a volatile store.",
       "id": true,
-      "id.description": "A unique ID associated with the given instrumentor call"
+      "id.description": "A unique ID associated with the given instrumentor call",
+      "location": true,
+      "location.description": "Location info struct containing index and pointers to location/string tables"
     }
   }
 }

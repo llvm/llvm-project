@@ -17,12 +17,16 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/StringSaver.h"
 
 #include <bitset>
+#include <string>
 #include <tuple>
 
 namespace llvm {
@@ -30,6 +34,61 @@ namespace instrumentor {
 
 struct InstrumentationConfig;
 struct InstrumentationOpportunity;
+
+/// Source location information for instrumented code.
+struct LocationInfo {
+  uint64_t LineNo = 0;
+  uint64_t ColumnNo = 0;
+  StringRef FileName;
+  StringRef FunctionName;
+
+  bool operator==(const LocationInfo &RHS) const {
+    return LineNo == RHS.LineNo && ColumnNo == RHS.ColumnNo &&
+           FileName == RHS.FileName && FunctionName == RHS.FunctionName;
+  }
+};
+
+} // namespace instrumentor
+} // namespace llvm
+
+/// DenseMapInfo specialization for LocationInfo pointers.
+template <> struct llvm::DenseMapInfo<llvm::instrumentor::LocationInfo *> {
+  static llvm::instrumentor::LocationInfo *getEmptyKey() {
+    static llvm::instrumentor::LocationInfo EmptyKey{(uint64_t)-1, 0, "", ""};
+    return &EmptyKey;
+  }
+
+  static llvm::instrumentor::LocationInfo *getTombstoneKey() {
+    static llvm::instrumentor::LocationInfo TombstoneKey{(uint64_t)-2, 0, "",
+                                                         ""};
+    return &TombstoneKey;
+  }
+
+  static unsigned getHashValue(const llvm::instrumentor::LocationInfo *LI) {
+    unsigned Hash = llvm::DenseMapInfo<uint64_t>::getHashValue(LI->LineNo);
+    Hash = llvm::detail::combineHashValue(
+        Hash, llvm::DenseMapInfo<uint64_t>::getHashValue(LI->ColumnNo));
+    Hash = llvm::detail::combineHashValue(
+        Hash, llvm::DenseMapInfo<llvm::StringRef>::getHashValue(LI->FileName));
+    Hash = llvm::detail::combineHashValue(
+        Hash,
+        llvm::DenseMapInfo<llvm::StringRef>::getHashValue(LI->FunctionName));
+    return Hash;
+  }
+
+  static bool isEqual(const llvm::instrumentor::LocationInfo *LHS,
+                      const llvm::instrumentor::LocationInfo *RHS) {
+    if (LHS == RHS)
+      return true;
+    if (LHS == getEmptyKey() || LHS == getTombstoneKey() ||
+        RHS == getEmptyKey() || RHS == getTombstoneKey())
+      return false;
+    return *LHS == *RHS;
+  }
+};
+
+namespace llvm {
+namespace instrumentor {
 
 /// An IR builder augmented with extra information for the instrumentor pass.
 /// The underlying IR builder features an insertion callback to keep track of
@@ -134,7 +193,46 @@ struct InstrumentorIRBuilderTy {
   /// A mapping from instrumentation instructions to the epoch they have been
   /// created.
   DenseMap<Instruction *, unsigned> NewInsts;
+
+  /// Location tracking for source location information.
+  ///{
+  /// Map from unique locations to their index in the location table.
+  DenseMap<LocationInfo *, uint64_t, DenseMapInfo<LocationInfo *>> LocationMap;
+
+  /// Encoded location information as constants for the global location table.
+  /// Each location uses 4 consecutive entries: [FuncIdx, FileIdx, LineNo,
+  /// ColumnNo].
+  SmallVector<Constant *> LocationEncoding;
+
+  /// Concatenated string containing all unique strings (filenames and function
+  /// names).
+  std::string ConcatenatedString;
+
+  /// Map from string to its offset in ConcatenatedString.
+  DenseMap<StringRef, uint64_t> UniqueStrings;
+
+  /// Allocator for LocationInfo objects.
+  BumpPtrAllocator LocationAllocator;
+
+  /// String saver for location strings.
+  StringSaver LocationStringSaver{LocationAllocator};
+
+  /// Pointers to the global variables containing location and string data.
+  /// These are set when the globals are created and used to construct
+  /// location info structs passed to runtime functions.
+  GlobalVariable *LocationGlobal = nullptr;
+  GlobalVariable *StringGlobal = nullptr;
+  ///}
 };
+
+/// Get the source location info struct for a Value. Returns a global with the
+/// struct constant of type { i64, ptr, ptr } containing, or null:
+///   - index: The index into the location table (or 0 if no location info)
+///   - locations_ptr: Pointer to the static locations array
+///   - strings_ptr: Pointer to the static strings array
+LLVM_ABI
+Value *getLocationIndex(Value &V, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB);
 
 /// Helper that represent the caches for instrumentation call arguments. The
 /// value of an argument may not need to be recomputed between the pre and post

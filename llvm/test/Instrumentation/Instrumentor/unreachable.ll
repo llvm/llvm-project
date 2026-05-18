@@ -3,9 +3,9 @@
 
 define void @foo() {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    call void @__instrumentor_pre_function(ptr @foo, ptr @__instrumentor_.str.2, i32 0, ptr null, i8 0, i32 4) #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    call void @__instrumentor_pre_unreachable(i32 3) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_post_function(ptr @foo, ptr @__instrumentor_.str.2, i32 0, ptr null, i8 0, i32 -5) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_function(ptr @foo, ptr @__instrumentor_.str.4, i32 0, ptr null, i8 0, i32 4, ptr @__instrumentor_location_info.3) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @__instrumentor_pre_unreachable(i32 3, ptr @__instrumentor_location_info.3) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_function(ptr @foo, ptr @__instrumentor_.str.4, i32 0, ptr null, i8 0, i32 -5, ptr @__instrumentor_location_info.3) #[[ATTR0]]
 ; CHECK-NEXT:    unreachable
 ;
   unreachable

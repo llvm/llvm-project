@@ -12,7 +12,10 @@
 #include "llvm/Transforms/IPO/Instrumentor.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 
 using namespace llvm;
 using namespace llvm::instrumentor;
@@ -472,4 +475,190 @@ bool llvm::instrumentor::evaluateFilter(Value &V,
   }
 
   return Result.get();
+}
+
+static uint64_t addString(StringRef S, std::string &ConcatenatedString,
+                          DenseMap<StringRef, uint64_t> &UniqueStrings) {
+  const auto &It = UniqueStrings.insert({S, ConcatenatedString.size()});
+  if (It.second) {
+    ConcatenatedString += S;
+    ConcatenatedString.push_back('\0');
+  }
+  return It.first->second;
+}
+
+static void encodeLocationInfo(LocationInfo &LI, uint64_t Idx,
+                               InstrumentorIRBuilderTy &IIRB) {
+  auto FuncIdx =
+      addString(LI.FunctionName, IIRB.ConcatenatedString, IIRB.UniqueStrings);
+  auto FileIdx =
+      addString(LI.FileName, IIRB.ConcatenatedString, IIRB.UniqueStrings);
+
+  // Each location uses 4 entries: [FuncIdx, FileIdx, LineNo, ColumnNo]
+  if (IIRB.LocationEncoding.size() < (Idx + 1) * 4)
+    IIRB.LocationEncoding.resize((Idx + 1) * 4);
+
+  IIRB.LocationEncoding[Idx * 4 + 0] = ConstantInt::get(IIRB.Int64Ty, FuncIdx);
+  IIRB.LocationEncoding[Idx * 4 + 1] = ConstantInt::get(IIRB.Int64Ty, FileIdx);
+  IIRB.LocationEncoding[Idx * 4 + 2] =
+      ConstantInt::get(IIRB.Int64Ty, LI.LineNo);
+  IIRB.LocationEncoding[Idx * 4 + 3] =
+      ConstantInt::get(IIRB.Int64Ty, LI.ColumnNo);
+}
+
+static void ensureFileName(LocationInfo *LI, Module &M) {
+  if (LI->FileName.empty())
+    LI->FileName = M.getSourceFileName();
+  if (LI->FileName.empty())
+    LI->FileName = M.getName();
+}
+
+static Value *addLocationInfo(LocationInfo *LI, bool &IsNew,
+                              InstrumentorIRBuilderTy &IIRB) {
+  auto It = IIRB.LocationMap.insert({LI, IIRB.LocationMap.size()});
+  IsNew = It.second;
+  uint64_t Idx = It.first->second;
+
+  if (!IsNew) {
+    // Location already exists, delete the duplicate
+    delete LI;
+  } else {
+    // New location, encode it
+    encodeLocationInfo(*It.first->first, Idx, IIRB);
+  }
+
+  return ConstantInt::get(IIRB.Int64Ty, Idx);
+}
+
+static Value *getLocationIndexForInstruction(Instruction &I,
+                                             InstrumentorIRBuilderTy &IIRB) {
+  LocationInfo *LI = new LocationInfo();
+  DILocation *DILoc = I.getDebugLoc().get();
+
+  if (DILoc) {
+    LI->FileName = DILoc->getFilename();
+    if (LI->FileName.empty() && I.getFunction()->getSubprogram())
+      LI->FileName = I.getFunction()->getSubprogram()->getFilename();
+
+    LI->FunctionName = DILoc->getSubprogramLinkageName();
+    if (LI->FunctionName.empty())
+      LI->FunctionName = I.getFunction()->getName();
+
+    LI->LineNo = DILoc->getLine();
+    LI->ColumnNo = DILoc->getColumn();
+  } else {
+    // No debug info available
+    LI->FunctionName = I.getFunction()->getName();
+    LI->FileName = "";
+    LI->LineNo = 0;
+    LI->ColumnNo = 0;
+  }
+
+  ensureFileName(LI, *I.getModule());
+
+  // Save strings in the string saver
+  LI->FileName = IIRB.LocationStringSaver.save(LI->FileName);
+  LI->FunctionName = IIRB.LocationStringSaver.save(LI->FunctionName);
+
+  bool IsNew;
+  return addLocationInfo(LI, IsNew, IIRB);
+}
+
+static Value *getLocationIndexForFunction(Function &F,
+                                          InstrumentorIRBuilderTy &IIRB) {
+  LocationInfo *LI = new LocationInfo();
+
+  LI->FunctionName = F.getName();
+
+  if (DISubprogram *SP = F.getSubprogram()) {
+    LI->FileName = SP->getFilename();
+    LI->LineNo = SP->getLine();
+  } else {
+    LI->FileName = "";
+    LI->LineNo = 0;
+  }
+
+  ensureFileName(LI, *F.getParent());
+
+  LI->ColumnNo = 0;
+
+  // Save strings in the string saver
+  LI->FileName = IIRB.LocationStringSaver.save(LI->FileName);
+  LI->FunctionName = IIRB.LocationStringSaver.save(LI->FunctionName);
+
+  bool IsNew;
+  return addLocationInfo(LI, IsNew, IIRB);
+}
+
+static Value *getLocationIndexForGlobalVariable(GlobalVariable &GV,
+                                                InstrumentorIRBuilderTy &IIRB) {
+  LocationInfo *LI = new LocationInfo();
+
+  SmallVector<DIGlobalVariableExpression *, 1> GlobalLocations;
+  GV.getDebugInfo(GlobalLocations);
+
+  if (!GlobalLocations.empty()) {
+    const auto *DLVar = GlobalLocations.front()->getVariable();
+    LI->FileName = DLVar->getFilename();
+    LI->LineNo = DLVar->getLine();
+    LI->FunctionName = DLVar->getName();
+  } else {
+    // No debug info available
+    LI->FileName = "";
+    LI->LineNo = 0;
+    LI->FunctionName = GV.getName();
+  }
+  LI->ColumnNo = 0;
+
+  ensureFileName(LI, *GV.getParent());
+
+  // Save strings in the string saver
+  LI->FileName = IIRB.LocationStringSaver.save(LI->FileName);
+  LI->FunctionName = IIRB.LocationStringSaver.save(LI->FunctionName);
+
+  bool IsNew;
+  return addLocationInfo(LI, IsNew, IIRB);
+}
+
+Value *llvm::instrumentor::getLocationIndex(Value &V,
+                                            InstrumentationConfig &IConf,
+                                            InstrumentorIRBuilderTy &IIRB) {
+  if (!IIRB.LocationGlobal || !IIRB.StringGlobal)
+    return ConstantPointerNull::get(IIRB.PtrTy);
+
+  Value *Idx = nullptr;
+  if (auto *I = dyn_cast<Instruction>(&V))
+    Idx = getLocationIndexForInstruction(*I, IIRB);
+  else if (auto *F = dyn_cast<Function>(&V))
+    Idx = getLocationIndexForFunction(*F, IIRB);
+  else if (auto *GV = dyn_cast<GlobalVariable>(&V))
+    Idx = getLocationIndexForGlobalVariable(*GV, IIRB);
+  else {
+    // Fallback: return index -1 (no location)
+    Idx = ConstantInt::get(IIRB.Int64Ty, -1);
+  }
+
+  // Create a struct with {index, locations_ptr, strings_ptr}
+  // The struct type is { i64, ptr, ptr }
+  auto *StructTy =
+      StructType::get(IIRB.Ctx, {IIRB.Int64Ty, IIRB.PtrTy, IIRB.PtrTy});
+
+  // Get pointers to the global arrays.
+  Value *LocationsPtr =
+      ConstantExpr::getBitCast(IIRB.LocationGlobal, IIRB.PtrTy);
+  Value *StringsPtr = ConstantExpr::getBitCast(IIRB.StringGlobal, IIRB.PtrTy);
+
+  // Create the struct constant
+  SmallVector<Constant *> StructFields;
+  StructFields.push_back(cast<Constant>(Idx));
+  StructFields.push_back(cast<Constant>(LocationsPtr));
+  StructFields.push_back(cast<Constant>(StringsPtr));
+
+  Constant *Initializer = ConstantStruct::get(StructTy, StructFields);
+  GlobalVariable *&GV = IConf.ConstantGlobalsCache[Initializer];
+  if (!GV)
+    GV = new GlobalVariable(IIRB.M, StructTy, false,
+                            GlobalValue::InternalLinkage, Initializer,
+                            IConf.getRTName("", "location_info"));
+  return GV;
 }

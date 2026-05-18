@@ -27,6 +27,50 @@ extern "C" {
 }
 #endif
 
+/// Location information struct passed from instrumentation code.
+/// Contains the location index and pointers to the static tables.
+typedef struct {
+  uint64_t index;           // Index into the location table
+  const uint64_t *locations; // Pointer to static location table
+  const char *strings;       // Pointer to static string table
+} InstrumentorLocationInfo;
+
+/// Source location information decoded from the location table.
+typedef struct {
+  const char *function_name;
+  const char *file_name;
+  uint64_t line_no;
+  uint64_t column_no;
+} InstrumentorLocation;
+
+/// Decode a location from the location table.
+/// The location table format is: [FuncIdx, FileIdx, LineNo, ColumnNo] per entry.
+/// Each index refers to a logical location (4 consecutive uint64_t values).
+/// \param location_idx The index into the location table
+/// \param locations Pointer to the location table array
+/// \param strings Pointer to the concatenated strings table
+static inline InstrumentorLocation
+getInstrumentorLocation(uint64_t location_idx, const uint64_t *locations, const char *strings) {
+  InstrumentorLocation loc = {0};
+
+  // Negative one index and null pointers indicate no location information
+  if (location_idx == ~uint64_t(0) || !locations || !strings)
+    return loc;
+
+  // Each location uses 4 consecutive entries
+  const uint64_t base = location_idx * 4;
+  const uint64_t func_idx = locations[base + 0];
+  const uint64_t file_idx = locations[base + 1];
+  loc.line_no = locations[base + 2];
+  loc.column_no = locations[base + 3];
+
+  // Strings are null-terminated and concatenated in the string table
+  loc.function_name = strings + func_idx;
+  loc.file_name = strings + file_idx;
+
+  return loc;
+}
+
 /// Header for each value in a value pack.
 /// Value packs are used to pass function arguments and other variable-length
 /// data to the runtime. The format is:
@@ -251,6 +295,26 @@ private:
   const void *ptr_;
   uint32_t num_elements_;
   uint64_t max_size_;
+};
+
+/// C++ wrapper for InstrumentorLocation with convenient methods.
+class LocationWrapper {
+public:
+  LocationWrapper(const InstrumentorLocationInfo &info)
+      : loc_(getInstrumentorLocation(info.index, info.locations, info.strings)) {}
+  LocationWrapper(uint64_t idx, const uint64_t *locations, const char *strings)
+      : loc_(getInstrumentorLocation(idx, locations, strings)) {}
+
+  const char *function_name() const { return loc_.function_name; }
+  const char *file_name() const { return loc_.file_name; }
+  uint64_t line_no() const { return loc_.line_no; }
+  uint64_t column_no() const { return loc_.column_no; }
+  bool is_valid() const { return loc_.function_name == nullptr && loc_.file_name == nullptr; }
+
+  const InstrumentorLocation &raw() const { return loc_; }
+
+private:
+  InstrumentorLocation loc_;
 };
 
 /// Template helper to extract a typed value from a value pack by index.

@@ -39,8 +39,13 @@ static std::pair<std::string, std::string> getAsCType(Type *Ty,
     auto S = "int" + std::to_string(BW) + "_t ";
     return {S, S + "*"};
   }
-  if (Ty->isPointerTy())
-    return {Flags & IRTArg::STRING ? "char *" : "void *", "void **"};
+  if (Ty->isPointerTy()) {
+    if (Flags & IRTArg::STRING)
+      return {"char *", "char **"};
+    if (Flags & IRTArg::LOCATION)
+      return {"InstrumentorLocationInfo *", "InstrumentorLocationInfo **"};
+    return {"void *", "void **"};
+  }
   if (Ty->isFloatTy())
     return {"float ", "float *"};
   if (Ty->isDoubleTy())
@@ -73,6 +78,24 @@ std::pair<std::string, std::string> IRTCallDescription::createCBodies() const {
                              (IO.IP.isPRE() ? " pre" : " post") + " -- ";
   std::string IndirectFormat = DirectFormat;
   std::string DirectArg, IndirectArg, DirectReturnValue, IndirectReturnValue;
+
+  // Check if location argument is present and add location prefix if so
+  std::string DirectLocationPrefix, IndirectLocationPrefix;
+  for (auto &IRArg : IO.IRTArgs) {
+    if (IRArg.Enabled && IRArg.Name.equals_insensitive("location")) {
+      // Add code to decode and print location before the main message
+      // The location argument is now a struct containing index and pointers
+      DirectLocationPrefix =
+          "  InstrumentorLocation loc = getInstrumentorLocation(" +
+          IRArg.Name.str() + "->index, " + IRArg.Name.str() + "->locations, " +
+          IRArg.Name.str() + "->strings);\n";
+      DirectLocationPrefix +=
+          "  printf(\"%s:%s:%\" PRIu64 \":%\" PRIu64 \" \", loc.file_name, "
+          "loc.function_name, loc.line_no, loc.column_no);\n\n  ";
+      IndirectLocationPrefix = DirectLocationPrefix;
+      break;
+    }
+  }
 
   auto AddToFormats = [&](Twine S) {
     DirectFormat += S.str();
@@ -118,8 +141,10 @@ std::pair<std::string, std::string> IRTCallDescription::createCBodies() const {
     }
   }
 
-  std::string DirectBody = DirectFormat + "\\n\"" + DirectArg + ");\n";
-  std::string IndirectBody = IndirectFormat + "\\n\"" + IndirectArg + ");\n";
+  std::string DirectBody =
+      DirectLocationPrefix + DirectFormat + "\\n\"" + DirectArg + ");\n";
+  std::string IndirectBody =
+      IndirectLocationPrefix + IndirectFormat + "\\n\"" + IndirectArg + ");\n";
 
   // Add value pack element printing
   for (size_t ArgIdx = 0; ArgIdx < IO.IRTArgs.size(); ++ArgIdx) {
@@ -278,6 +303,54 @@ void printRuntimeHeader(const InstrumentationConfig &IConf,
   OS << "#ifdef __cplusplus\n";
   OS << "}\n";
   OS << "#endif\n\n";
+
+  // Location info struct that gets passed to runtime functions
+  OS << "/// Location information struct passed from instrumentation code.\n";
+  OS << "/// Contains the location index and pointers to the static tables.\n";
+  OS << "typedef struct {\n";
+  OS << "  uint64_t index;           // Index into the location table\n";
+  OS << "  const uint64_t *locations; // Pointer to static location table\n";
+  OS << "  const char *strings;       // Pointer to static string table\n";
+  OS << "} InstrumentorLocationInfo;\n\n";
+
+  // Location structure
+  OS << "/// Source location information decoded from the location table.\n";
+  OS << "typedef struct {\n";
+  OS << "  const char *function_name;\n";
+  OS << "  const char *file_name;\n";
+  OS << "  uint64_t line_no;\n";
+  OS << "  uint64_t column_no;\n";
+  OS << "} InstrumentorLocation;\n\n";
+
+  // Location decoder function
+  OS << "/// Decode a location from the location table.\n";
+  OS << "/// The location table format is: [FuncIdx, FileIdx, LineNo, "
+        "ColumnNo] per entry.\n";
+  OS << "/// Each index refers to a logical location (4 consecutive uint64_t "
+        "values).\n";
+  OS << "/// \\param location_idx The index into the location table\n";
+  OS << "/// \\param locations Pointer to the location table array\n";
+  OS << "/// \\param strings Pointer to the concatenated strings table\n";
+  OS << "static inline InstrumentorLocation\n";
+  OS << "getInstrumentorLocation(uint64_t location_idx, const uint64_t "
+        "*locations, const char *strings) {\n";
+  OS << "  InstrumentorLocation loc = {0};\n\n";
+  OS << "  // Negative one index and null pointers indicate no location "
+        "information\n";
+  OS << "  if (location_idx == ~uint64_t(0) || !locations || !strings)\n";
+  OS << "    return loc;\n\n";
+  OS << "  // Each location uses 4 consecutive entries\n";
+  OS << "  const uint64_t base = location_idx * 4;\n";
+  OS << "  const uint64_t func_idx = locations[base + 0];\n";
+  OS << "  const uint64_t file_idx = locations[base + 1];\n";
+  OS << "  loc.line_no = locations[base + 2];\n";
+  OS << "  loc.column_no = locations[base + 3];\n\n";
+  OS << "  // Strings are null-terminated and concatenated in the string "
+        "table\n";
+  OS << "  loc.function_name = strings + func_idx;\n";
+  OS << "  loc.file_name = strings + file_idx;\n\n";
+  OS << "  return loc;\n";
+  OS << "}\n\n";
 
   // Value pack structures
   OS << "/// Header for each value in a value pack.\n";
@@ -519,6 +592,28 @@ void printRuntimeHeader(const InstrumentationConfig &IConf,
   OS << "  const void *ptr_;\n";
   OS << "  uint32_t num_elements_;\n";
   OS << "  uint64_t max_size_;\n";
+  OS << "};\n\n";
+
+  // LocationWrapper class
+  OS << "/// C++ wrapper for InstrumentorLocation with convenient methods.\n";
+  OS << "class LocationWrapper {\n";
+  OS << "public:\n";
+  OS << "  LocationWrapper(const InstrumentorLocationInfo &info)\n";
+  OS << "      : loc_(getInstrumentorLocation(info.index, info.locations, "
+        "info.strings)) {}\n";
+  OS << "  LocationWrapper(uint64_t idx, const uint64_t *locations, const char "
+        "*strings)\n";
+  OS << "      : loc_(getInstrumentorLocation(idx, locations, strings)) "
+        "{}\n\n";
+  OS << "  const char *function_name() const { return loc_.function_name; }\n";
+  OS << "  const char *file_name() const { return loc_.file_name; }\n";
+  OS << "  uint64_t line_no() const { return loc_.line_no; }\n";
+  OS << "  uint64_t column_no() const { return loc_.column_no; }\n";
+  OS << "  bool is_valid() const { return loc_.function_name == nullptr && "
+        "loc_.file_name == nullptr; }\n\n";
+  OS << "  const InstrumentorLocation &raw() const { return loc_; }\n\n";
+  OS << "private:\n";
+  OS << "  InstrumentorLocation loc_;\n";
   OS << "};\n\n";
 
   // Helper template functions
