@@ -9,7 +9,6 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace clang;
