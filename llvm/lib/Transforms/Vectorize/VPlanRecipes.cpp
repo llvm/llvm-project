@@ -425,27 +425,6 @@ void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-template <unsigned PartOpIdx>
-VPValue *
-VPUnrollPartAccessor<PartOpIdx>::getUnrollPartOperand(const VPUser &U) const {
-  if (U.getNumOperands() == PartOpIdx + 1)
-    return U.getOperand(PartOpIdx);
-  return nullptr;
-}
-
-template <unsigned PartOpIdx>
-unsigned VPUnrollPartAccessor<PartOpIdx>::getUnrollPart(const VPUser &U) const {
-  if (auto *UnrollPartOp = getUnrollPartOperand(U))
-    return cast<VPConstantInt>(UnrollPartOp)->getZExtValue();
-  return 0;
-}
-
-namespace llvm {
-template class VPUnrollPartAccessor<1>;
-template class VPUnrollPartAccessor<2>;
-template class VPUnrollPartAccessor<3>;
-}
-
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, const VPIRMetadata &MD,
                              DebugLoc DL, const Twine &Name)
@@ -4450,25 +4429,6 @@ void VPExpandSCEVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = EXPAND SCEV " << *Expr;
 }
 #endif
-
-void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
-  Value *CanonicalIV = State.get(getOperand(0), /*IsScalar*/ true);
-  Type *STy = CanonicalIV->getType();
-  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  ElementCount VF = State.VF;
-  Value *VStart = VF.isScalar()
-                      ? CanonicalIV
-                      : Builder.CreateVectorSplat(VF, CanonicalIV, "broadcast");
-  Value *VStep = Builder.CreateElementCount(
-      STy, VF.multiplyCoefficientBy(getUnrollPart(*this)));
-  if (VF.isVector()) {
-    VStep = Builder.CreateVectorSplat(VF, VStep);
-    VStep =
-        Builder.CreateAdd(VStep, Builder.CreateStepVector(VStep->getType()));
-  }
-  Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
-  State.set(this, CanonicalVectorIV);
-}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
