@@ -142,9 +142,9 @@ inline void unsafe_stack_setup(void *start, size_t size, size_t guard) {
 }
 
 inline void unsafe_sigalt_stack_setup(void* start, size_t size) {
-  SFS_CHECK((char*)start + size >= (char*)start);
-  void* stack_ptr = (char*)start + size;
-  SFS_CHECK((((size_t)stack_ptr) & (kStackAlign - 1)) == 0);
+  SFS_CHECK((uintptr_t)start + size >= (uintptr_t)start);
+  void* stack_ptr = (void*)((uintptr_t)start + size);
+  SFS_CHECK((((uintptr_t)stack_ptr) & (kStackAlign - 1)) == 0);
 
   unsafe_sigalt_stack_ptr = stack_ptr;
   unsafe_sigalt_stack_start = start;

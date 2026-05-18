@@ -3928,6 +3928,24 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinCountedByRef(TheCall))
       return ExprError();
     break;
+
+  case Builtin::BIfeclearexcept:
+  case Builtin::BIfegetexceptflag:
+  case Builtin::BIferaiseexcept:
+  case Builtin::BIfesetexceptflag:
+  case Builtin::BIfetestexcept:
+  case Builtin::BIfegetround:
+  case Builtin::BIfesetround:
+  case Builtin::BIfegetenv:
+  case Builtin::BIfeholdexcept:
+  case Builtin::BIfesetenv:
+  case Builtin::BIfeupdateenv:
+    if (TheCall->getFPFeaturesInEffect(getLangOpts()).getExceptionMode() ==
+            LangOptions::FPE_Ignore &&
+        isPotentiallyEvaluatedContext()) {
+      Diag(TheCall->getBeginLoc(), diag::warn_fe_access_without_fenv_access)
+          << FDecl->getName() << TheCall->getSourceRange();
+    }
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))
@@ -4216,6 +4234,8 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
 
     Expr *Captured = const_cast<Expr *>(GetArgAt(ArgIdx));
     for (int CapturingParamIdx : Attr->params()) {
+      if (CapturingParamIdx == LifetimeCaptureByAttr::Invalid)
+        continue;
       // lifetime_capture_by(this) case is handled in the lifetimebound expr
       // initialization codepath.
       if (CapturingParamIdx == LifetimeCaptureByAttr::This &&

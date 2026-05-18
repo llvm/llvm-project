@@ -430,6 +430,9 @@ Changes in existing checks
   - Avoid false positives when moving object to a base type then accessing
     non-base members.
 
+  - Avoid false positives when moving object is reinitialized via the base
+    class's ``operator=``.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,
@@ -467,6 +470,11 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
   by fixing a false positive on implicitly generated functions such as
   inherited constructors.
+
+- Improved :doc:`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by adding the
+  `IgnoreMacros` option. When enabled, unscoped ``enum`` declarations within
+  macros are ignored.
 
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following

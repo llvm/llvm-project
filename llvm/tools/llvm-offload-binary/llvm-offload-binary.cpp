@@ -87,8 +87,7 @@ static Error writeFile(StringRef Filename, StringRef Data) {
 }
 
 static Error bundleImages() {
-  SmallVector<char, 1024> BinaryData;
-  raw_svector_ostream OS(BinaryData);
+  SmallVector<OffloadBinary::OffloadingImage> AllImages;
   for (StringRef Image : DeviceImages) {
     BumpPtrAllocator Alloc;
     StringSaver Saver(Alloc);
@@ -123,16 +122,16 @@ static Error bundleImages() {
           ImageBinary.StringData[Key] = Value;
         }
       }
-      llvm::SmallString<0> Buffer = OffloadBinary::write(ImageBinary);
-      if (Buffer.size() % OffloadBinary::getAlignment() != 0)
-        return createStringError(inconvertibleErrorCode(),
-                                 "Offload binary has invalid size alignment");
-      OS << Buffer;
+      AllImages.emplace_back(std::move(ImageBinary));
     }
   }
 
-  if (Error E = writeFile(OutputFile,
-                          StringRef(BinaryData.begin(), BinaryData.size())))
+  SmallString<0> Buffer = OffloadBinary::write(AllImages);
+  if (Buffer.size() % OffloadBinary::getAlignment() != 0)
+    return createStringError(inconvertibleErrorCode(),
+                             "Offload binary has invalid size alignment");
+
+  if (Error E = writeFile(OutputFile, StringRef(Buffer.data(), Buffer.size())))
     return E;
   return Error::success();
 }

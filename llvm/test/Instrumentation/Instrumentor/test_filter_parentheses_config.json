@@ -1,0 +1,58 @@
+{
+  "configuration": {
+    "runtime_prefix": "__test_paren_",
+    "runtime_prefix.description": "The runtime API prefix."
+  },
+  "instruction_post": {
+    "load": {
+      "enabled": true,
+      "filter": "(atomicity_ordering>3 || atomicity_ordering==0) && is_volatile==0",
+      "filter.description": "Skip loads with (high atomicity OR non-atomic) AND non-volatile. This tests parentheses grouping.",
+      "pointer": true,
+      "pointer.description": "The accessed pointer.",
+      "pointer_as": false,
+      "pointer_as.description": "The address space of the accessed pointer.",
+      "value": true,
+      "value.description": "The loaded value.",
+      "value_size": false,
+      "value_size.description": "The size of the loaded value.",
+      "alignment": false,
+      "alignment.description": "The known access alignment.",
+      "value_type_id": false,
+      "value_type_id.description": "The type id of the loaded value.",
+      "atomicity_ordering": true,
+      "atomicity_ordering.description": "The atomicity ordering of the load.",
+      "sync_scope_id": false,
+      "sync_scope_id.description": "The sync scope id of the load.",
+      "is_volatile": true,
+      "is_volatile.description": "Flag indicating a volatile load.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
+    "store": {
+      "enabled": true,
+      "filter": "atomicity_ordering>1 || (is_volatile==1 && atomicity_ordering==0)",
+      "filter.description": "Skip stores with atomicity OR (volatile AND non-atomic). Tests parentheses with different grouping.",
+      "pointer": true,
+      "pointer.description": "The accessed pointer.",
+      "pointer_as": false,
+      "pointer_as.description": "The address space of the accessed pointer.",
+      "value": true,
+      "value.description": "The stored value.",
+      "value_size": false,
+      "value_size.description": "The size of the stored value.",
+      "alignment": false,
+      "alignment.description": "The known access alignment.",
+      "value_type_id": false,
+      "value_type_id.description": "The type id of the stored value.",
+      "atomicity_ordering": true,
+      "atomicity_ordering.description": "The atomicity ordering of the store.",
+      "sync_scope_id": false,
+      "sync_scope_id.description": "The sync scope id of the store.",
+      "is_volatile": true,
+      "is_volatile.description": "Flag indicating a volatile store.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  }
+}
