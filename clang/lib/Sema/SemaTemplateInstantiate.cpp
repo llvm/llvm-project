@@ -2417,8 +2417,16 @@ TemplateInstantiator::TransformDeclRefExpr(DeclRefExpr *E) {
 
   // Handle references to function parameter packs.
   if (VarDecl *PD = dyn_cast<VarDecl>(D))
-    if (PD->isParameterPack())
+    if (PD->isParameterPack()) {
+      if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(PD);
+          PVD && SemaRef.CurrentInstantiationScope &&
+          (SemaRef.inConstraintSubstitution() ||
+           SemaRef.inParameterMappingSubstitution()) &&
+          maybeInstantiateFunctionParameterToScope(PVD))
+        return ExprError();
+
       return TransformFunctionParmPackRefExpr(E, PD);
+    }
 
   return inherited::TransformDeclRefExpr(E);
 }
