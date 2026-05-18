@@ -1996,6 +1996,9 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithSelfAssignment) {
     void target() {
       int tgt = 2;
       int *a = &tgt;
+      int *b = a;
+      a = b;
+      a = a;
       int *s = a;
       POINT(after_use);
     }
@@ -2006,6 +2009,56 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithSelfAssignment) {
 
   EXPECT_TRUE(
       llvm::is_contained(OriginFlowChain, *Helper->getOriginForDecl("a")));
+}
+
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithLifetimeBound) {
+  SetupTest(R"(
+    int* choose(int* a [[clang::lifetimebound]], int* b  [[clang::lifetimebound]]);
+    void target() {
+      int tgta = 1, tgtb = 2;
+      int *a = &tgta;
+      int *b = &tgtb;
+      int *result = choose(a, b);
+      result = choose(result , result);
+      int *s = result;
+      POINT(after_use);
+    }
+  )");
+
+  const llvm::SmallVector<OriginID> OriginFlowChainForTgtA =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgta", "after_use");
+
+  const llvm::SmallVector<OriginID> OriginFlowChainForTgtB =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgtb", "after_use");
+
+  EXPECT_TRUE(llvm::is_contained(OriginFlowChainForTgtA,
+                                 *Helper->getOriginForDecl("a")));
+  EXPECT_FALSE(llvm::is_contained(OriginFlowChainForTgtA,
+                                  *Helper->getOriginForDecl("b")));
+  EXPECT_TRUE(llvm::is_contained(OriginFlowChainForTgtB,
+                                 *Helper->getOriginForDecl("b")));
+  EXPECT_FALSE(llvm::is_contained(OriginFlowChainForTgtB,
+                                  *Helper->getOriginForDecl("a")));
+}
+
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithMultiAssignInSameStmt) {
+  SetupTest(R"(
+    void target() {
+      int tgt = 2;
+      int *a, *b, *c;
+      a = b = c = &tgt;
+      int *s = a;
+      POINT(after_use);
+    }
+  )");
+
+// FIXME: Handle chained assignments. The current implementation lacks this
+//  support, causing the assertion failure.
+//  https://github.com/llvm/llvm-project/pull/196075#discussion_r3264392605
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(Helper->buildOriginFlowChainInOneBlock("s", "a", "after_use"),
+               "TargetLoan must be present in the StartOID at the StartPoint");
+#endif
 }
 } // anonymous namespace
 } // namespace clang::lifetimes::internal
