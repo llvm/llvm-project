@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___ALGORITHM_COUNT_H
 #define _LIBCPP___ALGORITHM_COUNT_H
 
+#include <__algorithm/for_each_segment.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/min.h>
 #include <__bit/invert_if.h>
@@ -18,6 +19,7 @@
 #include <__functional/identity.h>
 #include <__fwd/bit_reference.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/segmented_iterator.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 
@@ -40,6 +42,25 @@ __count(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
       ++__r;
   return __r;
 }
+
+// segmented iterator implementation
+#ifndef _LIBCPP_CXX03_LANG
+template <class _AlgPolicy,
+          class _SegmentedIterator,
+          class _Tp,
+          class _Proj,
+          __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+typename _IterOps<_AlgPolicy>::template __difference_type<_SegmentedIterator>
+__count(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
+  typename _IterOps<_AlgPolicy>::template __difference_type<_SegmentedIterator> __r(0);
+  using __local_iterator_t = typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator;
+  std::__for_each_segment(__first, __last, [&](__local_iterator_t __lfirst, __local_iterator_t __llast) {
+    __r += std::__count<_AlgPolicy>(__lfirst, __llast, __value, __proj);
+  });
+  return __r;
+}
+#endif // _LIBCPP_CXX03_LANG
 
 // __bit_iterator implementation
 template <bool _ToCount, class _Cp, bool _IsConst>
