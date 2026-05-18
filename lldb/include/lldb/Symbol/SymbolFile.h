@@ -136,23 +136,7 @@ public:
   virtual bool GetLoadDebugInfoEnabled() { return true; }
 
   /// Get the separate debug info files for this module.
-  ///
-  /// Returns a list of module specs for the separate debug info files
-  /// associated with this module. Separate debug info files are
-  /// considered any files that are referenced from debug info but
-  /// aren't the actual object file that the symbol file parses.
-  ///
-  /// If this module uses split DWARF it will return a DWARF package
-  /// (.dwp) if it exists, otherwise it will return a list of all
-  /// .dwo files.
-  ///
-  /// If this module uses DWARF in .o files (Darwin), it will return
-  /// a list of all .o files if there is no dSYM file. If a dSYM file
-  /// is present, no specifications will be returned since the debug
-  /// info is self-contained in the dSYM bundle.
-  ///
-  /// An empty list will be returned if there are no separate debug
-  /// info files for this module.
+  /// See SBModule::GetSeparateDebugInfoFiles for a detailled description.
   virtual ModuleSpecList GetSeparateDebugInfoModuleSpecs() { return {}; }
 
   /// Specify debug info should be loaded.
