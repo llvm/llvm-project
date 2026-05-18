@@ -976,6 +976,14 @@ static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
     gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
 }
 
+static void setLinkageForFunction(cir::FuncOp &func, const NamedDecl *nd) {
+  // Mirrors CodeGenModule::setLinkageForGV for function declarations.
+  LinkageInfo lv = nd->getLinkageAndVisibility();
+  if (isExternallyVisible(lv.getLinkage()) &&
+      (nd->hasAttr<WeakAttr>() || nd->isWeakImported()))
+    func.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+}
+
 static llvm::SmallVector<int64_t> indexesOfArrayAttr(mlir::ArrayAttr indexes) {
   llvm::SmallVector<int64_t> inds;
   for (mlir::Attribute i : indexes) {
@@ -2992,6 +3000,26 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
+
+  // Mirrors setLinkageForGV in CodeGenModule::SetFunctionAttributes.
+  setLinkageForFunction(func, funcDecl);
+
+  // GetGVALinkageForFunction requires a definition (or willHaveBody) and
+  // asserts via isInlineDefinitionExternallyVisible on bare declarations.
+  const bool isDeclWithoutBody =
+      func.isDeclaration() && !funcDecl->doesThisDeclarationHaveABody();
+  if (!isIncompleteFunction && !isDeclWithoutBody) {
+    // TODO(cir): This needs a lot of work to better match CodeGen. That
+    // ultimately ends up in setGlobalVisibility, which already has the linkage
+    // of the LLVM GV (corresponding to our FuncOp) computed, so it doesn't have
+    // to recompute it here. This is a minimal fix for now.
+    if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
+      const Decl *decl = globalDecl.getDecl();
+      func.setGlobalVisibility(
+          getGlobalVisibilityAttrFromDecl(decl).getValue());
+    }
+  }
+
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
   if (funcDecl->isInlineBuiltinDeclaration()) {
