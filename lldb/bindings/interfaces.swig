@@ -56,6 +56,7 @@
 %include "./interface/SBPlatformExtensions.i"
 %include "./interface/SBProcessDocstrings.i"
 %include "./interface/SBProcessInfoDocstrings.i"
+%include "./interface/SBProcessInfoExtensions.i"
 %include "./interface/SBProgressDocstrings.i"
 %include "./interface/SBQueueDocstrings.i"
 %include "./interface/SBQueueItemDocstrings.i"
