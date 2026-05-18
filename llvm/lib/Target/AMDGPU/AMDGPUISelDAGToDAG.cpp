@@ -378,7 +378,7 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
     case ISD::BUILD_VECTOR:
       // TODO: Match load d16 from shl (extload:i16), 16
       if (Subtarget->d16PreservesUnusedBits())
-          MadeChange |= matchLoadD16FromBuildVector(N);
+        MadeChange |= matchLoadD16FromBuildVector(N);
 
       break;
     case ISD::ZERO_EXTEND:
