@@ -13266,7 +13266,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     return R;
 
   EVT ResultVT = N->getValueType(0);
-  if (ResultVT.isVector()) 
+  if (ResultVT.isVector())
     if (SDValue R = castIntVectorSelect(N, DAG, TLI, N0, N1, N2))
       return R;
 
