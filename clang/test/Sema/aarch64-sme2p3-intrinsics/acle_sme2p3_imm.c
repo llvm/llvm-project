@@ -10,12 +10,12 @@ void test_range_0_0(void) __arm_streaming __arm_in("zt0") {
 }
 
 void test_range_0_1(void) __arm_streaming {
-  svluti6_lane_s16_x4(svcreate2_s16(svundef_s16(), svundef_s16()), // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
-                      svcreate2_u8(svundef_u8(), svundef_u8()), -1);
-  svluti6_lane_u16_x4(svcreate2_u16(svundef_u16(), svundef_u16()), // expected-error {{argument value 2 is outside the valid range [0, 1]}}
-                      svcreate2_u8(svundef_u8(), svundef_u8()), 2);
-  svluti6_lane_f16_x4(svcreate2_f16(svundef_f16(), svundef_f16()), // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
-                      svcreate2_u8(svundef_u8(), svundef_u8()), -1);
-  svluti6_lane_bf16_x4(svcreate2_bf16(svundef_bf16(), svundef_bf16()), // expected-error {{argument value 2 is outside the valid range [0, 1]}}
-                       svcreate2_u8(svundef_u8(), svundef_u8()), 2);
+  svluti6_lane_s16_x4_s16_x2_u8_x2(svcreate2_s16(svundef_s16(), svundef_s16()), // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+                                   svcreate2_u8(svundef_u8(), svundef_u8()), -1);
+  svluti6_lane_u16_x4_u16_x2_u8_x2(svcreate2_u16(svundef_u16(), svundef_u16()), // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+                                   svcreate2_u8(svundef_u8(), svundef_u8()), 2);
+  svluti6_lane_f16_x4_f16_x2_u8_x3(svcreate2_f16(svundef_f16(), svundef_f16()), // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+                                   svcreate3_u8(svundef_u8(), svundef_u8(), svundef_u8()), -1);
+  svluti6_lane_bf16_x4_bf16_x2_u8_x3(svcreate2_bf16(svundef_bf16(), svundef_bf16()), // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+                                     svcreate3_u8(svundef_u8(), svundef_u8(), svundef_u8()), 2);
 }

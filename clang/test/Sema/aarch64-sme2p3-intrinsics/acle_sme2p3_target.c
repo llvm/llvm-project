@@ -16,5 +16,5 @@ svint8_t has_sme2p3_zt(svuint8_t indices) __arm_streaming __arm_in("zt0") {
 __attribute__((target("sme2p3,bf16")))
 svbfloat16x4_t has_sme2p3_lane(svbfloat16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return svluti6_lane_bf16_x4(table, indices, 0);
+  return svluti6_lane_bf16_x4_bf16_x2_u8_x2(table, indices, 0);
 }

@@ -418,7 +418,8 @@ public:
   void EmitMultiVectorLutiLane(SDNode *Node, unsigned NumOutVecs, unsigned Opc,
                                ArrayRef<SDValue> Ops);
   void SelectMultiVectorLutiLaneTuple(SDNode *Node, unsigned NumOutVecs,
-                                      unsigned Opc, uint32_t MaxImm);
+                                      unsigned Opc, uint32_t MaxImm,
+                                      unsigned NumIndexVecs);
 
   void SelectMultiVectorLuti(SDNode *Node, unsigned NumOutVecs, unsigned Opc,
                              unsigned NumInVecs);
@@ -2292,15 +2293,18 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLane(SDNode *Node,
 void AArch64DAGToDAGISel::SelectMultiVectorLutiLaneTuple(SDNode *Node,
                                                          unsigned NumOutVecs,
                                                          unsigned Opc,
-                                                         uint32_t MaxImm) {
-  auto *Imm = dyn_cast<ConstantSDNode>(Node->getOperand(5));
+                                                         uint32_t MaxImm,
+                                                         unsigned NumIndexVecs) {
+  unsigned ImmOp = 3 + NumIndexVecs;
+  auto *Imm = dyn_cast<ConstantSDNode>(Node->getOperand(ImmOp));
   if (Imm && Imm->getZExtValue() > MaxImm)
     return;
 
+  SmallVector<SDValue, 3> IndexRegs(Node->ops().slice(3, NumIndexVecs));
   SmallVector<SDValue, 4> Ops = {
       createZTuple({Node->getOperand(1), Node->getOperand(2)}),
-      createZTuple({Node->getOperand(3), Node->getOperand(4)}),
-      Node->getOperand(5),
+      createZTuple(IndexRegs),
+      Node->getOperand(ImmOp),
   };
   EmitMultiVectorLutiLane(Node, NumOutVecs, Opc, Ops);
 }
@@ -6119,7 +6123,12 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::aarch64_sme_luti6_lane_x4:
       if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
               Node->getValueType(0), {0, AArch64::LUTI6_4Z2Z2ZI, 0}))
-        SelectMultiVectorLutiLaneTuple(Node, 4, Opc, 1);
+        SelectMultiVectorLutiLaneTuple(Node, 4, Opc, 1, 2);
+      return;
+    case Intrinsic::aarch64_sme_luti6_lane_x4_x3:
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0), {0, AArch64::LUTI6_4Z2Z3ZI, 0}))
+        SelectMultiVectorLutiLaneTuple(Node, 4, Opc, 1, 3);
       return;
     case Intrinsic::aarch64_sve_urshl_single_x2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(

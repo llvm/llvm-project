@@ -29,7 +29,7 @@
 //
 svint16x4_t test_svluti6_lane_s16_x4(svint16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return SVE_ACLE_FUNC(svluti6_lane,_s16_x4,_s16_x2,)(table, indices, 1);
+  return SVE_ACLE_FUNC(svluti6_lane,_s16_x4,_s16_x2_u8_x2,)(table, indices, 1);
 }
 
 // CHECK-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @test_svluti6_lane_u16_x4(
@@ -46,7 +46,7 @@ svint16x4_t test_svluti6_lane_s16_x4(svint16x2_t table, svuint8x2_t indices)
 //
 svuint16x4_t test_svluti6_lane_u16_x4(svuint16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return SVE_ACLE_FUNC(svluti6_lane,_u16_x4,_u16_x2,)(table, indices, 0);
+  return SVE_ACLE_FUNC(svluti6_lane,_u16_x4,_u16_x2_u8_x2,)(table, indices, 0);
 }
 
 // CHECK-LABEL: define dso_local { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @test_svluti6_lane_f16_x4(
@@ -63,7 +63,7 @@ svuint16x4_t test_svluti6_lane_u16_x4(svuint16x2_t table, svuint8x2_t indices)
 //
 svfloat16x4_t test_svluti6_lane_f16_x4(svfloat16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return SVE_ACLE_FUNC(svluti6_lane,_f16_x4,_f16_x2,)(table, indices, 1);
+  return SVE_ACLE_FUNC(svluti6_lane,_f16_x4,_f16_x2_u8_x2,)(table, indices, 1);
 }
 
 // CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_svluti6_lane_bf16_x4(
@@ -80,7 +80,51 @@ svfloat16x4_t test_svluti6_lane_f16_x4(svfloat16x2_t table, svuint8x2_t indices)
 //
 svbfloat16x4_t test_svluti6_lane_bf16_x4(svbfloat16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return SVE_ACLE_FUNC(svluti6_lane,_bf16_x4,_bf16_x2,)(table, indices, 0);
+  return SVE_ACLE_FUNC(svluti6_lane,_bf16_x4,_bf16_x2_u8_x2,)(table, indices, 0);
+}
+
+// CHECK-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @test_svluti6_lane_s16_x4_u8_x3(
+// CHECK-SAME: <vscale x 8 x i16> [[TABLE_COERCE0:%.*]], <vscale x 8 x i16> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES_COERCE0:%.*]], <vscale x 16 x i8> [[INDICES_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES_COERCE2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti6.lane.x4.x3.nxv8i16(<vscale x 8 x i16> [[TABLE_COERCE0]], <vscale x 8 x i16> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES_COERCE0]], <vscale x 16 x i8> [[INDICES_COERCE1]], <vscale x 16 x i8> [[INDICES_COERCE2]], i32 1)
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
+//
+svint16x4_t test_svluti6_lane_s16_x4_u8_x3(svint16x2_t table, svuint8x3_t indices)
+    __arm_streaming {
+  return SVE_ACLE_FUNC(svluti6_lane,_s16_x4,_s16_x2_u8_x3,)(table, indices, 1);
+}
+
+// CHECK-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @test_svluti6_lane_u16_x4_u8_x3(
+// CHECK-SAME: <vscale x 8 x i16> [[TABLE_COERCE0:%.*]], <vscale x 8 x i16> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES_COERCE0:%.*]], <vscale x 16 x i8> [[INDICES_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES_COERCE2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti6.lane.x4.x3.nxv8i16(<vscale x 8 x i16> [[TABLE_COERCE0]], <vscale x 8 x i16> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES_COERCE0]], <vscale x 16 x i8> [[INDICES_COERCE1]], <vscale x 16 x i8> [[INDICES_COERCE2]], i32 0)
+// CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
+//
+svuint16x4_t test_svluti6_lane_u16_x4_u8_x3(svuint16x2_t table, svuint8x3_t indices)
+    __arm_streaming {
+  return SVE_ACLE_FUNC(svluti6_lane,_u16_x4,_u16_x2_u8_x3,)(table, indices, 0);
+}
+
+// CHECK-LABEL: define dso_local { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @test_svluti6_lane_f16_x4_u8_x3(
+// CHECK-SAME: <vscale x 8 x half> [[TABLE_COERCE0:%.*]], <vscale x 8 x half> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES_COERCE0:%.*]], <vscale x 16 x i8> [[INDICES_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES_COERCE2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.luti6.lane.x4.x3.nxv8f16(<vscale x 8 x half> [[TABLE_COERCE0]], <vscale x 8 x half> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES_COERCE0]], <vscale x 16 x i8> [[INDICES_COERCE1]], <vscale x 16 x i8> [[INDICES_COERCE2]], i32 1)
+// CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
+//
+svfloat16x4_t test_svluti6_lane_f16_x4_u8_x3(svfloat16x2_t table, svuint8x3_t indices)
+    __arm_streaming {
+  return SVE_ACLE_FUNC(svluti6_lane,_f16_x4,_f16_x2_u8_x3,)(table, indices, 1);
+}
+
+// CHECK-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_svluti6_lane_bf16_x4_u8_x3(
+// CHECK-SAME: <vscale x 8 x bfloat> [[TABLE_COERCE0:%.*]], <vscale x 8 x bfloat> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES_COERCE0:%.*]], <vscale x 16 x i8> [[INDICES_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES_COERCE2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.luti6.lane.x4.x3.nxv8bf16(<vscale x 8 x bfloat> [[TABLE_COERCE0]], <vscale x 8 x bfloat> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES_COERCE0]], <vscale x 16 x i8> [[INDICES_COERCE1]], <vscale x 16 x i8> [[INDICES_COERCE2]], i32 0)
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]]
+//
+svbfloat16x4_t test_svluti6_lane_bf16_x4_u8_x3(svbfloat16x2_t table, svuint8x3_t indices)
+    __arm_streaming {
+  return SVE_ACLE_FUNC(svluti6_lane,_bf16_x4,_bf16_x2_u8_x3,)(table, indices, 0);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svluti6_zt_s8(
