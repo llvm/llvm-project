@@ -171,7 +171,6 @@ struct IndexedAccessOpRewriter final
     if (!op.hasInboundsIndices())
       return rewriter.notifyMatchFailure(op, "indices may be out of bounds");
 
-
     // If the access already has only zeros as indices there is nothing
     // to do.
     if (hasAllZeroIndices(op.getIndices()))
