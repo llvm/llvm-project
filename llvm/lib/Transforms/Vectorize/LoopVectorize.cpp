@@ -750,7 +750,7 @@ void reportVectorizationFailure(const StringRef DebugMsg,
   LLVM_DEBUG(debugVectorizationMessage("Not vectorizing: ", DebugMsg, I));
   LoopVectorizeHints Hints(TheLoop, false /* doesn't matter */, *ORE);
   ORE->emit(
-      createLVAnalysis(Hints.vectorizeAnalysisPassName(), ORETag, TheLoop, I)
+      createLVAnalysis(LV_NAME, ORETag, TheLoop, I)
       << "loop not vectorized: " << OREMsg);
 }
 
@@ -759,7 +759,7 @@ void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
                              const Loop *TheLoop, Instruction *I, DebugLoc DL) {
   LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
   LoopVectorizeHints Hints(TheLoop, false /* doesn't matter */, *ORE);
-  ORE->emit(createLVAnalysis(Hints.vectorizeAnalysisPassName(), ORETag, TheLoop,
+  ORE->emit(createLVAnalysis(LV_NAME, ORETag, TheLoop,
                              I, DL)
             << Msg);
 }
@@ -8305,11 +8305,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   IC = UserIC > 0 ? UserIC : IC;
 
   // Emit diagnostic messages, if any.
-  const char *VAPassName = Hints.vectorizeAnalysisPassName();
   if (!VectorizeLoop && !InterleaveLoop) {
     // Do not vectorize or interleaving the loop.
     ORE->emit([&]() {
-      return OptimizationRemarkMissed(VAPassName, VecDiagMsg.first,
+      return OptimizationRemarkMissed(LV_NAME, VecDiagMsg.first,
                                       L->getStartLoc(), L->getHeader())
              << VecDiagMsg.second;
     });
@@ -8324,7 +8323,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (!VectorizeLoop && InterleaveLoop) {
     LLVM_DEBUG(dbgs() << "LV: Interleave Count is " << IC << '\n');
     ORE->emit([&]() {
-      return OptimizationRemarkAnalysis(VAPassName, VecDiagMsg.first,
+      return OptimizationRemarkAnalysis(LV_NAME, VecDiagMsg.first,
                                         L->getStartLoc(), L->getHeader())
              << VecDiagMsg.second;
     });

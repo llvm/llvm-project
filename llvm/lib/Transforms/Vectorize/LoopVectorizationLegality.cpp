@@ -214,7 +214,7 @@ bool LoopVectorizeHints::allowVectorization(
     // vectorize.disable to be used without disabling the pass and errors
     // to differentiate between disabled vectorization and a width of 1.
     ORE.emit([&]() {
-      return OptimizationRemarkAnalysis(vectorizeAnalysisPassName(),
+      return OptimizationRemarkAnalysis(LV_NAME,
                                         "AllDisabled", L->getStartLoc(),
                                         L->getHeader())
              << "loop not vectorized: vectorization and interleaving are "
@@ -250,10 +250,6 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
     }
     return R;
   });
-}
-
-const char *LoopVectorizeHints::vectorizeAnalysisPassName() const {
-  return LV_NAME;
 }
 
 bool LoopVectorizeHints::allowReordering() const {
@@ -1221,8 +1217,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
   if (LAR) {
     ORE->emit([&]() {
-      return OptimizationRemarkAnalysis(Hints->vectorizeAnalysisPassName(),
-                                        "loop not vectorized: ", *LAR);
+      return OptimizationRemarkAnalysis(LV_NAME, "loop not vectorized: ", *LAR);
     });
   }
 
