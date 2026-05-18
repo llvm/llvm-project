@@ -484,7 +484,6 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   // Iteratively lower each constant element of the array.
   if (auto arrayAttr = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts())) {
     for (auto [idx, elt] : llvm::enumerate(arrayAttr)) {
-      mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
       mlir::Value init = visit(elt);
       result =
           mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);
@@ -2496,6 +2495,25 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
                          cir::ConstComplexAttr, cir::GlobalViewAttr,
                          cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
                          cir::VTableAttr, cir::ZeroAttr>(init.value())) {
+      if (auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(init.value())) {
+        if (!hasTrailingZeros(constArr)) {
+          mlir::Type elTy = constArr.getType();
+          while (auto arrTy = mlir::dyn_cast<cir::ArrayType>(elTy))
+            elTy = arrTy.getElementType();
+          if (mlir::isa<cir::PointerType>(elTy)) {
+            mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+            if (std::optional<mlir::Attribute> bulkInit =
+                    lowerConstArrayAttr(constArr, typeConverter, module)) {
+              mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
+              rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+                  op, llvmType, isConst, linkage, symbol, bulkInit.value(),
+                  alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr,
+                  attributes);
+              return mlir::success();
+            }
+          }
+        }
+      }
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.

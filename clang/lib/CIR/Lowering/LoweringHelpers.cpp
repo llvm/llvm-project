@@ -12,6 +12,8 @@
 
 #include "clang/CIR/LoweringHelpers.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/SymbolTable.h"
 #include "clang/CIR/MissingFeatures.h"
 
 mlir::DenseElementsAttr
@@ -115,9 +117,71 @@ mlir::DenseElementsAttr convertToDenseElementsAttr(
       llvm::ArrayRef(values));
 }
 
+/// Return true when \p gv can be lowered to a \c FlatSymbolRefAttr leaf without
+/// addrspacecast or bitcast (mirrors \c CIRAttrToValue::visitCirAttr).
+static bool globalViewMatchesPointerLeaf(cir::GlobalViewAttr gv,
+                                         mlir::ModuleOp moduleOp,
+                                         const mlir::TypeConverter *converter) {
+  if (gv.getIndices() || mlir::isa<cir::IntType, cir::VPtrType>(gv.getType()))
+    return false;
+
+  auto ptrTy = mlir::dyn_cast<cir::PointerType>(gv.getType());
+  if (!ptrTy)
+    return false;
+
+  unsigned sourceAddrSpace = 0;
+  mlir::Type sourceType;
+  auto sourceSymbol =
+      mlir::SymbolTable::lookupSymbolIn(moduleOp, gv.getSymbol());
+  if (auto llvmSymbol = mlir::dyn_cast<mlir::LLVM::GlobalOp>(sourceSymbol)) {
+    sourceType = llvmSymbol.getType();
+    sourceAddrSpace = llvmSymbol.getAddrSpace();
+  } else if (auto cirSymbol = mlir::dyn_cast<cir::GlobalOp>(sourceSymbol)) {
+    sourceType = converter->convertType(cirSymbol.getSymType());
+    if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+            cirSymbol.getAddrSpaceAttr()))
+      sourceAddrSpace = targetAS.getValue();
+  } else {
+    return false;
+  }
+
+  auto llvmDstTy = converter->convertType<mlir::LLVM::LLVMPointerType>(ptrTy);
+  if (llvmDstTy.getAddressSpace() != sourceAddrSpace)
+    return false;
+
+  mlir::Type llvmEltTy = converter->convertType(ptrTy.getPointee());
+  if (llvmEltTy == sourceType)
+    return true;
+  if (auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(sourceType))
+    return llvmEltTy == arrTy.getElementType();
+  return false;
+}
+
+/// Lower a single pointer-element of a \c cir.const_array to an LLVM-dialect
+/// constant leaf suitable for a bulk \c llvm.mlir.constant.  Only handles
+/// address-of-global without indices and null pointers; indexed global views
+/// must use the per-element \c llvm.insertvalue fallback.
+static std::optional<mlir::Attribute>
+lowerPointerElementAttr(mlir::Attribute elt, mlir::MLIRContext *ctx,
+                        mlir::ModuleOp moduleOp,
+                        const mlir::TypeConverter *converter) {
+  if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(elt)) {
+    if (!moduleOp || !globalViewMatchesPointerLeaf(gv, moduleOp, converter))
+      return std::nullopt;
+    return gv.getSymbol();
+  }
+  if (auto nullPtr = mlir::dyn_cast<cir::ConstPtrAttr>(elt)) {
+    if (nullPtr.isNullValue())
+      return mlir::LLVM::ZeroAttr::get(ctx);
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
 std::optional<mlir::Attribute>
 lowerConstArrayAttr(cir::ConstArrayAttr constArr,
-                    const mlir::TypeConverter *converter) {
+                    const mlir::TypeConverter *converter,
+                    mlir::ModuleOp moduleOp) {
   // Ensure ConstArrayAttr has a type.
   const auto typedConstArr = mlir::cast<mlir::TypedAttr>(constArr);
 
@@ -132,6 +196,13 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
     type = arrayType.getElementType();
   }
 
+  if (auto eltsArr = mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts())) {
+    for (mlir::Attribute elt : eltsArr) {
+      if (mlir::isa<cir::PoisonAttr>(elt))
+        return std::nullopt;
+    }
+  }
+
   if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
     return convertStringAttrToDenseElementsAttr(constArr,
                                                 converter->convertType(type));
@@ -142,6 +213,23 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
   if (mlir::isa<cir::FPTypeInterface>(type))
     return convertToDenseElementsAttr<cir::FPAttr, mlir::APFloat>(
         constArr, dims, type, converter->convertType(type));
+
+  if (mlir::isa<cir::PointerType>(type)) {
+    auto eltsArr = mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts());
+    if (!eltsArr)
+      return std::nullopt;
+    llvm::SmallVector<mlir::Attribute> lowered;
+    lowered.reserve(eltsArr.size());
+    mlir::MLIRContext *ctx = constArr.getContext();
+    for (mlir::Attribute elt : eltsArr) {
+      std::optional<mlir::Attribute> llvmElt =
+          lowerPointerElementAttr(elt, ctx, moduleOp, converter);
+      if (!llvmElt)
+        return std::nullopt;
+      lowered.push_back(*llvmElt);
+    }
+    return mlir::ArrayAttr::get(ctx, lowered);
+  }
 
   return std::nullopt;
 }
