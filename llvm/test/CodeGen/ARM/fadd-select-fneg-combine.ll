@@ -50,7 +50,8 @@ define <2 x float> @fadd_select_fneg_fneg_v2f32(i32 %arg0, <2 x float> %x, <2 x 
 ; CHECK-NEXT:    add r0, sp, #8
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    b .LBB2_3
-; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:  .LBB2_2: @ %select.true.sink
+; CHECK-NEXT:    vldr d3, [sp]
 ; CHECK-NEXT:    vmov d2, r2, r3
 ; CHECK-NEXT:  .LBB2_3: @ %select.end
 ; CHECK-NEXT:    vneg.f32 q1, q1
@@ -77,7 +78,8 @@ define <2 x half> @fadd_select_fneg_fneg_v2f16(i32 %arg0, <2 x half> %x, <2 x ha
 ; CHECK-NEXT:    add r0, sp, #8
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    b .LBB3_3
-; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:  .LBB3_2: @ %select.true.sink
+; CHECK-NEXT:    vldr d3, [sp]
 ; CHECK-NEXT:    vmov d2, r2, r3
 ; CHECK-NEXT:  .LBB3_3: @ %select.end
 ; CHECK-NEXT:    vneg.f16 q1, q1
