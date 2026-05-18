@@ -366,8 +366,7 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
 void SPIRVModuleAnalysis::visitFunPtrUse(
     Register OpReg, const MachineOperand *FunPtrOp,
     InstrGRegsMap &SignatureToGReg,
-    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
-    const MachineInstr &MI) {
+    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF) {
   const MachineOperand *OpFunDef = GR->getFunctionDefinitionByUse(FunPtrOp);
   assert(OpFunDef && OpFunDef->isReg());
   // find the actual function definition and number it globally in advance
@@ -405,7 +404,7 @@ void SPIRVModuleAnalysis::visitDecl(
     if (Opcode == SPIRV::OpConstantFunctionPointerINTEL &&
         MRI.getRegClass(OpReg) == &SPIRV::pIDRegClass) {
       visitFunPtrUse(OpReg, &MI.getOperand(2), SignatureToGReg, GlobalToGReg,
-                     MF, MI);
+                     MF);
       continue;
     }
     // Skip already processed instructions
