@@ -189,8 +189,8 @@ exit:
   ret void
 }
 
-; for (i = 0; i < 10; i++)
-;   for (j = 0; j < 10; j++)
+; for (i = 0; i < 42; i++)
+;   for (j = 0; j < 42; j++)
 ;     A[100*i + j] = B[100*i + j] + C[i + 100*j] + C[i + 99*j] + C[i + 98*j];
 ;
 ; The above loop should NOT be interchanged in terms of locality of reference.
@@ -225,15 +225,15 @@ define void @unprofitable1(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
 ; CHECK-NEXT:    [[SUM_2:%.*]] = add i8 [[SUM_1]], [[VAL_C2]]
 ; CHECK-NEXT:    store i8 [[SUM_2]], ptr [[GEP_A]], align 1
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 10
+; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 42
 ; CHECK-NEXT:    br label %[[LOOP_I_LATCH]]
 ; CHECK:       [[LOOP_J_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 42
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP_J]]
 ; CHECK:       [[LOOP_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 10
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 42
 ; CHECK-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -261,12 +261,12 @@ loop.j:
   %sum.2 = add i8 %sum.1, %val.C2
   store i8 %sum.2, ptr %gep.A
   %j.inc = add i64 %j, 1
-  %ec.j = icmp eq i64 %j.inc, 10
+  %ec.j = icmp eq i64 %j.inc, 42
   br i1 %ec.j, label %loop.i.latch, label %loop.j
 
 loop.i.latch:
   %i.inc = add i64 %i, 1
-  %ec.i = icmp eq i64 %i.inc, 10
+  %ec.i = icmp eq i64 %i.inc, 42
   br i1 %ec.i, label %exit, label %loop.i.header
 
 exit:
