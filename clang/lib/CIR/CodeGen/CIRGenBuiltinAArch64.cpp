@@ -328,7 +328,6 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vcvtd_n_f64_u64:
   case NEON::BI__builtin_neon_vcvtd_n_s64_f64:
   case NEON::BI__builtin_neon_vcvtd_n_u64_f64:
-<<<<<<< HEAD
   case NEON::BI__builtin_neon_vaddlv_s32:
   case NEON::BI__builtin_neon_vaddlv_u32:
   case NEON::BI__builtin_neon_vaddlvq_s32:
@@ -355,11 +354,9 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vrecpxh_f16:
   case NEON::BI__builtin_neon_vrsqrteh_f16:
   case NEON::BI__builtin_neon_vrsqrtsh_f16:
-=======
   case NEON::BI__builtin_neon_vqrshrund_n_s64:
   case NEON::BI__builtin_neon_vqrshrunh_n_s16:
   case NEON::BI__builtin_neon_vqrshruns_n_s32:
->>>>>>> 0e110f35d9cb (added more test cases and vqrshrn_n_v impl)
     return emitNeonCall(cgf.cgm, cgf.getBuilder(),
                         {cgf.convertType(expr->getArg(0)->getType())}, ops,
                         llvmIntrName, cgf.convertType(expr->getType()), loc);
@@ -2703,7 +2700,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
-
   case NEON::BI__builtin_neon_vqrshrn_n_v: {
     cir::VectorType argTy = builder.getExtendedOrTruncatedElementVectorType(
         ty, /*isExtended=*/true, /*isSigned=*/!usgn);
@@ -2712,7 +2708,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return emitNeonCall(cgm, builder, {argTy, sInt32Ty}, ops, intrName, ty,
                         loc);
   }
-
   case NEON::BI__builtin_neon_vqrshrun_n_v: {
     cir::VectorType argTy =
         builder.getExtendedOrTruncatedElementVectorType(ty, true, true);
