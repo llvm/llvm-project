@@ -5707,7 +5707,9 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
   for (unsigned J = 0; J + 1 < MD->getNumOperands(); J += 2) {
     auto *OpNoCI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(J));
     Check(OpNoCI,
-          "!mem.cache_hint hint node must consist of (operand_no, hint_node) pairs", MD);
+          "!mem.cache_hint hint node must consist of (operand_no, hint_node) "
+          "pairs",
+          MD);
 
     Check(OpNoCI->getValue().isNonNegative(),
           "!mem.cache_hint operand_no must be non-negative", MD);
@@ -5725,7 +5727,10 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
           "!mem.cache_hint contains duplicate operand_no", MD);
 
     const auto *Node = dyn_cast<MDNode>(MD->getOperand(J + 1));
-    Check(Node, "!mem.cache_hint hint node must consist of (operand_no, hint_node) pairs", MD);
+    Check(Node,
+          "!mem.cache_hint hint node must consist of (operand_no, hint_node) "
+          "pairs",
+          MD);
 
     Check(Node->getNumOperands() % 2 == 0,
           "!mem.cache_hint hint node must have even number of operands "
