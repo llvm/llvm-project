@@ -131,7 +131,9 @@ auto f7 = [] {
 
 struct A {
   void f() {
-    struct B { struct C; };
+    struct B { struct C; }; // #B
     { struct B::C {}; }
+    // expected-error@-1 {{nested local class 'C' must be defined in the same block scope as its parent class 'B'}}
+    //   expected-note@#B {{'B' defined here}}
   }
 };
