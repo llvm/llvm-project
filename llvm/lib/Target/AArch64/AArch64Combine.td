@@ -11,12 +11,6 @@
 
 include "llvm/Target/GlobalISel/Combine.td"
 
-def fconstant_to_constant : GICombineRule<
-  (defs root:$root),
-  (match (G_FCONSTANT $dst, $src):$root,
-         [{ return matchFConstantToConstant(*${root}, MRI); }]),
-  (apply [{ applyFConstantToConstant(*${root}); }])>;
-
 def icmp_redundant_trunc : GICombineRule<
   (defs root:$root, register_matchinfo:$matchinfo),
   (match (G_ICMP $dst, $tst, $src1, $src2):$root,
@@ -173,7 +167,7 @@ def form_duplane : GICombineRule <
 >;
 
 // Clean up G_UNMERGE(G_DUPLANE16) -> G_DUPLANE16
-class unmerge_duplane<Instruction Op> : GICombineRule <
+class unmerge_duplane<Instruction Op> : GICombineRule<
   (defs root:$root),
   (match (Op $a, $src, $c),
          (G_UNMERGE_VALUES $d1, $d2, $a):$root,
@@ -184,8 +178,22 @@ def unmerge_duplane8 : unmerge_duplane<G_DUPLANE8>;
 def unmerge_duplane16 : unmerge_duplane<G_DUPLANE16>;
 def unmerge_duplane32 : unmerge_duplane<G_DUPLANE32>;
 // G_DUPLANE64 is not included as the result in scalar.
+
+// G_EXTRACT_SUBVECTOR(G_DUPLANE16) -> G_DUPLANE16
+class extract_duplane<Instruction Op> : GICombineRule<
+  (defs root:$root),
+  (match (Op $a, $src, $c),
+         (G_EXTRACT_SUBVECTOR $d1, $a, $l):$root,
+         [{ return MRI.getType(${d1}.getReg()).getSizeInBits() == 64; }]),
+  (apply (Op $d1, $src, $c))
+>;
+def extract_duplane8 : extract_duplane<G_DUPLANE8>;
+def extract_duplane16 : extract_duplane<G_DUPLANE16>;
+def extract_duplane32 : extract_duplane<G_DUPLANE32>;
+
 def unmerge_duplanes : GICombineGroup<[unmerge_duplane8, unmerge_duplane16,
-                                       unmerge_duplane32]>;
+                                       unmerge_duplane32, extract_duplane8,
+                                       extract_duplane16, extract_duplane32]>;
 
 def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
                                               uzp, trn, fullrev, shuf_to_ins]>;
@@ -258,10 +266,10 @@ def lower_mulv2s64 : GICombineRule<
 >;
 
 def build_vector_to_dup : GICombineRule<
-  (defs root:$root),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_BUILD_VECTOR):$root,
-          [{ return matchBuildVectorToDup(*${root}, MRI); }]),
-  (apply [{ applyBuildVectorToDup(*${root}, MRI, B); }])
+          [{ return matchBuildVectorToDup(*${root}, ${matchinfo}, MRI); }]),
+  (apply [{ applyBuildVectorToDup(*${root}, ${matchinfo}, MRI, B); }])
 >;
 
 def build_vector_to_vector_insert : GICombineRule<
@@ -345,7 +353,7 @@ def AArch64PostLegalizerLowering
     : GICombiner<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
-                        lower_vector_fcmp, form_truncstore, fconstant_to_constant,
+                        lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
                         vector_unmerge_lowering, insertelt_nonconst,
@@ -370,6 +378,7 @@ def AArch64PostLegalizerCombiner
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, combine_concat_vector,
+                        combine_build_vector_of_bitcast,
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
                         combine_mul_cmlt, combine_use_vector_truncate,

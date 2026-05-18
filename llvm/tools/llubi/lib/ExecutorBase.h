@@ -106,7 +106,8 @@ public:
                                           uint64_t AccessSize, Align Alignment,
                                           bool IsStore);
 
-  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy);
+  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
+                bool NoUndef);
   void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
              Type *ValTy);
 

@@ -17,9 +17,16 @@
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
+#include "SIDefines.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
 
@@ -572,70 +579,6 @@ static bool isThreadID(const GCNSubtarget &ST, Value *V) {
   return false;
 }
 
-// Attempt to capture situations where the index argument matches
-// a DPP pattern, and convert to a DPP-based mov
-static std::optional<Instruction *>
-tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
-  Value *Val = II.getArgOperand(0);
-  Value *Idx = II.getArgOperand(1);
-  auto &B = IC.Builder;
-
-  // DPP16 Row Share requires known wave size, architecture support
-  if (!ST.isWaveSizeKnown() || !ST.hasDPPRowShare())
-    return std::nullopt;
-
-  Value *Tid;
-  uint64_t Mask;
-  uint64_t RowIdx;
-  bool CanDPP16RowShare = false;
-
-  // wave32 requires Mask & 0x1F == 0x10
-  // wave64 requires Mask & 0x3F == 0x30
-  uint64_t MaskCheck = (1UL << ST.getWavefrontSizeLog2()) - 1;
-  uint64_t MaskTarget = MaskCheck & 0xF0;
-
-  // DPP16 Row Share 0: Idx = Tid & Mask
-  auto RowShare0Pred = m_And(m_Value(Tid), m_ConstantInt(Mask));
-
-  // DPP16 Row Share (0 < Row < 15): Idx = (Tid & Mask) | RowIdx
-  auto RowSharePred =
-      m_Or(m_And(m_Value(Tid), m_ConstantInt(Mask)), m_ConstantInt(RowIdx));
-
-  // DPP16 Row Share 15: Idx = Tid | 0xF
-  auto RowShare15Pred = m_Or(m_Value(Tid), m_ConstantInt<0xF>());
-
-  if (match(Idx, RowShare0Pred) && isThreadID(ST, Tid)) {
-    if ((Mask & MaskCheck) != MaskTarget)
-      return std::nullopt;
-
-    RowIdx = 0;
-    CanDPP16RowShare = true;
-  } else if (match(Idx, RowSharePred) && isThreadID(ST, Tid) && RowIdx < 15 &&
-             RowIdx > 0) {
-    if ((Mask & MaskCheck) != MaskTarget)
-      return std::nullopt;
-
-    CanDPP16RowShare = true;
-  } else if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid)) {
-    RowIdx = 15;
-    CanDPP16RowShare = true;
-  }
-
-  if (CanDPP16RowShare) {
-    CallInst *UpdateDPP =
-        B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Val->getType(),
-                          {PoisonValue::get(Val->getType()), Val,
-                           B.getInt32(AMDGPU::DPP::ROW_SHARE0 | RowIdx),
-                           B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
-    UpdateDPP->takeName(&II);
-    UpdateDPP->copyMetadata(II);
-    return IC.replaceInstUsesWith(II, UpdateDPP);
-  }
-
-  // No valid DPP detected
-  return std::nullopt;
-}
-
 Instruction *
 GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
                                              IntrinsicInst &II) const {
@@ -716,6 +659,393 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
   }
 
   return nullptr;
+}
+
+/// Evaluate V as a function of the lane ID and return its value on Lane, or
+/// std::nullopt if V is not a closed-form expression of the lane ID.
+static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
+                                            const GCNSubtarget &ST,
+                                            const DataLayout &DL,
+                                            unsigned Depth = 0) {
+  if (Depth >= MaxAnalysisRecursionDepth)
+    return std::nullopt;
+
+  // Poison/undef in the index expression: bail and let InstCombine fold the
+  // intrinsic the usual way.
+  if (isa<UndefValue>(V))
+    return std::nullopt;
+
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(V))
+    return CI->getZExtValue();
+
+  if (isThreadID(ST, V))
+    return Lane;
+
+  const BinaryOperator *BO = dyn_cast<BinaryOperator>(V);
+  if (!BO)
+    return std::nullopt;
+
+  std::optional<unsigned> LHS =
+      evalLaneExpr(BO->getOperand(0), Lane, ST, DL, Depth + 1);
+  if (!LHS)
+    return std::nullopt;
+  std::optional<unsigned> RHS =
+      evalLaneExpr(BO->getOperand(1), Lane, ST, DL, Depth + 1);
+  if (!RHS)
+    return std::nullopt;
+
+  Type *Ty = BO->getType();
+  Constant *Ops[] = {ConstantInt::get(Ty, *LHS), ConstantInt::get(Ty, *RHS)};
+  auto *CI =
+      dyn_cast_or_null<ConstantInt>(ConstantFoldInstOperands(BO, Ops, DL));
+  return CI ? std::optional<unsigned>(CI->getZExtValue()) : std::nullopt;
+}
+
+/// Build the per-lane shuffle map by evaluating Index for every lane in the
+/// wave. Returns false if any lane index is non-constant or out of range.
+static bool tryBuildShuffleMap(Value *Index, const GCNSubtarget &ST,
+                               SmallVectorImpl<uint8_t> &Ids,
+                               const DataLayout &DL) {
+  unsigned WaveSize = ST.getWavefrontSize();
+  Ids.resize(WaveSize);
+  for (unsigned Lane : seq(WaveSize)) {
+    std::optional<unsigned> Val = evalLaneExpr(Index, Lane, ST, DL);
+    if (!Val || *Val >= WaveSize)
+      return false;
+    Ids[Lane] = *Val;
+  }
+  return true;
+}
+
+/// Lanes are partitioned into groups of Period; each group is a translated
+/// copy of the first: Ids[I] = Ids[I % Period] + (I & ~(Period - 1)).
+template <unsigned Period>
+static bool hasPeriodicLayout(ArrayRef<uint8_t> Ids) {
+  static_assert(isPowerOf2_32(Period), "Period must be a power of two");
+  for (unsigned I = Period, E = Ids.size(); I < E; ++I)
+    if (Ids[I] != Ids[I % Period] + (I & ~(Period - 1)))
+      return false;
+  return true;
+}
+
+/// Match an N-lane row pattern: each lane in [0, N) reads from a source lane
+/// in the same N-lane row, and the pattern repeats periodically across rows.
+template <unsigned N> static bool isRowPattern(ArrayRef<uint8_t> Ids) {
+  for (unsigned I = 0; I < N; ++I)
+    if (Ids[I] >= N)
+      return false;
+  return hasPeriodicLayout<N>(Ids);
+}
+
+static constexpr auto isQuadPattern = isRowPattern<4>;
+static constexpr auto isHalfRowPattern = isRowPattern<8>;
+static constexpr auto isFullRowPattern = isRowPattern<16>;
+
+/// Match a 4-lane (quad) permutation, encoded as the v_mov_b32_dpp
+/// QUAD_PERM control word: bits[1:0]=Ids[0], [3:2]=Ids[1], [5:4]=Ids[2],
+/// [7:6]=Ids[3].
+static std::optional<unsigned> matchQuadPermPattern(ArrayRef<uint8_t> Ids) {
+  if (!isQuadPattern(Ids))
+    return std::nullopt;
+  return Ids[3] << 6 | Ids[2] << 4 | Ids[1] << 2 | Ids[0];
+}
+
+/// Match an N-lane reversal (mirror) pattern.
+template <unsigned N> static bool matchMirrorPattern(ArrayRef<uint8_t> Ids) {
+  if (!isRowPattern<N>(Ids))
+    return false;
+  for (unsigned J = 0; J < N; ++J)
+    if (Ids[J] != (N - 1) - J)
+      return false;
+  return true;
+}
+
+static constexpr auto matchHalfRowMirrorPattern = matchMirrorPattern<8>;
+static constexpr auto matchFullRowMirrorPattern = matchMirrorPattern<16>;
+
+/// Match a 16-lane cyclic rotation; returns the rotation amount in [1, 15].
+static std::optional<unsigned> matchRowRotatePattern(ArrayRef<uint8_t> Ids) {
+  if (Ids[0] == 0 || !isFullRowPattern(Ids))
+    return std::nullopt;
+  for (unsigned J = 1; J < 16; ++J)
+    if (Ids[J] != (Ids[0] + J) % 16)
+      return std::nullopt;
+  return 16u - Ids[0];
+}
+
+/// Match a row-share pattern: all 16 lanes of each row read the same source
+/// lane. Returns the shared source lane index in [0, 16).
+static std::optional<unsigned> matchRowSharePattern(ArrayRef<uint8_t> Ids) {
+  if (!isFullRowPattern(Ids))
+    return std::nullopt;
+  if (!all_equal(Ids.take_front(16)))
+    return std::nullopt;
+  return Ids[0];
+}
+
+/// Match an XOR mask pattern within each 16-lane row: Ids[J] == Mask ^ J,
+/// with Mask in [1, 15].
+static std::optional<unsigned> matchRowXMaskPattern(ArrayRef<uint8_t> Ids) {
+  unsigned Mask = Ids[0];
+  if (Mask == 0 || !isFullRowPattern(Ids))
+    return std::nullopt;
+  for (unsigned J = 0; J < 16; ++J)
+    if (Ids[J] != (Mask ^ J))
+      return std::nullopt;
+  return Mask;
+}
+
+/// Match an 8-lane arbitrary permutation, encoded as the v_mov_b32_dpp8
+/// 24-bit selector (three bits per output lane).
+static std::optional<unsigned> matchHalfRowPermPattern(ArrayRef<uint8_t> Ids) {
+  if (!isHalfRowPattern(Ids))
+    return std::nullopt;
+  unsigned Selector = 0;
+  for (unsigned J = 0; J < 8; ++J)
+    Selector |= Ids[J] << (J * 3);
+  return Selector;
+}
+
+/// Pack a 16-lane permutation into a single 64-bit value: four bits per output
+/// lane, lane J in bits [J*4 + 3 : J*4]. The caller splits it into the low and
+/// high 32-bit selector operands of v_permlane16 / v_permlanex16.
+static uint64_t computePermlane16Masks(ArrayRef<uint8_t> Ids) {
+  uint64_t Sel = 0;
+  for (unsigned J = 0; J < 16; ++J)
+    Sel |= static_cast<uint64_t>(Ids[J] & 0xF) << (J * 4);
+  return Sel;
+}
+
+/// Match a half-wave swap: lane J reads from lane J ^ 32. Only meaningful on
+/// wave64 targets.
+static bool matchHalfWaveSwapPattern(ArrayRef<uint8_t> Ids) {
+  if (Ids.size() != 64)
+    return false;
+  for (unsigned J = 0; J < 64; ++J)
+    if (Ids[J] != (J ^ 32))
+      return false;
+  return true;
+}
+
+/// Match a cross-row permutation suitable for v_permlanex16: every lane in
+/// the low 16-lane half reads from the high half of its own row, and vice
+/// versa.
+static bool isCrossRowPattern(ArrayRef<uint8_t> Ids) {
+  if (!hasPeriodicLayout<32>(Ids))
+    return false;
+  for (unsigned J = 0; J < 16; ++J) {
+    if (Ids[J] < 16 || Ids[J] >= 32)
+      return false;
+    if (Ids[J + 16] != Ids[J] - 16)
+      return false;
+  }
+  return true;
+}
+
+/// Match a DS_SWIZZLE bitmask-mode permutation:
+///   dst_lane = ((src_lane & AND) | OR) ^ XOR
+/// with each mask being five bits. Returns the encoded swizzle immediate.
+/// The hardware applies the formula independently within each 32-lane group,
+/// so on wave64 the high group must replicate the low one (translated by 32).
+static std::optional<unsigned>
+matchDsSwizzleBitmaskPattern(ArrayRef<uint8_t> Ids) {
+  if (!hasPeriodicLayout<32>(Ids))
+    return std::nullopt;
+
+  // The formula is per-bit: output bit B depends only on input bit B. Probe
+  // each bit with src=0 and src=(1<<B); if the output bit flipped, AND[B]=1
+  // and XOR[B] carries the constant offset; otherwise it is a constant bit
+  // encoded in OR (with AND[B]=0, XOR[B]=0).
+  unsigned AndMask = 0, OrMask = 0, XorMask = 0;
+  for (unsigned B = 0; B < 5; ++B) {
+    unsigned Bit0 = (Ids[0] >> B) & 1;
+    unsigned Bit1 = (Ids[1u << B] >> B) & 1;
+    if (Bit0 != Bit1) {
+      AndMask |= 1u << B;
+      XorMask |= Bit0 << B;
+    } else {
+      OrMask |= Bit0 << B;
+    }
+  }
+
+  // The per-bit derivation assumes bit independence; verify the masks
+  // actually reproduce every lane in the 32-lane group.
+  for (unsigned I : seq(32u)) {
+    unsigned Expected = ((I & AndMask) | OrMask) ^ XorMask;
+    if (Ids[I] != Expected)
+      return std::nullopt;
+  }
+
+  return AMDGPU::Swizzle::BITMASK_PERM_ENC |
+         AndMask << AMDGPU::Swizzle::BITMASK_AND_SHIFT |
+         OrMask << AMDGPU::Swizzle::BITMASK_OR_SHIFT |
+         XorMask << AMDGPU::Swizzle::BITMASK_XOR_SHIFT;
+}
+
+/// Emit v_mov_b32_dpp with the given control word, row/bank masks 0xF, and
+/// bound_ctrl=1 so out-of-bounds lanes are well-defined and the DPP mov can
+/// be folded into a consuming VALU op by GCNDPPCombine.
+static Value *createUpdateDpp(IRBuilderBase &B, Value *Val, unsigned Ctrl) {
+  Type *Ty = Val->getType();
+  return B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, {Ty},
+                           {PoisonValue::get(Ty), Val, B.getInt32(Ctrl),
+                            B.getInt32(0xF), B.getInt32(0xF), B.getTrue()});
+}
+
+/// Emit v_mov_b32_dpp8 with the given 24-bit lane selector.
+static Value *createMovDpp8(IRBuilderBase &B, Value *Val, unsigned Selector) {
+  return B.CreateIntrinsic(Intrinsic::amdgcn_mov_dpp8, {Val->getType()},
+                           {Val, B.getInt32(Selector)});
+}
+
+/// Emit v_permlane16 with the precomputed lane-select halves.
+static Value *createPermlane16(IRBuilderBase &B, Value *Val, uint32_t Lo,
+                               uint32_t Hi) {
+  Type *Ty = Val->getType();
+  return B.CreateIntrinsic(Intrinsic::amdgcn_permlane16, {Ty},
+                           {PoisonValue::get(Ty), Val, B.getInt32(Lo),
+                            B.getInt32(Hi), B.getFalse(), B.getFalse()});
+}
+
+/// Emit v_permlanex16 with the precomputed lane-select halves. Each output
+/// lane reads from the other 16-lane half of the same row.
+static Value *createPermlaneX16(IRBuilderBase &B, Value *Val, uint32_t Lo,
+                                uint32_t Hi) {
+  Type *Ty = Val->getType();
+  return B.CreateIntrinsic(Intrinsic::amdgcn_permlanex16, {Ty},
+                           {PoisonValue::get(Ty), Val, B.getInt32(Lo),
+                            B.getInt32(Hi), B.getFalse(), B.getFalse()});
+}
+
+/// Emit ds_swizzle with the given immediate, bitcasting/converting between
+/// pointer/float types and i32 as required by the intrinsic signature.
+static Value *createDsSwizzle(IRBuilderBase &B, Value *Val, unsigned Offset,
+                              const DataLayout &DL) {
+  Type *OrigTy = Val->getType();
+  assert(DL.getTypeSizeInBits(OrigTy) == 32 &&
+         "ds_swizzle only supports 32-bit operands");
+  IntegerType *I32Ty = B.getInt32Ty();
+  Value *Src = Val;
+  if (OrigTy->isPointerTy())
+    Src = B.CreatePtrToInt(Src, I32Ty);
+  else if (OrigTy != I32Ty)
+    Src = B.CreateBitCast(Src, I32Ty);
+  Value *Result = B.CreateIntrinsic(Intrinsic::amdgcn_ds_swizzle, {},
+                                    {Src, B.getInt32(Offset)});
+  if (OrigTy->isPointerTy())
+    return B.CreateIntToPtr(Result, OrigTy);
+  if (OrigTy != I32Ty)
+    return B.CreateBitCast(Result, OrigTy);
+  return Result;
+}
+
+/// Emit v_permlane64 (swap of the two 32-lane halves of a wave64).
+static Value *createPermlane64(IRBuilderBase &B, Value *Val) {
+  return B.CreateIntrinsic(Intrinsic::amdgcn_permlane64, {Val->getType()},
+                           {Val});
+}
+
+/// Given a shuffle map, try to emit the best hardware intrinsic.
+static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
+                                        ArrayRef<uint8_t> Ids,
+                                        const GCNSubtarget &ST,
+                                        const DataLayout &DL) {
+  // Uniform shuffle (all lanes read the same value) is handled by cheaper
+  // broadcast/readlane intrinsics.
+  if (all_equal(Ids))
+    return nullptr;
+
+  if (std::optional<unsigned> QP = matchQuadPermPattern(Ids)) {
+    if (ST.hasDPP())
+      return createUpdateDpp(B, Src, *QP);
+    return createDsSwizzle(B, Src, AMDGPU::Swizzle::QUAD_PERM_ENC | *QP, DL);
+  }
+
+  if (ST.hasDPP()) {
+    if (matchHalfRowMirrorPattern(Ids))
+      return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_HALF_MIRROR);
+    if (matchFullRowMirrorPattern(Ids))
+      return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_MIRROR);
+    if (std::optional<unsigned> Amt = matchRowRotatePattern(Ids))
+      return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_ROR_FIRST + *Amt - 1);
+  }
+
+  // row_share is supported on GFX90A and GFX10+; row_xmask is GFX10+ only.
+  if (ST.hasDPPRowShare()) {
+    if (std::optional<unsigned> Lane = matchRowSharePattern(Ids))
+      return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_SHARE_FIRST + *Lane);
+  }
+
+  if (ST.hasDPP() && ST.hasGFX10Insts()) {
+    if (std::optional<unsigned> Mask = matchRowXMaskPattern(Ids))
+      return createUpdateDpp(B, Src, AMDGPU::DPP::ROW_XMASK_FIRST + *Mask);
+  }
+
+  if (ST.hasDPP8()) {
+    if (std::optional<unsigned> Sel = matchHalfRowPermPattern(Ids))
+      return createMovDpp8(B, Src, *Sel);
+  }
+
+  if (ST.hasPermLaneX16()) {
+    if (isFullRowPattern(Ids)) {
+      uint64_t Sel = computePermlane16Masks(Ids);
+      return createPermlane16(B, Src, Lo_32(Sel), Hi_32(Sel));
+    }
+    // Cross-row shuffles (e.g. XOR 16..31) — covered by permlanex16.
+    if (isCrossRowPattern(Ids)) {
+      uint64_t Sel = computePermlane16Masks(Ids);
+      return createPermlaneX16(B, Src, Lo_32(Sel), Hi_32(Sel));
+    }
+  }
+
+  // Generic DS_SWIZZLE bitmask-mode fallback: handles any 32-lane shuffle that
+  // can be expressed as dst = ((src & AND) | OR) ^ XOR with 5-bit masks. This
+  // is available on every target that has ds_swizzle.
+  if (std::optional<unsigned> Imm = matchDsSwizzleBitmaskPattern(Ids))
+    return createDsSwizzle(B, Src, *Imm, DL);
+
+  if (ST.hasPermLane64() && matchHalfWaveSwapPattern(Ids))
+    return createPermlane64(B, Src);
+
+  return nullptr;
+}
+
+/// Try to fold a wave_shuffle/ds_bpermute whose lane index is a constant
+/// function of the lane ID into a hardware-specific lane permutation intrinsic.
+static std::optional<Instruction *>
+tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
+                          const GCNSubtarget &ST) {
+  const DataLayout &DL = IC.getDataLayout();
+  if (DL.getTypeSizeInBits(II.getType()) != 32)
+    return std::nullopt;
+
+  if (!ST.isWaveSizeKnown())
+    return std::nullopt;
+
+  unsigned WaveSize = ST.getWavefrontSize();
+  bool IsBpermute = II.getIntrinsicID() == Intrinsic::amdgcn_ds_bpermute;
+  Value *Src = II.getArgOperand(IsBpermute ? 1 : 0);
+  Value *Index = II.getArgOperand(IsBpermute ? 0 : 1);
+
+  SmallVector<uint8_t, 64> Ids;
+  if (IsBpermute) {
+    Ids.resize(WaveSize);
+    for (unsigned Lane : seq(WaveSize)) {
+      std::optional<unsigned> Val = evalLaneExpr(Index, Lane, ST, DL);
+      if (!Val || (*Val & 3) || (*Val >> 2) >= WaveSize)
+        return std::nullopt;
+      Ids[Lane] = *Val >> 2;
+    }
+  } else {
+    if (!tryBuildShuffleMap(Index, ST, Ids, DL))
+      return std::nullopt;
+  }
+
+  Value *Result = matchShuffleToHWIntrinsic(IC.Builder, Src, Ids, ST, DL);
+  if (!Result)
+    return std::nullopt;
+
+  return IC.replaceInstUsesWith(II, Result);
 }
 
 std::optional<Instruction *>
@@ -1559,6 +1889,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     return IC.replaceOperand(II, 0, PoisonValue::get(VDstIn->getType()));
   }
+  case Intrinsic::amdgcn_wave_shuffle:
+    return tryOptimizeShufflePattern(IC, II, *ST);
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane:
@@ -1589,10 +1921,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
     }
 
-    if (IID != Intrinsic::amdgcn_ds_bpermute) {
-      if (Instruction *Res = hoistLaneIntrinsicThroughOperand(IC, II))
-        return Res;
-    }
+    if (IID == Intrinsic::amdgcn_ds_bpermute)
+      return tryOptimizeShufflePattern(IC, II, *ST);
+
+    if (Instruction *Res = hoistLaneIntrinsicThroughOperand(IC, II))
+      return Res;
 
     return std::nullopt;
   }
@@ -1896,12 +2229,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
-  }
-  case Intrinsic::amdgcn_wave_shuffle: {
-    if (!ST->hasDPP())
-      return std::nullopt;
-
-    return tryWaveShuffleDPP(*ST, IC, II);
   }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

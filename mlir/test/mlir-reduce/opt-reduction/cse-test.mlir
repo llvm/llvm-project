@@ -1,5 +1,5 @@
 // UNSUPPORTED: system-windows
-// RUN: mlir-reduce %s --no-implicit-module -opt-reduction-pass='opt-pass=cse test=%S/../failure-test.sh' | FileCheck %s
+// RUN: mlir-reduce %s --no-implicit-module -opt-reduction-pass='opt-pass=cse test=%S/../script/failure-test.sh' | FileCheck %s
 
 // CHECK-LABEL: func @cse_on_func
 //  CHECK-SAME:   %[[ARG0:.*]]: i32,

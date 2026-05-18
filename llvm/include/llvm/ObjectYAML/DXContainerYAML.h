@@ -296,6 +296,12 @@ struct Signature {
   llvm::SmallVector<SignatureParameter> Parameters;
 };
 
+struct DebugName {
+  std::optional<uint16_t> Flags;
+  std::optional<uint16_t> NameLength;
+  std::string Filename;
+};
+
 struct Part {
   Part() = default;
   Part(std::string N, uint32_t S) : Name(N), Size(S) {}
@@ -307,12 +313,16 @@ struct Part {
   std::optional<PSVInfo> Info;
   std::optional<DXContainerYAML::Signature> Signature;
   std::optional<DXContainerYAML::RootSignatureYamlDesc> RootSignature;
+  std::optional<DXContainerYAML::DebugName> DebugName;
 };
 
 struct Object {
   FileHeader Header;
   std::vector<Part> Parts;
 };
+
+LLVM_ABI Expected<std::unique_ptr<DXContainerYAML::Object>>
+fromDXContainer(object::DXContainer &DXC);
 
 } // namespace DXContainerYAML
 } // namespace llvm
@@ -371,6 +381,10 @@ template <> struct MappingTraits<DXContainerYAML::ShaderHash> {
 
 template <> struct MappingTraits<DXContainerYAML::PSVInfo> {
   LLVM_ABI static void mapping(IO &IO, DXContainerYAML::PSVInfo &PSV);
+};
+
+template <> struct MappingTraits<DXContainerYAML::DebugName> {
+  LLVM_ABI static void mapping(IO &IO, DXContainerYAML::DebugName &DebugName);
 };
 
 template <> struct MappingTraits<DXContainerYAML::Part> {

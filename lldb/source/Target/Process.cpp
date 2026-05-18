@@ -52,6 +52,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
@@ -73,6 +74,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
 using namespace lldb;
@@ -408,7 +410,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
                               ListenerSP listener_sp,
                               const FileSpec *crash_file_path,
                               bool can_connect) {
-  static uint32_t g_process_unique_id = 0;
+  static std::atomic<uint32_t> g_process_unique_id{0};
 
   ProcessSP process_sp;
   ProcessCreateInstance create_callback = nullptr;
@@ -1277,10 +1279,14 @@ StateType Process::GetState() {
   if (!m_current_private_state_thread_sp)
     return eStateUnloaded;
 
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private)
+    return GetPrivateState();
+
   if (CurrentThreadPosesAsPrivateStateThread())
     return GetPrivateState();
-  else
-    return GetPublicState();
+
+  return GetPublicState();
 }
 
 void Process::SetPublicState(StateType new_state, bool restarted) {
@@ -1762,6 +1768,14 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
       constituent->GetBreakpoint().GetResolver()->GetResolverTy() ==
       BreakpointResolver::ResolverTy::AddressResolver;
   bool should_be_eager = use_hardware || bp_from_address;
+
+  // If this breakpoint must be eager, flush the breakpoint queue in case there
+  // is an interaction between the sites in the queue and this new site.
+  if (should_be_eager)
+    if (llvm::Error E = FlushDelayedBreakpoints())
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Breakpoints), std::move(E),
+          "eager breakpoint requested, but failed to flush breakpoints: {0}");
 
   auto error = should_be_eager ? EnableBreakpointSite(bp_site_sp.get())
                                : Status::FromError(ExecuteBreakpointSiteAction(
@@ -4065,6 +4079,15 @@ bool Process::PrivateStateThread::IsOnThread(const HostThread &thread) const {
   return m_private_state_thread.EqualsThread(thread);
 }
 
+ProcessRunLock &Process::PrivateStateThread::GetRunLock() {
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private)
+    return m_private_run_lock;
+  if (IsOnThread(Host::GetCurrentThread()))
+    return m_private_run_lock;
+  return m_public_run_lock;
+}
+
 bool Process::StartPrivateStateThread(
     lldb::StateType state, bool run_lock_is_running,
     std::shared_ptr<PrivateStateThread> *backup_ptr) {
@@ -4320,14 +4343,12 @@ Status Process::HaltPrivate() {
   return error;
 }
 
-thread_local bool PrivateStateThreadGuard::g_is_private_state_thread = false;
-
 thread_result_t Process::RunPrivateStateThread(bool is_override) {
   // Override PSTs exist solely to service RunThreadPlan expression evaluation.
   // They must see parent frames, not provider-augmented frames.
-  std::optional<PrivateStateThreadGuard> pst_guard;
+  std::optional<PolicyStack::Guard> policy_guard;
   if (is_override)
-    pst_guard.emplace();
+    policy_guard.emplace(Policy::PrivateState());
 
   bool control_only = true;
 
@@ -5525,9 +5546,9 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
     // If we spawned an override PST, mark the current (original) PST so
     // GetStackFrameList returns parent frames during event processing.
-    std::optional<PrivateStateThreadGuard> private_state_thread_guard;
+    std::optional<PolicyStack::Guard> policy_guard;
     if (backup_private_state_thread)
-      private_state_thread_guard.emplace();
+      policy_guard.emplace(Policy::PrivateState());
 
     while (true) {
       // We usually want to resume the process if we get to the top of the
@@ -5929,7 +5950,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
       }
     } // END WAIT LOOP
 
-    private_state_thread_guard.reset();
+    policy_guard.reset();
 
     // If we had to start up a temporary private state thread to run this
     // thread plan, shut it down now.
@@ -6140,7 +6161,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   return return_value;
 }
 
-void Process::GetStatus(Stream &strm) {
+void Process::GetStatus(Stream &strm, bool is_verbose) {
   const StateType state = GetState();
   if (StateIsStoppedState(state, false)) {
     if (state == eStateExited) {
@@ -6152,8 +6173,11 @@ void Process::GetStatus(Stream &strm) {
     } else {
       if (state == eStateConnected)
         strm.Printf("Connected to remote target.\n");
-      else
+      else {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
+        if (auto core_args = GetCoreFileArgs(); core_args && is_verbose)
+          core_args->Format(strm);
+      }
     }
   } else {
     strm.Printf("Process %" PRIu64 " is running.\n", GetID());

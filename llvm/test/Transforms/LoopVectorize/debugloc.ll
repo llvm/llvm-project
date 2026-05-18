@@ -243,8 +243,8 @@ exit:
 !27 = !{i32 1, !"Debug Info Version", i32 3}
 !28 = !DILocation(line: 137, column: 44, scope: !29)
 !29 = distinct !DILexicalBlock(scope: !30, file: !5, line: 137, column: 2)
-!30 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!31 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!30 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, type: !7, unit: !0)
+!31 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, type: !7, unit: !0)
 !32 = distinct !DILexicalBlock(scope: !31, file: !5, line: 137, column: 2)
 !33 = !DILocation(line: 210, column: 44, scope: !32)
 !34 = !DILocation(line: 320, column: 44, scope: !32)

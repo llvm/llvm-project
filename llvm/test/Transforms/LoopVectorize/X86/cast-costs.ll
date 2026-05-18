@@ -287,7 +287,7 @@ define i16 @bitcast_half_to_i16(ptr %src, ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[RDX:%.*]] = phi i16 [ [[BC_MERGE_RDX11]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[OR:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr half, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load half, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[FADD1:%.*]] = fadd half [[LOAD1]], 0xH0000
+; CHECK-NEXT:    [[FADD1:%.*]] = fadd half [[LOAD1]], 0.000000e+00
 ; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast half [[FADD1]] to i16
 ; CHECK-NEXT:    [[OR]] = or i16 [[RDX]], [[BITCAST1]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1

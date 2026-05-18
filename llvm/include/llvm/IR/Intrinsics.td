@@ -1056,11 +1056,14 @@ def int_structured_alloca : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [IntrIna
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
 
-def int_memcpy  : Intrinsic<[],
+// The memcpy etc. intrinsics specify willreturn and argmemonly here, and these
+// then get removed by accessors if the memcpy is volatile. FIXME: Consider
+// inverting the handling.
+
+def int_memcpy  : DefaultAttrsIntrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                              llvm_i1_ty],
-                            [IntrArgMemOnly, IntrWillReturn, IntrNoFree,
-                             IntrNoCallback,
+                            [IntrArgMemOnly,
                              NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
                              NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
                              WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
@@ -1070,27 +1073,25 @@ def int_memcpy  : Intrinsic<[],
 // In particular this means that the generated code is not allowed to call any
 // external function.
 def int_memcpy_inline
-    : Intrinsic<[],
+    : DefaultAttrsIntrinsic<[],
       [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i1_ty],
-      [IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
+      [IntrArgMemOnly,
        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
        NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
        ImmArg<ArgIndex<3>>]>;
 
-def int_memmove : Intrinsic<[],
+def int_memmove : DefaultAttrsIntrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                              llvm_i1_ty],
-                            [IntrArgMemOnly, IntrWillReturn, IntrNoFree,
-                             IntrNoCallback,
+                            [IntrArgMemOnly,
                              NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
                              WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
                              ImmArg<ArgIndex<3>>]>;
-def int_memset  : Intrinsic<[],
+def int_memset  : DefaultAttrsIntrinsic<[],
                             [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty,
                              llvm_i1_ty],
-                            [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
-                             IntrNoFree, IntrNoCallback,
+                            [IntrWriteMem, IntrArgMemOnly,
                              NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
                              ImmArg<ArgIndex<3>>]>;
 
@@ -1099,20 +1100,20 @@ def int_memset  : Intrinsic<[],
 // external function.
 // The third argument (specifying the size) must be a constant.
 def int_memset_inline
-    : Intrinsic<[],
+    : DefaultAttrsIntrinsic<[],
       [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i1_ty],
-      [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
+      [IntrWriteMem, IntrArgMemOnly,
        NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
        ImmArg<ArgIndex<3>>]>;
 
 // Memset variant that writes a given pattern.
 def int_experimental_memset_pattern
-    : Intrinsic<[],
+    : DefaultAttrsIntrinsic<[],
       [llvm_anyptr_ty, // Destination.
        llvm_any_ty,    // Pattern value.
        llvm_anyint_ty, // Count (number of times to fill value).
        llvm_i1_ty],    // IsVolatile.
-      [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
+      [IntrWriteMem, IntrArgMemOnly,
        NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
        ImmArg<ArgIndex<3>>]>;
 

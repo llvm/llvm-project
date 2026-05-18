@@ -275,9 +275,9 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
-  static cir::GlobalOp
-  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, llvm::StringRef name,
-                 mlir::Type t, bool isConstant = false,
+  cir::GlobalOp
+  createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,
+                 bool isConstant = false,
                  mlir::ptr::MemorySpaceAttrInterface addrSpace = {},
                  mlir::Operation *insertPoint = nullptr);
 
@@ -596,6 +596,9 @@ public:
                           GlobalDecl aliasGD, cir::FuncOp aliasee,
                           cir::GlobalLinkageKind linkage);
 
+  /// Emit a definition for an `__attribute__((alias))` declaration.
+  void emitAliasDefinition(GlobalDecl gd);
+
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
@@ -645,6 +648,7 @@ public:
   void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
                                 bool performInit);
 
+  void setGlobalTlsReferences(const VarDecl &vd, cir::GlobalOp globalOp);
   void emitCXXGlobalVarDeclInitFunc(const VarDecl *vd, cir::GlobalOp addr,
                                     bool performInit);
 
