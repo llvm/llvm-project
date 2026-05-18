@@ -459,21 +459,21 @@ bool AppleObjCRuntime::CalculateHasNewLiteralsAndIndexing() {
   if (!m_process)
     return false;
 
-  Target &target(m_process->GetTarget());
-
   static ConstString s_method_signature(
       "-[NSDictionary objectForKeyedSubscript:]");
-  static ConstString s_arclite_method_signature(
-      "__arclite_objectForKeyedSubscript");
+  // NSDictionary is toll-free bridged with CFDictionary, so the
+  // implementation lives in CoreFoundation, not Foundation.
+  static ModuleSpec corefoundation_module_spec(FileSpec("CoreFoundation"));
 
-  SymbolContextList sc_list;
+  Target &target = m_process->GetTarget();
+  if (ModuleSP corefoundation_module_sp =
+          target.GetImages().FindFirstModule(corefoundation_module_spec)) {
+    if (corefoundation_module_sp->FindFirstSymbolWithNameAndType(
+            s_method_signature, eSymbolTypeCode))
+      return true;
+  }
 
-  target.GetImages().FindSymbolsWithNameAndType(s_method_signature,
-                                                eSymbolTypeCode, sc_list);
-  if (sc_list.IsEmpty())
-    target.GetImages().FindSymbolsWithNameAndType(s_arclite_method_signature,
-                                                  eSymbolTypeCode, sc_list);
-  return !sc_list.IsEmpty();
+  return false;
 }
 
 lldb::SearchFilterSP AppleObjCRuntime::CreateExceptionSearchFilter() {

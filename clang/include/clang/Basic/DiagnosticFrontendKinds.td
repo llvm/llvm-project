@@ -43,6 +43,11 @@ def note_fe_backend_resource_limit: Note<"%0 (%1) exceeds limit (%2) in '%3'">, 
 def remark_fe_backend_plugin: Remark<"%0">, BackendInfo, InGroup<RemarkBackendPlugin>;
 def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 
+def err_target_spirv_requires_vulkan : Error<
+    "SPIR-V target requires a Vulkan environment">;
+def err_target_spirv_invalid_shader_stage : Error<
+    "SPIR-V target requires a valid shader stage or no environment">;
+
 def warn_fe_override_module : Warning<
     "overriding the module target triple with %0">,
     InGroup<DiagGroup<"override-module">>;
@@ -94,6 +99,12 @@ def err_fe_backend_error_attr :
 def warn_fe_backend_warning_attr :
   Warning<"call to '%0' declared with 'warning' attribute: %1">, BackendInfo,
   InGroup<BackendWarningAttributes>;
+def note_fe_backend_in : Note<"called by function '%0'">, BackendInfo;
+def note_fe_backend_inlined : Note<"inlined by function '%0'">, BackendInfo;
+def note_fe_backend_inlining_debug_info
+    : Note<"use '-gline-directives-only' (implied by '-g1') or higher for "
+           "more accurate inlining chain locations">,
+      BackendInfo;
 def warn_toc_unsupported_type : Warning<"-mtocdata option is ignored "
   "for %0 because %1">, InGroup<BackendWarningAttributes>;
 
@@ -348,6 +359,12 @@ def err_non_default_visibility_dllimport : Error<
   "non-default visibility cannot be applied to 'dllimport' declaration">;
 def err_ifunc_resolver_return : Error<
   "ifunc resolver function must return a pointer">;
+def err_alias_between_function_and_variable : Error<
+  "cannot alias a %select{function|variable}0 with a %select{variable|function}0">;
+def note_aliasee_declaration: Note<"aliasee is declared here">;
+def warn_alias_type_mismatch : Warning<
+  "alias and aliasee have different types %0 and %1">,
+  InGroup<DiagGroup<"attribute-alias">>;
 
 def warn_atomic_op_misaligned : Warning<
   "misaligned atomic operation may incur "

@@ -14,24 +14,12 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, socket, (int domain, int type, int protocol)) {
-#ifdef SYS_socket
-  int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_socket, domain, type, protocol);
-#elif defined(SYS_socketcall)
-  unsigned long sockcall_args[3] = {static_cast<unsigned long>(domain),
-                                    static_cast<unsigned long>(type),
-                                    static_cast<unsigned long>(protocol)};
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_SOCKET,
-                                              sockcall_args);
-#else
-#error "socket and socketcall syscalls unavailable for this platform."
-#endif
+  int ret = syscall_impl<int>(SYS_socket, domain, type, protocol);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

@@ -1,9 +1,12 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
 #include "CIRGenFunction.h"
+#include "CIRGenModule.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -53,6 +56,54 @@ class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
   AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
+
+  bool supportsLibCall() const override { return false; }
+
+  void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
+                           CIRGenModule &cgm) const override {
+    if (auto func = mlir::dyn_cast<cir::FuncOp>(global)) {
+      if (requiresAMDGPUProtectedVisibility(decl, func.getGlobalVisibility())) {
+        func.setGlobalVisibility(cir::VisibilityKind::Protected);
+        func.setDSOLocal(true);
+      }
+      setAMDGPUTargetFunctionAttributes(decl, func, cgm);
+    } else if (auto gv = mlir::dyn_cast<cir::GlobalOp>(global)) {
+      if (requiresAMDGPUProtectedVisibility(decl, gv.getGlobalVisibility())) {
+        gv.setGlobalVisibility(cir::VisibilityKind::Protected);
+        gv.setDSOLocal(true);
+      }
+    }
+  }
+
+  clang::LangAS
+  getGlobalVarAddressSpace(CIRGenModule &cgm,
+                           const clang::VarDecl *decl) const override {
+    using clang::LangAS;
+    assert(!cgm.getLangOpts().OpenCL &&
+           !(cgm.getLangOpts().CUDA && cgm.getLangOpts().CUDAIsDevice) &&
+           "Address space agnostic languages only");
+    LangAS defaultGlobalAS = LangAS::opencl_global;
+    if (!decl)
+      return defaultGlobalAS;
+
+    LangAS addrSpace = decl->getType().getAddressSpace();
+    if (addrSpace != LangAS::Default)
+      return addrSpace;
+
+    // Only promote to address space 4 if VarDecl has constant initialization.
+    if (decl->getType().isConstantStorage(cgm.getASTContext(), false, false) &&
+        decl->hasConstantInitialization())
+      return LangAS::opencl_constant;
+
+    return defaultGlobalAS;
+  }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getCIRAllocaAddressSpace() const override {
+    return cir::LangAddressSpaceAttr::get(
+        &getABIInfo().cgt.getMLIRContext(),
+        cir::LangAddressSpace::OffloadPrivate);
+  }
 };
 
 } // namespace
@@ -69,7 +120,6 @@ public:
   X8664TargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<X8664ABIInfo>(cgt)) {}
 };
-
 } // namespace
 
 namespace {
@@ -83,6 +133,46 @@ class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
   NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
+
+  void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
+                           CIRGenModule &cgm) const override {
+    auto globalValue = mlir::dyn_cast<cir::CIRGlobalValueInterface>(global);
+    if (globalValue && globalValue.isDeclaration())
+      return;
+
+    const auto *vd = dyn_cast_or_null<VarDecl>(decl);
+    if (vd) {
+      if (cgm.getLangOpts().CUDA) {
+        if (vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
+            vd->getType()->isCUDADeviceBuiltinTextureType())
+          assert(!cir::MissingFeatures::emitNVVMMetadata());
+        return;
+      }
+    }
+
+    const auto *fd = dyn_cast_or_null<FunctionDecl>(decl);
+    if (!fd)
+      return;
+
+    auto func = mlir::cast<cir::FuncOp>(global);
+
+    // Perform special handling in OpenCL/CUDA mode.
+    if (cgm.getLangOpts().OpenCL || cgm.getLangOpts().CUDA) {
+      // Use function attributes to check for kernel functions. By default, all
+      // functions are device functions.
+      if (fd->hasAttr<DeviceKernelAttr>() || fd->hasAttr<CUDAGlobalAttr>()) {
+        // OpenCL/CUDA kernel functions get kernel metadata. Kernel functions
+        // are also not subject to inlining.
+        func.setInlineKind(cir::InlineKind::NoInline);
+        if (fd->hasAttr<CUDAGlobalAttr>()) {
+          func.setCallingConv(cir::CallingConv::PTXKernel);
+          assert(!cir::MissingFeatures::opFuncParameterAttributes());
+        }
+        if (fd->hasAttr<CUDALaunchBoundsAttr>())
+          assert(!cir::MissingFeatures::handleCUDALaunchBoundsAttr());
+      }
+    }
+  }
 };
 } // namespace
 

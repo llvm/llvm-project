@@ -146,8 +146,8 @@ module acc_locations
     !$acc atomic
     y = y + 1
 ! CHECK: acc.atomic.update %{{.*}} : !fir.ref<i32> {
-! CHECK: ^bb0(%{{.*}}: i32 loc("{{.*}}locations.f90":142:3)):
-! CHECK: } loc("{{.*}}locations.f90":142:3)
+! CHECK: ^bb0(%{{.*}}: i32 loc("{{.*}}locations.f90":146:11)):
+! CHECK: } loc("{{.*}}locations.f90":146:11)
 
     !$acc atomic update
     z = x * z

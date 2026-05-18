@@ -675,7 +675,7 @@ static std::error_code collectModuleHeaderIncludes(
   }
 
   // Recurse into submodules.
-  for (auto *Submodule : Module->submodules())
+  for (clang::Module *Submodule : Module->submodules())
     if (std::error_code Err = collectModuleHeaderIncludes(
             LangOpts, FileMgr, Diag, ModMap, Submodule, Includes))
       return Err;
@@ -850,6 +850,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (!BeginInvocation(CI))
     return false;
 
+  // The list of module files the input AST file depends on. This is separate
+  // from FrontendOptions::ModuleFiles, because those only represent explicit
+  // modules, while this is capable of representing implicit ones too.
+  SmallVector<ModuleFileName> ModuleFiles;
+
   // If we're replaying the build of an AST file, import it and set up
   // the initial state from its build.
   if (ReplayASTFile) {
@@ -892,7 +897,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
       for (serialization::ModuleFile &MF : MM)
         if (&MF != &PrimaryModule)
-          CI.getFrontendOpts().ModuleFiles.emplace_back(MF.FileName.str());
+          ModuleFiles.emplace_back(MF.FileName);
 
       ASTReader->visitTopLevelModuleMaps(PrimaryModule, [&](FileEntryRef FE) {
         CI.getFrontendOpts().ModuleMapFiles.push_back(
@@ -1289,6 +1294,17 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles) {
     serialization::ModuleFile *Loaded = nullptr;
     if (!CI.loadModuleFile(ModuleFileName::makeExplicit(ModuleFile), Loaded))
+      return false;
+
+    if (Loaded && Loaded->StandardCXXModule)
+      CI.getDiagnostics().Report(
+          diag::warn_eagerly_load_for_standard_cplusplus_modules);
+  }
+
+  // If we were asked to load any module files by the ASTUnit, do so now.
+  for (const auto &ModuleFile : ModuleFiles) {
+    serialization::ModuleFile *Loaded = nullptr;
+    if (!CI.loadModuleFile(ModuleFile, Loaded))
       return false;
 
     if (Loaded && Loaded->StandardCXXModule)

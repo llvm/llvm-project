@@ -250,7 +250,7 @@ def ARMBcci64        : SDNode<"ARMISD::BCC_i64", SDT_ARMBCC_i64,
 def ARMcmp           : SDNode<"ARMISD::CMP", SDT_ARMCmp>;
 
 // ARM CMN instructions.
-def ARMcmn           : SDNode<"ARMISD::CMN", SDT_ARMCmp>;
+def ARMcmn           : SDNode<"ARMISD::CMN", SDT_ARMCmp, [SDNPCommutative]>;
 
 // ARM compare that sets only Z flag.
 def ARMcmpZ          : SDNode<"ARMISD::CMPZ", SDT_ARMCmp, [SDNPCommutative]>;
@@ -2354,6 +2354,7 @@ def HINT : AI<(outs), (ins imm0_239:$imm), MiscFrm, NoItinerary,
   let DecoderMethod = "DecodeHINTInstruction";
 }
 
+// Architectural ARM-mode NOP is a HINT from ARMv6K; plain ARMv6 uses MOV (see MOV nop alias).
 def : InstAlias<"nop$p", (HINT 0, pred:$p)>, Requires<[IsARM, HasV6K]>;
 def : InstAlias<"yield$p", (HINT 1, pred:$p)>, Requires<[IsARM, HasV6K]>;
 def : InstAlias<"wfe$p", (HINT 2, pred:$p)>, Requires<[IsARM, HasV6K]>;
@@ -5078,10 +5079,10 @@ def CMNri : AI1<0b1011, (outs), (ins GPR:$Rn, mod_imm:$imm), DPFrm, IIC_iCMPi,
 }
 
 // CMN register-register/shift
-def CMNzrr : AI1<0b1011, (outs), (ins GPR:$Rn, GPR:$Rm), DPFrm, IIC_iCMPr,
+def CMNrr : AI1<0b1011, (outs), (ins GPR:$Rn, GPR:$Rm), DPFrm, IIC_iCMPr,
                  "cmn", "\t$Rn, $Rm",
-                 [(set CPSR, (BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
-                   GPR:$Rn, GPR:$Rm))]>, Sched<[WriteCMP, ReadALU, ReadALU]> {
+                 [(set CPSR, (ARMcmn GPR:$Rn, GPR:$Rm))]>,
+                 Sched<[WriteCMP, ReadALU, ReadALU]> {
   bits<4> Rn;
   bits<4> Rm;
   let isCommutable = 1;
@@ -5095,12 +5096,11 @@ def CMNzrr : AI1<0b1011, (outs), (ins GPR:$Rn, GPR:$Rm), DPFrm, IIC_iCMPr,
   let Unpredictable{15-12} = 0b1111;
 }
 
-def CMNzrsi : AI1<0b1011, (outs),
+def CMNrsi : AI1<0b1011, (outs),
                   (ins GPR:$Rn, so_reg_imm:$shift), DPSoRegImmFrm, IIC_iCMPsr,
                   "cmn", "\t$Rn, $shift",
-                  [(set CPSR, (BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
-                    GPR:$Rn, so_reg_imm:$shift))]>,
-                    Sched<[WriteCMPsi, ReadALU]> {
+                  [(set CPSR, (ARMcmn GPR:$Rn, so_reg_imm:$shift))]>,
+                  Sched<[WriteCMPsi, ReadALU]> {
   bits<4> Rn;
   bits<12> shift;
   let Inst{25} = 0;
@@ -5114,12 +5114,11 @@ def CMNzrsi : AI1<0b1011, (outs),
   let Unpredictable{15-12} = 0b1111;
 }
 
-def CMNzrsr : AI1<0b1011, (outs),
+def CMNrsr : AI1<0b1011, (outs),
                   (ins GPRnopc:$Rn, so_reg_reg:$shift), DPSoRegRegFrm, IIC_iCMPsr,
                   "cmn", "\t$Rn, $shift",
-                  [(set CPSR, (BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
-                    GPRnopc:$Rn, so_reg_reg:$shift))]>,
-                    Sched<[WriteCMPsr, ReadALU]> {
+                  [(set CPSR, (ARMcmn GPRnopc:$Rn, so_reg_reg:$shift))]>,
+                  Sched<[WriteCMPsr, ReadALU]> {
   bits<4> Rn;
   bits<12> shift;
   let Inst{25} = 0;
@@ -5137,11 +5136,17 @@ def CMNzrsr : AI1<0b1011, (outs),
 
 }
 
+// ARMcmpZ patterns for CMN (compare-to-zero with negated operands)
 def : ARMPat<(ARMcmp  GPR:$src, mod_imm_neg:$imm),
              (CMNri   GPR:$src, mod_imm_neg:$imm)>;
-
 def : ARMPat<(ARMcmpZ GPR:$src, mod_imm_neg:$imm),
              (CMNri   GPR:$src, mod_imm_neg:$imm)>;
+def : ARMPat<(ARMcmpZ GPR:$src, (ineg GPR:$rhs)),
+             (CMNrr GPR:$src, GPR:$rhs)>;
+def : ARMPat<(ARMcmpZ GPR:$src, (ineg so_reg_imm:$rhs)),
+             (CMNrsi GPR:$src, so_reg_imm:$rhs)>;
+def : ARMPat<(ARMcmpZ GPRnopc:$src, (ineg so_reg_reg:$rhs)),
+             (CMNrsr GPRnopc:$src, so_reg_reg:$rhs)>;
 
 // Note that TST/TEQ don't set all the same flags that CMP does!
 defm TST  : AI1_cmp_irs<0b1000, "tst",
@@ -6220,6 +6225,17 @@ def : ARMPat<(ARMWrapperJT tjumptable:$dst),
 
 // TODO: add,sub,and, 3-instr forms?
 
+
+// Exception Handling
+def ARMLocalRecover : SDNode<"ISD::LOCAL_RECOVER",
+                             SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                  SDTCisInt<1>]>>;
+def : ARMPat<(ARMLocalRecover mcsym:$sym), (MOVi32imm mcsym:$sym)>,
+            Requires<[IsARM, UseMovt]>;
+def : ARMPat<(ARMLocalRecover mcsym:$sym), (LDRLIT_ga_abs mcsym:$sym)>,
+            Requires<[IsARM, DontUseMovt]>;
+
+
 // Tail calls. These patterns also apply to Thumb mode.
 // Regular indirect tail call
 def : Pat<(ARMtcret tcGPR:$dst, (i32 timm:$SPDiff)),
@@ -6576,9 +6592,9 @@ def RORr : ARMAsmPseudo<"ror${s}${p} $Rd, $Rn, $Rm",
 def : ARMInstAlias<"neg${s}${p} $Rd, $Rm",
                    (RSBri GPR:$Rd, GPR:$Rm, 0, pred:$p, cc_out:$s)>;
 
-// Pre-v6, 'mov r0, r0' was used as a NOP encoding.
+// Pre-ARMv6K (including ARMv6), 'mov r0, r0' is the NOP encoding in ARM state.
 def : InstAlias<"nop${p}", (MOVr R0, R0, pred:$p, (cc_out zero_reg)), 0>,
-         Requires<[IsARM, NoV6]>;
+         Requires<[IsARM, NoV6K]>;
 
 // MUL/UMLAL/SMLAL/UMULL/SMULL are available on all arches, but
 // the instruction definitions need difference constraints pre-v6.
@@ -6724,4 +6740,10 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
   let isTerminator = 1 in
   def SEH_EpilogEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+}
+
+// C++ Exception / SEH Pseudo Instructions
+let isTerminator = 1, isReturn = 1, isBarrier = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
+  def CLEANUPRET : PseudoInst<(outs), (ins), NoItinerary, [(cleanupret bb)]>, Sched<[]>;
+  def CATCHRET : PseudoInst<(outs), (ins arm_br_target:$dst, arm_br_target:$src), NoItinerary, [(catchret bb:$dst, bb:$src)]>, Sched<[]>;
 }

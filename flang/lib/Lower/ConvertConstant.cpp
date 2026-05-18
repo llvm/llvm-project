@@ -63,7 +63,10 @@ static mlir::Attribute convertToAttribute(
                             {value.ToUInt64(), value.SHIFTR(64).ToUInt64()}));
     }
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
-    return builder.getIntegerAttr(type, value.IsTrue());
+    if (value.IsCanonical())
+      return builder.getIntegerAttr(type, value.IsTrue());
+    else
+      return builder.getIntegerAttr(type, value.word().ToInt64());
   } else {
     auto getFloatAttr = [&](const auto &value, mlir::Type type) {
       std::string str = value.DumpHexadecimal();
@@ -262,7 +265,15 @@ static mlir::Value genScalarLit(
     }
     return builder.createIntegerConstant(loc, ty, value.ToInt64());
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
-    return builder.createBool(loc, value.IsTrue());
+    if (value.IsCanonical())
+      return builder.createBool(loc, value.IsTrue());
+    mlir::Type logicalType = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Logical, KIND, {});
+    mlir::Type intType = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND, {});
+    mlir::Value integer =
+        builder.createIntegerConstant(loc, intType, value.word().ToInt64());
+    return fir::BitcastOp::create(builder, loc, logicalType, integer);
   } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
     std::string str = value.DumpHexadecimal();
     if constexpr (KIND == 2) {
@@ -485,18 +496,6 @@ static mlir::Value genInlinedStructureCtorLitImpl(
     const Fortran::evaluate::StructureConstructor &ctor, mlir::Type type) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto recTy = mlir::cast<fir::RecordType>(type);
-
-  if (!converter.getLoweringOptions().getLowerToHighLevelFIR()) {
-    mlir::Value res = fir::UndefOp::create(builder, loc, recTy);
-    for (const auto &[sym, expr] : ctor.values()) {
-      // Parent components need more work because they do not appear in the
-      // fir.rec type.
-      if (sym->test(Fortran::semantics::Symbol::Flag::ParentComp))
-        TODO(loc, "parent component in structure constructor");
-      res = genStructureComponentInit(converter, loc, sym, expr.value(), res);
-    }
-    return res;
-  }
 
   auto fieldTy = fir::FieldType::get(recTy.getContext());
   mlir::Value res{};

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Program.h"
+#include "Char.h"
 #include "Context.h"
 #include "Function.h"
 #include "Integral.h"
@@ -213,18 +214,15 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
     }
 
     if (Redecl != VD) {
-      if (Block *RedeclBlock = Globals[Iter->second]->block();
-          RedeclBlock->isExtern()) {
+      Block *RedeclBlock = Globals[Iter->second]->block();
+      // All pointers pointing to the previous extern decl now point to the
+      // new decl.
+      // A previous iteration might've already fixed up the pointers for this
+      // global.
+      if (RedeclBlock != NewGlobal->block())
+        RedeclBlock->movePointersTo(NewGlobal->block());
 
-        // All pointers pointing to the previous extern decl now point to the
-        // new decl.
-        // A previous iteration might've already fixed up the pointers for this
-        // global.
-        if (RedeclBlock != NewGlobal->block())
-          RedeclBlock->movePointersTo(NewGlobal->block());
-
-        Globals[Iter->second] = NewGlobal;
-      }
+      Globals[Iter->second] = NewGlobal;
     }
     Iter->second = *Idx;
   }
@@ -232,10 +230,10 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
   return *Idx;
 }
 
-UnsignedOrNone Program::createGlobal(const Expr *E) {
+UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
   if (auto Idx = getGlobal(E))
     return Idx;
-  if (auto Idx = createGlobal(E, E->getType(), /*IsStatic=*/true,
+  if (auto Idx = createGlobal(E, ExprType, /*IsStatic=*/true,
                               /*IsExtern=*/false, /*IsWeak=*/false)) {
     GlobalIndices[E] = *Idx;
     return *Idx;
@@ -384,7 +382,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
           (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) ||
           (Desc->ElemRecord && Desc->ElemRecord->hasPtrField());
     } else {
-      return nullptr;
+      Desc = allocateDescriptor(FD);
     }
     Fields.emplace_back(FD, Desc, BaseSize);
     BaseSize += align(Desc->getAllocSize());
@@ -402,7 +400,6 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       bool IsConst, bool IsTemporary,
                                       bool IsMutable, bool IsVolatile,
                                       const Expr *Init) {
-
   // Classes and structures.
   if (const auto *RD = Ty->getAsRecordDecl()) {
     if (const auto *Record = getOrCreateRecord(RD))

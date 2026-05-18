@@ -2,7 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -S %s | FileCheck --check-prefix=VF1 %s
 ; RUN: opt -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S %s | FileCheck --check-prefix=VF2 %s
 
-@f = external dso_local global i32, align 4
+@f = external global i32, align 4
 
 define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF1-LABEL: define void @int_iv_based_on_pointer_iv(
@@ -17,13 +17,12 @@ define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF1:       [[VECTOR_PH]]:
 ; VF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
 ; VF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; VF1-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 4
-; VF1-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 4
+; VF1-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
 ; VF1-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr null, i64 [[TMP4]]
 ; VF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF1:       [[VECTOR_BODY]]:
 ; VF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF1-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; VF1-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; VF1-NEXT:    [[INDUCTION3:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; VF1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDUCTION3]]
@@ -49,13 +48,12 @@ define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
 ; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; VF2-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 4
-; VF2-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 4
+; VF2-NEXT:    [[TMP6:%.*]] = shl i64 [[N_VEC]], 2
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr null, i64 [[TMP6]]
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; VF2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP4]]

@@ -26,6 +26,9 @@
 #include <string>
 #include <sys/ptrace.h>
 #include <unistd.h>
+#define DECLARE_REGISTER_INFOS_PPC64_STRUCT
+#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -80,13 +83,23 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::createStringError("Could not sync with inferior process");
+    return llvm::createStringError("could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
+  ProcessInstanceInfo Info;
+  if (!Host::GetProcessInfo(pid, Info)) {
+    return llvm::make_error<StringError>("Cannot get process architecture",
+                                         llvm::inconvertibleErrorCode());
+  }
+
+  // Set the architecture to the exe architecture.
+  LLDB_LOG(log, "pid = {0}, detected architecture {1}", pid,
+           Info.GetArchitecture().GetArchitectureName());
+
   return std::unique_ptr<NativeProcessAIX>(new NativeProcessAIX(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      HostInfo::GetArchitecture(HostInfo::eArchKind64), *this, {pid}));
+      Info.GetArchitecture(), *this, {pid}));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -242,6 +255,11 @@ size_t NativeProcessAIX::UpdateThreads() {
   return m_threads.size();
 }
 
+Status NativeProcessAIX::GetFileLoadAddress(const llvm::StringRef &file_name,
+                                            lldb::addr_t &load_addr) {
+  return Status("unsupported");
+}
+
 Status NativeProcessAIX::GetLoadedModuleFileSpec(const char *module_path,
                                                  FileSpec &file_spec) {
   return Status("unsupported");
@@ -264,13 +282,98 @@ llvm::Error NativeProcessAIX::Detach(lldb::tid_t tid) {
   return PtraceWrapper(PT_DETACH, tid).takeError();
 }
 
+template <typename GPR_T, typename PTSPRS_T>
+int GetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
+  PTSPRS_T sprs;
+
+  int ret = ptrace64(req, tid, reinterpret_cast<long long>(&sprs), 0, 0);
+
+  if (ret != -1) {
+    gpr->cr = sprs.pt_cr;
+    gpr->msr = sprs.pt_msr;
+    gpr->xer = sprs.pt_xer;
+    gpr->lr = sprs.pt_lr;
+    gpr->ctr = sprs.pt_ctr;
+    gpr->pc = sprs.pt_iar;
+  }
+  return ret;
+}
+
+template <typename GPR_T, typename PTSPRS_T>
+int SetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
+  PTSPRS_T sprs;
+
+  sprs.pt_cr = gpr->cr;
+  sprs.pt_msr = gpr->msr;
+  sprs.pt_xer = gpr->xer;
+  sprs.pt_lr = gpr->lr;
+  sprs.pt_ctr = gpr->ctr;
+  sprs.pt_iar = gpr->pc;
+
+  return ptrace64(req, tid, reinterpret_cast<long long>(&sprs), 0, 0);
+}
+
 llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
                                                     void *addr, void *data,
                                                     size_t data_size) {
-  int ret;
-
+  int ret = 0;
   Log *log = GetLog(POSIXLog::Ptrace);
+  // PTT_* requests require a thread ID (TID).
+  // Each entry under /proc/<pid>/lwp/ represents a thread,
+  // and the directory name corresponds to its thread ID (TID).
+  // A process may contain multiple threads.
+  // TODO: With multi-threading support, iterate over all entries to enumerate
+  // available TIDs and retrieve the target debugging thread ID.
+  llvm::SmallString<128> proc_lwp_dir;
+  llvm::sys::path::append(proc_lwp_dir, "/proc/", std::to_string(pid), "/lwp/");
+
+  lldb::tid_t tid = 0;
+  std::error_code ec;
+  bool result;
+  if (!llvm::sys::fs::is_directory(proc_lwp_dir, result) && result) {
+    for (sys::fs::directory_iterator it(proc_lwp_dir, ec), end;
+         it != end && !ec; it.increment(ec)) {
+      llvm::StringRef name = llvm::sys::path::filename(it->path());
+
+      if (name == "." || name == "..")
+        continue;
+
+      if (!name.getAsInteger(10, tid)) {
+        break;
+      }
+    }
+  }
+
   switch (req) {
+  // On AIX, ptrace exposes differently. GPRs and SPRs are handled via separate
+  // requests: PTT_READ_GPRS reads only GPRs & PTT_READ_SPRS is required to
+  // fetch SPRs. Similarly, writes are also split across:
+  // PTT_WRITE_GPRS & PTT_WRITE_SPRS.
+  case PTT_READ_GPRS:
+    if (data_size == sizeof(GPR_PPC)) // 32bit SPRs read
+      ret = GetSPRs<GPR_PPC, ptsprs>(PTT_READ_SPRS, tid,
+                                     static_cast<GPR_PPC *>(data));
+    else if (data_size == sizeof(GPR_PPC64)) // 64bit SPRs read
+      ret = GetSPRs<GPR_PPC64, ptxsprs>(PTT_READ_SPRS, tid,
+                                        static_cast<GPR_PPC64 *>(data));
+
+    if (ret != -1)
+      ret = ptrace64(req, tid, reinterpret_cast<long long>(data), 0,
+                     0); // read GPRs
+    break;
+
+  case PTT_WRITE_GPRS:
+    if (data_size == sizeof(GPR_PPC)) // 32bit SPRs write
+      ret = SetSPRs<GPR_PPC, ptsprs>(PTT_WRITE_SPRS, tid,
+                                     static_cast<GPR_PPC *>(data));
+    else if (data_size == sizeof(GPR_PPC64)) // 64bit SPRS write
+      ret = SetSPRs<GPR_PPC64, ptxsprs>(PTT_WRITE_SPRS, tid,
+                                        static_cast<GPR_PPC64 *>(data));
+
+    if (ret != -1)
+      ret = ptrace64(req, tid, reinterpret_cast<long long>(data), 0,
+                     0); // write GPRs
+    break;
   case PT_ATTACH:
   case PT_DETACH:
   case PT_KILL:

@@ -1192,11 +1192,10 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 // Suppress deprecation warnings from BranchInst.
 LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 
-UncondBrInst::UncondBrInst(BasicBlock *IfTrue, InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::UncondBr,
+UncondBrInst::UncondBrInst(BasicBlock *Target, InsertPosition InsertBefore)
+    : BranchInst(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
                  AllocMarker, InsertBefore) {
-  assert(IfTrue && "Branch destination may not be null!");
-  Op<-1>() = IfTrue;
+  Op<-1>() = Target;
 }
 
 UncondBrInst::UncondBrInst(const UncondBrInst &BI)
@@ -1437,7 +1436,7 @@ AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
 
 void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
-                         SyncScope::ID SSID) {
+                         SyncScope::ID SSID, bool Elementwise) {
   assert(Ordering != AtomicOrdering::NotAtomic &&
          "atomicrmw instructions can only be atomic.");
   assert(Ordering != AtomicOrdering::Unordered &&
@@ -1447,6 +1446,7 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
   setOperation(Operation);
   setOrdering(Ordering);
   setSyncScopeID(SSID);
+  setElementwise(Elementwise);
   setAlignment(Alignment);
 
   assert(getOperand(0) && getOperand(1) && "All operands must be non-null!");
@@ -1458,9 +1458,10 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
 
 AtomicRMWInst::AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                              Align Alignment, AtomicOrdering Ordering,
-                             SyncScope::ID SSID, InsertPosition InsertBefore)
+                             SyncScope::ID SSID, bool Elementwise,
+                             InsertPosition InsertBefore)
     : Instruction(Val->getType(), AtomicRMW, AllocMarker, InsertBefore) {
-  Init(Operation, Ptr, Val, Alignment, Ordering, SSID);
+  Init(Operation, Ptr, Val, Alignment, Ordering, SSID, Elementwise);
 }
 
 StringRef AtomicRMWInst::getOperationName(BinOp Op) {
@@ -4049,6 +4050,10 @@ CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
   return Cmp->getPredicate();
 }
 
+CmpPredicate CmpPredicate::getInverse(CmpPredicate P) {
+  return {CmpInst::getInversePredicate(P), P.hasSameSign()};
+}
+
 CmpPredicate CmpPredicate::getSwapped(CmpPredicate P) {
   return {CmpInst::getSwappedPredicate(P), P.hasSameSign()};
 }
@@ -4359,7 +4364,9 @@ FCmpInst *FCmpInst::cloneImpl() const {
 }
 
 ICmpInst *ICmpInst::cloneImpl() const {
-  return new ICmpInst(getPredicate(), Op<0>(), Op<1>());
+  auto *Result = new ICmpInst(getPredicate(), Op<0>(), Op<1>());
+  Result->setSameSign(hasSameSign());
+  return Result;
 }
 
 ExtractValueInst *ExtractValueInst::cloneImpl() const {
@@ -4398,9 +4405,9 @@ AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
 }
 
 AtomicRMWInst *AtomicRMWInst::cloneImpl() const {
-  AtomicRMWInst *Result =
-      new AtomicRMWInst(getOperation(), getOperand(0), getOperand(1),
-                        getAlign(), getOrdering(), getSyncScopeID());
+  AtomicRMWInst *Result = new AtomicRMWInst(
+      getOperation(), getOperand(0), getOperand(1), getAlign(), getOrdering(),
+      getSyncScopeID(), isElementwise());
   Result->setVolatile(isVolatile());
   return Result;
 }

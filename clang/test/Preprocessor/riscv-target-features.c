@@ -116,6 +116,7 @@
 // CHECK-NOT: __riscv_zicboz {{.*$}}
 // CHECK-NOT: __riscv_ziccamoa {{.*$}}
 // CHECK-NOT: __riscv_ziccamoc {{.*$}}
+// CHECK-NOT: __riscv_ziccid {{.*$}}
 // CHECK-NOT: __riscv_ziccif {{.*$}}
 // CHECK-NOT: __riscv_zicclsm {{.*$}}
 // CHECK-NOT: __riscv_ziccrse {{.*$}}
@@ -180,6 +181,7 @@
 
 // Experimental extensions
 
+// CHECK-NOT: __riscv_p {{.*$}}
 // CHECK-NOT: __riscv_zicfilp {{.*$}}
 // CHECK-NOT: __riscv_zicfiss {{.*$}}
 // CHECK-NOT: __riscv_zvbc32e {{.*$}}
@@ -897,6 +899,14 @@
 // CHECK-ZICCAMOC-EXT: __riscv_ziccamoc 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32iziccid -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCID-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64iziccid -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCID-EXT %s
+// CHECK-ZICCID-EXT: __riscv_ziccid 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32iziccif -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCIF-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
@@ -1583,6 +1593,15 @@
 // CHECK-ZVKT-EXT: __riscv_zvkt 1000000{{$}}
 
 // Experimental extensions
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_p0p21 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-P-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_p0p21 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-P-EXT %s
+// CHECK-P-EXT: __riscv_p 21000{{$}}
+//
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izfbfmin1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZFBFMIN-EXT %s

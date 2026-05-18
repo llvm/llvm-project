@@ -14,7 +14,7 @@
 namespace llvm {
 
 class ShadowStackGCLoweringPass
-    : public PassInfoMixin<ShadowStackGCLoweringPass> {
+    : public RequiredPassInfoMixin<ShadowStackGCLoweringPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

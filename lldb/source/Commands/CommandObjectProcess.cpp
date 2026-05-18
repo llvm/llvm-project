@@ -89,9 +89,8 @@ protected:
               result.SetStatus(eReturnStatusSuccessFinishResult);
               process = nullptr;
             } else {
-              result.AppendErrorWithFormat(
-                  "Failed to detach from process: %s\n",
-                  detach_error.AsCString());
+              result.AppendErrorWithFormat("Failed to detach from process: %s",
+                                           detach_error.AsCString());
             }
           } else {
             Status destroy_error(process->Destroy(false));
@@ -99,7 +98,7 @@ protected:
               result.SetStatus(eReturnStatusSuccessFinishResult);
               process = nullptr;
             } else {
-              result.AppendErrorWithFormat("Failed to kill process: %s\n",
+              result.AppendErrorWithFormat("Failed to kill process: %s",
                                            destroy_error.AsCString());
             }
           }
@@ -144,8 +143,7 @@ public:
 
 protected:
   void DoExecute(Args &launch_args, CommandReturnObject &result) override {
-    Debugger &debugger = GetDebugger();
-    Target *target = debugger.GetSelectedTarget().get();
+    Target *target = &GetTarget();
     // If our listener is nullptr, users aren't allows to launch
     ModuleSP exe_module_sp = target->GetExecutableModule();
 
@@ -315,7 +313,9 @@ protected:
     PlatformSP platform_sp(
         GetDebugger().GetPlatformList().GetSelectedPlatform());
 
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = &GetTarget();
+    if (target->IsDummyTarget())
+      target = nullptr;
     // N.B. The attach should be synchronous.  It doesn't help much to get the
     // prompt back between initiating the attach and the target actually
     // stopping.  So even if the interpreter is set to be asynchronous, we wait
@@ -371,7 +371,7 @@ protected:
             "no error returned from Target::Attach, and target has no process");
       }
     } else {
-      result.AppendErrorWithFormat("attach failed: %s\n", error.AsCString());
+      result.AppendErrorWithFormat("attach failed: %s", error.AsCString());
     }
 
     if (!result.Succeeded())
@@ -388,14 +388,14 @@ protected:
             new_exec_module_sp->GetFileSpec().GetPath().c_str());
       }
     } else if (!new_exec_module_sp) {
-      result.AppendWarningWithFormat("No executable binary.");
+      result.AppendWarning("no executable binary");
     } else if (old_exec_module_sp->GetFileSpec() !=
                new_exec_module_sp->GetFileSpec()) {
 
-      result.AppendWarningWithFormat(
-          "Executable binary changed from \"%s\" to \"%s\".\n",
-          old_exec_module_sp->GetFileSpec().GetPath().c_str(),
-          new_exec_module_sp->GetFileSpec().GetPath().c_str());
+      result.AppendWarningWithFormatv(
+          "executable binary changed from \"{0}\" to \"{1}\"",
+          old_exec_module_sp->GetFileSpec().GetPath(),
+          new_exec_module_sp->GetFileSpec().GetPath());
     }
 
     if (!old_arch_spec.IsValid()) {
@@ -403,10 +403,10 @@ protected:
           "Architecture set to: {0}.",
           target->GetArchitecture().GetTriple().getTriple().c_str());
     } else if (!old_arch_spec.IsExactMatch(target->GetArchitecture())) {
-      result.AppendWarningWithFormat(
-          "Architecture changed from %s to %s.\n",
-          old_arch_spec.GetTriple().getTriple().c_str(),
-          target->GetArchitecture().GetTriple().getTriple().c_str());
+      result.AppendWarningWithFormatv(
+          "architecture changed from {0} to {1}",
+          old_arch_spec.GetTriple().getTriple(),
+          target->GetArchitecture().GetTriple().getTriple());
     }
 
     // This supports the use-case scenario of immediately continuing the
@@ -534,7 +534,7 @@ protected:
       // default breakpoint.
       if (m_options.m_run_to_bkpt_args.GetArgumentCount() > 0)
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            m_options.m_run_to_bkpt_args, target, result, &run_to_bkpt_ids,
+            m_options.m_run_to_bkpt_args, m_exe_ctx, result, &run_to_bkpt_ids,
             BreakpointName::Permissions::disablePerm);
       if (!result.Succeeded()) {
         return;
@@ -732,12 +732,12 @@ protected:
           result.SetStatus(eReturnStatusSuccessContinuingNoResult);
         }
       } else {
-        result.AppendErrorWithFormat("Failed to resume process: %s.\n",
+        result.AppendErrorWithFormat("Failed to resume process: %s",
                                      error.AsCString());
       }
     } else {
       result.AppendErrorWithFormat(
-          "Process cannot be continued from its current state (%s).\n",
+          "Process cannot be continued from its current state (%s)",
           StateAsCString(state));
     }
   }
@@ -827,7 +827,7 @@ protected:
     if (error.Success()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Detach failed: %s\n", error.AsCString());
+      result.AppendErrorWithFormat("Detach failed: %s", error.AsCString());
     }
   }
 
@@ -896,7 +896,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one argument:\nUsage: %s\n", m_cmd_name.c_str(),
+          "'%s' takes exactly one argument:\nUsage: %s", m_cmd_name.c_str(),
           m_cmd_syntax.c_str());
       return;
     }
@@ -905,7 +905,7 @@ protected:
     if (process && process->IsAlive()) {
       result.AppendErrorWithFormat(
           "Process %" PRIu64
-          " is currently being debugged, kill the process before connecting.\n",
+          " is currently being debugged, kill the process before connecting.",
           process->GetID());
       return;
     }
@@ -917,18 +917,21 @@ protected:
     Status error;
     Debugger &debugger = GetDebugger();
     PlatformSP platform_sp = m_interpreter.GetPlatform(true);
+    Target *target = &GetTarget();
+    if (target->IsDummyTarget())
+      target = nullptr;
     ProcessSP process_sp =
         debugger.GetAsyncExecution()
-            ? platform_sp->ConnectProcess(
-                  command.GetArgumentAtIndex(0), plugin_name, debugger,
-                  debugger.GetSelectedTarget().get(), error)
+            ? platform_sp->ConnectProcess(command.GetArgumentAtIndex(0),
+                                          plugin_name, debugger, target, error)
             : platform_sp->ConnectProcessSynchronous(
                   command.GetArgumentAtIndex(0), plugin_name, debugger,
-                  result.GetOutputStream(), debugger.GetSelectedTarget().get(),
-                  error);
+                  result.GetOutputStream(), target, error);
     if (error.Fail() || process_sp == nullptr) {
       result.AppendError(error.AsCString("Error connecting to the process"));
+      return;
     }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   CommandOptions m_options;
@@ -952,6 +955,10 @@ public:
     if (process)
       return process->GetPluginCommandObject();
     return nullptr;
+  }
+
+  llvm::StringRef GetUnsupportedError() override {
+    return "no process plugin commands are currently registered";
   }
 };
 
@@ -1057,8 +1064,8 @@ protected:
       }
 
       if (image_token != LLDB_INVALID_IMAGE_TOKEN) {
-        result.AppendMessageWithFormat(
-            "Loading \"%s\"...ok\nImage %u loaded.\n", image_path.str().c_str(),
+        result.AppendMessageWithFormatv(
+            "Loading \"{0}\"...ok\nImage {1} loaded.", image_path.str().c_str(),
             image_token);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
@@ -1099,10 +1106,10 @@ public:
 
     Process *process = m_exe_ctx.GetProcessPtr();
 
-    const std::vector<lldb::addr_t> &tokens = process->GetImageTokens();
-    const size_t token_num = tokens.size();
+    const std::vector<addr_t> &token_addrs = process->GetImageTokens();
+    const size_t token_num = token_addrs.size();
     for (size_t i = 0; i < token_num; ++i) {
-      if (tokens[i] == LLDB_INVALID_IMAGE_TOKEN)
+      if (token_addrs[i] == LLDB_INVALID_ADDRESS)
         continue;
       request.TryCompleteCurrentArg(std::to_string(i));
     }
@@ -1179,20 +1186,20 @@ protected:
         signo = process->GetUnixSignals()->GetSignalNumberFromName(signal_name);
 
       if (signo == LLDB_INVALID_SIGNAL_NUMBER) {
-        result.AppendErrorWithFormat("Invalid signal argument '%s'.\n",
+        result.AppendErrorWithFormat("Invalid signal argument '%s'",
                                      command.GetArgumentAtIndex(0));
       } else {
         Status error(process->Signal(signo));
         if (error.Success()) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat("Failed to send signal %i: %s\n", signo,
+          result.AppendErrorWithFormat("Failed to send signal %i: %s", signo,
                                        error.AsCString());
         }
       }
     } else {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one signal number argument:\nUsage: %s\n",
+          "'%s' takes exactly one signal number argument:\nUsage: %s",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
     }
   }
@@ -1225,7 +1232,7 @@ protected:
     if (error.Success()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Failed to halt process: %s\n",
+      result.AppendErrorWithFormat("Failed to halt process: %s",
                                    error.AsCString());
     }
   }
@@ -1257,7 +1264,7 @@ protected:
     if (error.Success()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Failed to kill process: %s\n",
+      result.AppendErrorWithFormat("Failed to kill process: %s",
                                    error.AsCString());
     }
   }
@@ -1362,7 +1369,7 @@ protected:
                   SaveCoreStyle::eSaveCoreDirtyOnly ||
               core_dump_options.GetStyle() ==
                   SaveCoreStyle::eSaveCoreStackOnly) {
-            result.AppendMessageWithFormat(
+            result.AppendMessage(
                 "\nModified-memory or stack-memory only corefile "
                 "created.  This corefile may \n"
                 "not show library/framework/app binaries "
@@ -1370,7 +1377,7 @@ protected:
                 "those binaries have "
                 "been updated/modified. Copies are not included\n"
                 "in this corefile.  Use --style full to include all "
-                "process memory.\n");
+                "process memory.");
           }
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
@@ -1379,7 +1386,7 @@ protected:
               output_file.GetPath(), error);
         }
       } else {
-        result.AppendErrorWithFormat("'%s' takes one arguments:\nUsage: %s\n",
+        result.AppendErrorWithFormat("'%s' takes one arguments:\nUsage: %s",
                                      m_cmd_name.c_str(), m_cmd_syntax.c_str());
       }
     } else {
@@ -1459,7 +1466,7 @@ protected:
     const uint32_t num_frames = 1;
     const uint32_t num_frames_with_source = 1;
     const bool stop_format = true;
-    process->GetStatus(strm);
+    process->GetStatus(strm, m_options.m_verbose);
     process->GetThreadStatus(strm, only_threads_with_stop_reason, start_frame,
                              num_frames, num_frames_with_source, stop_format);
 
@@ -1759,8 +1766,8 @@ protected:
               signals_sp->SetShouldNotify(signo, *notify_action);
             ++num_signals_set;
           } else {
-            result.AppendErrorWithFormat("Invalid signal name '%s'\n",
-                                          arg.c_str());
+            result.AppendErrorWithFormat("Invalid signal name '%s'",
+                                         arg.c_str());
             continue;
           }
         } else {

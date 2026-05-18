@@ -20,6 +20,7 @@
 #include "mlir-c/Support.h"
 
 #include <array>
+#include <cassert>
 #include <functional>
 #include <optional>
 #include <string>
@@ -76,8 +77,9 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
-MlirBlock createBlock(const nb::sequence &pyArgTypes,
-                      const std::optional<nb::sequence> &pyArgLocs) {
+MlirBlock createBlock(
+    const nb::typed<nb::sequence, PyType> &pyArgTypes,
+    const std::optional<nb::typed<nb::sequence, PyLocation>> &pyArgLocs) {
   std::vector<MlirType> argTypes;
   argTypes.reserve(nb::len(pyArgTypes));
   for (nb::handle pyType : pyArgTypes)
@@ -189,25 +191,6 @@ nb::object PyBlock::getCapsule() {
 // Collections.
 //------------------------------------------------------------------------------
 
-nb::typed<nb::object, PyRegion> PyRegionIterator::dunderNext() {
-  operation->checkValid();
-  if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
-    PyErr_SetNone(PyExc_StopIteration);
-    // python functions should return NULL after setting any exception
-    return nb::object();
-  }
-  MlirRegion region = mlirOperationGetRegion(operation->get(), nextIndex++);
-  return nb::cast(PyRegion(operation, region));
-}
-
-void PyRegionIterator::bind(nb::module_ &m) {
-  nb::class_<PyRegionIterator>(m, "RegionIterator")
-      .def("__iter__", &PyRegionIterator::dunderIter,
-           "Returns an iterator over the regions in the operation.")
-      .def("__next__", &PyRegionIterator::dunderNext,
-           "Returns the next region in the iteration.");
-}
-
 PyRegionList::PyRegionList(PyOperationRef operation, intptr_t startIndex,
                            intptr_t length, intptr_t step)
     : Sliceable(startIndex,
@@ -215,16 +198,6 @@ PyRegionList::PyRegionList(PyOperationRef operation, intptr_t startIndex,
                              : length,
                 step),
       operation(std::move(operation)) {}
-
-PyRegionIterator PyRegionList::dunderIter() {
-  operation->checkValid();
-  return PyRegionIterator(operation, startIndex);
-}
-
-void PyRegionList::bindDerived(ClassTy &c) {
-  c.def("__iter__", &PyRegionList::dunderIter,
-        "Returns an iterator over the regions in the sequence.");
-}
 
 intptr_t PyRegionList::getRawNumElements() {
   operation->checkValid();
@@ -796,7 +769,7 @@ nb::str PyDiagnostic::getMessage() {
   return nb::cast<nb::str>(fileObject.attr("getvalue")());
 }
 
-nb::tuple PyDiagnostic::getNotes() {
+nb::typed<nb::tuple, PyDiagnostic> PyDiagnostic::getNotes() {
   checkValid();
   if (materializedNotes)
     return *materializedNotes;
@@ -1471,11 +1444,12 @@ PyOpResultList PyOpResultList::slice(intptr_t startIndex, intptr_t length,
 // PyOpView
 //------------------------------------------------------------------------------
 
-static void populateResultTypes(std::string_view name, nb::list resultTypeList,
+static void populateResultTypes(std::string_view name,
+                                nb::sequence resultTypeList,
                                 const nb::object &resultSegmentSpecObj,
                                 std::vector<int32_t> &resultSegmentLengths,
                                 std::vector<PyType *> &resultTypes) {
-  resultTypes.reserve(resultTypeList.size());
+  resultTypes.reserve(nb::len(resultTypeList));
   if (resultSegmentSpecObj.is_none()) {
     // Non-variadic result unpacking.
     size_t index = 0;
@@ -1494,13 +1468,13 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
   } else {
     // Sized result unpacking.
     auto resultSegmentSpec = nb::cast<std::vector<int>>(resultSegmentSpecObj);
-    if (resultSegmentSpec.size() != resultTypeList.size()) {
+    if (resultSegmentSpec.size() != nb::len(resultTypeList)) {
       throw nb::value_error(
           join("Operation \"", name, "\" requires ", resultSegmentSpec.size(),
-               " result segments but was provided ", resultTypeList.size())
+               " result segments but was provided ", nb::len(resultTypeList))
               .c_str());
     }
-    resultSegmentLengths.reserve(resultTypeList.size());
+    resultSegmentLengths.reserve(nb::len(resultTypeList));
     for (size_t i = 0, e = resultSegmentSpec.size(); i < e; ++i) {
       int segmentSpec = resultSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
@@ -1591,10 +1565,10 @@ static MlirValue getOpResultOrValue(nb::handle operand) {
   throw nb::value_error("is not a Value");
 }
 
-nb::object PyOpView::buildGeneric(
+nb::typed<nb::object, PyOperation> PyOpView::buildGeneric(
     std::string_view name, std::tuple<int, bool> opRegionSpec,
     nb::object operandSegmentSpecObj, nb::object resultSegmentSpecObj,
-    std::optional<nb::list> resultTypeList, nb::list operandList,
+    std::optional<nb::sequence> resultTypeList, nb::sequence operandList,
     std::optional<nb::dict> attributes,
     std::optional<std::vector<PyBlock *>> successors,
     std::optional<int> regions, PyLocation &location,
@@ -1655,13 +1629,13 @@ nb::object PyOpView::buildGeneric(
   } else {
     // Sized operand unpacking.
     auto operandSegmentSpec = nb::cast<std::vector<int>>(operandSegmentSpecObj);
-    if (operandSegmentSpec.size() != operandList.size()) {
+    if (operandSegmentSpec.size() != nb::len(operandList)) {
       throw nb::value_error(
           join("Operation \"", name, "\" requires ", operandSegmentSpec.size(),
-               "operand segments but was provided ", operandList.size())
+               "operand segments but was provided ", nb::len(operandList))
               .c_str());
     }
-    operandSegmentLengths.reserve(operandList.size());
+    operandSegmentLengths.reserve(nb::len(operandList));
     for (size_t i = 0, e = operandSegmentSpec.size(); i < e; ++i) {
       int segmentSpec = operandSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
@@ -1908,6 +1882,23 @@ nb::typed<nb::object, PyAttribute> PyAttribute::maybeDownCast() {
       mlirTypeID, mlirAttributeGetDialect(this->get()));
   // nb::rv_policy::move means use std::move to move the return value
   // contents into a new instance that will be owned by Python.
+  nb::object thisObj = nb::cast(this, nb::rv_policy::move);
+  if (!typeCaster)
+    return thisObj;
+  return typeCaster.value()(thisObj);
+}
+
+//------------------------------------------------------------------------------
+// PyLocation::maybeDownCast.
+//------------------------------------------------------------------------------
+
+nb::typed<nb::object, PyLocation> PyLocation::maybeDownCast() {
+  MlirAttribute locAttr = mlirLocationGetAttribute(this->get());
+  MlirTypeID mlirTypeID = mlirAttributeGetTypeID(locAttr);
+  assert(!mlirTypeIDIsNull(mlirTypeID) &&
+         "mlirTypeID was expected to be non-null.");
+  std::optional<nb::callable> typeCaster = PyGlobals::get().lookupTypeCaster(
+      mlirTypeID, mlirAttributeGetDialect(locAttr));
   nb::object thisObj = nb::cast(this, nb::rv_policy::move);
   if (!typeCaster)
     return thisObj;
@@ -2489,7 +2480,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
            "exist.")
       .def(
           "__iter__",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::iterator, nb::str> {
             nb::list keys;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef name, MlirAttribute) {
@@ -2500,7 +2491,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Iterates over attribute names.")
       .def(
           "keys",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::list, nb::str> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef name, MlirAttribute) {
@@ -2511,7 +2502,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of attribute names.")
       .def(
           "values",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self) -> nb::typed<nb::list, PyAttribute> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(), [&](MlirStringRef, MlirAttribute attr) {
@@ -2523,7 +2514,9 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of attribute values.")
       .def(
           "items",
-          [](PyOpAttributeMap &self) {
+          [](PyOpAttributeMap &self)
+              -> nb::typed<nb::list,
+                           nb::typed<nb::tuple, nb::str, PyAttribute>> {
             nb::list out;
             PyOpAttributeMap::forEachAttr(
                 self.operation->get(),
@@ -2540,10 +2533,10 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
 
 void PyOpAdaptor::bind(nb::module_ &m) {
   nb::class_<PyOpAdaptor>(m, "OpAdaptor")
-      .def(nb::init<nb::list, PyOpAttributeMap>(),
+      .def(nb::init<nb::typed<nb::list, PyValue>, PyOpAttributeMap>(),
            "Creates an OpAdaptor with the given operands and attributes.",
            "operands"_a, "attributes"_a)
-      .def(nb::init<nb::list, PyOpView &>(),
+      .def(nb::init<nb::typed<nb::list, PyValue>, PyOpView &>(),
            "Creates an OpAdaptor with the given operands and operation view.",
            "operands"_a, "opview"_a)
       .def_prop_ro(
@@ -2608,7 +2601,6 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 
   // To ensure that the same dynamic trait gets the same TypeID despite how many
   // times `attach` is called, we store it as an attribute on the target class.
-  constexpr const char *typeIDAttr = "_TYPE_ID";
   if (!nb::hasattr(target, typeIDAttr)) {
     nb::setattr(target, typeIDAttr,
                 nb::cast(PyTypeID(PyGlobals::get().allocateTypeID())));
@@ -2642,6 +2634,7 @@ bool PyDynamicOpTraits::IsTerminator::attach(const nb::object &opName,
 void PyDynamicOpTraits::IsTerminator::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::IsTerminator, PyDynamicOpTrait> cls(
       m, "IsTerminatorTrait");
+  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitIsTerminatorGetTypeID());
   cls.attr("attach") = classmethod(
       [](const nb::object &cls, const nb::object &opName,
          DefaultingPyMlirContext context) {
@@ -2660,6 +2653,7 @@ bool PyDynamicOpTraits::NoTerminator::attach(const nb::object &opName,
 void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::NoTerminator, PyDynamicOpTrait> cls(
       m, "NoTerminatorTrait");
+  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitNoTerminatorGetTypeID());
   cls.attr("attach") = classmethod(
       [](const nb::object &cls, const nb::object &opName,
          DefaultingPyMlirContext context) {
@@ -2758,17 +2752,71 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
 #endif
 }
 
+/// Apply currentLocAction: wrap or fuse Location.current onto baseLoc.
+static MlirLocation
+applyCurrentLocAction(MlirContext ctx, MlirLocation baseLoc,
+                      PyGlobals::TracebackLoc::CurrentLocAction action) {
+  using Action = PyGlobals::TracebackLoc::CurrentLocAction;
+  if (action == Action::Fallback)
+    return baseLoc;
+
+  auto *currentLoc = PyThreadContextEntry::getDefaultLocation();
+  if (!currentLoc)
+    return baseLoc;
+  assert(mlirLocationGetContext(currentLoc->get()).ptr == ctx.ptr &&
+         "Location.current must belong to the current MLIR context");
+
+  // NamelocWrap: walk the NameLoc chain on Location.current, collect scope
+  // names, wrap baseLoc innermost-first so result is Outer(Inner(baseLoc)).
+  // If Location.current is not a NameLoc, scopeNames is empty and baseLoc
+  // is returned unchanged (nameloc_wrap is a no-op for non-NameLoc contexts).
+  thread_local std::vector<MlirStringRef> scopeNames;
+  scopeNames.clear();
+  MlirLocation walk = currentLoc->get();
+  while (mlirLocationIsAName(walk)) {
+    scopeNames.push_back(mlirIdentifierStr(mlirLocationNameGetName(walk)));
+    walk = mlirLocationNameGetChildLoc(walk);
+  }
+  for (auto it = scopeNames.rbegin(); it != scopeNames.rend(); ++it)
+    baseLoc = mlirLocationNameGet(ctx, *it, baseLoc);
+  return baseLoc;
+}
+
 PyLocation
 maybeGetTracebackLocation(const std::optional<PyLocation> &location) {
-  if (location.has_value())
-    return location.value();
-  if (!PyGlobals::get().getTracebackLoc().locTracebacksEnabled())
-    return DefaultingPyLocation::resolve();
+  auto &tbl = PyGlobals::get().getTracebackLoc();
 
+  // Tracebacks not enabled — return explicit loc or fall back to
+  // Location.current.
+  if (!tbl.locTracebacksEnabled())
+    return location.has_value() ? location.value()
+                                : DefaultingPyLocation::resolve();
+
+  // From here: tracebacks are enabled.
+  using OnExplicit = PyGlobals::TracebackLoc::OnExplicitAction;
   PyMlirContext &ctx = DefaultingPyMlirContext::resolve();
-  MlirLocation mlirLoc = tracebackToLocation(ctx.get());
+  MlirLocation baseLoc;
+
+  // Step 1: on_explicit — resolve explicit loc= vs traceback.
+  if (location.has_value()) {
+    switch (tbl.tracebackActionOnExplicitLoc()) {
+    case OnExplicit::UseExplicit:
+      baseLoc = location->get();
+      break;
+    case OnExplicit::UseTraceback:
+      baseLoc = tracebackToLocation(ctx.get());
+      break;
+    }
+  } else {
+    baseLoc = tracebackToLocation(ctx.get());
+  }
+
+  // Step 2: current_loc — compose with Location.current.
+  baseLoc = applyCurrentLocAction(ctx.get(), baseLoc,
+                                  tbl.tracebackActionOnCurrentLoc());
+
   PyMlirContextRef ref = PyMlirContext::forContext(ctx.get());
-  return {ref, mlirLoc};
+  return {ref, baseLoc};
 }
 } // namespace
 
@@ -2849,6 +2897,19 @@ void populateRoot(nb::module_ &m) {
   m.attr("T") = nb::type_var("T");
   m.attr("U") = nb::type_var("U");
 
+  // Policies for how loc_tracebacks() composes the three location sources
+  // (explicit loc=, generated traceback, Location.current).
+  nb::enum_<PyGlobals::TracebackLoc::OnExplicitAction>(m, "OnExplicitAction")
+      .value("USE_EXPLICIT",
+             PyGlobals::TracebackLoc::OnExplicitAction::UseExplicit)
+      .value("USE_TRACEBACK",
+             PyGlobals::TracebackLoc::OnExplicitAction::UseTraceback);
+
+  nb::enum_<PyGlobals::TracebackLoc::CurrentLocAction>(m, "CurrentLocAction")
+      .value("FALLBACK", PyGlobals::TracebackLoc::CurrentLocAction::Fallback)
+      .value("NAMELOC_WRAP",
+             PyGlobals::TracebackLoc::CurrentLocAction::NamelocWrap);
+
   nb::class_<PyGlobals>(m, "_Globals")
       .def_prop_rw("dialect_search_modules",
                    &PyGlobals::getDialectSearchPrefixes,
@@ -2893,6 +2954,24 @@ void populateRoot(nb::module_ &m) {
       .def("register_traceback_file_exclusion",
            [](PyGlobals &self, const std::string &filename) {
              self.getTracebackLoc().registerTracebackFileExclusion(filename);
+           })
+      .def("traceback_action_on_explicit_loc",
+           [](PyGlobals &self) {
+             return self.getTracebackLoc().tracebackActionOnExplicitLoc();
+           })
+      .def("set_traceback_action_on_explicit_loc",
+           [](PyGlobals &self,
+              PyGlobals::TracebackLoc::OnExplicitAction action) {
+             self.getTracebackLoc().setTracebackActionOnExplicitLoc(action);
+           })
+      .def("traceback_action_on_current_loc",
+           [](PyGlobals &self) {
+             return self.getTracebackLoc().tracebackActionOnCurrentLoc();
+           })
+      .def("set_traceback_action_on_current_loc",
+           [](PyGlobals &self,
+              PyGlobals::TracebackLoc::CurrentLocAction action) {
+             self.getTracebackLoc().setTracebackActionOnCurrentLoc(action);
            });
 
   // Aside from making the globals accessible to python, having python manage
@@ -2987,6 +3066,191 @@ void populateRoot(nb::module_ &m) {
       // clang-format on
       "typeid"_a, nb::kw_only(), "replace"_a = false,
       "Register a value caster for casting MLIR values to custom user values.");
+}
+
+//------------------------------------------------------------------------------
+// Location subclass bindDerived implementations.
+//------------------------------------------------------------------------------
+
+void PyUnknownLocation::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](DefaultingPyMlirContext context) {
+        return PyUnknownLocation(context->getRef(),
+                                 mlirLocationUnknownGet(context->get()));
+      },
+      "context"_a = nb::none(),
+      "Gets a Location representing an unknown location.");
+}
+
+void PyFileLineColLocation::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](std::string filename, int line, int col,
+         DefaultingPyMlirContext context) {
+        return PyFileLineColLocation(
+            context->getRef(),
+            mlirLocationFileLineColGet(context->get(),
+                                       toMlirStringRef(filename), line, col));
+      },
+      "filename"_a, "line"_a, "col"_a, "context"_a = nb::none(),
+      "Gets a FileLineColLoc for a file, line, and column.");
+  c.def_static(
+      "get",
+      [](std::string filename, int startLine, int startCol, int endLine,
+         int endCol, DefaultingPyMlirContext context) {
+        return PyFileLineColLocation(
+            context->getRef(), mlirLocationFileLineColRangeGet(
+                                   context->get(), toMlirStringRef(filename),
+                                   startLine, startCol, endLine, endCol));
+      },
+      "filename"_a, "start_line"_a, "start_col"_a, "end_line"_a, "end_col"_a,
+      "context"_a = nb::none(),
+      "Gets a FileLineColLoc spanning a file and line/column range.");
+  c.def_prop_ro(
+      "filename",
+      [](PyFileLineColLocation &self) {
+        return mlirIdentifierStr(
+            mlirLocationFileLineColRangeGetFilename(self.get()));
+      },
+      "Gets the filename from a `FileLineColLoc`.");
+  c.def_prop_ro(
+      "start_line",
+      [](PyFileLineColLocation &self) {
+        return mlirLocationFileLineColRangeGetStartLine(self.get());
+      },
+      "Gets the start line number from a `FileLineColLoc`.");
+  c.def_prop_ro(
+      "start_col",
+      [](PyFileLineColLocation &self) {
+        return mlirLocationFileLineColRangeGetStartColumn(self.get());
+      },
+      "Gets the start column number from a `FileLineColLoc`.");
+  c.def_prop_ro(
+      "end_line",
+      [](PyFileLineColLocation &self) {
+        return mlirLocationFileLineColRangeGetEndLine(self.get());
+      },
+      "Gets the end line number from a `FileLineColLoc`.");
+  c.def_prop_ro(
+      "end_col",
+      [](PyFileLineColLocation &self) {
+        return mlirLocationFileLineColRangeGetEndColumn(self.get());
+      },
+      "Gets the end column number from a `FileLineColLoc`.");
+}
+
+void PyNameLocation::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](std::string name, std::optional<PyLocation> childLoc,
+         DefaultingPyMlirContext context) {
+        return PyNameLocation(
+            context->getRef(),
+            mlirLocationNameGet(context->get(), toMlirStringRef(name),
+                                childLoc
+                                    ? childLoc->get()
+                                    : mlirLocationUnknownGet(context->get())));
+      },
+      "name"_a, "child_loc"_a = nb::none(), "context"_a = nb::none(),
+      "Gets a NameLoc with an optional child location.");
+  c.def_prop_ro(
+      "name_str",
+      [](PyNameLocation &self) {
+        return mlirIdentifierStr(mlirLocationNameGetName(self.get()));
+      },
+      "Gets the name string from a `NameLoc`.");
+  c.def_prop_ro(
+      "child_loc",
+      [](PyNameLocation &self) {
+        return PyLocation(self.getContext(),
+                          mlirLocationNameGetChildLoc(self.get()))
+            .maybeDownCast();
+      },
+      "Gets the child location from a `NameLoc`.");
+}
+
+void PyCallSiteLocation::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](PyLocation callee, const std::vector<PyLocation> &frames,
+         DefaultingPyMlirContext context) {
+        if (frames.empty())
+          throw nb::value_error("No caller frames provided.");
+        MlirLocation caller = frames.back().get();
+        for (size_t index = frames.size() - 1; index-- > 0;) {
+          caller = mlirLocationCallSiteGet(frames[index].get(), caller);
+        }
+        return PyCallSiteLocation(
+            context->getRef(), mlirLocationCallSiteGet(callee.get(), caller));
+      },
+      "callee"_a, "frames"_a, "context"_a = nb::none(),
+      "Gets a CallSiteLoc chaining a callee and one or more caller frames.");
+  c.def_prop_ro(
+      "callee",
+      [](PyCallSiteLocation &self) {
+        return PyLocation(self.getContext(),
+                          mlirLocationCallSiteGetCallee(self.get()))
+            .maybeDownCast();
+      },
+      "Gets the callee location from a `CallSiteLoc`.");
+  c.def_prop_ro(
+      "caller",
+      [](PyCallSiteLocation &self) {
+        return PyLocation(self.getContext(),
+                          mlirLocationCallSiteGetCaller(self.get()))
+            .maybeDownCast();
+      },
+      "Gets the caller location from a `CallSiteLoc`.");
+}
+
+void PyFusedLocation::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](const std::vector<PyLocation> &pyLocations,
+         std::optional<PyAttribute> metadata, DefaultingPyMlirContext context) {
+        std::vector<MlirLocation> locations;
+        locations.reserve(pyLocations.size());
+        for (const PyLocation &pyLocation : pyLocations)
+          locations.push_back(pyLocation.get());
+        MlirLocation location = mlirLocationFusedGet(
+            context->get(), locations.size(), locations.data(),
+            metadata ? metadata->get() : MlirAttribute{0});
+        // Strict: `Location.fused(...)` handles the collapse case.
+        if (!mlirLocationIsAFused(location))
+          throw nb::value_error(
+              "FusedLoc.get would collapse to a non-fused location; use "
+              "Location.fused(...) for the permissive variant.");
+        return PyFusedLocation(context->getRef(), location);
+      },
+      "locations"_a, "metadata"_a = nb::none(), "context"_a = nb::none(),
+      "Gets a FusedLoc from an array of locations and optional metadata. "
+      "Raises if the fuse would collapse to a non-fused location; use "
+      "`Location.fused(...)` for the permissive variant.");
+  c.def_prop_ro(
+      "locations",
+      [](PyFusedLocation &self) {
+        unsigned numLocations = mlirLocationFusedGetNumLocations(self.get());
+        std::vector<MlirLocation> locations(numLocations);
+        if (numLocations)
+          mlirLocationFusedGetLocations(self.get(), locations.data());
+        std::vector<nb::object> pyLocations;
+        pyLocations.reserve(numLocations);
+        for (unsigned i = 0; i < numLocations; ++i)
+          pyLocations.push_back(
+              PyLocation(self.getContext(), locations[i]).maybeDownCast());
+        return pyLocations;
+      },
+      "Gets the list of locations from a `FusedLoc`.");
+  c.def_prop_ro(
+      "metadata",
+      [](PyFusedLocation &self) -> std::optional<PyAttribute> {
+        MlirAttribute metadata = mlirLocationFusedGetMetadata(self.get());
+        if (mlirAttributeIsNull(metadata))
+          return std::nullopt;
+        return PyAttribute(self.getContext(), metadata);
+      },
+      "Gets the metadata attribute from a `FusedLoc`, or None if absent.");
 }
 
 //------------------------------------------------------------------------------
@@ -3361,13 +3625,60 @@ void populateIRCore(nb::module_ &m) {
           // clang-format on
           "Gets the Location bound to the current thread or raises ValueError.")
       .def_static(
+          "from_attr",
+          [](PyAttribute &attribute, DefaultingPyMlirContext context) {
+            return PyLocation(context->getRef(),
+                              mlirLocationFromAttribute(attribute))
+                .maybeDownCast();
+          },
+          "attribute"_a, "context"_a = nb::none(),
+          "Gets a Location from a `LocationAttr`.")
+      // Factory shims kept for backward compatibility; return the concrete
+      // subclass. New code should use the subclass `.get()` directly.
+      .def_static(
           "unknown",
           [](DefaultingPyMlirContext context) {
-            return PyLocation(context->getRef(),
-                              mlirLocationUnknownGet(context->get()));
+            return PyUnknownLocation(context->getRef(),
+                                     mlirLocationUnknownGet(context->get()));
           },
-          "context"_a = nb::none(),
-          "Gets a Location representing an unknown location.")
+          "context"_a = nb::none(), "Alias for `UnknownLoc.get()`.")
+      .def_static(
+          "file",
+          [](std::string filename, int line, int col,
+             DefaultingPyMlirContext context) {
+            return PyFileLineColLocation(
+                context->getRef(),
+                mlirLocationFileLineColGet(
+                    context->get(), toMlirStringRef(filename), line, col));
+          },
+          "filename"_a, "line"_a, "col"_a, "context"_a = nb::none(),
+          "Alias for `FileLineColLoc.get()`.")
+      .def_static(
+          "file",
+          [](std::string filename, int startLine, int startCol, int endLine,
+             int endCol, DefaultingPyMlirContext context) {
+            return PyFileLineColLocation(
+                context->getRef(),
+                mlirLocationFileLineColRangeGet(
+                    context->get(), toMlirStringRef(filename), startLine,
+                    startCol, endLine, endCol));
+          },
+          "filename"_a, "start_line"_a, "start_col"_a, "end_line"_a,
+          "end_col"_a, "context"_a = nb::none(),
+          "Alias for `FileLineColLoc.get()` over a range.")
+      .def_static(
+          "name",
+          [](std::string name, std::optional<PyLocation> childLoc,
+             DefaultingPyMlirContext context) {
+            return PyNameLocation(
+                context->getRef(),
+                mlirLocationNameGet(
+                    context->get(), toMlirStringRef(name),
+                    childLoc ? childLoc->get()
+                             : mlirLocationUnknownGet(context->get())));
+          },
+          "name"_a, "childLoc"_a = nb::none(), "context"_a = nb::none(),
+          "Alias for `NameLoc.get()`.")
       .def_static(
           "callsite",
           [](PyLocation callee, const std::vector<PyLocation> &frames,
@@ -3375,70 +3686,14 @@ void populateIRCore(nb::module_ &m) {
             if (frames.empty())
               throw nb::value_error("No caller frames provided.");
             MlirLocation caller = frames.back().get();
-            for (size_t index = frames.size() - 1; index-- > 0;) {
+            for (size_t index = frames.size() - 1; index-- > 0;)
               caller = mlirLocationCallSiteGet(frames[index].get(), caller);
-            }
-            return PyLocation(context->getRef(),
-                              mlirLocationCallSiteGet(callee.get(), caller));
+            return PyCallSiteLocation(
+                context->getRef(),
+                mlirLocationCallSiteGet(callee.get(), caller));
           },
           "callee"_a, "frames"_a, "context"_a = nb::none(),
-          "Gets a Location representing a caller and callsite.")
-      .def("is_a_callsite", mlirLocationIsACallSite,
-           "Returns True if this location is a CallSiteLoc.")
-      .def_prop_ro(
-          "callee",
-          [](PyLocation &self) {
-            return PyLocation(self.getContext(),
-                              mlirLocationCallSiteGetCallee(self));
-          },
-          "Gets the callee location from a CallSiteLoc.")
-      .def_prop_ro(
-          "caller",
-          [](PyLocation &self) {
-            return PyLocation(self.getContext(),
-                              mlirLocationCallSiteGetCaller(self));
-          },
-          "Gets the caller location from a CallSiteLoc.")
-      .def_static(
-          "file",
-          [](std::string filename, int line, int col,
-             DefaultingPyMlirContext context) {
-            return PyLocation(
-                context->getRef(),
-                mlirLocationFileLineColGet(
-                    context->get(), toMlirStringRef(filename), line, col));
-          },
-          "filename"_a, "line"_a, "col"_a, "context"_a = nb::none(),
-          "Gets a Location representing a file, line and column.")
-      .def_static(
-          "file",
-          [](std::string filename, int startLine, int startCol, int endLine,
-             int endCol, DefaultingPyMlirContext context) {
-            return PyLocation(context->getRef(),
-                              mlirLocationFileLineColRangeGet(
-                                  context->get(), toMlirStringRef(filename),
-                                  startLine, startCol, endLine, endCol));
-          },
-          "filename"_a, "start_line"_a, "start_col"_a, "end_line"_a,
-          "end_col"_a, "context"_a = nb::none(),
-          "Gets a Location representing a file, line and column range.")
-      .def("is_a_file", mlirLocationIsAFileLineColRange,
-           "Returns True if this location is a FileLineColLoc.")
-      .def_prop_ro(
-          "filename",
-          [](PyLocation loc) {
-            return mlirIdentifierStr(
-                mlirLocationFileLineColRangeGetFilename(loc));
-          },
-          "Gets the filename from a FileLineColLoc.")
-      .def_prop_ro("start_line", mlirLocationFileLineColRangeGetStartLine,
-                   "Gets the start line number from a `FileLineColLoc`.")
-      .def_prop_ro("start_col", mlirLocationFileLineColRangeGetStartColumn,
-                   "Gets the start column number from a `FileLineColLoc`.")
-      .def_prop_ro("end_line", mlirLocationFileLineColRangeGetEndLine,
-                   "Gets the end line number from a `FileLineColLoc`.")
-      .def_prop_ro("end_col", mlirLocationFileLineColRangeGetEndColumn,
-                   "Gets the end column number from a `FileLineColLoc`.")
+          "Alias for `CallSiteLoc.get()`.")
       .def_static(
           "fused",
           [](const std::vector<PyLocation> &pyLocations,
@@ -3451,64 +3706,10 @@ void populateIRCore(nb::module_ &m) {
             MlirLocation location = mlirLocationFusedGet(
                 context->get(), locations.size(), locations.data(),
                 metadata ? metadata->get() : MlirAttribute{0});
-            return PyLocation(context->getRef(), location);
+            return PyLocation(context->getRef(), location).maybeDownCast();
           },
           "locations"_a, "metadata"_a = nb::none(), "context"_a = nb::none(),
-          "Gets a Location representing a fused location with optional "
-          "metadata.")
-      .def("is_a_fused", mlirLocationIsAFused,
-           "Returns True if this location is a `FusedLoc`.")
-      .def_prop_ro(
-          "locations",
-          [](PyLocation &self) {
-            unsigned numLocations = mlirLocationFusedGetNumLocations(self);
-            std::vector<MlirLocation> locations(numLocations);
-            if (numLocations)
-              mlirLocationFusedGetLocations(self, locations.data());
-            std::vector<PyLocation> pyLocations{};
-            pyLocations.reserve(numLocations);
-            for (unsigned i = 0; i < numLocations; ++i)
-              pyLocations.emplace_back(self.getContext(), locations[i]);
-            return pyLocations;
-          },
-          "Gets the list of locations from a `FusedLoc`.")
-      .def_static(
-          "name",
-          [](std::string name, std::optional<PyLocation> childLoc,
-             DefaultingPyMlirContext context) {
-            return PyLocation(
-                context->getRef(),
-                mlirLocationNameGet(
-                    context->get(), toMlirStringRef(name),
-                    childLoc ? childLoc->get()
-                             : mlirLocationUnknownGet(context->get())));
-          },
-          "name"_a, "childLoc"_a = nb::none(), "context"_a = nb::none(),
-          "Gets a Location representing a named location with optional child "
-          "location.")
-      .def("is_a_name", mlirLocationIsAName,
-           "Returns True if this location is a `NameLoc`.")
-      .def_prop_ro(
-          "name_str",
-          [](PyLocation loc) {
-            return mlirIdentifierStr(mlirLocationNameGetName(loc));
-          },
-          "Gets the name string from a `NameLoc`.")
-      .def_prop_ro(
-          "child_loc",
-          [](PyLocation &self) {
-            return PyLocation(self.getContext(),
-                              mlirLocationNameGetChildLoc(self));
-          },
-          "Gets the child location from a `NameLoc`.")
-      .def_static(
-          "from_attr",
-          [](PyAttribute &attribute, DefaultingPyMlirContext context) {
-            return PyLocation(context->getRef(),
-                              mlirLocationFromAttribute(attribute));
-          },
-          "attribute"_a, "context"_a = nb::none(),
-          "Gets a Location from a `LocationAttr`.")
+          "Alias for `FusedLoc.get()` (may collapse to a non-fused location).")
       .def_prop_ro(
           "context",
           [](PyLocation &self) -> nb::typed<nb::object, PyMlirContext> {
@@ -3522,6 +3723,16 @@ void populateIRCore(nb::module_ &m) {
                                mlirLocationGetAttribute(self));
           },
           "Get the underlying `LocationAttr`.")
+      .def_prop_ro(
+          "typeid",
+          [](PyLocation &self) {
+            MlirTypeID mlirTypeID =
+                mlirAttributeGetTypeID(mlirLocationGetAttribute(self.get()));
+            assert(!mlirTypeIDIsNull(mlirTypeID) &&
+                   "mlirTypeID was expected to be non-null.");
+            return PyTypeID(mlirTypeID);
+          },
+          "Gets the `TypeID` of the underlying LocationAttr.")
       .def(
           "emit_error",
           [](PyLocation &self, std::string message) {
@@ -3534,6 +3745,15 @@ void populateIRCore(nb::module_ &m) {
             Args:
               message: The error message to emit.)")
       .def(
+          "__str__",
+          [](PyLocation &self) {
+            PyPrintAccumulator printAccum;
+            mlirLocationPrint(self, printAccum.getCallback(),
+                              printAccum.getUserData());
+            return printAccum.join();
+          },
+          "Returns the assembly form of the Location.")
+      .def(
           "__repr__",
           [](PyLocation &self) {
             PyPrintAccumulator printAccum;
@@ -3542,6 +3762,12 @@ void populateIRCore(nb::module_ &m) {
             return printAccum.join();
           },
           "Returns the assembly representation of the location.");
+
+  PyUnknownLocation::bind(m);
+  PyFileLineColLocation::bind(m);
+  PyNameLocation::bind(m);
+  PyCallSiteLocation::bind(m);
+  PyFusedLocation::bind(m);
 
   //----------------------------------------------------------------------------
   // Mapping of Module
@@ -3751,7 +3977,8 @@ void populateIRCore(nb::module_ &m) {
           [](PyOperationBase &self) {
             PyOperation &operation = self.getOperation();
             return PyLocation(operation.getContext(),
-                              mlirOperationGetLocation(operation.get()));
+                              mlirOperationGetLocation(operation.get()))
+                .maybeDownCast();
           },
           [](PyOperationBase &self, const PyLocation &location) {
             PyOperation &operation = self.getOperation();
@@ -3963,7 +4190,19 @@ void populateIRCore(nb::module_ &m) {
              Args:
                callback: A callable that takes an Operation and returns a WalkResult.
                walk_order: The order of traversal (PRE_ORDER or POST_ORDER).
-               op_class: If provided, only operations of this type are passed to the callback.)");
+               op_class: If provided, only operations of this type are passed to the callback.)")
+      .def(
+          "has_trait",
+          [](PyOperationBase &self, nb::type_object &traitCls) {
+            PyTypeID traitTypeID =
+                nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+            MlirIdentifier opName =
+                mlirOperationGetName(self.getOperation().get());
+            return mlirOperationNameHasTrait(
+                mlirIdentifierStr(opName), traitTypeID.get(),
+                self.getOperation().getContext()->get());
+          },
+          "trait_cls"_a, "Checks if the operation has a given trait.");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
@@ -3971,7 +4210,8 @@ void populateIRCore(nb::module_ &m) {
           [](std::string_view name,
              std::optional<std::vector<PyType *>> results,
              std::optional<std::vector<PyValue *>> operands,
-             std::optional<nb::dict> attributes,
+             std::optional<nb::typed<nb::dict, nb::str, PyAttribute>>
+                 attributes,
              std::optional<std::vector<PyBlock *>> successors, int regions,
              const std::optional<PyLocation> &location,
              const nb::object &maybeIp,
@@ -4073,8 +4313,10 @@ void populateIRCore(nb::module_ &m) {
                  std::tuple<int, bool> opRegionSpec,
                  nb::object operandSegmentSpecObj,
                  nb::object resultSegmentSpecObj,
-                 std::optional<nb::list> resultTypeList, nb::list operandList,
-                 std::optional<nb::dict> attributes,
+                 std::optional<nb::sequence> resultTypeList,
+                 nb::sequence operandList,
+                 std::optional<nb::typed<nb::dict, nb::str, PyAttribute>>
+                     attributes,
                  std::optional<std::vector<PyBlock *>> successors,
                  std::optional<int> regions,
                  const std::optional<PyLocation> &location,
@@ -4120,8 +4362,9 @@ void populateIRCore(nb::module_ &m) {
   // ods_operand_segments/ods_result_segments as arguments to the constructor,
   // rather than to access them as attributes.
   opViewClass.attr("build_generic") = classmethod(
-      [](nb::handle cls, std::optional<nb::list> resultTypeList,
-         nb::list operandList, std::optional<nb::dict> attributes,
+      [](nb::handle cls, std::optional<nb::sequence> resultTypeList,
+         nb::sequence operandList,
+         std::optional<nb::typed<nb::dict, nb::str, PyAttribute>> attributes,
          std::optional<std::vector<PyBlock *>> successors,
          std::optional<int> regions, std::optional<PyLocation> location,
          const nb::object &maybeIp) {
@@ -4139,6 +4382,9 @@ void populateIRCore(nb::module_ &m) {
       "cls"_a, "results"_a = nb::none(), "operands"_a = nb::none(),
       "attributes"_a = nb::none(), "successors"_a = nb::none(),
       "regions"_a = nb::none(), "loc"_a = nb::none(), "ip"_a = nb::none(),
+      // clang-format off
+      nb::sig("def build_generic(cls, results: Sequence[Type] | None = None, operands: Sequence[Value] | None = None, attributes: dict[str, Attribute] | None = None, successors: Sequence[Block] | None = None, regions: int | None = None, loc: Location | None = None, ip: InsertionPoint | None = None) -> typing.Self"),
+      // clang-format on
       "Builds a specific, generated OpView based on class level attributes.");
   opViewClass.attr("parse") = classmethod(
       [](const nb::object &cls, const std::string &sourceStr,
@@ -4164,7 +4410,22 @@ void populateIRCore(nb::module_ &m) {
       },
       "cls"_a, "source"_a, nb::kw_only(), "source_name"_a = "",
       "context"_a = nb::none(),
+      // clang-format off
+      nb::sig("def parse(cls, source: str, *, source_name: str = '', context: Context | None = None) -> typing.Self"),
+      // clang-format on
       "Parses a specific, generated OpView based on class level attributes.");
+  opViewClass.attr("has_trait") = classmethod(
+      [](nb::object &self, nb::type_object &traitCls,
+         DefaultingPyMlirContext &context) {
+        PyTypeID traitTypeID =
+            nb::cast<PyTypeID>(traitCls.attr(PyDynamicOpTrait::typeIDAttr));
+        std::string opName = nb::cast<std::string>(self.attr("OPERATION_NAME"));
+        return mlirOperationNameHasTrait(
+            mlirStringRefCreate(opName.data(), opName.size()),
+            traitTypeID.get(), context->get());
+      },
+      "cls"_a, "trait_cls"_a, "context"_a = nb::none(),
+      "Checks if the operation has a given trait.");
 
   PyOpAdaptor::bind(m);
 
@@ -4262,8 +4523,9 @@ void populateIRCore(nb::module_ &m) {
           "Returns a forward-optimized sequence of operations.")
       .def_static(
           "create_at_start",
-          [](PyRegion &parent, const nb::sequence &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+          [](PyRegion &parent, nb::typed<nb::sequence, PyType> pyArgTypes,
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             parent.checkValid();
             MlirBlock block = createBlock(pyArgTypes, pyArgLocs);
             mlirRegionInsertOwnedBlock(parent, 0, block);
@@ -4291,7 +4553,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "create_before",
           [](PyBlock &self, const nb::args &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             self.checkValid();
             MlirBlock block =
                 createBlock(nb::cast<nb::sequence>(pyArgTypes), pyArgLocs);
@@ -4305,7 +4568,8 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "create_after",
           [](PyBlock &self, const nb::args &pyArgTypes,
-             const std::optional<nb::sequence> &pyArgLocs) {
+             const std::optional<nb::typed<nb::sequence, PyLocation>>
+                 &pyArgLocs) {
             self.checkValid();
             MlirBlock block =
                 createBlock(nb::cast<nb::sequence>(pyArgTypes), pyArgLocs);
@@ -4844,12 +5108,12 @@ void populateIRCore(nb::module_ &m) {
           "Returns the string form of value as an operand (i.e., the ValueID).")
       .def_prop_ro(
           "type",
-          [](PyValue &self) -> nb::typed<nb::object, PyType> {
+          [](PyValue &self) {
             return PyType(self.getParentOperation()->getContext(),
                           mlirValueGetType(self.get()))
                 .maybeDownCast();
           },
-          "Returns the type of the value.")
+          "Returns the type of the value.", nb::sig("def type(self) -> _T"))
       .def(
           "set_type",
           [](PyValue &self, const PyType &type) {
@@ -4892,8 +5156,9 @@ void populateIRCore(nb::module_ &m) {
           "location",
           [](PyValue self) {
             return PyLocation(
-                PyMlirContext::forContext(mlirValueGetContext(self)),
-                mlirValueGetLocation(self));
+                       PyMlirContext::forContext(mlirValueGetContext(self)),
+                       mlirValueGetLocation(self))
+                .maybeDownCast();
           },
           "Returns the source location of the value.");
 
@@ -5012,7 +5277,6 @@ void populateIRCore(nb::module_ &m) {
   PyOpOperands::bind(m);
   PyOpResultList::bind(m);
   PyOpSuccessors::bind(m);
-  PyRegionIterator::bind(m);
   PyRegionList::bind(m);
 
   // Debug bindings.

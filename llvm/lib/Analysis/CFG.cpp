@@ -235,10 +235,21 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
     const Cycle *OuterC = nullptr;
     if (CI) {
       OuterC = CI->getTopLevelParentCycle(BB);
-      if (CyclesWithHoles.count(OuterC))
-        OuterC = nullptr;
-      else if (StopCycles.contains(OuterC))
-        return true;
+      if (OuterC) {
+        if (CyclesWithHoles.count(OuterC))
+          OuterC = nullptr;
+        else if (StopCycles.contains(OuterC))
+          return true;
+      } else {
+        // If BB is not part of a cycle, then it can't reach any block that
+        // dominates it. An exception is if the block is unreachable, as all
+        // reachable blocks dominate an unreachable block.
+        if (DT && DT->isReachableFromEntry(BB) &&
+            llvm::all_of(StopSet, [&](const BasicBlock *StopBB) {
+              return DT->dominates(StopBB, BB);
+            }))
+          continue;
+      }
     }
 
     if (!--Limit) {

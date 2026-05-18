@@ -75,6 +75,9 @@ RUN sudo apt-get update \
         python3-packaging \
         python3-setuptools \
         python3-psutil \
+        python3-venv \
+        python3-yaml \
+        rsync \
         software-properties-common \
         swig \
         unzip \

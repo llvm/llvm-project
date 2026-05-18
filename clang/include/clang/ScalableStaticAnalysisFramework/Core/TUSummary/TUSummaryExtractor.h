@@ -10,6 +10,9 @@
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_TUSUMMARY_TUSUMMARYEXTRACTOR_H
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/Decl.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include <optional>
 
 namespace clang::ssaf {
 class TUSummaryBuilder;
@@ -18,6 +21,16 @@ class TUSummaryExtractor : public ASTConsumer {
 public:
   explicit TUSummaryExtractor(TUSummaryBuilder &Builder)
       : SummaryBuilder(Builder) {}
+
+  /// Creates EntityName from the Decl, registers the entity, and sets its
+  /// linkage atomically.
+  /// \returns the EntityId, or std::nullopt if EntityName creation fails.
+  std::optional<EntityId> addEntity(const NamedDecl *D);
+
+  /// Creates EntityName for the return value of \p FD, registers the entity,
+  /// and sets its linkage atomically.
+  /// \returns the EntityId, or std::nullopt if EntityName creation fails.
+  std::optional<EntityId> addEntityForReturn(const FunctionDecl *FD);
 
 protected:
   TUSummaryBuilder &SummaryBuilder;

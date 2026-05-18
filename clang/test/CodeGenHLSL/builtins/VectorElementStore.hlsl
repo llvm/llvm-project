@@ -15,7 +15,7 @@ void test_uint4(uint Idx, uint Val) {
 
 // Test local vector element store for bool.
 // CHECK: [[COND1:%.*]] = load i32, ptr addrspace(3) @Cond, align 4
-// CHECK: [[COND2:%.*]] = trunc i32 [[COND1]] to i1
+// CHECK: [[COND2:%.*]] = icmp ne i32 [[COND1]], 0
 // CHECK: [[IDX:%.*]] = load i32, ptr %Idx.addr, align 4
 // CHECK: [[COND3:%.*]] = zext i1 [[COND2]] to i32
 // CHECK: [[PTR:%.*]] = getelementptr <3 x i32>, ptr %Val, i32 0, i32 [[IDX]]
@@ -30,7 +30,7 @@ bool3 test_bool(uint Idx) {
 
 // Test resource vector element store for float.
 // CHECK: [[VAL:%.*]] = load float, ptr %Val.addr, align 4
-// CHECK: [[RES_PTR:%.*]] = call {{.*}} ptr @_ZN4hlsl18RWStructuredBufferIDv4_fEixEj(ptr {{.*}} @_ZL3Buf, i32 noundef 0)
+// CHECK: [[RES_PTR:%.*]] = call {{.*}} ptr @_ZNK4hlsl18RWStructuredBufferIDv4_fEixEj(ptr {{.*}} @_ZL3Buf, i32 noundef 0)
 // CHECK: [[IDX:%.*]] = load i32, ptr %Idx.addr, align 4
 // CHECK: [[PTR:%.*]] = getelementptr <4 x float>, ptr [[RES_PTR]], i32 0, i32 [[IDX]]
 // CHECK: store float [[VAL]], ptr [[PTR]], align 4

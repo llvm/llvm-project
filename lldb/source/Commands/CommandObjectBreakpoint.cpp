@@ -1104,7 +1104,7 @@ protected:
         if (!func_regexp.empty()) {
           if (func_regexp[0] == '*' || func_regexp[0] == '?')
             result.AppendWarning(
-                "Function name regex does not accept glob patterns.");
+                "function name regex does not accept glob patterns");
         }
         return;
       }
@@ -1911,7 +1911,7 @@ protected:
           if (m_options.m_func_regexp[0] == '*' ||
               m_options.m_func_regexp[0] == '?')
             result.AppendWarning(
-                "Function name regex does not accept glob patterns.");
+                "function name regex does not accept glob patterns");
         }
         return;
       }
@@ -2073,7 +2073,7 @@ protected:
     BreakpointIDList valid_bp_ids;
 
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids,
+        command, &target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::disablePerm);
 
     if (result.Succeeded()) {
@@ -2153,7 +2153,7 @@ protected:
       // Particular breakpoint selected; enable that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, target, result, &valid_bp_ids,
+          command, m_exe_ctx, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::disablePerm);
 
       if (result.Succeeded()) {
@@ -2261,7 +2261,7 @@ protected:
       BreakpointIDList valid_bp_ids;
 
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, target, result, &valid_bp_ids,
+          command, m_exe_ctx, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::disablePerm);
 
       if (result.Succeeded()) {
@@ -2406,7 +2406,7 @@ protected:
       // Particular breakpoints selected; show info about that breakpoint.
       BreakpointIDList valid_bp_ids;
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, target, result, &valid_bp_ids,
+          command, &target, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (result.Succeeded()) {
@@ -2529,7 +2529,7 @@ protected:
     switch (break_type) {
     case eClearTypeFileAndLine: // Breakpoint by source position
     {
-      const ConstString filename(m_options.m_filename.c_str());
+      const ConstString filename(m_options.m_filename);
       BreakpointLocationCollection loc_coll;
 
       for (size_t i = 0; i < num_breakpoints; ++i) {
@@ -2685,7 +2685,7 @@ protected:
 
       if (!command.empty()) {
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            command, target, result, &excluded_bp_ids,
+            command, &target, result, &excluded_bp_ids,
             BreakpointName::Permissions::PermissionKinds::deletePerm);
         if (!result.Succeeded())
           return;
@@ -2704,7 +2704,7 @@ protected:
       }
     } else {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, target, result, &valid_bp_ids,
+          command, m_exe_ctx, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::deletePerm);
       if (!result.Succeeded())
         return;
@@ -2959,6 +2959,7 @@ protected:
                                        m_bp_opts.GetBreakpointOptions(),
                                        m_access_options.GetPermissions());
     }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
 private:
@@ -3015,7 +3016,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, target, result, &valid_bp_ids,
+        command, &target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -3089,7 +3090,7 @@ protected:
     // Particular breakpoint selected; disable that breakpoint.
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-        command, target, result, &valid_bp_ids,
+        command, &target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::deletePerm);
 
     if (result.Succeeded()) {
@@ -3146,8 +3147,7 @@ protected:
     if (name_list.empty()) {
       result.AppendMessage("No breakpoint names found.");
     } else {
-      for (const std::string &name_str : name_list) {
-        const char *name = name_str.c_str();
+      for (const std::string &name : name_list) {
         // First print out the options for the name:
         Status error;
         BreakpointName *bp_name =
@@ -3165,7 +3165,7 @@ protected:
           BreakpointList &breakpoints = target.GetBreakpointList();
           bool any_set = false;
           for (BreakpointSP bp_sp : breakpoints.Breakpoints()) {
-            if (bp_sp->MatchesName(name)) {
+            if (bp_sp->MatchesName(name.c_str())) {
               StreamString s;
               any_set = true;
               bp_sp->GetDescription(&s, eDescriptionLevelBrief);
@@ -3562,7 +3562,7 @@ protected:
     BreakpointIDList valid_bp_ids;
     if (!command.empty()) {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
-          command, target, result, &valid_bp_ids,
+          command, m_exe_ctx, result, &valid_bp_ids,
           BreakpointName::Permissions::PermissionKinds::listPerm);
 
       if (!result.Succeeded()) {
@@ -3575,13 +3575,252 @@ protected:
     Status error = target.SerializeBreakpointsToFile(file_spec, valid_bp_ids,
                                                      m_options.m_append);
     if (!error.Success()) {
-      result.AppendErrorWithFormat("error serializing breakpoints: %s.",
+      result.AppendErrorWithFormat("error serializing breakpoints: %s",
                                    error.AsCString());
     }
   }
 
 private:
   CommandOptions m_options;
+};
+
+#pragma mark override add
+#define LLDB_OPTIONS_breakpoint_override_add
+#include "CommandOptions.inc"
+
+class CommandObjectBreakpointOverrideAdd : public CommandObjectParsed {
+public:
+  CommandObjectBreakpointOverrideAdd(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "breakpoint override add",
+                            "Add a scripted breakpoint override resolver.",
+                            nullptr),
+        m_python_class_options("breakpoint override resolver", true, 'P') {
+    // We're picking up all the normal options, commands and disable.
+    m_all_options.Append(&m_python_class_options,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_1);
+    m_all_options.Append(&m_dummy_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+    m_all_options.Append(&m_options, llvm::ArrayRef<llvm::StringRef>());
+    m_all_options.Finalize();
+  }
+
+  ~CommandObjectBreakpointOverrideAdd() override = default;
+
+  class CommandOptions : public OptionGroup {
+  public:
+    CommandOptions() = default;
+
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = GetDefinitions()[option_idx].short_option;
+
+      switch (short_option) {
+      case 'd':
+        m_description.assign(std::string(option_arg));
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_description.clear();
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_breakpoint_override_add_options);
+    }
+
+    // Instance variables to hold the values for command options.
+
+    std::string m_description;
+  };
+  Options *GetOptions() override { return &m_all_options; }
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target =
+        m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
+    llvm::Expected<lldb::user_id_t> id = target.AddBreakpointResolverOverride(
+        m_python_class_options.GetName(),
+        m_python_class_options.GetStructuredData(), m_options.m_description);
+    if (id) {
+      result.AppendMessageWithFormatv("{0}", *id);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+    } else {
+      result.AppendErrorWithFormatv("could not add resolver: {0}.",
+                                    llvm::toString(id.takeError()));
+    }
+  }
+
+private:
+  BreakpointDummyOptionGroup m_dummy_options;
+  OptionGroupPythonClassWithDict m_python_class_options;
+  CommandOptions m_options;
+  OptionGroupOptions m_all_options;
+};
+
+class CommandObjectBreakpointOverrideDelete : public CommandObjectParsed {
+public:
+  CommandObjectBreakpointOverrideDelete(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "breakpoint override delete",
+                            "Delete a scripted breakpoint override resolver.",
+                            nullptr) {
+    AddSimpleArgumentList(eArgTypeIndex, eArgRepeatOptional);
+    m_all_options.Append(&m_dummy_options, LLDB_OPT_SET_1, LLDB_OPT_SET_1);
+    m_all_options.Finalize();
+  }
+
+  ~CommandObjectBreakpointOverrideDelete() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target =
+        m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
+
+    const size_t argc = command.GetArgumentCount();
+    if (argc == 0) {
+      if (m_interpreter.Confirm("Delete all breakpoint overrides?", false)) {
+        target.ClearBreakpointResolverOverrides();
+      }
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      return;
+    }
+
+    for (auto &entry : command.entries()) {
+      uint64_t id;
+      bool success;
+      if (!entry.ref().getAsInteger(0, id))
+        success = target.RemoveBreakpointResolverOverride(id);
+      else {
+        result.AppendErrorWithFormatv("Index not an integer: {0}", entry.ref());
+        result.SetStatus(eReturnStatusFailed);
+        return;
+      }
+      if (!success) {
+        result.AppendErrorWithFormatv("Cannot delete override: {0}", id);
+        result.SetStatus(eReturnStatusFailed);
+        return;
+      }
+    }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+
+private:
+  BreakpointDummyOptionGroup m_dummy_options;
+  OptionGroupOptions m_all_options;
+};
+
+class CommandObjectBreakpointOverrideList : public CommandObjectParsed {
+public:
+  CommandObjectBreakpointOverrideList(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "breakpoint override list",
+            "List the current scripted breakpoint override resolvers.",
+            nullptr) {
+    AddSimpleArgumentList(eArgTypeIndex, eArgRepeatOptional);
+    m_all_options.Append(&m_dummy_options, LLDB_OPT_SET_1, LLDB_OPT_SET_1);
+    m_all_options.Finalize();
+  }
+
+  ~CommandObjectBreakpointOverrideList() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target =
+        m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
+
+    const size_t argc = command.GetArgumentCount();
+    std::vector<uint64_t> idxs;
+    if (argc != 0) {
+      for (auto &entry : command.entries()) {
+        uint64_t id;
+        if (!entry.ref().getAsInteger(0, id)) {
+          idxs.push_back(id);
+        } else {
+          result.AppendErrorWithFormatv("Index not an integer: {0}",
+                                        entry.ref());
+          result.SetStatus(eReturnStatusFailed);
+          return;
+        }
+      }
+    }
+    target.DescribeBreakpointOverrides(result.GetOutputStream(), idxs);
+    if (idxs.empty()) {
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+    } else {
+      result.SetStatus(eReturnStatusFailed);
+      Stream &error_strm = result.GetErrorStream();
+      if (idxs.size() == 1) {
+        error_strm << llvm::formatv("error: invalid index: {0}", idxs[0]);
+        return;
+      }
+      error_strm << "error: invalid indices: ";
+      auto begin = idxs.begin();
+      error_strm << llvm::formatv("{0}", *begin);
+      idxs.erase(begin);
+      for (auto elem : idxs)
+        error_strm << llvm::formatv(", {0}", elem);
+    }
+  }
+
+private:
+  BreakpointDummyOptionGroup m_dummy_options;
+  OptionGroupOptions m_all_options;
+};
+class CommandObjectBreakpointOverride : public CommandObjectMultiword {
+public:
+  CommandObjectBreakpointOverride(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "override",
+            "Commands to manage breakpoint override resolvers") {
+
+    SetHelpLong(
+        R"(
+Breakpoint override resolvers allow you to intercept breakpoint requests and
+re-implement them using a custom breakpoint resolver.  Override resolvers are
+implemented by a scripted breakpoint resolver that implements the 
+'overrides_resolver' interface.  It takes an SBStructuredData with the
+serialized form of the original breakpoint resolver.  If it returns true, then
+the provided resolver will be substituted for the one lldb would have produced
+by default.
+
+Add new override resolvers using:
+
+    (lldb) breakpoint override add -c class_name
+
+This returns the ID of the resolver you added.
+
+List the currently added override resolvers using:
+
+    (lldb) breakpoint override list
+    
+Delete an added resolver using:
+
+    (lldb) breakpoint override delete <id>
+
+)");
+    CommandObjectSP add_command_object(
+        new CommandObjectBreakpointOverrideAdd(interpreter));
+    CommandObjectSP delete_command_object(
+        new CommandObjectBreakpointOverrideDelete(interpreter));
+    CommandObjectSP list_command_object(
+        new CommandObjectBreakpointOverrideList(interpreter));
+
+    LoadSubCommand("add", add_command_object);
+    LoadSubCommand("delete", delete_command_object);
+    LoadSubCommand("list", list_command_object);
+  }
+
+  ~CommandObjectBreakpointOverride() override = default;
 };
 
 // CommandObjectMultiwordBreakpoint
@@ -3617,6 +3856,8 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
       new CommandObjectBreakpointWrite(interpreter));
   CommandObjectSP read_command_object(
       new CommandObjectBreakpointRead(interpreter));
+  CommandObjectSP override_command_object(
+      new CommandObjectBreakpointOverride(interpreter));
 
   list_command_object->SetCommandName("breakpoint list");
   enable_command_object->SetCommandName("breakpoint enable");
@@ -3630,6 +3871,7 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
   name_command_object->SetCommandName("breakpoint name");
   write_command_object->SetCommandName("breakpoint write");
   read_command_object->SetCommandName("breakpoint read");
+  override_command_object->SetCommandName("breakpoint override");
 
   LoadSubCommand("list", list_command_object);
   LoadSubCommand("enable", enable_command_object);
@@ -3643,12 +3885,13 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
   LoadSubCommand("name", name_command_object);
   LoadSubCommand("write", write_command_object);
   LoadSubCommand("read", read_command_object);
+  LoadSubCommand("override", override_command_object);
 }
 
 CommandObjectMultiwordBreakpoint::~CommandObjectMultiwordBreakpoint() = default;
 
 void CommandObjectMultiwordBreakpoint::VerifyIDs(
-    Args &args, Target &target, bool allow_locations,
+    Args &args, const ExecutionContext &exe_ctx, bool allow_locations,
     CommandReturnObject &result, BreakpointIDList *valid_ids,
     BreakpointName::Permissions ::PermissionKinds purpose) {
   // args can be strings representing 1). integers (for breakpoint ids)
@@ -3662,6 +3905,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   // If args is empty, we will use the last created breakpoint (if there is
   // one.)
 
+  Target &target = exe_ctx.GetTargetRef();
   Args temp_args;
 
   if (args.empty()) {
@@ -3683,7 +3927,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   // into TEMP_ARGS.
 
   if (llvm::Error err = BreakpointIDList::FindAndReplaceIDRanges(
-          args, &target, allow_locations, purpose, temp_args)) {
+          args, exe_ctx, allow_locations, purpose, temp_args)) {
     result.SetError(std::move(err));
     return;
   }
@@ -3717,13 +3961,13 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
             &id_str, cur_bp_id.GetBreakpointID(), cur_bp_id.GetLocationID());
         i = valid_ids->GetSize() + 1;
         result.AppendErrorWithFormat(
-            "'%s' is not a currently valid breakpoint/location id.\n",
+            "'%s' is not a currently valid breakpoint/location id",
             id_str.GetData());
       }
     } else {
       i = valid_ids->GetSize() + 1;
       result.AppendErrorWithFormat(
-          "'%d' is not a currently valid breakpoint ID.\n",
+          "'%d' is not a currently valid breakpoint ID",
           cur_bp_id.GetBreakpointID());
     }
   }

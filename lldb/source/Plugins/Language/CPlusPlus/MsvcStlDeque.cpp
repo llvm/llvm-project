@@ -10,6 +10,8 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 
@@ -55,7 +57,7 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::
 llvm::Expected<uint32_t> lldb_private::formatters::
     MsvcStlDequeSyntheticFrontEnd::CalculateNumChildren() {
   if (!m_map)
-    return llvm::createStringError("Failed to read size");
+    return llvm::createStringError("failed to read size");
   return m_size;
 }
 
@@ -85,9 +87,9 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::GetChildAtIndex(
 
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(name.GetString(), second_address,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+  return CreateChildValueObjectFromAddress(name.GetString(), second_address,
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
 lldb::ChildCacheState
@@ -140,16 +142,20 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
     if (!element_type)
       return lldb::eRefetch;
   }
-  auto element_size = element_type.GetByteSize(nullptr);
-  if (!element_size)
+  auto element_size_or_err = element_type.GetByteSize(nullptr);
+  if (!element_size_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),
+                   element_size_or_err.takeError(),
+                   "failed to get deque element byte size: {0}");
     return lldb::eRefetch;
+  }
 
   m_map = map_sp.get();
   m_exe_ctx_ref = m_backend.GetExecutionContextRef();
   m_block_size = block_size.ULongLong();
   m_offset = offset;
   m_map_size = map_size;
-  m_element_size = *element_size;
+  m_element_size = *element_size_or_err;
   m_element_type = element_type;
   m_size = size;
   return lldb::eRefetch;
@@ -158,13 +164,11 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
 llvm::Expected<size_t> lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_map)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   if (auto optional_idx = ExtractIndexFromString(name.GetCString()))
     return *optional_idx;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool lldb_private::formatters::IsMsvcStlDeque(ValueObject &valobj) {

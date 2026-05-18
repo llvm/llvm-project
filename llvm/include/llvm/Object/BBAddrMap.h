@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/UniqueBBID.h"
 
@@ -64,8 +65,7 @@ struct BBAddrMap {
           static_cast<bool>(Val & (1 << 6)), static_cast<bool>(Val & (1 << 7))};
       if (Feat.encode() != Val)
         return createStringError(
-            std::error_code(), "invalid encoding for BBAddrMap::Features: 0x%x",
-            Val);
+            "invalid encoding for BBAddrMap::Features: 0x%x", Val);
       return Feat;
     }
 
@@ -115,8 +115,7 @@ struct BBAddrMap {
                     /*HasIndirectBranch=*/static_cast<bool>(V & (1 << 4))};
         if (MD.encode() != V)
           return createStringError(
-              std::error_code(), "invalid encoding for BBEntry::Metadata: 0x%x",
-              V);
+              "invalid encoding for BBEntry::Metadata: 0x%x", V);
         return MD;
       }
     };
@@ -158,9 +157,7 @@ struct BBAddrMap {
 
     // Equality operator for unit testing.
     bool operator==(const BBRangeEntry &Other) const {
-      return BaseAddress == Other.BaseAddress &&
-             std::equal(BBEntries.begin(), BBEntries.end(),
-                        Other.BBEntries.begin());
+      return BaseAddress == Other.BaseAddress && BBEntries == Other.BBEntries;
     }
   };
 
@@ -202,7 +199,7 @@ struct BBAddrMap {
 
   // Equality operator for unit testing.
   bool operator==(const BBAddrMap &Other) const {
-    return std::equal(BBRanges.begin(), BBRanges.end(), Other.BBRanges.begin());
+    return BBRanges == Other.BBRanges;
   }
 };
 
@@ -238,7 +235,8 @@ struct PGOAnalysisMap {
 
     bool operator==(const PGOBBEntry &Other) const {
       return std::tie(BlockFreq, PostLinkBlockFreq, Successors) ==
-             std::tie(Other.BlockFreq, PostLinkBlockFreq, Other.Successors);
+             std::tie(Other.BlockFreq, Other.PostLinkBlockFreq,
+                      Other.Successors);
     }
   };
 
@@ -253,6 +251,40 @@ struct PGOAnalysisMap {
            std::tie(Other.FuncEntryCount, Other.BBEntries, Other.FeatEnable);
   }
 };
+
+/// Extracts addresses from a data stream.
+/// The base implementation reads the address directly.
+/// Subclasses can override to handle format-specific details such as relocation
+/// resolution.
+class AddressExtractor {
+  const DataExtractor &Data;
+  unsigned AddressSize;
+
+public:
+  AddressExtractor(const DataExtractor &Data, unsigned AddressSize)
+      : Data(Data), AddressSize(AddressSize) {}
+
+  virtual ~AddressExtractor() = default;
+
+  const DataExtractor &getDataExtractor() const { return Data; }
+
+  /// Extract and resolve an address at the current \p Cur position.
+  virtual Expected<uint64_t> extractAddress(DataExtractor::Cursor &Cur) {
+    uint64_t Address = Data.getUnsigned(Cur, AddressSize);
+    if (!Cur)
+      return Cur.takeError();
+    return Address;
+  }
+};
+
+/// Decodes one BB address map section payload.
+///
+/// \p Extractor provides address extraction and the underlying DataExtractor.
+/// \p PGOAnalyses if non-null, receives the decoded PGO analysis data. On
+///   error, \p PGOAnalyses may be partially populated.
+Expected<std::vector<BBAddrMap>>
+decodeBBAddrMapPayload(AddressExtractor &Extractor,
+                       std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr);
 
 } // end namespace object.
 } // end namespace llvm.

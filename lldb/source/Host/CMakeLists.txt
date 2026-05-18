@@ -17,6 +17,7 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
+  common/ConPTYUtils.cpp
   common/DiagnosticsRendering.cpp
   common/FileAction.cpp
   common/FileCache.cpp
@@ -80,6 +81,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/ProcessLauncherWindows.cpp
     windows/PseudoConsole.cpp
     windows/ProcessRunLock.cpp
+    windows/WindowsFileAction.cpp
     )
 else()
   add_host_subdirectory(posix

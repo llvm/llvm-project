@@ -8,43 +8,15 @@
 
 #include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/Timeout.h"
+
+#include <cstring>
 
 using namespace lldb;
 using namespace lldb_private;
 
-/// Strips the ConPTY initialization sequences that Windows unconditionally
-/// emits when a process is first attached to a pseudo console.
-///
-/// These are emitted by ConPTY's host process (conhost.exe) at process attach
-/// time, not by the debuggee. They are always the first bytes on the output
-/// pipe and are always present as a contiguous prefix.
-///
-/// \param dst  Buffer containing the data read from the ConPTY output pipe.
-///             Modified in place: if the initialization sequences are present
-///             as a prefix, they are removed by shifting the remaining bytes
-///             to the front of the buffer.
-/// \param dst_len The size of \p dst.
-/// \param len  On input, the number of valid bytes in \p dst. On output,
-///             reduced by the number of bytes stripped.
-/// \return
-///     \p true if the sequence was found and stripped.
-static bool StripConPTYInitSequences(void *dst, size_t dst_len, size_t &len) {
-  static const char sequences[] = "\x1b[?9001l\x1b[?1004l";
-  static const size_t sequences_len = sizeof(sequences) - 1;
-  char *buf = static_cast<char *>(dst);
-  if (len >= sequences_len) {
-    assert(dst_len >= len - sequences_len);
-    if (memcmp(buf, sequences, sequences_len) == 0) {
-      memmove(buf, buf + sequences_len, len - sequences_len);
-      len -= sequences_len;
-      return true;
-    }
-  }
-  return false;
-}
-
 ConnectionConPTY::ConnectionConPTY(std::shared_ptr<PseudoConsole> pty)
-    : m_pty(pty), ConnectionGenericFile(pty->GetSTDOUTHandle(), false) {};
+    : ConnectionGenericFile(pty->GetSTDOUTHandle(), false), m_pty(pty) {}
 
 ConnectionConPTY::~ConnectionConPTY() {}
 
@@ -64,17 +36,23 @@ size_t ConnectionConPTY::Read(void *dst, size_t dst_len,
                               const Timeout<std::micro> &timeout,
                               lldb::ConnectionStatus &status,
                               Status *error_ptr) {
-  std::unique_lock<std::mutex> guard(m_pty->GetMutex());
-  if (m_pty->IsStopping()) {
-    m_pty->GetCV().wait(guard, [this] { return !m_pty->IsStopping(); });
+  {
+    std::unique_lock<std::mutex> guard(m_pty->GetMutex());
+    if (m_pty->IsStopping())
+      m_pty->GetCV().wait(guard, [this] { return !m_pty->IsStopping(); });
+    if (!m_pty->IsConnected()) {
+      status = eConnectionStatusEndOfFile;
+      return 0;
+    }
   }
 
+  char *out = static_cast<char *>(dst);
   size_t bytes_read =
-      ConnectionGenericFile::Read(dst, dst_len, timeout, status, error_ptr);
+      ConnectionGenericFile::Read(out, dst_len, timeout, status, error_ptr);
 
-  if (bytes_read > 0 && !m_pty_vt_sequence_was_stripped) {
-    if (StripConPTYInitSequences(dst, dst_len, bytes_read))
-      m_pty_vt_sequence_was_stripped = true;
+  if (bytes_read > 0) {
+    StripConPTYSequences(out, bytes_read, !m_conpty_sequences_stripped);
+    m_conpty_sequences_stripped = true;
   }
 
   return bytes_read;

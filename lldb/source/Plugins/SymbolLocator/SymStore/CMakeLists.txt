@@ -13,7 +13,7 @@ add_lldb_library(lldbPluginSymbolLocatorSymStore PLUGIN
     lldbCore
     lldbHost
     lldbSymbol
-    LLVMSupportHTTP
+    LLVMHTTP
   )
 
 add_dependencies(lldbPluginSymbolLocatorSymStore
