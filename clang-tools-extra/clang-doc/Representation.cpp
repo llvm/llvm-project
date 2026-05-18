@@ -94,7 +94,7 @@ llvm::StringRef commentKindToString(CommentKind Kind) {
 const SymbolID EmptySID = SymbolID();
 
 template <typename T>
-static llvm::Expected<OwnedPtr<Info>> reduce(OwningPtrArray<Info> &Values) {
+static llvm::Expected<Info *> reduce(SmallVectorImpl<Info *> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no value to reduce");
@@ -106,8 +106,7 @@ static llvm::Expected<OwnedPtr<Info>> reduce(OwningPtrArray<Info> &Values) {
 }
 
 template <typename T>
-static void reduceChildren(OwningVec<T> &Children,
-                           OwningVec<T> &&ChildrenToMerge) {
+static void reduceChildren(DocList<T> &Children, DocList<T> &&ChildrenToMerge) {
   while (!ChildrenToMerge.empty()) {
     T *Ptr = ChildrenToMerge.front().Ptr;
     ChildrenToMerge.pop_front();
@@ -126,8 +125,8 @@ static void reduceChildren(OwningVec<T> &Children,
 }
 
 template <>
-void reduceChildren<Reference>(OwningVec<Reference> &Children,
-                               OwningVec<Reference> &&ChildrenToMerge) {
+void reduceChildren<Reference>(DocList<Reference> &Children,
+                               DocList<Reference> &&ChildrenToMerge) {
   while (!ChildrenToMerge.empty()) {
     Reference *Ptr = ChildrenToMerge.front().Ptr;
     ChildrenToMerge.pop_front();
@@ -147,7 +146,7 @@ void reduceChildren<Reference>(OwningVec<Reference> &Children,
 }
 
 template <typename T>
-static void mergeUnkeyed(OwningVec<T> &Target, OwningVec<T> &&Source) {
+static void mergeUnkeyed(DocList<T> &Target, DocList<T> &&Source) {
   while (!Source.empty()) {
     T *Ptr = Source.front().Ptr;
     Source.pop_front();
@@ -160,8 +159,8 @@ static void mergeUnkeyed(OwningVec<T> &Target, OwningVec<T> &&Source) {
 }
 
 template <>
-void mergeUnkeyed<CommentInfo>(OwningVec<CommentInfo> &Target,
-                               OwningVec<CommentInfo> &&Source) {
+void mergeUnkeyed<CommentInfo>(DocList<CommentInfo> &Target,
+                               DocList<CommentInfo> &&Source) {
   while (!Source.empty()) {
     CommentInfo *Ptr = Source.front().Ptr;
     Source.pop_front();
@@ -255,7 +254,7 @@ llvm::Error mergeSingleInfo(doc::OwnedPtr<doc::Info> &Reduced,
 }
 
 // Dispatch function.
-llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values) {
+llvm::Expected<Info *> mergeInfos(SmallVectorImpl<Info *> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no info values to merge");

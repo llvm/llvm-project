@@ -260,6 +260,8 @@ Non-comprehensive list of changes in this release
 - ``typeid`` on references and pointers of ``final`` types no longer emits a
   vtable lookup at runtime.
 
+- Updated support for Unicode from 15.1 to 18.0.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
@@ -506,6 +508,9 @@ Improvements to Clang's diagnostics
 
 - Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
 
+- Added warnings for floating-point exception function calls (fenv.h) without enabling
+  floating-point exception behavior via the appropriate flags or pragmas. (#GH128239)
+  
 - Improved ``__block`` attribute coverage for ivars, static variables and register variables. (#GH197213)
 
 Improvements to Clang's time-trace
@@ -552,6 +557,7 @@ Bug Fixes in This Version
 - Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with ``--triple spirv``. (#GH189964)
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
+- Fixed a bug where Clang fails to find instantiation of Decls in constraint checking. (#GH173086)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
 - Fixed a crash caused by declaring multiple ``ownership_returns`` attributes with mismatched or missing arguments. (#GH188733)
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
@@ -560,6 +566,7 @@ Bug Fixes in This Version
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
+- Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

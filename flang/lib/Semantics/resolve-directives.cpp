@@ -590,8 +590,8 @@ public:
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPSectionConstruct &);
-  void Post(const parser::OpenMPSectionConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpSectionDirective &);
+  void Post(const parser::OmpSectionDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPCriticalConstruct &critical);
   void Post(const parser::OpenMPCriticalConstruct &) { PopContext(); }
@@ -705,8 +705,8 @@ public:
 
   bool Pre(const parser::OmpAllocateDirective &);
 
-  bool Pre(const parser::OpenMPAssumeConstruct &);
-  void Post(const parser::OpenMPAssumeConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpAssumeDirective &);
+  void Post(const parser::OmpAssumeDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPAtomicConstruct &);
   void Post(const parser::OpenMPAtomicConstruct &) { PopContext(); }
@@ -2179,7 +2179,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpSectionDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_section);
   GetContext().withinConstruct = true;
   return true;
@@ -2255,7 +2255,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpAllocateDirective &x) {
   return false;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPAssumeConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpAssumeDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_assume);
   return true;
 }
