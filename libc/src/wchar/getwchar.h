@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This file contains the prototype for the getwchar function, which reads a
-/// single character from the provided stream.
+/// single character from stdin.
 ///
 //===----------------------------------------------------------------------===//
 
