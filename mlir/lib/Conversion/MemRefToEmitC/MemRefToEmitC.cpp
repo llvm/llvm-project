@@ -30,7 +30,6 @@ using namespace mlir;
 
 static bool isMemRefTypeLegalForEmitC(MemRefType memRefType) {
   return memRefType.hasStaticShape() && memRefType.getLayout().isIdentity() &&
-         memRefType.getRank() != 0 &&
          !llvm::is_contained(memRefType.getShape(), 0);
 }
 
@@ -74,6 +73,11 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
           op.getLoc(), "cannot transform alloca with dynamic shape");
     }
 
+    if (op.getType().getRank() == 0) {
+      return rewriter.notifyMatchFailure(
+          op.getLoc(), "cannot transform alloca with zero rank");
+    }
+
     if (op.getAlignment().value_or(1) > 1) {
       // TODO: Allow alignment if it is not more than the natural alignment
       // of the C array.
@@ -103,7 +107,7 @@ Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
 
 static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
                                            OpBuilder &builder) {
-  assert(isMemRefTypeLegalForEmitC(memrefType) &&
+  assert(isMemRefTypeLegalForEmitC(memrefType) && memrefType.getRank() != 0 &&
          "incompatible memref type for EmitC conversion");
   emitc::CallOpaqueOp elementSize = emitc::CallOpaqueOp::create(
       builder, loc, emitc::SizeTType::get(builder.getContext()),
@@ -151,6 +155,12 @@ static Value stripPointerUnrealizedCast(Value v) {
   return Value();
 }
 
+static Value getPointerOrStripUnrealizedCast(Value v) {
+  if (isa<emitc::PointerType>(v.getType()))
+    return v;
+  return stripPointerUnrealizedCast(v);
+}
+
 static Value computeRowMajorLinearIndex(ImplicitLocOpBuilder &builder,
                                         MemRefType memrefType,
                                         ValueRange indices) {
@@ -163,6 +173,9 @@ static Value computeRowMajorLinearIndex(ImplicitLocOpBuilder &builder,
       indices.empty()
           ? emitc::ConstantOp::create(builder, idxType, builder.getIndexAttr(0))
           : indices[0];
+
+  if (shape.empty())
+    return linearIndex;
 
   for (auto [dim, idx] : llvm::zip(shape.drop_front(), indices.drop_front())) {
     Value dimSize =
@@ -186,7 +199,10 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     }
 
     Type sizeTType = emitc::SizeTType::get(rewriter.getContext());
-    Type elementType = memrefType.getElementType();
+    Type elementType =
+        getTypeConverter()->convertType(memrefType.getElementType());
+    if (!elementType)
+      return rewriter.notifyMatchFailure(loc, "cannot convert element type");
     IndexType indexType = rewriter.getIndexType();
     emitc::CallOpaqueOp sizeofElementOp = emitc::CallOpaqueOp::create(
         rewriter, loc, sizeTType, rewriter.getStringAttr("sizeof"),
@@ -256,6 +272,35 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
       return rewriter.notifyMatchFailure(
           loc, "incompatible target memref type for EmitC conversion");
 
+    if (srcMemrefType.getRank() == 0) {
+      assert(targetMemrefType.getRank() == 0 &&
+             "target must have same rank as source");
+      Type elementType =
+          getTypeConverter()->convertType(srcMemrefType.getElementType());
+      if (!elementType)
+        return rewriter.notifyMatchFailure(loc, "cannot convert element type");
+
+      Value srcPtr = getPointerOrStripUnrealizedCast(operands.getSource());
+      Value targetPtr = getPointerOrStripUnrealizedCast(operands.getTarget());
+      if (!srcPtr || !targetPtr)
+        return rewriter.notifyMatchFailure(loc, "expected pointer operands");
+
+      Value zeroIndex = emitc::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexType(), rewriter.getIndexAttr(0));
+      auto srcLValue = emitc::SubscriptOp::create(
+          rewriter, loc, cast<TypedValue<emitc::PointerType>>(srcPtr),
+          zeroIndex);
+      auto value = emitc::LoadOp::create(rewriter, loc, elementType,
+                                         srcLValue.getResult());
+
+      auto targetLValue = emitc::SubscriptOp::create(
+          rewriter, loc, cast<TypedValue<emitc::PointerType>>(targetPtr),
+          zeroIndex);
+      rewriter.replaceOpWithNewOp<emitc::AssignOp>(
+          copyOp, targetLValue.getResult(), value.getResult());
+      return success();
+    }
+
     auto srcArrayValue =
         cast<TypedValue<emitc::ArrayType>>(operands.getSource());
     emitc::AddressOfOp srcPtr =
@@ -273,7 +318,6 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
             calculateMemrefTotalSizeBytes(loc, srcMemrefType, rewriter)});
 
     rewriter.replaceOp(copyOp, memCpyCall.getResults());
-
     return success();
   }
 };
@@ -380,8 +424,8 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
 
     auto arrayValue =
         dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
-    Value strippedPtr = stripPointerUnrealizedCast(operands.getMemref());
-    if (!strippedPtr && arrayValue) {
+    Value ptr = getPointerOrStripUnrealizedCast(operands.getMemref());
+    if (!ptr && arrayValue) {
       auto subscript = emitc::SubscriptOp::create(rewriter, loc, arrayValue,
                                                   operands.getIndices());
 
@@ -389,14 +433,14 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
       return success();
     }
 
-    if (!strippedPtr)
+    if (!ptr)
       return rewriter.notifyMatchFailure(loc, "expected array or pointer type");
     MemRefType opMemrefType = cast<MemRefType>(op.getMemref().getType());
     ValueRange indices = operands.getIndices();
 
     ImplicitLocOpBuilder b(loc, rewriter);
     Value linearIndex = computeRowMajorLinearIndex(b, opMemrefType, indices);
-    auto typedPtr = cast<TypedValue<emitc::PointerType>>(strippedPtr);
+    auto typedPtr = cast<TypedValue<emitc::PointerType>>(ptr);
     auto subscript =
         emitc::SubscriptOp::create(rewriter, loc, typedPtr, linearIndex);
 
@@ -414,8 +458,8 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
     Location loc = op.getLoc();
     auto arrayValue =
         dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
-    Value strippedPtr = stripPointerUnrealizedCast(operands.getMemref());
-    if (!strippedPtr && arrayValue) {
+    Value ptr = getPointerOrStripUnrealizedCast(operands.getMemref());
+    if (!ptr && arrayValue) {
       auto subscript = emitc::SubscriptOp::create(rewriter, loc, arrayValue,
                                                   operands.getIndices());
       rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
@@ -423,14 +467,14 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
       return success();
     }
 
-    if (!strippedPtr)
+    if (!ptr)
       return rewriter.notifyMatchFailure(loc, "expected array or pointer type");
     MemRefType opMemrefType = cast<MemRefType>(op.getMemref().getType());
     ValueRange indices = operands.getIndices();
 
     ImplicitLocOpBuilder b(loc, rewriter);
     Value linearIndex = computeRowMajorLinearIndex(b, opMemrefType, indices);
-    auto typedPtr = cast<TypedValue<emitc::PointerType>>(strippedPtr);
+    auto typedPtr = cast<TypedValue<emitc::PointerType>>(ptr);
     auto subscript =
         emitc::SubscriptOp::create(rewriter, loc, typedPtr, linearIndex);
 
@@ -452,6 +496,8 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
             typeConverter.convertType(memRefType.getElementType());
         if (!convertedElementType)
           return {};
+        if (memRefType.getRank() == 0)
+          return emitc::PointerType::get(convertedElementType);
         return emitc::ArrayType::get(memRefType.getShape(),
                                      convertedElementType);
       });

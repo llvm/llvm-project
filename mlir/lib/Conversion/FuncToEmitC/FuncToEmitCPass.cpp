@@ -13,6 +13,7 @@
 #include "mlir/Conversion/FuncToEmitC/FuncToEmitCPass.h"
 
 #include "mlir/Conversion/FuncToEmitC/FuncToEmitC.h"
+#include "mlir/Conversion/MemRefToEmitC/MemRefToEmitC.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
@@ -36,6 +37,7 @@ void ConvertFuncToEmitC::runOnOperation() {
   ConversionTarget target(getContext());
 
   target.addLegalDialect<emitc::EmitCDialect>();
+  target.addLegalOp<UnrealizedConversionCastOp>();
   target.addIllegalOp<func::CallOp, func::FuncOp, func::ReturnOp>();
 
   RewritePatternSet patterns(&getContext());
@@ -49,6 +51,7 @@ void ConvertFuncToEmitC::runOnOperation() {
   });
 
   populateFuncToEmitCPatterns(typeConverter, patterns);
+  populateMemRefToEmitCTypeConversion(typeConverter);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

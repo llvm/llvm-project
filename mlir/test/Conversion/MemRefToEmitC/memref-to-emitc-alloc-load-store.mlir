@@ -57,6 +57,33 @@ func.func private @memref_alloc_load(%i: index, %j: index) -> f32 {
   return %v : f32
 }
 
+// CHECK-LABEL: emitc.func @load_rank0(
+// CHECK-SAME:  %[[ARG0:.*]]: !emitc.ptr<i64>) -> i64
+func.func @load_rank0(%arg0: memref<i64>) -> i64 {
+  // CHECK:     %[[INDEX:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> index
+  // CHECK:     %[[ELEM_LVALUE:.*]] = subscript %[[ARG0]][%[[INDEX]]] : (!emitc.ptr<i64>, index) -> !emitc.lvalue<i64>
+  // CHECK:     %[[LOADED_VAL:.*]] = load %[[ELEM_LVALUE]] : <i64>
+  %0 = memref.load %arg0[] : memref<i64>
+  // CHECK:     return %[[LOADED_VAL]] : i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: emitc.func private @store_rank0_alloc(
+// CHECK-SAME:  %[[VAL:.*]]: i64)
+func.func private @store_rank0_alloc(%v: i64) {
+  // CHECK:     %[[SIZEOF_I64:.*]] = call_opaque "sizeof"() {args = [i64]} : () -> !emitc.size_t
+  // CHECK:     %[[NUM_ELEMS:.*]] = "emitc.constant"() <{value = 1 : index}> : () -> index
+  // CHECK:     %[[TOTAL_BYTES:.*]] = mul %[[SIZEOF_I64]], %[[NUM_ELEMS]] : (!emitc.size_t, index) -> !emitc.size_t
+  // CHECK:     %[[MALLOC_PTR:.*]] = call_opaque "malloc"(%[[TOTAL_BYTES]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
+  // CHECK:     %[[ELEM_PTR:.*]] = cast %[[MALLOC_PTR]] : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i64>
+  %0 = memref.alloc() : memref<i64>
+  // CHECK:     %[[INDEX:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> index
+  // CHECK:     %[[ELEM_LVALUE:.*]] = subscript %[[ELEM_PTR]][%[[INDEX]]] : (!emitc.ptr<i64>, index) -> !emitc.lvalue<i64>
+  // CHECK:     assign %[[VAL]] : i64 to %[[ELEM_LVALUE]] : <i64>
+  memref.store %v, %0[] : memref<i64>
+  return
+}
+
 /// LoadOp and StoreOp still compatible
 /// Previous array paths still available
 // CHECK-LABEL: emitc.func @memref_load_store(

@@ -12,10 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/FuncToEmitC/FuncToEmitC.h"
-
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Conversion/MemRefToEmitC/MemRefToEmitC.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -33,6 +36,8 @@ struct FuncToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
       ConversionTarget &target, TypeConverter &typeConverter,
       RewritePatternSet &patterns) const final {
     populateFuncToEmitCPatterns(typeConverter, patterns);
+    populateMemRefToEmitCTypeConversion(typeConverter);
+    target.addLegalOp<UnrealizedConversionCastOp>();
   }
 };
 } // namespace
@@ -48,6 +53,112 @@ void mlir::registerConvertFuncToEmitCInterface(DialectRegistry &registry) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+// Checks whether return type is a MemRef that can be converted to scalar and
+// legal for EmitC.
+static bool isScalarizableMemRefResult(Type retTy) {
+  auto retTyAsMemRef = dyn_cast<MemRefType>(retTy);
+  return retTyAsMemRef && retTyAsMemRef.hasStaticShape() &&
+         retTyAsMemRef.getLayout().isIdentity() &&
+         retTyAsMemRef.getNumElements() == 1;
+}
+
+static Value materializeCastIfNeeded(OpBuilder &builder, Location loc,
+                                     Type type, Value value) {
+  if (value.getType() == type)
+    return value;
+  return UnrealizedConversionCastOp::create(builder, loc, type, value)
+      .getResult(0);
+}
+
+static Value loadScalarFromArray(OpBuilder &builder, Location loc,
+                                 Type scalarType,
+                                 TypedValue<emitc::ArrayType> arrayValue) {
+  emitc::ConstantOp zeroIndex = emitc::ConstantOp::create(
+      builder, loc, builder.getIndexType(), builder.getIndexAttr(0));
+  SmallVector<Value> indices(arrayValue.getType().getRank(),
+                             zeroIndex.getResult());
+  auto subscript =
+      emitc::SubscriptOp::create(builder, loc, arrayValue, indices);
+  return emitc::LoadOp::create(builder, loc, scalarType, subscript.getResult())
+      .getResult();
+}
+
+static Value loadScalarFromPointer(OpBuilder &builder, Location loc,
+                                   Type scalarType,
+                                   TypedValue<emitc::PointerType> ptr) {
+  Value zeroIndex = emitc::ConstantOp::create(
+      builder, loc, builder.getIndexType(), builder.getIndexAttr(0));
+  auto subscript = emitc::SubscriptOp::create(builder, loc, ptr, zeroIndex);
+  return emitc::LoadOp::create(builder, loc, scalarType, subscript.getResult())
+      .getResult();
+}
+
+static bool shouldReadMemRefReturnAsPointer(Value value,
+                                            MemRefType memrefType) {
+  return memrefType.getRank() == 0 || value.getDefiningOp<memref::AllocOp>();
+}
+
+static void scalarizeSingleElementMemRefReturns(
+    emitc::FuncOp funcOp, ConversionPatternRewriter &rewriter,
+    const TypeConverter &typeConverter, MemRefType memrefType) {
+  // Due to branching the function may have multiple return statements.
+  SmallVector<func::ReturnOp> returnOps;
+  funcOp.walk([&](func::ReturnOp returnOp) {
+    assert(returnOp.getNumOperands() == 1 &&
+           "Expected scalarized function to have one return operand");
+    returnOps.push_back(returnOp);
+  });
+
+  for (func::ReturnOp returnOp : returnOps) {
+    OpBuilder::InsertionGuard guard(rewriter);
+    Location loc = returnOp.getLoc();
+    rewriter.setInsertionPoint(returnOp);
+
+    Type scalarType = typeConverter.convertType(memrefType.getElementType());
+    assert(scalarType && "MemRef element type must be EmitC convertible.");
+
+    Value returnedValue = returnOp.getOperand(0);
+    if (auto arrayValue =
+            dyn_cast<TypedValue<emitc::ArrayType>>(returnedValue)) {
+      Value scalar = loadScalarFromArray(rewriter, loc, scalarType, arrayValue);
+      rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp, scalar);
+      continue;
+    }
+
+    if (auto ptr = dyn_cast<TypedValue<emitc::PointerType>>(returnedValue)) {
+      Value scalar = loadScalarFromPointer(rewriter, loc, scalarType, ptr);
+      rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp, scalar);
+      continue;
+    }
+
+    auto returnedMemRefType = dyn_cast<MemRefType>(returnedValue.getType());
+    assert(returnedMemRefType &&
+           "Expected scalarized return operand to be a memref, emitc.array, or "
+           "emitc.ptr.");
+
+    if (shouldReadMemRefReturnAsPointer(returnedValue, returnedMemRefType)) {
+      Type ptrTy = emitc::PointerType::get(scalarType);
+      Value ptrValue =
+          materializeCastIfNeeded(rewriter, loc, ptrTy, returnedValue);
+      Value scalar =
+          loadScalarFromPointer(rewriter, loc, scalarType,
+                                cast<TypedValue<emitc::PointerType>>(ptrValue));
+      rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp, scalar);
+      continue;
+    }
+
+    Type convertedArrayType = typeConverter.convertType(returnedMemRefType);
+    assert((convertedArrayType && isa<emitc::ArrayType>(convertedArrayType)) &&
+           "MemRef type must convert to emitc.array.");
+    Value arrayValue = materializeCastIfNeeded(
+        rewriter, loc, convertedArrayType, returnedValue);
+    Value scalar =
+        loadScalarFromArray(rewriter, loc, scalarType,
+                            cast<TypedValue<emitc::ArrayType>>(arrayValue));
+    rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp, scalar);
+  }
+}
+
 class CallOpConversion final : public OpConversionPattern<func::CallOp> {
 public:
   using OpConversionPattern<func::CallOp>::OpConversionPattern;
@@ -92,8 +203,19 @@ public:
     }
 
     Type resultType;
+    bool scalarizeMemRefResult = false;
+    MemRefType scalarizedMemRefType;
     if (fnType.getNumResults() == 1) {
-      resultType = getTypeConverter()->convertType(fnType.getResult(0));
+      Type originalResultType = fnType.getResult(0);
+      scalarizeMemRefResult = isScalarizableMemRefResult(originalResultType) &&
+                              isPrivateAndUnused(funcOp);
+      if (scalarizeMemRefResult) {
+        scalarizedMemRefType = cast<MemRefType>(originalResultType);
+      }
+      Type typeToConvert = scalarizeMemRefResult
+                               ? getElementTypeOrSelf(scalarizedMemRefType)
+                               : originalResultType;
+      resultType = getTypeConverter()->convertType(typeToConvert);
       if (!resultType)
         return rewriter.notifyMatchFailure(funcOp,
                                            "result type conversion failed");
@@ -132,10 +254,28 @@ public:
       if (failed(rewriter.convertRegionTypes(
               &newFuncOp.getBody(), *getTypeConverter(), &signatureConverter)))
         return failure();
+      if (scalarizeMemRefResult)
+        scalarizeSingleElementMemRefReturns(
+            newFuncOp, rewriter, *getTypeConverter(), scalarizedMemRefType);
     }
     rewriter.eraseOp(funcOp);
 
     return success();
+  }
+
+private:
+  // Updating the signature of public functions or functions with users is
+  // unsafe, since we may not have access to update all symbol users, therefore
+  // their call sites would still expect the original signature.
+  bool isPrivateAndUnused(func::FuncOp funcOp) const {
+    if (!funcOp.isPrivate())
+      return false;
+
+    ModuleOp module = funcOp->getParentOfType<ModuleOp>();
+    if (!module)
+      return false;
+
+    return SymbolTable::symbolKnownUseEmpty(funcOp, module);
   }
 };
 
@@ -150,9 +290,13 @@ public:
       return rewriter.notifyMatchFailure(
           returnOp, "only zero or one operand is supported");
 
-    rewriter.replaceOpWithNewOp<emitc::ReturnOp>(
-        returnOp,
-        returnOp.getNumOperands() ? adaptor.getOperands()[0] : nullptr);
+    if (returnOp.getNumOperands() == 0) {
+      rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp, Value());
+      return success();
+    }
+
+    rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp,
+                                                 adaptor.getOperands()[0]);
     return success();
   }
 };
