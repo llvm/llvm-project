@@ -1050,7 +1050,6 @@ void SampleProfileMatcher::runOnModule() {
         if (ProfFunc == OrphanFuncToProfileNameMap.end())
           continue;
       }
-      auto Matched = FuncProfileMatchCache.find({F, ProfFunc->second});
       // Avoid running stale profile matching on already matched orphan
       // functions
       if (functionMatchesProfile(*F, ProfFunc->second, true))
