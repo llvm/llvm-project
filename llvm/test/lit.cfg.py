@@ -448,8 +448,12 @@ def ptxas_supported_sms(ptxas_executable):
 def ptxas_supports_address_size_32(ptxas_executable):
     # Linux outputs the error message to stderr, while Windows outputs to stdout.
     # Pipe both to stdout to make sure we get the error message.
+    # Pass "-" + empty stdin so ptxas attempts to read input rather than falling
+    # back to a usage banner (which some builds do when an injected default option
+    # like -std-elf conflicts with -m 32).
     result = subprocess.run(
-        [ptxas_executable, "-m 32"],
+        [ptxas_executable, "-m 32", "-"],
+        input="",
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

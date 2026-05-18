@@ -110,7 +110,7 @@ private:
   // instruction, if needed to implement the instructions memory order. Required
   // fences after the instruction need to be handled elsewhere.
   std::pair<NVPTX::Ordering, NVPTX::Scope>
-  insertMemoryInstructionFence(SDLoc DL, SDValue &Chain, MemSDNode *N);
+  getMemInstOrderingScope(MemSDNode *N);
   NVPTX::Scope getOperationScope(MemSDNode *N, NVPTX::Ordering O) const;
 
 public:

@@ -350,7 +350,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     MadeChange |= tryInsertFencesForAtomic(
-        LI, isAcquireOrStronger(LI->getOrdering()), AtomicOrdering::Monotonic);
+        LI, isAcquireOrStronger(LI->getOrdering()), TLI->atomicOperationOrderAfterFenceSplit(LI));
 
     MadeChange |= tryExpandAtomicLoad(LI);
     return MadeChange;
@@ -373,7 +373,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     MadeChange |= tryInsertFencesForAtomic(
-        SI, isReleaseOrStronger(SI->getOrdering()), AtomicOrdering::Monotonic);
+        SI, isReleaseOrStronger(SI->getOrdering()), TLI->atomicOperationOrderAfterFenceSplit(SI));
 
     MadeChange |= tryExpandAtomicStore(SI);
     return MadeChange;
