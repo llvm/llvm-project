@@ -1,5 +1,5 @@
 ; Check handling of match-time diagnostics for invalid patterns (e.g.,
-; substitution overflow) in the case of expected patterns (e.g., CHECK-NOT) that
+; substitution overflow) in the case of expected patterns (e.g., CHECK) that
 ; otherwise have no errors.
 
 RUN: echo > %t.chk 'CHECK: [[#122+1]] [[STR:abc]] [[#NUM:0x0 - 0x1]]'
