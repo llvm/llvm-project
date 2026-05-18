@@ -3906,10 +3906,10 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) nounwind 
 ; AVX512F-NEXT:    vmovd %edi, %xmm1
 ; AVX512F-NEXT:    vpinsrb $1, %esi, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpinsrb $2, %edx, %xmm1, %xmm1
-; AVX512F-NEXT:    vpmovzxbq {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero,xmm1[2],zero,zero,zero,zero,zero,zero,zero,xmm1[3],zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; AVX512F-NEXT:    movb $7, %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %k0 {%k1}
+; AVX512F-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k0 {%k1}
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
@@ -3924,10 +3924,9 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) nounwind 
 ; AVX512VL-NEXT:    vmovd %edi, %xmm1
 ; AVX512VL-NEXT:    vpinsrb $1, %esi, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpinsrb $2, %edx, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmovzxbq {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero,xmm1[2],zero,zero,zero,zero,zero,zero,zero,xmm1[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512VL-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %k1 {%k1}
+; AVX512VL-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; AVX512VL-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1 {%k1}
 ; AVX512VL-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
     %out = call <3 x i32> @llvm.experimental.vector.compress(<3 x i32> %vec, <3 x i1> %mask, <3 x i32> undef)
     ret <3 x i32> %out
@@ -3962,10 +3961,10 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; AVX512F-NEXT:    vmovd %ecx, %xmm0
 ; AVX512F-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; AVX512F-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX512F-NEXT:    movb $7, %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k0 {%k1}
+; AVX512F-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0 {%k1}
 ; AVX512F-NEXT:    vmovd %edi, %xmm0
 ; AVX512F-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
@@ -3988,8 +3987,8 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; AVX512VL-NEXT:    vmovd %ecx, %xmm0
 ; AVX512VL-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512VL-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1 {%k1}
+; AVX512VL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX512VL-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1 {%k1}
 ; AVX512VL-NEXT:    vmovd %edi, %xmm0
 ; AVX512VL-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
@@ -4000,7 +3999,6 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; AVX512VL-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512VL-NEXT:    # kill: def $dl killed $dl killed $edx
 ; AVX512VL-NEXT:    # kill: def $cl killed $cl killed $ecx
-; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
     %out = call <3 x i3> @llvm.experimental.vector.compress(<3 x i3> %vec, <3 x i1> %mask, <3 x i3> undef)
     ret <3 x i3> %out

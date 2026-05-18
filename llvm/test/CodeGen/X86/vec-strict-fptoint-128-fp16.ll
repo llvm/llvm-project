@@ -456,8 +456,8 @@ define <4 x i1> @strict_vector_fptosi_v4f16_to_v4i1(<4 x half> %a) #0 {
 ; NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
 ; NOVL-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm0
-; NOVL-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
-; NOVL-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
+; NOVL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; NOVL-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k1
 ; NOVL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NOVL-NEXT:    vzeroupper
@@ -491,8 +491,8 @@ define <4 x i1> @strict_vector_fptoui_v4f16_to_v4i1(<4 x half> %a) #0 {
 ; NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
 ; NOVL-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm0
-; NOVL-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
-; NOVL-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
+; NOVL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; NOVL-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k1
 ; NOVL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NOVL-NEXT:    vzeroupper

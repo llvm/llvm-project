@@ -1190,17 +1190,17 @@ define <3 x i10> @udiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; AVX512-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX512-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1023,1023,1023,1023]
-; AVX512-NEXT:    vmovd %ecx, %xmm2
-; AVX512-NEXT:    vpinsrd $1, %r8d, %xmm2, %xmm2
-; AVX512-NEXT:    vpinsrd $2, %r9d, %xmm2, %xmm2
-; AVX512-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; AVX512-NEXT:    movb $7, %al
 ; AVX512-NEXT:    kmovd %eax, %k1
-; AVX512-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; AVX512-NEXT:    vpmovzxbq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,xmm3[1],zero,zero,zero,zero,zero,zero,zero,xmm3[2],zero,zero,zero,zero,zero,zero,zero,xmm3[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm3, %k1 {%k1}
+; AVX512-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1]
+; AVX512-NEXT:    vmovd %ecx, %xmm4
+; AVX512-NEXT:    vpinsrd $1, %r8d, %xmm4, %xmm4
+; AVX512-NEXT:    vptestmd %xmm3, %xmm2, %k1 {%k1}
+; AVX512-NEXT:    vpinsrd $2, %r9d, %xmm4, %xmm2
 ; AVX512-NEXT:    vpandd %xmm1, %xmm2, %xmm3 {%k1}
 ; AVX512-NEXT:    vpextrd $1, %xmm3, %ecx
 ; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -1225,7 +1225,6 @@ define <3 x i10> @udiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; AVX512-NEXT:    movl %esi, %eax
 ; AVX512-NEXT:    # kill: def $dx killed $dx killed $edx
 ; AVX512-NEXT:    # kill: def $cx killed $cx killed $ecx
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %res = call <3 x i10> @llvm.masked.udiv(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m)
   ret <3 x i10> %res

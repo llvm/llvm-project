@@ -2579,12 +2579,11 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    seto %al
 ; AVX512-NEXT:    vmovd %r9d, %xmm0
 ; AVX512-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
+; AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    vmovdqa %xmm1, (%rdi)
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %t = call {<2 x i64>, <2 x i1>} @llvm.umul.with.overflow.v2i64(<2 x i64> %a0, <2 x i64> %a1)
   %val = extractvalue {<2 x i64>, <2 x i1>} %t, 0

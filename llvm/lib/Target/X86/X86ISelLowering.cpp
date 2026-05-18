@@ -8556,12 +8556,12 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
   if (NonConstIdx.size() > 1 && OpVT == MVT::i8) {
     // On pre-BWI targets, we must extend to vXi32 instead.
     MVT ByteVT = VT.changeVectorElementType(MVT::i8);
-    MVT WideVT =
-        Subtarget.hasBWI() ? ByteVT : VT.changeVectorElementType(MVT::i32);
+    MVT WideSVT = Subtarget.hasBWI() ? MVT::i8 : MVT::i32;
     if (ByteVT.getSizeInBits() < 128) {
+      WideSVT = ByteVT == MVT::v4i8 ? MVT::i32 : MVT::i64;
       ByteVT = MVT::v16i8;
-      WideVT = VT.changeVectorElementType(MVT::i64);
     }
+    MVT WideVT = VT.changeVectorElementType(WideSVT);
     if (DAG.getTargetLoweringInfo().isTypeLegal(ByteVT) &&
         DAG.getTargetLoweringInfo().isTypeLegal(WideVT)) {
       SmallVector<SDValue, 16> Elts(Op->op_values());

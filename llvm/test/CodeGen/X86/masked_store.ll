@@ -6424,10 +6424,10 @@ define void @widen_masked_store(<3 x i32> %v, ptr %p, <3 x i1> %mask) nounwind {
 ; AVX512F-NEXT:    vmovd %esi, %xmm1
 ; AVX512F-NEXT:    vpinsrb $1, %edx, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
-; AVX512F-NEXT:    vpmovzxbq {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero,xmm1[2],zero,zero,zero,zero,zero,zero,zero,xmm1[3],zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; AVX512F-NEXT:    movb $7, %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %k0 {%k1}
+; AVX512F-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k0 {%k1}
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
@@ -6441,10 +6441,9 @@ define void @widen_masked_store(<3 x i32> %v, ptr %p, <3 x i1> %mask) nounwind {
 ; AVX512VLDQ-NEXT:    vmovd %esi, %xmm1
 ; AVX512VLDQ-NEXT:    vpinsrb $1, %edx, %xmm1, %xmm1
 ; AVX512VLDQ-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
-; AVX512VLDQ-NEXT:    vpmovzxbq {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero,xmm1[2],zero,zero,zero,zero,zero,zero,zero,xmm1[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512VLDQ-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %k1 {%k1}
+; AVX512VLDQ-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; AVX512VLDQ-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1 {%k1}
 ; AVX512VLDQ-NEXT:    vmovdqa32 %xmm0, (%rdi) {%k1}
-; AVX512VLDQ-NEXT:    vzeroupper
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: widen_masked_store:
@@ -6454,10 +6453,9 @@ define void @widen_masked_store(<3 x i32> %v, ptr %p, <3 x i1> %mask) nounwind {
 ; AVX512VLBW-NEXT:    vmovd %esi, %xmm1
 ; AVX512VLBW-NEXT:    vpinsrb $1, %edx, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpmovzxbq {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero,xmm1[2],zero,zero,zero,zero,zero,zero,zero,xmm1[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512VLBW-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %k1 {%k1}
+; AVX512VLBW-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; AVX512VLBW-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1 {%k1}
 ; AVX512VLBW-NEXT:    vmovdqa32 %xmm0, (%rdi) {%k1}
-; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
 ;
 ; X86-AVX512-LABEL: widen_masked_store:
@@ -6467,11 +6465,10 @@ define void @widen_masked_store(<3 x i32> %v, ptr %p, <3 x i1> %mask) nounwind {
 ; X86-AVX512-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-AVX512-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
 ; X86-AVX512-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; X86-AVX512-NEXT:    vpmovzxbq {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero,xmm1[2],zero,zero,zero,zero,zero,zero,zero,xmm1[3],zero,zero,zero,zero,zero,zero,zero
-; X86-AVX512-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm1, %k1 {%k1}
+; X86-AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; X86-AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm1, %k1 {%k1}
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqa32 %xmm0, (%eax) {%k1}
-; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
   call void @llvm.masked.store.v3i32.p0(<3 x i32> %v, ptr %p, i32 16, <3 x i1> %mask)
   ret void

@@ -104,12 +104,11 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512-32-NEXT:    seta %cl
 ; AVX512-32-NEXT:    vmovd %ecx, %xmm2
 ; AVX512-32-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; AVX512-32-NEXT:    vpmovzxbq {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512-32-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm2, %k1
+; AVX512-32-NEXT:    vpmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; AVX512-32-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm2, %k1
 ; AVX512-32-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
 ; AVX512-32-NEXT:    movl %ebp, %esp
 ; AVX512-32-NEXT:    popl %ebp
-; AVX512-32-NEXT:    vzeroupper
 ; AVX512-32-NEXT:    retl
 ;
 ; AVX512-64-LABEL: test_v2f32_ogt_s:
@@ -122,10 +121,9 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512-64-NEXT:    seta %cl
 ; AVX512-64-NEXT:    vmovd %ecx, %xmm2
 ; AVX512-64-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; AVX512-64-NEXT:    vpmovzxbq {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512-64-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm2, %k1
+; AVX512-64-NEXT:    vpmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; AVX512-64-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
-; AVX512-64-NEXT:    vzeroupper
 ; AVX512-64-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_v2f32_ogt_s:
@@ -143,9 +141,8 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512F-32-NEXT:    seta %cl
 ; AVX512F-32-NEXT:    vmovd %ecx, %xmm2
 ; AVX512F-32-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; AVX512F-32-NEXT:    vpmovzxbq {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512F-32-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512F-32-NEXT:    vptestmq %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; AVX512F-32-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm2, %k1
 ; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; AVX512F-32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-32-NEXT:    movl %ebp, %esp
@@ -165,8 +162,8 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512F-64-NEXT:    seta %cl
 ; AVX512F-64-NEXT:    vmovd %ecx, %xmm2
 ; AVX512F-64-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; AVX512F-64-NEXT:    vpmovzxbq {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512F-64-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %k1
+; AVX512F-64-NEXT:    vpmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; AVX512F-64-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %k1
 ; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; AVX512F-64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-64-NEXT:    vzeroupper
@@ -286,12 +283,11 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512-32-NEXT:    andb %cl, %dl
 ; AVX512-32-NEXT:    vmovd %edx, %xmm2
 ; AVX512-32-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; AVX512-32-NEXT:    vpmovzxbq {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512-32-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm2, %k1
+; AVX512-32-NEXT:    vpmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; AVX512-32-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm2, %k1
 ; AVX512-32-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
 ; AVX512-32-NEXT:    movl %ebp, %esp
 ; AVX512-32-NEXT:    popl %ebp
-; AVX512-32-NEXT:    vzeroupper
 ; AVX512-32-NEXT:    retl
 ;
 ; AVX512-64-LABEL: test_v2f32_oeq_q:
@@ -308,10 +304,9 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512-64-NEXT:    andb %al, %dl
 ; AVX512-64-NEXT:    vmovd %edx, %xmm2
 ; AVX512-64-NEXT:    vpinsrb $1, %ecx, %xmm2, %xmm2
-; AVX512-64-NEXT:    vpmovzxbq {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512-64-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm2, %k1
+; AVX512-64-NEXT:    vpmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; AVX512-64-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
-; AVX512-64-NEXT:    vzeroupper
 ; AVX512-64-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_v2f32_oeq_q:
@@ -333,9 +328,8 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512F-32-NEXT:    andb %cl, %dl
 ; AVX512F-32-NEXT:    vmovd %edx, %xmm2
 ; AVX512F-32-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; AVX512F-32-NEXT:    vpmovzxbq {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512F-32-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX512F-32-NEXT:    vptestmq %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; AVX512F-32-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm2, %k1
 ; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; AVX512F-32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-32-NEXT:    movl %ebp, %esp
@@ -359,8 +353,8 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512F-64-NEXT:    andb %al, %dl
 ; AVX512F-64-NEXT:    vmovd %edx, %xmm2
 ; AVX512F-64-NEXT:    vpinsrb $1, %ecx, %xmm2, %xmm2
-; AVX512F-64-NEXT:    vpmovzxbq {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero
-; AVX512F-64-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %k1
+; AVX512F-64-NEXT:    vpmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; AVX512F-64-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %k1
 ; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; AVX512F-64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-64-NEXT:    vzeroupper
