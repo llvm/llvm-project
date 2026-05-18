@@ -506,6 +506,9 @@ Improvements to Clang's diagnostics
 
 - Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
 
+- Added warnings for floating-point exception function calls (fenv.h) without enabling
+  floating-point exception behavior via the appropriate flags or pragmas. (#GH128239)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -550,6 +553,7 @@ Bug Fixes in This Version
 - Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with ``--triple spirv``. (#GH189964)
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
+- Fixed a bug where Clang fails to find instantiation of Decls in constraint checking. (#GH173086)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
 - Fixed a crash caused by declaring multiple ``ownership_returns`` attributes with mismatched or missing arguments. (#GH188733)
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
