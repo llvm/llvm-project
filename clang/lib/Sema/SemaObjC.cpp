@@ -1713,7 +1713,8 @@ void SemaObjC::handleBlocksAttr(Decl *D, const ParsedAttr &AL) {
 
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (VD->getStorageClass() == SC_Register) {
-      Diag(AL.getLoc(), diag::err_block_not_allowed_on) << diag::NotAllowedBlockVarReason::RegisterVariable;
+      Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+          << diag::NotAllowedBlockVarReason::RegisterVariable;
       return;
     }
 
