@@ -32,8 +32,8 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-EMPTY:
 ; IC2-NEXT:  vector.body:
 ; IC2-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; IC2-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP10:%[0-9]+]]>
-; IC2-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi>.1 = phi ir<-1>, vp<[[VP11:%[0-9]+]]>
+; IC2-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<-1>, vp<[[VP10:%[0-9]+]]>
+; IC2-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi>.1 = phi (find-last) ir<-1>, vp<[[VP11:%[0-9]+]]>
 ; IC2-NEXT:    WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP8:%[0-9]+]]>, vector.body ]
 ; IC2-NEXT:    WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP9:%[0-9]+]]>, vector.body ]
 ; IC2-NEXT:    CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<%index>
@@ -97,38 +97,42 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-TF-EMPTY:
 ; IC2-TF-NEXT:  vector.body:
 ; IC2-TF-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; IC2-TF-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP16:%[0-9]+]]>
-; IC2-TF-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi>.1 = phi ir<-1>, vp<[[VP17:%[0-9]+]]>
-; IC2-TF-NEXT:    WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP14:%[0-9]+]]>, vector.body ]
-; IC2-TF-NEXT:    WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP15:%[0-9]+]]>, vector.body ]
-; IC2-TF-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>
-; IC2-TF-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>, ir<1>
-; IC2-TF-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP2]]>
-; IC2-TF-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP2]]>
+; IC2-TF-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi> = phi (find-last) ir<-1>, vp<[[VP18:%[0-9]+]]>
+; IC2-TF-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi>.1 = phi (find-last) ir<-1>, vp<[[VP19:%[0-9]+]]>
+; IC2-TF-NEXT:    WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP16:%[0-9]+]]>, vector.body ]
+; IC2-TF-NEXT:    WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP17:%[0-9]+]]>, vector.body ]
+; IC2-TF-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = broadcast vp<%index>
+; IC2-TF-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = step-vector i64
+; IC2-TF-NEXT:    EMIT vp<%vec.iv> = add vp<[[VP6]]>, vp<[[VP7]]>
+; IC2-TF-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = broadcast ir<4>
+; IC2-TF-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = add vp<[[VP8]]>, vp<[[VP7]]>
+; IC2-TF-NEXT:    EMIT vp<%vec.iv>.1 = add vp<[[VP6]]>, vp<[[VP9]]>
+; IC2-TF-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<%vec.iv>, vp<[[VP2]]>
+; IC2-TF-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = icmp ule vp<%vec.iv>.1, vp<[[VP2]]>
 ; IC2-TF-NEXT:    CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<%index>
-; IC2-TF-NEXT:    vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds ir<%ld.addr>, ir<4>
-; IC2-TF-NEXT:    WIDEN ir<%ld> = load ir<%ld.addr>, vp<[[VP8]]>
-; IC2-TF-NEXT:    WIDEN ir<%ld>.1 = load vp<[[VP10]]>, vp<[[VP9]]>
+; IC2-TF-NEXT:    vp<[[VP12:%[0-9]+]]> = vector-pointer inbounds ir<%ld.addr>, ir<4>
+; IC2-TF-NEXT:    WIDEN ir<%ld> = load ir<%ld.addr>, vp<[[VP10]]>
+; IC2-TF-NEXT:    WIDEN ir<%ld>.1 = load vp<[[VP12]]>, vp<[[VP11]]>
 ; IC2-TF-NEXT:    WIDEN ir<%select.cmp> = icmp slt vp<[[VP3]]>, ir<%ld>
 ; IC2-TF-NEXT:    WIDEN ir<%select.cmp>.1 = icmp slt vp<[[VP3]]>, ir<%ld>.1
-; IC2-TF-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%select.cmp>
-; IC2-TF-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = logical-and vp<[[VP9]]>, ir<%select.cmp>.1
-; IC2-TF-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = any-of vp<[[VP11]]>, vp<[[VP12]]>
-; IC2-TF-NEXT:    EMIT vp<[[VP14]]> = select vp<[[VP13]]>, vp<[[VP11]]>, vp<[[VP4]]>
-; IC2-TF-NEXT:    EMIT vp<[[VP15]]> = select vp<[[VP13]]>, vp<[[VP12]]>, vp<[[VP5]]>
-; IC2-TF-NEXT:    EMIT vp<[[VP16]]> = select vp<[[VP13]]>, ir<%ld>, ir<%data.phi>
-; IC2-TF-NEXT:    EMIT vp<[[VP17]]> = select vp<[[VP13]]>, ir<%ld>.1, ir<%data.phi>.1
+; IC2-TF-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = logical-and vp<[[VP10]]>, ir<%select.cmp>
+; IC2-TF-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = logical-and vp<[[VP11]]>, ir<%select.cmp>.1
+; IC2-TF-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = any-of vp<[[VP13]]>, vp<[[VP14]]>
+; IC2-TF-NEXT:    EMIT vp<[[VP16]]> = select vp<[[VP15]]>, vp<[[VP13]]>, vp<[[VP4]]>
+; IC2-TF-NEXT:    EMIT vp<[[VP17]]> = select vp<[[VP15]]>, vp<[[VP14]]>, vp<[[VP5]]>
+; IC2-TF-NEXT:    EMIT vp<[[VP18]]> = select vp<[[VP15]]>, ir<%ld>, ir<%data.phi>
+; IC2-TF-NEXT:    EMIT vp<[[VP19]]> = select vp<[[VP15]]>, ir<%ld>.1, ir<%data.phi>.1
 ; IC2-TF-NEXT:    EMIT vp<%index.next> = add vp<%index>, ir<8>
-; IC2-TF-NEXT:    EMIT vp<[[VP18:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
-; IC2-TF-NEXT:    EMIT branch-on-cond vp<[[VP18]]>
+; IC2-TF-NEXT:    EMIT vp<[[VP20:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; IC2-TF-NEXT:    EMIT branch-on-cond vp<[[VP20]]>
 ; IC2-TF-NEXT:  Successor(s): middle.block, vector.body
 ; IC2-TF-EMPTY:
 ; IC2-TF-NEXT:  middle.block:
-; IC2-TF-NEXT:    EMIT vp<[[VP20:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP16]]>, vp<[[VP14]]>, vp<[[VP17]]>, vp<[[VP15]]>
+; IC2-TF-NEXT:    EMIT vp<[[VP22:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP18]]>, vp<[[VP16]]>, vp<[[VP19]]>, vp<[[VP17]]>
 ; IC2-TF-NEXT:  Successor(s): ir-bb<exit>
 ; IC2-TF-EMPTY:
 ; IC2-TF-NEXT:  ir-bb<exit>:
-; IC2-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %loop ] (extra operand: vp<[[VP20]]> from middle.block)
+; IC2-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %loop ] (extra operand: vp<[[VP22]]> from middle.block)
 ; IC2-TF-NEXT:  No successors
 ; IC2-TF-NEXT:  }
 ;

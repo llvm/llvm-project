@@ -323,6 +323,7 @@ set(files
   __concepts/invocable.h
   __concepts/movable.h
   __concepts/predicate.h
+  __concepts/primary_template.h
   __concepts/regular.h
   __concepts/relation.h
   __concepts/same_as.h
@@ -875,7 +876,6 @@ set(files
   __type_traits/is_pod.h
   __type_traits/is_pointer.h
   __type_traits/is_polymorphic.h
-  __type_traits/is_primary_template.h
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
   __type_traits/is_referenceable.h
@@ -895,7 +895,6 @@ set(files
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
-  __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
   __type_traits/is_within_lifetime.h

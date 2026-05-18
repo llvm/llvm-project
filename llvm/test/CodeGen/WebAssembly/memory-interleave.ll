@@ -1542,6 +1542,233 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
   ret void
 }
 
+; CHECK-LABEL: scale_argb_row_down2_box:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i8x16.shuffle	4, 12, 20, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 4, 12, 20, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i8x16.shuffle	4, 12, 20, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 4, 12, 20, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i16x8.add
+; CHECK: i16x8.shr_u
+; CHECK: i8x16.shuffle	1, 9, 17, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 1, 9, 17, 25, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i8x16.shuffle	5, 13, 21, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 5, 13, 21, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i8x16.shuffle	1, 9, 17, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 1, 9, 17, 25, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i8x16.shuffle	5, 13, 21, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 5, 13, 21, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i16x8.add
+; CHECK: i16x8.shr_u
+; CHECK: i8x16.shuffle	8, 24, 0, 0, 10, 26, 0, 0, 12, 28, 0, 0, 14, 30, 0, 0
+; CHECK: i8x16.shuffle	2, 10, 18, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 2, 10, 18, 26, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i8x16.shuffle	6, 14, 22, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 6, 14, 22, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i8x16.shuffle	2, 10, 18, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 2, 10, 18, 26, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i8x16.shuffle	6, 14, 22, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 6, 14, 22, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i16x8.add
+; CHECK: i16x8.shr_u
+; CHECK: i16x8.extract_lane_u	4
+; CHECK: i8x16.replace_lane	2
+; CHECK: i8x16.shuffle	3, 11, 19, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 3, 11, 19, 27, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i8x16.shuffle	7, 15, 23, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 7, 15, 23, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i8x16.shuffle	3, 11, 19, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 3, 11, 19, 27, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i8x16.shuffle	7, 15, 23, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 0, 0, 0, 7, 15, 23, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i16x8.add
+; CHECK: i16x8.shr_u
+; CHECK: i16x8.extract_lane_u	4
+; CHECK: i8x16.replace_lane	3
+; CHECK: i16x8.extract_lane_u	5
+; CHECK: i8x16.replace_lane	6
+; CHECK: i16x8.extract_lane_u	5
+; CHECK: i8x16.replace_lane	7
+; CHECK: i16x8.extract_lane_u	6
+; CHECK: i8x16.replace_lane	10
+; CHECK: i16x8.extract_lane_u	6
+; CHECK: i8x16.replace_lane	11
+; CHECK: i16x8.extract_lane_u	7
+; CHECK: i8x16.replace_lane	14
+; CHECK: i16x8.extract_lane_u	7
+; CHECK: i8x16.replace_lane	15
+; CHECK: v128.store
+; CHECK: i8x16.shuffle	0, 16, 0, 0, 2, 18, 0, 0, 4, 20, 0, 0, 6, 22, 0, 0
+; CHECK: i16x8.extract_lane_u	0
+; CHECK: i8x16.replace_lane	2
+; CHECK: i16x8.extract_lane_u	0
+; CHECK: i8x16.replace_lane	3
+; CHECK: i16x8.extract_lane_u	1
+; CHECK: i8x16.replace_lane	6
+; CHECK: i16x8.extract_lane_u	1
+; CHECK: i8x16.replace_lane	7
+; CHECK: i16x8.extract_lane_u	2
+; CHECK: i8x16.replace_lane	10
+; CHECK: i16x8.extract_lane_u	2
+; CHECK: i8x16.replace_lane	11
+; CHECK: i16x8.extract_lane_u	3
+; CHECK: i8x16.replace_lane	14
+; CHECK: i16x8.extract_lane_u	3
+; CHECK: i8x16.replace_lane	15
+; CHECK: v128.store
+define hidden void @scale_argb_row_down2_box(ptr noundef readonly captures(none) %arg, i32 noundef %arg1, ptr noundef writeonly captures(none) %arg2, i32 noundef %arg3) local_unnamed_addr #0 {
+bb:
+  %i = icmp sgt i32 %arg3, 0
+  br i1 %i, label %bb4, label %bb86
+
+bb4:                                              ; preds = %bb4, %bb
+  %i5 = phi i32 [ %i84, %bb4 ], [ 0, %bb ]
+  %i6 = phi ptr [ %i82, %bb4 ], [ %arg, %bb ]
+  %i7 = phi ptr [ %i83, %bb4 ], [ %arg2, %bb ]
+  %i8 = load i8, ptr %i6, align 1
+  %i9 = zext i8 %i8 to i16
+  %i10 = getelementptr inbounds nuw i8, ptr %i6, i32 4
+  %i11 = load i8, ptr %i10, align 1
+  %i12 = zext i8 %i11 to i16
+  %i13 = getelementptr inbounds i8, ptr %i6, i32 %arg1
+  %i14 = load i8, ptr %i13, align 1
+  %i15 = zext i8 %i14 to i16
+  %i16 = getelementptr i8, ptr %i13, i32 4
+  %i17 = load i8, ptr %i16, align 1
+  %i18 = zext i8 %i17 to i16
+  %i19 = add nuw nsw i16 %i9, 2
+  %i20 = add nuw nsw i16 %i19, %i12
+  %i21 = add nuw nsw i16 %i20, %i15
+  %i22 = add nuw nsw i16 %i21, %i18
+  %i23 = lshr i16 %i22, 2
+  %i24 = trunc nuw i16 %i23 to i8
+  store i8 %i24, ptr %i7, align 1
+  %i25 = getelementptr inbounds nuw i8, ptr %i6, i32 1
+  %i26 = load i8, ptr %i25, align 1
+  %i27 = zext i8 %i26 to i16
+  %i28 = getelementptr inbounds nuw i8, ptr %i6, i32 5
+  %i29 = load i8, ptr %i28, align 1
+  %i30 = zext i8 %i29 to i16
+  %i31 = getelementptr i8, ptr %i13, i32 1
+  %i32 = load i8, ptr %i31, align 1
+  %i33 = zext i8 %i32 to i16
+  %i34 = getelementptr i8, ptr %i13, i32 5
+  %i35 = load i8, ptr %i34, align 1
+  %i36 = zext i8 %i35 to i16
+  %i37 = add nuw nsw i16 %i27, 2
+  %i38 = add nuw nsw i16 %i37, %i30
+  %i39 = add nuw nsw i16 %i38, %i33
+  %i40 = add nuw nsw i16 %i39, %i36
+  %i41 = lshr i16 %i40, 2
+  %i42 = trunc nuw i16 %i41 to i8
+  %i43 = getelementptr inbounds nuw i8, ptr %i7, i32 1
+  store i8 %i42, ptr %i43, align 1
+  %i44 = getelementptr inbounds nuw i8, ptr %i6, i32 2
+  %i45 = load i8, ptr %i44, align 1
+  %i46 = zext i8 %i45 to i16
+  %i47 = getelementptr inbounds nuw i8, ptr %i6, i32 6
+  %i48 = load i8, ptr %i47, align 1
+  %i49 = zext i8 %i48 to i16
+  %i50 = getelementptr i8, ptr %i13, i32 2
+  %i51 = load i8, ptr %i50, align 1
+  %i52 = zext i8 %i51 to i16
+  %i53 = getelementptr i8, ptr %i13, i32 6
+  %i54 = load i8, ptr %i53, align 1
+  %i55 = zext i8 %i54 to i16
+  %i56 = add nuw nsw i16 %i46, 2
+  %i57 = add nuw nsw i16 %i56, %i49
+  %i58 = add nuw nsw i16 %i57, %i52
+  %i59 = add nuw nsw i16 %i58, %i55
+  %i60 = lshr i16 %i59, 2
+  %i61 = trunc nuw i16 %i60 to i8
+  %i62 = getelementptr inbounds nuw i8, ptr %i7, i32 2
+  store i8 %i61, ptr %i62, align 1
+  %i63 = getelementptr inbounds nuw i8, ptr %i6, i32 3
+  %i64 = load i8, ptr %i63, align 1
+  %i65 = zext i8 %i64 to i16
+  %i66 = getelementptr inbounds nuw i8, ptr %i6, i32 7
+  %i67 = load i8, ptr %i66, align 1
+  %i68 = zext i8 %i67 to i16
+  %i69 = getelementptr i8, ptr %i13, i32 3
+  %i70 = load i8, ptr %i69, align 1
+  %i71 = zext i8 %i70 to i16
+  %i72 = getelementptr i8, ptr %i13, i32 7
+  %i73 = load i8, ptr %i72, align 1
+  %i74 = zext i8 %i73 to i16
+  %i75 = add nuw nsw i16 %i65, 2
+  %i76 = add nuw nsw i16 %i75, %i68
+  %i77 = add nuw nsw i16 %i76, %i71
+  %i78 = add nuw nsw i16 %i77, %i74
+  %i79 = lshr i16 %i78, 2
+  %i80 = trunc nuw i16 %i79 to i8
+  %i81 = getelementptr inbounds nuw i8, ptr %i7, i32 3
+  store i8 %i80, ptr %i81, align 1
+  %i82 = getelementptr inbounds nuw i8, ptr %i6, i32 8
+  %i83 = getelementptr inbounds nuw i8, ptr %i7, i32 4
+  %i84 = add nuw nsw i32 %i5, 1
+  %i85 = icmp eq i32 %i84, %arg3
+  br i1 %i85, label %bb86, label %bb4
+
+bb86:                                             ; preds = %bb4, %bb
+  ret void
+}
+
 ; CHECK-LABEL: two_floats_same_op:
 ; CHECK-NOT: f32x4.mul
 define hidden void @two_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {

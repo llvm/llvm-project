@@ -33,10 +33,11 @@ define i1 @b(ptr) {
 ; The reference to @b and T2 that will be loaded in %t0.o
 
 !7 = !DITemplateValueParameter(value: ptr @b)
-!8 = distinct !DISubprogram(unit: !2)
+!8 = distinct !DISubprogram(unit: !2, type: !15)
 
 ; This DICompositeType is uniqued against !5 in Inputs/type-mapping-bug2.ll,
 ; causing !7 and hence %T2 to be loaded into it's module
 
 !9 = !DICompositeType(tag: DW_TAG_array_type, identifier: "SHARED", scope: !8)
-
+!14 = !{null}
+!15 = !DISubroutineType(types: !14)

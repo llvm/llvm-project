@@ -111,7 +111,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::LastActiveLane:
     // Assume that the maximum possible number of elements in a vector fits
     // within the index type for the default address space.
-    return R->getParent()->getPlan()->getDataLayout().getIndexType(Ctx, 0);
+    return DL.getIndexType(Ctx, 0);
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
@@ -201,7 +201,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
 }
 
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
-  assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R)) &&
+  assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R->getAsRecipe())) &&
          "Store recipes should not define any values");
   return cast<LoadInst>(&R->getIngredient())->getType();
 }

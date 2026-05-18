@@ -18227,6 +18227,26 @@ InstructionCost BoUpSLP::getSpillCost() {
   // the same block paths multiple times.
   SmallDenseMap<std::pair<const BasicBlock *, const BasicBlock *>, bool>
       ParentOpParentToPreds;
+  // Memoize whether a basic block contains a non-terminator no-return call.
+  // Such blocks are dead-end paths in normal control flow (execution does not
+  // exit them past the no-return call), so the block is excluded from the
+  // spill cost analysis. Terminator no-return calls (invoke/callbr) are not
+  // block-killing because they still have live CFG successors (e.g. the
+  // unwind destination of an invoke).
+  SmallDenseMap<const BasicBlock *, bool> BlockHasNoReturnCallCache;
+  auto BlockHasNoReturnCall = [&](const BasicBlock *BB) {
+    auto [It, Inserted] = BlockHasNoReturnCallCache.try_emplace(BB, false);
+    if (!Inserted)
+      return It->second;
+    for (const Instruction &I : *BB) {
+      const auto *CB = dyn_cast<CallBase>(&I);
+      if (CB && CB->doesNotReturn() && !CB->isTerminator()) {
+        It->second = true;
+        return true;
+      }
+    }
+    return false;
+  };
   // Memoize whether a loop's body (all blocks of the loop, including
   // sub-loops) contains any non-vec call.
   SmallDenseMap<const Loop *, bool> LoopBodyHasNonVecCall;
@@ -18236,6 +18256,11 @@ InstructionCost BoUpSLP::getSpillCost() {
       return It->second;
     for (BasicBlock *BB : L->blocks()) {
       if (isa<CatchSwitchInst>(BB->getTerminator()))
+        continue;
+      // Blocks containing a no-return call are dead-end paths and never
+      // actually flow back through the loop's back-edge, so their calls do
+      // not keep loop-invariant vector values live across calls.
+      if (BlockHasNoReturnCall(BB))
         continue;
       for (const Instruction &I : *BB) {
         const auto *CB = dyn_cast<CallBase>(&I);
@@ -18307,6 +18332,12 @@ InstructionCost BoUpSLP::getSpillCost() {
       // forward execution (via loop back-edges); skip them and their
       // dominated predecessors.
       if (DT->properlyDominates(Root, BB))
+        continue;
+      // A block containing a no-return call cannot reach Root via the
+      // forward edge being analyzed: execution does not continue past the
+      // no-return call, so the BB -> ... -> Root path is dead. Drop the
+      // block from the analysis without following its predecessors.
+      if (BlockHasNoReturnCall(BB))
         continue;
       auto Pair = std::make_pair(BB, OpParent);
       if (auto It = ParentOpParentToPreds.find(Pair);
@@ -18951,11 +18982,21 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
         IsEqualCostAltShuffleToTrim()) {
       PreferTrimmedTree |= TotalSubtreeCost == GatherCost;
       // If the remaining tree is just a buildvector - exit, it will cause
-      // endless attempts to vectorize.
+      // endless attempts to vectorize. When the tree is already profitable,
+      // skip trimming this node and let the post-loop logic (including
+      // gathered loads processing) decide.
       if (VectorizableTree.front()->hasState() &&
           VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
-          TE->Idx == 1)
+          TE->Idx == 1) {
+        if (Cost < -SLPCostThreshold) {
+          LLVM_DEBUG(dbgs() << "SLP: Skipping trim of node " << TE->Idx
+                            << " - tree already profitable with cost " << Cost
+                            << ".\n");
+          Worklist.pop();
+          continue;
+        }
         return InstructionCost::getInvalid();
+      }
 
       LLVM_DEBUG(dbgs() << "SLP: Trimming unprofitable subtree at node "
                         << TE->Idx << " with cost "
@@ -19214,7 +19255,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       if (User && User->hasOneUse() &&
           isa<LoadInst, StoreInst>(User->user_back())) {
         Type *LocalTy = getValueType(User->user_back());
-        if (!UserScalarTy) {
+        if (!UserScalarTy && !isa<ScalableVectorType>(LocalTy)) {
           UserScalarTy = LocalTy;
         } else if (UserScalarTy != LocalTy) {
           AllUsersGEPSWithStoresLoads = false;
@@ -20307,7 +20348,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     });
     // Try to find the perfect match in another gather node at first.
     auto *It = find_if(FirstEntries, [=](const TreeEntry *EntryPtr) {
-      return EntryPtr->isSame(VL) || EntryPtr->isSame(TE->Scalars);
+      return (EntryPtr->getVectorFactor() == TE->Scalars.size() &&
+              EntryPtr->isSame(TE->Scalars)) ||
+             EntryPtr->isSame(VL);
     });
     if (It != FirstEntries.end() &&
         (IsReusedNodeFound || (*It)->getVectorFactor() == VL.size() ||
@@ -26808,7 +26851,7 @@ public:
                           VectorizeStoreChain);
   /// Add an additional store to the chain
   /// \p Store store too append to Operands
-  /// \p Idx position within TryToVectorize::StoreSeq
+  /// \p Idx position within VectorizeStores::Stores
   void addOperand(Value *Store, unsigned Idx);
 
 private:
@@ -27314,19 +27357,6 @@ public:
     }
   }
 
-  /// Remove all stores that have been vectorized from this group.
-  void clearVectorizedStores(const BoUpSLP::ValueSet &VectorizedStores) {
-    DistToInstMap::reverse_iterator LastVectorizedStore = find_if(
-        reverse(Instrs), [&](const std::pair<int64_t, unsigned> &DistAndIdx) {
-          return VectorizedStores.contains(AllStores[DistAndIdx.second]);
-        });
-
-    // Get a forward iterator pointing after the last vectorized store and erase
-    // all stores before it so we don't try to vectorize them again.
-    DistToInstMap::iterator VectorizedStoresEnd = LastVectorizedStore.base();
-    Instrs.erase(Instrs.begin(), VectorizedStoresEnd);
-  }
-
 private:
   /// The index of the Base instruction, i.e. the one with a 0 pointer distance.
   unsigned BaseInstrIdx;
@@ -27348,12 +27378,11 @@ bool SLPVectorizerPass::vectorizeStores(
   // stores that we vectorized so that we don't visit the same store twice.
   BoUpSLP::ValueSet VectorizedStores;
   bool Changed = false;
+  SmallVector<std::unique_ptr<StoreChainContext>> AllContexts;
+  SmallVector<unsigned> RangeSizesByIdx(Stores.size(), 1);
 
-  auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    SmallVector<unsigned> RangeSizesByIdx(StoreSeq.size(), 1);
-    SmallVector<std::unique_ptr<StoreChainContext>> AllContexts;
+  auto ExtendContexts = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
     BoUpSLP::ValueList Operands;
-    SmallVector<StoreChainContext::SizePair> RangeSizes;
     const unsigned MaxStride = EnableStridedStores ? MaxProfitableStride : 1;
 
     // All chains that we're still building
@@ -27364,8 +27393,8 @@ bool SLPVectorizerPass::vectorizeStores(
       union {
         // If added, index into AllContexts
         unsigned AllContextsIdx;
-        // Index into StoreSeq if not added to AllContexts yet
-        unsigned StoreSeqIdx;
+        // Index into Stores if not added to AllContexts yet
+        unsigned StoresIdx;
       };
       // If not added to AllContexts, what is the single store in the chain
       Value *FirstStore;
@@ -27396,11 +27425,12 @@ bool SLPVectorizerPass::vectorizeStores(
       for (auto &Status : Chains[GetChainsKey(Dist)]) {
         if (Status.AddedToAllContexts) {
           // Chain already in AllContexts()
-          AllContexts[Status.AllContextsIdx]->addOperand(Stores[InstIdx], Idx);
+          AllContexts[Status.AllContextsIdx]->addOperand(Stores[InstIdx],
+                                                         InstIdx);
         } else {
           // Chain just a single element, not yet in AllContexts()
-          SmallVector<StoreChainContext::SizePair> RS = {
-              {Status.StoreSeqIdx, 1}, {Idx, 1}};
+          SmallVector<StoreChainContext::SizePair> RS = {{Status.StoresIdx, 1},
+                                                         {InstIdx, 1}};
           BoUpSLP::ValueList Ops = {Status.FirstStore, Stores[InstIdx]};
           AllContexts.emplace_back(std::make_unique<StoreChainContext>(
               Ops, RS, RangeSizesByIdx, Status.Stride));
@@ -27421,12 +27451,14 @@ bool SLPVectorizerPass::vectorizeStores(
           continue;
         unsigned Key = GetChainsKey(Dist + Stride);
         Chains[Key].push_back({/*AddedToAllContexts=*/false,
-                               {/*StoreSeqIdx=*/(unsigned)Idx},
+                               {/*StoresIdx=*/(unsigned)InstIdx},
                                Stores[InstIdx],
                                Stride});
       }
     }
+  };
 
+  auto ActuallyVectorizeContexts = [&]() {
     unsigned GlobalMaxVF = 0;
     for (auto &CtxPtr : AllContexts)
       if (CtxPtr->initializeContext(R, *DL, *TTI, Visited))
@@ -27518,8 +27550,7 @@ bool SLPVectorizerPass::vectorizeStores(
     // Otherwise, insert this store and keep collecting.
     if (std::optional<unsigned> PrevInst =
             RelatedStores->insertOrLookup(Idx, *PtrDist)) {
-      TryToVectorize(RelatedStores->getStores());
-      RelatedStores->clearVectorizedStores(VectorizedStores);
+      ExtendContexts(RelatedStores->getStores());
       RelatedStores->rebase(/*MinSafeIdx=*/*PrevInst + 1,
                             /*NewBaseInstIdx=*/Idx,
                             /*DistFromCurBase=*/*PtrDist);
@@ -27534,7 +27565,7 @@ bool SLPVectorizerPass::vectorizeStores(
     // Check that we do not try to vectorize stores of different types.
     if (PrevValTy != SI->getValueOperand()->getType()) {
       for (RelatedStoreInsts &StoreSeq : SortedStores)
-        TryToVectorize(StoreSeq.getStores());
+        ExtendContexts(StoreSeq.getStores());
       SortedStores.clear();
       PrevValTy = SI->getValueOperand()->getType();
     }
@@ -27543,8 +27574,9 @@ bool SLPVectorizerPass::vectorizeStores(
 
   // Final vectorization attempt.
   for (RelatedStoreInsts &StoreSeq : SortedStores)
-    TryToVectorize(StoreSeq.getStores());
+    ExtendContexts(StoreSeq.getStores());
 
+  ActuallyVectorizeContexts();
   return Changed;
 }
 
@@ -28661,7 +28693,8 @@ public:
       // original scalar identity operations on matched horizontal reductions).
       IsSupportedHorRdxIdentityOp =
           RK == ReductionOrdering::Unordered && RdxKind != RecurKind::Mul &&
-          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd;
+          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd &&
+          (!SLPReVec || !Candidates.front()->getType()->isVectorTy());
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
@@ -29540,6 +29573,8 @@ private:
           // res = vv
           break;
         case RecurKind::Sub:
+        case RecurKind::FSub:
+        case RecurKind::FAddChainWithSubs:
         case RecurKind::AddChainWithSubs:
         case RecurKind::Mul:
         case RecurKind::FMul:
@@ -29691,6 +29726,8 @@ private:
       // res = vv
       return VectorizedValue;
     case RecurKind::Sub:
+    case RecurKind::FSub:
+    case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
@@ -29794,6 +29831,8 @@ private:
       return Builder.CreateFMul(VectorizedValue, Scale);
     }
     case RecurKind::Sub:
+    case RecurKind::FSub:
+    case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
