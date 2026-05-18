@@ -36,12 +36,13 @@
 ! RUN:     %flang_fc1 -fsyntax-only -cpp %s -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir/
 ! RUN:     %flang_fc1 -fsyntax-only -cpp %s -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTONE -fintrinsic-modules-path=%S/Inputs/module-dir-one/
 ! RUN:     %flang_fc1 -fsyntax-only -cpp %s -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir-one/ -fintrinsic-modules-path=%S/Inputs/module-dir/
-! RUN: not %flang_fc1 -fsyntax-only -cpp %s -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir/ -fintrinsic-modules-path=%S/Inputs/module-dir-one/ 2>&1 | FileCheck %s --check-prefix=WRONGINPUTONE
+! RUN: not %flang_fc1 -fsyntax-only -cpp %s -DINTRINSICS_DEFAULT -DINTRINSICS_INPUTONE -DINTRINSICS_INPUTTWO -fintrinsic-modules-path=%S/Inputs/module-dir/     -fintrinsic-modules-path=%S/Inputs/module-dir-one/ 2>&1 | FileCheck %s --check-prefix=WRONGINPUTONE
 
 
 !-----------------------------------------
 
-! DEFAULTPATH: flang{{.*}}-fc1{{.*}}-fintrinsic-modules-path 
+! DEFAULTPATH:      -fc1
+! DEFAULTPATH-SAME: -fintrinsic-modules-path" "{{.*}}/flang/test/Driver/Inputs/resource_dir_with_per_target_subdir/finclude/flang/x86_64-unknown-linux-gnu"
 
 ! NOINPUTONE: Source file 'basictestmoduleone.mod' was not found
 ! NOINPUTTWO: Source file 'basictestmoduletwo.mod' was not found
