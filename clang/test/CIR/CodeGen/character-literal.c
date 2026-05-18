@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 void high_byte_to_signed_char(void) {
   signed char c = '\xFF';
@@ -17,9 +17,6 @@ void high_byte_to_signed_char(void) {
 // LLVM-LABEL: define{{.*}} void @high_byte_to_signed_char
 // LLVM:         store i8 -1, ptr %{{.*}}
 
-// OGCG-LABEL: define{{.*}} void @high_byte_to_signed_char
-// OGCG:         store i8 -1, ptr %{{.*}}
-
 void boundary_byte(void) {
   signed char c = '\x80';
   (void)c;
@@ -31,9 +28,6 @@ void boundary_byte(void) {
 
 // LLVM-LABEL: define{{.*}} void @boundary_byte
 // LLVM:         store i8 -128, ptr %{{.*}}
-
-// OGCG-LABEL: define{{.*}} void @boundary_byte
-// OGCG:         store i8 -128, ptr %{{.*}}
 
 void low_byte(void) {
   signed char c = 'A';
@@ -47,9 +41,6 @@ void low_byte(void) {
 // LLVM-LABEL: define{{.*}} void @low_byte
 // LLVM:         store i8 65, ptr %{{.*}}
 
-// OGCG-LABEL: define{{.*}} void @low_byte
-// OGCG:         store i8 65, ptr %{{.*}}
-
 void high_byte_to_unsigned_char(void) {
   unsigned char c = '\xFF';
   (void)c;
@@ -61,6 +52,3 @@ void high_byte_to_unsigned_char(void) {
 
 // LLVM-LABEL: define{{.*}} void @high_byte_to_unsigned_char
 // LLVM:         store i8 -1, ptr %{{.*}}
-
-// OGCG-LABEL: define{{.*}} void @high_byte_to_unsigned_char
-// OGCG:         store i8 -1, ptr %{{.*}}
