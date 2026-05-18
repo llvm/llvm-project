@@ -2883,8 +2883,8 @@ struct XArrayCoorOpConversion
         // Use stride in bytes from the descriptor.
         mlir::Value stride =
             getStrideFromBox(loc, baseBoxTyPair, operands[0], i, rewriter);
-        auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, stride,
-                                            addMulFlags);
+        auto sc =
+            mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, stride, nsw);
         offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
                                            addMulFlags);
       } else {

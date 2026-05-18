@@ -13,7 +13,7 @@ func.func @array_coor_box_value(%29 : !fir.box<!fir.array<2xf64>>,
 // CHECK: %[[t4:.*]] = mul nuw nsw i64 %[[t3]], 1
 // CHECK: %[[t5:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 7, i32 0, i32 2
 // CHECK: %[[t6:.*]] = load i64, ptr %[[t5]]
-// CHECK: %[[t7:.*]] = mul nuw nsw i64 %[[t4]], %[[t6]]
+// CHECK: %[[t7:.*]] = mul nsw i64 %[[t4]], %[[t6]]
 // CHECK: %[[t8:.*]] = add nuw nsw i64 %[[t7]], 0
 // CHECK: %[[t9:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 0
 // CHECK: %[[t10:.*]] = load ptr, ptr %[[t9]]
@@ -36,7 +36,7 @@ func.func private @take_int(%arg0: !fir.ref<i32>) -> ()
 // CHECK-SAME: ptr {{[^%]*}}%[[VAL_0:.*]])
 // CHECK:   %[[VAL_1:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[VAL_0]], i32 0, i32 7, i32 0, i32 2
 // CHECK:   %[[VAL_2:.*]] = load i64, ptr %[[VAL_1]]
-// CHECK:   %[[VAL_3:.*]] = mul nuw nsw i64 1, %[[VAL_2]]
+// CHECK:   %[[VAL_3:.*]] = mul nsw i64 1, %[[VAL_2]]
 // CHECK:   %[[VAL_4:.*]] = add nuw nsw i64 %[[VAL_3]], 0
 // CHECK:   %[[VAL_5:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:   %[[VAL_6:.*]] = load ptr, ptr %[[VAL_5]]
