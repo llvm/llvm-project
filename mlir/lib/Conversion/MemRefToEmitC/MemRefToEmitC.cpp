@@ -244,17 +244,17 @@ struct ConvertDealloc final : public OpConversionPattern<memref::DeallocOp> {
   matchAndRewrite(memref::DeallocOp deallocOp, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = deallocOp.getLoc();
+    // Deliberately narrow since EmitC lowering needs to recover an actual heap
+    // pointer value to pass to free().
     Value strippedPtr = stripPointerUnrealizedCast(operands.getMemref());
     if (!strippedPtr) {
       return rewriter.notifyMatchFailure(
           loc, "expected pointer-backed memref for EmitC deallocation");
     }
 
-    // `memref.alloc` lowers supported memrefs to one contiguous heap buffer
-    // (`malloc`/`aligned_alloc`) and load/store lowerings linearize all
-    // multi-dimensional indexing separately. Deallocation therefore only needs
-    // the original base pointer cast to `void *` for `free`; there is no
-    // pointer-of-pointer structure, shape walk, or size recomputation here.
+    // The allocation APIs used by this conversion return `void *`, and `free`
+    // expects that same pointer type. Deallocation therefore only needs the
+    // recovered base pointer cast back to `void *` before calling `free`.
     Type opaqueVoidPtrType = emitc::PointerType::get(
         emitc::OpaqueType::get(rewriter.getContext(), "void"));
     Value freeArg =
@@ -502,7 +502,7 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
 
 void mlir::populateMemRefToEmitCConversionPatterns(
     RewritePatternSet &patterns, const TypeConverter &converter) {
-  patterns.add<ConvertAlloca, ConvertAlloc, ConvertDealloc, ConvertCopy,
+  patterns.add<ConvertAlloca, ConvertAlloc, ConvertCopy, ConvertDealloc,
                ConvertGlobal, ConvertGetGlobal, ConvertLoad, ConvertStore>(
       converter, patterns.getContext());
 }

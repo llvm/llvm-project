@@ -17,6 +17,14 @@ func.func @alloca_with_alignment() {
 
 // -----
 
+func.func @alloc_and_dealloc_arg(%arg0: memref<999xi32>) {
+  // expected-error@+1 {{failed to legalize operation 'memref.dealloc'}}
+  memref.dealloc %arg0 : memref<999xi32>
+  return
+}
+
+// -----
+
 func.func @non_identity_layout() {
   // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
   %0 = memref.alloca() : memref<4x3xf32, affine_map<(d0, d1) -> (d1, d0)>>
