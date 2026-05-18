@@ -506,6 +506,8 @@ Improvements to Clang's diagnostics
 
 - Added ``-Wattribute-alias`` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
 
+- Improved ``__block`` attribute coverage for ivars, static variables and register variables. (#GH197213)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
