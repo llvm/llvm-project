@@ -3966,7 +3966,7 @@ define i32 @pr61361(i32 %arg) {
 
 define i32 @pr62088() {
 ; CHECK-LABEL: define i32 @pr62088() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    br i1 true, label %[[LOOP]], label %[[EXIT:.*]]
