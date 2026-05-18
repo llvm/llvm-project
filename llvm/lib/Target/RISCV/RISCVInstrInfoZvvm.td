@@ -214,15 +214,15 @@ let Predicates = [HasStdExtZvvfmm] in {
 } // Predicates = [HasStdExtZvvfmm]
 
 let Predicates = [HasStdExtZvvmtls] in {
-  def VMTL_V_L : VTileLoadLambda<0b00, "vmtl.v">, VLSSchedMC<64>;
-  def VMTL_V : VTileLoad<0b00, "vmtl.v">, VLSSchedMC<64>;
-  def VMTS_V_L : VTileStoreLambda<0b00, "vmts.v">, VSSSchedMC<64>;
-  def VMTS_V : VTileStore<0b00, "vmts.v">, VSSSchedMC<64>;
+  def VMTL_V_L : VTileLoadLambda<0b00, "vmtl.v">;
+  def VMTL_V : VTileLoad<0b00, "vmtl.v">;
+  def VMTS_V_L : VTileStoreLambda<0b00, "vmts.v">;
+  def VMTS_V : VTileStore<0b00, "vmts.v">;
 } // Predicates = [HasStdExtZvvmtls]
 
 let Predicates = [HasStdExtZvvmttls] in {
-  def VMTTL_V_L : VTileLoadLambda<0b01, "vmttl.v">, VLSSchedMC<64>;
-  def VMTTL_V : VTileLoad<0b01, "vmttl.v">, VLSSchedMC<64>;
-  def VMTTS_V_L : VTileStoreLambda<0b01, "vmtts.v">, VSSSchedMC<64>;
-  def VMTTS_V : VTileStore<0b01, "vmtts.v">, VSSSchedMC<64>;
+  def VMTTL_V_L : VTileLoadLambda<0b01, "vmttl.v">;
+  def VMTTL_V : VTileLoad<0b01, "vmttl.v">;
+  def VMTTS_V_L : VTileStoreLambda<0b01, "vmtts.v">;
+  def VMTTS_V : VTileStore<0b01, "vmtts.v">;
 } // Predicates = [HasStdExtZvvmttls]
