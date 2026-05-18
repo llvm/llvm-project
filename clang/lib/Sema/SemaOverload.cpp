@@ -874,8 +874,6 @@ void DeductionFailureInfo::Destroy() {
 
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     // FIXME: Destroy the template argument list?
-    // CNSInfo and ASTConstraintSatisfaction are ASTContext-allocated and do
-    // not own non-arena resources.
     Data = nullptr;
     if (PartialDiagnosticAt *Diag = getSFINAEDiagnostic()) {
       Diag->~PartialDiagnosticAt();
