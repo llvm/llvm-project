@@ -700,6 +700,10 @@ cl::opt<bool> IpiStream("ipi-stream",
                         cl::desc("Dump the IPI Stream (Stream 5)"),
                         cl::sub(PdbToYamlSubcommand), cl::init(false));
 
+cl::opt<bool> DXContainerStream("dxcontainer",
+                                cl::desc("Dump the DXContainer Stream"),
+                                cl::sub(PdbToYamlSubcommand), cl::init(false));
+
 cl::opt<bool> PublicsStream("publics-stream",
                             cl::desc("Dump the Publics Stream"),
                             cl::sub(PdbToYamlSubcommand), cl::init(false));
@@ -1560,6 +1564,7 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DbiStream = true;
       opts::pdb2yaml::TpiStream = true;
       opts::pdb2yaml::IpiStream = true;
+      opts::pdb2yaml::DXContainerStream = true;
       opts::pdb2yaml::PublicsStream = true;
       opts::pdb2yaml::DumpModules = true;
       opts::pdb2yaml::DumpModuleFiles = true;
