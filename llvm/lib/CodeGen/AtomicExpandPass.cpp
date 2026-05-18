@@ -389,13 +389,11 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       if (ExpansionKind ==
           TargetLoweringBase::AtomicExpansionKind::Elementwise) {
         // If the target wants fence-based lowering for this elementwise RMW,
-        // insert the fences before splitting and downgrade the RMW ordering
-        // first. The split operations inherit the downgraded ordering, so they
+        // insert the fences and downgrade the RMW ordering before splitting.
+        // The split operations inherit the downgraded ordering, so they
         // do not each get their own fence pair.
         tryInsertFencesForAtomic(
-            RMWI,
-            isReleaseOrStronger(RMWI->getOrdering()) ||
-                isAcquireOrStronger(RMWI->getOrdering()),
+            RMWI, isStrongerThanMonotonic(RMWI->getOrdering()),
             TLI->atomicOperationOrderAfterFenceSplit(RMWI));
         expandElementwiseAtomicRMW(RMWI);
         return true;
@@ -415,9 +413,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     MadeChange |= tryInsertFencesForAtomic(
-        RMWI,
-        isReleaseOrStronger(RMWI->getOrdering()) ||
-            isAcquireOrStronger(RMWI->getOrdering()),
+        RMWI, isStrongerThanMonotonic(RMWI->getOrdering()),
         TLI->atomicOperationOrderAfterFenceSplit(RMWI));
 
     // There are two different ways of expanding RMW instructions:
