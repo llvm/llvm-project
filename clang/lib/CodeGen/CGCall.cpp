@@ -1056,7 +1056,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
-  } else if (CGM.shouldUseLLVMABILowering()) {
+  } else if (CGM.shouldUseLLVMABILowering(CC)) {
     CGM.computeABIInfoUsingLib(*FI);
   } else {
     CGM.getABIInfo().computeInfo(*FI);

@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
@@ -313,7 +314,8 @@ public:
   /// Returns the field, base, or virtual base whose extent contains
   /// \p OffsetInBits, or nullptr if no such element exists. Empty bases and
   /// unnamed bitfields are skipped.
-  const FieldInfo *getElementContainingOffset(unsigned OffsetInBits) const;
+  LLVM_ABI const FieldInfo *
+  getElementContainingOffset(unsigned OffsetInBits) const;
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Record;

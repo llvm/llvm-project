@@ -16,7 +16,7 @@
 
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/Types.h"
-#include "llvm/TargetParser/Triple.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <memory>
 
@@ -93,11 +93,9 @@ enum class X86AVXABILevel {
   AVX512,
 };
 
-std::unique_ptr<TargetInfo> createX8664TargetInfo(TypeBuilder &TB,
-                                                  const Triple &TargetTriple,
-                                                  X86AVXABILevel AVXLevel,
-                                                  bool Has64BitPointers,
-                                                  const ABICompatInfo &Compat);
+LLVM_ABI std::unique_ptr<TargetInfo>
+createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
+                       bool Has64BitPointers, const ABICompatInfo &Compat);
 
 } // namespace abi
 } // namespace llvm
