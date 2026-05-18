@@ -83,7 +83,7 @@ struct View {
   friend View friend_redecl(MyObj &obj); // intra-warning {{'lifetimebound' attribute on an intra-TU definition is not visible to callers; add it to the declaration instead}}
 };
 
-// FIXME: Fix warning location, add a note pointing to this declaration saying "attribute inherited from this declaration"
+// FIXME: This diagnoses an attribute inherited from another redeclaration, not one written on the definition. Once we enforce that redeclarations agree on lifetimebound, handle this with a dedicated warning and note.
 View friend_redecl(MyObj &obj [[clang::lifetimebound]]); // intra-note {{'lifetimebound' attribute appears here on the definition}}
 
 View friend_redecl(MyObj &obj) {
