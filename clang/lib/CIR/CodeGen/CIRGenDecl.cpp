@@ -487,10 +487,10 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   }
 
   GlobalDecl gd;
-  if (isa<CXXConstructorDecl>(dc))
-    errorNYI(d.getSourceRange(), "C++ constructors static var context");
-  else if (isa<CXXDestructorDecl>(dc))
-    errorNYI(d.getSourceRange(), "C++ destructors static var context");
+  if (const auto *cd = dyn_cast<CXXConstructorDecl>(dc))
+    gd = GlobalDecl(cd, Ctor_Base);
+  else if (const auto *dd = dyn_cast<CXXDestructorDecl>(dc))
+    gd = GlobalDecl(dd, Dtor_Base);
   else if (const auto *fd = dyn_cast<FunctionDecl>(dc))
     gd = GlobalDecl(fd);
   else {

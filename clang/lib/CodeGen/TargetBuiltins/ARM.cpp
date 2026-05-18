@@ -2382,7 +2382,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
                                                        : Intrinsic::arm_strexd);
     llvm::Type *STy = llvm::StructType::get(Int32Ty, Int32Ty);
 
-    Address Tmp = CreateMemTemp(E->getArg(0)->getType());
+    Address Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
     Value *Val = EmitScalarExpr(E->getArg(0));
     Builder.CreateStore(Val, Tmp);
 
@@ -4768,7 +4768,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                              : Intrinsic::aarch64_stxp);
     llvm::Type *STy = llvm::StructType::get(Int64Ty, Int64Ty);
 
-    Address Tmp = CreateMemTemp(E->getArg(0)->getType());
+    Address Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
     EmitAnyExprToMem(E->getArg(0), Tmp, Qualifiers(), /*init*/ true);
 
     Tmp = Tmp.withElementType(STy);
@@ -7306,9 +7306,10 @@ Value *CodeGenFunction::EmitAArch64CpuInit() {
 Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
   const Expr *ArgExpr = E->getArg(0)->IgnoreParenCasts();
   StringRef ArgStr = cast<StringLiteral>(ArgExpr)->getString();
+  llvm::SmallVector<StringRef, 8> OrigFeatures;
+  ArgStr.split(OrigFeatures, "+");
   llvm::SmallVector<StringRef, 8> Features;
-  ArgStr.split(Features, "+");
-  for (auto &Feature : Features) {
+  for (StringRef Feature : OrigFeatures) {
     Feature = Feature.trim();
     if (!llvm::AArch64::parseFMVExtension(Feature))
       return Builder.getFalse();

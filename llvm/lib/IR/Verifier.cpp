@@ -2864,7 +2864,7 @@ void Verifier::visitConstantPtrAuth(const ConstantPtrAuth *CPA) {
         "signed ptrauth constant deactivation symbol must be a pointer");
 
   Check(isa<GlobalValue>(CPA->getDeactivationSymbol()) ||
-            CPA->getDeactivationSymbol()->isNullValue(),
+            isa<ConstantPointerNull>(CPA->getDeactivationSymbol()),
         "signed ptrauth constant deactivation symbol must be a global value "
         "or null");
 }
@@ -5427,6 +5427,15 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
             "VP !prof indirect call or memop size expected to be applied to "
             "CallBase instructions only",
             MD);
+
+    DenseSet<uint64_t> ProfileValues;
+    for (unsigned I = 3; I < MD->getNumOperands(); I += 2) {
+      ConstantInt *ProfileValue =
+          mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
+      uint64_t ProfileValueInt = ProfileValue->getZExtValue();
+      auto [ValueIt, Inserted] = ProfileValues.insert(ProfileValueInt);
+      Check(Inserted, "VP !prof should not have duplicate profile values", MD);
+    }
   } else {
     CheckFailed("expected either branch_weights or VP profile name", MD);
   }

@@ -10,6 +10,21 @@ void test_crypto(unsigned char *vdmrpp, unsigned char *vdmrp, unsigned char *vpp
   __vector_pair vp = *((__vector_pair *)vpp);
   int ia;
 
+  __builtin_dmsha2hash(&vdmr, &vdmr, 2);  // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+  __builtin_dmsha2hash(&vdmr, &vdmr, -1);  // expected-error {{argument value -1 is outside the valid range [0, 1]}}
+  __builtin_dmsha2hash(&vdmr, &vdmr, ia);  // expected-error {{argument to '__builtin_dmsha2hash' must be a constant integer}}
+
+  __builtin_dmsha3hash(&vdmrpair, 32);  // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+  __builtin_dmsha3hash(&vdmrpair, -2);  // expected-error {{argument value -2 is outside the valid range [0, 31]}}
+  __builtin_dmsha3hash(&vdmrpair, ia);  // expected-error {{argument to '__builtin_dmsha3hash' must be a constant integer}}
+
+  __builtin_dmxxshapad(&vdmr, vc, 4, 0, 3);  // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  __builtin_dmxxshapad(&vdmr, vc, 3, 2, 3);  // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+  __builtin_dmxxshapad(&vdmr, vc, 3, 1, -1);  // expected-error {{argument value -1 is outside the valid range [0, 3]}}
+  __builtin_dmxxshapad(&vdmr, vc, ia, 1, 1);  // expected-error {{argument to '__builtin_dmxxshapad' must be a constant integer}}
+  __builtin_dmxxshapad(&vdmr, vc, 0, ia, 1);  // expected-error {{argument to '__builtin_dmxxshapad' must be a constant integer}}
+  __builtin_dmxxshapad(&vdmr, vc, 0, 1, ia);  // expected-error {{argument to '__builtin_dmxxshapad' must be a constant integer}}
+
   __builtin_dmxxsha3512pad(&vdmr, vc, 2);  // expected-error {{argument value 2 is outside the valid range [0, 1]}}
   __builtin_dmxxsha3512pad(&vdmr, vc, ia);  // expected-error {{argument to '__builtin_dmxxsha3512pad' must be a constant integer}}
 

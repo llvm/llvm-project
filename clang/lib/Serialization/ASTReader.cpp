@@ -3179,6 +3179,18 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
   }
 }
 
+/// Returns {build-session validation applies, MF was validated this session}.
+static std::pair<bool, bool>
+wasValidatedInBuildSession(const ModuleFile &MF,
+                           const HeaderSearchOptions &HSOpts) {
+  const bool EnablesBSValidation =
+      HSOpts.ModulesValidateOncePerBuildSession && MF.Kind == MK_ImplicitModule;
+  const bool WasValidated =
+      EnablesBSValidation &&
+      MF.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp;
+  return {EnablesBSValidation, WasValidated};
+}
+
 ASTReader::RelocationResult
 ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // Don't emit module relocation errors if we have -fno-validate-pch.
@@ -3201,12 +3213,13 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // When only validating modules once per build session,
   // Skip check if the timestamp is up to date or module was built in same build
   // session.
-  if (HSOpts.ModulesValidateOncePerBuildSession && IsImplicitModule) {
-    if (F.InputFilesValidationTimestamp >= HSOpts.BuildSessionTimestamp)
-      return {std::nullopt, IgnoreError};
-    if (static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
-      return {std::nullopt, IgnoreError};
-  }
+  auto [EnablesBSValidation, WasValidated] =
+      wasValidatedInBuildSession(F, HSOpts);
+  if (WasValidated)
+    return {std::nullopt, IgnoreError};
+  if (EnablesBSValidation &&
+      static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
+    return {std::nullopt, IgnoreError};
 
   Diag(diag::remark_module_check_relocation) << F.ModuleName << F.FileName;
 
@@ -3294,9 +3307,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         F.InputFilesValidationStatus = ValidateSystemInputs
                                            ? InputFilesValidation::AllFiles
                                            : InputFilesValidation::UserFiles;
-        if (HSOpts.ModulesValidateOncePerBuildSession &&
-            F.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp &&
-            F.Kind == MK_ImplicitModule) {
+        auto [_, WasValidated] = wasValidatedInBuildSession(F, HSOpts);
+        if (WasValidated) {
           N = ForceValidateUserInputs ? NumUserInputs : 0;
           F.InputFilesValidationStatus =
               ForceValidateUserInputs
@@ -5743,6 +5755,42 @@ void ASTReader::InitializeContext() {
           const TagType *Tag = Ucontext_tType->getAs<TagType>();
           assert(Tag && "Invalid ucontext_t type in AST file");
           Context.setucontext_tDecl(Tag->getDecl());
+        }
+      }
+    }
+
+    if (TypeID Fexcept_t = SpecialTypes[SPECIAL_TYPE_FEXCEPT_T]) {
+      QualType Fexcept_tType = GetType(Fexcept_t);
+      if (Fexcept_tType.isNull()) {
+        Error("fexcept_t type is NULL");
+        return;
+      }
+
+      if (!Context.fexcept_tDecl) {
+        if (const TypedefType *Typedef = Fexcept_tType->getAs<TypedefType>())
+          Context.setfexcept_tDecl(Typedef->getDecl());
+        else {
+          const TagType *Tag = Fexcept_tType->getAs<TagType>();
+          assert(Tag && "Invalid fexcept_t type in AST file");
+          Context.setfexcept_tDecl(Tag->getDecl());
+        }
+      }
+    }
+
+    if (TypeID Fenv_t = SpecialTypes[SPECIAL_TYPE_FENV_T]) {
+      QualType Fenv_tType = GetType(Fenv_t);
+      if (Fenv_tType.isNull()) {
+        Error("fenv_t type is NULL");
+        return;
+      }
+
+      if (!Context.fenv_tDecl) {
+        if (const TypedefType *Typedef = Fenv_tType->getAs<TypedefType>())
+          Context.setfenv_tDecl(Typedef->getDecl());
+        else {
+          const TagType *Tag = Fenv_tType->getAs<TagType>();
+          assert(Tag && "Invalid fenv_t type in AST file");
+          Context.setfenv_tDecl(Tag->getDecl());
         }
       }
     }

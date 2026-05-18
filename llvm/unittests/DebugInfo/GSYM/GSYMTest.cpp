@@ -2815,6 +2815,145 @@ FinalizeEncodeAndDecode(GsymCreator &GC) {
 }
 
 template <typename CreatorT>
+static void AddDuplicateRangePair(CreatorT &GC, uint64_t Addr,
+                                  gsym_strp_t RichName, gsym_strp_t NonRichName,
+                                  bool AddRichFirst, uint32_t FileIdx,
+                                  uint32_t FirstLine) {
+  FunctionInfo RichFI(Addr, 0x20, RichName);
+  RichFI.OptLineTable = LineTable();
+  RichFI.OptLineTable->push(LineEntry(Addr, FileIdx, FirstLine));
+  RichFI.OptLineTable->push(LineEntry(Addr + 0x10, FileIdx, FirstLine + 1));
+
+  FunctionInfo NonRichFI(Addr, 0x20, NonRichName);
+  if (AddRichFirst) {
+    GC.addFunctionInfo(std::move(RichFI));
+    GC.addFunctionInfo(std::move(NonRichFI));
+  } else {
+    GC.addFunctionInfo(std::move(NonRichFI));
+    GC.addFunctionInfo(std::move(RichFI));
+  }
+}
+
+static void VerifyDuplicateRangeResult(const GsymReader &GR, uint64_t Addr,
+                                       StringRef ExpectedName,
+                                       uint32_t ExpectedFileIdx,
+                                       uint32_t FirstLine) {
+  auto ExpFI = GR.getFunctionInfo(Addr);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  EXPECT_EQ(GR.getString(ExpFI->Name), ExpectedName);
+  ASSERT_TRUE(ExpFI->OptLineTable.has_value());
+  ASSERT_EQ(ExpFI->OptLineTable->size(), 2u);
+  EXPECT_EQ((*ExpFI->OptLineTable)[0],
+            LineEntry(Addr, ExpectedFileIdx, FirstLine));
+  EXPECT_EQ((*ExpFI->OptLineTable)[1],
+            LineEntry(Addr + 0x10, ExpectedFileIdx, FirstLine + 1));
+}
+
+template <typename CreatorT> static void TestMangledNameReplacement() {
+  CreatorT GC;
+  const uint32_t FileIdx = GC.insertFile("/tmp/main.cpp");
+  const gsym_strp_t ShortName = GC.insertString("make_ftype");
+  const gsym_strp_t MangledName = GC.insertString("_Z10make_ftypePci");
+  const gsym_strp_t SwiftMangledName =
+      GC.insertString("$s4main10make_ftypeyyF");
+
+  AddDuplicateRangePair(GC, 0x1000, ShortName, MangledName,
+                        /*AddRichFirst=*/false, FileIdx, 10);
+  AddDuplicateRangePair(GC, 0x2000, ShortName, MangledName,
+                        /*AddRichFirst=*/true, FileIdx, 20);
+  AddDuplicateRangePair(GC, 0x3000, ShortName, SwiftMangledName,
+                        /*AddRichFirst=*/false, FileIdx, 30);
+
+  auto GROrErr = FinalizeEncodeAndDecode(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
+
+  EXPECT_EQ(GR->getNumAddresses(), 3u);
+  VerifyDuplicateRangeResult(*GR, 0x1000, "_Z10make_ftypePci", FileIdx, 10);
+  VerifyDuplicateRangeResult(*GR, 0x2000, "_Z10make_ftypePci", FileIdx, 20);
+  VerifyDuplicateRangeResult(*GR, 0x3000, "$s4main10make_ftypeyyF", FileIdx,
+                             30);
+}
+
+TEST(GSYMTest, TestMangledNameReplacement) {
+  TestMangledNameReplacement<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestMangledNameReplacementV2) {
+  TestMangledNameReplacement<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestMangledNameReplacementNegative() {
+  CreatorT GC;
+  const uint32_t FileIdx = GC.insertFile("/tmp/test.cpp");
+  const gsym_strp_t MangledA = GC.insertString("_Z3foov");
+  const gsym_strp_t MangledB = GC.insertString("_Z3barv");
+  const gsym_strp_t MangledName = GC.insertString("_Z10make_ftypePci");
+  const gsym_strp_t UnrelatedName = GC.insertString("some_other_func");
+  const gsym_strp_t SwiftShortName = GC.insertString("foo");
+  const gsym_strp_t SwiftLongerName = GC.insertString("$s5fooBaryyF");
+
+  AddDuplicateRangePair(GC, 0x3000, MangledB, MangledA,
+                        /*AddRichFirst=*/false, FileIdx, 5);
+  AddDuplicateRangePair(GC, 0x4000, UnrelatedName, MangledName,
+                        /*AddRichFirst=*/false, FileIdx, 15);
+  AddDuplicateRangePair(GC, 0x5000, SwiftShortName, SwiftLongerName,
+                        /*AddRichFirst=*/false, FileIdx, 25);
+
+  auto GROrErr = FinalizeEncodeAndDecode(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
+
+  EXPECT_EQ(GR->getNumAddresses(), 3u);
+  VerifyDuplicateRangeResult(*GR, 0x3000, "_Z3barv", FileIdx, 5);
+  VerifyDuplicateRangeResult(*GR, 0x4000, "some_other_func", FileIdx, 15);
+  VerifyDuplicateRangeResult(*GR, 0x5000, "foo", FileIdx, 25);
+}
+
+TEST(GSYMTest, TestMangledNameReplacementNegative) {
+  TestMangledNameReplacementNegative<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestMangledNameReplacementNegativeV2) {
+  TestMangledNameReplacementNegative<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestDuplicateRangeKeepsCallSites() {
+  CreatorT GC;
+  const gsym_strp_t FuncName = GC.insertString("foo");
+  const gsym_strp_t MatchRegex = GC.insertString("callee");
+
+  FunctionInfo NonRichFI(0x5000, 0x20, FuncName);
+  FunctionInfo RichFI(0x5000, 0x20, FuncName);
+  RichFI.CallSites = CallSiteInfoCollection();
+  CallSiteInfo CSI;
+  CSI.ReturnOffset = 0x10;
+  CSI.MatchRegex.push_back(MatchRegex);
+  RichFI.CallSites->CallSites.push_back(CSI);
+
+  GC.addFunctionInfo(std::move(NonRichFI));
+  GC.addFunctionInfo(std::move(RichFI));
+
+  auto GROrErr = FinalizeEncodeAndDecode(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
+
+  auto ExpFI = GR->getFunctionInfo(0x5000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_TRUE(ExpFI->CallSites.has_value());
+  ASSERT_EQ(ExpFI->CallSites->CallSites.size(), 1u);
+  EXPECT_EQ(ExpFI->CallSites->CallSites[0].ReturnOffset, 0x10u);
+  ASSERT_EQ(ExpFI->CallSites->CallSites[0].MatchRegex.size(), 1u);
+  EXPECT_EQ(GR->getString(ExpFI->CallSites->CallSites[0].MatchRegex[0]),
+            "callee");
+}
+
+TEST(GSYMTest, TestDuplicateRangeKeepsCallSites) {
+  TestDuplicateRangeKeepsCallSites<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestDuplicateRangeKeepsCallSitesV2) {
+  TestDuplicateRangeKeepsCallSites<GsymCreatorV2>();
+}
+
+template <typename CreatorT>
 static void TestGsymSegmenting(uint64_t SegmentSize) {
   // Test creating a GSYM file with function infos and segment the information.
   // We verify segmenting is working by creating a full GSYM and also by

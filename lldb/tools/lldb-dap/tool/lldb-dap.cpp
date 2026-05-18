@@ -12,9 +12,13 @@
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
 #include "Handler/ResponseHandler.h"
+#include "LLDBUtils.h"
 #include "RunInTerminal.h"
 #include "Transport.h"
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBProcessInfo.h"
+#include "lldb/API/SBProcessInfoList.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
@@ -41,6 +45,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
@@ -180,6 +185,97 @@ static llvm::Error LaunchClient(const llvm::opt::InputArgList &args) {
     return llvm::createStringError("no launch arguments provided");
 
   return ClientLauncher::GetLauncher(*client)->Launch(launch_args);
+}
+
+/// Handles `--list-processes`: print the processes visible to the selected
+/// platform as a JSON array on stdout, then exit.
+///
+/// The JSON shape is intentionally minimal and stable:
+///
+///   [ { "pid": number, "name": string, "triple": string,
+///       "user": number, "executable": string }, ... ]
+///
+/// Fields other than `pid` are omitted if not available.
+static llvm::Expected<llvm::json::Array>
+GetProcessArray(const llvm::opt::InputArgList &args) {
+  llvm::StringRef platform_name = args.getLastArgValue(OPT_platform_name);
+  llvm::StringRef platform_url = args.getLastArgValue(OPT_platform_url);
+
+  if (!platform_url.empty() && platform_name.empty())
+    return llvm::createStringError("--platform-url requires --platform");
+
+  if (lldb::SBError init_error =
+          lldb::SBDebugger::InitializeWithErrorHandling();
+      init_error.Fail())
+    return llvm::createStringError(llvm::formatv(
+        "failed to initialize lldb: {0}", init_error.GetCString()));
+  llvm::scope_exit cleanup{[]() { lldb::SBDebugger::Terminate(); }};
+
+  lldb::SBDebugger debugger =
+      lldb::SBDebugger::Create(/*source_init_files=*/false);
+  if (!debugger.IsValid())
+    return llvm::createStringError("failed to create debugger");
+
+  lldb::SBPlatform platform =
+      platform_name.empty() ? lldb::SBPlatform::GetHostPlatform()
+                            : lldb::SBPlatform(platform_name.str().c_str());
+  if (!platform.IsValid())
+    return llvm::createStringError(
+        llvm::formatv("unknown platform: {0}", platform_name));
+
+  bool connected = false;
+  if (!platform_url.empty()) {
+    lldb::SBPlatformConnectOptions opts(platform_url.str().c_str());
+    lldb::SBError error = platform.ConnectRemote(opts);
+    if (error.Fail())
+      return llvm::createStringError(
+          llvm::formatv("failed to connect to platform {0} at {1}: {2}",
+                        platform.GetName(), platform_url, error.GetCString()));
+    connected = true;
+  }
+  llvm::scope_exit disconnect{[&]() {
+    if (connected)
+      platform.DisconnectRemote();
+  }};
+
+  lldb::SBError error;
+  lldb::SBProcessInfoList processes = platform.GetAllProcesses(error);
+  if (error.Fail()) {
+    if (!platform.IsConnected() && platform_url.empty())
+      return llvm::createStringError(
+          llvm::formatv("platform {0} is not connected; pass --platform-url "
+                        "to connect to a remote platform",
+                        platform.GetName()));
+    return llvm::createStringError(
+        llvm::formatv("failed to list processes: {0}", error.GetCString()));
+  }
+
+  llvm::json::Array array;
+  for (uint32_t i = 0, n = processes.GetSize(); i < n; ++i) {
+    lldb::SBProcessInfo info;
+    if (!processes.GetProcessInfoAtIndex(i, info))
+      continue;
+
+    llvm::json::Object entry;
+    entry["pid"] = info.GetProcessID();
+    if (const char *name = info.GetName())
+      entry["name"] = name;
+    if (const char *triple = info.GetTriple())
+      entry["triple"] = triple;
+    if (info.UserIDIsValid())
+      entry["user"] = info.GetUserID();
+
+    lldb::SBFileSpec exe = info.GetExecutableFile();
+    if (exe.IsValid()) {
+      std::string path = lldb_dap::GetSBFileSpecPath(exe);
+      if (!path.empty())
+        entry["executable"] = path;
+    }
+
+    array.push_back(std::move(entry));
+  }
+
+  return array;
 }
 
 llvm::Error
@@ -702,6 +798,18 @@ int main(int argc, char *argv[]) {
       llvm::WithColor::error() << llvm::toString(std::move(error)) << '\n';
       return EXIT_FAILURE;
     }
+    return EXIT_SUCCESS;
+  }
+
+  if (input_args.hasArg(OPT_list_processes)) {
+    llvm::Expected<llvm::json::Array> arr_or_err = GetProcessArray(input_args);
+    if (!arr_or_err) {
+      llvm::WithColor::error()
+          << llvm::toString(arr_or_err.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::outs() << llvm::formatv("{0}\n",
+                                  llvm::json::Value(std::move(*arr_or_err)));
     return EXIT_SUCCESS;
   }
 

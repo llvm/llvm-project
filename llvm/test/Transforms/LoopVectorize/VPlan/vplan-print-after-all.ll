@@ -7,6 +7,7 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createHeaderPhiRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::removeDeadRecipes
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::addCanonicalIVRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleEarlyExits
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::addMiddleCheck
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createLoopRegions
@@ -14,6 +15,7 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInLoopReductionRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeMemOpWideningDecisions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeScalarizationDecisions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeCallWideningDecisions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::clearReductionWrapFlags
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimizeFindIVReductions
@@ -43,7 +45,6 @@
 ; CHECK: VPlan for loop in 'foo' after removeBranchOnConst
 ; CHECK: VPlan for loop in 'foo' after removeDeadRecipes
 ; CHECK: VPlan for loop in 'foo' after createAndOptimizeReplicateRegions
-; CHECK: VPlan for loop in 'foo' after hoistInvariantLoads
 ; CHECK: VPlan for loop in 'foo' after mergeBlocksIntoPredecessors
 ; CHECK: VPlan for loop in 'foo' after licm
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimize

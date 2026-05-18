@@ -5952,9 +5952,12 @@ ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
 /// Retrieve the template type parameter type for a template
 /// parameter or parameter pack with the given depth, index, and (optionally)
 /// name.
-QualType ASTContext::getTemplateTypeParmType(unsigned Depth, unsigned Index,
-                                             bool ParameterPack,
-                                             TemplateTypeParmDecl *TTPDecl) const {
+QualType
+ASTContext::getTemplateTypeParmType(int Depth, int Index, bool ParameterPack,
+                                    TemplateTypeParmDecl *TTPDecl) const {
+  assert(Depth >= 0 && "Depth must be non-negative");
+  assert(Index >= 0 && "Index must be non-negative");
+
   llvm::FoldingSetNodeID ID;
   TemplateTypeParmType::Profile(ID, Depth, Index, ParameterPack, TTPDecl);
   void *InsertPos = nullptr;
@@ -12845,6 +12848,25 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     break;
   case 'm':
     Type = Context.MFloat8Ty;
+    break;
+  case 'T':
+    switch (*Str++) {
+    case 'x': {
+      Type = Context.getfexcept_tType();
+      break;
+    }
+    case 'e': {
+      Type = Context.getfenv_tType();
+      break;
+    }
+    default: {
+      llvm_unreachable("Unexpected target builtin type");
+    }
+    }
+    if (Type.isNull()) {
+      Error = ASTContext::GE_Missing_fenv;
+      return {};
+    }
     break;
   }
 

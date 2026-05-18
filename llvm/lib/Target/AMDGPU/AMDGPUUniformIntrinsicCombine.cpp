@@ -49,7 +49,7 @@ isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
   Value *V = U.get();
   if (auto It = Tracker.find(V); It != Tracker.end())
     return !It->second; // divergent if marked false
-  return UI.isDivergentUse(U);
+  return UI.isDivergentAtUse(U);
 }
 
 /// Optimizes uniform intrinsics calls if their operand can be proven uniform.

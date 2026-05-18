@@ -507,12 +507,11 @@ FUNCTION_PASS("partially-inline-libcalls", PartiallyInlineLibCallsPass())
 FUNCTION_PASS("pgo-memop-opt", PGOMemOPSizeOpt())
 FUNCTION_PASS("place-safepoints", PlaceSafepointsPass())
 FUNCTION_PASS("print", PrintFunctionPass(errs()))
-// TODO: rename to print<foo> after NPM switch
-FUNCTION_PASS("print-alias-sets", AliasSetsPrinterPass(errs()))
-FUNCTION_PASS("print-cfg-sccs", CFGSCCPrinterPass(errs()))
-FUNCTION_PASS("print-memderefs", MemDerefPrinterPass(errs()))
-FUNCTION_PASS("print-mustexecute", MustExecutePrinterPass(errs()))
-FUNCTION_PASS("print-predicateinfo", PredicateInfoPrinterPass(errs()))
+FUNCTION_PASS("print<alias-sets>", AliasSetsPrinterPass(errs()))
+FUNCTION_PASS("print<cfg-sccs>", CFGSCCPrinterPass(errs()))
+FUNCTION_PASS("print<mem-derefs>", MemDerefPrinterPass(errs()))
+FUNCTION_PASS("print<must-execute>", MustExecutePrinterPass(errs()))
+FUNCTION_PASS("print<predicate-info>", PredicateInfoPrinterPass(errs()))
 FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(errs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(errs()))
 FUNCTION_PASS("print<branch-prob>", BranchProbabilityPrinterPass(errs()))
@@ -605,7 +604,7 @@ FUNCTION_PASS_WITH_PARAMS(
 FUNCTION_PASS_WITH_PARAMS(
     "gvn", "GVNPass", [](GVNOptions Opts) { return GVNPass(Opts); },
     parseGVNOptions,
-    "no-pre;pre;no-load-pre;load-pre;no-split-backedge-load-pre;"
+    "no-scalar-pre;scalar-pre;no-load-pre;load-pre;no-split-backedge-load-pre;"
     "split-backedge-load-pre;no-memdep;memdep;no-memoryssa;memoryssa")
 FUNCTION_PASS_WITH_PARAMS(
     "hardware-loops", "HardwareLoopsPass",

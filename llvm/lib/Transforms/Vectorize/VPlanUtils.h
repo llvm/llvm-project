@@ -74,6 +74,7 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 
 /// Return true if we do not know how to (mechanically) hoist or sink \p R.
 /// When sinking, passing \p Sinking = true ensures that assumes aren't sunk.
+/// Returns true for recipes that access memory.
 bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
 
 /// Returns the VPValue representing the uncountable exit comparison used by
@@ -305,6 +306,17 @@ public:
     return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
       return cast<BlockTy>(&Block);
     });
+  }
+
+  /// Return an iterator range over \p Range with each block cast to \p
+  /// BlockTy. Unlike blocksOnly, all blocks in \p Range must be of type
+  /// \p BlockTy.
+  template <typename BlockTy, typename T> static auto blocksAs(T &&Range) {
+    // Create BaseTy with correct const-ness based on BlockTy.
+    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
+                                      const VPBlockBase, VPBlockBase>;
+    return map_range(
+        Range, [](BaseTy *Block) -> BlockTy * { return cast<BlockTy>(Block); });
   }
 
   /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
