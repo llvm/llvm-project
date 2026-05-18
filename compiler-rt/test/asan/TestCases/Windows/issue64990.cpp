@@ -25,4 +25,4 @@ int main(int argc, char **argv) {
   return 0;
 }
 // CHECK: #0 {{.*}} in __asan_memcpy
-// CHECK: SUMMARY: AddressSanitizer: global-buffer-overflow {{.*}} in main
+// CHECK: SUMMARY: AddressSanitizer: global-buffer-overflow {{.*}} in __builtin_memcpy
