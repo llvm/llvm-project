@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Definition of struct sockaddr_in.
+/// Definition of struct sockaddr_in. This is the sockaddr specialization for
+/// AF_INET sockets, as defined by posix.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -17,9 +18,6 @@
 #include "in_port_t.h"
 #include "sa_family_t.h"
 #include "struct_in_addr.h"
-
-// This is the sockaddr specialization for AF_INET sockets, as
-// defined by posix.
 
 struct __attribute__((may_alias)) sockaddr_in {
   sa_family_t sin_family; /* AF_INET */
