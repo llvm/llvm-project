@@ -20,5 +20,12 @@ Homepage = "https://llvm.org/"
 "Issue Tracker" = "https://github.com/llvm/llvm-project/issues"
 "Source Code" = "https://github.com/llvm/llvm-project/tree/main/llvm/tools/llvm-ir2vec"
 
+[tool.setuptools.dynamic]
+version = {attr = "ir2vec.__version__"}
+
+[tool.setuptools.package-data]
+ir2vec = ["*.so", "*.pyd", "*.dylib"]
+"ir2vec.vocab_data" = ["*.json"]
+
 [tool.setuptools.packages.find]
 include = ["ir2vec*"]
