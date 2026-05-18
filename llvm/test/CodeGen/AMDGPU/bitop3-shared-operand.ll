@@ -13,9 +13,8 @@
 define amdgpu_ps float @bitop3_xor_and_or(i32 %wi, i32 %mul) {
 ; GCN-LABEL: bitop3_xor_and_or:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b32 s0, 0xaaaaaaaa
 ; GCN-NEXT:    v_xor_b32_e32 v2, 0xaaaaaaaa, v1
-; GCN-NEXT:    v_bitop3_b32 v3, v1, v1, s0 bitop3:0x48
+; GCN-NEXT:    v_and_b32_e32 v3, v2, v1
 ; GCN-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x78
 ; GCN-NEXT:    v_and_or_b32 v0, v0, v3, v1
 ; GCN-NEXT:    ; return to shader part epilog
@@ -25,7 +24,7 @@ define amdgpu_ps float @bitop3_xor_and_or(i32 %wi, i32 %mul) {
 ; O0-NEXT:    v_mov_b32_e32 v2, v1
 ; O0-NEXT:    s_mov_b32 s0, 0xaaaaaaaa
 ; O0-NEXT:    v_xor_b32_e64 v3, v2, s0
-; O0-NEXT:    v_bitop3_b32 v1, v2, v2, s0 bitop3:0x48
+; O0-NEXT:    v_and_b32_e64 v1, v3, v2
 ; O0-NEXT:    v_bitop3_b32 v0, v0, v3, v2 bitop3:0x78
 ; O0-NEXT:    v_and_or_b32 v0, v0, v1, v2
 ; O0-NEXT:    ; return to shader part epilog
@@ -49,15 +48,15 @@ define amdgpu_ps float @bitop3_umax_and_not(i32 %v, i32 %salt, i32 %shl) {
 ; O0-LABEL: bitop3_umax_and_not:
 ; O0:       ; %bb.0:
 ; O0-NEXT:    v_accvgpr_write_b32 a0, v2 ; Reload Reuse
-; O0-NEXT:    v_mov_b32_e32 v3, v1
-; O0-NEXT:    v_mov_b32_e32 v2, v0
+; O0-NEXT:    v_mov_b32_e32 v4, v1
+; O0-NEXT:    v_mov_b32_e32 v3, v0
 ; O0-NEXT:    v_accvgpr_read_b32 v0, a0 ; Reload Reuse
-; O0-NEXT:    v_xnor_b32_e64 v1, v2, v3
-; O0-NEXT:    v_bitop3_b32 v0, v0, v2, v3 bitop3:0x90
+; O0-NEXT:    v_xor_b32_e64 v2, v3, v4
+; O0-NEXT:    v_not_b32_e32 v1, v2
+; O0-NEXT:    v_bitop3_b32 v0, v0, v3, v4 bitop3:0x90
 ; O0-NEXT:    s_mov_b32 s0, 2
 ; O0-NEXT:    v_max_u32_e64 v0, v0, s0
-; O0-NEXT:    v_bitop3_b32 v0, v0, v2, v3 bitop3:0x60
-; O0-NEXT:    v_and_b32_e64 v0, v0, v1
+; O0-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
 ; O0-NEXT:    ; return to shader part epilog
   %mix = xor i32 %v, %salt
   %not = xor i32 %mix, -1
@@ -77,17 +76,19 @@ define amdgpu_ps float @bitop3_umax_xor_and(i32 %v, i32 %salt) {
 ; GCN-NEXT:    v_xor_b32_e32 v0, v0, v1
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
 ; GCN-NEXT:    v_max_u32_e32 v1, v1, v0
-; GCN-NEXT:    v_bitop3_b32 v0, v1, v1, v0 bitop3:0x48
+; GCN-NEXT:    v_xor_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GCN-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; O0-LABEL: bitop3_umax_xor_and:
 ; O0:       ; %bb.0:
-; O0-NEXT:    v_xor_b32_e64 v1, v0, v1
+; O0-NEXT:    v_xor_b32_e64 v0, v0, v1
 ; O0-NEXT:    s_mov_b32 s0, 8
-; O0-NEXT:    v_lshlrev_b32_e64 v0, s0, v1
-; O0-NEXT:    v_max_u32_e64 v0, v0, v1
-; O0-NEXT:    v_bitop3_b32 v0, v0, v0, v1 bitop3:0x48
+; O0-NEXT:    v_lshlrev_b32_e64 v1, s0, v0
+; O0-NEXT:    v_max_u32_e64 v1, v1, v0
+; O0-NEXT:    v_xor_b32_e64 v0, v1, v0
+; O0-NEXT:    v_and_b32_e64 v0, v0, v1
 ; O0-NEXT:    s_mov_b32 s0, 31
 ; O0-NEXT:    v_ashrrev_i32_e64 v0, s0, v0
 ; O0-NEXT:    ; return to shader part epilog
@@ -135,9 +136,8 @@ define amdgpu_ps float @bitop3_highbit_or_xor(i32 %v, i32 %salt) {
 ; SDAG-LABEL: bitop3_highbit_or_xor:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_brev_b32 s0, 1
-; SDAG-NEXT:    v_bitop3_b32 v2, v0, v1, v0 bitop3:0xc
-; SDAG-NEXT:    v_bitop3_b32 v0, v0, s0, v1 bitop3:0xce
-; SDAG-NEXT:    v_xor_b32_e32 v0, v0, v2
+; SDAG-NEXT:    v_bitop3_b32 v2, v0, s0, v1 bitop3:0xce
+; SDAG-NEXT:    v_bitop3_b32 v0, v2, v0, v1 bitop3:0xd2
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: bitop3_highbit_or_xor:
@@ -150,10 +150,10 @@ define amdgpu_ps float @bitop3_highbit_or_xor(i32 %v, i32 %salt) {
 ; O0-LABEL: bitop3_highbit_or_xor:
 ; O0:       ; %bb.0:
 ; O0-NEXT:    v_mov_b32_e32 v2, v1
-; O0-NEXT:    v_bitop3_b32 v1, v0, v2, v0 bitop3:0xc
+; O0-NEXT:    v_mov_b32_e32 v1, v0
 ; O0-NEXT:    s_mov_b32 s0, 0x80000000
-; O0-NEXT:    v_bitop3_b32 v0, v0, s0, v2 bitop3:0xce
-; O0-NEXT:    v_xor_b32_e64 v0, v0, v1
+; O0-NEXT:    v_bitop3_b32 v0, v1, s0, v2 bitop3:0xce
+; O0-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xd2
 ; O0-NEXT:    ; return to shader part epilog
   %mix = xor i32 %v, %salt
   %and = and i32 %mix, %salt
@@ -174,13 +174,12 @@ define amdgpu_ps float @bitop3_or_xor_and(i32 %wi) {
 ;
 ; O0-LABEL: bitop3_or_xor_and:
 ; O0:       ; %bb.0:
-; O0-NEXT:    v_mov_b32_e32 v2, v0
-; O0-NEXT:    s_mov_b32 s0, 25
-; O0-NEXT:    v_add_u32_e64 v0, v2, s0
 ; O0-NEXT:    s_mov_b32 s0, 3
-; O0-NEXT:    v_or3_b32 v1, v2, s0, v0
-; O0-NEXT:    v_bitop3_b32 v0, v0, v2, s0 bitop3:0x10
-; O0-NEXT:    v_and_b32_e64 v0, v0, v1
+; O0-NEXT:    v_or_b32_e64 v2, v0, s0
+; O0-NEXT:    s_mov_b32 s1, 25
+; O0-NEXT:    v_add_u32_e64 v1, v0, s1
+; O0-NEXT:    v_bitop3_b32 v0, v1, v0, s0 bitop3:0x10
+; O0-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xe0
 ; O0-NEXT:    ; return to shader part epilog
   %and = or i32 %wi, 3
   %and1 = add i32 %wi, 25
@@ -249,9 +248,8 @@ define amdgpu_ps float @bitop3_and_xor_constant(i32 %wi, i32 %salt) {
 ; SDAG-LABEL: bitop3_and_xor_constant:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_mov_b32 s0, 0x79ad5691
-; SDAG-NEXT:    v_bitop3_b32 v2, v0, v1, v0 bitop3:0xc
-; SDAG-NEXT:    v_bitop3_b32 v0, v0, s0, v1 bitop3:0xc6
-; SDAG-NEXT:    v_and_b32_e32 v0, v0, v2
+; SDAG-NEXT:    v_bitop3_b32 v2, v0, s0, v1 bitop3:0xc6
+; SDAG-NEXT:    v_bitop3_b32 v0, v2, v0, v1 bitop3:0x20
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: bitop3_and_xor_constant:
@@ -264,10 +262,10 @@ define amdgpu_ps float @bitop3_and_xor_constant(i32 %wi, i32 %salt) {
 ; O0-LABEL: bitop3_and_xor_constant:
 ; O0:       ; %bb.0:
 ; O0-NEXT:    v_mov_b32_e32 v2, v1
-; O0-NEXT:    v_bitop3_b32 v1, v0, v2, v0 bitop3:0xc
+; O0-NEXT:    v_mov_b32_e32 v1, v0
 ; O0-NEXT:    s_mov_b32 s0, 0x79ad5691
-; O0-NEXT:    v_bitop3_b32 v0, v0, s0, v2 bitop3:0xc6
-; O0-NEXT:    v_and_b32_e64 v0, v0, v1
+; O0-NEXT:    v_bitop3_b32 v0, v1, s0, v2 bitop3:0xc6
+; O0-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x20
 ; O0-NEXT:    ; return to shader part epilog
   %mix = xor i32 %wi, %salt
   %x = and i32 %mix, %salt
@@ -331,17 +329,17 @@ define amdgpu_ps float @bitop3_umax_and_not_v2(i32 %wi, i32 %v) {
 ;
 ; O0-LABEL: bitop3_umax_and_not_v2:
 ; O0:       ; %bb.0:
-; O0-NEXT:    v_mov_b32_e32 v2, v1
+; O0-NEXT:    v_mov_b32_e32 v3, v1
 ; O0-NEXT:    s_mov_b32 s0, 0x9e3779b9
-; O0-NEXT:    v_mul_lo_u32 v3, v0, s0
-; O0-NEXT:    v_xnor_b32_e64 v1, v2, v3
+; O0-NEXT:    v_mul_lo_u32 v4, v0, s0
+; O0-NEXT:    v_xor_b32_e64 v2, v3, v4
+; O0-NEXT:    v_not_b32_e32 v1, v2
 ; O0-NEXT:    s_mov_b32 s0, 15
 ; O0-NEXT:    v_lshlrev_b32_e64 v0, s0, v0
-; O0-NEXT:    v_bitop3_b32 v0, v0, v2, v3 bitop3:0x90
+; O0-NEXT:    v_bitop3_b32 v0, v0, v3, v4 bitop3:0x90
 ; O0-NEXT:    s_mov_b32 s0, 2
 ; O0-NEXT:    v_max_u32_e64 v0, v0, s0
-; O0-NEXT:    v_bitop3_b32 v0, v0, v2, v3 bitop3:0x60
-; O0-NEXT:    v_and_b32_e64 v0, v0, v1
+; O0-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
 ; O0-NEXT:    ; return to shader part epilog
   %salt = mul i32 %wi, -1640531527
   %mix = xor i32 %v, %salt
@@ -507,24 +505,26 @@ define amdgpu_ps float @bitop3_ctlz_shl_or(i32 %n) {
 define amdgpu_ps float @bitop3_bxort_or_t_and_not_t(i32 %a, i32 %b, i32 %c) {
 ; SDAG-LABEL: bitop3_bxort_or_t_and_not_t:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_and_b32_e32 v0, v2, v0
-; SDAG-NEXT:    v_or_b32_e32 v1, v1, v0
-; SDAG-NEXT:    v_bfi_b32 v0, v0, 0, v1
+; SDAG-NEXT:    v_and_b32_e32 v3, v2, v0
+; SDAG-NEXT:    v_bitop3_b32 v0, v2, v0, v2 bitop3:0x3f
+; SDAG-NEXT:    v_bitop3_b32 v0, v1, v0, v3 bitop3:0xc8
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: bitop3_bxort_or_t_and_not_t:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_and_b32_e32 v3, v2, v0
-; GISEL-NEXT:    v_bitop3_b32 v0, v1, v2, v0 bitop3:0x78
-; GISEL-NEXT:    v_bfi_b32 v0, v3, 0, v0
+; GISEL-NEXT:    v_bitop3_b32 v0, v2, v0, v2 bitop3:0x3f
+; GISEL-NEXT:    v_bitop3_b32 v0, v1, v0, v3 bitop3:0x48
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; O0-LABEL: bitop3_bxort_or_t_and_not_t:
 ; O0:       ; %bb.0:
+; O0-NEXT:    v_accvgpr_write_b32 a0, v2 ; Reload Reuse
 ; O0-NEXT:    v_mov_b32_e32 v3, v0
-; O0-NEXT:    v_and_b32_e64 v0, v2, v3
-; O0-NEXT:    v_bitop3_b32 v1, v1, v2, v3 bitop3:0xf8
-; O0-NEXT:    v_bfi_b32 v0, v0, 0, v1
+; O0-NEXT:    v_accvgpr_read_b32 v0, a0 ; Reload Reuse
+; O0-NEXT:    v_and_b32_e64 v2, v0, v3
+; O0-NEXT:    v_bitop3_b32 v0, v0, v3, v0 bitop3:0x3f
+; O0-NEXT:    v_bitop3_b32 v0, v1, v0, v2 bitop3:0xc8
 ; O0-NEXT:    ; return to shader part epilog
   %t  = and i32 %c, %a
   %u  = xor i32 %b, %t
@@ -553,11 +553,13 @@ define amdgpu_ps float @bitop3_t1t2_and_xor_or(i32 %a, i32 %b, i32 %c) {
 ;
 ; O0-LABEL: bitop3_t1t2_and_xor_or:
 ; O0:       ; %bb.0:
-; O0-NEXT:    v_mov_b32_e32 v3, v1
+; O0-NEXT:    v_mov_b32_e32 v3, v2
+; O0-NEXT:    v_mov_b32_e32 v4, v1
 ; O0-NEXT:    v_mov_b32_e32 v1, v0
-; O0-NEXT:    v_bitop3_b32 v0, v1, v2, v3 bitop3:0xa0
-; O0-NEXT:    v_bitop3_b32 v1, v1, v2, v3 bitop3:0xfc
-; O0-NEXT:    v_xor_b32_e64 v0, v0, v1
+; O0-NEXT:    v_and_b32_e64 v0, v1, v4
+; O0-NEXT:    v_or_b32_e64 v2, v1, v3
+; O0-NEXT:    v_bitop3_b32 v1, v1, v3, v4 bitop3:0xfc
+; O0-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x6c
 ; O0-NEXT:    ; return to shader part epilog
   %t1  = and i32 %a, %b
   %t2  = or  i32 %a, %c
@@ -583,10 +585,9 @@ define i32 @bitop3_bandt_or_t_and_not_t(i32 %a, i32 %b, i32 %c) {
 ; O0:       ; %bb.0:
 ; O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; O0-NEXT:    v_mov_b32_e32 v3, v2
-; O0-NEXT:    v_mov_b32_e32 v2, v0
-; O0-NEXT:    v_and_b32_e64 v0, v2, v3
-; O0-NEXT:    v_bitop3_b32 v1, v1, v2, v3 bitop3:0x88
-; O0-NEXT:    v_bfi_b32 v0, v0, 0, v1
+; O0-NEXT:    v_and_b32_e64 v2, v0, v3
+; O0-NEXT:    v_bitop3_b32 v0, v0, v3, v0 bitop3:0x3f
+; O0-NEXT:    v_bitop3_b32 v0, v1, v0, v2 bitop3:0x88
 ; O0-NEXT:    s_setpc_b64 s[30:31]
   %t  = and i32 %a, %c
   %u  = and i32 %b, %t
@@ -609,11 +610,14 @@ define i32 @bitop3_absorb_xor_not_or(i32 %a, i32 %b, i32 %c) {
 ;
 ; O0-LABEL: bitop3_absorb_xor_not_or:
 ; O0:       ; %bb.0:
-; O0:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; O0-NEXT:    v_mov_b32_e32 v3, v0
-; O0-NEXT:    v_bitop3_b32 v0, v2, v1, v3 bitop3:0x3c
-; O0-NEXT:    v_bitop3_b32 v1, v2, v1, v3 bitop3:0xff
-; O0-NEXT:    v_xor_b32_e64 v0, v0, v1
+; O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; O0-NEXT:    v_accvgpr_write_b32 a0, v2 ; Reload Reuse
+; O0-NEXT:    v_mov_b32_e32 v3, v1
+; O0-NEXT:    v_accvgpr_read_b32 v1, a0 ; Reload Reuse
+; O0-NEXT:    v_xor_b32_e64 v2, v1, v3
+; O0-NEXT:    v_bitop3_b32 v0, v1, v0, v3 bitop3:0xde
+; O0-NEXT:    v_bitop3_b32 v1, v0, v1, v3 bitop3:0x60
+; O0-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x1b
 ; O0-NEXT:    s_setpc_b64 s[30:31]
   %t  = xor i32 %c, %b
   %ta = or  i32 %t, %a
@@ -622,6 +626,120 @@ define i32 @bitop3_absorb_xor_not_or(i32 %a, i32 %b, i32 %c) {
   %nut = or i32 %nu, %t
   %r  = xor i32 %u, %nut
   ret i32 %r
+}
+
+; (or(x, C) ^ x) -- x appears both as or's RHS and xor's RHS
+define i32 @bitop3_shared_or_xor_identity(i32 %x) {
+; GCN-LABEL: bitop3_shared_or_xor_identity:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_or_b32_e32 v1, 0x80000000, v0
+; GCN-NEXT:    v_xor_b32_e32 v0, v1, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; O0-LABEL: bitop3_shared_or_xor_identity:
+; O0:       ; %bb.0:
+; O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; O0-NEXT:    v_mov_b32_e32 v1, v0
+; O0-NEXT:    s_mov_b32 s0, 0x80000000
+; O0-NEXT:    v_or_b32_e64 v0, v1, s0
+; O0-NEXT:    v_xor_b32_e64 v0, v0, v1
+; O0-NEXT:    s_setpc_b64 s[30:31]
+  %or = or i32 %x, -2147483648
+  %xor = xor i32 %or, %x
+  ret i32 %xor
+}
+
+; xor(or(xor(fshl(x,0,5), x), x), xor(fshl(x,0,5), x)) -- x shared across fshl, xor, and or
+define i32 @bitop3_shared_fshl_or_xor(i32 %x) {
+; SDAG-LABEL: bitop3_shared_fshl_or_xor:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_lshlrev_b32_e32 v1, 5, v0
+; SDAG-NEXT:    v_xor_b32_e32 v2, v1, v0
+; SDAG-NEXT:    v_or_b32_e32 v0, v1, v0
+; SDAG-NEXT:    v_xor_b32_e32 v0, v0, v2
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: bitop3_shared_fshl_or_xor:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_alignbit_b32 v1, v0, 0, 27
+; GISEL-NEXT:    v_xor_b32_e32 v2, v1, v0
+; GISEL-NEXT:    v_bitop3_b32 v0, v1, v0, v1 bitop3:0xfc
+; GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; O0-LABEL: bitop3_shared_fshl_or_xor:
+; O0:       ; %bb.0:
+; O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; O0-NEXT:    v_mov_b32_e32 v2, v0
+; O0-NEXT:    s_mov_b32 s1, -5
+; O0-NEXT:    s_mov_b32 s0, 0
+; O0-NEXT:    v_mov_b32_e32 v0, s1
+; O0-NEXT:    v_alignbit_b32 v0, v2, s0, v0
+; O0-NEXT:    v_xor_b32_e64 v1, v0, v2
+; O0-NEXT:    v_bitop3_b32 v0, v0, v2, v0 bitop3:0xfc
+; O0-NEXT:    v_xor_b32_e64 v0, v0, v1
+; O0-NEXT:    s_setpc_b64 s[30:31]
+  %fshl = call i32 @llvm.fshl.i32(i32 %x, i32 0, i32 5)
+  %xor = xor i32 %fshl, %x
+  %or = or i32 %xor, %x
+  %xor1 = xor i32 %or, %xor
+  ret i32 %xor1
+}
+
+; and(xor(x, C), x) -- x appears as both xor's LHS and and's RHS
+define i32 @bitop3_shared_and_xor_constant(i32 %x) {
+; GCN-LABEL: bitop3_shared_and_xor_constant:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x79ad5691, v0
+; GCN-NEXT:    v_and_b32_e32 v0, v1, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; O0-LABEL: bitop3_shared_and_xor_constant:
+; O0:       ; %bb.0:
+; O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; O0-NEXT:    v_mov_b32_e32 v1, v0
+; O0-NEXT:    s_mov_b32 s0, 0x79ad5691
+; O0-NEXT:    v_xor_b32_e64 v0, v1, s0
+; O0-NEXT:    v_and_b32_e64 v0, v0, v1
+; O0-NEXT:    s_setpc_b64 s[30:31]
+  %xor = xor i32 %x, 2041403025
+  %and = and i32 %xor, %x
+  ret i32 %and
+}
+
+; xor(and(xor(a,b), b), xor(a,b)) -- xor(a,b) shared as and's LHS and outer xor's RHS
+define i32 @bitop3_shared_and_xor_identity(i32 %a, i32 %b) {
+; SDAG-LABEL: bitop3_shared_and_xor_identity:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_xor_b32_e32 v2, v0, v1
+; SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
+; SDAG-NEXT:    v_xor_b32_e32 v0, v0, v2
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: bitop3_shared_and_xor_identity:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GISEL-NEXT:    v_bfi_b32 v0, v1, 0, v0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; O0-LABEL: bitop3_shared_and_xor_identity:
+; O0:       ; %bb.0:
+; O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; O0-NEXT:    v_mov_b32_e32 v2, v1
+; O0-NEXT:    v_xor_b32_e64 v1, v0, v2
+; O0-NEXT:    v_bitop3_b32 v0, v0, v2, v0 bitop3:0xc
+; O0-NEXT:    v_xor_b32_e64 v0, v0, v1
+; O0-NEXT:    s_setpc_b64 s[30:31]
+  %x = xor i32 %a, %b
+  %and = and i32 %x, %b
+  %result = xor i32 %and, %x
+  ret i32 %result
 }
 
 declare i32 @llvm.umax.i32(i32, i32)
