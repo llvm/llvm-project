@@ -1568,6 +1568,8 @@ public:
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
 
+  RValue emitPseudoObjectRValue(const PseudoObjectExpr *e,
+                                AggValueSlot slot = AggValueSlot::ignored());
   LValue emitPseudoObjectLValue(const PseudoObjectExpr *E);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
@@ -2026,6 +2028,9 @@ public:
   /// Emit a call to an NVPTX builtin function.
   std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
+
+  /// Emit a device-side printf call for NVPTX targets.
+  mlir::Value emitNVPTXDevicePrintfCallExpr(const CallExpr *expr);
 
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 

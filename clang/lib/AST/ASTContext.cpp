@@ -5952,9 +5952,12 @@ ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
 /// Retrieve the template type parameter type for a template
 /// parameter or parameter pack with the given depth, index, and (optionally)
 /// name.
-QualType ASTContext::getTemplateTypeParmType(unsigned Depth, unsigned Index,
-                                             bool ParameterPack,
-                                             TemplateTypeParmDecl *TTPDecl) const {
+QualType
+ASTContext::getTemplateTypeParmType(int Depth, int Index, bool ParameterPack,
+                                    TemplateTypeParmDecl *TTPDecl) const {
+  assert(Depth >= 0 && "Depth must be non-negative");
+  assert(Index >= 0 && "Index must be non-negative");
+
   llvm::FoldingSetNodeID ID;
   TemplateTypeParmType::Profile(ID, Depth, Index, ParameterPack, TTPDecl);
   void *InsertPos = nullptr;

@@ -118,7 +118,6 @@ public:
 
   LLVM_ABI Result run(Module &M, ModuleAnalysisManager &);
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &);
-  static bool isRequired() { return true; }
 };
 
 /// Create a verifier pass.

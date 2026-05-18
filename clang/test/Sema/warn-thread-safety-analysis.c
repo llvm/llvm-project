@@ -32,6 +32,10 @@
 // Simplified only for test purpose.
 struct LOCKABLE Mutex {};
 
+struct Task {
+  struct Mutex mu;
+};
+
 struct Foo {
   struct Mutex *mu_;
   int  a_value GUARDED_BY(mu_);
@@ -42,6 +46,10 @@ struct Foo {
   } bar;
 
   int* a_ptr PT_GUARDED_BY(bar.other_mu);
+
+  struct Task *task;
+  int  b_value GUARDED_BY(&task->mu);
+  int* b_ptr PT_GUARDED_BY(&task->mu);
 };
 
 struct LOCKABLE Lock {};
@@ -206,22 +214,29 @@ int main(void) {
     a_ = 42;
   }
 
-  foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'mu_' exclusively}}
-  *foo_.a_ptr = 1; // expected-warning {{writing the value pointed to by 'a_ptr' requires holding mutex 'bar.other_mu' exclusively}}
-
+  foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'foo_.mu_' exclusively}}
+  *foo_.a_ptr = 1; // expected-warning {{writing the value pointed to by 'a_ptr' requires holding mutex 'foo_.bar.other_mu' exclusively}}
+  foo_.b_value = 0; // expected-warning {{writing variable 'b_value' requires holding mutex 'foo_.task->mu' exclusively}}
+  *foo_.b_ptr = 1; // expected-warning {{writing the value pointed to by 'b_ptr' requires holding mutex 'foo_.task->mu' exclusively}}
 
   mutex_exclusive_lock(foo_.bar.other_mu);
+  *foo_.a_ptr = 1;
   mutex_exclusive_lock(foo_.bar.third_mu); // expected-warning{{mutex 'third_mu' must be acquired before 'other_mu'}}
   mutex_exclusive_lock(foo_.mu_); // expected-warning{{mutex 'mu_' must be acquired before 'other_mu'}}
   mutex_exclusive_unlock(foo_.mu_);
   mutex_exclusive_unlock(foo_.bar.other_mu);
   mutex_exclusive_unlock(foo_.bar.third_mu);
 
+  mutex_exclusive_lock(&foo_.task->mu);
+  foo_.b_value = 0;
+  *foo_.b_ptr = 1;
+  mutex_exclusive_unlock(&foo_.task->mu);
+
 #ifdef LATE_PARSING
-  late_parsing.a_value_defined_before = 1; // expected-warning{{writing variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late' exclusively}}
+  late_parsing.a_value_defined_before = 1; // expected-warning{{writing variable 'a_value_defined_before' requires holding mutex 'late_parsing.a_mutex_defined_late' exclusively}}
   late_parsing.a_ptr_defined_before = 0;
   set_value(&late_parsing.a_value_defined_before, 0); // expected-warning{{calling function 'set_value' requires holding mutex 'foo_.mu_' exclusively}}
-                                                      // expected-warning@-1{{passing pointer to variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late'}}
+                                                      // expected-warning@-1{{passing pointer to variable 'a_value_defined_before' requires holding mutex 'late_parsing.a_mutex_defined_late'}}
   mutex_exclusive_lock(late_parsing.a_mutex_defined_late);
   mutex_exclusive_lock(late_parsing.a_mutex_defined_early); // expected-warning{{mutex 'a_mutex_defined_early' must be acquired before 'a_mutex_defined_late'}}
   mutex_exclusive_unlock(late_parsing.a_mutex_defined_early);

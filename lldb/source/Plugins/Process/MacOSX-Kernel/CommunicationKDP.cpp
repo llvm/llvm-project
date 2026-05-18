@@ -194,8 +194,8 @@ size_t CommunicationKDP::WaitForPacketWithTimeoutMicroSecondsNoLock(
                              status, &error);
 
     LLDB_LOG_VERBOSE(log,
-                     "Read (buffer, sizeof(buffer), timeout_usec = 0x{0:x}, "
-                     "status = {1}, error = {2}) => bytes_read = {4}",
+                     "Read (buffer, sizeof(buffer), timeout_usec = {:x+}, "
+                     "status = {}, error = {}) => bytes_read = {}",
                      timeout_usec,
                      Communication::ConnectionStatusAsString(status), error,
                      bytes_read);

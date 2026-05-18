@@ -281,16 +281,19 @@
 #include "math/ilogbf128.h"
 #include "math/ilogbf16.h"
 #include "math/ilogbl.h"
-#include "math/iscanonical.h"
+// TODO: iscanonical is a macro in <math.h>
+// #include "math/iscanonical.h"
 #include "math/iscanonicalbf16.h"
 #include "math/iscanonicalf.h"
 #include "math/iscanonicalf128.h"
 #include "math/iscanonicalf16.h"
 #include "math/iscanonicall.h"
-#include "math/isnan.h"
+// TODO: isnan is a macro in <math.h>
+// #include "math/isnan.h"
 #include "math/isnanf.h"
 #include "math/isnanl.h"
-#include "math/issignaling.h"
+// TODO: issignaling is a macro in <math.h>
+// #include "math/issignaling.h"
 #include "math/issignalingbf16.h"
 #include "math/issignalingf.h"
 #include "math/issignalingf128.h"

@@ -296,16 +296,16 @@ module m01
     integer :: j(1)
     j(1) = 1
     !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'x=' is not definable
-    !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
+    !BECAUSE: Variable 'a(__builtin_int(j,kind=8))' has a vector subscript
     call intentout_arr(a(j))
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' is not definable
-    !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
+    !BECAUSE: Variable 'a(__builtin_int(j,kind=8))' has a vector subscript
     call intentinout_arr(a(j))
     !WARNING: Actual argument associated with ASYNCHRONOUS dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
-    !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
+    !BECAUSE: Variable 'a(__builtin_int(j,kind=8))' has a vector subscript
     call asynchronous_arr(a(j))
     !WARNING: Actual argument associated with VOLATILE dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
-    !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
+    !BECAUSE: Variable 'a(__builtin_int(j,kind=8))' has a vector subscript
     call volatile_arr(a(j))
   end subroutine
 

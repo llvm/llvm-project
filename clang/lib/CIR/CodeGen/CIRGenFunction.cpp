@@ -274,6 +274,22 @@ void CIRGenFunction::LexicalScope::cleanup() {
   if (curBlock->mightHaveTerminator() && curBlock->getTerminator())
     return;
 
+  // If the builder's current block lives in a region nested below this
+  // lexical scope's region, popCleanup has left the insertion point past
+  // a cir.cleanup.scope inside that nested region (for example, inside a
+  // cir.for body when the body cleanup was registered there). Emitting a
+  // cir.yield at the current position would terminate the nested region
+  // instead of this scope's region. Reposition to the back block of this
+  // scope's region so the terminator below lands in the correct place.
+  if (mlir::Region *scopeRegion = entryBlock->getParent();
+      scopeRegion && !scopeRegion->empty() &&
+      curBlock->getParent() != scopeRegion) {
+    builder.setInsertionPointToEnd(&scopeRegion->back());
+    curBlock = builder.getBlock();
+    if (curBlock->mightHaveTerminator() && curBlock->getTerminator())
+      return;
+  }
+
   // Get rid of any empty block at the end of the scope. An empty non-entry
   // block is created when a terminator (return/break/continue) is followed
   // by unreachable code.
@@ -531,8 +547,12 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
   }
 
+  // Only implicit-object member functions (without an explicit `this`
+  // parameter) receive an implicit `this` argument that the CXXABI prolog has
+  // to set up. C++23 explicit-object members (P0847R7) carry their object via a
+  // regular parameter and use the standard parameter prolog instead.
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
-      cast<CXXMethodDecl>(d)->isInstance()) {
+      cast<CXXMethodDecl>(d)->isImplicitObjectMemberFunction()) {
     cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
 
     const auto *md = cast<CXXMethodDecl>(d);
@@ -1017,8 +1037,11 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
   QualType retTy = fd->getReturnType();
 
+  // Only implicit-object member functions need the CXXABI-supplied `this`
+  // parameter prepended to the arg list.  Explicit-object members carry the
+  // object as a regular parameter that fd->parameters() already enumerates.
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
-  if (md && md->isInstance()) {
+  if (md && md->isImplicitObjectMemberFunction()) {
     if (cgm.getCXXABI().hasThisReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "this return");
     else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
@@ -1081,10 +1104,6 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
 
       // Skip unique OVEs.
       if (ov->isUnique()) {
-        // FIXME: This doesn't really affect anything, but I cannot find a test
-        // for this, so leave an ErrorNYI here until we can find one.
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "emitPseudoObjectExpr skipped for uniqueness");
         assert(ov != resultExpr &&
                "A unique OVE cannot be used as the result expression");
         continue;
@@ -1120,9 +1139,7 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
       if (forLValue)
         result = cgf.emitLValue(semantic);
       else
-        cgf.cgm.errorNYI(
-            e->getSourceRange(),
-            "emitPseudoObjectExpr as an RValue, when semantic is result");
+        result = cgf.emitAnyExpr(semantic, slot);
     } else {
       // FIXME: best I can tell, this is only reachable as an r-value, so this
       // isn't properly tested.
@@ -1134,6 +1151,12 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
   }
 
   return result;
+}
+
+RValue CIRGenFunction::emitPseudoObjectRValue(const PseudoObjectExpr *e,
+                                              AggValueSlot slot) {
+  return std::get<RValue>(
+      emitPseudoObjectExpr(*this, e, /*forLValue=*/false, slot));
 }
 
 LValue CIRGenFunction::emitPseudoObjectLValue(const PseudoObjectExpr *e) {
@@ -1191,9 +1214,19 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(e);
-    RunCleanupsScope scope(*this);
+    FullExprCleanupScope scope(*this, cleanups->getSubExpr());
     LValue lv = emitLValue(cleanups->getSubExpr());
-    assert(!cir::MissingFeatures::cleanupWithPreservedValues());
+    if (lv.isSimple()) {
+      // Defend against branches out of gnu statement expressions surrounded by
+      // cleanups.
+      Address addr = lv.getAddress();
+      mlir::Value v = addr.getPointer();
+      scope.exit({&v});
+      return LValue::makeAddr(addr.withPointer(v), lv.getType(),
+                              lv.getBaseInfo());
+    }
+    // FIXME: Is it possible to create an ExprWithCleanups that produces a
+    // bitfield lvalue or some other non-simple lvalue?
     return lv;
   }
   case Expr::CXXDefaultArgExprClass: {
