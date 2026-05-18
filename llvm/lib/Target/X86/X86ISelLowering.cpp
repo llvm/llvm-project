@@ -51673,16 +51673,15 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
     if (!DCI.isBeforeLegalize() && VT.isInteger() && CIdx &&
         (CIdx->getZExtValue() & 1) == 1 && TLI.isTypeLegal(VT)) {
       using namespace SDPatternMatch;
+      auto *Cst = dyn_cast<ConstantSDNode>(Scl);
       MVT WideSVT = MVT::getIntegerVT(2 * NumBitsPerElt);
       MVT WideVT = MVT::getVectorVT(WideSVT, NumElts / 2);
       SDValue InnerVec, InnerScl;
-      if (TLI.isTypeLegal(WideSVT) && TLI.isTypeLegal(WideVT) &&
+      if (Cst && TLI.isTypeLegal(WideSVT) && TLI.isTypeLegal(WideVT) &&
           sd_match(Vec, m_OneUse(m_InsertElt(
                             m_Value(InnerVec), m_Value(InnerScl),
                             m_SpecificInt(CIdx->getZExtValue() - 1))))) {
-        auto *Cst = dyn_cast<ConstantSDNode>(Scl);
-        auto *InnerCst = dyn_cast<ConstantSDNode>(InnerScl);
-        if (Cst && InnerCst) {
+        if (auto *InnerCst = dyn_cast<ConstantSDNode>(InnerScl)) {
           SDLoc DL(N);
           APInt Pack = InnerCst->getAPIntValue().zext(2 * NumBitsPerElt);
           Pack.insertBits(Cst->getAPIntValue().trunc(NumBitsPerElt),
