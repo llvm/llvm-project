@@ -599,18 +599,18 @@ protected:
     return R->getVPRecipeID() == VPRecipeID;                                   \
   }
 
-/// VPSingleDef is a base class for recipes for modeling a sequence of one or
-/// more output IR that define a single result VPValue.
-/// Note that VPRecipeBase must be inherited from before VPValue.
-class VPSingleDefRecipe : public VPRecipeBase, public VPRecipeValue {
+/// VPSingleDefRecipe is a base class for recipes that model a sequence of one
+/// or more output IR that define a single result VPValue. Note that
+/// VPSingleDefRecipe must inherit from VPRecipeBase before VPSingleDefValue.
+class VPSingleDefRecipe : public VPRecipeBase, public VPSingleDefValue {
 public:
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
                     DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPRecipeValue(this) {}
+      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this) {}
 
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
                     Value *UV, DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPRecipeValue(this, UV) {}
+      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPRecipeID()) {
@@ -2879,7 +2879,7 @@ protected:
     if (StoredValues.empty()) {
       for (Instruction *Inst : IG->members()) {
         assert(!Inst->getType()->isVoidTy() && "must have result");
-        new VPRecipeValue(this, Inst);
+        new VPMultiDefValue(this, Inst);
       }
     } else {
       for (auto *SV : StoredValues)

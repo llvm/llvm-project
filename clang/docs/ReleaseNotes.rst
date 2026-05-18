@@ -562,6 +562,7 @@ Bug Fixes in This Version
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
+- Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
