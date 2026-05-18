@@ -10183,18 +10183,27 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetBindNameOn(symbol);
       }
     }
-    // Implicitly treat allocatable arrays as managed when feature is enabled.
-    // This is done after all explicit CUDA attributes have been processed.
-    // Only applies when CUDA Fortran is enabled; otherwise -gpu=mem:managed
-    // on a non-CUDA-Fortran translation unit (e.g. pure OpenACC) would
-    // incorrectly route every allocatable through the CUDA Fortran managed
-    // descriptor pipeline.
-    if (context().languageFeatures().IsEnabled(
-            common::LanguageFeature::CudaManaged) &&
-        context().languageFeatures().IsEnabled(common::LanguageFeature::CUDA))
-      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()})
-        if (IsAllocatable(symbol) && !object->cudaDataAttr())
+
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
+        // Implicitly treat allocatable arrays as managed when feature is
+        // enabled. This is done after all explicit CUDA attributes have been
+        // processed. Only applies when CUDA Fortran is enabled; otherwise
+        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
+        // OpenACC) would incorrectly route every allocatable through the CUDA
+        // Fortran managed descriptor pipeline.
+        if (context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaManaged) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CUDA))
           object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+        // Implicitly treat allocatable arrays as pinned when feature is
+        // enabled.
+        else if (context().languageFeatures().IsEnabled(
+                     common::LanguageFeature::CudaPinned))
+          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+      }
+    }
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {

@@ -222,7 +222,18 @@ def _skipForVariant(variant_name, expected_fn, bugnumber=None):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
         skip_dict = getattr(func, "__variant_skip__", {})
-        skip_dict[variant_name] = expected_fn
+        existing_fn = skip_dict.get(variant_name)
+        if existing_fn:
+            # Chain the decorator with the existing one.
+            def chained_fn(**kwargs):
+                reason = expected_fn(**kwargs)
+                if reason:
+                    return reason
+                return existing_fn(**kwargs)
+
+            skip_dict[variant_name] = chained_fn
+        else:
+            skip_dict[variant_name] = expected_fn
         func.__variant_skip__ = skip_dict
         return func
 

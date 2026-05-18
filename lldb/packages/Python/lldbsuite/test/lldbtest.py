@@ -2263,6 +2263,16 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 dirs.append(dir_to_add)
 
         env_value = self.platformContext.shlib_path_separator.join(dirs)
+        # On Windows the shlib env var is PATH. `SetEnvironmentEntries` with
+        # append=True replaces any matching key, so simply returning
+        # "PATH=<test-build-dir>" would wipe out the inherited PATH and break
+        # DLL resolution. Prepend our dirs to the inherited PATH instead.
+        if sys.platform == "win32" and shlib_environment_var == "PATH":
+            existing = os.environ.get("PATH", None)
+            if existing is not None:
+                env_value = (
+                    env_value + self.platformContext.shlib_path_separator + existing
+                )
         return ["%s=%s" % (shlib_environment_var, env_value)]
 
     def registerSanitizerLibrariesWithTarget(self, target):

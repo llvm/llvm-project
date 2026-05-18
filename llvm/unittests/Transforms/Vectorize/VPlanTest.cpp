@@ -53,7 +53,7 @@ loop:
 
   Loop *L = LI->getLoopFor(LoopHeader);
   PredicatedScalarEvolution PSE(*SE, *L);
-  VPlan Plan(LoopHeader);
+  VPlan Plan(LoopHeader, IntegerType::get(*Ctx, 32));
   Argument *X = F->getArg(0);
   VPValue *Op = Plan.getOrAddLiveIn(X);
 
@@ -1736,8 +1736,8 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
 
 struct VPDoubleValueDef : public VPRecipeBase {
   VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPRecipeBase(99, Operands) {
-    new VPRecipeValue(this);
-    new VPRecipeValue(this);
+    new VPMultiDefValue(this);
+    new VPMultiDefValue(this);
   }
 
   VPRecipeBase *clone() override { return nullptr; }
