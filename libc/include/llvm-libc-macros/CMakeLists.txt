@@ -401,6 +401,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  regex_macros
+  HDR
+    regex-macros.h
+)
+
+add_macro_header(
   EFIAPI_macros
   HDR
     EFIAPI-macros.h
