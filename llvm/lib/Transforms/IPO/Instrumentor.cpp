@@ -399,6 +399,36 @@ bool InstrumentorImpl::instrumentModule() {
   return Changed;
 }
 
+static void updateGlobalLoctionArrays(InstrumentorIRBuilderTy &IIRB,
+                                      InstrumentationConfig &IConf) {
+  auto MakeAndReplaceGlobal = [&](Type *Ty, GlobalVariable *&V, StringRef Name,
+                                  Constant *Initializer) {
+    auto *GV = new GlobalVariable(IIRB.M, Ty, /*isConstant=*/true,
+                                  GlobalValue::InternalLinkage, Initializer,
+                                  IConf.getRTName("", Name), nullptr,
+                                  GlobalVariable::NotThreadLocal,
+                                  IIRB.DL.getDefaultGlobalsAddressSpace());
+    if (V) {
+      V->replaceAllUsesWith(GV);
+      V->eraseFromParent();
+    }
+    V = GV;
+  };
+
+  // Create the location table global (static/internal linkage)
+  auto *ArrayTy = ArrayType::get(IIRB.Int64Ty, IIRB.LocationEncoding.size());
+  MakeAndReplaceGlobal(ArrayTy, IIRB.LocationGlobal, "locations",
+                       ConstantArray::get(ArrayTy, IIRB.LocationEncoding));
+
+  // Create the string table global (static/internal linkage)
+  auto *StringArrayTy =
+      ArrayType::get(IIRB.Int8Ty, IIRB.ConcatenatedString.size());
+  MakeAndReplaceGlobal(StringArrayTy, IIRB.StringGlobal, "strings",
+                       ConstantDataArray::getString(IIRB.Ctx,
+                                                    IIRB.ConcatenatedString,
+                                                    /*AddNull=*/false));
+}
+
 bool InstrumentorImpl::instrument() {
   bool Changed = false;
   if (!shouldInstrumentTarget())
@@ -406,6 +436,10 @@ bool InstrumentorImpl::instrument() {
 
   StringRef FunctionRegexStr = IConf.FunctionRegex->getString();
   ParsedFunctionRegex = createRegex(FunctionRegexStr, "function", IIRB.Ctx);
+
+  // Create the global location arrays eagerly as they might be needed before we
+  // have seen all locations.
+  updateGlobalLoctionArrays(IIRB, IConf);
 
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_PRE])
@@ -419,6 +453,17 @@ bool InstrumentorImpl::instrument() {
 
   for (Function &Fn : M)
     Changed |= instrumentFunction(Fn);
+
+  // Update the location table and string table as globals if there are any
+  // locations, otherwise delete them.
+  if (!IIRB.LocationEncoding.empty()) {
+    updateGlobalLoctionArrays(IIRB, IConf);
+    Changed = true;
+  } else {
+    IIRB.LocationGlobal->eraseFromParent();
+    IIRB.StringGlobal->eraseFromParent();
+    IIRB.LocationGlobal = IIRB.StringGlobal = nullptr;
+  }
 
   return Changed;
 }
@@ -841,7 +886,7 @@ void FunctionIO::init(InstrumentationConfig &IConf,
     IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_main",
                              "Flag to indicate it is the main function.",
                              IRTArg::NONE, isMainFunction));
-  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId), Config.has(PassLocation));
   IConf.addChoice(*this, IIRB.Ctx);
 }
 
@@ -915,7 +960,7 @@ void UnreachableIO::init(InstrumentationConfig &IConf,
                          InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
   if (UserConfig)
     Config = *UserConfig;
-  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId), Config.has(PassLocation));
   IConf.addChoice(*this, IIRB.Ctx);
 }
 ///}
@@ -944,7 +989,7 @@ void AllocaIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
                              "The allocation alignment.", IRTArg::NONE,
                              getAlignment));
 
-  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId), Config.has(PassLocation));
   IConf.addChoice(*this, IIRB.Ctx);
 }
 
@@ -1044,7 +1089,7 @@ void StoreIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
                              isVolatile));
   }
 
-  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId), Config.has(PassLocation));
   IConf.addChoice(*this, IIRB.Ctx);
 }
 
@@ -1169,7 +1214,7 @@ void LoadIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
                              isVolatile));
   }
 
-  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId), Config.has(PassLocation));
   IConf.addChoice(*this, IIRB.Ctx);
 }
 
@@ -1248,7 +1293,7 @@ void ModuleIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
     IRTArgs.push_back(IRTArg(IIRB.PtrTy, "target_triple", "The target triple.",
                              IRTArg::STRING, getTargetTriple));
 
-  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId), Config.has(PassLocation));
   IConf.addChoice(*this, IIRB.Ctx);
 }
 Value *ModuleIO::getModuleName(Value &V, Type &Ty, InstrumentationConfig &IConf,
@@ -1305,7 +1350,7 @@ void GlobalVarIO::init(InstrumentationConfig &IConf,
     IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_definition",
                              "Flag to indicate global definitions.",
                              IRTArg::NONE, isDefinition));
-  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId), Config.has(PassLocation));
   IConf.addChoice(*this, IIRB.Ctx);
 }
 Value *GlobalVarIO::getAddress(Value &V, Type &Ty, InstrumentationConfig &IConf,

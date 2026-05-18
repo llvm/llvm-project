@@ -64,6 +64,7 @@ struct IRTArg {
     POTENTIALLY_INDIRECT = 1 << 3,
     INDIRECT_HAS_SIZE = 1 << 4,
     VALUE_PACK = 1 << 5,
+    LOCATION = 1 << 6,
     LAST,
   };
 
@@ -547,7 +548,7 @@ struct InstrumentationOpportunity {
 
   /// Add arguments available in all instrumentation opportunities.
   void addCommonArgs(InstrumentationConfig &IConf, LLVMContext &Ctx,
-                     bool PassId) {
+                     bool PassId, bool PassLocation = false) {
     const auto CB = IP.isPRE() ? getIdPre : getIdPost;
     if (PassId) {
       IRTArgs.push_back(
@@ -555,6 +556,19 @@ struct InstrumentationOpportunity {
                  "A unique ID associated with the given instrumentor call",
                  IRTArg::NONE, CB, nullptr, true, true));
     }
+    if (PassLocation) {
+      IRTArgs.push_back(
+          IRTArg(PointerType::get(Ctx, 0), "location",
+                 "Location info struct containing index and pointers to "
+                 "location/string tables",
+                 IRTArg::LOCATION, getLocationArg, nullptr, true, true));
+    }
+  }
+
+  /// Get the location index for the instrumented value.
+  static Value *getLocationArg(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+    return getLocationIndex(V, IConf, IIRB);
   }
 
   /// Get the opportunity identifier for the pre and post positions.
@@ -613,6 +627,7 @@ struct FunctionIO final : public InstrumentationOpportunity {
     ReplaceArguments,
     PassIsMain,
     PassId,
+    PassLocation,
     NumConfig,
   };
 
@@ -662,6 +677,7 @@ struct AllocaIO final : public InstructionIO<Instruction::Alloca> {
     ReplaceSize,
     PassAlignment,
     PassId,
+    PassLocation,
     NumConfig,
   };
 
@@ -692,6 +708,7 @@ struct UnreachableIO final : public InstructionIO<Instruction::Unreachable> {
 
   enum ConfigKind {
     PassId,
+    PassLocation,
     NumConfig,
   };
 
@@ -719,6 +736,7 @@ struct ModuleIO final : public InstrumentationOpportunity {
     PassId,
     PassName,
     PassTargetTriple,
+    PassLocation,
     NumConfig,
   };
 
@@ -763,6 +781,7 @@ struct GlobalVarIO final : public InstrumentationOpportunity {
     PassIsConstant,
     PassIsDefinition,
     PassId,
+    PassLocation,
     NumConfig,
   };
 
@@ -825,6 +844,7 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
     PassSyncScopeId,
     PassIsVolatile,
     PassId,
+    PassLocation,
     NumConfig,
   };
 
@@ -902,6 +922,7 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
     PassSyncScopeId,
     PassIsVolatile,
     PassId,
+    PassLocation,
     NumConfig,
   };
 

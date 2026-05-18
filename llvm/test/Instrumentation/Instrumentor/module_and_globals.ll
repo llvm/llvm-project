@@ -24,56 +24,64 @@ entry:
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1000, ptr @__instrumentor_ctor, ptr null }]
 ; CHECK: @__instrumentor_.str = private unnamed_addr constant [8 x i8] c"<stdin>\00", align 1
 ; CHECK: @__instrumentor_.str.1 = private unnamed_addr constant [1 x i8] zeroinitializer, align 1
+; CHECK: @__instrumentor_location_info = internal global { i64, ptr, ptr } { i64 0, ptr @__instrumentor_locations.11, ptr @__instrumentor_strings.12 }
 ; CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1000, ptr @__instrumentor_dtor, ptr null }]
-; CHECK: @__instrumentor_.str.2 = private unnamed_addr constant [2 x i8] c"X\00", align 1
-; CHECK: @__instrumentor_.str.3 = private unnamed_addr constant [2 x i8] c"Y\00", align 1
-; CHECK: @__instrumentor_.str.4 = private unnamed_addr constant [2 x i8] c"Z\00", align 1
-; CHECK: @__instrumentor_.str.5 = private unnamed_addr constant [4 x i8] c"foo\00", align 1
+; CHECK: @__instrumentor_location_info.2 = internal global { i64, ptr, ptr } { i64 1, ptr @__instrumentor_locations.11, ptr @__instrumentor_strings.12 }
+; CHECK: @__instrumentor_.str.3 = private unnamed_addr constant [2 x i8] c"X\00", align 1
+; CHECK: @__instrumentor_location_info.4 = internal global { i64, ptr, ptr } { i64 2, ptr @__instrumentor_locations.11, ptr @__instrumentor_strings.12 }
+; CHECK: @__instrumentor_.str.5 = private unnamed_addr constant [2 x i8] c"Y\00", align 1
+; CHECK: @__instrumentor_location_info.6 = internal global { i64, ptr, ptr } { i64 3, ptr @__instrumentor_locations.11, ptr @__instrumentor_strings.12 }
+; CHECK: @__instrumentor_.str.7 = private unnamed_addr constant [2 x i8] c"Z\00", align 1
+; CHECK: @__instrumentor_location_info.8 = internal global { i64, ptr, ptr } { i64 4, ptr @__instrumentor_locations.11, ptr @__instrumentor_strings.12 }
+; CHECK: @__instrumentor_location_info.9 = internal global { i64, ptr, ptr } { i64 5, ptr @__instrumentor_locations.11, ptr @__instrumentor_strings.12 }
+; CHECK: @__instrumentor_.str.10 = private unnamed_addr constant [4 x i8] c"foo\00", align 1
+; CHECK: @__instrumentor_locations.11 = internal constant [24 x i64] [i64 0, i64 20, i64 0, i64 0, i64 28, i64 20, i64 0, i64 0, i64 48, i64 20, i64 0, i64 0, i64 50, i64 20, i64 0, i64 0, i64 52, i64 20, i64 0, i64 0, i64 54, i64 20, i64 0, i64 0]
+; CHECK: @__instrumentor_strings.12 = internal constant [58 x i8] c"__instrumentor_ctor\00<stdin>\00__instrumentor_dtor\00X\00Y\00Z\00foo\00"
 ;.
 ; CHECK-LABEL: define i32 @foo() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @__instrumentor_pre_function(ptr @foo, ptr @__instrumentor_.str.5, i32 0, ptr null, i8 0, i32 12) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @__instrumentor_pre_function(ptr @foo, ptr @__instrumentor_.str.10, i32 0, ptr null, i8 0, i32 12, ptr @__instrumentor_location_info.9) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[Z_SHADOW_LOAD:%.*]] = load ptr, ptr @__instrumentor_shadow.Z, align 8
 ; CHECK-NEXT:    [[Y_SHADOW_LOAD:%.*]] = load ptr, ptr @__instrumentor_shadow.Y, align 8
 ; CHECK-NEXT:    [[X_SHADOW_LOAD:%.*]] = load ptr, ptr @__instrumentor_shadow.X, align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__instrumentor_pre_load(ptr [[X_SHADOW_LOAD]], i32 0, i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 9) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__instrumentor_pre_load(ptr [[X_SHADOW_LOAD]], i32 0, i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 9, ptr @__instrumentor_location_info.9) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_load(ptr [[X_SHADOW_LOAD]], i32 0, i64 [[TMP2]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -9) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_load(ptr [[X_SHADOW_LOAD]], i32 0, i64 [[TMP2]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -9, ptr @__instrumentor_location_info.9) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @__instrumentor_pre_load(ptr [[Y_SHADOW_LOAD]], i32 0, i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 10) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @__instrumentor_pre_load(ptr [[Y_SHADOW_LOAD]], i32 0, i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 10, ptr @__instrumentor_location_info.9) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @__instrumentor_post_load(ptr [[Y_SHADOW_LOAD]], i32 0, i64 [[TMP7]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -10) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @__instrumentor_post_load(ptr [[Y_SHADOW_LOAD]], i32 0, i64 [[TMP7]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -10, ptr @__instrumentor_location_info.9) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @__instrumentor_pre_load(ptr [[Z_SHADOW_LOAD]], i32 0, i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 11) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @__instrumentor_pre_load(ptr [[Z_SHADOW_LOAD]], i32 0, i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 11, ptr @__instrumentor_location_info.9) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @__instrumentor_post_load(ptr [[Z_SHADOW_LOAD]], i32 0, i64 [[TMP12]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -11) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @__instrumentor_post_load(ptr [[Z_SHADOW_LOAD]], i32 0, i64 [[TMP12]], i64 4, i64 4, i32 12, i32 0, i8 1, i8 0, i32 -11, ptr @__instrumentor_location_info.9) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], [[TMP9]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD]], [[TMP14]]
-; CHECK-NEXT:    call void @__instrumentor_post_function(ptr @foo, ptr @__instrumentor_.str.5, i32 0, ptr null, i8 0, i32 -13) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_function(ptr @foo, ptr @__instrumentor_.str.10, i32 0, ptr null, i8 0, i32 -13, ptr @__instrumentor_location_info.9) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
 ;
 ; CHECK-LABEL: define private void @__instrumentor_ctor() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @__instrumentor_pre_module(ptr @__instrumentor_.str, ptr @__instrumentor_.str.1, i32 1) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__instrumentor_pre_global(ptr @X, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.2, i64 0, i8 0, i8 1, i32 3) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_module(ptr @__instrumentor_.str, ptr @__instrumentor_.str.1, i32 1, ptr @__instrumentor_location_info) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__instrumentor_pre_global(ptr @X, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.3, i64 0, i8 0, i8 1, i32 3, ptr @__instrumentor_location_info.4) #[[ATTR0]]
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr @__instrumentor_shadow.X, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__instrumentor_pre_global(ptr @Y, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.3, i64 42, i8 1, i8 1, i32 4) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__instrumentor_pre_global(ptr @Y, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.5, i64 42, i8 1, i8 1, i32 4, ptr @__instrumentor_location_info.6) #[[ATTR0]]
 ; CHECK-NEXT:    store ptr [[TMP1]], ptr @__instrumentor_shadow.Y, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @__instrumentor_pre_global(ptr @Z, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.4, i64 0, i8 0, i8 0, i32 5) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @__instrumentor_pre_global(ptr @Z, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.7, i64 0, i8 0, i8 0, i32 5, ptr @__instrumentor_location_info.8) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define private void @__instrumentor_dtor() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @__instrumentor_post_global(ptr @Z, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.4, i64 0, i8 0, i8 0, i32 -8) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_post_global(ptr @Y, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.3, i64 42, i8 1, i8 1, i32 -7) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_post_global(ptr @X, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.2, i64 0, i8 0, i8 1, i32 -6) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_post_module(ptr @__instrumentor_.str, ptr @__instrumentor_.str.1, i32 -2) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_global(ptr @Z, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.7, i64 0, i8 0, i8 0, i32 -8, ptr @__instrumentor_location_info.8) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_global(ptr @Y, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.5, i64 42, i8 1, i8 1, i32 -7, ptr @__instrumentor_location_info.6) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_global(ptr @X, i32 0, i64 4, i64 4, ptr @__instrumentor_.str.3, i64 0, i8 0, i8 1, i32 -6, ptr @__instrumentor_location_info.4) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_module(ptr @__instrumentor_.str, ptr @__instrumentor_.str.1, i32 -2, ptr @__instrumentor_location_info.2) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
 ;.
