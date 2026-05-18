@@ -2,7 +2,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=OGCG
 
-// Empty union (should be padded to size 1)
+// Padding-only union: CIR keeps only a tail pad member, so
+// getLargestMember() is null and getABIAlignment must not call
+// getTypeABIAlignment on null.
 union Empty {};
 // CIR: !rec_Empty = !cir.record<union "Empty" padded {!u8i}>
 // LLVM-DAG: %union.Empty = type { i8 }
@@ -14,6 +16,8 @@ union alignas(16) EmptyAligned {};
 // LLVM-DAG: %union.EmptyAligned = type { [16 x i8] }
 // OGCG-DAG: %union.EmptyAligned = type { [16 x i8] }
 
+// Struct holding a padding-only union member: layout queries !rec_Empty
+// alignment (null largest), not OuterWithEmpty's int x.
 union OuterWithEmpty {
   Empty e;
   int x;
