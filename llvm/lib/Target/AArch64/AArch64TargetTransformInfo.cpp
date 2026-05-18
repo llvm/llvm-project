@@ -4347,7 +4347,8 @@ std::optional<InstructionCost> AArch64TTIImpl::getNarrowIntPromoteCost(
     if (OI.isConstant())
       return false;
     if (Idx < Args.size() &&
-        (isa<SExtInst>(Args[Idx]) || isa<ZExtInst>(Args[Idx])))
+        (isa<SExtInst>(Args[Idx]) || isa<ZExtInst>(Args[Idx]) ||
+         isa<LoadInst>(Args[Idx])))
       return false;
     return true;
   };
