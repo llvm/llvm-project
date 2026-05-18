@@ -308,9 +308,6 @@ public:
   ///
   /// An empty list will be returned if there are no separate debug
   /// info files for this module.
-  ///
-  /// \return
-  ///     A list of module specifications for the separate debug info files.
   lldb::SBModuleSpecList GetSeparateDebugInfoFiles();
 
   /// Get the number of global modules.
