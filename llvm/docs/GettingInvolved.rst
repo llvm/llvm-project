@@ -236,7 +236,16 @@ what to add to your calendar invite.
      - `ics <https://calendar.google.com/calendar/ical/9c23f3a54dbb4fbac3801c50094fc43118a37c186f5c65b2898cd0fc251c8610%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/u/0?cid=OWMyM2YzYTU0ZGJiNGZiYWMzODAxYzUwMDk0ZmM0MzExOGEzN2MxODZmNWM2NWIyODk4Y2QwZmMyNTFjODYxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting notes <https://docs.google.com/document/d/1ijI8pWeyidmhFOd5Ndgvr5AziZwrMCbt2oUehv8qHmw/edit?usp=sharing>`__
-
+   * - LLVM Memory Safety Working Group
+     - Every 4 weeks on Thursdays
+     - `ics <https://calendar.google.com/calendar/ical/2d77f9a2624d18cd46e5299d15cc0fa0c90dca53fd68802261d52121d21a0573%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0?cid=MmQ3N2Y5YTI2MjRkMThjZDQ2ZTUyOTlkMTVjYzBmYTBjOTBkY2E1M2ZkNjg4MDIyNjFkNTIxMjFkMjFhMDU3M0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting notes <https://docs.google.com/document/d/1DkCik6BTnO-cox_9y_BTKzPaJJOo_hBxiNFP3lInvOM/edit?usp=sharing>`__
+   * - `Lifetime Safety Breakout Group <https://github.com/orgs/llvm/projects/39>`__
+     - Every 2 weeks on Wednesdays
+     - `ics <https://calendar.google.com/calendar/ical/2d77f9a2624d18cd46e5299d15cc0fa0c90dca53fd68802261d52121d21a0573%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0?cid=MmQ3N2Y5YTI2MjRkMThjZDQ2ZTUyOTlkMTVjYzBmYTBjOTBkY2E1M2ZkNjg4MDIyNjFkNTIxMjFkMjFhMDU3M0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting notes <https://docs.google.com/document/d/1DkCik6BTnO-cox_9y_BTKzPaJJOo_hBxiNFP3lInvOM/edit?tab=t.nvvd6cfloi81>`__
 
 For event owners, our Discord bot also supports sending automated announcements
 of upcoming sync-ups. Please see the :ref:`discord-bot-event-pings` section for

@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR long double nanl(const char *arg) {
+LIBC_INLINE constexpr long double nanl(const char *arg) {
   auto result = internal::strtonan<long double>(arg);
   if (result.has_error())
     libc_errno = result.error;

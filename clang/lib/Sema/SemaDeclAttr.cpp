@@ -8919,8 +8919,10 @@ void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
   // If this ever proves to be a problem it should be easy to fix.
   QualType Ty = this->Context.getPointerType(VD->getType());
   QualType ParamTy = FD->getParamDecl(0)->getType();
-  if (!this->IsAssignConvertCompatible(this->CheckAssignmentConstraints(
-          FD->getParamDecl(0)->getLocation(), ParamTy, Ty))) {
+  if (QualType ConvertedTy;
+      !this->IsAssignConvertCompatible(this->CheckAssignmentConstraints(
+          FD->getParamDecl(0)->getLocation(), ParamTy, Ty)) &&
+      !ObjC().isObjCWritebackConversion(Ty, ParamTy, ConvertedTy)) {
     this->Diag(Attr->getArgLoc(),
                diag::err_attribute_cleanup_func_arg_incompatible_type)
         << NI.getName() << ParamTy << Ty;

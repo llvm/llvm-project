@@ -2582,10 +2582,14 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   unsigned OpFlags = Subtarget.ClassifyGlobalReference(GV, TM);
   const unsigned char MO_NC = AArch64II::MO_NC;
 
+  unsigned GuardWidth = M.getStackProtectorGuardValueWidth().value_or(
+      Subtarget.isTargetILP32() ? 4 : 8);
+  if (GuardWidth != 4 && GuardWidth != 8)
+    report_fatal_error("Unsupported stack protector value width");
   if ((OpFlags & AArch64II::MO_GOT) != 0) {
     BuildMI(MBB, MI, DL, get(AArch64::LOADgot), Reg)
         .addGlobalAddress(GV, 0, OpFlags);
-    if (Subtarget.isTargetILP32()) {
+    if (GuardWidth == 4) {
       unsigned Reg32 = TRI->getSubReg(Reg, AArch64::sub_32);
       BuildMI(MBB, MI, DL, get(AArch64::LDRWui))
           .addDef(Reg32, RegState::Dead)
@@ -2600,7 +2604,9 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addMemOperand(*MI.memoperands_begin());
     }
   } else if (TM.getCodeModel() == CodeModel::Large) {
-    assert(!Subtarget.isTargetILP32() && "how can large exist in ILP32?");
+    if (GuardWidth == 4)
+      report_fatal_error("Large code model with 4-byte stack protector not yet "
+                         "supported");
     BuildMI(MBB, MI, DL, get(AArch64::MOVZXi), Reg)
         .addGlobalAddress(GV, 0, AArch64II::MO_G0 | MO_NC)
         .addImm(0);
@@ -2621,13 +2627,18 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addImm(0)
         .addMemOperand(*MI.memoperands_begin());
   } else if (TM.getCodeModel() == CodeModel::Tiny) {
+    // FIXME: This is computing the stack protector value as a constant
+    // pc-relative offset, not loading it from memory. Which is maybe
+    // an interesting compromise in some environments, but it looks like it
+    // was done accidentally.  And it probably shouldn't be tied to the
+    // code model.
     BuildMI(MBB, MI, DL, get(AArch64::ADR), Reg)
         .addGlobalAddress(GV, 0, OpFlags);
   } else {
     BuildMI(MBB, MI, DL, get(AArch64::ADRP), Reg)
         .addGlobalAddress(GV, 0, OpFlags | AArch64II::MO_PAGE);
     unsigned char LoFlags = OpFlags | AArch64II::MO_PAGEOFF | MO_NC;
-    if (Subtarget.isTargetILP32()) {
+    if (GuardWidth == 4) {
       unsigned Reg32 = TRI->getSubReg(Reg, AArch64::sub_32);
       BuildMI(MBB, MI, DL, get(AArch64::LDRWui))
           .addDef(Reg32, RegState::Dead)

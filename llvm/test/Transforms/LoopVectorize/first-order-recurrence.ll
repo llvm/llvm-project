@@ -3304,7 +3304,7 @@ loop:
   %for = phi i32 [ 0, %entry ], [ %for.prev, %loop ]
   %cmp = icmp eq i32 %for, 15
   %C = icmp eq i1 %cmp, true
-  %vec.dead = and i1 %C, 1
+  %vec.dead = and i1 %C, %cmp
   %iv.next = add i16 %iv, 1
   %B1 = or i16 %iv.next, %iv.next
   %B3 = and i1 %cmp, %C
