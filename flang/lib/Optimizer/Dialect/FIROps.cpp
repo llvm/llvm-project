@@ -750,7 +750,7 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
 
       rewriter.replaceOpWithNewOp<fir::ArrayCoorOp>(
           op, op.getType(), boxedMemref, boxedShape, boxedSlice, newIndices,
-          op.getTypeparams());
+          typeparamsForCanonicalizedMemref(boxedMemref, op.getTypeparams()));
       return mlir::success();
     }
 
@@ -994,12 +994,24 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
         op.getSliceMutable().assign(boxedSlice);
       if (shiftedIndices)
         op.getIndicesMutable().assign(*shiftedIndices);
+      op.getTypeparamsMutable().assign(
+          typeparamsForCanonicalizedMemref(boxedMemref, op.getTypeparams()));
     });
     return mlir::success();
   }
 
 private:
   using IndicesVectorTy = std::vector<mlir::Value>;
+
+  // array_coor on a fir.box carries length/type info in the descriptor;
+  // explicit typeparams are only valid for plain ref memrefs.
+  static mlir::ValueRange
+  typeparamsForCanonicalizedMemref(mlir::Value memref,
+                                   mlir::ValueRange typeparams) {
+    if (mlir::isa<fir::BaseBoxType>(memref.getType()))
+      return mlir::ValueRange{};
+    return typeparams;
+  }
 
   // If v is a shape_shift operation:
   //   fir.shape_shift %l1, %e1, %l2, %e2, ...

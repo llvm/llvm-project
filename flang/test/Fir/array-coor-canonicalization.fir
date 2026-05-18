@@ -719,3 +719,114 @@ func.func @test24_rank_reducing_shifted_nonscalar(
   %ac = fir.array_coor %b %i, %k : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
   return %ac : !fir.ref<f32>
 }
+
+// Deferred-length character array accessed through box_addr: typeparams on the
+// ref array_coor carry the element LEN, but after pulling the rebox through
+// box_addr the memref becomes a box and must not keep those typeparams.
+// CHECK-LABEL:   func.func @test25_box_addr_char_typeparams(
+// CHECK-SAME:                      %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>>,
+// CHECK-SAME:                      %[[VAL_1:.*]]: index) -> !fir.ref<!fir.char<1,?>> {
+// CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_3:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_2]]) %[[VAL_1]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.ref<!fir.char<1,?>>
+// CHECK:           return %[[VAL_3]] : !fir.ref<!fir.char<1,?>>
+// CHECK:         }
+func.func @test25_box_addr_char_typeparams(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %idx: index) -> !fir.ref<!fir.char<1,?>> {
+  %c0 = arith.constant 0 : index
+  %rebox = fir.rebox %arg0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  %elemsize = fir.box_elesize %rebox : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+  %ref = fir.box_addr %rebox : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
+  %shape = fir.shape %idx : (index) -> !fir.shape<1>
+  %co = fir.array_coor %ref(%shape) %idx typeparams %elemsize : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, index) -> !fir.ref<!fir.char<1,?>>
+  return %co : !fir.ref<!fir.char<1,?>>
+}
+
+// Rank-reducing deferred-length character slice through fir.box_addr: the ref
+// array_coor carries element LEN in typeparams; canonicalization must fold to a
+// full-rank array_coor on the original ref and keep those typeparams.
+// CHECK-LABEL:   func.func @test26_box_addr_char_rank_reducing_typeparams(
+// CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<!fir.array<16x6x!fir.char<1,?>>>,
+// CHECK-SAME:                      %[[VAL_1:.*]]: index,
+// CHECK-SAME:                      %[[VAL_2:.*]]: i64,
+// CHECK-SAME:                      %[[VAL_3:.*]]: index) -> !fir.ref<!fir.char<1,?>> {
+// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_5:.*]] = arith.constant -2 : index
+// CHECK:           %[[VAL_6:.*]] = arith.constant 16 : index
+// CHECK:           %[[VAL_7:.*]] = arith.constant 6 : index
+// CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_4]], %[[VAL_6]], %[[VAL_5]], %[[VAL_7]] : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:           %[[VAL_9:.*]] = fir.undefined index
+// CHECK:           %[[VAL_10:.*]] = fir.slice %[[VAL_4]], %[[VAL_1]], %[[VAL_4]], %[[VAL_2]], %[[VAL_9]], %[[VAL_9]] : (index, index, index, i64, index, index) -> !fir.slice<2>
+// CHECK:           %[[VAL_11:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_8]]) {{\[}}%[[VAL_10]]] %[[VAL_4]], %[[VAL_2]] typeparams %[[VAL_3]] : (!fir.ref<!fir.array<16x6x!fir.char<1,?>>>, !fir.shapeshift<2>, !fir.slice<2>, index, i64, index) -> !fir.ref<!fir.char<1,?>>
+// CHECK:           return %[[VAL_11]] : !fir.ref<!fir.char<1,?>>
+// CHECK:         }
+func.func @test26_box_addr_char_rank_reducing_typeparams(
+    %arg0: !fir.ref<!fir.array<16x6x!fir.char<1,?>>>, %m: index, %i: i64,
+    %elemsize: index) -> !fir.ref<!fir.char<1,?>> {
+  %c1 = arith.constant 1 : index
+  %c_neg2 = arith.constant -2 : index
+  %c16 = arith.constant 16 : index
+  %c6 = arith.constant 6 : index
+  %ss = fir.shape_shift %c1, %c16, %c_neg2, %c6 : (index, index, index, index) -> !fir.shapeshift<2>
+  %u = fir.undefined index
+  %s = fir.slice %c1, %m, %c1, %i, %u, %u : (index, index, index, i64, index, index) -> !fir.slice<2>
+  %b = fir.embox %arg0(%ss) [%s] : (!fir.ref<!fir.array<16x6x!fir.char<1,?>>>, !fir.shapeshift<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  %ba = fir.box_addr %b : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
+  %sh1 = fir.shape %m : (index) -> !fir.shape<1>
+  %ac = fir.array_coor %ba(%sh1) %c1 typeparams %elemsize : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, index) -> !fir.ref<!fir.char<1,?>>
+  return %ac : !fir.ref<!fir.char<1,?>>
+}
+
+// Parametric derived type accessed through box_addr: typeparams on the ref
+// array_coor carry the element LEN, but after pulling the rebox through box_addr
+// the memref becomes a box and must not keep those typeparams.
+// CHECK-LABEL:   func.func @test27_box_addr_derived_typeparams(
+// CHECK-SAME:                      %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>,
+// CHECK-SAME:                      %[[VAL_1:.*]]: index,
+// CHECK-SAME:                      %[[VAL_2:.*]]: i32) -> !fir.ref<!fir.type<dt(l:i32){x:i32}>> {
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_4:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_3]]) %[[VAL_1]] : (!fir.box<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<dt(l:i32){x:i32}>>
+// CHECK:           return %[[VAL_4]] : !fir.ref<!fir.type<dt(l:i32){x:i32}>>
+// CHECK:         }
+func.func @test27_box_addr_derived_typeparams(
+    %arg0: !fir.box<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>, %idx: index,
+    %len: i32) -> !fir.ref<!fir.type<dt(l:i32){x:i32}>> {
+  %rebox = fir.rebox %arg0 : (!fir.box<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>) -> !fir.box<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>
+  %ref = fir.box_addr %rebox : (!fir.box<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>) -> !fir.ref<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>
+  %shape = fir.shape %idx : (index) -> !fir.shape<1>
+  %co = fir.array_coor %ref(%shape) %idx typeparams %len : (!fir.ref<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>, !fir.shape<1>, index, i32) -> !fir.ref<!fir.type<dt(l:i32){x:i32}>>
+  return %co : !fir.ref<!fir.type<dt(l:i32){x:i32}>>
+}
+
+// Rank-reducing slice of an array of parametric derived types through
+// fir.box_addr: typeparams on the ref array_coor must be kept after folding to
+// a full-rank array_coor on the original ref.
+// CHECK-LABEL:   func.func @test28_box_addr_derived_rank_reducing_typeparams(
+// CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<!fir.array<16x6x!fir.type<dt(l:i32){x:i32}>>>,
+// CHECK-SAME:                      %[[VAL_1:.*]]: index,
+// CHECK-SAME:                      %[[VAL_2:.*]]: i64,
+// CHECK-SAME:                      %[[VAL_3:.*]]: i32) -> !fir.ref<!fir.type<dt(l:i32){x:i32}>> {
+// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_5:.*]] = arith.constant -2 : index
+// CHECK:           %[[VAL_6:.*]] = arith.constant 16 : index
+// CHECK:           %[[VAL_7:.*]] = arith.constant 6 : index
+// CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_4]], %[[VAL_6]], %[[VAL_5]], %[[VAL_7]] : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:           %[[VAL_9:.*]] = fir.undefined index
+// CHECK:           %[[VAL_10:.*]] = fir.slice %[[VAL_4]], %[[VAL_1]], %[[VAL_4]], %[[VAL_2]], %[[VAL_9]], %[[VAL_9]] : (index, index, index, i64, index, index) -> !fir.slice<2>
+// CHECK:           %[[VAL_11:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_8]]) {{\[}}%[[VAL_10]]] %[[VAL_4]], %[[VAL_2]] typeparams %[[VAL_3]] : (!fir.ref<!fir.array<16x6x!fir.type<dt(l:i32){x:i32}>>>, !fir.shapeshift<2>, !fir.slice<2>, index, i64, i32) -> !fir.ref<!fir.type<dt(l:i32){x:i32}>>
+// CHECK:           return %[[VAL_11]] : !fir.ref<!fir.type<dt(l:i32){x:i32}>>
+// CHECK:         }
+func.func @test28_box_addr_derived_rank_reducing_typeparams(
+    %arg0: !fir.ref<!fir.array<16x6x!fir.type<dt(l:i32){x:i32}>>>, %m: index,
+    %i: i64, %len: i32) -> !fir.ref<!fir.type<dt(l:i32){x:i32}>> {
+  %c1 = arith.constant 1 : index
+  %c_neg2 = arith.constant -2 : index
+  %c16 = arith.constant 16 : index
+  %c6 = arith.constant 6 : index
+  %ss = fir.shape_shift %c1, %c16, %c_neg2, %c6 : (index, index, index, index) -> !fir.shapeshift<2>
+  %u = fir.undefined index
+  %s = fir.slice %c1, %m, %c1, %i, %u, %u : (index, index, index, i64, index, index) -> !fir.slice<2>
+  %b = fir.embox %arg0(%ss) [%s] : (!fir.ref<!fir.array<16x6x!fir.type<dt(l:i32){x:i32}>>>, !fir.shapeshift<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>
+  %ba = fir.box_addr %b : (!fir.box<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>) -> !fir.ref<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>
+  %sh1 = fir.shape %m : (index) -> !fir.shape<1>
+  %ac = fir.array_coor %ba(%sh1) %c1 typeparams %len : (!fir.ref<!fir.array<?x!fir.type<dt(l:i32){x:i32}>>>, !fir.shape<1>, index, i32) -> !fir.ref<!fir.type<dt(l:i32){x:i32}>>
+  return %ac : !fir.ref<!fir.type<dt(l:i32){x:i32}>>
+}
