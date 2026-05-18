@@ -29,8 +29,8 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF1-EMPTY:
 ; UF1-NEXT:  vector.body:
 ; UF1-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; UF1-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a> = phi vp<[[VP2]]>, ir<%sum.a.next>
-; UF1-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b> = phi vp<[[VP2]]>, ir<%sum.b.next>
+; UF1-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a> = phi (add) vp<[[VP2]]>, ir<%sum.a.next>
+; UF1-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b> = phi (add) vp<[[VP2]]>, ir<%sum.b.next>
 ; UF1-NEXT:    WIDEN-PHI vp<[[VP6:%[0-9]+]]> = phi [ vp<[[VP4]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; UF1-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; UF1-NEXT:    CLONE ir<%ga> = getelementptr inbounds ir<%a>, vp<%index>
@@ -65,14 +65,14 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF4-EMPTY:
 ; UF4-NEXT:  vector.body:
 ; UF4-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a> = phi vp<[[VP2]]>, ir<%sum.a.next>
-; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a>.1 = phi ir<0>, ir<%sum.a.next>.1
-; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a>.2 = phi ir<0>, ir<%sum.a.next>.2
-; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a>.3 = phi ir<0>, ir<%sum.a.next>.3
-; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b> = phi vp<[[VP2]]>, ir<%sum.b.next>
-; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b>.1 = phi ir<0>, ir<%sum.b.next>.1
-; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b>.2 = phi ir<0>, ir<%sum.b.next>.2
-; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b>.3 = phi ir<0>, ir<%sum.b.next>.3
+; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a> = phi (add) vp<[[VP2]]>, ir<%sum.a.next>
+; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a>.1 = phi (add) ir<0>, ir<%sum.a.next>.1
+; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a>.2 = phi (add) ir<0>, ir<%sum.a.next>.2
+; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a>.3 = phi (add) ir<0>, ir<%sum.a.next>.3
+; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b> = phi (add) vp<[[VP2]]>, ir<%sum.b.next>
+; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b>.1 = phi (add) ir<0>, ir<%sum.b.next>.1
+; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b>.2 = phi (add) ir<0>, ir<%sum.b.next>.2
+; UF4-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b>.3 = phi (add) ir<0>, ir<%sum.b.next>.3
 ; UF4-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>
 ; UF4-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>, ir<1>
 ; UF4-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>, ir<2>
