@@ -323,19 +323,15 @@ public:
 
     const auto &SM = FD->getASTContext().getSourceManager();
     const FileID DefFile = SM.getFileID(SM.getExpansionLoc(FD->getLocation()));
-    const FunctionDecl *FirstDecl = nullptr;
+    const FunctionDecl *CanonicalDecl = FD->getCanonicalDecl();
     WarningScope Scope = WarningScope::IntraTU;
 
-    for (const FunctionDecl *D = FD->getPreviousDecl(); D;
-         D = D->getPreviousDecl()) {
-      if (D->isThisDeclarationADefinition())
-        continue;
-      FirstDecl = D;
-      Scope = SM.getFileID(SM.getExpansionLoc(D->getLocation())) != DefFile
-                  ? WarningScope::CrossTU
-                  : WarningScope::IntraTU;
-    }
-    return {FirstDecl, Scope};
+    Scope = SM.getFileID(SM.getExpansionLoc(CanonicalDecl->getLocation())) !=
+                    DefFile
+                ? WarningScope::CrossTU
+                : WarningScope::IntraTU;
+
+    return {CanonicalDecl, Scope};
   }
 
   const std::pair<const CXXMethodDecl *, WarningScope>
