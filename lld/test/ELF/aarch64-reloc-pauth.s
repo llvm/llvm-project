@@ -176,7 +176,7 @@
 
 # EMPTY-RELR:      Relocation section '.rela.dyn' at offset {{.+}} contains 1 entries:
 # EMPTY-RELR-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
-# EMPTY-RELR-NEXT: 0000000000030350  0000000000000411 R_AARCH64_AUTH_RELATIVE           8003034f
+# EMPTY-RELR-NEXT: 0000000000030320  0000000000000411 R_AARCH64_AUTH_RELATIVE           8003031f
 # EMPTY-RELR-EMPTY:
 # EMPTY-RELR-NEXT: Relocation section '.relr.auth.dyn' at offset {{.+}} contains 0 entries:
 # EMPTY-RELR-NEXT: Index: Entry Address Symbolic Address
@@ -186,9 +186,6 @@
 ## empty for this test, this space is filled with NULL tags.
 # EMPTY-RELR:      Hex dump of section '.dynamic':
 # EMPTY-RELR:      0x00020310 00000000 00000000 00000000 00000000
-# EMPTY-RELR-NEXT: 0x00020320 00000000 00000000 00000000 00000000
-# EMPTY-RELR-NEXT: 0x00020330 00000000 00000000 00000000 00000000
-# EMPTY-RELR-NEXT: 0x00020340 00000000 00000000 00000000 00000000
 # EMPTY-RELR-EMPTY:
 
 .section .test, "aw"
@@ -230,16 +227,13 @@
 # EMPTY-RELA-EMPTY:
 # EMPTY-RELA-NEXT: Relocation section '.relr.auth.dyn' at offset {{.+}} contains 1 entries:
 # EMPTY-RELA-NEXT: Index: Entry Address Symbolic Address
-# EMPTY-RELA-NEXT: 0000: 0000000000030340 0000000000030340 $d
+# EMPTY-RELA-NEXT: 0000: 0000000000030310 0000000000030310 $d
 
 ## The .dynamic section has enough space pre-allocated for the case when both
 ## .rela.dyn and .relr.auth.dyn sections are present. Since .rela.dyn becomes
 ## empty for this test, this space is filled with NULL tags.
 # EMPTY-RELA:      Hex dump of section '.dynamic':
 # EMPTY-RELA:      0x00020300 00000000 00000000 00000000 00000000
-# EMPTY-RELA-NEXT: 0x00020310 00000000 00000000 00000000 00000000
-# EMPTY-RELA-NEXT: 0x00020320 00000000 00000000 00000000 00000000
-# EMPTY-RELA-NEXT: 0x00020330 00000000 00000000 00000000 00000000
 # EMPTY-RELA-EMPTY:
 
 # EMPTY-RELA-RO-NOT: .rela.dyn

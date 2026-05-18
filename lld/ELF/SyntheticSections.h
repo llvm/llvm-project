@@ -483,8 +483,7 @@ public:
   size_t getSize() const override { return size; }
 
 private:
-  std::vector<std::pair<int32_t, uint64_t>>
-  computeContents(bool afterFinalizeAddressDependentContents);
+  std::vector<std::pair<int32_t, uint64_t>> computeContents();
 };
 
 class RelocationBaseSection : public SyntheticSection {

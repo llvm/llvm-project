@@ -1592,6 +1592,11 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.relrDyn->updateAllocSize(ctx);
       if (part.relrAuthDyn)
         changed |= part.relrAuthDyn->updateAllocSize(ctx);
+      if (part.relrAuthDyn && part.dynamic && part.dynamic->getParent()) {
+        size_t oldSize = part.dynamic->getSize();
+        finalizeSynthetic(ctx, part.dynamic.get());
+        changed |= (oldSize != part.dynamic->getSize());
+      }
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize(ctx);
       if (part.ehFrameHdr && part.ehFrameHdr->isNeeded())
