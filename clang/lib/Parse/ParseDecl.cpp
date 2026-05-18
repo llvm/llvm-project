@@ -2162,10 +2162,11 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   ParsedAttributes LocalAttrs(AttrFactory);
   LocalAttrs.takeAllPrependingFrom(Attrs);
   ParsingDeclarator D(*this, DS, LocalAttrs, Context);
-  if (TemplateInfo.TemplateParams)
+  if (!getLangOpts().C2y && TemplateInfo.TemplateParams)
     D.setTemplateParameterLists(*TemplateInfo.TemplateParams);
 
   bool IsTemplateSpecOrInst =
+      !getLangOpts().C2y &&
       (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation ||
        TemplateInfo.Kind == ParsedTemplateKind::ExplicitSpecialization);
   SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
@@ -2185,7 +2186,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     while (MaybeParseHLSLAnnotations(D))
       ;
 
-  if (Tok.is(tok::kw_requires))
+  if (!getLangOpts().C2y && Tok.is(tok::kw_requires))
     ParseTrailingRequiresClauseWithScope(D);
 
   // Save late-parsed attributes for now; they need to be parsed in the

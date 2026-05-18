@@ -1264,7 +1264,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   T.consumeOpen();
   SourceLocation Start = Tok.getLocation();
 
-  if (getLangOpts().CPlusPlus) {
+  if (getLangOpts().CPlusPlus || getLangOpts().C2y) {
     Cond = ParseCXXCondition(InitStmt, Loc, CK, false);
   } else {
     ExprResult CondExpr = ParseExpression();

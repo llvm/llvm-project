@@ -220,6 +220,8 @@ def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
 def err_c2y_labeled_break_continue : Error<
   "named %select{'break'|'continue'}0 is only supported in C2y">;
+def err_c2y_first_condition_clause_is_not_declaration : Error<
+  "first clause in condition must be a declaration">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;

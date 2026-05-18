@@ -1868,7 +1868,8 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
 Sema::ConditionResult
 Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
                           Sema::ConditionKind CK, bool MissingOK,
-                          ForRangeInfo *FRI, bool EnterForConditionScope) {
+                          ForRangeInfo *FRI, bool EnterForConditionScope,
+                          bool isSecondCallForIfCond) {
   // Helper to ensure we always enter a continue/break scope if requested.
   struct ForConditionScopeRAII {
     Scope *S;
@@ -1883,6 +1884,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
         S->setIsConditionVarScope(false);
     }
   } ForConditionScope{EnterForConditionScope ? getCurScope() : nullptr};
+  bool parsingIfOrSwitchCondition = !FRI && !EnterForConditionScope;
 
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   PreferredType.enterCondition(Actions, Tok.getLocation());
@@ -1898,10 +1900,11 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
   MaybeParseCXX11Attributes(attrs);
 
   const auto WarnOnInit = [this, &CK] {
-    Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
-                                ? diag::warn_cxx14_compat_init_statement
-                                : diag::ext_init_statement)
-        << (CK == Sema::ConditionKind::Switch);
+    if (!getLangOpts().C2y)
+      Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
+                                  ? diag::warn_cxx14_compat_init_statement
+                                  : diag::ext_init_statement)
+          << (CK == Sema::ConditionKind::Switch);
   };
 
   // Determine what kind of thing we have.
@@ -1924,7 +1927,9 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       }
       ConsumeToken();
       *InitStmt = Actions.ActOnNullStmt(SemiLoc);
-      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+      return ParseCXXCondition(nullptr, Loc, CK, MissingOK, FRI,
+                               EnterForConditionScope,
+                               parsingIfOrSwitchCondition);
     }
 
     EnterExpressionEvaluationContext Eval(
@@ -1939,10 +1944,22 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       return Sema::ConditionError();
 
     if (InitStmt && Tok.is(tok::semi)) {
+      if (getLangOpts().C2y && parsingIfOrSwitchCondition &&
+          !isSecondCallForIfCond)
+        // C2y only permits declaration in the first clause of an if condition,
+        // so it makes sense to error out in other condition. We can stop
+        // parsing here and just report an error but we chose to continue to
+        // generate an error about the second clause of the condition since
+        // there's a ';' found.
+        Diag(Tok.getLocation(),
+             diag::err_c2y_first_condition_clause_is_not_declaration);
+
       WarnOnInit();
       *InitStmt = Actions.ActOnExprStmt(Expr.get());
       ConsumeToken();
-      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+      return ParseCXXCondition(nullptr, Loc, CK, MissingOK, FRI,
+                               EnterForConditionScope,
+                               parsingIfOrSwitchCondition);
     }
 
     return Actions.ActOnCondition(getCurScope(), Loc, Expr.get(), CK,
@@ -1953,7 +1970,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
     WarnOnInit();
     DeclGroupPtrTy DG;
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
-    if (Tok.is(tok::kw_using))
+    if (!getLangOpts().C2y && Tok.is(tok::kw_using))
       DG = ParseAliasDeclarationInInitStatement(
           DeclaratorContext::SelectionInit, attrs);
     else {
@@ -1962,7 +1979,9 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
                                   attrs, DeclSpecAttrs, /*RequireSemi=*/true);
     }
     *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
-    return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+    return ParseCXXCondition(nullptr, Loc, CK, MissingOK, FRI,
+                             EnterForConditionScope,
+                             parsingIfOrSwitchCondition);
   }
 
   case ConditionOrInitStatement::ForRangeDecl: {
@@ -1978,7 +1997,12 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
     return Sema::ConditionResult();
   }
 
-  case ConditionOrInitStatement::ConditionDecl:
+  case ConditionOrInitStatement::ConditionDecl: {
+    if (getLangOpts().C2y && isSecondCallForIfCond) {
+      Diag(Tok.getLocation(), diag::err_expected_expression);
+      return Sema::ConditionError();
+    }
+  } break;
   case ConditionOrInitStatement::Error:
     break;
   }
@@ -2007,7 +2031,8 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
   }
 
   // If attributes are present, parse them.
-  MaybeParseGNUAttributes(DeclaratorInfo);
+  if (!getLangOpts().C2y)
+    MaybeParseGNUAttributes(DeclaratorInfo);
 
   // Type-check the declaration itself.
   DeclResult Dcl = Actions.ActOnCXXConditionDeclaration(getCurScope(),
