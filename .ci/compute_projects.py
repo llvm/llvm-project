@@ -80,7 +80,7 @@ DEPENDENT_RUNTIMES_TO_BUILD = {
 # This mapping describes runtimes that should be tested when the key project is
 # touched.
 DEPENDENT_RUNTIMES_TO_TEST = {
-    "clang": {"compiler-rt"},
+    "clang": {"compiler-rt", "libc"},
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
     "libclc": {"libclc"},
