@@ -20,6 +20,10 @@
 ; RUN:     -enable-epilogue-vectorization=false -debug-only=loop-vectorize       \
 ; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefix=SVE2p3
 ; RUN: opt -passes=loop-vectorize                                                \
+; RUN:     -scalable-vectorization=on -mattr=+sve,+sme2                          \
+; RUN:     -enable-epilogue-vectorization=false -debug-only=loop-vectorize       \
+; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefix=SME2
+; RUN: opt -passes=loop-vectorize                                                \
 ; RUN:     -scalable-vectorization=on -mattr=+sve2,+i8mm                         \
 ; RUN:     -enable-epilogue-vectorization=false -debug-only=loop-vectorize       \
 ; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefix=I8MM
@@ -53,6 +57,12 @@ define i16 @sub_reduction_i16_zext_i8_zext_i8(ptr %src1, ptr %src2, ptr %src3, i
 ; SVE2p3:  Cost of 2 for VF vscale x 16: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i16), (ir<%load3> zext to i16)))
 ; SVE2p3:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i16), (ir<%load2> zext to i16))
 ; SVE2p3:  Cost of 2 for VF vscale x 16: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i16), (ir<%load3> zext to i16)))
+;
+; SME2-LABEL: 'sub_reduction_i16_zext_i8_zext_i8'
+; SME2:  Cost of 2 for VF vscale x 16: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i16), (ir<%load2> zext to i16))
+; SME2:  Cost of 2 for VF vscale x 16: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i16), (ir<%load3> zext to i16)))
+; SME2:  Cost of 2 for VF vscale x 16: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i16), (ir<%load2> zext to i16))
+; SME2:  Cost of 2 for VF vscale x 16: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i16), (ir<%load3> zext to i16)))
 ;
 ; I8MM-LABEL: 'sub_reduction_i16_zext_i8_zext_i8'
 ; I8MM:  Cost of 2 for VF vscale x 16: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i16), (ir<%load2> zext to i16))
@@ -101,6 +111,7 @@ define i16 @sub_reduction_i16_zext_i8_sext_i8(ptr %src1, ptr %src2, ptr %src3, i
 ; SVE2-LABEL: 'sub_reduction_i16_zext_i8_sext_i8'
 ; SVE2p1-LABEL: 'sub_reduction_i16_zext_i8_sext_i8'
 ; SVE2p3-LABEL: 'sub_reduction_i16_zext_i8_sext_i8'
+; SME2-LABEL: 'sub_reduction_i16_zext_i8_sext_i8'
 ; I8MM-LABEL: 'sub_reduction_i16_zext_i8_sext_i8'
 entry:
   br label %loop
@@ -162,6 +173,12 @@ define i32 @sub_reduction_i32_zext_i8_zext_i8(ptr %src1, ptr %src2, ptr %src3, i
 ; SVE2p3:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i32), (ir<%load2> zext to i32))
 ; SVE2p3:  Cost of 3 for VF vscale x 16: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i32), (ir<%load3> zext to i32)))
 ;
+; SME2-LABEL: 'sub_reduction_i32_zext_i8_zext_i8'
+; SME2:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i32), (ir<%load2> zext to i32))
+; SME2:  Cost of 3 for VF vscale x 16: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i32), (ir<%load3> zext to i32)))
+; SME2:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i32), (ir<%load2> zext to i32))
+; SME2:  Cost of 3 for VF vscale x 16: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i32), (ir<%load3> zext to i32)))
+;
 ; I8MM-LABEL: 'sub_reduction_i32_zext_i8_zext_i8'
 ; I8MM:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i32), (ir<%load2> zext to i32))
 ; I8MM:  Cost of 3 for VF vscale x 16: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i32), (ir<%load3> zext to i32)))
@@ -206,6 +223,7 @@ define i32 @sub_reduction_i32_zext_i8_sext_i8(ptr %src1, ptr %src2, ptr %src3, i
 ; SVE2-LABEL: 'sub_reduction_i32_zext_i8_sext_i8'
 ; SVE2p1-LABEL: 'sub_reduction_i32_zext_i8_sext_i8'
 ; SVE2p3-LABEL: 'sub_reduction_i32_zext_i8_sext_i8'
+; SME2-LABEL: 'sub_reduction_i32_zext_i8_sext_i8'
 ; I8MM-LABEL: 'sub_reduction_i32_zext_i8_sext_i8'
 ; I8MM:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i32), (ir<%load2> sext to i32))
 ; I8MM:  Cost of 3 for VF vscale x 16: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load1> zext to i32), (ir<%load3> sext to i32)))
@@ -272,6 +290,12 @@ define i64 @sub_reduction_i64_zext_i8_zext_i8(ptr %src1, ptr %src2, ptr %src3, i
 ; SVE2p3:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
 ; SVE2p3:  Cost of 3 for VF vscale x 16: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
 ;
+; SME2-LABEL: 'sub_reduction_i64_zext_i8_zext_i8'
+; SME2:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
+; SME2:  Cost of 3 for VF vscale x 16: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
+; SME2:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
+; SME2:  Cost of 3 for VF vscale x 16: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
+;
 ; I8MM-LABEL: 'sub_reduction_i64_zext_i8_zext_i8'
 ; I8MM:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
 ; I8MM:  Cost of 3 for VF vscale x 16: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
@@ -319,6 +343,7 @@ define i64 @sub_reduction_i64_zext_i8_sext_i8(ptr %src1, ptr %src2, ptr %src3, i
 ; SVE2-LABEL: 'sub_reduction_i64_zext_i8_sext_i8'
 ; SVE2p1-LABEL: 'sub_reduction_i64_zext_i8_sext_i8'
 ; SVE2p3-LABEL: 'sub_reduction_i64_zext_i8_sext_i8'
+; SME2-LABEL: 'sub_reduction_i64_zext_i8_sext_i8'
 ; I8MM-LABEL: 'sub_reduction_i64_zext_i8_sext_i8'
 entry:
   br label %loop
@@ -378,6 +403,12 @@ define i32 @sub_reduction_i32_zext_i16_zext_i16(ptr %src1, ptr %src2, ptr %src3,
 ; SVE2p3:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i32), (ir<%load2> zext to i32))
 ; SVE2p3:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i32), (ir<%load3> zext to i32)))
 ;
+; SME2-LABEL: 'sub_reduction_i32_zext_i16_zext_i16'
+; SME2:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i32), (ir<%load2> zext to i32))
+; SME2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i32), (ir<%load3> zext to i32)))
+; SME2:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i32), (ir<%load2> zext to i32))
+; SME2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i32), (ir<%load3> zext to i32)))
+;
 ; I8MM-LABEL: 'sub_reduction_i32_zext_i16_zext_i16'
 ; I8MM:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i32), (ir<%load2> zext to i32))
 ; I8MM:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i32), (ir<%load3> zext to i32)))
@@ -425,6 +456,7 @@ define i32 @sub_reduction_i32_zext_i16_sext_i16(ptr %src1, ptr %src2, ptr %src3,
 ; SVE2-LABEL: 'sub_reduction_i32_zext_i16_sext_i16'
 ; SVE2p1-LABEL: 'sub_reduction_i32_zext_i16_sext_i16'
 ; SVE2p3-LABEL: 'sub_reduction_i32_zext_i16_sext_i16'
+; SME2-LABEL: 'sub_reduction_i32_zext_i16_sext_i16'
 ; I8MM-LABEL: 'sub_reduction_i32_zext_i16_sext_i16'
 entry:
   br label %loop
@@ -486,6 +518,12 @@ define i64 @sub_reduction_i64_zext_i16_zext_i16(ptr %src1, ptr %src2, ptr %src3,
 ; SVE2p3:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
 ; SVE2p3:  Cost of 3 for VF vscale x 8: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
 ;
+; SME2-LABEL: 'sub_reduction_i64_zext_i16_zext_i16'
+; SME2:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
+; SME2:  Cost of 3 for VF vscale x 8: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
+; SME2:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
+; SME2:  Cost of 3 for VF vscale x 8: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
+;
 ; I8MM-LABEL: 'sub_reduction_i64_zext_i16_zext_i16'
 ; I8MM:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
 ; I8MM:  Cost of 3 for VF vscale x 8: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
@@ -530,6 +568,7 @@ define i64 @sub_reduction_i64_zext_i16_sext_i16(ptr %src1, ptr %src2, ptr %src3,
 ; SVE2-LABEL: 'sub_reduction_i64_zext_i16_sext_i16'
 ; SVE2p1-LABEL: 'sub_reduction_i64_zext_i16_sext_i16'
 ; SVE2p3-LABEL: 'sub_reduction_i64_zext_i16_sext_i16'
+; SME2-LABEL: 'sub_reduction_i64_zext_i16_sext_i16'
 ; I8MM-LABEL: 'sub_reduction_i64_zext_i16_sext_i16'
 entry:
   br label %loop
@@ -589,6 +628,12 @@ define i64 @sub_reduction_i64_zext_i32_zext_i32(ptr %src1, ptr %src2, ptr %src3,
 ; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
 ; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
 ;
+; SME2-LABEL: 'sub_reduction_i64_zext_i32_zext_i32'
+; SME2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
+; SME2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
+; SME2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
+; SME2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
+;
 ; I8MM-LABEL: 'sub_reduction_i64_zext_i32_zext_i32'
 ; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
 ; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
@@ -636,6 +681,7 @@ define i64 @sub_reduction_i64_zext_i32_sext_i32(ptr %src1, ptr %src2, ptr %src3,
 ; SVE2-LABEL: 'sub_reduction_i64_zext_i32_sext_i32'
 ; SVE2p1-LABEL: 'sub_reduction_i64_zext_i32_sext_i32'
 ; SVE2p3-LABEL: 'sub_reduction_i64_zext_i32_sext_i32'
+; SME2-LABEL: 'sub_reduction_i64_zext_i32_sext_i32'
 ; I8MM-LABEL: 'sub_reduction_i64_zext_i32_sext_i32'
 entry:
   br label %loop
@@ -696,6 +742,12 @@ define float @sub_reduction_float_fpext_half_fpext_half(ptr %src1, ptr %src2, pt
 ; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
 ; SVE2p3:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
 ; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+; SME2-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
+; SME2:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SME2:  Cost of 6 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SME2:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SME2:  Cost of 6 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
 ;
 ; I8MM-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
 ; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
@@ -761,6 +813,12 @@ define float @sub_reduction_float_fpext_bfloat_fpext_bfloat(ptr %src1, ptr %src2
 ; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
 ; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
 ; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+;
+; SME2-LABEL: 'sub_reduction_float_fpext_bfloat_fpext_bfloat'
+; SME2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SME2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
+; SME2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
+; SME2:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP11]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
 ;
 ; I8MM-LABEL: 'sub_reduction_float_fpext_bfloat_fpext_bfloat'
 ; I8MM:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
