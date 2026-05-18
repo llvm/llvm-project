@@ -1433,7 +1433,7 @@ def AMDGPU_TransposeLoadOp :
     matrix.
 
     This op is a direct wrapper around the ROCDL `ds_read_tr` family intrinsics on
-    CDNA4 and the `ds_load_tr` family of instructions on CDNA5. Please refer
+    gfx950 and the `ds_load_tr` family of instructions on gfx1250. Please refer
     to the respective ISA documentation for more details about its exact semantics.
 
     Format example:
