@@ -15,13 +15,13 @@ define void @odd_top_level_operands(ptr %p) {
   ret void
 }
 
-; CHECK: !mem.cache_hint operand_no must be an integer constant in pair
+; CHECK: !mem.cache_hint must alternate between i32 operand numbers and metadata hint nodes
 define void @operand_no_not_integer(ptr %p) {
   %v = load i32, ptr %p, !mem.cache_hint !{!"zero", !{!"nvvm.l1_eviction", !"first"}}
   ret void
 }
 
-; CHECK: !mem.cache_hint operand_no must be non-negative
+; CHECK: !mem.cache_hint operand number must be non-negative
 define void @operand_no_negative(ptr %p) {
   %v = load i32, ptr %p, !mem.cache_hint !{i32 -1, !{!"nvvm.l1_eviction", !"first"}}
   ret void
@@ -33,25 +33,25 @@ define void @non_intrinsic_call(ptr %p) {
   ret void
 }
 
-; CHECK: !mem.cache_hint operand_no must refer to a pointer operand
+; CHECK: !mem.cache_hint operand number must refer to a pointer operand
 define void @operand_no_not_pointer(ptr %d, ptr %s) {
   call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 8, i1 false), !mem.cache_hint !{i32 2, !{!"nvvm.l1_eviction", !"first"}}
   ret void
 }
 
-; CHECK: !mem.cache_hint operand_no must refer to a pointer operand
+; CHECK: !mem.cache_hint operand number must refer to a pointer operand
 define void @store_operand_no_is_value(ptr %p) {
   store i32 0, ptr %p, !mem.cache_hint !{i32 0, !{!"nvvm.l1_eviction", !"first"}}
   ret void
 }
 
-; CHECK: !mem.cache_hint operand_no is out of range
+; CHECK: !mem.cache_hint operand number is out of range
 define void @operand_no_out_of_range(ptr %p) {
   %v = load i32, ptr %p, !mem.cache_hint !{i32 1, !{!"nvvm.l1_eviction", !"first"}}
   ret void
 }
 
-; CHECK: !mem.cache_hint contains duplicate operand_no
+; CHECK: !mem.cache_hint contains duplicate operand number
 define void @duplicate_operand_no(ptr %p) {
   call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %p, i64 8, i1 false), !mem.cache_hint !{
       i32 0, !{!"nvvm.l1_eviction", !"first"},
@@ -59,7 +59,7 @@ define void @duplicate_operand_no(ptr %p) {
   ret void
 }
 
-; CHECK: !mem.cache_hint hint node must be a metadata node
+; CHECK: !mem.cache_hint must alternate between i32 operand numbers and metadata hint nodes
 define void @hint_node_not_mdnode(ptr %p) {
   %v = load i32, ptr %p, !mem.cache_hint !{i32 0, !"not_a_node"}
   ret void

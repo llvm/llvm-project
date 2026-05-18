@@ -7832,21 +7832,23 @@ or writes memory. It provides target-specific cache control hints for the
 memory operation. This metadata is a performance hint: dropping or ignoring it
 must not change the observable behavior of the program.
 
-The value of ``!mem.cache_hint`` is a single metadata node containing a flat
-list of ``(operand_no, hint_node)`` pairs. For non-call instructions, ``operand_no``
-is the IR operand index. For intrinsic calls, ``operand_no`` is the call argument index.
-Each ``hint_node`` is a metadata node containing target-prefixed key/value pairs.
-Keys must be strings, and values must be either strings or integer constants.
+The ``!mem.cache_hint`` node must contain an even number of entries, alternating between
+``i32`` operand numbers and metadata hint nodes.
 
-The ``!mem.cache_hint`` node must contain an even number of entries, alternating
-``i32`` operand numbers and metadata nodes. Operand numbers must be unique within
-a ``!mem.cache_hint`` node and must refer to a pointer-typed operand. Keys within
-a single hint node must also be unique.
+Operand numbers refer to the pointer operand that carries the cache hint specified by the following hint node.
+For non-call instructions, the operand number is the IR operand index.
+For intrinsic calls, the operand number is the call argument index.
+Operand numbers must be unique within
+a ``!mem.cache_hint`` node and must refer to a pointer-typed operand.
 
-For a ``load``, the pointer is operand 0. For a ``store``, the value is
+For exmaple, for a ``load``, the pointer is operand 0. For a ``store``, the value is
 operand 0 and the pointer is operand 1. For intrinsic calls such as
 ``llvm.memcpy``, operand numbers correspond to argument positions: e.g.,
 destination is argument 0 and source is argument 1.
+
+Each hint node is a metadata node containing target-prefixed key/value pairs.
+Keys must be strings, and values must be either strings or integer constants. Keys within
+a single hint node must be unique.
 
 The hint node keys are prefixed with a target identifier (e.g., ``nvvm.``) and
 their interpretation is entirely target-dependent. The IR verifier enforces only
